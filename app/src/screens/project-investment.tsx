@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { parseDecimalHalfEven } from "@flow/shared";
+import { parseDecimalHalfEven, type ProjectDetail } from "@flow/shared";
 import { useCallback, useEffect, useId, useRef, useState, type RefObject } from "react";
 import { z } from "zod";
 import { getSupabase } from "../lib/supabase";
@@ -31,28 +31,13 @@ import { waitForAccessToken } from "../wait-for-session";
 import { ProjectLoanList } from "./loan-match";
 
 /* ------------------------------------------------------------------------------------------------
- * Data. get_project returns `investment` (decision 0143). The shared project schema does not carry
- * it yet, so this file reads the project once more on the cash basis for all time: rehab is "what
- * the property has cost so far", and the screen's period and basis never change the card.
+ * Data. The card reads `investment` from the project page's own get_project (decision 0143: it
+ * ignores the period and basis). Only the rehab sheet reads the project again, on the cash basis for
+ * all time, to list rehab by category; it runs while that sheet is open.
  * ---------------------------------------------------------------------------------------------- */
 
 const minorInput = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
 const minor = minorInput.transform((value) => BigInt(value));
-const minorOrNull = z.union([minorInput, z.null()]).transform((value) => (value == null ? null : BigInt(value)));
-
-const investmentSchema = z.object({
-  currency: z.string().regex(/^[A-Z]{3}$/),
-  purchase_minor: minorOrNull,
-  arv_minor: minorOrNull,
-  value_minor: minorOrNull,
-  value_date: z.string().nullable(),
-  rehab_minor: minor,
-  rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: minor })).catch([]),
-  loan_balance_minor: minor,
-  loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: minor })).catch([]),
-  forced_equity_minor: minorOrNull,
-  current_equity_minor: minorOrNull,
-});
 
 const categoryAmountSchema = z.object({
   currency: z.string(),
@@ -61,20 +46,10 @@ const categoryAmountSchema = z.object({
   amount_minor: minor,
 });
 
-const projectInvestmentSchema = z
+const rehabCostsSchema = z
   .object({
-    id: z.string(),
-    is_overhead: z.boolean().optional(),
-    investment: investmentSchema.nullable().optional(),
     categories_by_currency: z.array(categoryAmountSchema).optional(),
     excluded_categories_by_currency: z.array(categoryAmountSchema).optional(),
-    loans: z.array(z.object({
-      id: z.string(),
-      name: z.string(),
-      currency: z.string(),
-      balance_minor: minor,
-      status: z.string().optional(),
-    })).optional(),
   })
   .nullable();
 
@@ -95,15 +70,16 @@ export type RehabCategory = z.infer<typeof rehabCategorySchema>;
 export type ProjectInvestment = {
   isOverhead: boolean;
   figures: InvestmentFigures | null;
-  /** All-time, cash-basis project costs by category, in and out of the P&L. */
-  categories: CategoryAmount[];
   /** Open loans filed under the project. */
   loans: InvestmentLoan[];
+  /** Stories only: the rehab sheet's costs by category, with no network. */
+  categories?: CategoryAmount[];
 };
 
-export function toProjectInvestment(data: z.infer<typeof projectInvestmentSchema>): ProjectInvestment | null {
-  if (data == null) return null;
-  const inv = data.investment ?? null;
+type ProjectSource = Pick<NonNullable<ProjectDetail>, "id" | "is_overhead" | "investment" | "loans">;
+
+export function toProjectInvestment(project: ProjectSource): ProjectInvestment {
+  const inv = project.investment ?? null;
   const figures: InvestmentFigures | null = inv == null ? null : {
     currency: inv.currency,
     purchaseMinor: inv.purchase_minor,
@@ -117,36 +93,31 @@ export function toProjectInvestment(data: z.infer<typeof projectInvestmentSchema
     forcedEquityMinor: inv.forced_equity_minor,
     currentEquityMinor: inv.current_equity_minor,
   };
-  const categories = [...(data.categories_by_currency ?? []), ...(data.excluded_categories_by_currency ?? [])].map((row) => ({
-    id: row.id,
-    name: row.name,
-    currency: row.currency,
-    minor: row.amount_minor,
-  }));
-  const loans = (data.loans ?? [])
+  const loans = (project.loans ?? [])
     .filter((loan) => loan.status == null || loan.status === "open")
     .map(({ id, name, currency, balance_minor }) => ({ id, name, currency, balance_minor }));
-  return { isOverhead: data.is_overhead === true, figures, categories, loans };
+  return { isOverhead: project.is_overhead === true, figures, loans };
 }
 
-/** Under "project", so every write that refreshes the project page refreshes the card too. */
-export function investmentQueryKey(preview: string, projectId: string) {
-  return ["project", preview, projectId, "investment"] as const;
-}
-
-export function useProjectInvestmentQuery(projectId: string) {
+/** All-time, cash-basis costs by category, in and out of the P&L: rehab's own rule (0143). */
+export function useRehabCostsQuery(projectId: string, active: boolean) {
   const preview = useHomePreview();
   return useQuery({
-    queryKey: investmentQueryKey(preview, projectId),
-    enabled: preview === "off" && projectId !== "",
-    queryFn: async (): Promise<ProjectInvestment | null> => {
+    queryKey: ["project", preview, projectId, "rehab-costs"],
+    enabled: active && preview === "off" && projectId !== "",
+    queryFn: async (): Promise<CategoryAmount[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      // Cash basis, no range: rehab's own rule (0143), so the category list adds up to it.
       const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: "cash" });
       if (error) throw error;
-      return toProjectInvestment(projectInvestmentSchema.parse(data));
+      const parsed = rehabCostsSchema.parse(data);
+      return [...(parsed?.categories_by_currency ?? []), ...(parsed?.excluded_categories_by_currency ?? [])].map((row) => ({
+        id: row.id,
+        name: row.name,
+        currency: row.currency,
+        minor: row.amount_minor,
+      }));
     },
   });
 }
@@ -176,6 +147,7 @@ export type RehabLine = { key: string; id: string | null; name: string; minor: b
 export type RehabBreakdown = { counted: RehabLine[]; left: RehabLine[]; addsUp: boolean };
 
 export const NO_CATEGORY = "בלי קטגוריה";
+export const REHAB_TOTAL_ONLY = "הפירוט לפי קטגוריה לא זמין.";
 
 function leftOutReason(category: RehabCategory | undefined): string | undefined {
   if (category == null) return undefined;
@@ -280,12 +252,12 @@ export function RehabSheet({
           <ListRow variant="skeleton" />
         </List>
       ) : failed || breakdown == null ? (
-        <p className="t-hint" role="status">
-          {"לא הצלחנו לטעון את הפירוט. "}
-          <TextLink size="hint" chevron={false} onClick={onRetry}>ניסיון חוזר</TextLink>
-        </p>
+        <div className="ui-invest-retry">
+          <p className="t-hint" role="status">לא הצלחנו לטעון את הפירוט.</p>
+          <TextLink chevron={false} className="ui-invest-link" label="ניסיון חוזר: פירוט השיפוץ" onClick={onRetry}>ניסיון חוזר</TextLink>
+        </div>
       ) : !breakdown.addsUp ? (
-        <p className="t-hint">הפירוט לפי קטגוריה לא זמין לסכום הזה כרגע.</p>
+        <p className="t-hint">{REHAB_TOTAL_ONLY}</p>
       ) : (
         <>
           {breakdown.counted.length === 0 ? (
@@ -324,7 +296,7 @@ export function RehabSheet({
           ) : null}
         </>
       )}
-      <TextLink to={`/settings/categories${search}`} size="hint" chevron={false}>
+      <TextLink to={`/settings/categories${search}`} tone="quiet" chevron={false} className="ui-invest-link">
         מה נספר בשיפוץ? בהגדרות הקטגוריות
       </TextLink>
     </Sheet>
@@ -354,12 +326,14 @@ export function LoansSheet({
         </span>
         <p className="t-hint">ההלוואות הפתוחות בפרויקט</p>
       </div>
-      {own.length === 0 ? <p className="t-hint">אין הלוואות פתוחות {currencyWord(figures.currency)}.</p> : <ProjectLoanList rows={own} />}
+      {own.length === 0 ? <p className="t-hint">אין הלוואות פתוחות {currencyWord(figures.currency)}.</p> : (
+        <div className="ui-invest-loans"><ProjectLoanList rows={own} /></div>
+      )}
       {other.length > 0 ? (
         <>
           <h3 className="ui-invest-list-head t-label">במטבע אחר</h3>
           <p className="t-hint">לא נכנסות להון הנוכחי.</p>
-          <ProjectLoanList rows={other} />
+          <div className="ui-invest-loans"><ProjectLoanList rows={other} /></div>
         </>
       ) : null}
     </Sheet>
@@ -449,7 +423,7 @@ export function InvestmentEditSheet({
   minor: bigint | null;
   date: string | null;
   /** Resolves true once saved. A failure toasts and keeps the sheet open. */
-  onSave: (patch: InvestmentPatch, kind: "save" | "clear") => Promise<boolean>;
+  onSave: (patch: InvestmentPatch, kind: "save" | "clear", field: InvestmentField) => Promise<boolean>;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const label = INVESTMENT_LABELS[field];
@@ -482,7 +456,7 @@ export function InvestmentEditSheet({
 
   const run = useCallback(async (patch: InvestmentPatch, kind: "save" | "clear"): Promise<boolean> => {
     setBusy(true);
-    const pending = onSave(patch, kind);
+    const pending = onSave(patch, kind, field);
     saving.current = pending;
     try {
       const ok = await pending;
@@ -504,10 +478,8 @@ export function InvestmentEditSheet({
 
   /** ✕, scrim, swipe and back save a valid change first; an empty amount holds once (0075). */
   const guard = useCallback(async (): Promise<boolean> => {
-    if (saving.current) {
-      await saving.current;
-      return true;
-    }
+    // A second close while a save runs waits for it, and stays open if it fails (0075).
+    if (saving.current) return await saving.current;
     const verdict = editVerdict(field, base.current, draft.current);
     if (verdict.kind === "clean") return true;
     if (verdict.kind === "hold") {
@@ -632,13 +604,17 @@ export function InvestmentEditSheet({
  * The section the project page mounts under its categories.
  * ---------------------------------------------------------------------------------------------- */
 
-function failureFor(label: string) {
-  return (error: Error): WriteFailure => {
-    const code = (error as { code?: string }).code;
-    if (code === "42501") return { message: "אין הרשאה לשנות את ההשקעה.", retry: false };
-    return `לא הצלחנו לשמור את ${label}.`;
-  };
+type SaveRequest = { patch: InvestmentPatch; kind: "save" | "clear"; field: InvestmentField };
+
+/** The toast names the figure that failed, whichever sheet is open by then. */
+export function investmentFailure(error: Error): WriteFailure {
+  const field = (error as { field?: InvestmentField }).field;
+  const code = (error as { code?: string }).code;
+  if (code === "42501") return { message: INVESTMENT_REFUSED, retry: false };
+  return `לא הצלחנו לשמור את ${field == null ? "ההשקעה" : INVESTMENT_LABELS[field]}.`;
 }
+
+export const INVESTMENT_REFUSED = "אין הרשאה לשנות את ההשקעה.";
 
 /** Sample mode works the figures out the way the server does (0143). */
 function applySample(figures: InvestmentFigures, patch: InvestmentPatch): InvestmentFigures {
@@ -657,28 +633,28 @@ function applySample(figures: InvestmentFigures, patch: InvestmentPatch): Invest
 type OpenSheet = InvestmentField | "rehab" | "loans" | null;
 
 /**
- * FLOW-404. The השקעה card with its sheets. Mount it under the project's categories. The overhead
- * project has no card; a viewer sees it read-only. `sample` draws it with no network (stories).
+ * FLOW-404. The השקעה card with its sheets. Mount it under the project's categories with the
+ * project the page already read. The overhead project has no card; a viewer sees it read-only.
+ * `sample` draws it with no network (stories).
  */
 export function ProjectInvestmentSection({
-  projectId,
+  project,
   sample,
   sampleCategories,
-  sampleState,
   initialSheet = null,
 }: {
-  projectId: string;
+  project: ProjectSource;
   sample?: ProjectInvestment;
   sampleCategories?: RehabCategory[];
-  sampleState?: "loading" | "error";
   /** Stories open a sheet on first draw. */
   initialSheet?: OpenSheet;
 }) {
   const preview = useHomePreview();
   const readOnly = useHoldWrites();
-  const sampled = sample != null || sampleState != null;
-  const query = useProjectInvestmentQuery(sampled ? "" : projectId);
+  const projectId = project.id;
   const [sampleData, setSampleData] = useState(sample);
+  const data = sampleData ?? toProjectInvestment(project);
+  const sampled = sample != null;
   const [sheet, setSheet] = useState<OpenSheet>(readOnly ? null : initialSheet);
   const [editField, setEditField] = useState<InvestmentField>(
     initialSheet === "purchase" || initialSheet === "arv" || initialSheet === "value" ? initialSheet : "purchase",
@@ -691,56 +667,59 @@ export function ProjectInvestmentSection({
     loans: useRef<HTMLButtonElement>(null),
   } satisfies Record<InvestmentRow, RefObject<HTMLButtonElement | null>>;
   const rehabOpen = sheet === "rehab";
+  const costs = useRehabCostsQuery(projectId, rehabOpen && !sampled);
   const categories = useRehabCategoriesQuery(rehabOpen && !sampled);
   const setRehabSheet = useSheetHistory("investment-rehab", rehabOpen, (next) => { setSheet(next ? "rehab" : null); });
   const setLoansSheet = useSheetHistory("investment-loans", sheet === "loans", (next) => { setSheet(next ? "loans" : null); });
-  const label = INVESTMENT_LABELS[editField];
-  const save = useWrite<{ patch: InvestmentPatch; kind: "save" | "clear" }>({
-    failure: failureFor(label),
+  const save = useWrite<SaveRequest>({
+    failure: investmentFailure,
     keys: ["project"],
-    run: async ({ patch }) => {
-      const supabase = getSupabase();
-      if (!supabase || projectId === "") throw new Error("supabase");
-      assertNoError(await supabase.rpc("set_project_investment", { p_project_id: projectId, p_patch: patch }));
+    run: async ({ patch, field }) => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase || projectId === "") throw new Error("supabase");
+        assertNoError(await supabase.rpc("set_project_investment", { p_project_id: projectId, p_patch: patch }));
+      } catch (error) {
+        throw Object.assign(error instanceof Error ? error : new Error("failed"), { field });
+      }
     },
   });
-  const onSave = useCallback(async (patch: InvestmentPatch, kind: "save" | "clear"): Promise<boolean> => {
-    if (sampleData != null) {
+  const onSave = useCallback(async (patch: InvestmentPatch, kind: "save" | "clear", field: InvestmentField): Promise<boolean> => {
+    if (sampled) {
       setSampleData((current) => current == null || current.figures == null ? current : { ...current, figures: applySample(current.figures, patch) });
       return true;
     }
     try {
-      await save.mutateAsync({ patch, kind });
+      await save.mutateAsync({ patch, kind, field });
       return true;
     } catch {
       return false;
     }
-  }, [sampleData, save]);
+  }, [sampled, save]);
 
   if (!sampled && preview !== "off") return null;
-  const data = sampleData ?? query.data;
-  const state = sampleState ?? (sampled ? "ready" : query.isPending ? "loading" : query.isError ? "error" : "ready");
-  if (state === "ready" && (data == null || data.isOverhead || data.figures == null)) return null;
-  const figures = data?.figures ?? null;
-  const editMinor = figures == null ? null : editField === "purchase" ? figures.purchaseMinor : editField === "arv" ? figures.arvMinor : figures.valueMinor;
+  if (data.isOverhead || data.figures == null) return null;
+  const figures = data.figures;
+  const editMinor = editField === "purchase" ? figures.purchaseMinor : editField === "arv" ? figures.arvMinor : figures.valueMinor;
+  // Nothing to list: no open loan in the project's currency or any other.
+  const loansEmpty = figures.loanMinor === 0n && figures.loanOther.length === 0;
+  const rehabCosts = sampled ? (sampleData?.categories ?? []) : (costs.data ?? []);
+  const rehabCategories = sampled ? (sampleCategories ?? []) : (categories.data ?? null);
 
   return (
     <>
       <InvestmentCard
-        state={state}
         figures={figures}
         readOnly={readOnly}
         rowRefs={rows}
-        retrying={query.isFetching}
-        onRetry={sampled ? undefined : () => { void query.refetch(); }}
         onEdit={(field) => {
           setEditField(field);
           setSheet(field);
         }}
         onRehab={() => { setRehabSheet(true); }}
-        onLoans={() => { setLoansSheet(true); }}
+        onLoans={loansEmpty ? undefined : () => { setLoansSheet(true); }}
       />
-      {readOnly || figures == null ? null : (
+      {readOnly ? null : (
         <>
           <InvestmentEditSheet
             key={editField}
@@ -757,18 +736,21 @@ export function ProjectInvestmentSection({
             open={rehabOpen}
             onOpenChange={setRehabSheet}
             figures={figures}
-            costs={data?.categories ?? []}
-            categories={sampled ? (sampleCategories ?? []) : (categories.data ?? null)}
-            loading={!sampled && categories.isPending}
-            failed={!sampled && categories.isError}
-            onRetry={() => { void categories.refetch(); }}
+            costs={rehabCosts}
+            categories={rehabCategories}
+            loading={!sampled && (costs.isPending || categories.isPending)}
+            failed={!sampled && (costs.isError || categories.isError)}
+            onRetry={() => {
+              if (costs.isError) void costs.refetch();
+              if (categories.isError) void categories.refetch();
+            }}
             returnFocusRef={rows.rehab}
           />
           <LoansSheet
             open={sheet === "loans"}
             onOpenChange={setLoansSheet}
             figures={figures}
-            loans={data?.loans ?? []}
+            loans={data.loans}
             returnFocusRef={rows.loans}
           />
         </>

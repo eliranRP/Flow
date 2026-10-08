@@ -139,3 +139,23 @@
 .ui-invest-left .ui-num {
   color: var(--color-text-secondary);
 }
+
+/* A loan's name wraps in the loans sheet, so a short one is never cut at 320. */
+.ui-invest-loans .ui-row-title {
+  white-space: normal;
+}
+
+/* The rehab sheet's links keep the 44px text-link target and sit on the start side. */
+.ui-invest-link {
+  align-self: flex-start;
+}
+
+.ui-invest-retry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ui-invest-retry p {
+  margin: 0;
+}

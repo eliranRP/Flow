@@ -49,7 +49,7 @@ export const FORCED_LABEL = "הון מאולץ";
 export const CURRENT_LABEL = "הון נוכחי";
 export const FORCED_FORMULA = "שווי אחרי שיפוץ פחות קנייה ושיפוץ";
 export const CURRENT_FORMULA = "שווי היום פחות הלוואות";
-export const INVESTMENT_ERROR = "לא הצלחנו לטעון את ההשקעה.";
+export const INVESTMENT_ERROR = "לא הצלחנו לטעון.";
 
 const CURRENCY_WORDS: Record<string, string> = {
   ILS: "בשקלים",

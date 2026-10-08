@@ -406,7 +406,7 @@ export function ProjectDetailScreen({
           }}
         />
       </div>
-      {sample == null || sampleInvestment != null ? <ProjectInvestmentSection projectId={project.id} sample={sampleInvestment} /> : null}
+      <ProjectInvestmentSection project={project} sample={sampleInvestment} />
       <SectionHead title="תנועות">
         {/* FLOW-402: every line of the project, in the search with the project chip set. */}
         <TextLink to={`/search${withParam(search, "project", project.id)}`} tone="quiet">כל התנועות</TextLink>

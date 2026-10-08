@@ -40,19 +40,17 @@ const MISSING_PROJECT: ProjectInvestment = {
 
 type Args = {
   project?: "filled" | "missing";
-  state?: "loading" | "error";
   sheet?: "purchase" | "arv" | "value" | "rehab" | "loans" | null;
   viewer?: boolean;
 };
 
-function Section({ project = "filled", state, sheet = null, viewer = false }: Args) {
+function Section({ project = "filled", sheet = null, viewer = false }: Args) {
   return (
     <StoryRoute entry="/projects/p1" viewer={viewer}>
       <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
       <ProjectInvestmentSection
-        projectId="p1"
-        sample={state == null ? (project === "filled" ? FILLED_PROJECT : MISSING_PROJECT) : undefined}
-        sampleState={state}
+        project={{ id: "p1" }}
+        sample={project === "filled" ? FILLED_PROJECT : MISSING_PROJECT}
         sampleCategories={CATEGORIES}
         initialSheet={sheet}
       />
@@ -75,8 +73,6 @@ const se = { parameters: { flowRouter: false, viewport: { defaultViewport: "flow
 export const Card: Story = {};
 export const CardMissing: Story = { args: { project: "missing" } };
 export const CardViewer: Story = { args: { project: "missing", viewer: true } };
-export const CardLoading: Story = { args: { state: "loading" } };
-export const CardError: Story = { args: { state: "error" } };
 export const EditPurchase: Story = { args: { sheet: "purchase" } };
 export const EditValue: Story = { args: { sheet: "value" } };
 export const EditValueSE: Story = { args: { sheet: "value" }, ...se };
