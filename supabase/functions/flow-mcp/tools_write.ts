@@ -8,6 +8,7 @@ import {
   isCalendarDate,
   isFail,
   ppmFromPercent,
+  signedPpmFromPercent,
   type ToolDefer,
   type ToolInvoke,
   type ToolResult,
@@ -42,6 +43,8 @@ import {
   setJevModeSchema,
   setLinePnlSchema,
   setLinesPnlSchema,
+  setIndexRateSchema,
+  setLoanIndexSchema,
   setLoanRateSchema,
   setOverheadProjectSchema,
   setProjectInvestmentSchema,
@@ -189,6 +192,36 @@ export async function callWrite(
       p_loan_id: parsed.data.loan_id,
       p_effective_date: parsed.data.effective_date,
       p_annual_rate_ppm: ratePpm,
+    };
+  } else if (name === "set_loan_index") {
+    const parsed = setLoanIndexSchema.safeParse(args);
+    if (!parsed.success || (parsed.data.rate_index === null) !== (parsed.data.margin_percent === null)) {
+      return fail("validation", "validation");
+    }
+    let marginPpm: number | null = null;
+    if (parsed.data.margin_percent !== null) {
+      const ppm = signedPpmFromPercent(parsed.data.margin_percent);
+      if (typeof ppm !== "number") return ppm;
+      marginPpm = ppm;
+    }
+    rpcName = "mcp_set_loan_index";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_loan_id: parsed.data.loan_id,
+      p_rate_index: parsed.data.rate_index,
+      p_margin_ppm: marginPpm,
+    };
+  } else if (name === "set_index_rate") {
+    const parsed = setIndexRateSchema.safeParse(args);
+    if (!parsed.success || !isCalendarDate(parsed.data.effective_date)) return fail("validation", "validation");
+    const ppm = ppmFromPercent(parsed.data.annual_rate_percent);
+    if (typeof ppm !== "number") return ppm;
+    rpcName = "mcp_set_index_rate";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_rate_index: parsed.data.rate_index,
+      p_effective_date: parsed.data.effective_date,
+      p_annual_rate_ppm: ppm,
     };
   } else if (name === "split_line") {
     const parsed = splitLineSchema.safeParse(args);
