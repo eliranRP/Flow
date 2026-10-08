@@ -417,11 +417,11 @@ A refund of $100 filed as North rent, with 30% going back against South's repair
 - VAT stays on the line. The parts split the net amount.
 - While a split is in place, `set_expense_category` and `assign_expense` change only the line's own category and project, which the P&L does not read for a split line. Clear the split with `parts: []` first, or send new parts.
 
-Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "amount_minor" }], "undo_kind": "line_split", "id" }`, with every part in minor units as stored (percents and the rest resolved). Undo `kind: "line_split"` with the transaction id puts back the parts from before this write (none, or an earlier split) and the line's assignment flags. If the parts changed since, undo is `conflict`.
+Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "amount_minor" }], "undo_kind": "line_split", "id", "write_id" }`, with every part in minor units as stored (percents and the rest resolved). `write_id` names this write for `undo_batch`; `undo` does not take it. Undo `kind: "line_split"` with the transaction id puts back the parts from before this write (none, or an earlier split), with their percent and rest markers, and the line's assignment flags. If the parts changed since, undo is `conflict`.
 
 Once split, the line counts by part in `get_totals`, `list_projects`, `get_project` and `list_project_category`: each part under its own category and project, a part in a kept-out category in the `excluded_*` totals, and the line's own category gets nothing. `count` still counts the line once. If a bank re-sync changes the line amount so the parts no longer sum, the line counts whole until it is split again; `get_expense` shows `line_split.parts_match: false`.
 
-`get_expense` on a split line adds `line_split`: `{ "currency", "line_minor", "parts": [{ "category_id", "category_name", "project_id", "project_name", "amount_minor", "percent", "rest" }], "parts_match" }`. `percent` is the percent the part was given (null for an amount or the rest) and `rest` marks the part that took what was left; both are informational, `amount_minor` is what counts, and a part put back by undo shows neither.
+`get_expense` on a split line adds `line_split`: `{ "currency", "line_minor", "parts": [{ "category_id", "category_name", "project_id", "project_name", "amount_minor", "percent", "rest" }], "parts_match" }`. `percent` is the percent the part was given (null for an amount or the rest) and `rest` marks the part that took what was left; both are informational, `amount_minor` is what counts, and a part put back by undo of a write made before FLOW-133 shows neither.
 
 ### set_line_pnl
 
@@ -435,7 +435,7 @@ Takes one line out of the P&L, or counts one line of a kept-out category. Decisi
 - An out line moves to the `excluded_*` totals of `get_totals`, `list_projects` and `get_project`, and to `get_breakdown`'s `excluded` group, on both bases. Nothing is hidden, except that an unpaid supplier invoice is in no field on `cash` ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)).
 - Refused: `transaction not found` (also another company's line) and `loan line is fixed` (a line with a loan split or in a loan category; its parts decide what counts).
 
-Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "line_pnl", "id" }`. Undo `kind: "line_pnl"` with the transaction id puts back the override from before this write. If the override changed since (for example in the app), undo is `conflict`.
+Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "line_pnl", "id", "write_id" }` (`write_id` is for `undo_batch`). Undo `kind: "line_pnl"` with the transaction id puts back the override from before this write. If the override changed since (for example in the app), undo is `conflict`.
 
 ### set_lines_pnl
 
@@ -482,7 +482,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`, each res
 }
 ```
 
-Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is either `{ "transaction_id", "ok": true, "undo_kind" }` or `{ "transaction_id", "ok": false, "code" }`. A successful `shares[]` row also has `closed_review`. A `parts[]` row does not return the stored parts; read them with `get_expense` (`line_split.parts`) when the cents matter (percent and rest parts are rounded).
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is either `{ "transaction_id", "ok": true, "undo_kind" }` or `{ "transaction_id", "ok": false, "code" }`. A successful `shares[]` row also has `closed_review`. A successful `parts[]` row also has `parts`, the stored parts in minor units as `split_line` returns them ([FLOW-133](../backlog/TASKS.md#flow-133)).
 
 ### undo_batch
 
@@ -490,7 +490,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. A `parts[]` row goes back to the parts from before, or to none. Like `set_lines_pnl`'s rows, it undoes the newest `split_line` write on that line, so split a line again between the batch and its undo and the undo reverts that later write ([FLOW-133](../backlog/TASKS.md#flow-133)). Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. A `parts[]` row goes back to the parts from before, or to none. A `parts[]` or `set_lines_pnl` row undoes only the batch's own write: when a later `split_line` (or `set_line_pnl`) on that line is still live, the row is `conflict` and the later write stays; undo that one first. A row whose own write was already undone is `not_found`. Batches stored before [FLOW-133](../backlog/TASKS.md#flow-133) still undo the newest write on the line. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Not in tools/list
 

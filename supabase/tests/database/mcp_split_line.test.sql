@@ -125,7 +125,8 @@ select is((select count(*)::integer from public.line_splits), 0, 'no refused cal
 
 -- Happy path.
 select is(
-  public.mcp_split_line('k-1', (select id from msl where label = 'txn_bill'), pg_temp.parts(4000, 6000)),
+  -- write_id (FLOW-133) is a fresh id; flow_133_batch_undo.test.sql checks it.
+  public.mcp_split_line('k-1', (select id from msl where label = 'txn_bill'), pg_temp.parts(4000, 6000)) #- '{data,write_id}',
   jsonb_build_object('ok', true, 'data', jsonb_build_object(
     'transaction_id', (select id from msl where label = 'txn_bill'),
     'parts', pg_temp.parts(4000, 6000),
