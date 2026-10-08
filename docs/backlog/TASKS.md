@@ -74,7 +74,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
-| 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen in progress, PR #TBD) |
+| 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen in progress, PR #150) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | ready |
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
@@ -568,7 +568,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-325"></a>
 ### FLOW-325 · Split a refund across projects and categories by percent or amount
-- **Type:** MCP · **Status:** server done (#135, #142); app screen in progress (claude/project-thread-0wt3o6, PR #TBD; plan option A approved) · **Depends on:** FLOW-311, FLOW-104
+- **Type:** MCP · **Status:** server done (#135, #142); app screen in progress (claude/project-thread-0wt3o6, PR #150; plan option A approved) · **Depends on:** FLOW-311, FLOW-104
 - **What:** The owner's ask (2026-10-08): select part of a refund (or any line) and split it between projects and categories by percent or fixed amounts, the rest staying where it was. Server: `save_line_split` and MCP `split_line` parts take `amount_minor`, `percent` (rounded together so the parts hit the line to the cent) or `rest: true` (the line's own category and project by default); a part of the other kind is a reversal (a refund back against expenses) and needs a project. Decision [0123](../decisions/0123-line-split-percent-rest-reversal.md). Takes over FLOW-312's reversal-part and app-screen items.
 - **App:** a screen on the transaction detail to view and edit the parts, by percent or amount, with the rest shown live. Plan and mockup in the design thread, owner approval on a card before building.
 - **Acceptance:** pgTAP for rounding, rest, reversal P&L effect and refusals; MCP tests; mockup approved; the screen's parts match `get_line_split`.
@@ -576,7 +576,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] (#135 review) `get_project.transactions[].parts_minor` sums parts unsigned; with reversal parts it should be signed by kind before the app screen shows it.
 - [ ] (#135 review) A reversal part in a kept-out category still needs a project; 0103 lets a kept-out whole line skip it.
 - [ ] (#135 review) A part with no project and one naming the line's own project are different pairs, so the same category and project can appear twice. (The app screen guards it: it treats no project as the line's project.)
-- [x] App screen, first PR (PR #TBD): the "פיצול" section on the transaction detail with a read view of the parts, the full-screen editor (parts, % / ₪ with the server preview's cents, the live rest row, the sticky totals), refund reversals that need a project, save on leave with the hold line, clearing with a confirm, undo from the toast, and the detail's category and project rows saying the line is split.
+- [x] App screen, first PR (PR #150): the "פיצול" section on the transaction detail with a read view of the parts, the full-screen editor (parts, % / ₪ with the server preview's cents, the live rest row, the sticky totals), refund reversals that need a project, save on leave with the hold line, clearing with a confirm, undo from the toast, and the detail's category and project rows saying the line is split.
 - [ ] App screen follow-ups (plan §10): swipe to delete a part, splitting from the review card, "N חלקים" on the transaction lists.
 
 <a id="flow-326"></a>
