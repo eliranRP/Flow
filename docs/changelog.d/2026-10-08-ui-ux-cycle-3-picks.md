@@ -1,0 +1,1 @@
+Backlog: the owner picked the cycle 3 open questions: "עדכון הפיצול" is the main button on a split-mismatch card, "הוספת חלק" moves to the split editor's bottom bar, new parts keep the last unit and refunds open the reversal section, the skip-undo toast sits above the review buttons, and the app says "פיצול" everywhere.

@@ -81,6 +81,7 @@ export {
   LOAN_KINDS,
   LOAN_TERM_MONTHS_MAX,
   LoanScheduleError,
+  monthlyPaymentMinor,
   rateOnDate,
   regularPaymentMinor,
 } from "./loan-schedule.ts";

@@ -792,7 +792,7 @@ export function ProjectDetailScreen({
             rows={heldTransactions}
             keyOf={(txn) => txn.id}
             dateOf={(txn) => txn.doc_date}
-            amountOf={(txn) => ({ minor: txn.amount_net, currency: txn.currency ?? "ILS", direction: txn.direction === "income" ? "income" : "expense" })}
+            amountOf={(txn) => ({ minor: txn.kept_out === true ? 0n : txn.amount_net, currency: txn.currency ?? "ILS", direction: txn.direction === "income" ? "income" : "expense" })}
             complete={heldTransactions.length < PROJECT_RECENT_CAP}
             renderRow={(txn) => (
               <ListRow
