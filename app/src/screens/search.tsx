@@ -1,7 +1,7 @@
 import { onlineManager } from "@tanstack/react-query";
 import { formatAmountText, type SearchRow } from "@flow/shared";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { NavigationType, useLocation, useNavigationType } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import * as searchE2eFixture from "../dev/search-e2e-fixture";
 import { allTime, customRange, periodLabel, presetPeriod, samePeriod, windowLabel, type PresetKind } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -62,6 +62,8 @@ const searchE2e = import.meta.env.DEV ? searchE2eFixture : null;
 /** Each history entry keeps the filters it showed, so Back from a line reopens the same list. */
 const remembered = new Map<string, { filters: SearchFilters; text: string }>();
 const REMEMBER_MAX = 30;
+/** History entries whose arrival already focused the field, with the visit that did it. */
+const focusedEntries = new Map<string, object>();
 /** The first entry of a page load (and every Storybook router). It is never remembered. */
 const FIRST_ENTRY = "default";
 
@@ -79,6 +81,7 @@ function remember(key: string, filters: SearchFilters, text: string) {
 /** Test hook: a fresh module state between unit tests. */
 export function resetSearchMemory(): void {
   remembered.clear();
+  focusedEntries.clear();
 }
 
 const PERIOD_KINDS: readonly PresetKind[] = ["month", "months3", "months6", "year"];
@@ -91,7 +94,6 @@ const PERIOD_KINDS: readonly PresetKind[] = ["month", "months3", "months6", "yea
  */
 export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const location = useLocation();
-  const navigation = useNavigationType();
   const preview = useHomePreview();
   const previewSearch = usePreviewSearch();
   const fixture = sample == null && preview === "empty" ? searchE2e?.searchE2eFixture ?? null : null;
@@ -128,12 +130,23 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const categories = categoryList.filter((category) => category.hidden !== true);
 
   // A fresh visit from the search icon types straight away. The title took focus first (its
-  // effect runs before this one), so this wins; Back to the list leaves focus where it returns.
+  // effect runs before this one), so this wins. The icon's link state asks for focus once per
+  // history entry: Back to the same entry finds it taken by an earlier visit and leaves focus
+  // where it returns. StrictMode's second effect pass is the same visit, so it focuses again.
   const inputRef = useRef<HTMLInputElement>(null);
-  const focusOnArrival = useRef(navigation === NavigationType.Push && wantsSearchFocus(location.state));
+  // Read once on mount: a later change of the entry never moves focus.
+  const arrival = useRef({ key: location.key, wants: wantsSearchFocus(location.state) });
   useEffect(() => {
-    if (!focusOnArrival.current) return;
-    focusOnArrival.current = false;
+    const { key, wants } = arrival.current;
+    if (!wants) return;
+    const owner = focusedEntries.get(key);
+    if (owner != null && owner !== arrival.current) return;
+    focusedEntries.set(key, arrival.current);
+    while (focusedEntries.size > REMEMBER_MAX) {
+      const oldest = focusedEntries.keys().next().value;
+      if (oldest == null) break;
+      focusedEntries.delete(oldest);
+    }
     inputRef.current?.focus({ preventScroll: true });
   }, []);
 
@@ -244,7 +257,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     <div className="ui-search-screen" ref={screenRef}>
       <ScreenHeader title="חיפוש" backTo={`/${previewSearch}`} />
       <p className="ui-search-count t-label" role="status">
-        {phase.kind === "ready" && (rows.length > 0 || filtered) ? (
+        {phase.kind === "ready" && rows.length > 0 ? (
           <CountLine rows={rows} total={total} complete={complete} />
         ) : null}
         {refreshing ? <span className="ui-spinner" aria-label="מחפש" /> : null}

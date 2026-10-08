@@ -4826,6 +4826,7 @@ html[data-kb="open"] .ui-search-dock {
   min-inline-size: 0;
   overflow-x: auto;
   padding: var(--space-1) var(--space-side);
+  scroll-padding-inline: var(--space-side);
   scrollbar-width: none;
 }
 
