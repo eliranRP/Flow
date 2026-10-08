@@ -1039,7 +1039,7 @@ function readTools() {
       to: { type: "string" },
     }),
     toolSpec("list_categories", "The company's categories. rehab is the category's rehab switch (true, false, or null for the default) and in_rehab whether it counts as rehab (set_category_rehab).", {}),
-    toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense).", {
+    toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense). supplier matches part of the supplier's name, or of the customer's (customer_name) on an income line.", {
       direction: { type: "string", enum: ["expense", "income"] },
       reason: { type: "string" },
       supplier: { type: "string" },
@@ -2344,7 +2344,9 @@ export async function callTool(
         p_category: category?.toLowerCase() ?? null,
         p_direction: direction,
       };
-      const filtered = Object.values(filters).some((value) => value != null);
+      // A query counts as a filter: search_transactions matches it on the description, the
+      // supplier and the customer, in any case, as the docs say.
+      const filtered = query != null || Object.values(filters).some((value) => value != null);
       if (scopeName === "pending" && filtered) {
         // With a filter, search_transactions picks the page (0140); the rows stay list_review's.
         // A line with two open review rows shows once here, and a row resolved between the two
