@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -44,6 +44,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_rehab` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "project_investment"` | `id` | the project id `set_project_investment` used |
 | `undo` `kind: "category_rehab"` | `id` | the category id `set_category_rehab` used |
+| `delete_category` | `category_id` | `list_categories` `categories[].id` |
+| `move_category_lines` | `from_category_id`, `into_category_id` | `list_categories` `categories[].id` (the target not hidden) |
+| `undo` `kind: "category_delete"` | `id` | the category id `delete_category` used |
+| `undo` `kind: "category_move"` | `id` | the source category id `move_category_lines` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -305,6 +309,22 @@ Sets a project's investment figures: `currency` (an ISO code such as `USD` or `I
 ```
 
 `rehab` is required: `true` counts the category as rehab on projects, `false` leaves it out, `null` follows the default. By default every category counts except those kept out of the P&L (`excluded_from_pnl`) and the loan parts (`loan_part` set), so the purchase and the loan payments stay out. A loan payment's fees part stays out too, even in a category that counts, unless that category is switched on (`true`). Switching on the principal category counts principal repayments as rehab, while the loan they repay is already in `current_equity_minor`. Output `data`: `category_id`, `rehab`, `in_rehab` (what the category comes to), `undo_kind: "category_rehab"` and `id`. Undo puts back the setting before, and is `conflict` when it changed since. Another company's category is `refused` / `category not found` ([0143](../decisions/0143-project-investment.md)).
+
+### delete_category
+
+```json
+{ "idempotency_key": "catdel-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1" }
+```
+
+Deletes a category, even one with lines. Its lines keep their project, lose the category and go back to לאישור as lines with no category (an open review row with reason `missing_category`, unless one is open already); nothing guesses a new category for them. A line split by category with a part in it loses its whole split. Suppliers forget it as their remembered category. Output `data`: `category_id`, `name`, `lines` (how many lines on the books, not removed and not void, went back to review), `undo_kind: "category_delete"` and `id`. Refused: a loan category (`refused` / `loan category is fixed`), a category a loan or a loan payment part uses (`a loan uses this category`; move those first with `move_category_lines` or `update_loan`), another company's (`category not found`). Undo puts back the category with the same id, its lines, splits and remembered suppliers, and closes the review rows the delete opened; it is `conflict` once one of those lines has a category or a split again or the name is taken again, and `not_found` when the owner already undid it in the app ([0144](../decisions/0144-category-delete-and-move.md)).
+
+### move_category_lines
+
+```json
+{ "idempotency_key": "catmove-1", "from_category_id": "c0ffee00-1111-4000-8000-0000000000a1", "into_category_id": "c0ffee00-1111-4000-8000-0000000000a2" }
+```
+
+Moves every line of one category to another of the same kind, and with them split parts, loan payment parts, loan part categories and remembered supplier categories. Neither category is hidden (`merge_category` in the app is this move plus hiding the source). A moved line counts as the owner's choice. Output `data`: `from`, `into`, `lines` (lines on the books moved, a split line once), `undo_kind: "category_move"` and `id` (the source). Refused: the same category (`pick a different category`), a hidden or another company's target (`category not found`), another kind (`categories must be the same kind`), a split line with parts in both (`a split line has both categories`), a loan part the target cannot take (`a loan uses this category for a part the other category cannot take`). Undo, with the source category id, moves exactly those back with their old flags; it is `conflict` once any of them was moved or re-tagged since. A remembered category the owner changed since stays ([0144](../decisions/0144-category-delete-and-move.md)).
 
 ### set_overhead_project
 

@@ -416,6 +416,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "reorder_loans",
     "set_project_investment",
     "set_category_rehab",
+    "delete_category",
+    "move_category_lines",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -472,6 +474,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "reorder_loans",
     "set_project_investment",
     "set_category_rehab",
+    "delete_category",
+    "move_category_lines",
     "undo",
     "undo_batch",
   ]);
@@ -3973,4 +3977,39 @@ Deno.test("get_expense takes the loan split from get_transaction when it carries
   assertEquals(out.isError, false);
   if (out.structuredContent.ok) assertEquals((out.structuredContent.data as { loan_split: unknown }).loan_split, split);
   assertEquals(calls.some((call) => call.name === "get_loan_split"), false, "no second read");
+});
+
+Deno.test("delete_category and move_category_lines forward their input, undo takes both kinds (FLOW-405)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "category_delete", id: CATEGORY } } }));
+  const deleted = await callTool("delete_category", { idempotency_key: "cd-1", category_id: CATEGORY.toUpperCase() }, ["write"], rpc);
+  assertEquals(deleted.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_delete_category", body: { p_idempotency_key: "cd-1", p_category_id: CATEGORY } });
+  const moved = await callTool("move_category_lines", {
+    idempotency_key: "cm-1", from_category_id: CATEGORY, into_category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(moved.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_move_category_lines", body: { p_idempotency_key: "cm-1", p_from: CATEGORY, p_into: INCOME_CATEGORY } });
+  for (const kind of ["category_delete", "category_move"]) {
+    const undo = await callTool("undo", { idempotency_key: "u-" + kind, kind, id: CATEGORY }, ["write"], rpc);
+    assertEquals(undo.isError, false);
+    assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-" + kind, p_kind: kind, p_id: CATEGORY } });
+  }
+
+  const denied = await callTool("delete_category", { idempotency_key: "k", category_id: CATEGORY }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const [tool, input] of [
+    ["delete_category", { idempotency_key: "k" }],
+    ["delete_category", { idempotency_key: "k", category_id: "not-a-uuid" }],
+    ["delete_category", { idempotency_key: "k", category_id: CATEGORY, force: true }],
+    ["move_category_lines", { idempotency_key: "k", from_category_id: CATEGORY }],
+    ["move_category_lines", { idempotency_key: "k", from_category_id: CATEGORY, into_category_id: "not-a-uuid" }],
+    ["move_category_lines", { idempotency_key: "k", from: CATEGORY, into: INCOME_CATEGORY }],
+  ] as const) {
+    const result = await callTool(tool, input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
 });
