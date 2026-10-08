@@ -83,6 +83,7 @@ export const WRITE_TOOL_NAMES = [
   "set_category_rehab",
   "delete_category",
   "move_category_lines",
+  "set_company_currency",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -144,6 +145,7 @@ const ALLOWED: Record<string, Set<string>> = {
   set_category_rehab: new Set(["idempotency_key", "category_id", "rehab"]),
   delete_category: new Set(["idempotency_key", "category_id"]),
   move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
+  set_company_currency: new Set(["idempotency_key", "currency"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -231,7 +233,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -549,6 +551,10 @@ const moveCategoryLinesSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   from_category_id: UUID_TEXT,
   into_category_id: UUID_TEXT,
+}).strict();
+const setCompanyCurrencySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  currency: z.string().regex(/^[A-Z]{3}$/),
 }).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
@@ -926,7 +932,7 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function defaultLoanCurrency(rpc: ToolRpc): Promise<string | ToolResult> {
+async function companyCurrency(rpc: ToolRpc): Promise<string | ToolResult> {
   const result = await rpc("mcp_company_loan_currency", {});
   if (result.status >= 400 || typeof result.json !== "string") return fail("refused", READ_REFUSED);
   return result.json;
@@ -1084,7 +1090,7 @@ function readTools() {
       as_of: { type: "string" },
     }),
     syncStatusSpec(),
-    toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is cash or invoiced (default cash, like get_totals). Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default ILS): that group's lines, newest first, in rows[] with has_more. excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part.", {
+    toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is cash or invoiced (default cash, like get_totals). Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default the company currency): that group's lines, newest first, in rows[] with has_more. excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part.", {
       direction: { type: "string", enum: ["income", "expense"] },
       from: { type: "string" },
       to: { type: "string" },
@@ -1385,13 +1391,17 @@ function writeTools() {
       from_category_id: { type: "string" },
       into_category_id: { type: "string" },
     }, true),
+    toolSpec("set_company_currency", "Set the company's base currency (owner only), a three-letter code such as ILS or USD. Nothing is converted: the base currency's row leads every by_currency list, it is the default for a new loan, a new project's investment and get_breakdown, and the *_minor twins of the ILS-only figures (get_home net_profit_minor, prev_* per currency, overhead_share_minor) are in it. Returns id, base_currency and prior. Undo is kind company_currency with the company id, a conflict once the currency was changed again.", {
+      idempotency_key: { type: "string" },
+      currency: { type: "string" },
+    }, true),
     toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1565,7 +1575,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
   }
   let currency = parsed.data.currency;
   if (currency == null) {
-    const defaulted = await defaultLoanCurrency(rpc);
+    const defaulted = await companyCurrency(rpc);
     if (typeof defaulted !== "string") return defaulted;
     currency = defaulted;
   }
@@ -2102,6 +2112,14 @@ async function callWrite(
       p_from: parsed.data.from_category_id,
       p_into: parsed.data.into_category_id,
     };
+  } else if (name === "set_company_currency") {
+    const parsed = setCompanyCurrencySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_company_currency";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_currency: parsed.data.currency,
+    };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -2305,12 +2323,17 @@ export async function callTool(
     }
     const group = args.group == null ? null : args.group;
     if (group != null && (typeof group !== "string" || group.length === 0 || group.length > 64)) return fail("validation", "validation");
-    const currency = args.currency == null ? "ILS" : args.currency;
-    if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return fail("validation", "validation");
+    let currency = args.currency;
+    if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
     const limit = limitOf(args.limit, 40);
     if (typeof limit !== "number") return limit;
     const offset = offsetOf(args.offset);
     if (typeof offset !== "number") return offset;
+    if (currency == null) {
+      const base = await companyCurrency(rpc);
+      if (typeof base !== "string") return base;
+      currency = base;
+    }
     const result = await rpc("get_breakdown_lines", {
       ...range,
       p_group_key: group,
