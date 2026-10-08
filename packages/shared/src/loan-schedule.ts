@@ -96,6 +96,7 @@ export type LoanScheduleRow = {
 export type LoanBalloon = {
   /** The final payment, in the loan's minor units. */
   readonly amountMinor: bigint;
+  /** The final principal-and-interest over the regular one (escrow left out of both). */
   readonly ratioToPayment: number;
 };
 
@@ -116,8 +117,18 @@ export type LoanSchedule = {
 
 type DateParts = { year: number; month: number; day: number };
 
+/**
+ * Milliseconds since 1970-01-01 for a UTC day. `Date.UTC` maps years 0 to 99 to 1900 to
+ * 1999, so the year is set on its own.
+ */
+function utcTime(year: number, monthIndex: number, day: number): number {
+  const date = new Date(0);
+  date.setUTCFullYear(year, monthIndex, day);
+  return date.getTime();
+}
+
 function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return new Date(utcTime(year, month, 0)).getUTCDate();
 }
 
 function parseStartDate(iso: string): DateParts {
@@ -135,7 +146,7 @@ function parseStartDate(iso: string): DateParts {
 function formatDate(parts: DateParts): string {
   const month = String(parts.month).padStart(2, "0");
   const day = String(parts.day).padStart(2, "0");
-  return `${String(parts.year)}-${month}-${day}`;
+  return `${String(parts.year).padStart(4, "0")}-${month}-${day}`;
 }
 
 function shiftMonths(start: DateParts, add: number): string {
@@ -149,7 +160,7 @@ function shiftMonths(start: DateParts, add: number): string {
 /** Days since 1970-01-01 for a valid YYYY-MM-DD. */
 function dayNumber(iso: string): number {
   const parts = parseStartDate(iso);
-  return Math.round(Date.UTC(parts.year, parts.month - 1, parts.day) / 86_400_000);
+  return Math.round(utcTime(parts.year, parts.month - 1, parts.day) / 86_400_000);
 }
 
 function assertRatePpm(ppm: number): void {
@@ -254,21 +265,32 @@ function exactAnnuity(
   };
 }
 
-/** True when principal-and-interest is more than one minor unit below the exact annuity. */
-function piBelowAnnuity(terms: LoanTerms): boolean {
+/**
+ * True when principal-and-interest is more than one minor unit below the exact annuity
+ * of the principal over `months` (the term by default).
+ */
+function piBelowAnnuity(terms: LoanTerms, months: number = terms.termMonths): boolean {
   const pi = terms.paymentMinor - terms.escrowMinor;
-  const { numerator, denominator } = exactAnnuity(terms.principalMinor, terms.annualRatePpm, terms.termMonths);
+  const { numerator, denominator } = exactAnnuity(terms.principalMinor, terms.annualRatePpm, months);
   return numerator > (pi + ONE_CENT) * denominator;
+}
+
+/**
+ * The final row as a balloon. The ratio compares principal-and-interest on both sides,
+ * like the test that sets the balloon, so a large escrow does not shrink it.
+ */
+function balloonFrom(last: LoanScheduleRow, terms: LoanTerms): LoanBalloon {
+  return {
+    amountMinor: last.paymentMinor,
+    ratioToPayment: Number(last.paymentMinor - last.escrowMinor) / Number(terms.paymentMinor - terms.escrowMinor),
+  };
 }
 
 function balloonOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): LoanBalloon | null {
   if (!piBelowAnnuity(terms)) return null;
   const last = rows.at(-1);
   if (last == null) return null;
-  return {
-    amountMinor: last.paymentMinor,
-    ratioToPayment: Number(last.paymentMinor) / Number(terms.paymentMinor),
-  };
+  return balloonFrom(last, terms);
 }
 
 function finalAdjustmentOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): LoanFinalAdjustment | null {
@@ -335,9 +357,11 @@ export function impliedAmortizationMonths(terms: LoanTerms): number {
  * change keeps its schedule exactly.
  *
  * `balloon` is set only when principal-and-interest is more than one cent below
- * the exact, unrounded annuity (always for a `balloon` loan that runs its term, and for an
- * `interest_only` loan whose interest-only months are the term). Escrow is excluded from
- * that comparison. `finalAdjustment` is the final payment when a full term ends on a
+ * the exact, unrounded annuity over the months that amortize (always for a `balloon` loan
+ * that runs its term, and for an `interest_only` loan whose interest-only months are the
+ * term; on those kinds also for a payment entered by hand below it, unless a rate change
+ * recast it). Escrow is excluded from that comparison and from `ratioToPayment`.
+ * `finalAdjustment` is the final payment when a full term ends on a
  * different amount only because of that rounding; an early payoff, a non-amortizing kind
  * or a recast leaves it null.
  */
@@ -400,13 +424,16 @@ export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
     };
   }
   const reachesTerm = rows.length === terms.termMonths;
-  const ballooned = (kind === "balloon" && amortizeTo > terms.termMonths) || (kind === "interest_only" && ioMonths === terms.termMonths);
+  // A payment entered by hand below the annuity over the months that amortize also leaves
+  // a balloon at the term, unless a rate change recast it to the full annuity.
+  const amortizingMonths = amortizeTo - ioMonths;
+  const ballooned = (kind === "balloon" && amortizeTo > terms.termMonths) ||
+    (kind === "interest_only" && ioMonths === terms.termMonths) ||
+    (!recast && amortizingMonths > 0 && piBelowAnnuity(terms, amortizingMonths));
   const last = rows.at(-1);
   return {
     rows,
-    balloon: reachesTerm && ballooned && last != null
-      ? { amountMinor: last.paymentMinor, ratioToPayment: Number(last.paymentMinor) / Number(terms.paymentMinor) }
-      : null,
+    balloon: reachesTerm && ballooned && last != null ? balloonFrom(last, terms) : null,
     finalAdjustment: null,
   };
 }
@@ -448,6 +475,25 @@ export function regularPaymentMinor(input: {
     annualRatePpm: input.annualRatePpm,
     termMonths: months,
   }) + input.escrowMinor;
+}
+
+/**
+ * The monthly payment to show for a loan (FLOW-136): the stored payment, except on an
+ * `interest_only` loan whose interest-only months are the term. Its stored payment is the
+ * bullet due at the term (decision 0132), while every month before it pays the interest at
+ * the loan's own rate, rounded half to even, plus escrow.
+ */
+export function monthlyPaymentMinor(input: {
+  readonly principalMinor: bigint;
+  readonly annualRatePpm: number;
+  readonly termMonths: number;
+  readonly paymentMinor: bigint;
+  readonly escrowMinor: bigint;
+  readonly kind?: LoanKind;
+  readonly interestOnlyMonths?: number | null;
+}): bigint {
+  if (input.kind !== "interest_only" || input.interestOnlyMonths !== input.termMonths) return input.paymentMinor;
+  return divHalfEven(input.principalMinor * BigInt(input.annualRatePpm), MONTHLY_DENOMINATOR) + input.escrowMinor;
 }
 
 /** Demand-loan interest for a period, as an exact numerator over `365 × RATE_PPM_SCALE`. */

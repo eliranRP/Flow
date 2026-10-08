@@ -7,6 +7,7 @@ import {
   demandStatement,
   impliedAmortizationMonths,
   LoanScheduleError,
+  monthlyPaymentMinor,
   rateOnDate,
   regularPaymentMinor,
   type LoanSchedule,
@@ -95,7 +96,7 @@ describe("buildLoanSchedule", () => {
     expect(rows.map((row) => row.dueDate)).toEqual(["2026-03-31", "2026-04-30", "2026-05-31"]);
     expect(rows[2]?.paymentMinor).toBe(500n);
     expect(rows[2]?.balanceMinor).toBe(0n);
-    expect(balloon).toEqual({ amountMinor: 500n, ratioToPayment: 1.25 });
+    expect(balloon).toEqual({ amountMinor: 500n, ratioToPayment: 400 / 300 });
   });
 
   it("clamps a January 31 start onto the following February", () => {
@@ -196,7 +197,7 @@ describe("buildLoanSchedule", () => {
     });
     expect(balloon).toEqual({
       amountMinor: 6_032_440n,
-      ratioToPayment: Number(6_032_440n) / Number(1_055_000n),
+      ratioToPayment: Number(5_032_440n) / Number(55_000n),
     });
   });
 
@@ -553,6 +554,63 @@ describe("loan kinds and rate changes (decision 0132)", () => {
     const recast = contractualPaymentMinor({ principalMinor: 12_000_000n, annualRatePpm: 120_000, termMonths: 12 });
     expect(rows[12]?.paymentMinor).toBe(recast + 10_000n);
     expect(rows.at(-1)?.balanceMinor).toBe(0n);
+  });
+
+  it("keeps four-digit dates and real leap years before the year 1000", () => {
+    const { rows } = buildLoanSchedule({
+      principalMinor: 300n,
+      annualRatePpm: 0,
+      termMonths: 3,
+      startDate: "0099-12-31",
+      paymentMinor: 100n,
+      escrowMinor: 0n,
+    });
+    expect(rows.map((row) => row.dueDate)).toEqual(["0099-12-31", "0100-01-31", "0100-02-28"]);
+    // 0000 is a leap year (divisible by 400); 1900, which Date.UTC would use, is not.
+    expect(buildLoanSchedule({
+      principalMinor: 200n,
+      annualRatePpm: 0,
+      termMonths: 2,
+      startDate: "0000-01-31",
+      paymentMinor: 100n,
+      escrowMinor: 0n,
+    }).rows.map((row) => row.dueDate)).toEqual(["0000-01-31", "0000-02-29"]);
+  });
+
+  it("flags a payment entered by hand below the annuity on interest_only and balloon loans (FLOW-136)", () => {
+    const regular = regularPaymentMinor(io);
+    expect(buildLoanSchedule({ ...io, paymentMinor: regular }).balloon).toBeNull();
+    const low = buildLoanSchedule({ ...io, paymentMinor: regular - 50_000n });
+    const last = low.rows.at(-1);
+    expect(low.rows).toHaveLength(24);
+    expect(last?.balanceMinor).toBe(0n);
+    expect(low.balloon).toEqual({
+      amountMinor: last?.paymentMinor,
+      ratioToPayment: Number((last?.paymentMinor ?? 0n) - 10_000n) / Number(regular - 60_000n),
+    });
+
+    const atTerm: LoanTerms = { ...base, termMonths: 60, kind: "balloon", amortizationMonths: 60 };
+    const level = regularPaymentMinor(atTerm);
+    expect(buildLoanSchedule({ ...atTerm, paymentMinor: level }).balloon).toBeNull();
+    const short = buildLoanSchedule({ ...atTerm, paymentMinor: level - 10_000n });
+    expect(short.balloon?.amountMinor).toBe(short.rows.at(-1)?.paymentMinor);
+  });
+
+  it("shows interest and escrow as the monthly payment when the interest-only months are the term", () => {
+    const bullet = { ...io, termMonths: 12, interestOnlyMonths: 12 };
+    const paymentMinor = regularPaymentMinor(bullet);
+    expect(paymentMinor).toBe(12_060_000n + 10_000n);
+    expect(monthlyPaymentMinor({ ...bullet, paymentMinor })).toBe(60_000n + 10_000n);
+    expect(monthlyPaymentMinor({ ...io, paymentMinor: 123_456n })).toBe(123_456n);
+    expect(monthlyPaymentMinor({ ...base, paymentMinor: 59_955n })).toBe(59_955n);
+  });
+
+  it("a rate change recasts a low hand-entered payment to the annuity, so no balloon is left", () => {
+    const regular = regularPaymentMinor(io);
+    const rates = [{ effectiveDate: "2026-07-01", annualRatePpm: 70_000 }];
+    const { rows, balloon } = buildLoanSchedule({ ...io, paymentMinor: regular - 50_000n, rates });
+    expect(rows.at(-1)?.balanceMinor).toBe(0n);
+    expect(balloon).toBeNull();
   });
 
   it("a rate change on an amortizing loan with an implicit balloon recasts over the period its payment implies", () => {

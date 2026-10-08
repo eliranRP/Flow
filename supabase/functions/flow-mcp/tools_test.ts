@@ -3718,3 +3718,26 @@ Deno.test("set_invoice_paid validates input, refuses read tokens and passes the 
   assertEquals(refused.isError, true);
   if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "invoice not found");
 });
+
+Deno.test("list_loans shows interest and escrow as the payment when the interest-only months are the term (FLOW-136)", async () => {
+  const bullet = {
+    id: LOAN,
+    name: "Example Bridge",
+    currency: "USD",
+    principal_minor: 12000000,
+    annual_rate_ppm: 60000,
+    term_months: 12,
+    start_date: "2026-01-01",
+    payment_minor: 12070000,
+    escrow_minor: 10000,
+    balance_minor: 12000000,
+    kind: "interest_only",
+    interest_only_months: 12,
+  };
+  const partial = { ...bullet, id: LOAN_TXN, term_months: 24, payment_minor: 541000 };
+  const { rpc } = rpcOf((name) => (name === "mcp_list_loans" ? { status: 200, json: [bullet, partial] } : { status: 500, json: null }));
+  const listed = await callTool("list_loans", {}, ["read"], rpc);
+  if (!listed.structuredContent.ok) throw new Error("list_loans failed");
+  const loans = (listed.structuredContent.data as { loans: typeof bullet[] }).loans;
+  assertEquals(loans.map((loan) => loan.payment_minor), [70000, 541000]);
+});
