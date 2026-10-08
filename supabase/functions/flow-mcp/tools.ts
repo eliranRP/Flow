@@ -868,7 +868,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
     }, true),
-    toolSpec("split_line", "Split one bank line into parts, each with its own category, optional project, and exact amount in minor units (cents). Parts must sum to the line. A part without project_id keeps the line's project. parts [] clears the split. Undo is kind line_split with the transaction id.", {
+    toolSpec("split_line", "Split one bank line into parts, each with its own category, optional project, and exact amount in minor units (cents). Parts must sum to the line. A part without project_id keeps the line's project. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       parts: {

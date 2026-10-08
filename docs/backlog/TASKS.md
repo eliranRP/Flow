@@ -387,7 +387,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)
 - **Type:** BACKLOG NIT · **Status:** in-progress (items 1 and 6 done in #133; item 2 claimed on claude/project-thread-7c0ni2, item 5 next; items 3 and 4 with the refund split thread) · **Depends on:** FLOW-311
 - [x] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part. (#133)
-- [ ] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead.
+- [x] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead. (#136: an open `split_mismatch` review, decision [0123](../decisions/0123-split-line-resync-review.md). The review card has no special text for it yet; a hint goes to the Mercury thread.)
 - [ ] After FLOW-104: let a part take the other kind as a reversal, like a whole line.
 - [ ] App screen to view and edit the parts (SMALL UI, plan with a mockup first).
 - [ ] `split_line` inside the `assign_expenses` batch, with `undo_batch`.
