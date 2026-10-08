@@ -322,6 +322,23 @@ export const projectDetailSchema = z
   })
   .nullable();
 
+/** A loan payment's parts as get_transaction returns them (get_loan_split, decisions 0107 and 0136). */
+export const transactionLoanSplitSchema = z.object({
+  loan_id: z.string(),
+  loan_name: z.string().nullable(),
+  needs_review: z.boolean().nullable(),
+  by_parts: z.boolean(),
+  parts: z.array(
+    z.object({
+      part: z.enum(["interest", "escrow", "principal", "fees"]),
+      amount_minor: agorotSchema,
+      in_pnl: z.boolean().nullable(),
+    }),
+  ),
+});
+
+export type TransactionLoanSplit = z.infer<typeof transactionLoanSplitSchema>;
+
 export const transactionDetailSchema = z
   .object({
     id: z.string(),
@@ -345,6 +362,11 @@ export const transactionDetailSchema = z
     review_id: z.string().nullable().optional(),
     paid: z.boolean().nullable().optional(),
     open_gross_agorot: agorotOrNull.optional(),
+    /**
+     * FLOW-114 (decision 0136): get_loan_split's answer, so the card needs no second read. Null when
+     * the line has no loan split. Missing from an older payload, or unreadable, it reads as unknown.
+     */
+    loan_split: transactionLoanSplitSchema.nullable().optional().catch(undefined),
     allocations: z
       .array(
         z.object({

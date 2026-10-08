@@ -1,0 +1,56 @@
+/* FLOW-114 option B: the split sheet of a matched loan payment (ui/loan-parts-sheet.tsx). */
+.ui-loan-parts {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-loan-parts-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-parts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--control-height);
+  padding-block: var(--space-1);
+}
+
+.ui-loan-parts-row + .ui-loan-parts-row {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-loan-parts-label {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Wide enough for 9,999,999.99 at 320px; the field's own message line stays off. */
+.ui-loan-parts-field {
+  flex: 0 0 auto;
+  inline-size: 9.5rem;
+}
+
+.ui-loan-parts-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3) var(--space-1);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-title-3-weight);
+  line-height: var(--type-label-line);
+}
+
+.ui-loan-parts-problem {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.ui-loan-parts-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

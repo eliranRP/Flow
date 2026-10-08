@@ -2,6 +2,8 @@ import { formatAmountText, formatMoney, type TransactionDetail } from "@flow/sha
 import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
+import { LoanCategoryRow } from "./loan-match-row";
+import { useLoanSplitView } from "./loan-match-api";
 import { absAgorot } from "../agorot";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
@@ -132,6 +134,7 @@ export function TransactionScreen({
   const categories = useCategoriesQuery(sample == null);
   const lineSplitQuery = useLineSplitQuery(sample ? "" : transactionId, sample == null);
   const loanSplitFlag = useLoanSplitFlag(sample?.id ?? transactionId);
+  const loanSplitView = useLoanSplitView((sample ?? detail.data)?.loan_split);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const remove = useWrite({
     failure: "לא הצלחנו למחוק.",
@@ -445,14 +448,17 @@ export function TransactionScreen({
             setChangeSheet(true);
           }} />
         )}
-        {holdWrites ? (
-          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
-        ) : (
-          <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
-            setChangeStart("category");
-            setChangeSheet(true);
-          }} />
-        )}
+        {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
+        <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} active={sample == null} readOnly={holdWrites}>
+          {holdWrites ? (
+            <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+          ) : (
+            <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
+              setChangeStart("category");
+              setChangeSheet(true);
+            }} />
+          )}
+        </LoanCategoryRow>
       </List>
       <LoanTransactionSplit
         transactionId={txn.id}
@@ -462,6 +468,7 @@ export function TransactionScreen({
         direction={txn.direction}
         active={sample == null}
         readOnly={holdWrites}
+        split={txn.loan_split}
       />
       {vatShown && txn.vat_amount !== 0n ? (
         <p className="ui-page-pad t-hint">
@@ -480,7 +487,7 @@ export function TransactionScreen({
         split={lineSplit}
         readOnly={holdWrites}
         categories={sample ? (sampleCategories ?? []) : (categories.data ?? [])}
-        loanSplit={loanSplitFlag}
+        loanSplit={loanSplitFlag || loanSplitView != null}
         projectSplitTo={`/transactions/${txn.id}/split${search}`}
         onProjectSplit={onOpenSplit ? openSplit : undefined}
         categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
