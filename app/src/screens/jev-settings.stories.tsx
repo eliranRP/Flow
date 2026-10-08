@@ -3,6 +3,8 @@ import { JEV_DEFAULT, JevSettingsCard, type JevCardState } from "./jev-settings"
 
 const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "ready" };
 const on: JevCardState = { ...JEV_DEFAULT, enabled: true, status: "ready" };
+const auto: JevCardState = { ...JEV_DEFAULT, enabled: true, mode: "auto", status: "ready" };
+const autoOdd: JevCardState = { ...auto, threshold: 0.92 };
 const failed: JevCardState = { ...JEV_DEFAULT, status: "error" };
 
 const meta = {
@@ -28,6 +30,13 @@ export const On: Story = { args: { state: on, optionsOpen: true }, ...light390 }
 export const OnDark: Story = { args: { state: on, optionsOpen: true }, ...dark390 };
 export const On320: Story = { args: { state: on, optionsOpen: true }, ...light320 };
 export const OnDark320: Story = { args: { state: on, optionsOpen: true }, ...dark320 };
+
+// FLOW-702: auto mode shows the threshold choices; a stored threshold off the list selects none.
+export const OnAuto: Story = { args: { state: auto, optionsOpen: true }, ...light390 };
+export const OnAutoDark: Story = { args: { state: auto, optionsOpen: true }, ...dark390 };
+export const OnAuto320: Story = { args: { state: auto, optionsOpen: true }, ...light320 };
+export const OnAutoDark320: Story = { args: { state: auto, optionsOpen: true }, ...dark320 };
+export const OnAutoCustomThreshold: Story = { args: { state: autoOdd, optionsOpen: true }, ...light390 };
 
 export const Error: Story = { args: { state: failed }, ...light390 };
 export const ErrorDark: Story = { args: { state: failed }, ...dark390 };

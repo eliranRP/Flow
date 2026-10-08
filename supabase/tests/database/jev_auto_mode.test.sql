@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(37);
+select plan(39);
 
 do $users$
 begin
@@ -450,6 +450,23 @@ select is(
   (select count(*)::integer from public.jev_prefills),
   0,
   'another company sees none of the audit rows'
+);
+reset role;
+
+-- The review card reads these rows (#231): the owner still reads their own, the undone mark included.
+insert into ja_out (label, result)
+select 'fills_co', to_jsonb(count(*)::integer) from public.jev_prefills
+where company_id = (select id from ja_ref where label = 'co');
+select tests.authenticate_as('ja_owner');
+select is(
+  (select count(*)::integer from public.jev_prefills),
+  (select (result #>> '{}')::integer from ja_out where label = 'fills_co'),
+  'the owner reads every audit row of their company'
+);
+select is(
+  (select undone_at is not null from public.jev_prefills where transaction_id = (select id from ja_ref where label = 'a1')),
+  true,
+  'including the undone mark the card reads'
 );
 reset role;
 
