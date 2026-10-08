@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups (category rename merged in #228) | The next plan-first server item |
+| Dev lane 1 | FLOW-802 health check (plan: the project's plans/flow-802-health-check.md; FLOW-401 server merged in #233, category rename in #228) | The next plan-first server item |
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
@@ -784,7 +784,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-401"></a>
 ### FLOW-401 · Project view by category
-- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP, dev lane 1; the owner chose "With groups", 2026-10-08; plan: the project's plans/flow-401-project-categories.md; the screen goes to a UI lane) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #233, [0149](../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08; plan: the project's plans/flow-401-project-categories.md; the screen needs a mockup and the owner's approval) · **Depends on:** —
 - **What:** Per project, expenses broken down by category with every line visible under its category (no extra taps or "show more"), category consolidation (for example all utilities under one group), a monthly expected amount per category from earlier months, and an alert when a month looks off (a new or missing recurring expense, or an amount well above usual). The math is plain SQL (median of the last 3–6 months, threshold rules); Jev only phrases. MCP: tools for the breakdown, the expected amounts and the anomaly list.
 - **Acceptance:** plan and mockup approved.
 
@@ -796,7 +796,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-403"></a>
 ### FLOW-403 · Project timeline and expected months
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** FLOW-401
+- **Type:** PLAN FIRST · **Status:** plan-first, screen only (server parts exist: `get_project` takes any date range, [0129](../decisions/0129-profit-by-month.md) and [0141](../decisions/0141-period-bar.md); `get_expected_months` takes a project, [0131](../decisions/0131-jev-patterns.md); `project_category_months` gives the expected cost per category, [0149](../decisions/0149-project-category-months.md)). A UI lane plans the screen with a mockup · **Depends on:** FLOW-401
 - **What:** Transactions by a chosen date range (for example last month), plus expected future months from past data, computed in SQL. Shares the recurring-pattern base with FLOW-701.
 - **Acceptance:** plan approved.
 
@@ -1069,7 +1069,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-802"></a>
 ### FLOW-802 · Health check and usage monitoring
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (dev lane 1, 2026-10-08; plan: the project's plans/flow-802-health-check.md, option A recommended: checks plus a daily GitHub run that fails and emails on an alert) · **Depends on:** —
 - **What:** A `health()` RPC and a daily health-check workflow (stuck queues, cron runs, last sync), usage alerts against the free-tier limits, and a move-to-paid-plan runbook.
 - **Acceptance:** an alert on a simulated stuck queue.
 
