@@ -91,7 +91,7 @@ const ALLOWED: Record<string, Set<string>> = {
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
-  search_expenses: new Set(["scope", "query", "limit", "offset"]),
+  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "direction"]),
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit", "as_of"]),
@@ -986,7 +986,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project, signed against the line's own kind: a reversal part counts minus (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
       from: { type: "string" },
@@ -1006,11 +1006,16 @@ function readTools() {
     toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag; category_suggested is true while the category is only a guess, and a guessed kept-out category still counts. pnl_state is in, out, or mixed: a line split by category with a part kept out, or a loan payment counted by its parts, is mixed. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
-    toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id. meta is the line's bank details (see get_expense).", {
+    toolSpec("search_expenses", "Search pending review rows, filed rows, or both (income too). id is the ledger id. meta is the line's bank details (see get_expense). query matches the description, supplier or customer, in any case. Optional filters: from and to (YYYY-MM-DD, by document date, both ends included), direction (income or expense), project_id (the line's project, a share of a shared cost on it, or a split part on it; none for lines on no project) and category_id (the line's category, or a split or loan split part in it; none for lines with no category and no parts). filed and all rows, newest first, also have currency, amount_original, line_status, customer_name, waiting_review, kept_out, split_parts (line split parts, 0 when whole) and loan_matched. pending rows are list_review rows; with a filter they come newest first.", {
       scope: { type: "string", enum: ["pending", "filed", "all"] },
       query: { type: "string" },
       limit: { type: "integer" },
       offset: { type: "integer" },
+      from: { type: "string" },
+      to: { type: "string" },
+      direction: { type: "string", enum: ["income", "expense"] },
+      project_id: { type: "string" },
+      category_id: { type: "string" },
     }),
     toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). direct + shared + overhead + unassigned expense = expense. unassigned is income with no project, and cost with no role, a project role and no project, or a shared role and no split.", {
       from: { type: "string" },
@@ -1263,12 +1268,12 @@ function writeTools() {
       effective_date: { type: "string" },
       annual_rate_percent: { type: ["number", "string", "null"] },
     }, true),
-    toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
+    toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id, unless its category is kept out of the P&L and the line is not put back in it. A part without project_id and one naming the line's project, with the same category, are the same pair (refused). Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       parts: LINE_PARTS_SPEC,
     }, true),
-    toolSpec("set_line_pnl", "Take one line out of the P&L (in_pnl false), count it although its category is kept out (in_pnl true), or follow its category again (in_pnl null). Covers every part of a split line. A loan line is refused. Returns the line's in_pnl. Undo is kind line_pnl with the transaction id.", {
+    toolSpec("set_line_pnl", "Take one line out of the P&L (in_pnl false), count it although its category is kept out (in_pnl true), or follow its category again (in_pnl null). Covers every part of a split line. A loan line is refused. in_pnl true is refused (a reversal part needs a project) while a split part of the other kind in a kept-out category has no project. Returns the line's in_pnl. Undo is kind line_pnl with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       in_pnl: { type: ["boolean", "null"] },
@@ -2185,6 +2190,57 @@ export async function callTool(
       if (scopeName !== "pending" && scopeName !== "filed" && scopeName !== "all") return fail("validation", "validation");
       const query = textOf(args.query);
       if (typeof query !== "string" && query != null) return query;
+      const from = dateOf(args.from);
+      if (typeof from !== "string" && from != null) return from;
+      const to = dateOf(args.to);
+      if (typeof to !== "string" && to != null) return to;
+      if (from != null && to != null && from > to) return fail("validation", "validation");
+      const direction = textOf(args.direction);
+      if (typeof direction !== "string" && direction != null) return direction;
+      if (direction != null && direction !== "expense" && direction !== "income") return fail("validation", "validation");
+      const project = textOf(args.project_id);
+      if (typeof project !== "string" && project != null) return project;
+      if (project != null && project !== "none" && !UUID.test(project)) return fail("validation", "validation");
+      const category = textOf(args.category_id);
+      if (typeof category !== "string" && category != null) return category;
+      if (category != null && category !== "none" && !UUID.test(category)) return fail("validation", "validation");
+      const filters = {
+        p_from: from,
+        p_to: to,
+        p_project: project?.toLowerCase() ?? null,
+        p_category: category?.toLowerCase() ?? null,
+        p_direction: direction,
+      };
+      const filtered = Object.values(filters).some((value) => value != null);
+      if (scopeName === "pending" && filtered) {
+        // With a filter, search_transactions picks the page (0140); the rows stay list_review's.
+        // A line with two open review rows shows once here, and a row resolved between the two
+        // reads drops out of the page while total still counts it.
+        const found = await rpc("search_transactions", {
+          p_query: query,
+          p_scope: "pending",
+          p_limit: limit,
+          p_offset: offset,
+          ...filters,
+        });
+        if (found.status >= 400 || found.json == null || typeof found.json !== "object") {
+          return fail("refused", READ_REFUSED);
+        }
+        const body = found.json as { total?: unknown; expenses?: unknown };
+        const ids = Array.isArray(body.expenses)
+          ? (body.expenses as Array<Record<string, unknown>>).map((row) => row.id)
+          : [];
+        const listed = await rpc("list_review", {});
+        if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The read was refused.");
+        const byLine = new Map((listed.json as Review[]).map((row) => [row.transaction_id, row]));
+        const rows = ids.flatMap((id) => {
+          const row = byLine.get(id);
+          return row ? [{ ...row, id: row.transaction_id }] : [];
+        });
+        const expenses = await withLineMeta(rpc, rows, (row) => row.id);
+        if (!Array.isArray(expenses)) return expenses;
+        return ok({ total: body.total, expenses });
+      }
       if (scopeName === "pending") {
         const listed = await rpc("list_review", {});
         if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The read was refused.");
@@ -2211,6 +2267,7 @@ export async function callTool(
         p_scope: scopeName,
         p_limit: limit,
         p_offset: offset,
+        ...(filtered ? filters : {}),
       });
       if (found.status >= 400 || found.json == null || typeof found.json !== "object") {
         return fail("refused", READ_REFUSED);

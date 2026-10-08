@@ -1125,7 +1125,7 @@ isOneToOne: false
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
                            },
 "search_transactions":
-{ Args: { "p_limit"?: number,"p_offset"?: number,"p_query"?: string,"p_scope"?: string }; Returns: Json
+{ Args: { "p_category"?: string,"p_direction"?: string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project"?: string,"p_query"?: string,"p_scope"?: string,"p_to"?: string }; Returns: Json
                            },
 "set_after_overhead":
 { Args: { "p_on": boolean,"p_project_id"?: string }; Returns: undefined

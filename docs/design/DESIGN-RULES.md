@@ -193,6 +193,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 |---|---|---|
 | Button | primary, secondary (tint), ghost, destructive. Default, pressed, disabled | One primary per screen. Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
 | + button | 48px circle. Default, pressed | Opens Add. Sits in the tab bar |
+| Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"` | With Back or a leading control, Back sits alone on the bar and the kicker, title and subtitle stack under it on the start side (mockups 07, 14). A compact title (the transaction) and `layout="inline"` stay on the bar. FLOW-326 |
 | Period pill | tinted, or white/dark on the band | Opens the period sheet |
 | Chips | suggested (tint + ✦), outlined choice, selected (violet + check), disabled, status | Hit area 44px even if drawn 36px |
 | Segmented tabs | track tint, selected `seg-on` | |
@@ -201,12 +202,12 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed; one row, or two rows (review, unpaid) each pressed on its own | The one tinted block on Home. Two rows share it, separated by padding, no hairline (FLOW-321) |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
-| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. [0120](../decisions/0120-income-green-type-scale.md) |
+| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. A row that opens the transaction carries the trailing chevron (FLOW-328). [0120](../decisions/0120-income-green-type-scale.md) |
 | Statement row (`ListRow variant="statement"`) | default, pressed, focus; pending; with suggestion; income; name with no letter | FLOW-305 option A, the review list. 40px initials circle in `tint` with `accent-text` letters (one colour for every row; a name with no letter shows the source icon). Counterparty 17/400 `text`, one line; a Latin name is LTR and cuts at its end. Line 2 in `meta`: the `בהמתנה` status chip, then `✦` in `accent-text` and "project · category" (ellipsis). End column: the amount as in a transaction row, the method under it (16px icon + `meta` label, never cut). The link name reads counterparty, method, "הצעה: …", direction word + amount, "בהמתנה". Day heads (`היום`, `אתמול`, `יום ב׳ · 05/10`) are h3, 15/500 `text-secondary`, under the sticky month head, not sticky; month totals show cents when the rows do. |
 | Change pill | ▼ / ▲ plus % | On the band it sits in a solid pill |
 | Tab bar | בית, פרויקטים, +, לאישור (neutral badge), הגדרות | Active tab is violet icon and label |
 | Bottom sheet | scrim, grab handle, title, ✕ | ✕, scrim, swipe, and Android back save a valid pending change, then close. An incomplete change stays open and says why, with ביטול השינוי beside that sentence. A second dismiss discards it and closes. A dismiss during a save waits for the save, then closes. Push a history entry. [0075](../decisions/0075-save-on-tap-and-on-leave.md) |
-| Empty state | icon, title, one line, at most one button | No emoji. Positive wording when the work is done |
+| Empty state | icon, title, one line, at most one button | No emoji. Positive wording when the work is done. The action, here and on an error state, is the standard 44px button in the secondary (tint) style, never the 36px pill (FLOW-328; style set by the design lead in cycle 4) |
 | Skeleton | bars shaped like the content, shimmer 1.4s | Known chrome stays real. `ld-01`…`ld-03` |
 | Busy button | same size, spinner + verb ("מאשר…") | Other actions on that screen go disabled. `ld-04` |
 | Processing | progress, step list, "המשך ברקע" | Invoice `ld-06`. Bank `ld-05` is not a build task ([0065](../decisions/0065-review-round5.md) point 40) |
@@ -265,7 +266,7 @@ The band holds only the summary. Home: one quiet period pill, one label, the her
 ### 3.3 Tap targets and thumb zone
 
 - Minimum hit area **44×44** (`--touch-min`). Buttons and inputs are 52px tall. The + button is 48px. Chips drawn at 36px still hit 44px.
-- A row toggles or navigates across its full width.
+- A row toggles or navigates across its full width. A row rendered as a button starts its copy on the start side, like any other row (FLOW-326).
 - Primary actions sit at the bottom of sheets and full-screen flows, in the thumb zone. The tab bar is the persistent thumb-zone navigation. Guide §3 and §4.
 
 ### 3.4 RTL
@@ -286,7 +287,7 @@ Guide §6.4 and §11.3. Do not use `Intl.NumberFormat('he-IL', {style:'currency'
 | Money | `₪200,000`. ₪ before the digits, no space, thousands commas, whole shekels on summaries |
 | Agorot | Only on detail, the review card, and edit fields, and only when non-zero |
 | Negative loss | Unicode minus U+2212 before ₪, in `bad`: `−₪10,000` |
-| Row sign | `+` or `−`, amount stays `text` |
+| Row sign | `+` or `−`, amount stays `text`. A figure already labelled הוצאות (project band, category rows) carries no minus (FLOW-328) |
 | Percent | `27%`, whole numbers |
 | Change | `▼ 10%` or `▲ 8%` in a pill |
 | Date | `22/09` this year, `21/09/2026` full, range `01–30/09` |
@@ -305,6 +306,7 @@ Guide §11.1.
 - Short, friendly, direct, second person. One line where possible.
 - Gender-neutral: plural imperatives ("העלו") and noun buttons ("אישור", "שמירה", "ביטול"). Avoid "אתה" / "את".
 - Plain words: רווח, הכנסות, הוצאות, לא שולמו, כלליות.
+- Splitting a line is always "פיצול" (verb לפצל, past פוצלו), never "חלוקה". Owner pick, 2026-10-08 (FLOW-328).
 - No exclamation marks, no emoji, no ALL-CAPS English.
 - Hebrew punctuation: ״ ׳, en dash with spaces, middle dot.
 - Errors say what happened and what to do, without blame.

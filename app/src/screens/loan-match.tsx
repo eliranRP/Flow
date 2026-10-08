@@ -361,6 +361,9 @@ export function LoanReadError({ label, busy, onRetry }: { label: string; busy: b
   );
 }
 
+/** The server refuses a payment dated after a paid-off or closed loan ended (FLOW-136). */
+const LOAN_CLOSED_TEXT = "ההלוואה נסגרה לפני תאריך התשלום.";
+
 function failureText(error: Error): string {
   const code = (error as { code?: string }).code;
   if (code === "42501") return "אין הרשאה לשייך הלוואה.";
@@ -369,6 +372,7 @@ function failureText(error: Error): string {
   if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
   if (error.message.includes("loan_split_sum")) return "הפיצול לא מסתכם לשורה.";
   if (error.message === "date") return "התאריך לא על לוח הסילוקין.";
+  if (error.message.includes("loan_closed")) return LOAN_CLOSED_TEXT;
   return "לא הצלחנו לשייך את ההלוואה.";
 }
 
@@ -379,6 +383,7 @@ function correctFailureText(error: Error): string {
   if (error.message.includes("loan_split_sum")) return "הפיצול לא מסתכם לשורה.";
   // The balance check clear_loan_split_review runs again (FLOW-131).
   if (error.message.includes("loan_split_balance")) return "התשלום גבוה מיתרת ההלוואה.";
+  if (error.message.includes("loan_closed")) return LOAN_CLOSED_TEXT;
   return "לא הצלחנו לעדכן את הפיצול.";
 }
 

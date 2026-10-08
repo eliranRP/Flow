@@ -1,15 +1,15 @@
 {
-  "id": "311a05f7-70ad-41c9-83fc-064084390d97",
+  "id": "3339d413-34d4-42b2-82bc-635c6bfd0e38",
   "feeId": null,
-  "amount": -35300,
-  "createdAt": "2026-07-31T13:45:18.220205Z",
-  "postedAt": "2026-07-31T14:32:33.449112Z",
-  "estimatedDeliveryDate": "2026-08-06T21:00:00Z",
+  "amount": -24400,
+  "createdAt": "2026-07-31T15:10:10.301769Z",
+  "postedAt": "2026-07-31T16:33:10.387157Z",
+  "estimatedDeliveryDate": "2026-08-01T21:00:00Z",
   "status": "sent",
   "note": null,
   "bankDescription": "Send Money transaction initiated on Mercury",
   "externalMemo": null,
-  "counterpartyId": "1566ad33-7ca6-4a44-8277-c81a6a7c3cee",
+  "counterpartyId": "ab2d04a1-1b66-487f-ac38-cd9a8612246b",
   "details": {
     "electronicRoutingInfo": {
       "bankName": "EXAMPLE BANK N.A.",
@@ -41,7 +41,7 @@
   "categoryData": null,
   "checkNumber": null,
   "trackingNumber": null,
-  "requestId": "fc7fdb0a-995e-439a-9ad1-5ee884f56c0a",
-  "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+  "requestId": "2e021878-7784-4f95-8350-007314ade394",
+  "accountId": "6ae62fa6-a618-46b0-8981-800caa11d5d3",
   "merchant": null
 }
