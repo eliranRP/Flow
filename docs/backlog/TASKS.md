@@ -32,7 +32,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | done (#116) |
 | 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | done (#118) |
-| 13c | [FLOW-206](#flow-206) | Bulk setup without rate-limit stalls | MCP | claimed |
+| 13c | [FLOW-206](#flow-206) | Bulk setup without rate-limit stalls | MCP | in-progress (#119) |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
@@ -312,7 +312,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-206"></a>
 ### FLOW-206 · Bulk setup without rate-limit stalls
-- **Type:** MCP · **Status:** claimed (FLOW-206 thread, 2026-10-08, claude/project-thread-2a1dyf) · **Depends on:** —
+- **Type:** MCP · **Status:** in-progress (#119) · **Depends on:** —
 - **What:** `create_project` and `create_category` hit HTTP 429 after about 10 calls in a row during a company setup. Add batch create tools (like `assign_expenses`) or a higher burst for setup. Also send the MCP `tools/list_changed` notification so clients refresh a stale tool list after a deploy.
 - **Acceptance:** a setup of 30 projects and categories runs without a 429; tests for the batch and the notification.
 

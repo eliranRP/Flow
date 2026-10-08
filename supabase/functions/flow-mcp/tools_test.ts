@@ -333,6 +333,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -372,6 +374,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -944,6 +948,82 @@ Deno.test("create_project and create_category send exact p_* bodies", async () =
     name: "mcp_create_category",
     body: { p_idempotency_key: "cat-new-1", p_name: "Tools", p_kind: "expense" },
   });
+});
+
+Deno.test("create_projects and create_categories send one batch write each", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: "cccccccc-cccc-4000-8000-0000000000c1",
+        ok_count: 1,
+        error_count: 1,
+        results: [
+          { name: "Site Alpha", ok: true, id: PROJECT_NEW, undo_kind: "project" },
+          { name: "Site Beta", ok: false, code: "refused", existing_id: PROJECT_NEW },
+        ],
+      },
+    },
+  }));
+  const projects = await callTool("create_projects", {
+    idempotency_key: "setup-p",
+    items: [{ name: "  Site Alpha " }, { name: "Site Beta", status: "finished" }],
+  }, ["write"], rpc);
+  assertEquals(projects.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_create_projects",
+    body: {
+      p_idempotency_key: "setup-p",
+      p_items: [{ name: "Site Alpha" }, { name: "Site Beta", status: "finished" }],
+    },
+  });
+  if (projects.structuredContent.ok) {
+    assertEquals((projects.structuredContent.data as { error_count: number }).error_count, 1);
+  }
+  const categories = await callTool("create_categories", {
+    idempotency_key: "setup-c",
+    items: [{ name: "Tools", kind: "expense" }, { name: "Tools", kind: "income" }],
+  }, ["write"], rpc);
+  assertEquals(categories.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_create_categories",
+    body: {
+      p_idempotency_key: "setup-c",
+      p_items: [{ name: "Tools", kind: "expense" }, { name: "Tools", kind: "income" }],
+    },
+  });
+});
+
+Deno.test("setup batches refuse bad rows before any write", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const many = Array.from({ length: 101 }, (_, index) => ({ name: `Site ${index}` }));
+  const cases = [
+    callTool("create_projects", { idempotency_key: "k", items: [] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: many }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "x" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "Site A" }, { name: " Site A" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "Site A", company_id: "forged" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k".repeat(125), items: [{ name: "Site A" }] }, ["write"], rpc),
+    callTool("create_categories", { idempotency_key: "k", items: [{ name: "Tools" }] }, ["write"], rpc),
+    callTool("create_categories", { idempotency_key: "k", items: [{ name: "Tools", kind: "asset" }] }, ["write"], rpc),
+    callTool("create_categories", {
+      idempotency_key: "k",
+      items: [{ name: "Tools", kind: "expense" }, { name: "Tools ", kind: "expense" }],
+    }, ["write"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("create_categories", {
+    idempotency_key: "k",
+    items: [{ name: "Tools", kind: "expense" }],
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 0);
 });
 
 Deno.test("cycle 4 write validation and read-token forbidden", async () => {

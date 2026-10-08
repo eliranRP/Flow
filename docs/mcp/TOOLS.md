@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -20,8 +20,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category`, `split_line`, `set_line_pnl` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
-| `undo` `kind: "project"` | `id` | the project id `create_project` returned |
-| `undo` `kind: "category"` | `id` | the category id `create_category` returned |
+| `undo` `kind: "project"` | `id` | the project id `create_project` or a `create_projects` row returned |
+| `undo` `kind: "category"` | `id` | the category id `create_category` or a `create_categories` row returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 | `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
 | `undo` `kind: "company"` | `id` | the company id `rename_company` returned |
@@ -39,6 +39,10 @@ A review-queue id in a transaction argument is `validation` and the message is `
 Success: `{ "ok": true, "data": {} }`.
 
 Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" } }`. Tool failures set MCP `isError` true. HTTP 401 and 429 are not tool results.
+
+## Tool list changes
+
+`initialize` says `listChanged: true` and returns an `Mcp-Session-Id` that stamps the tool list the token sees. After a deploy changes that list, a `tools/call` from an older session that accepts `text/event-stream` is answered as a stream: `notifications/tools/list_changed` first, then the reply. List the tools again on that notification. Without a session id, or with `Accept: application/json` only, the reply is plain JSON ([0119](../decisions/0119-mcp-bulk-setup.md)).
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
@@ -220,6 +224,22 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 ```
 
 There is no cost-type argument on categories. Output `data`: `{ "id", "undo_kind": "category" }`.
+
+### create_projects and create_categories
+
+For a company setup: up to 100 rows in one write, so a setup of dozens of projects and categories stays inside the write rate limit ([0119](../decisions/0119-mcp-bulk-setup.md)).
+
+```json
+{ "idempotency_key": "setup-1", "items": [{ "name": "Site Alpha" }, { "name": "Site Beta", "status": "finished" }] }
+```
+
+```json
+{ "idempotency_key": "setup-2", "items": [{ "name": "Tools", "kind": "expense" }, { "name": "Rent", "kind": "income" }] }
+```
+
+Rows take the same fields as `create_project` and `create_category`. The same name twice in one call (per kind for categories), an empty list, or more than 100 rows is `validation` for the whole call. Each row uses the key `idempotency_key:ordinal`, so the key is 1–124 characters. A bad row does not block good rows.
+
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is `{ "name", "ok": true, "id", "undo_kind" }` (categories add `kind`) or `{ "name", "ok": false, "code" }`. A name that is already taken is `refused` and adds `existing_id`, so a rerun of a setup still returns every id. [undo_batch](#undo_batch) with `batch_key` removes the rows that were created; a row that something already uses is `conflict` and stays.
 
 ### hide_category
 
@@ -438,7 +458,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from an `assign_expenses` or `set_lines_pnl` batch through `mcp_undo`, newest first. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` for a created project or category. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Not in tools/list
 

@@ -1,4 +1,5 @@
-// flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status.
+// flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status. The session id only
+// stamps the tool list a session saw, so a stale session hears list_changed (decision 0119).
 // Decision 0080. Reads through cycle 5, single-expense writes, cycle 4–6 writes, category P&L toggle. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
 
@@ -70,6 +71,26 @@ function jsonResponse(req: Request, body: unknown, status: number, extra?: Heade
   headers.set("x-flow-cf-connecting-ip", cfState(req));
   return new Response(JSON.stringify(body), { status, headers });
 }
+
+// One JSON-RPC message per event. The notification goes first, then the reply.
+function sseResponse(req: Request, messages: unknown[]): Response {
+  const headers = new Headers();
+  headers.set("content-type", "text/event-stream");
+  headers.set("cache-control", "no-store");
+  headers.set("x-flow-cf-connecting-ip", cfState(req));
+  const text = messages.map((message) => `event: message\ndata: ${JSON.stringify(message)}\n\n`).join("");
+  return new Response(text, { status: 200, headers });
+}
+
+// The tool list a scope sees, as a short hash. initialize puts it in the session id, so a
+// later call from a session that listed an older set can be told to list the tools again.
+async function toolsVersion(scope: string[]): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(toolsFor(scope)));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(digest.slice(0, 8), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+const LIST_CHANGED = { jsonrpc: "2.0", method: "notifications/tools/list_changed" };
 
 function emptyResponse(req: Request, status: number, extra?: HeadersInit): Response {
   const headers = new Headers(extra);
@@ -515,28 +536,36 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   if (body == null) return jsonResponse(req, { error: "one message per request" }, 400);
   if (method.startsWith("notifications/")) return emptyResponse(req, 202);
   const id = "id" in body ? body.id : null;
+  const scope = Array.isArray(row.scope) ? row.scope.filter((item): item is string => typeof item === "string") : [];
   if (method === "initialize") {
     return jsonResponse(req, {
       jsonrpc: "2.0",
       id,
       result: {
         protocolVersion: PROTOCOL,
-        capabilities: { tools: { listChanged: false } },
+        capabilities: { tools: { listChanged: true } },
         serverInfo: { name: "flow-mcp", version: "0.1.0" },
       },
-    }, 200);
+    }, 200, { "mcp-session-id": `${crypto.randomUUID()}.${await toolsVersion(scope)}` });
   }
   if (method === "ping") return jsonResponse(req, { jsonrpc: "2.0", id, result: {} }, 200);
-  const scope = Array.isArray(row.scope) ? row.scope.filter((item): item is string => typeof item === "string") : [];
   if (method === "tools/list") {
     const tools = signingKey(deps) ? toolsFor(scope) : [];
     return jsonResponse(req, { jsonrpc: "2.0", id, result: { tools } }, 200);
   }
   if (method === "tools/call") {
     const name = toolName;
+    // A session that listed the tools before a deploy changed them gets list_changed first,
+    // when it accepts a stream. Sessions without an id (or a stream) get plain JSON.
+    const session = req.headers.get("mcp-session-id");
+    const stale = session != null &&
+      (req.headers.get("accept") ?? "").includes("text/event-stream") &&
+      session.slice(session.lastIndexOf(".") + 1) !== await toolsVersion(scope);
+    const reply = (message: unknown) =>
+      stale ? sseResponse(req, [LIST_CHANGED, message]) : jsonResponse(req, message, 200);
     const toolError = (code: string, message: string) => {
       const structured = { ok: false, error: { code, message } };
-      return jsonResponse(req, {
+      return reply({
         jsonrpc: "2.0",
         id,
         result: {
@@ -544,7 +573,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
           structuredContent: structured,
           isError: true,
         },
-      }, 200);
+      });
     };
     const knownRead = (READ_TOOL_NAMES as readonly string[]).includes(name);
     if ((isWriteTool(name) || knownRead) && !scopeAllows(name, scope)) {
@@ -584,7 +613,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
       deps.waitUntil,
     );
     const text = JSON.stringify(result.structuredContent);
-    return jsonResponse(req, {
+    return reply({
       jsonrpc: "2.0",
       id,
       result: {
@@ -592,7 +621,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
         structuredContent: result.structuredContent,
         isError: result.isError,
       },
-    }, 200);
+    });
   }
   return jsonResponse(req, { jsonrpc: "2.0", id, error: { code: -32601, message: "Method not found" } }, 200);
 }

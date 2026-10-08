@@ -39,6 +39,8 @@ export const WRITE_TOOL_NAMES = [
   "set_expense_category",
   "create_project",
   "create_category",
+  "create_projects",
+  "create_categories",
   "sync_bank",
   "hide_category",
   "set_category_pnl",
@@ -76,6 +78,8 @@ const ALLOWED: Record<string, Set<string>> = {
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   create_project: new Set(["idempotency_key", "name", "status"]),
   create_category: new Set(["idempotency_key", "name", "kind"]),
+  create_projects: new Set(["idempotency_key", "items"]),
+  create_categories: new Set(["idempotency_key", "items"]),
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
@@ -210,6 +214,36 @@ const createCategorySchema = z.object({
   name: z.string().trim().min(2).max(120),
   kind: z.enum(["expense", "income"]),
 }).strict();
+// A setup batch: up to 100 rows, a name at most once (per kind for categories).
+const PROJECT_ROW = z.object({
+  name: z.string().trim().min(2).max(120),
+  status: z.enum(["active", "finished"]).optional(),
+}).strict();
+const CATEGORY_ROW = z.object({
+  name: z.string().trim().min(2).max(120),
+  kind: z.enum(["expense", "income"]),
+}).strict();
+function uniqueRows<T>(keyOf: (row: T) => string) {
+  return (body: { items: T[] }, ctx: z.RefinementCtx) => {
+    const seen = new Set<string>();
+    for (const item of body.items) {
+      const key = keyOf(item);
+      if (seen.has(key)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom });
+        return;
+      }
+      seen.add(key);
+    }
+  };
+}
+const createProjectsSchema = z.object({
+  idempotency_key: BATCH_KEY,
+  items: z.array(PROJECT_ROW).min(1).max(100),
+}).strict().superRefine(uniqueRows<z.infer<typeof PROJECT_ROW>>((row) => row.name));
+const createCategoriesSchema = z.object({
+  idempotency_key: BATCH_KEY,
+  items: z.array(CATEGORY_ROW).min(1).max(100),
+}).strict().superRefine(uniqueRows<z.infer<typeof CATEGORY_ROW>>((row) => `${row.kind}|${row.name}`));
 const syncBankSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
 }).strict();
@@ -743,6 +777,36 @@ function writeTools() {
       name: { type: "string" },
       kind: { type: "string", enum: ["expense", "income"] },
     }, true),
+    toolSpec("create_projects", "Create up to 100 projects in one write, for a company setup. Partial success is allowed: each row returns ok with its id, or a code; a name that is already taken returns existing_id. undo_batch with the returned batch_key removes the rows that were created.", {
+      idempotency_key: { type: "string" },
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            status: { type: "string", enum: ["active", "finished"] },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
+    toolSpec("create_categories", "Create up to 100 categories in one write, for a company setup. Partial success is allowed: each row returns ok with its id, or a code; a name already taken for that kind returns existing_id. undo_batch with the returned batch_key removes the rows that were created.", {
+      idempotency_key: { type: "string" },
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            kind: { type: "string", enum: ["expense", "income"] },
+          },
+          required: ["name", "kind"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job.", {
       idempotency_key: { type: "string" },
     }, true),
@@ -834,7 +898,7 @@ function writeTools() {
       kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"] },
       id: { type: "string" },
     }, true),
-    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses or set_lines_pnl batch.", {
+    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
@@ -1186,6 +1250,22 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_name: parsed.data.name,
       p_kind: parsed.data.kind,
+    };
+  } else if (name === "create_projects") {
+    const parsed = createProjectsSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_create_projects";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items.map((item) => item.status == null ? { name: item.name } : item),
+    };
+  } else if (name === "create_categories") {
+    const parsed = createCategoriesSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_create_categories";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items,
     };
   } else if (name === "hide_category") {
     const parsed = hideCategorySchema.safeParse(args);
