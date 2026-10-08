@@ -46,6 +46,7 @@ export const READ_TOOL_NAMES = [
   "get_anomalies",
   "get_missing_bills",
   "get_expected_months",
+  "list_unpaid",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -72,6 +73,7 @@ export const WRITE_TOOL_NAMES = [
   "split_line",
   "set_line_pnl",
   "set_lines_pnl",
+  "set_invoice_paid",
   "undo",
   "undo_batch",
 ] as const;
@@ -98,6 +100,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_anomalies: new Set(),
   get_missing_bills: new Set(),
   get_expected_months: new Set(["months", "project_id"]),
+  list_unpaid: new Set(),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -122,6 +125,7 @@ const ALLOWED: Record<string, Set<string>> = {
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
   set_lines_pnl: new Set(["idempotency_key", "items"]),
+  set_invoice_paid: new Set(["idempotency_key", "transaction_id", "paid"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -208,7 +212,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"]),
   id: UUID_TEXT,
 }).strict();
 // Same rule as private.company_name_problem: 2 to 100 code points after trim()
@@ -470,6 +474,11 @@ const setLinesPnlSchema = z.object({
     seen.add(item.transaction_id);
   }
 });
+const setInvoicePaidSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  paid: z.boolean(),
+}).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
   batch_key: UUID_TEXT,
@@ -484,6 +493,49 @@ type ToolResult = {
   isError: boolean;
   structuredContent: { ok: true; data: unknown } | { ok: false; error: { code: string; message: string } };
 };
+
+/**
+ * FLOW-330. list_unpaid rows in minor units, with open and marked totals per currency and
+ * direction: customer invoices (income) and supplier invoices (expense, negative) never mix.
+ */
+function unpaidReport(rows: unknown[]) {
+  const totals = new Map<string, { currency: string; direction: string; open_gross_minor: bigint; marked_gross_minor: bigint }>();
+  const invoices = rows.map((raw) => {
+    const row = (raw ?? {}) as Record<string, unknown>;
+    const currency = typeof row.currency === "string" ? row.currency : "ILS";
+    const direction = row.direction === "expense" ? "expense" : "income";
+    const gross = BigInt(String(row.open_gross_agorot ?? 0));
+    const markedAt = typeof row.marked_paid_at === "string" ? row.marked_paid_at : null;
+    const key = `${currency}|${direction}`;
+    const total = totals.get(key) ?? { currency, direction, open_gross_minor: 0n, marked_gross_minor: 0n };
+    if (markedAt == null) total.open_gross_minor += gross;
+    else total.marked_gross_minor += gross;
+    totals.set(key, total);
+    return {
+      id: row.id,
+      description: row.description ?? null,
+      doc_date: row.doc_date ?? null,
+      currency,
+      direction,
+      project_name: row.project_name ?? null,
+      customer_name: row.customer_name ?? null,
+      open_gross_minor: Number(gross),
+      open_net_minor: Number(BigInt(String(row.open_net_agorot ?? 0))),
+      marked_paid_at: markedAt,
+    };
+  });
+  return {
+    invoices,
+    totals: [...totals.values()]
+      .sort((x, y) => x.currency.localeCompare(y.currency) || x.direction.localeCompare(y.direction))
+      .map((t) => ({
+        currency: t.currency,
+        direction: t.direction,
+        open_gross_minor: Number(t.open_gross_minor),
+        marked_gross_minor: Number(t.marked_gross_minor),
+      })),
+  };
+}
 
 function fail(code: string, message: string): ToolResult {
   return { isError: true, structuredContent: { ok: false, error: { code, message } } };
@@ -963,6 +1015,7 @@ function readTools() {
       months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
     }),
+    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
   ];
 }
 
@@ -1193,9 +1246,14 @@ function writeTools() {
         },
       },
     }, true),
+    toolSpec("set_invoice_paid", "Mark one open invoice from list_unpaid as paid (paid true) while SUMIT has no receipt for it yet, or clear the mark (paid false). A marked document leaves the unpaid total but stays listed with marked_paid_at until a sync closes it; marking again keeps the first time. A line list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_paid with the transaction id.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      paid: { type: "boolean" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1825,6 +1883,15 @@ async function callWrite(
       p_transaction_id: parsed.data.transaction_id,
       p_in_pnl: parsed.data.in_pnl,
     };
+  } else if (name === "set_invoice_paid") {
+    const parsed = setInvoicePaidSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_invoice_paid";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_paid: parsed.data.paid,
+    };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -1971,6 +2038,13 @@ export async function callTool(
     }
     if (!Array.isArray(data)) return fail("refused", READ_REFUSED);
     return ok({ missing: data });
+  }
+
+  if (name === "list_unpaid") {
+    const result = await rpc("list_unpaid", {});
+    const rows = result.json;
+    if (result.status >= 400 || !Array.isArray(rows)) return fail("refused", READ_REFUSED);
+    return ok(unpaidReport(rows));
   }
 
   if (name === "get_expected_months") {
