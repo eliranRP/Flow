@@ -109,9 +109,18 @@ describe("ListRow", () => {
       <MemoryRouter>
         <ListRow variant="transaction" title="Example Mortgage Home Loans" agorot={100n} sign="out" source="invoice" />
         <ListRow variant="transaction" title="Example Bank Loan" agorot={100n} sign="out" source="invoice" tag={<span>⊘</span>} />
-        <ListRow variant="transaction" title="חשבונית 12" agorot={100n} sign="out" source="invoice" />
+        <ListRow variant="transaction" title="חשבונית 12" agorot={100n} sign="out" source="invoice" hint="מגדל הים · 03/10" />
+        <ListRow variant="project" title="Villa 12 רעננה" agorot={100n} />
       </MemoryRouter>,
     );
+    expect(screen.getByText("Villa 12 רעננה")).not.toHaveAttribute("dir");
+    const hint = screen.getByText("חשבונית 12").closest(".ui-row")?.querySelector(".ui-row-hint");
+    expect(hint).toHaveClass("ui-row-hint-line");
+    expect(hint).toHaveAttribute("data-clip-ok");
+    // The words shrink; the date and the separator stay whole, so a line never ends on "·".
+    expect(hint?.textContent).toBe("מגדל הים · 03/10");
+    // Each part carries its separator in front, so a part that drops takes its "·" with it.
+    expect([...(hint?.querySelectorAll(".ui-hint-part") ?? [])].map((part) => part.textContent)).toEqual(["מגדל הים", " · 03/10"]);
     expect(screen.getByText("Example Mortgage Home Loans")).toHaveAttribute("dir", "ltr");
     expect(screen.getByText("Example Mortgage Home Loans")).toHaveClass("ui-row-title-ltr");
     const tagged = screen.getByText("Example Bank Loan");
