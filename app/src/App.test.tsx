@@ -24,8 +24,8 @@ describe("App", () => {
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("הרווח יופיע כאן אחרי ש־SUMIT מחובר.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
+    expect(screen.getByText("הרווח יופיע כאן אחרי חיבור בנק או SUMIT.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
@@ -158,10 +158,11 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "עזרה" })).toBeInTheDocument();
     expect(screen.getByText("לעזרה בכניסה כותבים לנו.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
+    // FLOW-326: the shared Back chevron in the header bar, not a text link.
     const back = screen.getByRole("button", { name: "חזרה" });
-    expect(back).toHaveClass("ui-text-link");
-    expect(back).not.toHaveClass("ui-icon-btn");
-    expect(back.closest(".ui-page-pad")).not.toBeNull();
+    expect(back).toHaveClass("ui-icon-btn");
+    expect(back).not.toHaveClass("ui-text-link");
+    expect(back.closest(".ui-page-title-row")).not.toBeNull();
     expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".ui-page-pad")).not.toBeNull();
   });
 

@@ -207,6 +207,12 @@ describe("category drill-down months", () => {
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
+  it("shows a USD drill-down in dollars", () => {
+    wrap(<ProjectCategoryScreen sample={{ ...sample, currency: "USD", pageSize: undefined }} backTo="/projects/a" />);
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −$5,000");
+    expect(screen.getByText("Line 1").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("−$1,000.00");
+  });
+
   it("totals the last month once every row is shown", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, pageSize: undefined }} backTo="/projects/a" />);
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");

@@ -100,7 +100,7 @@ export const ReviewDark: Story = { ...dark };
 export const SplitMismatch: Story = { args: { kind: "mismatch" } };
 export const SplitMismatch320: Story = { ...narrow, args: { kind: "mismatch" } };
 export const SplitMismatchDark: Story = { ...dark, args: { kind: "mismatch" } };
-/** Decision 0135: the undo toast sits just above the bar. */
+/** Decision 0137: the undo toast sits just above the bar. */
 export const ToastAboveBar: Story = { args: { toast: "הפריט אושר" } };
 export const ToastAboveBarSE: Story = { ...se, args: { toast: "דילגנו על הפריט" } };
 export const ToastAboveBarDark: Story = { ...dark, args: { toast: "הפריט אושר" } };

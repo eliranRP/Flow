@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { flushSync } from "react-dom";
 import { useSumitConnect } from "../use-sumit-connect";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
@@ -88,7 +89,8 @@ export function StepBusiness({
     if (save.isPending) return;
     // The create_company rule (FLOW-606), on the field instead of a save toast.
     const problem = companyNameError(name);
-    setError(problem);
+    // Commit the message before focus, so the field is announced with it.
+    flushSync(() => { setError(problem); });
     if (problem) {
       fieldRef.current?.focus();
       return;

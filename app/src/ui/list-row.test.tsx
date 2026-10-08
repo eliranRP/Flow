@@ -6,6 +6,18 @@ import { SuggestTag } from "./suggest-tag";
 import { expectRtl, expectTarget } from "./test-support";
 
 describe("ListRow", () => {
+  it("gives a linked transaction row the trailing chevron (FLOW-328)", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="מלט" agorot={-100n} sign="out" source="invoice" href="/transactions/t1" />
+        <ListRow variant="transaction" title="ספק" agorot={-100n} sign="out" source="invoice" />
+        <ListRow variant="transaction" title="ללא חץ" agorot={-100n} sign="out" source="invoice" href="/transactions/t2" chevron={false} />
+      </MemoryRouter>,
+    );
+    const rows = Array.from(container.querySelectorAll(".ui-row"));
+    expect(rows.map((row) => row.querySelector(".ui-row-chevron") != null)).toEqual([true, false, false]);
+  });
+
   it("renders project, transaction, review, and supplier rows", () => {
     expectRtl();
     render(

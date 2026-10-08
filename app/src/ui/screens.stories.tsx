@@ -24,6 +24,7 @@ import {
   ReviewScreen,
   ConnectionsScreen,
   LoansScreen,
+  NotificationsScreen,
   SettingsScreen,
   SplitScreen,
   TransactionScreen,
@@ -239,6 +240,16 @@ export const Help: Story = {
     </StoryRoute>
   ),
 };
+
+/** FLOW-328: the shared empty state, Hebrew only. */
+export const Notifications: Story = {
+  render: () => (
+    <StoryRoute entry="/notifications?preview=1">
+      <NotificationsScreen />
+    </StoryRoute>
+  ),
+};
+export const NotificationsDark: Story = { ...Notifications, name: "Notifications, dark", globals: { theme: "dark" } };
 
 export const ProjectsEmpty: Story = {
   render: () => (

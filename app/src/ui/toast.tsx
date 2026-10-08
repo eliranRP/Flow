@@ -8,7 +8,7 @@ type ToastInput = {
   onAction?: () => void;
   /** Sit under the page header even while a sheet is open. A card-line pick closes that sheet. */
   /** `tab` sits above the Home tab bar. A confirmation does not move it under the band. */
-  /** `bar` sits just above the screen's pinned action bar (decision 0135). A confirmation stays there too. */
+  /** `bar` sits just above the screen's pinned action bar (decision 0137). A confirmation stays there too. */
   place?: "page" | "tab" | "bar";
 };
 
@@ -275,7 +275,7 @@ export function placeToast(layer: HTMLElement): void {
   }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
   if (layer.dataset.place === "bar") {
-    // Decision 0135: just above the bar, near the thumb. It may cover the bottom of the
+    // Decision 0137: just above the bar, near the thumb. It may cover the bottom of the
     // scrolling card, never the bar. No control-collision pass, the same as `tab`.
     const gap = cssPx("--space-2");
     layer.style.paddingInline = "var(--space-card-inset)";

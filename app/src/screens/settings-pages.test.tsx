@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
-import { connectionsHint, ConnectionsScreen, LoansScreen, loansCountHint, SettingsScreen } from "./flow-screens";
+import { connectionsHint, ConnectionsScreen, LoansScreen, loansCountHint, NotificationsScreen, SettingsScreen } from "./flow-screens";
 
 // FLOW-501. Settings keeps the account, תצוגה and עוד; חיבורים and הלוואות open pages.
 
@@ -280,5 +280,16 @@ describe("Loans page", () => {
     render(providers(<RouterProvider router={router} />));
     expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/settings");
+  });
+});
+
+describe("notifications page (FLOW-328)", () => {
+  it("uses the shared empty state, in Hebrew only", () => {
+    const { container } = render(<MemoryRouter><NotificationsScreen /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: "התראות" })).toBeInTheDocument();
+    const empty = container.querySelector(".ui-empty-state");
+    expect(empty).not.toBeNull();
+    expect(empty?.querySelector(".ui-empty-icon svg")).not.toBeNull();
+    expect(container.textContent).not.toMatch(/[A-Za-z]/);
   });
 });

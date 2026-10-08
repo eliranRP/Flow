@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-29
 **Status:** Accepted
-**Superseded by:** [0135](0135-review-toast-above-bar.md) for §8 on לאישור only (toasts sit above the pinned action bar there)
+**Superseded by:** [0137](0137-review-toast-above-bar.md) for §8 on לאישור only (toasts sit above the pinned action bar there)
 
 ## Context
 

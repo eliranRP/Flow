@@ -337,6 +337,8 @@ a.ui-row,
   /* No row hairlines anywhere: rows are separated by their padding (decision 0120, option C). */
   border-bottom: 0;
   color: inherit;
+  /* A row rendered as <button> would centre its copy (FLOW-326). */
+  text-align: start;
   text-decoration: none;
 }
 
@@ -2190,13 +2192,14 @@ a.ui-row,
   margin: 0;
 }
 
+/* On the start side at the page gutter, clear of the band's curved corners (FLOW-328). */
 .ui-preview-banner {
   position: absolute;
-  inset-inline: 0;
+  inset-inline: var(--space-side);
   inset-block-end: 0;
   margin: 0;
   padding: 0;
-  text-align: center;
+  text-align: start;
   color: var(--color-on-band-secondary);
   pointer-events: none;
 }
@@ -2366,6 +2369,13 @@ button.ui-tab-slot {
   width: 100%;
   max-width: 100%;
   margin-top: var(--space-6);
+}
+
+/* Empty and error states share the standard 44px button shape, not the 36px pill (FLOW-328, ds-7). */
+.ui-empty-action .ui-btn-pill {
+  height: auto;
+  min-height: var(--touch-min);
+  border-radius: var(--radius-button);
 }
 
 .ui-sheet-scrim {
@@ -2819,8 +2829,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   gap: 2px;
 }
 
+/* The switch label reads like a row title, 17/400 (FLOW-326, decision 0120 option C). */
 .ui-switch-label {
   overflow: hidden;
+  font-size: var(--type-title-3-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-title-3-line);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3242,6 +3256,11 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   padding-inline: var(--space-side);
 }
 
+/* Mockup 02: 20px between the project band and the overhead switch (FLOW-328). */
+.ui-project-overhead {
+  margin-top: var(--space-5);
+}
+
 .ui-cat-seg {
   margin-top: var(--space-4);
 }
@@ -3390,8 +3409,9 @@ html:has(.ui-split) {
   padding-block-end: calc(var(--split-foot) + var(--space-2));
 }
 
+/* FLOW-328: the 24px side gutter of every other screen. */
 .ui-split .ui-page {
-  padding-inline: var(--space-5);
+  padding-inline: var(--space-side);
 }
 
 .ui-split-body {
@@ -3417,10 +3437,11 @@ html:has(.ui-split) {
   -webkit-line-clamp: 2;
 }
 
+/* The amount starts on the start side, under the title (FLOW-328). */
 .ui-split-amount {
   margin-top: var(--space-6);
-  padding-inline: var(--space-5);
-  text-align: center;
+  padding-inline: var(--space-side);
+  text-align: start;
 }
 
 .ui-split-meta {
@@ -3430,32 +3451,28 @@ html:has(.ui-split) {
 
 .ui-split-question {
   margin: var(--space-8) 0 0;
-  padding-inline: var(--space-5);
+  padding-inline: var(--space-side);
   text-align: start;
 }
 
 .ui-split-card {
-  margin: var(--space-3) var(--space-5) 0;
+  margin: var(--space-3) var(--space-side) 0;
   overflow: hidden;
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 
+/* No hairlines between the choices; rows are separated by their padding (FLOW-328, decision 0120).
+   The inline padding stays: in dark the card's surface shows, and the radios must not touch its edge. */
 .ui-split-card .ui-radio-row,
 .ui-split-card .ui-check-row,
 .ui-split-card .ui-split-manual {
   padding-inline: var(--space-4);
+  border-bottom: 0;
 }
 
 .ui-split-card .ui-radio-row {
   min-block-size: 64px;
-  border-bottom: 1px solid var(--color-line);
-}
-
-.ui-split-card .ui-radio-row:last-child,
-.ui-split-card .ui-check-row:last-child,
-.ui-split-card .ui-split-manual:last-child {
-  border-bottom: 0;
 }
 
 .ui-split-card .ui-row-title {
@@ -3874,8 +3891,10 @@ div.ui-check-row {
   text-align: end;
 }
 
+/* A turning 18px square reaches ~3.7px past its box on each side; the start margin keeps that
+   corner inside the total so the saving figure does not overflow (clip-check at 320/360/390). */
 .ui-lsplit-total .ui-spinner {
-  margin-inline-end: var(--space-2);
+  margin-inline: var(--space-1) var(--space-2);
 }
 
 .ui-lsplit-read .ui-row-meta {
@@ -3942,14 +3961,19 @@ div.ui-check-row {
   color: var(--color-text-muted);
 }
 
+/* Mockup 06: the supplier line sits 2px under the sheet title, like a subtitle (FLOW-328). */
+.ui-sheet-body:has(> .ui-change-swap > .ui-change-summary:first-child) {
+  margin-top: 2px;
+}
+
 .ui-change-summary .ui-row {
   min-block-size: var(--sheet-gap);
 }
 
+/* Values at the row-title weight, like the transaction detail (FLOW-328). */
 .ui-change-summary .ui-row-title {
   display: -webkit-box;
   overflow: hidden;
-  font-weight: var(--type-title-3-weight);
   white-space: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -4279,16 +4303,13 @@ div.ui-check-row {
   list-style: none;
 }
 
+/* No hairlines between the steps, and each number circle is centred on its text (FLOW-328). */
 .ui-install-step {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-3);
   min-block-size: var(--touch-min);
   padding-block: var(--space-3);
-}
-
-.ui-install-step + .ui-install-step {
-  border-top: 1px solid var(--color-line);
 }
 
 .ui-install-num {
@@ -4297,7 +4318,6 @@ div.ui-check-row {
   place-items: center;
   inline-size: calc(var(--touch-min) - var(--space-4));
   block-size: calc(var(--touch-min) - var(--space-4));
-  margin-top: var(--space-1);
   border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent-text);
@@ -4629,7 +4649,7 @@ div.ui-check-row {
 
 /* ---------------------------------------------------------------------------------------------
    FLOW-327: the pinned action bar (ActionBar). A screen's repeated action sits on top of the tab
-   bar; the screen's toasts sit just above it (decision 0135). `edge` sits on the screen edge.
+   bar; the screen's toasts sit just above it (decision 0137). `edge` sits on the screen edge.
    --------------------------------------------------------------------------------------------- */
 :root {
   /* Two control rows, the gap between them, and the bar's block padding: 136px. */
@@ -4700,7 +4720,7 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   }
 }
 
-/* The review toasts line up with the card (decision 0135). */
+/* The review toasts line up with the card (decision 0137). */
 .ui-toast-host[data-place="bar"] {
   padding-inline: var(--space-card-inset);
 }

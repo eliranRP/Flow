@@ -38,14 +38,14 @@ function renderSave(
 }
 
 describe("useWrite", () => {
-  it("offers לחלוקה, not a retry, when the database refuses a shared cost", async () => {
+  it("offers לפיצול, not a retry, when the database refuses a shared cost", async () => {
     const onSplit = vi.fn();
     renderSave(() => Promise.reject(new Error("shared costs are split, not assigned to one project")), changeSaveFailure, onSplit);
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
-    expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
+    expect(await screen.findByText("עלות משותפת מפוצלת במסך הפיצול.")).toBeInTheDocument();
     expect(document.querySelector(".ui-toast-bad")).toBeNull();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "לחלוקה" }));
+    fireEvent.click(screen.getByRole("button", { name: "לפיצול" }));
     expect(onSplit).toHaveBeenCalledOnce();
   });
 

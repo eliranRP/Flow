@@ -76,6 +76,7 @@ export const WRITE_TOOL_NAMES = [
   "set_line_pnl",
   "set_lines_pnl",
   "set_invoice_paid",
+  "detach_loan_payment",
   "undo",
   "undo_batch",
 ] as const;
@@ -129,6 +130,7 @@ const ALLOWED: Record<string, Set<string>> = {
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
   set_lines_pnl: new Set(["idempotency_key", "items"]),
   set_invoice_paid: new Set(["idempotency_key", "transaction_id", "paid"]),
+  detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -215,29 +217,40 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach"]),
   id: UUID_TEXT,
-}).strict();
-// Same rule as private.company_name_problem: 2 to 100 code points after trim()
-// (SQL private.trim_name strips the same whitespace) and no control character.
-function companyNameIsValid(name: string): boolean {
-  const points = Array.from(name);
-  if (points.length < 2 || points.length > 100) return false;
-  return points.every((point) => {
-    const code = point.codePointAt(0) ?? 0;
-    return code >= 0x20 && (code < 0x7f || code > 0x9f);
-  });
-}
-const renameCompanySchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().refine(companyNameIsValid),
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
 // bidi marks and controls incl. U+061C, BOM, soft hyphen, tag characters) and blank
 // fillers make two names look the same. ZWJ (U+200D) stays for emoji sequences.
+// SQL private.name_has_hidden_char spells out the same set (migration 20261010160000).
 const HIDDEN_CHARS = /[\p{Cc}\p{Zl}\p{Zp}\u034f\u115f\u1160\u3164\uffa0]|(?!\u200d)\p{Cf}/u;
+// No-break and other wide spaces inside a name become a plain space (SQL private.plain_spaces).
+const WIDE_SPACES = /[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/gu;
+/** The validation message for a refused name, so a client knows to strip a pasted mark. */
+const HIDDEN_NAME = "name has an invisible or control character";
+function plainSpaces(name: string): string {
+  return name.replace(WIDE_SPACES, " ");
+}
+// Same rule as private.company_name_problem: 2 to 100 code points after trim()
+// (SQL private.trim_name strips the same whitespace) and no hidden character.
+function companyNameIsValid(name: string): boolean {
+  const points = Array.from(name);
+  return points.length >= 2 && points.length <= 100;
+}
+const renameCompanySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME })
+    .refine(companyNameIsValid),
+}).strict();
 function visibleName(min: number, max: number) {
-  return z.string().trim().min(min).max(max).refine((name) => !HIDDEN_CHARS.test(name));
+  return z.string().trim().min(min).max(max).transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME });
+}
+/** `validation`, naming the hidden-character rule when that is what failed. */
+function invalid(error: z.ZodError): ToolResult {
+  return fail("validation", error.issues.some((issue) => issue.message === HIDDEN_NAME) ? HIDDEN_NAME : "validation");
 }
 const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -481,6 +494,10 @@ const setInvoicePaidSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   paid: z.boolean(),
+}).strict();
+const detachLoanPaymentSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
 }).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
@@ -986,7 +1003,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag; category_suggested is true while the category is only a guess, and a guessed kept-out category still counts. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag; category_suggested is true while the category is only a guess, and a guessed kept-out category still counts. pnl_state is in, out, or mixed: a line split by category with a part kept out, or a loan payment counted by its parts, is mixed. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id. meta is the line's bank details (see get_expense).", {
@@ -1276,9 +1293,13 @@ function writeTools() {
       transaction_id: { type: "string" },
       paid: { type: "boolean" },
     }, true),
+    toolSpec("detach_loan_payment", "Take one line off the loan it was attached to (attach_loan_payment, or matched in the app): its interest, escrow, principal and fees parts are removed, so the line counts whole under its own category again and the loan balance no longer counts its principal. The line keeps its project and category (undo of loan_split gives back a project the attach filed, but only before the detach or after undoing it). A line with no loan split is refused (line has no loan split). Returns the loan_id and the parts taken off, in cents. Undo is kind loan_detach with the transaction id: it puts the same parts back, and is a conflict when the line was matched again, the parts no longer fit (the line or the loan changed), or a demand loan has a later payment matched since.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1398,7 +1419,7 @@ async function syncBank(
 
 async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = addLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalid(parsed.error);
   const kind = parsed.data.kind ?? "amortizing";
   const principalMinor = minorFromMajor(parsed.data.principal);
   if (typeof principalMinor !== "bigint") return principalMinor;
@@ -1488,7 +1509,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
 
 async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = updateLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalid(parsed.error);
   const patch: Record<string, unknown> = {};
   if (parsed.data.name != null) patch.name = parsed.data.name;
   if (parsed.data.principal != null) {
@@ -1797,7 +1818,7 @@ async function callWrite(
     };
   } else if (name === "create_project") {
     const parsed = createProjectSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_project";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1806,7 +1827,7 @@ async function callWrite(
     };
   } else if (name === "create_category") {
     const parsed = createCategorySchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_category";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1815,7 +1836,7 @@ async function callWrite(
     };
   } else if (name === "create_projects") {
     const parsed = createProjectsSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_projects";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1823,7 +1844,7 @@ async function callWrite(
     };
   } else if (name === "create_categories") {
     const parsed = createCategoriesSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_categories";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1856,7 +1877,7 @@ async function callWrite(
     };
   } else if (name === "rename_company") {
     const parsed = renameCompanySchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_rename_company";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1916,6 +1937,14 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_paid: parsed.data.paid,
+    };
+  } else if (name === "detach_loan_payment") {
+    const parsed = detachLoanPaymentSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_detach_loan_payment";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
     };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
@@ -2310,6 +2339,9 @@ export async function callTool(
     out = { ...row, line_split: lineSplit };
   }
   if (row.direction === "income") return ok({ ...out, loan_split: null });
+  // get_transaction carries the loan split since FLOW-114; read it on its own only from a
+  // database that does not yet.
+  if ("loan_split" in row) return ok({ ...out, loan_split: row.loan_split ?? null });
   const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
   return ok({ ...out, loan_split: loanSplit.json ?? null });

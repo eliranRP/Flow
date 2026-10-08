@@ -22,3 +22,14 @@ Use this with [PITFALLS.md](PITFALLS.md) at the start of a cycle, and again befo
 - [ ] A test does not depend on today's date and does not require a later day.
 - [ ] A live verification names who ran it and how.
 - [ ] Each self-check line cites a command, an exit code, or an artifact. A justification is not a line. A cited run has an artifact.
+- [ ] A payload change lists every consumer (app, shared schemas, MCP, stories, demo data, e2e), and each one is updated or tested.
+- [ ] A unit or currency change reaches every sum, header and export that adds the field.
+- [ ] A SQL function another open pull request also redefines is patched from its current definition, and the landing order is agreed.
+- [ ] The idempotency store keeps final outcomes only; a constraint, lock or transient refusal is not cached.
+- [ ] No column that relaxes a security check is writable by the owner.
+- [ ] Every auth path has a wrong-value test, and a restricted role is probed against every write path touched.
+- [ ] E2e waits wait for a state, never a fixed timeout.
+- [ ] A persisted flag is checked against the source of truth before it gates money or a write.
+- [ ] Tests assert their own call or screen, not another feature's query.
+- [ ] Renamed ops-visible objects are listed under "Ops changes" in the pull request.
+- [ ] Database tests use the fixtures in `supabase/tests/helpers.sql` where they fit.

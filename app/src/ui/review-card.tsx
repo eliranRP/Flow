@@ -148,7 +148,7 @@ export function ReviewCard({
       onOpen: onCategory,
     });
   }
-  const note = shared ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה" : null;
+  const note = shared ? "הוצאה משותפת · אישור יפתח\u00A0פיצול" : null;
   const mismatch = reason === "split_mismatch";
   const jevOnCard = !pending && lines.some((line) => line.jev);
   const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;

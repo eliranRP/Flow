@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
@@ -87,7 +88,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BellIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -206,7 +207,8 @@ export function OnboardingScreen({ initialName }: { initialName?: string } = {})
     if (holdWrites || save.isPending) return;
     // The create_company rule (FLOW-606), on the field instead of a save toast.
     const problem = companyNameError(name);
-    setNameError(problem);
+    // Commit the message before focus, so the field is announced with it.
+    flushSync(() => { setNameError(problem); });
     if (problem) {
       nameRef.current?.focus();
       return;
@@ -580,6 +582,7 @@ function ProjectCategories({
   if (!hasCategories && !waiting && pendingOther.length === 0) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
+  // The section is titled הוצאות, so the figures carry no minus (FLOW-328).
   return (
     <>
       <List>
@@ -590,10 +593,9 @@ function ProjectCategories({
           title={category.name ?? "בלי קטגוריה"}
           agorot={absAgorot(category.amount_minor)}
           currency={currency}
-          amountDirection="expense"
           loss={false}
-          chevron={currency === "ILS" && category.id != null}
-          href={currency === "ILS" && category.id != null ? (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`) : undefined}
+          chevron={category.id != null}
+          href={category.id != null ? (categoryTo ?? categoryHref(project.id, category.id, currency, search)) : undefined}
           wrapHint={category.has_shared_share === true}
           hint={category.has_shared_share === true ? (
             <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
@@ -606,7 +608,6 @@ function ProjectCategories({
           title={pendingApprovalTitle(pending)}
           agorot={absAgorot(project.pending_agorot ?? 0n)}
           currency="ILS"
-          amountDirection="expense"
           loss={false}
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
@@ -619,7 +620,6 @@ function ProjectCategories({
           title={pendingApprovalTitle(bucket.count)}
           agorot={absAgorot(bucket.expense_minor)}
           currency={bucket.currency}
-          amountDirection="expense"
           loss={false}
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
@@ -730,12 +730,12 @@ export function ProjectDetailScreen({
             <BandFigures
               key={row.currency}
               income={formatAmountText(row.income_minor, row.currency)}
-              expense={formatAmountText(projectExpenseMinor(row), row.currency, { direction: "expense" })}
+              expense={formatAmountText(projectExpenseMinor(row), row.currency)}
             />
           ))}
         </BandHero>
       </TopBand>
-      <div className="ui-page-pad">
+      <div className="ui-page-pad ui-project-overhead">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
           hint={overheadHint(overheadOn, {
@@ -963,7 +963,6 @@ export function FiledTodayScreen({
   return (
     <ScreenState
       title="שויכו היום"
-      subtitle="אפשר לפתוח כל תנועה ולשנות את השיוך"
       backTo={backTo ?? `/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
@@ -1979,12 +1978,21 @@ export function ReviewEmpty({
 type CategorySample = {
   categoryName: string;
   projectName: string;
+  /** The rows' currency. Default ILS. */
+  currency?: string;
   rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
   /** Shows עוד תנועות until the rest of the sample rows are revealed. */
   pageSize?: number;
   /** FLOW-107. Loan split marks by row id, for stories. */
   loanMarks?: Record<string, LoanMark>;
 };
+
+/** The drill-down for one category row; a row in another currency names it (`?currency=`). */
+function categoryHref(projectId: string, categoryId: string, currency: string, search: string): string {
+  const path = `/projects/${projectId}/categories/${categoryId}`;
+  if (currency === "ILS") return `${path}${search}`;
+  return `${path}${search}${search === "" ? "?" : "&"}currency=${encodeURIComponent(currency)}`;
+}
 
 export function ProjectCategoryScreen({
   sample,
@@ -1996,9 +2004,10 @@ export function ProjectCategoryScreen({
   rowHref?: (row: { id: string }) => string;
 } = {}) {
   const { projectId = "", categoryId = "" } = useParams();
+  const [params] = useSearchParams();
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId);
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "");
   const location = useLocation();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const [sampleOpen, setSampleOpen] = useState(false);
@@ -2015,6 +2024,7 @@ export function ProjectCategoryScreen({
   }
   const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
   const projectName = sample?.projectName ?? first?.project_name ?? "";
+  const rowCurrency = sample?.currency ?? first?.currency ?? "ILS";
   const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
   const rowIds = rows.map((row) => row.id);
@@ -2029,7 +2039,7 @@ export function ProjectCategoryScreen({
           rows={rows}
           keyOf={(txn) => txn.id}
           dateOf={(txn) => txn.doc_date}
-          amountOf={(txn) => ({ minor: txn.amount_net, currency: "ILS", direction: "expense" })}
+          amountOf={(txn) => ({ minor: txn.amount_net, currency: rowCurrency, direction: "expense" })}
           complete={!more}
           renderRow={(txn) => (
             <ListRow
@@ -2037,6 +2047,7 @@ export function ProjectCategoryScreen({
               title={txn.description}
               {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
               agorot={txn.amount_net}
+              currency={rowCurrency}
               sign="out"
               source="invoice"
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
@@ -2980,7 +2991,7 @@ export function TransactionScreen({
         {reviewLabel || paymentLabel || pnlPill ? (
           <div className="ui-status-row">
             {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
-            {paymentLabel ? <StatusPill>{paymentLabel}</StatusPill> : null}
+            {paymentLabel ? <StatusPill icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusPill> : null}
             {pnlPill}
           </div>
         ) : null}
@@ -3090,7 +3101,7 @@ export function TransactionScreen({
           {txn.pnl_fixed === true ? (
             <p className="ui-cat-fixed">
               <LockIcon size={18} />
-              תשלום הלוואה · נספר לפי החלוקה
+              תשלום הלוואה · נספר לפי הפיצול
             </p>
           ) : (
             <>
@@ -3351,7 +3362,7 @@ export function SplitScreen({
   const popLeave = useRef(false);
   const save = useWrite({
     failure: projectSplitFailure,
-    success: "החלוקה נשמרה",
+    success: "הפיצול נשמר",
     keys: ["dashboard", "txn", "project"],
     onSuccess: () => {
       clearSplitDraft(draftId);
@@ -3511,7 +3522,7 @@ export function SplitScreen({
             toast.show({ tone: "bad", message: LINE_HAS_CATEGORY_SPLIT });
             return;
           }
-          toast.show({ tone: "bad", message: "החלוקה לא נשמרה", action: "ניסיון חוזר", onAction: () => { void leave(); } });
+          toast.show({ tone: "bad", message: "הפיצול לא נשמר", action: "ניסיון חוזר", onAction: () => { void leave(); } });
           return;
         } finally {
           inflight.current = null;
@@ -3619,7 +3630,7 @@ export function SplitScreen({
           leavePop();
         } catch {
           popLeave.current = false;
-          api.toast.show({ tone: "bad", message: "החלוקה לא נשמרה" });
+          api.toast.show({ tone: "bad", message: "הפיצול לא נשמר" });
         }
       })();
       inflight.current = work;
@@ -3654,7 +3665,7 @@ export function SplitScreen({
   if (phase.kind !== "ready" || active.length === 0) {
     return (
       <ScreenState
-        title="חלוקה בין פרויקטים"
+        title="פיצול בין פרויקטים"
         backTo={fallback}
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { void dashboard.refetch(); void txn.refetch(); }}
@@ -3667,13 +3678,13 @@ export function SplitScreen({
   const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתחלק שווה" : evenSentence(chosenParts, amount);
   const manualLeft = 10000 - manualUsed;
   const manualStatus = manualLeft > 0
-    ? `נשארו ${percentWords(manualLeft)}% לחלק`
+    ? `נשארו ${percentWords(manualLeft)}% לפצל`
     : manualLeft < 0
       ? `הסך ${percentWords(manualUsed)}%. צריך 100%.`
       : "הסך 100%";
   const oneName = [...active, ...extraProjects].find((project) => project.id === oneProject)?.name ?? "";
   const summary = !method
-    ? "בחרו איך לחלק"
+    ? "בחרו איך לפצל"
     : method === "one" && oneProject === ""
       ? COLLAPSE_PICK_HOLD
       : method === "one"
@@ -3685,7 +3696,7 @@ export function SplitScreen({
             : method === "manual" && !valid
               ? manualStatus
               : method === "manual"
-                ? `חלוקה ידנית · ${String(manualParts.length)} פרויקטים`
+                ? `פיצול ידני · ${String(manualParts.length)} פרויקטים`
                 : method === "income"
                   ? `לפי הכנסות · ${String(incomeParts.length)} פרויקטים`
                   : allLine;
@@ -3708,7 +3719,7 @@ export function SplitScreen({
     >
       <ScreenHeader
         layout="stacked"
-        title="חלוקה בין פרויקטים"
+        title="פיצול בין פרויקטים"
         leading={<IconButton label="סגירה" disabled={sampleSaving} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
         trailing={example}
       />
@@ -3716,9 +3727,9 @@ export function SplitScreen({
         <p className="t-display"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
         {meta ? <p className="ui-split-meta t-label">{meta}</p> : null}
       </div>
-      <h2 className="ui-split-question t-title-3">איך לחלק?</h2>
+      <h2 className="ui-split-question t-title-3">איך לפצל?</h2>
       <fieldset className="ui-split-body" disabled={busy}>
-        <div className="ui-split-card" role="radiogroup" aria-label="איך לחלק?">
+        <div className="ui-split-card" role="radiogroup" aria-label="איך לפצל?">
           <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} busy={busy && method === "equal"} disabled={busy && method !== "equal"} onSelect={() => { setMethod("equal"); }} />
           <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} disabled={busy && method !== "chosen"} onSelect={() => { setMethod("chosen"); }} />
           <RadioRow
@@ -3825,7 +3836,7 @@ export function SplitScreen({
           {method === "manual" ? (
             <TextLink chevron={false} disabled={busy} onClick={() => { setMethod(priorMethod.current); }}>חזרה לאפשרויות</TextLink>
           ) : (
-            <TextLink chevron={false} disabled={busy} onClick={openManual}>חלוקה ידנית</TextLink>
+            <TextLink chevron={false} disabled={busy} onClick={openManual}>פיצול ידני</TextLink>
           )}
         </p>
         {method === "manual" && valid ? <p className="ui-split-remain t-label">הסך 100%</p> : null}
@@ -4219,11 +4230,10 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           <SectionHead title="תצוגה" />
           <List>
             <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" icon={<TagIcon />} chevron />
-          </List>
-          <div className="ui-page-pad">
             <Toggle
               label="רווח אחרי כלליות"
               hint="חלק מהכלליות נכנס לכל פרויקט"
+              icon={<SplitIcon />}
               checked={overheadOn}
               disabled={holdWrites}
               onChange={(checked) => {
@@ -4239,7 +4249,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
                 saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
               }}
             />
-          </div>
+          </List>
         </>
       )}
       {showInstall || showSignOut || (setupEntry != null && !holdWrites) ? (
@@ -5448,12 +5458,9 @@ export function NotificationsScreen() {
   const search = usePreviewSearch();
   return (
     <div>
-      <ScreenHeader
-        title="התראות"
-        subtitle="אין עדיין התראות."
-        backTo={`/settings${search}`}
-      />
-      <p className="t-hint ui-page-pad">בשלב הזה ההודעות לא נשלחות. אין שירות בתשלום ואין Push.</p>
+      <ScreenHeader title="התראות" backTo={`/settings${search}`} />
+      {/* FLOW-328: the shared empty state, Hebrew only. */}
+      <EmptyState icon={<BellIcon />} title="אין עדיין התראות" body="בשלב הזה ההודעות לא נשלחות." />
     </div>
   );
 }

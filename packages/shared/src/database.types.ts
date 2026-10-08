@@ -836,6 +836,9 @@ isOneToOne: false
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
                            },
+"clear_loan_split":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
 "clear_loan_split_review":
 { Args: { "p_transaction_id": string }; Returns: undefined
                            },
@@ -939,7 +942,7 @@ isOneToOne: false
             }[]
                            },
 "list_project_category":
-{ Args: { "p_basis"?: string,"p_category": string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
+{ Args: { "p_basis"?: string,"p_category": string,"p_currency"?: string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
                            },
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -988,6 +991,9 @@ isOneToOne: false
                            },
 "mcp_credential_status":
 { Args: { "p_user": string }; Returns: Json
+                           },
+"mcp_detach_loan_payment":
+{ Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json

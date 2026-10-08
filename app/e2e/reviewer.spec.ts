@@ -98,14 +98,14 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   expect(await approve.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await approve.click();
   await expect(page).toHaveURL(/\/reviewer\/split\?save=ok$/);
-  await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("בחרו איך לחלק")).toBeVisible();
+  await expect(page.getByText("בחרו איך לפצל")).toBeVisible();
   const close = page.getByRole("button", { name: "סגירה" });
   expect(await close.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await page.getByRole("radio", { name: /שווה בין כל הפרויקטים/ }).click();
   await close.click();
-  await toast(page, "החלוקה נשמרה");
+  await toast(page, "הפיצול נשמר");
   await expect(page).toHaveURL(/\/reviewer\/review\?save=ok$/);
 
   await page.goto("/reviewer/review");
@@ -189,7 +189,7 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await page.getByRole("button", { name: "חזרה" }).click();
   await page.getByRole("link", { name: /ליסינג הדרך/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/transaction\/t-sample-split$/);
-  await expect(page.getByRole("list", { name: "חלוקה" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "פיצול" })).toBeVisible();
   await expect(page.getByText("60%")).toBeVisible();
   await expect(page.getByText("40%")).toBeVisible();
   await expect(page.getByText("בית הספר אלון")).toBeVisible();
@@ -313,20 +313,20 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
   await expectNoOverflow(page);
 });
 
-test("a shared-cost save offers לחלוקה and stays on the sheet", async ({ page }) => {
+test("a shared-cost save offers לפיצול and stays on the sheet", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/save?save=shared");
   await page.getByRole("button", { name: /פרויקט:/ }).click();
   await page.getByRole("radio", { name: "מחסן הנמל" }).click();
-  await toast(page, "עלות משותפת מחולקת במסך החלוקה.");
+  await toast(page, "עלות משותפת מפוצלת במסך הפיצול.");
   await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
   await expect(page.getByRole("radio", { name: "מחסן הנמל" })).toHaveAttribute("aria-checked", "false");
-  const split = toastAction(page, "לחלוקה");
+  const split = toastAction(page, "לפיצול");
   await expect(split).toBeVisible();
   expect(await split.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await split.click();
   await expect(page).toHaveURL(/\/reviewer\/split\?save=shared$/);
-  await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
 });
 
 test("reviewer screens stay inside the viewport at 320 in both themes", async ({ page }) => {
@@ -348,7 +348,7 @@ test("a refused split save has no retry", async ({ page }) => {
   await page.getByRole("button", { name: "סגירה" }).click();
   await toast(page, refusal);
   await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
 });
 
 test("a split expense saves the category on the tap and keeps it after close", async ({ page }) => {
@@ -370,7 +370,7 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await page.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
   await expect(page).toHaveURL(/\/reviewer\/split$/);
-  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
   await expect(page.getByText("ליסינג הדרך")).toBeVisible();
 });
 
@@ -385,7 +385,7 @@ test("a split returns to one project and the project totals follow", async ({ pa
   await expect(alon.getByText("₪533.44")).toBeVisible();
   await page.getByRole("radio", { name: "לפרויקט אחד" }).click();
   await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
-  await expect(page.getByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeVisible();
+  await expect(page.getByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeVisible();
   await page.getByRole("radio", { name: "בית הספר אלון" }).click();
   await toast(page, "השיוך נשמר");
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(0);

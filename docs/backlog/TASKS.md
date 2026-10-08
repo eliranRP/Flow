@@ -14,13 +14,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-330 server and MCP (mark paid stays marked) batched with FLOW-412 | FLOW-330 screen goes to UI lane 1 |
+| Dev lane 1 | Free (FLOW-114 loan match server items done in #184; the screen parts go to a UI lane) | FLOW-903 |
 | Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Loan follow-ups: FLOW-114 server items, FLOW-136 balloon | rest of FLOW-205, FLOW-705 |
+| Backlog bug fixes | Company name error read with the field (onboarding, setup business step) | Next ready bug |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -73,7 +73,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | done (#131) |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | done (#131, #134) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
-| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
+| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready for a UI lane (server parts done in #176) |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
@@ -84,7 +84,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
-| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
+| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready for a UI lane (server parts done in #176) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
 | 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | done (#128) |
@@ -94,9 +94,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
-| 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | ready |
+| 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | in progress (PR #TBD) |
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | claimed (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc) |
-| 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
+| 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | in progress (PR #TBD) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | in-progress (#163 server and MCP; the screen goes to the UI lane) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
@@ -208,8 +208,8 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-125"></a>
 ### FLOW-125 · Loan split follow-ups (#83 review)
 - Renumbered from a second FLOW-121 (2026-10-07).
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-107
-- [ ] Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
+- **Type:** BACKLOG NIT · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-107
+- [ ] (server done in #176: every list read returns `source`; the app still has to pass it on) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
 - [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
 - [ ] "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
 
@@ -222,9 +222,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-124"></a>
 ### FLOW-124 · One line out of the P&L follow-ups (#105)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-108 (#105)
-- [ ] Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
-- [ ] A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
+- **Type:** SMALL UI · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-108 (#105)
+- [ ] (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [ ] (server done in #176: `get_transaction` returns `pnl_state` `in`/`out`/`mixed`; driving the pill and hint from it is the UI part) A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
 - [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
 
 <a id="flow-103"></a>
@@ -338,14 +338,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-114"></a>
 ### FLOW-114 · Loans server follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (loan match server items done in #184; the screen parts for a UI lane; the backfill item open) · **Depends on:** —
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
 - [ ] Backfill existing loan lines into `loans` / `loan_splits`.
 - [x] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow. (Obsolete: the default parts resolve by `categories.loan_part`, not by name or visibility.)
 - [x] Date formatting for years below 1000. (Four digits, and real leap years for years 0 to 99.)
-- [ ] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view.
+- [ ] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view. (Server done: `save_loan_split` writes the split and checks the balance (20261010120000); `clear_loan_split` and MCP `detach_loan_payment` unmatch, and `get_transaction` returns `loan_split` (#184, [0136](../decisions/0136-loan-unmatch.md)). Left for a UI lane: write through `save_loan_split`, an unmatch button through `clear_loan_split`, the P&L cache keys after a match or unmatch, the category picker locked on a matched payment, and reading `loan_split` from the transaction instead of `get_loan_split`.)
 - [x] Follow-up to the owner's call: relax the interest-category check so split interest can use another category (pairs with FLOW-106 d). (FLOW-106 part 2, decision 0128.)
 
 <a id="flow-115"></a>
@@ -398,14 +398,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Undo ignores `review_queue.prior_*` and `reassign_undo.prior_*` that still point at the row. (Conflict while a prior project, category or share points at it: migration `20261010130000`.)
 - [x] Names accept control and invisible characters. (FLOW-205 part 1: project, category and loan names with a control or invisible format character are `validation`; ZWJ stays for emoji.)
 - [x] A second hide returns the generic refusal; if the app unhides a category the MCP hid, the MCP can neither re-hide nor undo. (A re-hide keeps the one open undo; undo of a hide the app reversed succeeds: migration `20261010130000`.)
-- [ ] TOOLS.md conflict wording, and document the `sync_bank` errors.
-- [ ] `mercury-sync` `deno check` doesn't resolve imports (also on main).
-- [ ] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token.
+- [x] TOOLS.md conflict wording, and document the `sync_bank` errors.
+- [x] `mercury-sync` `deno check` doesn't resolve imports (also on main). (It needs the function's own `--config`; `scripts/check-edge-functions.sh` checks every function that way in local CI and CI, and found a null check in `sumit-connect`.)
+- [ ] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token. (Needs a live MCP token for the sandbox company Flow QA, so it belongs with the Production QA thread's deploy check.)
 - [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
 - [x] A race test (dblink pgTAP or e2e) for the undo row lock. (`mcp_undo_race.test.sql`.)
 - [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
 - [x] The MCP review schema still requires `project_id` for kept-out income that doesn't need one. (FLOW-205 part 1: `assign_expense` takes no project for a kept-out income category; any other category without one is `validation`.)
-- [ ] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space.
+- [x] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space. (Migration `20261010160000`: the database refuses hidden characters in project, category, loan and company names and stores wide spaces as plain ones; a refused MCP name says `name has an invisible or control character`.)
 
 <a id="flow-206"></a>
 ### FLOW-206 · Bulk setup without rate-limit stalls
@@ -415,8 +415,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-210"></a>
 ### FLOW-210 · Bulk setup follow-ups (#119 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-206 (#119)
-- [ ] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`.
+- **Type:** BACKLOG NIT · **Status:** done (#180) · **Depends on:** FLOW-206 (#119)
+- [x] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`. (`bulk_setup_followups.test.sql`.)
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
@@ -516,7 +516,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
 - [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
 - [x] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
-- [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filters on `owner_id`, so a viewer's project page is empty: follow-up.)
+- [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filtered on `owner_id`, so a viewer's project page was empty: fixed in `20261010190000_viewer_project_page.sql` with the drill-down, category totals and filed-today helpers.)
 - [ ] Stored Mercury account labels lose their digits at import, so the account row never shows a last 4. Keep the label's last 4 at import if the owner wants it.
 - [ ] The review queue warms the first other row's details, not the next card's.
 
@@ -633,7 +633,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-326"></a>
 ### FLOW-326 · Screen titles and row text on the start side
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Source:** mobile UI/UX review cycle 1 (2026-10-08, D1, D2, D5, D16, D18)
+- **Type:** SMALL UI · **Status:** in progress (PR #TBD) · **Depends on:** — · **Source:** mobile UI/UX review cycle 1 (2026-10-08, D1, D2, D5, D16, D18)
 - **What:** (1) On every screen with a Back control the title is pushed to the far left, away from its kicker (categories, connections, loans, unpaid, filed, project category, notifications, onboarding). `ScreenHeader`'s `.ui-page-title-row` uses `space-between`; put the title on the start side, Back on its own row as in mockups 07 and 14 (the existing `layout="stacked"` option may already do this). (2) `ListRow` rows rendered as `<button>` centre their label and hint (transaction detail project/category labels, connections status, add sheet rows): add `text-align: start` to `.ui-row`. (3) The settings switch row has no icon slot and a 600 title; give `Toggle` the row icon slot and the 400 row-title weight everywhere. (4) Help's Back is plain text; use the shared Back.
 - **Acceptance:** shared components only (`screen-header.tsx`, `list-row.tsx`, `toggle.tsx`, `ui.css`); stories updated; clip-check at 320/360/390, light and dark; design review.
 
@@ -648,21 +648,21 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-328"></a>
 ### FLOW-328 · Mobile UI consistency pass (cycle 1)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-326 · **Source:** cycle 1 (D4, D6, D7, D8, D10, D11, D13, D14, D15, D17, U10, U11, U13)
-- [ ] Change sheet rule preview: the arrow's space is inside the LTR bdi, so it renders on the wrong side ("ספק ␣␣←פרויקט"); spaces outside the bdi.
-- [ ] Split screen: remove the hairlines between choices, 24px side gutter like other screens, amount on the start side.
-- [ ] Install screen: remove step hairlines and centre the number circles on their text.
-- [ ] Change sheet: values at the same weight as the transaction detail; title-to-subtitle gap as mockup 06.
-- [ ] Project screen: more space between the band and the overhead switch (mockup 02).
-- [ ] Empty and error states use the standard button, not a 36px pill, and match each other.
-- [ ] The "מצב תצוגה" tag on the band sits on the start side, clear of the curve.
-- [ ] No minus sign on a figure already labelled expenses (project band, category rows).
-- [ ] Status chip "שולם" carries the ✓ like mockup 10.
-- [ ] Notifications uses the shared EmptyState, Hebrew only.
-- [ ] Amounts in lists in whole units; agorot only when non-zero, on detail and edit fields (§3.5).
-- [ ] Transaction list rows carry the trailing chevron, then drop the "אפשר לפתוח כל תנועה" explainer.
-- [ ] Empty Home names bank or SUMIT ("חיבור בנק או SUMIT"), opening the connections page.
-- [ ] (cycle 3) One word for splitting a line: the detail section says "פיצול" while older screens say "חלוקה". The owner chose "פיצול" (2026-10-08); use it on every screen and in the MCP copy.
+- **Type:** SMALL UI · **Status:** in progress (PR #TBD) · **Depends on:** FLOW-326 · **Source:** cycle 1 (D4, D6, D7, D8, D10, D11, D13, D14, D15, D17, U10, U11, U13)
+- [x] Change sheet rule preview: the arrow's space is inside the LTR bdi, so it renders on the wrong side ("ספק ␣␣←פרויקט"); spaces outside the bdi.
+- [x] Split screen: remove the hairlines between choices, 24px side gutter like other screens, amount on the start side.
+- [x] Install screen: remove step hairlines and centre the number circles on their text.
+- [x] Change sheet: values at the same weight as the transaction detail; title-to-subtitle gap as mockup 06.
+- [x] Project screen: more space between the band and the overhead switch (mockup 02).
+- [x] Empty and error states use the standard button, not a 36px pill, and match each other.
+- [x] The "מצב תצוגה" tag on the band sits on the start side, clear of the curve.
+- [x] No minus sign on a figure already labelled expenses (project band, category rows).
+- [x] Status chip "שולם" carries the ✓ like mockup 10.
+- [x] Notifications uses the shared EmptyState, Hebrew only.
+- [ ] Amounts in lists in whole units; agorot only when non-zero, on detail and edit fields (§3.5). (Not in this PR: transaction rows show cents, ".00" included, by the owner's decision [0120](../decisions/0120-income-green-type-scale.md) option C; needs an owner call before it changes.)
+- [x] Transaction list rows carry the trailing chevron, then drop the "אפשר לפתוח כל תנועה" explainer.
+- [x] Empty Home names bank or SUMIT ("חיבור בנק או SUMIT"), opening the connections page.
+- [x] (cycle 3) One word for splitting a line: the detail section says "פיצול" while older screens say "חלוקה". The owner chose "פיצול" (2026-10-08); use it on every screen and in the MCP copy.
 - **Acceptance:** shared components and stories; clip-check; design review.
 
 <a id="flow-329"></a>
@@ -761,9 +761,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (item 1 in 0129, item 2 in #180) · **Depends on:** —
 - [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
-- [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
+- [x] No pgTAP for the ILS filter in `get_home` and `get_project`. (`ils_filter_totals.test.sql`: both bases, a range, shared costs and the overhead weights.)
 
 <a id="flow-410"></a>
 ### FLOW-410 · Find every project in project search
@@ -844,13 +844,14 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-508"></a>
 ### FLOW-508 · Settings and connect sheet follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Token and key fields render RTL; add `dir="ltr"` (Mercury and SUMIT).
-- [ ] An empty token goes to the server and comes back as a toast; add an inline client check with a reserved message line (both connectors).
-- [ ] The busy refresh row shows no spinner; keep the token field read-only while connect is busy.
-- [ ] A reloaded tab gets no message when a run fails; show the stored last error in the sheet.
+- [x] Token and key fields render RTL; add `dir="ltr"` (Mercury and SUMIT). (Already in both sheets.)
+- [x] An empty token goes to the server and comes back as a toast; add an inline client check with a reserved message line (both connectors). ("חסר מפתח.", "חסר מספר חברה."; focus moves to the first empty field.)
+- [x] The busy refresh row shows no spinner; keep the token field read-only while connect is busy. (The row already has `busy`; the key fields are read-only while connecting.)
+- [x] A reloaded tab gets no message when a run fails; show the stored last error in the sheet. (Already: the status sheet shows the stored `last_error`.)
 - [ ] Refresh completion is announced only by the toast; add a status text update.
 - [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
-- [ ] Back off status polling on error; release only the run's own claim; consider a shorter claim expiry.
+- [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
+- [ ] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`).
 - [ ] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320.
 - [ ] Onboarding header back control goes to sign-in and drops `preview=1`; the onboarding round trip leaves no-op Back steps.
 
@@ -1013,7 +1014,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-808"></a>
 ### FLOW-808 · Shared test fixtures and pitfalls upkeep
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#181: `tests.fixture_*` in `supabase/tests/helpers.sql`, PITFALLS findings 19 to 31, code checklist) · **Depends on:** —
 - **What:** Commit shared invented test fixtures so builders stop re-creating them, and fold the pending pitfall candidates from recent retros into [PITFALLS](../review/PITFALLS.md) and the checklists. Themes: a consumer matrix for every payload a contract change touches; a unit or currency change reaches every sum; two PRs redefining one SQL function agree the order up front; never cache constraint or transient refusals in an idempotency store; security-relaxing columns are never owner-writable; every auth path gets a wrong-value negative test; probe a restricted role against every write path; fixed-timeout e2e waits are flakes; a fix needs a test that fails when it is reverted; a persisted flag is a hint, not confirmation; don't peek at another feature's query with a second observer; renames of ops-visible objects need an "Ops changes" PR section.
 - **Acceptance:** PITFALLS and checklists updated; changelog.
 
@@ -1036,13 +1037,13 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-811"></a>
 ### FLOW-811 · CI and deploy follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Migration checker: scan nested dollar-quoted bodies and commits inside DO or function bodies; don't flag `begin atomic`; flag unwrapped create/drop index.
+- [x] Migration checker: scan nested dollar-quoted bodies and commits inside DO or function bodies; don't flag `begin atomic`; flag unwrapped create/drop index. (A nested body after `do` or `as` is now scanned too; the other three were already in.)
 - [ ] Record the production row-hash baseline query in a script, so a baseline can be recomputed after a deploy.
 - [ ] If Dependabot is added, give it the fixture deny-list secret (CI fails closed without it).
 - [ ] Optional: indexes for composite foreign keys without a matching index (advisor info).
-- [ ] Smoke: a failure message on the sheet-stack scrim check; anchor the auth allowlist to the Supabase host; a unit test for the reporter.
-- [ ] Add `supabase migration repair` to the CI/CD runbook.
-- [ ] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR.
+- [x] Smoke: a failure message on the sheet-stack scrim check; anchor the auth allowlist to the Supabase host; a unit test for the reporter. (The scrim check already had its message. The write guard moved to `e2e/smoke-allow.ts`: the auth, status and list-RPC POSTs pass only on the Supabase origin. Unit tests for it and the reporter.)
+- [x] Add `supabase migration repair` to the CI/CD runbook. (Already in `docs/runbooks/ci-cd.md`.)
+- [x] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR. (`docs/changelog.d`.)
 
 <a id="flow-812"></a>
 ### FLOW-812 · Faster CI

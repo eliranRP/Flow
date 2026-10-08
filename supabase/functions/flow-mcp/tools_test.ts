@@ -356,6 +356,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_line_pnl",
     "set_lines_pnl",
     "set_invoice_paid",
+    "detach_loan_payment",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -407,6 +408,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_line_pnl",
     "set_lines_pnl",
     "set_invoice_paid",
+    "detach_loan_payment",
     "undo",
     "undo_batch",
   ]);
@@ -817,6 +819,24 @@ Deno.test("names with control or invisible characters are refused before the RPC
   const marked = await callTool("create_project", { idempotency_key: "k2", name: "שָׁלוֹם ❤️ 🇮🇱" }, ["write"], rpc);
   assertEquals(marked.isError, false);
   assertEquals(calls.length, 2);
+});
+
+Deno.test("a refused name says why, rename_company takes the same rule, and wide spaces become plain (FLOW-205)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const messageOf = (result: { structuredContent: unknown }) =>
+    (result.structuredContent as { error?: { message?: string } }).error?.message;
+  const project = await callTool("create_project", { idempotency_key: "k", name: "Site\u200fBeta" }, ["write"], rpc);
+  assertEquals(messageOf(project), "name has an invisible or control character");
+  const batch = await callTool("create_categories", { idempotency_key: "k", items: [{ name: "Cat\u200bOne", kind: "expense" }] }, ["write"], rpc);
+  assertEquals(messageOf(batch), "name has an invisible or control character");
+  const company = await callTool("rename_company", { idempotency_key: "k", name: "Example\u200fCo" }, ["write"], rpc);
+  assertEquals(messageOf(company), "name has an invisible or control character");
+  const short = await callTool("create_project", { idempotency_key: "k", name: "A" }, ["write"], rpc);
+  assertEquals(messageOf(short), "validation");
+  assertEquals(calls.length, 0);
+  await callTool("create_project", { idempotency_key: "k3", name: "Site\u00a0Beta\u2009Two" }, ["write"], rpc);
+  await callTool("rename_company", { idempotency_key: "k4", name: "Example\u202fCo" }, ["write"], rpc);
+  assertEquals(calls.map((call) => call.body.p_name), ["Site Beta Two", "Example Co"]);
 });
 
 Deno.test("assign_expense and set_expense_category describe reversals", () => {
@@ -3759,4 +3779,55 @@ Deno.test("get_jev_suggestions takes no arguments and passes the SQL result thro
   assertEquals((await callTool("get_jev_suggestions", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
   assertEquals((await callTool("get_jev_suggestions", {}, ["write"], rpc)).isError, true);
   assertEquals(calls.length, 1);
+});
+
+Deno.test("detach_loan_payment forwards the line and undo takes kind loan_detach", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, loan_id: TXN, parts: [], undo_kind: "loan_detach", id: TXN } },
+  }));
+  const out = await callTool("detach_loan_payment", { idempotency_key: "d-1", transaction_id: TXN }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_detach_loan_payment",
+    body: { p_idempotency_key: "d-1", p_transaction_id: TXN },
+  });
+  const undo = await callTool("undo", { idempotency_key: "u-1", kind: "loan_detach", id: TXN }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[1], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "loan_detach", p_id: TXN } });
+});
+
+Deno.test("detach_loan_payment validates input, refuses read tokens and passes the fixed refusal", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message: "line has no loan split" } } }));
+  const denied = await callTool("detach_loan_payment", { idempotency_key: "k", transaction_id: TXN }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const bad: unknown[] = [
+    { idempotency_key: "k" },
+    { idempotency_key: "k", transaction_id: "not-a-uuid" },
+    { idempotency_key: "", transaction_id: TXN },
+    { idempotency_key: "k", transaction_id: TXN, loan_id: TXN },
+  ];
+  for (const input of bad) {
+    const result = await callTool("detach_loan_payment", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
+  const refused = await callTool("detach_loan_payment", { idempotency_key: "k", transaction_id: TXN }, ["write"], rpc);
+  assertEquals(refused.isError, true);
+  if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "line has no loan split");
+});
+
+Deno.test("get_expense takes the loan split from get_transaction when it carries one", async () => {
+  const split = { loan_id: TXN, loan_name: "Example loan", needs_review: false, by_parts: true, parts: [] };
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id: TXN, direction: "expense", loan_split: split } };
+    if (name === "get_line_split") return { status: 200, json: null };
+    return { status: 200, json: [] };
+  });
+  const out = await callTool("get_expense", { transaction_id: TXN }, ["read"], rpc);
+  assertEquals(out.isError, false);
+  if (out.structuredContent.ok) assertEquals((out.structuredContent.data as { loan_split: unknown }).loan_split, split);
+  assertEquals(calls.some((call) => call.name === "get_loan_split"), false, "no second read");
 });

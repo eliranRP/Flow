@@ -65,6 +65,25 @@ describe("supplier names", () => {
     expect(titles.some((node) => node.classList.contains("ui-remember-supplier"))).toBe(true);
     expect(titles.some((node) => node.classList.contains("ui-party"))).toBe(true);
   });
+
+  it("keeps the remember arrow's spaces outside its LTR bdi (FLOW-328)", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <Remember supplier="השרון" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const join = document.querySelector(".ui-remember-join");
+    expect(join?.textContent).toBe("←");
+    const dest = join?.closest(".ui-remember-dest");
+    expect(dest?.textContent).toBe("←\u00A0\u2060פרויקט · מלט");
+    // The summary values read at the row-title weight, like the transaction detail.
+    for (const title of document.querySelectorAll(".ui-change-summary .ui-row-title")) {
+      expect(getComputedStyle(title).fontWeight).toBe("var(--type-meta-weight)");
+    }
+    expect(document.querySelectorAll(".ui-change-summary .ui-row-title").length).toBeGreaterThan(0);
+  });
 });
 
 function Remember({ supplier }: { supplier: string }) {

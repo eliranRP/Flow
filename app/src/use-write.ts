@@ -14,7 +14,7 @@ export type WriteFailure = string | {
   message: string;
   retry?: boolean;
   tone?: "bad" | "info";
-  /** A shared-cost refusal offers לחלוקה instead of a retry. */
+  /** A shared-cost refusal offers לפיצול instead of a retry. */
   action?: string;
 };
 
@@ -39,13 +39,13 @@ export function useWrite<T = void>(options: {
   success?: string;
   failure: string | ((error: Error) => WriteFailure);
   onSuccess?: (payload: T) => void;
-  /** Where לחלוקה goes when the database refuses one project on a shared cost. */
+  /** Where לפיצול goes when the database refuses one project on a shared cost. */
   onSplit?: () => void;
   /** Runs before a retry, while the toast action is still focused. */
   retryFocus?: () => void;
   /** An error that needs no toast, because the screen already shows the state. */
   silent?: (error: Error) => boolean;
-  /** Where this write's toasts sit. לאישור keeps them above its action bar (decision 0135). */
+  /** Where this write's toasts sit. לאישור keeps them above its action bar (decision 0137). */
   place?: "page" | "tab" | "bar";
 }) {
   const toast = useToast();

@@ -17,10 +17,10 @@ export const Default: Story = {
   args: {
     icon: <ChartIcon />,
     title: "עוד אין נתונים",
-    body: "הרווח יופיע כאן אחרי ש־SUMIT מחובר.",
+    body: "הרווח יופיע כאן אחרי חיבור בנק או SUMIT.",
     action: (
-      <Button variant="pill" to="/settings">
-        חיבור SUMIT
+      <Button variant="pill" to="/settings/connections">
+        חיבור בנק או SUMIT
       </Button>
     ),
   },
