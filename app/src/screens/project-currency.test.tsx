@@ -1,6 +1,6 @@
 import type { ProjectDetail } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ToastProvider } from "../ui/toast";
@@ -63,10 +63,11 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.getByText("$2,750")).toBeInTheDocument();
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
     // Rows under הוצאות לפי קטגוריה carry no minus (FLOW-328).
-    expect(screen.queryByText("−$1,250")).not.toBeInTheDocument();
+    // The only minus is on the transaction row, which now shows with the project (FLOW-411).
+    const vendorRow = screen.getByText("Sample vendor").closest(".ui-row");
+    for (const signed of screen.queryAllByText("−$1,250")) expect(vendorRow?.contains(signed)).toBe(true);
     const categoryAmount = screen.getAllByText("$1,250")[0];
     expect(categoryAmount?.closest("bdi")).toHaveAttribute("dir", "ltr");
-    fireEvent.click(screen.getByText("תנועות אחרונות"));
     const txnAmount = screen.getByText("Sample vendor").closest(".ui-row")?.querySelector(".ui-num");
     // Transaction rows show cents like Mercury, ".00" included, drawn small (decision 0120, option C).
     expect(txnAmount?.textContent).toBe("−$1,250.00");

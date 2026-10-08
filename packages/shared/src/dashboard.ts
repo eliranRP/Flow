@@ -83,6 +83,12 @@ export const unpaidRowSchema = z.object({
   customer_name: z.string().nullable(),
   open_gross_agorot: agorotSchema,
   open_net_agorot: agorotSchema,
+  /** FLOW-330. The document's currency. Older payloads omit it. */
+  currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
+  /** A customer invoice is income; a supplier invoice is expense. Older payloads omit it. */
+  direction: z.enum(["income", "expense"]).optional().catch(undefined),
+  /** FLOW-330 (decision 0133). Set when the owner marked it paid and the sync has not closed it yet. */
+  marked_paid_at: z.string().nullable().optional(),
 });
 
 export const reviewRowSchema = z.object({
@@ -235,6 +241,8 @@ export const projectDetailSchema = z
         category: z.string().nullable(),
         /** Out of the P&L (its category, or the owner took the line out), so month sums leave it out. Omitted on older payloads. */
         kept_out: z.boolean().optional().catch(undefined),
+        /** A line split by category: this project's parts, unsigned. Null when the line has no split. */
+        parts_minor: agorotOrNull.optional(),
       }),
     ),
     /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
@@ -377,6 +385,36 @@ export const breakdownLinesSchema = z
   })
   .nullable();
 
+const profitMonthCurrencySchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  income_minor: agorotSchema,
+  expense_minor: agorotSchema,
+  profit_minor: agorotSchema,
+});
+
+/** Profit by month (decision 0129): every month of the range, newest first, ILS first in each. */
+export const profitMonthsSchema = z
+  .object({
+    basis: basisSchema,
+    from: z.string().nullable(),
+    to: z.string().nullable(),
+    project_id: z.string().nullable().optional(),
+    after_overhead: z.boolean().nullable().optional(),
+    months: z.array(
+      z.object({
+        month: z.string().regex(/^\d{4}-\d{2}$/),
+        from: z.string(),
+        to: z.string(),
+        open: z.boolean(),
+        by_currency: z.array(profitMonthCurrencySchema).nullable().transform((rows) => rows ?? []),
+        overhead_weighted: z.boolean().nullable().optional(),
+        overhead_share_agorot: agorotOrNull.optional(),
+      }),
+    ),
+    by_currency: z.array(profitMonthCurrencySchema),
+  })
+  .nullable();
+
 export type Basis = z.infer<typeof basisSchema>;
 export type BreakdownGroupBy = z.infer<typeof breakdownGroupBySchema>;
 export type BreakdownDirection = z.infer<typeof breakdownDirectionSchema>;
@@ -392,5 +430,7 @@ export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type MercuryStatus = z.infer<typeof mercuryStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
 export type ProjectCategoryPage = z.infer<typeof projectCategorySchema>;
+export type ProfitMonths = z.infer<typeof profitMonthsSchema>;
+export type ProfitMonth = NonNullable<ProfitMonths>["months"][number];
 export type ProjectWaitingRow = z.infer<typeof projectWaitingRowSchema>;
 export type TransactionDetail = z.infer<typeof transactionDetailSchema>;

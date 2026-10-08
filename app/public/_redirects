@@ -47,6 +47,8 @@
 /settings/loans/ /settings/loans 301
 /projects/:projectId/categories/:categoryId /app-shell 200
 /projects/:projectId/categories/:categoryId/ /projects/:projectId/categories/:categoryId 301
+/projects/:projectId/months /app-shell 200
+/projects/:projectId/months/ /projects/:projectId/months 301
 /projects/:projectId /app-shell 200
 /projects/:projectId/ /projects/:projectId 301
 /flow/:direction/excluded/:currency /app-shell 200

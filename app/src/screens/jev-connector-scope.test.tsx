@@ -5,7 +5,7 @@ import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { thisMonth } from "../period";
+import { defaultPeriod } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ReviewQueue, SettingsScreen } from "./flow-screens";
@@ -157,7 +157,7 @@ describe("Jev connector scope", () => {
   it("binds the scope from the review queue when the dashboard is already cached", async () => {
     bindJevConnectorScope(null);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    client.setQueryData(["dashboard", "off", thisMonth()], { company_id: scope.companyId });
+    client.setQueryData(["dashboard", "off", defaultPeriod()], { company_id: scope.companyId });
     render(
       <QueryClientProvider client={client}>
         <ToastProvider>

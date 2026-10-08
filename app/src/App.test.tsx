@@ -68,7 +68,7 @@ describe("App", () => {
   it("shows the ld-01 loading skeleton from preview=loading", () => {
     renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
     expect(document.querySelector(".ui-band")).not.toBeNull();
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(document.querySelectorAll(".ui-project-list .ui-row")).toHaveLength(3);

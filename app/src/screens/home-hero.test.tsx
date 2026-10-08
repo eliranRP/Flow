@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeBooks } from "./HomeScreen";
-import { heroExplanation, lastMonth, thisMonth } from "../period";
+import { heroExplanation, periodPhrase, stepPeriod, thisMonth } from "../period";
 
 function books(overrides: Partial<Dashboard> = {}): Dashboard {
   return {
@@ -65,7 +65,7 @@ describe("Home hero", () => {
     expect(spent.closest(".ui-band")).toBeNull();
     expect(document.querySelector(".ui-band .ui-band-figures")).toBeNull();
     expect(screen.getByText("מחודש שעבר").closest(".ui-band")).toBeNull();
-    expect(screen.getByRole("button", { name: "החודש" }).closest(".ui-band")).not.toBeNull();
+    expect(screen.getByRole("radiogroup", { name: "תקופה" }).closest(".ui-band")).not.toBeNull();
   });
 
   it("shows USD-only books without shekel placeholders or change pill", () => {
@@ -107,9 +107,9 @@ describe("Home hero", () => {
   });
 
   it("names a loss in the label", () => {
-    const period = lastMonth();
+    const period = stepPeriod(thisMonth(), -1) ?? thisMonth();
     renderHome(books({ income_agorot: 10_000_000n, expense_agorot: 20_000_000n, net_profit_agorot: -10_000_000n }), period);
-    expect(screen.getByText("הפסד בחודש קודם")).toBeInTheDocument();
+    expect(screen.getByText(`הפסד ${periodPhrase(period)}`)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "−₪100,000" })).toBeInTheDocument();
     expect(screen.getByText(heroExplanation(period))).toBeInTheDocument();
   });

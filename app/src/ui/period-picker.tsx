@@ -37,6 +37,40 @@ type PeriodPickerProps = {
 };
 
 export function PeriodPicker({ pill, open, onOpenChange, options, onCustom, tone = "band" }: PeriodPickerProps) {
+  return (
+    <>
+      <button
+        type="button"
+        className={tone === "page" ? "ui-band-period ui-page-period ui-hit" : "ui-band-period ui-hit"}
+        aria-label={pill}
+        onClick={() => {
+          onOpenChange(true);
+        }}
+      >
+        <span className="ui-period-label" data-clip-ok="">{pill}</span>
+        <span className="ui-period-chevron" aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+      </button>
+      <PeriodSheet open={open} onOpenChange={onOpenChange} options={options} onCustom={onCustom} selectedLabel={pill} />
+    </>
+  );
+}
+
+type PeriodSheetProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  options: PeriodOption[];
+  onCustom?: () => void;
+  /** Older callers select the row whose label matches the pill. */
+  selectedLabel?: string;
+};
+
+/**
+ * The period sheet (16): radio rows that apply on tap, then "טווח מותאם". The pill opens it, and
+ * so does the period bar's label (decision 0135). The range sheet opens only after this one closed.
+ */
+export function PeriodSheet({ open, onOpenChange, options, onCustom, selectedLabel }: PeriodSheetProps) {
   const custom = useRef(false);
   const onCustomRef = useRef(onCustom);
   onCustomRef.current = onCustom;
@@ -53,57 +87,42 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom, tone
     };
   }, [open]);
   return (
-    <>
-      <button
-        type="button"
-        className={tone === "page" ? "ui-band-period ui-page-period ui-hit" : "ui-band-period ui-hit"}
-        aria-label={pill}
-        onClick={() => {
-          setOpen(true);
-        }}
-      >
-        <span className="ui-period-label" data-clip-ok="">{pill}</span>
-        <span className="ui-period-chevron" aria-hidden="true">
-          <ChevronDownIcon />
-        </span>
-      </button>
-      <Sheet open={open} onOpenChange={setOpen} title="תקופה">
-        <div role="radiogroup" aria-label="תקופה">
-          {options.map((option) => (
-            <RadioRow
-              key={option.label}
-              label={option.label}
-              hint={option.hint}
-              selected={option.selected ?? option.label === pill}
-              onSelect={() => {
-                custom.current = false;
-                option.onSelect();
-                setOpen(false);
-              }}
-            />
-          ))}
-        </div>
-        {onCustom ? (
-          <button
-            type="button"
-            className="ui-radio-row"
-            onClick={() => {
-              custom.current = true;
+    <Sheet open={open} onOpenChange={setOpen} title="תקופה">
+      <div role="radiogroup" aria-label="תקופה">
+        {options.map((option) => (
+          <RadioRow
+            key={option.label}
+            label={option.label}
+            hint={option.hint}
+            selected={option.selected ?? option.label === selectedLabel}
+            onSelect={() => {
+              custom.current = false;
+              option.onSelect();
               setOpen(false);
             }}
-          >
-            <CalendarIcon size={20} />
-            <span className="ui-row-text">
-              <span className="ui-row-title">טווח מותאם</span>
-              <span className="ui-row-hint">בחירת תאריכים בלוח</span>
-            </span>
-            <span className="ui-banner-chevron">
-              <ChevronIcon />
-            </span>
-          </button>
-        ) : null}
-      </Sheet>
-    </>
+          />
+        ))}
+      </div>
+      {onCustom ? (
+        <button
+          type="button"
+          className="ui-radio-row"
+          onClick={() => {
+            custom.current = true;
+            setOpen(false);
+          }}
+        >
+          <CalendarIcon size={20} />
+          <span className="ui-row-text">
+            <span className="ui-row-title">טווח מותאם</span>
+            <span className="ui-row-hint">בחירת תאריכים בלוח</span>
+          </span>
+          <span className="ui-banner-chevron">
+            <ChevronIcon />
+          </span>
+        </button>
+      ) : null}
+    </Sheet>
   );
 }
 

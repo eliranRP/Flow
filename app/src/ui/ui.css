@@ -4614,3 +4614,150 @@ div.ui-check-row {
   font-size: var(--type-label-size);
   font-weight: var(--type-hint-weight);
 }
+
+/*
+  Profit by period (decision 0135): the period bar on Home's band, on the project band, or on a page.
+  Five presets on a segmented control, then a stepper whose SVG chevrons point outward.
+*/
+.ui-band-row > .ui-pbar {
+  flex: 1 1 auto;
+}
+
+.ui-pbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-band-hero .ui-pbar {
+  margin-block-start: var(--space-4);
+}
+
+.ui-seg-band {
+  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
+}
+
+.ui-seg-band .ui-seg-btn {
+  flex: 1 1 auto;
+  padding-inline: var(--space-2);
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-label-size);
+}
+
+.ui-seg-band .ui-seg-btn:active {
+  background: color-mix(in srgb, var(--color-on-band) 24%, transparent);
+}
+
+.ui-seg-band .ui-seg-btn[aria-checked="true"] {
+  background: var(--color-band-pill);
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+.ui-seg-short {
+  display: none;
+}
+
+@media (max-width: 359px) {
+  .ui-seg-long {
+    display: none;
+  }
+
+  .ui-seg-short {
+    display: inline;
+  }
+}
+
+.ui-pbar-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-pbar-arrow,
+.ui-pbar-arrow-slot {
+  flex: none;
+}
+
+.ui-pbar-arrow-slot {
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+}
+
+.ui-pbar-band .ui-icon-btn-on-band[aria-disabled="true"],
+.ui-pbar-band .ui-icon-btn-on-band[aria-disabled="true"]:active {
+  background: transparent;
+  color: color-mix(in srgb, var(--color-on-band) 40%, transparent);
+}
+
+.ui-pbar-label {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 0;
+  min-block-size: var(--touch-min);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: center;
+}
+
+.ui-pbar-band .ui-pbar-label {
+  color: var(--color-on-band);
+}
+
+.ui-pbar-label:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-pbar-band .ui-pbar-label:active {
+  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
+}
+
+.ui-pbar-window {
+  display: block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-pbar-hint {
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+}
+
+.ui-pbar-band .ui-pbar-hint {
+  color: var(--color-on-band-secondary);
+}
+
+/* "▲ ברווח" stays muted; "▼ הפסד" is bad. Profit is never green (0120). */
+.ui-profit-mark {
+  color: var(--color-text-muted);
+}
+
+.ui-profit-mark-loss {
+  color: var(--color-bad);
+}
+
+/* FLOW-330: one line per currency in the Unpaid total. */
+.ui-unpaid-totals bdi {
+  display: block;
+}
+
+/* The note under the "לפי חודש" list. */
+.ui-months-note {
+  margin-block-start: var(--space-4);
+}

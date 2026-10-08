@@ -1,7 +1,12 @@
 import { useRef, type KeyboardEvent } from "react";
 import { cx } from "./cx";
 
-type Option<T extends string> = { value: T; label: string };
+type Option<T extends string> = {
+  value: T;
+  label: string;
+  /** Drawn instead of the label under 360px. The label stays the accessible name. */
+  short?: string;
+};
 
 type SegmentedControlProps<T extends string> = {
   label: string;
@@ -15,6 +20,8 @@ type SegmentedControlProps<T extends string> = {
   /** The hint under the control. The group points at it. */
   describedBy?: string;
   disabled?: boolean;
+  /** The period bar sits on the violet band: a translucent track and white text (decision 0135). */
+  tone?: "page" | "band";
 };
 
 /** Roving tabindex. Arrow keys follow the reading direction, so they reverse under dir=rtl. */
@@ -27,6 +34,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   describedBy,
   disabled = false,
+  tone = "page",
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const index = Math.max(0, options.findIndex((option) => option.value === value));
@@ -56,7 +64,7 @@ export function SegmentedControl<T extends string>({
     <div className="ui-field">
       {showLabel ? <span className="ui-field-label">{label}</span> : null}
       <div
-        className={cx("ui-seg", radius === "input" && "ui-seg-input")}
+        className={cx("ui-seg", radius === "input" && "ui-seg-input", tone === "band" && "ui-seg-band")}
         role="radiogroup"
         aria-label={label}
         aria-describedby={describedBy}
@@ -83,7 +91,14 @@ export function SegmentedControl<T extends string>({
               onChange(option.value);
             }}
           >
-            <span className="ui-seg-label" data-clip-ok="">{option.label}</span>
+            <span className="ui-seg-label" data-clip-ok="">
+              {option.short == null ? option.label : (
+                <>
+                  <span className="ui-seg-long">{option.label}</span>
+                  <span className="ui-seg-short" aria-hidden="true">{option.short}</span>
+                </>
+              )}
+            </span>
           </button>
         );
       })}

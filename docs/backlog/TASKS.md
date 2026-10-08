@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-330 server and MCP (mark paid stays marked) batched with FLOW-412 | FLOW-330 screen goes to UI lane 1 |
 | Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
-| UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
+| UI lane 1 | Profit by period (option A, decision 0135) with FLOW-411 and the FLOW-330 screen, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -90,7 +90,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | done (#128) |
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
-| 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
+| 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | in progress (PR #TBD) |
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
@@ -98,7 +98,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | in progress (PR #TBD) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
-| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | in-progress (#163 server and MCP; the screen goes to the UI lane) |
+| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | in progress (PR #TBD; server and MCP #163) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | ready (owner chose 2026-10-08) |
@@ -673,7 +673,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
-- **Type:** SMALL CYCLE · **Status:** in-progress (#163 server and MCP; the screen goes to the UI lane) · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
+- **Type:** SMALL CYCLE · **Status:** in progress (PR #TBD; server and MCP #163) · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
 - **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`flow-screens.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
 - **MCP:** for (a), the unpaid tools return and can set the flag.
 - **Acceptance:** a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
@@ -774,7 +774,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-411"></a>
 ### FLOW-411 · Project screen: lines on open, honest period label
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-302
+- **Type:** SMALL UI · **Status:** in progress (PR #TBD, with profit by period, decision 0135) · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review. Show a project's recent lines (the month list, capped) under its categories without the extra "תנועות אחרונות" tap; the band says the figure is since the project started; the "כל הקטגוריות" link that jumps to Settings goes. FLOW-402 keeps the full page with filters; FLOW-403 adds a period.
 - **MCP:** none (`get_project` returns the lines).
 - **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.

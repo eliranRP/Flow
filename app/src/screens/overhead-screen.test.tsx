@@ -70,7 +70,7 @@ describe("project category breakdown", () => {
       pending_count: 1,
       pending_agorot: 5_000n,
     });
-    expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", "/projects/a/categories/h");
+    expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/a\/categories\/h\?period=/));
     expect(screen.getByRole("link", { name: /1 ממתינה לאישור/ })).toHaveAttribute("href", "/review?project=a");
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
     expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
@@ -218,7 +218,7 @@ describe("project overhead hero", () => {
     });
     expect(calls).toEqual([{ p_on: true, p_project_id: "a" }]);
     // The project screen asks for the same books basis as Home (decision 0060).
-    expect(projectArgs).toContainEqual({ p_id: "a", p_basis: "invoiced" });
+    expect(projectArgs).toContainEqual(expect.objectContaining({ p_id: "a", p_basis: "invoiced" }));
     expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeChecked();
   });
 

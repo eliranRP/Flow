@@ -17,7 +17,7 @@ import {
   writeGroupBy,
 } from "../breakdown";
 import { useHeldOrder } from "../list-hold";
-import { allTime, customRange, lastMonth, periodHint, periodLabel, samePeriod, thisMonth, yearToDate } from "../period";
+import { PRESET_KINDS, customRange, periodHint, periodLabel, presetLabel, presetPeriod, samePeriod } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useBooks, useBreakdownLinesQuery, useBreakdownQuery } from "../use-books";
@@ -58,7 +58,6 @@ function Totals({ direction, totals }: { direction: BreakdownDirection; totals: 
 function PeriodControl({ sheet, setSheet }: { sheet: boolean; setSheet: (open: boolean) => void }) {
   const books = useBooks();
   const [range, setRange] = useState(false);
-  const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
   return (
     <>
       <PeriodPicker
@@ -69,14 +68,18 @@ function PeriodControl({ sheet, setSheet }: { sheet: boolean; setSheet: (open: b
         onCustom={() => {
           setRange(true);
         }}
-        options={choices.map((choice) => ({
-          label: periodLabel(choice),
-          hint: periodHint(choice),
-          selected: samePeriod(choice, books.period),
-          onSelect: () => {
-            books.setPeriod(choice);
-          },
-        }))}
+        options={PRESET_KINDS.map((kind) => {
+          // The same presets as Home's period bar (decision 0135): each window that ends now.
+          const choice = presetPeriod(kind);
+          return {
+            label: presetLabel(kind),
+            hint: periodHint(choice),
+            selected: samePeriod(choice, books.period),
+            onSelect: () => {
+              books.setPeriod(choice);
+            },
+          };
+        })}
       />
       <RangeSheet
         open={range}

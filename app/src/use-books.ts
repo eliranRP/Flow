@@ -6,6 +6,7 @@ import {
   projectCategorySchema,
   projectDetailSchema,
   projectWaitingSchema,
+  profitMonthsSchema,
   filedTodaySchema,
   reviewRowSchema,
   sumitStatusSchema,
@@ -22,6 +23,7 @@ import {
   type ProjectCategoryPage,
   type ProjectDetail,
   type ProjectWaitingRow,
+  type ProfitMonths,
   type ReviewRow,
   type SumitStatus,
   type MercuryStatus,
@@ -32,7 +34,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type Quer
 import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
 import { waitForAccessToken } from "./wait-for-session";
-import { thisMonth, type PeriodChoice } from "./period";
+import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
 import { parseTxnMetaList, type TxnMeta } from "./txn-meta";
 import {
@@ -61,7 +63,7 @@ interface BooksContextValue {
 const BooksContext = createContext<BooksContextValue | null>(null);
 
 export function BooksProvider({ children }: { children: ReactNode }) {
-  const [period, setPeriodState] = useState<PeriodChoice>(() => thisMonth());
+  const [period, setPeriodState] = useState<PeriodChoice>(() => defaultPeriod());
   const setPeriod = useCallback((next: PeriodChoice) => {
     setPeriodState(next);
   }, []);
@@ -86,6 +88,11 @@ export function useOptionalBooks(): BooksContextValue | null {
 
 /** The one books basis (decision 0060). Home and the project screen both read it, so project income counts the same doc kinds as Home. */
 const BOOKS_BASIS = "invoiced";
+
+/** Both dates or neither: the project reads refuse one alone. */
+function rangeOf(period: PeriodChoice): { p_from: string; p_to: string } | null {
+  return period.from && period.to ? { p_from: period.from, p_to: period.to } : null;
+}
 
 function rpcArgs(period: PeriodChoice): { p_basis: typeof BOOKS_BASIS; p_from?: string; p_to?: string } {
   return {
@@ -324,16 +331,20 @@ export function useMercuryStatusQuery(active = true) {
   });
 }
 
-export function useProjectQuery(projectId: string) {
+/** The project's own period (decision 0129): every P&L field, the categories and the lines follow it. */
+export function useProjectQuery(projectId: string, period: PeriodChoice | null = null) {
   const preview = useHomePreview();
+  const range = period ? rangeOf(period) : null;
   return useQuery({
-    queryKey: ["project", preview, projectId],
+    queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null],
     enabled: preview === "off" && projectId !== "",
+    // A new period keeps the screen and its period bar; the figures follow the new read.
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<ProjectDetail> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: BOOKS_BASIS });
+      const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: BOOKS_BASIS, ...(range ?? {}) });
       if (error) throw error;
       return projectDetailSchema.parse(data);
     },
@@ -342,10 +353,11 @@ export function useProjectQuery(projectId: string) {
 
 const CATEGORY_PAGE = 40;
 
-export function useProjectCategoryQuery(projectId: string, categoryId: string) {
+export function useProjectCategoryQuery(projectId: string, categoryId: string, period: PeriodChoice | null = null) {
   const preview = useHomePreview();
+  const range = period ? rangeOf(period) : null;
   return useInfiniteQuery({
-    queryKey: ["project-category", preview, projectId, categoryId],
+    queryKey: ["project-category", preview, projectId, categoryId, range?.p_from ?? null, range?.p_to ?? null],
     enabled: preview === "off" && projectId !== "" && categoryId !== "",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
@@ -358,6 +370,7 @@ export function useProjectCategoryQuery(projectId: string, categoryId: string) {
         p_offset: pageParam,
         p_limit: CATEGORY_PAGE,
         p_basis: BOOKS_BASIS,
+        ...(range ?? {}),
       });
       if (error) throw error;
       return projectCategorySchema.parse(data);
@@ -425,6 +438,28 @@ export function useBreakdownLinesQuery(
       return breakdownLinesSchema.parse(data);
     },
     getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * BREAKDOWN_PAGE : undefined),
+  });
+}
+
+/** Profit by month for a project's period, newest month first (decision 0129). */
+export function useProfitMonthsQuery(projectId: string, period: PeriodChoice) {
+  const preview = useHomePreview();
+  const range = rangeOf(period);
+  return useQuery({
+    queryKey: ["profit-months", preview, projectId, range?.p_from ?? null, range?.p_to ?? null],
+    enabled: preview === "off" && projectId !== "",
+    queryFn: async (): Promise<ProfitMonths> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("get_profit_months", {
+        p_basis: BOOKS_BASIS,
+        p_project_id: projectId,
+        ...(range ?? {}),
+      });
+      if (error) throw error;
+      return profitMonthsSchema.parse(data);
+    },
   });
 }
 
@@ -542,7 +577,7 @@ export async function readLineMetaPage(client: QueryClient, preview: string, ids
 
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta"]) => {
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta", "profit-months"]) => {
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }

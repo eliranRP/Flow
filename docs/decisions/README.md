@@ -45,7 +45,7 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0016](0016-hebrew-only.md) | 2026-09-26 | Accepted | Hebrew only |
 | [0017](0017-sms-sign-in.md) | 2026-09-26 | Superseded | Sign in with phone number and an SMS code. Superseded by 0033 |
 | [0018](0018-two-notifications.md) | 2026-09-26 | Accepted | Two notifications: Sunday summary, and an 18:00 review nudge |
-| [0019](0019-home-periods-and-comparison.md) | 2026-09-26 | Accepted | Home: this month, last month, year to date, with a month comparison |
+| [0019](0019-home-periods-and-comparison.md) | 2026-09-26 | Accepted | Home: this month, last month, year to date, with a month comparison. Amended by 0135 (period bar) |
 | [0020](0020-capture-from-the-phone.md) | 2026-09-26 | Accepted | Multi-photo and files on the phone; Android share target only |
 | [0021](0021-shared-costs-and-overhead.md) | 2026-09-26 | Accepted | Shared project costs are split; true overhead stays overhead, with a view-only share |
 | [0022](0022-after-overhead-starts-off.md) | 2026-09-26 | Accepted | The after-overhead switch starts off, so the default numbers match the bank |
@@ -54,7 +54,7 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0025](0025-implementation-guide-is-mandatory.md) | 2026-09-26 | Accepted | The implementation guide, including its definition of done, is mandatory |
 | [0026](0026-empty-loading-error-states.md) | 2026-09-26 | Accepted | Every screen has empty, loading, and error states, in light and dark |
 | [0027](0027-date-picker.md) | 2026-09-26 | Accepted | Week starts Sunday; dates are dd/mm/yyyy; single and range pickers |
-| [0028](0028-period-sheet-with-custom-range.md) | 2026-09-26 | Accepted | Period sheet from the band pill, including a custom range |
+| [0028](0028-period-sheet-with-custom-range.md) | 2026-09-26 | Accepted | Period sheet from the band pill, including a custom range. Amended by 0135 (also opened from the period bar's label) |
 | [0029](0029-pwa-install-prompt.md) | 2026-09-26 | Accepted | PWA install prompt after the first successful report; Android and iPhone variants |
 | [0030](0030-confirmation-sheets.md) | 2026-09-26 | Accepted | Confirmation sheets for delete, archive, hide, and a two-step merge |
 | [0031](0031-logo.md) | 2026-09-26 | Accepted | Flow wordmark and the S1 app icon |
@@ -152,3 +152,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0133](0133-invoice-paid-marks.md) | 2026-10-08 | Accepted | An open customer document marked paid on Unpaid is stored (`invoice_paid_marks`, owner only) and stays listed with `marked_paid_at`, out of the unpaid total, until a sync closes it or the owner clears it; no P&L figure moves; MCP `list_unpaid` (open and marked totals) and `set_invoice_paid` (undo `invoice_paid`); `list_project_category` takes a basis and leaves unpaid supplier invoices out on cash (FLOW-412) |
 | [0131](0131-jev-patterns.md) | 2026-10-08 | Accepted | Computed in SQL when read: anomaly flags for the review card (`duplicate`, `amount_spike`, `new_party_large`), recurring suppliers and customers (3 of the last 6 months), `missing_bills` after the usual day plus 5, and `expected_months`; MCP `get_anomalies`, `get_missing_bills`, `get_expected_months` |
 | [0116](0116-settings-connections-and-loans-pages.md) | 2026-10-07 | Accepted | Settings opens two pages: חיבורים (`/settings/connections`, SUMIT, Mercury, Jev, עוזר AI) and הלוואות (`/settings/loans`), from one quiet group with hints; old `/settings?sheet=` links redirect; viewers read loans. Supersedes 0082 §1 |
+| [0135](0135-period-bar.md) | 2026-10-08 | Accepted | One `PeriodBar` on Home's band and the project band: presets חודש, 3 חודשים, 6 חודשים, שנה, הכול, and a stepper whose outward SVG chevrons step by the preset's length (later arrow off at the current window); the label opens the period sheet; Home opens on 3 months and lists up to 5 projects with ▲ ברווח / ▼ הפסד; a project keeps its own period (הכול is מתחילת הפרויקט) with a "לפי חודש" page. Amends 0019 and 0028 |

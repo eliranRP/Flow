@@ -47,3 +47,6 @@ export { TextLink } from "./text-link";
 export { Toast, ToastProvider, useToast } from "./toast";
 export { TopBand } from "./top-band";
 export { Wordmark } from "./wordmark";
+export { OutwardChevron, PeriodBar } from "./period-bar";
+export { PeriodSheet } from "./period-picker";
+export { ProfitMark } from "./profit-mark";
