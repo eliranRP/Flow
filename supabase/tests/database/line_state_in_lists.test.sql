@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(24);
+select plan(28);
 
 do $users$
 begin
@@ -67,6 +67,61 @@ select (select id from lso where label = 'co'), (select id from lso where label 
   (select id from lso where label = v.category), (select id from lso where label = v.project), v.amount
 from (values (1, 'draw', 'harbor', 1500), (2, 'materials', 'pier', 2500)) as v(ordinal, category, project, amount);
 
+-- A shared line split by category, allocated whole to Harbor: 1000 kept out, 2000 counted.
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, category_id, description,
+  user_assigned, category_assigned, category_suggested, pnl_role
+)
+values (
+  (select id from lso where label = 'co'), 'expense', 'receipt', 'posted', 'ILS',
+  3000, 3000, 3000, 0, 'source', '2026-06-12', '2026-06-12', 'manual', 'lso:shared',
+  (select id from lso where label = 'materials'), 'lso:shared', true, true, false, 'shared'
+);
+insert into lso (label, id) select 'txn_shared', id from public.transactions where idempotency_key = 'lso:shared';
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+values ((select id from lso where label = 'co'), (select id from lso where label = 'txn_shared'),
+  (select id from lso where label = 'harbor'), 10000, 3000);
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+select (select id from lso where label = 'co'), (select id from lso where label = 'txn_shared'), v.ordinal,
+  (select id from lso where label = v.category), null, v.amount
+from (values (1, 'draw', 1000), (2, 'materials', 2000)) as v(ordinal, category, amount);
+
+-- A loan payment counted by its parts (the company's loan-part categories): interest and escrow
+-- count, the principal is kept out.
+insert into public.loans (
+  company_id, name, principal_minor, annual_rate_ppm, term_months,
+  start_date, payment_minor, escrow_minor, currency
+)
+values ((select id from lso where label = 'co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 20000, 'ILS');
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, category_id, description, user_assigned
+)
+values (
+  (select id from lso where label = 'co'), 'expense', 'expense', null, 'posted', 'ILS',
+  -100000, -100000, 100000, 0, 'source', '2026-06-12', '2026-06-12', 'manual', 'lso:loan',
+  (select id from lso where label = 'materials'), 'lso:loan', true
+);
+insert into lso (label, id) select 'txn_loan', id from public.transactions where idempotency_key = 'lso:loan';
+insert into public.loan_splits (
+  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
+)
+select
+  (select id from lso where label = 'co'), l.id, (select id from lso where label = 'txn_loan'),
+  v.part::public.loan_split_part, v.amount, v.amount,
+  (select k.id from public.categories k where k.company_id = l.company_id and k.loan_part = v.part::public.loan_split_part),
+  false
+from public.loans l
+cross join (values
+  ('interest', 70000),
+  ('escrow', 20000),
+  ('principal', 10000)
+) as v(part, amount)
+where l.company_id = (select id from lso where label = 'co');
+
 insert into public.review_queue (company_id, transaction_id, status, reason)
 values ((select id from lso where label = 'co'), (select id from lso where label = 'txn_waiting_out'), 'open', 'suggested');
 
@@ -118,6 +173,20 @@ select is(
 select is(
   (pg_temp.row_of(public.list_project_category(pg_temp.id('pier'), pg_temp.id('materials'))->'rows', 'txn_split')->>'kept_out')::boolean,
   false, 'list_project_category: its counted part on another project is not');
+
+-- A shared split line, in the drill-down of a project it is allocated to.
+select is(
+  (pg_temp.row_of(public.list_project_category(pg_temp.id('harbor'), pg_temp.id('draw'))->'rows', 'txn_shared')->>'kept_out')::boolean,
+  true, 'list_project_category: the kept-out part of a shared split line is kept out');
+select is(
+  (pg_temp.row_of(public.list_project_category(pg_temp.id('harbor'), pg_temp.id('materials'))->'rows', 'txn_shared')->>'kept_out')::boolean,
+  false, 'list_project_category: its counted part is not');
+
+-- A loan payment counted by its parts.
+select is(public.get_transaction(pg_temp.id('txn_loan'))->>'pnl_state', 'mixed',
+  'a loan payment counted by its parts, the principal kept out, is mixed');
+select is((public.get_transaction(pg_temp.id('txn_loan'))->>'pnl_fixed')::boolean, true,
+  'and pnl_fixed says it is a loan line');
 
 -- get_breakdown_lines: each row is a part already in or out.
 select is(

@@ -11,7 +11,7 @@ On a line split by category, `get_transaction`'s `in_pnl` reads the line's own c
 
 ## Decision
 
-**One rule for a line's state.** `private.line_pnl_state(transaction, project, category)` is `in`, `out` or `mixed`. A posted line reads its parts in `private.pnl_lines`, the rows every total counts from: all parts in is `in`, none is `out`, some is `mixed`. When a project and a category are given and the line has parts there, only those parts count. A pending line, which `pnl_lines` does not hold yet, follows the line rule `get_transaction`'s `in_pnl` uses (so a guessed kept-out category still counts).
+**One rule for a line's state.** `private.line_pnl_state(transaction, project, category)` is `in`, `out` or `mixed`. A posted line reads its parts in `private.pnl_lines`, the rows every total counts from: all parts in is `in`, none is `out`, some is `mixed`. When a project and a category are given and the line has parts there, only those parts count. A pending line, which `pnl_lines` does not hold yet, follows the line rule `get_transaction`'s `in_pnl` uses (so a guessed kept-out category still counts). A loan payment counted by its parts is `mixed` (the principal is kept out); `pnl_fixed` already tells the app it is a loan line, which keeps its own mark. A shared line's parts sit on the line's own project in `pnl_lines`, so for a project they match on the category alone. A pending line already split by category is judged on its own category until it posts.
 
 **`get_transaction` returns `pnl_state`.** It sits next to `in_pnl`, which is unchanged. MCP `get_expense` passes it through. The app drives the split-line pill and hint from it.
 
@@ -22,7 +22,7 @@ On a line split by category, `get_transaction`'s `in_pnl` reads the line's own c
 
 MCP `list_review` and `search_expenses` (pending) rows pass `kept_out` through.
 
-Each read is patched from its current definition, so earlier changes to it (viewer reads, the basis) stay.
+Each read is patched from its current definition, so earlier changes to it (viewer reads, the basis) stay. A posted line reads `pnl_lines` once (twice only when a list names a project or category and the line has no parts there); a pending line does not read it.
 
 ## Alternatives rejected
 
