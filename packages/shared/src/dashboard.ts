@@ -297,6 +297,8 @@ export const projectCategorySchema = z
   .object({
     category_name: z.string().nullable(),
     project_name: z.string().nullable(),
+    /** The currency the rows are in (ILS before the server returned it). */
+    currency: z.string().optional().catch(undefined),
     total_agorot: agorotSchema,
     rows: z.array(
       z.object({
