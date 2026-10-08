@@ -34,9 +34,9 @@ type JevRow = {
   project_assigned?: boolean;
 };
 
+/** Income has a project in review (decision 0091), so Jev may suggest one (decision 0134). */
 function skipsProject(row: JevRow): boolean {
-  return row.direction === "income"
-    || row.pnl_role === "shared"
+  return row.pnl_role === "shared"
     || row.pnl_role === "overhead"
     || (row.share_count ?? 0) > 1
     || row.reason === "unallocated_shared";

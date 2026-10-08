@@ -382,6 +382,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_jev_accuracy",
     "get_profit_months",
     "get_anomalies",
+    "get_jev_suggestions",
     "get_missing_bills",
     "get_expected_months",
     "list_unpaid",
@@ -3740,4 +3741,22 @@ Deno.test("list_loans shows interest and escrow as the payment when the interest
   if (!listed.structuredContent.ok) throw new Error("list_loans failed");
   const loans = (listed.structuredContent.data as { loans: typeof bullet[] }).loans;
   assertEquals(loans.map((loan) => loan.payment_minor), [70000, 541000]);
+});
+
+Deno.test("get_jev_suggestions takes no arguments and passes the SQL result through", async () => {
+  const calls: Array<[string, unknown]> = [];
+  const payload = {
+    suggestions: [{ transaction_id: "t", direction: "income", reason: "same_as_last", party_filings: 3, matching_filings: 3 }],
+  };
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    return Promise.resolve({ status: 200, json: payload });
+  };
+  assertEquals((await callTool("get_jev_suggestions", {}, ["read"], rpc)).structuredContent, { ok: true, data: payload });
+  assertEquals(calls, [["mcp_jev_suggestions", {}]]);
+  assertEquals((await callTool("get_jev_suggestions", { limit: 5 }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_jev_suggestions", {}, ["read"], () => Promise.resolve({ status: 200, json: [] }))).isError, true);
+  assertEquals((await callTool("get_jev_suggestions", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
+  assertEquals((await callTool("get_jev_suggestions", {}, ["write"], rpc)).isError, true);
+  assertEquals(calls.length, 1);
 });

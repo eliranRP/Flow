@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-330 server and MCP (mark paid stays marked) batched with FLOW-412 | FLOW-330 screen goes to UI lane 1 |
-| Dev lane 2 | FLOW-701 (Jev phase 1) | Next `ready` task in the queue |
+| Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
@@ -60,7 +60,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | done (MCP side: #132 #151 #157 #162; screen fields with the UI lane) |
-| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | done (#101) |
@@ -927,7 +927,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-701"></a>
 ### FLOW-701 · Jev phase 1
-- **Type:** PLAN FIRST · **Status:** ready (plan answered 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; parts 1-4 merged in #137, #143, #149, #160) · **Depends on:** —
 - **What:** The proposed first phase: (1) make Jev run after syncs and learn from confirmations, and produce the shadow accuracy report on approved lines; (2) faster review (reasons, "approve all sure ones", income suggestions); (3) anomalies v1 in one list (SQL detects, Jev scores only candidates); (4) recurring patterns in SQL that feed missing bills and expected months. Also a review of other features where Jev can help. The numbers always come from SQL; Jev never approves ([0084](../decisions/0084-jev-auto-prefill.md)). A daily call cap per company in SQL and a usage log, since the provider has no spend cap.
 - **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions are reviewed one by one like every line, with no approve-all in the app (FLOW-324 dropped; MCP keeps `assign_expenses`); anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
 - **Acceptance:** owner answers the plan's open questions, then one PR per item.
@@ -963,10 +963,10 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-705"></a>
 ### FLOW-705 · Jev anomalies follow-ups (#160 review)
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] A voided credit note still suppresses a duplicate flag.
-- [ ] An income receipt that pays several invoices can be flagged as a spike.
+- [x] A voided credit note still suppresses a duplicate flag. (#168)
+- [x] An income receipt that pays several invoices can be flagged as a spike. (#168)
 - [ ] pgTAP cases for a pending line, two loans and an uneven median.
-- [ ] `mcp_review_anomalies` scans many rows when few lines are open.
+- [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —

@@ -168,13 +168,13 @@ select is(
 select is(
   (select e - 'transaction_id' from jp_out, jsonb_array_elements(result) e
    where label = 'anomalies' and (e ->> 'transaction_id')::uuid = (select id from jp_ref where label = 'spike_04')),
-  '{"kind": "amount_spike", "ratio": 10.0, "typical_amount_minor": 10000}'::jsonb,
+  '{"kind": "amount_spike", "ratio": 10.0, "typical_amount_minor": 10000, "jev_score": null}'::jsonb,
   'ten times the supplier''s usual amount is a spike'
 );
 select is(
   (select e - 'transaction_id' from jp_out, jsonb_array_elements(result) e
    where label = 'anomalies' and (e ->> 'transaction_id')::uuid = (select id from jp_ref where label = 'new_04')),
-  '{"kind": "new_party_large", "company_p90_minor": 500000}'::jsonb,
+  '{"kind": "new_party_large", "company_p90_minor": 500000, "jev_score": null}'::jsonb,
   'a first line above the company''s 90th percentile is flagged'
 );
 select is(
