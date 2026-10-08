@@ -380,6 +380,9 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_jev_status",
     "get_jev_accuracy",
     "get_profit_months",
+    "get_anomalies",
+    "get_missing_bills",
+    "get_expected_months",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -2797,6 +2800,49 @@ Deno.test("update_loan sends the part categories as uuids or null, and validates
     if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 1);
+});
+
+Deno.test("get_anomalies and get_missing_bills take no arguments and pass the SQL result through", async () => {
+  const calls: Array<[string, unknown]> = [];
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    if (name === "mcp_review_anomalies") {
+      return Promise.resolve({ status: 200, json: { anomalies: [{ transaction_id: "t", kind: "duplicate" }] } });
+    }
+    return Promise.resolve({ status: 200, json: [{ supplier_name: "שכירות", typical_day: 3 }] });
+  };
+  const anomalies = await callTool("get_anomalies", {}, ["read"], rpc);
+  assertEquals(anomalies.structuredContent, { ok: true, data: { anomalies: [{ transaction_id: "t", kind: "duplicate" }] } });
+  const missing = await callTool("get_missing_bills", {}, ["read"], rpc);
+  assertEquals(missing.structuredContent, { ok: true, data: { missing: [{ supplier_name: "שכירות", typical_day: 3 }] } });
+  assertEquals(calls, [["mcp_review_anomalies", {}], ["missing_bills", {}]]);
+  assertEquals((await callTool("get_missing_bills", { today: "2026-01-01" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_anomalies", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
+  assertEquals((await callTool("get_missing_bills", {}, ["read"], () => Promise.resolve({ status: 200, json: {} }))).isError, true);
+  assertEquals((await callTool("get_anomalies", {}, ["write"], rpc)).isError, true);
+  assertEquals(calls.length, 2);
+});
+
+Deno.test("get_expected_months checks months and project_id", async () => {
+  const calls: Array<[string, unknown]> = [];
+  const report = { today: "2026-04-20", months: [], recurring: [] };
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    return Promise.resolve({ status: 200, json: report });
+  };
+  const project = "11111111-1111-4111-8111-111111111111";
+  assertEquals((await callTool("get_expected_months", {}, ["read"], rpc)).structuredContent, { ok: true, data: report });
+  assertEquals((await callTool("get_expected_months", { months: 12, project_id: project }, ["read"], rpc)).isError, false);
+  assertEquals(calls, [
+    ["expected_months", { p_months: 3, p_project_id: null }],
+    ["expected_months", { p_months: 12, p_project_id: project }],
+  ]);
+  for (const bad of [{ months: 0 }, { months: 13 }, { months: 2.5 }, { months: "3" }, { project_id: "x" }, { from: "2026-01-01" }]) {
+    assertEquals((await callTool("get_expected_months", bad, ["read"], rpc)).isError, true);
+  }
+  assertEquals(calls.length, 2);
+  assertEquals((await callTool("get_expected_months", {}, ["read"], () => Promise.resolve({ status: 400, json: null }))).isError, true);
+  assertEquals((await callTool("get_expected_months", {}, ["write"], rpc)).isError, true);
 });
 
 // FLOW-106 part 3 (decision 0130): installments, a fees part, and exact parts.

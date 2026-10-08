@@ -324,6 +324,18 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 `mcp_jev_accuracy`, optional `from` and `to` (`YYYY-MM-DD`, inclusive, by the UTC day the review was approved or changed; omit both for all time; `from` after `to` is `validation`) ([0126](../decisions/0126-jev-outcomes.md)). Read tool. Output `data`: `from`, `to`, `threshold`, `lines` (resolved lines that had a Jev suggestion), `all_matched` (every compared field matched), `project_compared`, `project_matched`, `category_compared`, `category_matched`, `at_threshold` (`lines`, `all_matched` for confidence at or above `threshold`, what auto mode would pre-fill), and `bands[]` (`band` high/medium/low, `min` 0.9/0.7/0, `lines`, `all_matched`). A shared, overhead or multi-project line is not compared on project; a line split by category is not compared on category. An undone approval drops out. Counts only.
 
+### get_anomalies
+
+`mcp_review_anomalies`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days; not an invoice and its receipt, a cancelled invoice, or two loans' payments), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile posted line over the year up to the newest open line). A flag is a reason to look; it changes nothing.
+
+### get_missing_bills
+
+`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers (an expense line in at least 3 of the last 6 complete months and one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has `supplier_id`, `supplier_name`, `currency`, `typical_amount_minor` (median monthly net, negative), `typical_day`, `expected_by`, `months_seen`, `last_doc_date`, `project_id`, `category_id`.
+
+### get_expected_months
+
+`expected_months`, optional `months` (1 to 12, default 3) and `project_id` ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data`: `today`, `project_id`, `months[]` (`month` YYYY-MM, `open`, `by_currency[]` with `currency`, `income_minor`, `expense_minor`; expenses negative) and `recurring[]` (`direction`, `party_id`, `name`, `currency`, `typical_amount_minor`, `typical_day`, `months_seen`, `seen_this_month`, `project_id`, `category_id`). This month counts only the recurring parties not seen yet; later months count all of them. With `project_id`, only parties whose usual project it is. A projection from past months, not booked lines.
+
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
 
 ## Loans · cycle 5
