@@ -24,4 +24,6 @@
 
 ## Consequences
 
+The checks on a split and on a loan's mapping hold the categories they read (`for share`), so a concurrent `set_category_pnl` on one of them waits and then sees the loan or the part, and is refused if it would break the rule. They take the categories before the line and the loan, and the flip takes no loan lock, so the order of 0121 still holds.
+
 This supersedes the fixed-category paragraph of 0088 (the split rows keep their meaning). The fees part and its category come with FLOW-106 part 3. The loan sheet does not show or set these yet; that goes to the Mercury UI thread.

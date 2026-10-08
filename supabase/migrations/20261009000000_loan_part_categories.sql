@@ -77,6 +77,12 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Hold the named categories so a concurrent set_category_pnl waits (it updates the row).
+  perform 1
+  from public.categories c
+  where c.id in (new.interest_category_id, new.escrow_category_id, new.principal_category_id)
+  for share;
+
   if (new.interest_category_id is not null
       and not private.loan_part_category_ok(new.company_id, 'interest', new.interest_category_id))
      or (new.escrow_category_id is not null
@@ -177,7 +183,13 @@ begin
   end if;
 
   -- Interest and escrow go to an expense category in the P&L, principal to one kept out;
-  -- a keyed loan category takes only its own part (0127).
+  -- a keyed loan category takes only its own part (0127). The categories are held so a
+  -- concurrent flip of their P&L side waits for this check (the flip updates the row).
+  perform 1
+  from public.categories c
+  where c.id in (select s.category_id from public.loan_splits s where s.transaction_id = txn)
+  for share;
+
   if exists (
     select 1
     from public.loan_splits s
@@ -1212,6 +1224,18 @@ begin
         where p.id = (before->>'project_id')::uuid and p.company_id = cid
       ) then
         response := private.mcp_refused('project not found');
+      elsif exists (
+        select 1
+        from jsonb_each_text(before) f
+        where f.key in ('interest_category_id', 'escrow_category_id', 'principal_category_id')
+          and f.value is not null
+          and not exists (
+            select 1 from public.categories c
+            where c.id = f.value::uuid and c.company_id = cid
+          )
+      ) then
+        -- A category the edit replaced was deleted since.
+        response := private.mcp_refused('category not found');
       else
         update public.loans l
         set

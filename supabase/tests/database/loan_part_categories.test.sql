@@ -5,11 +5,12 @@
 
 begin;
 
-select plan(22);
+select plan(30);
 
 do $users$
 begin
   perform tests.create_supabase_user('f106d_owner', 'owner106d@example.com');
+  perform tests.create_supabase_user('f106d_other', 'other106d@example.com');
 end
 $users$;
 
@@ -61,6 +62,22 @@ begin
 end;
 $$;
 grant execute on function pg_temp.update_loan(text, jsonb) to authenticated, service_role;
+
+create or replace function pg_temp.undo(p_key text)
+returns jsonb
+language plpgsql
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  perform pg_temp.as_mcp();
+  result := public.mcp_undo(p_key, 'loan_update', pg_temp.id('loan'));
+  reset role;
+  return result;
+end;
+$$;
+grant execute on function pg_temp.undo(text) to authenticated, service_role;
 
 create or replace function pg_temp.listed()
 returns jsonb
@@ -246,6 +263,8 @@ select throws_ok(
   'but not escrow into a kept-out category'
 );
 reset role;
+-- The corrections above ran the deferred checks at once; later writes defer them again.
+set constraints all deferred;
 
 -- 19-21. null goes back to the default, and undo restores the previous mapping.
 select is(
@@ -275,6 +294,130 @@ select is(
   null,
   'a deleted category clears the loan''s interest category'
 );
+
+-- 23. Another company's category is not found.
+select tests.authenticate_as('f106d_other');
+select public.create_company('Example Other Part Co', true);
+reset role;
+insert into f106d (label, id)
+select 'other_cat', c.id
+from public.categories c join public.companies co on co.id = c.company_id
+where co.name = 'Example Other Part Co' and c.kind = 'expense' and c.loan_part is null and not c.excluded_from_pnl
+order by c.sort_order limit 1;
+select is(
+  pg_temp.update_loan('f106d-other', jsonb_build_object('interest_category_id', pg_temp.id('other_cat')))->'error'->>'message',
+  'category not found',
+  'another company''s category is not found'
+);
+
+-- 24. A category a loan names, with no parts filed yet, keeps its side of the P&L.
+insert into public.categories (company_id, name, kind, sort_order)
+values
+  (pg_temp.id('company'), 'Example named escrow', 'expense', 910),
+  (pg_temp.id('company'), 'Example temp interest', 'expense', 911),
+  (pg_temp.id('company'), 'Example side interest', 'expense', 912);
+insert into f106d (label, id)
+select v.label, c.id
+from public.categories c
+join (values
+  ('cat_named', 'Example named escrow'),
+  ('cat_temp', 'Example temp interest'),
+  ('cat_side', 'Example side interest')
+) v(label, name) on v.name = c.name
+where c.company_id = pg_temp.id('company');
+select pg_temp.update_loan('f106d-named', jsonb_build_object('escrow_category_id', pg_temp.id('cat_named')));
+select tests.authenticate_as('f106d_owner');
+select throws_ok(
+  $$ select public.set_category_excluded_from_pnl(pg_temp.id('cat_named'), true) $$,
+  '23514',
+  'loan category is fixed',
+  'a category a loan names for escrow cannot be kept out, before any part is filed'
+);
+reset role;
+
+-- 25. Undo is refused when the category it would restore was deleted since.
+select pg_temp.update_loan('f106d-temp', jsonb_build_object('interest_category_id', pg_temp.id('cat_temp')));
+select pg_temp.update_loan('f106d-swap', jsonb_build_object('interest_category_id', pg_temp.id('cat_in2')));
+delete from public.categories where id = pg_temp.id('cat_temp');
+select is(
+  pg_temp.undo('f106d-undo-swap')->'error'->>'message',
+  'category not found',
+  'undo cannot restore a deleted category'
+);
+
+-- 26. Undo is refused when that category changed sides of the P&L since.
+select pg_temp.update_loan('f106d-side', jsonb_build_object('interest_category_id', pg_temp.id('cat_side')));
+select pg_temp.update_loan('f106d-swap-2', jsonb_build_object('interest_category_id', pg_temp.id('cat_in2')));
+update public.categories set excluded_from_pnl = true where id = pg_temp.id('cat_side');
+select is(
+  pg_temp.undo('f106d-undo-swap-2')->'error'->>'message',
+  'category does not fit the loan part',
+  'undo cannot put interest back on a category now kept out'
+);
+select is(
+  (select interest_category_id from public.loans where id = pg_temp.id('loan')),
+  pg_temp.id('cat_in2'),
+  'and the mapping is unchanged'
+);
+
+-- 28-29. A corrected part follows the rule for principal and for an income category.
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original,
+  vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
+)
+values (pg_temp.id('company'), 'expense', 'expense', 'posted', -100000, -100000, 100000, 0, 'unknown',
+  '2026-02-01', 'USD', 'manual', 'f106d:feb', 'Example loan payment');
+select pg_temp.as_mcp();
+select public.mcp_attach_loan_payment(
+  'f106d-attach-feb',
+  (select id from public.transactions where idempotency_key = 'f106d:feb'),
+  pg_temp.id('loan'),
+  '[{"part": "interest", "amount_minor": 50000, "scheduled_minor": 50000},
+    {"part": "escrow", "amount_minor": 10000, "scheduled_minor": 10000},
+    {"part": "principal", "amount_minor": 40000, "scheduled_minor": 40000}]'::jsonb
+);
+reset role;
+select tests.authenticate_as('f106d_owner');
+select throws_ok(
+  $$ update public.loan_splits s set category_id = pg_temp.id('cat_in2')
+     from public.transactions t
+     where t.id = s.transaction_id and t.idempotency_key = 'f106d:feb' and s.part = 'principal';
+     set constraints all immediate; $$,
+  '23514',
+  'loan_split_category',
+  'principal cannot be corrected into a category in the P&L'
+);
+reset role;
+select tests.authenticate_as('f106d_owner');
+select throws_ok(
+  format(
+    $$ update public.loan_splits s set category_id = %L
+       from public.transactions t
+       where t.id = s.transaction_id and t.idempotency_key = 'f106d:feb' and s.part = 'interest';
+       set constraints all immediate; $$,
+    (select c.id from public.categories c
+     where c.company_id = pg_temp.id('company') and c.kind = 'income' order by c.sort_order limit 1)
+  ),
+  '23514',
+  'loan_split_category',
+  'interest cannot be corrected into an income category'
+);
+reset role;
+
+-- 30. The app's own insert of a loan follows the rule.
+select tests.authenticate_as('f106d_owner');
+select throws_ok(
+  $$ insert into public.loans (
+       company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor,
+       escrow_minor, currency, principal_category_id
+     )
+     values (pg_temp.id('company'), 'Example App Loan', 1000000, 60000, 120, '2026-01-01', 20000, 0, 'USD',
+       pg_temp.id('cat_in2')) $$,
+  '23514',
+  'loan_category_not_allowed',
+  'the app cannot add a loan with a P&L category for principal'
+);
+reset role;
 
 select * from finish();
 rollback;
