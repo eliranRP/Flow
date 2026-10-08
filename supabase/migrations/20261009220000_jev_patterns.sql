@@ -1,4 +1,4 @@
--- FLOW-701 part 4 (Jev phase 1). Decision 0130.
+-- FLOW-701 part 4 (Jev phase 1). Decision 0131.
 -- SQL finds the patterns; Jev does not compute numbers (decision 0084).
 -- 1. Anomaly candidates on a line: a likely duplicate, an amount far above what the same
 --    supplier or customer usually bills, or a large first line from a new one. The review card

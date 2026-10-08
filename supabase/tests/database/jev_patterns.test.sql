@@ -1,4 +1,4 @@
--- FLOW-701 part 4 (decision 0130). Anomaly candidates, recurring suppliers and customers,
+-- FLOW-701 part 4 (decision 0131). Anomaly candidates, recurring suppliers and customers,
 -- missing bills and expected months, all computed in SQL for the caller's company.
 -- Helpers come from supabase/tests/helpers.sql.
 
