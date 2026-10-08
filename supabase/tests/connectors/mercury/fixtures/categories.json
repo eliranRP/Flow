@@ -1,161 +1,161 @@
 {
   "categories": [
     {
-      "id": "94b75002-cd43-45b8-82de-6d8bb587c89c",
+      "id": "5fd87a58-f1bd-4405-b424-ba74675e6582",
       "name": "Revenue",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "6a631c99-7bf5-4e1c-a398-f0ab442e9907",
+      "id": "a678160b-ba7b-47ec-a878-e541efabed70",
       "name": "Shipping & Postage",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "51985190-8e6a-470c-9d0e-89c113f3e9fd",
+      "id": "c6d83671-3f75-47fe-93f0-e4eaef0413d7",
       "name": "Interest Earned",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "c7f30c94-9370-4720-96b0-e154c6dc5512",
+      "id": "7d0c8a43-475c-4aec-a309-5b24448e5e90",
       "name": "COGS",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "654eeb81-2088-43fc-9142-f1f174e242b8",
+      "id": "9aaf52ab-420a-42cd-a2a2-e601612cfd51",
       "name": "Financing Proceeds",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "493c0eac-a5bd-4663-9ad4-0eb3edf86e98",
+      "id": "d80d9a63-579b-486e-a02f-314e57b3029d",
       "name": "Legal & Professional Services",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "47772ad4-0a08-4015-9e0b-c2090241c99b",
+      "id": "76152a62-b62e-4d17-b8d3-8c5ec5b54794",
       "name": "Software & Subscriptions",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "f3ea5753-6f01-4f81-b6fd-32692483d822",
+      "id": "44c9acb3-f3d3-4ac4-8a43-dde392a6bce0",
       "name": "Rent & Utilities",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "a01810de-f0a0-4815-b1fd-530a57cd559f",
+      "id": "e28bc9c7-7636-4024-b2e3-7c6884b4c369",
       "name": "Bank Fees",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "0db853d6-2c95-480a-b809-cd1fb05f4180",
+      "id": "17a5cb23-6a8f-45a3-aa2e-fec16fd62e63",
       "name": "Credit & Loan Payments",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "86abb5b2-440e-49b4-bfa1-ab67aa927413",
+      "id": "bc6cdf87-ebb4-465d-8836-dfb52731b10e",
       "name": "Business Meals",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "ad1b8c6b-8aa9-4e36-b54d-96447e43e387",
+      "id": "014f0a29-ec14-4ae6-8668-4b3849435728",
       "name": "Entertainment",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "2d5ac976-c7bc-4114-a1bb-32ef6898639f",
+      "id": "b126fa91-739d-451f-a33d-2d631217d4a9",
       "name": "Office Supplies & Equipment",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "f0716b16-1daa-48c2-8f6d-da6f0f987b72",
+      "id": "f788251d-7e51-4b80-b349-5f4a5958c8ac",
       "name": "Travel & Transportation",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "da519490-f42b-4bb8-85a0-4ab555ddcee8",
+      "id": "7b746219-3692-487d-bbed-409058c94264",
       "name": "Employee Benefits",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "f9f7bee7-43a7-4818-b6d0-02bbd7bfe6f1",
+      "id": "4636fa49-c5a3-41e3-9b6f-da0a8d254ece",
       "name": "Marketing & Advertising",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "0300c27c-c81e-4de0-9dab-263180db5e99",
+      "id": "889cbd41-bcc2-4fe4-92b6-6af97a9c98c1",
       "name": "Transfer",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "63922677-df43-4abc-bd50-660a5e378a39",
+      "id": "5938d706-df0a-4dea-a7fa-775ae4fc76f7",
       "name": "Insurance",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "c4e14589-7f8f-4061-9aac-b9bc693c84da",
+      "id": "0b1e15df-9e64-4524-9d3b-451f52318ac1",
       "name": "Inventory & Materials",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "a95adee0-e893-4aac-86ec-49143e685bc9",
+      "id": "14fa9b7e-c05f-4725-a0f8-f46dad261da9",
       "name": "Payment Processing Fees",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "631689ea-c65e-4f50-876e-68840f1eb7c8",
+      "id": "490f2047-9203-4452-a5dd-b24f20b871ce",
       "name": "Payroll",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "91c58734-c98f-4dbf-b137-eeef7279b212",
+      "id": "71292edc-fb98-44ea-b435-4ab37590b788",
       "name": "Taxes",
       "visibleForReimbursements": true,
       "visibleForCardSpend": true,
       "visibleForOther": true
     },
     {
-      "id": "e9bd6ebf-7118-40fa-8ddc-03d597419112",
+      "id": "7a3f255c-26ec-4d64-8335-9a5cbadaf7e7",
       "name": "Other Costs",
       "visibleForReimbursements": false,
       "visibleForCardSpend": true,

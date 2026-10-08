@@ -1,25 +1,25 @@
 {
   "transactions": [
     {
-      "id": "6e91abc0-6cfb-4a85-891a-23912c05ef86",
+      "id": "5d7de978-8170-4927-8d6b-c99d42300357",
       "feeId": null,
-      "amount": -57.5,
-      "createdAt": "2026-07-30T14:10:21.352515Z",
-      "postedAt": "2026-07-31T02:19:57.164686Z",
-      "estimatedDeliveryDate": "2026-08-05T21:00:00Z",
+      "amount": -32,
+      "createdAt": "2026-07-30T08:26:44.432423Z",
+      "postedAt": "2026-07-30T23:30:00.248376Z",
+      "estimatedDeliveryDate": "2026-08-06T21:00:00Z",
       "status": "sent",
       "note": null,
       "bankDescription": "Cloud Office Suite_example",
       "externalMemo": null,
-      "counterpartyId": "311c8f88-7188-4e1f-96f5-6fbdad1622de",
+      "counterpartyId": "b81c60d8-5060-4463-b698-f7c241385e8d",
       "details": {
         "creditCardInfo": {
-          "id": "57ffc3ac-3f58-468c-a301-34546a9bd375",
+          "id": "b54aa14a-ec84-4dda-a25e-8b43a42cae1a",
           "email": "name@example.com",
           "paymentMethod": "Credit Card ••0000"
         }
       },
-      "cardId": "57ffc3ac-3f58-468c-a301-34546a9bd375",
+      "cardId": "b54aa14a-ec84-4dda-a25e-8b43a42cae1a",
       "reasonForFailure": null,
       "failedAt": null,
       "dashboardLink": "https://example.invalid/redacted",
@@ -29,14 +29,14 @@
       "currencyExchangeInfo": null,
       "compliantWithReceiptPolicy": true,
       "hasGeneratedReceipt": false,
-      "creditAccountPeriodId": "68dd3440-10ab-45ef-abac-d252f05359f9",
+      "creditAccountPeriodId": "ace2c514-246e-4039-8ec1-fe69d101b95e",
       "mercuryCategory": "Software",
       "generalLedgerCodeName": null,
       "glAllocations": [],
       "attachments": [],
       "relatedTransactions": [],
       "categoryData": {
-        "id": "47772ad4-0a08-4015-9e0b-c2090241c99b",
+        "id": "76152a62-b62e-4d17-b8d3-8c5ec5b54794",
         "name": "Software & Subscriptions",
         "visibleForReimbursements": true,
         "visibleForCardSpend": true,
@@ -45,15 +45,15 @@
       "checkNumber": null,
       "trackingNumber": null,
       "requestId": null,
-      "accountId": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09",
+      "accountId": "5d399c67-05ca-4b7a-85b1-c2981ed6206b",
       "merchant": {
         "categoryCode": "4816",
-        "id": "m_651c85a0ccd72",
+        "id": "m_56cd21f32cf85",
         "category": "Software",
-        "amount": -5750,
+        "amount": -3200,
         "currency": "USD"
       },
-      "_synthetic": "The same id after posting, for the pending -> sent test (amount unchanged)."
+      "_synthetic": "Generated: the same id after posting, for the pending -> sent test (amount unchanged)."
     }
   ],
   "page": {}
