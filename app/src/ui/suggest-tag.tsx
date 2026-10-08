@@ -6,13 +6,14 @@ export function SuggestTag() {
 /**
  * The הצעת Jev mark: a suggested value that Jev, the AI tagger, filled. It replaces
  * הצעה on that line only. A supplier rule or a value the user set keeps הצעה or no mark.
- * The ✦ is decoration; the words are the accessible name.
+ * The ✦ is decoration; the words are the accessible name. On a narrow card (FLOW-327) the
+ * words are visually hidden and only ✦ shows, so the value keeps the room.
  */
 export function JevTag() {
   return (
     <span className="ui-suggest-tag ui-suggest-tag-jev">
       <span aria-hidden="true">✦</span>
-      <span>הצעת Jev</span>
+      <span className="ui-suggest-tag-words">הצעת Jev</span>
     </span>
   );
 }

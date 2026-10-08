@@ -102,6 +102,12 @@ describe("MonthList", () => {
     expect(september.querySelectorAll(".ui-month-line")).toHaveLength(1);
   });
 
+  it("starts with no pause when the first currency rounds to zero", () => {
+    renderList([row("a", "2026-09-01", 40n, "expense"), row("b", "2026-09-02", 50_000n, "income", "USD"), row("c", "2026-08-01", 70_000n, "income")]);
+    const september = screen.getByRole("group", { name: "ספטמבר 2026" });
+    expect(september.querySelector(".ui-month-totals")?.textContent).toBe("הכנסות $500");
+  });
+
   it("shows only the name of the last month while more rows may load", () => {
     renderList(NEWEST_FIRST, false);
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")).not.toBeNull();

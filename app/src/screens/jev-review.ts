@@ -1,4 +1,5 @@
 import { getSupabase } from "../lib/supabase";
+import { isJevReasonKind, type JevReasonInfo, type ReviewFlag, type ReviewFlagKind } from "../review-copy";
 
 export type JevField = { id: string; name: string };
 
@@ -7,6 +8,13 @@ export type JevPrefill = {
   transactionId: string;
   project: JevField | null;
   category: JevField | null;
+  /** Why it looks right, from rpc `jev_suggestions` (decision 0134). Absent when that read failed. */
+  why?: JevReasonInfo;
+  /**
+   * FLOW-703: Jev answered "no project / overhead" (`no_project: true` from rpc `jev_suggestions`,
+   * #177). Optional: older servers never send it. It suggests nothing to save.
+   */
+  noProject?: true;
 };
 
 export type JevReviewState = {
@@ -134,8 +142,11 @@ export function parseJevSuggestion(
   if (!isRecord(answers)) return null;
   const project = readChoice(answers.project, projects);
   const category = readChoice(answers.category, categories);
-  if (!project && !category) return null;
-  return { suggestionId, transactionId, project, category };
+  // #177: Jev answers the project question with choice "none" (no project / overhead). It
+  // pre-fills nothing, but the card shows it, with or without the reasons read.
+  const noProject = project == null && isRecord(answers.project) && answers.project.choice === "none";
+  if (!project && !category && !noProject) return null;
+  return { suggestionId, transactionId, project, category, ...(noProject ? { noProject: true as const } : {}) };
 }
 
 type NameRow = { id: string; name: string; status?: string; hidden?: boolean };
@@ -489,6 +500,9 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
   const supabase = getSupabase();
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
   if (!supabase || typeof supabase.from !== "function" || ids.length === 0) return { connectorOn: true, byId: {} };
+  // The reasons read is optional: it starts now, beside the suggestions, and has its own shorter
+  // deadline so a slow rpc never holds the prefill.
+  const reasonsRead = loadJevReasonsWithin(ids, signal);
   const chunks: string[][] = [];
   for (let start = 0; start < ids.length; start += JEV_SUGGESTION_CHUNK) {
     chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
@@ -505,9 +519,10 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
       if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
     }
   }
-  const [projects, categories] = await Promise.all([
+  const [projects, categories, reasons] = await Promise.all([
     signalled(supabase.from("projects").select("id,name,status"), signal),
     signalled(supabase.from("categories").select("id,name,hidden"), signal),
+    reasonsRead,
   ]);
   if (projects.error) throw new Error(projects.error.message);
   if (categories.error) throw new Error(categories.error.message);
@@ -516,11 +531,191 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
   const byId: Record<string, JevPrefill | null> = {};
   for (const id of ids) {
     const row = newest.get(id);
-    byId[id] = row
+    const prefill = row
       ? parseJevSuggestion(row.answers, row.id, row.transaction_id, projectNames, categoryNames)
       : null;
+    const reason = reasons.get(id);
+    // A "no project" answer with no category is still a suggestion to show.
+    const shown = prefill ?? (row && reason?.noProject === true
+      ? { suggestionId: row.id, transactionId: row.transaction_id, project: null, category: null }
+      : null);
+    byId[id] = shown == null ? null : withReason(shown, reason);
   }
   return { connectorOn: true, byId };
+}
+
+/** Ids per rpc call: the server takes at most 500. */
+export const JEV_RPC_CHUNK = 500;
+
+function chunked(ids: readonly string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let start = 0; start < ids.length; start += JEV_RPC_CHUNK) chunks.push(ids.slice(start, start + JEV_RPC_CHUNK));
+  return chunks;
+}
+
+type JevReasonRow = JevReasonInfo & { projectId: string | null; categoryId: string | null; noProject: boolean };
+
+function readCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function readId(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+/** One `jev_suggestions` row, or null when it is not the shape decision 0134 names. */
+export function parseJevReason(value: unknown): (JevReasonRow & { transactionId: string }) | null {
+  if (!isRecord(value)) return null;
+  const transactionId = readId(value.transaction_id);
+  const partyFilings = readCount(value.party_filings);
+  const matchingFilings = readCount(value.matching_filings);
+  if (transactionId == null || !isJevReasonKind(value.reason) || partyFilings == null || matchingFilings == null) return null;
+  return {
+    transactionId,
+    reason: value.reason,
+    partyFilings,
+    matchingFilings,
+    projectId: readId(value.project_id),
+    categoryId: readId(value.category_id),
+    noProject: value.no_project === true,
+  };
+}
+
+/**
+ * rpc `jev_suggestions` for the reasons. Optional: a failed or missing read gives no reasons,
+ * and the card shows no reason line. It never fails the suggestion read.
+ */
+export async function loadJevReasons(ids: readonly string[], signal?: AbortSignal): Promise<Map<string, JevReasonRow>> {
+  const reasons = new Map<string, JevReasonRow>();
+  const supabase = getSupabase();
+  if (!supabase || typeof supabase.rpc !== "function" || ids.length === 0) return reasons;
+  try {
+    const reads = await Promise.all(chunked(ids).map((chunk) => signalled(
+      supabase.rpc("jev_suggestions", { p_transaction_ids: chunk }),
+      signal,
+    )));
+    for (const read of reads) {
+      if (read.error || !Array.isArray(read.data)) continue;
+      for (const raw of read.data) {
+        const row = parseJevReason(raw);
+        if (row == null) continue;
+        const { transactionId, ...rest } = row;
+        reasons.set(transactionId, rest);
+      }
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+  }
+  return reasons;
+}
+
+/** The reasons read's own deadline, inside the one-second suggestion read. */
+export const JEV_REASONS_MS = 600;
+
+/**
+ * `loadJevReasons` with its own child abort linked to `parent`. Its own timeout gives no
+ * reasons; only the parent's abort rejects.
+ */
+export function loadJevReasonsWithin(
+  ids: readonly string[],
+  parent?: AbortSignal,
+  ms: number = JEV_REASONS_MS,
+): Promise<Map<string, JevReasonRow>> {
+  if (parent?.aborted) return Promise.reject(abortError(parent.reason));
+  const child = new AbortController();
+  const onParent = () => {
+    child.abort(parent?.reason);
+  };
+  parent?.addEventListener("abort", onParent, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<Map<string, JevReasonRow>>((resolve, reject) => {
+    const settle = () => {
+      if (parent?.aborted) reject(abortError(parent.reason));
+      else resolve(new Map());
+    };
+    timer = setTimeout(() => {
+      child.abort();
+    }, ms);
+    child.signal.addEventListener("abort", settle, { once: true });
+  });
+  const read = loadJevReasons(ids, child.signal).catch((error: unknown) => {
+    if (parent?.aborted) throw abortError(parent.reason);
+    if (child.signal.aborted) return new Map<string, JevReasonRow>();
+    throw error;
+  });
+  const settled = Promise.race([read, expired]).finally(() => {
+    clearTimeout(timer);
+    parent?.removeEventListener("abort", onParent);
+  });
+  // Started before the suggestions read is awaited: a parent abort that lands first must not
+  // surface as an unhandled rejection.
+  settled.catch(() => undefined);
+  return settled;
+}
+
+/** The reason belongs to the suggestion on the card only when it names the same project and category. */
+function withReason(prefill: JevPrefill, row: JevReasonRow | undefined): JevPrefill {
+  if (row == null) return prefill;
+  if (prefill.project != null && row.projectId !== prefill.project.id) return prefill;
+  if (prefill.category != null && row.categoryId !== prefill.category.id) return prefill;
+  return {
+    ...prefill,
+    why: { reason: row.reason, partyFilings: row.partyFilings, matchingFilings: row.matchingFilings },
+    ...(row.noProject && prefill.project == null ? { noProject: true as const } : {}),
+  };
+}
+
+const FLAG_KINDS: readonly ReviewFlagKind[] = ["duplicate", "amount_spike", "new_party_large"];
+
+function readNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+/** One `review_anomalies` row, or null when it is not one of the three kinds in decision 0131. */
+export function parseReviewFlag(value: unknown): ReviewFlag | null {
+  if (!isRecord(value)) return null;
+  const transactionId = readId(value.transaction_id);
+  const kind = FLAG_KINDS.find((item) => item === value.kind);
+  if (transactionId == null || kind == null) return null;
+  const score = readNumber(value.jev_score);
+  return {
+    transaction_id: transactionId,
+    kind,
+    jev_score: score != null && score >= 0 && score <= 1 ? score : null,
+    other_doc_date: typeof value.other_doc_date === "string" ? value.other_doc_date : null,
+    typical_amount_minor: readNumber(value.typical_amount_minor),
+    ratio: readNumber(value.ratio),
+  };
+}
+
+export type ReviewFlagsData = Record<string, ReviewFlag[]>;
+
+/** rpc `review_anomalies` for the lines in the queue. A failed read throws; the card then shows no flag. */
+export async function loadReviewFlags(transactionIds: readonly string[], signal?: AbortSignal): Promise<ReviewFlagsData> {
+  const supabase = getSupabase();
+  const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
+  const byId: ReviewFlagsData = {};
+  if (!supabase || typeof supabase.rpc !== "function" || ids.length === 0) return byId;
+  const reads = await Promise.all(chunked(ids).map((chunk) => signalled(
+    supabase.rpc("review_anomalies", { p_transaction_ids: chunk }),
+    signal,
+  )));
+  for (const read of reads) {
+    if (read.error) throw new Error(read.error.message);
+    if (!Array.isArray(read.data)) continue;
+    for (const raw of read.data) {
+      const flag = parseReviewFlag(raw);
+      if (flag == null) continue;
+      (byId[flag.transaction_id] ??= []).push(flag);
+    }
+  }
+  return byId;
+}
+
+export function reviewFlagsQueryKey(transactionIds: readonly string[]) {
+  return ["review-anomalies", jevQueueKey(transactionIds)] as const;
 }
 
 export async function loadJevQueue(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {

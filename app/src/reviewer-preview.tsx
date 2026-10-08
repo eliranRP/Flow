@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
 import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen, reviewIsSplit, reviewSplitTitle } from "./screens/flow-screens";
 import {
-  fileReviewerApproval,
   patchReviewerCategory,
   reviewerBooks,
   reviewerCategories,
@@ -21,7 +20,6 @@ import {
   sampleSaveMode,
   subscribeReviewerFiled,
   subscribeReviewerQueue,
-  unfileReviewerApproval,
   type SampleSave,
 } from "./reviewer-sample";
 import { useWrite } from "./use-write";
@@ -623,11 +621,9 @@ function SampleQueue({
       previewWrite={{
         run: () => sampleRun(mode),
         onDone: (id) => {
-          fileReviewerApproval(id);
           setRows((current) => current.filter((row) => row.id !== id));
         },
         onUndo: (id) => {
-          unfileReviewerApproval(id);
           const original = initial.find((row) => row.id === id);
           if (!original) return;
           setRows((current) => (current.some((row) => row.id === id) ? current : [original, ...current]));

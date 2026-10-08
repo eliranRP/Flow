@@ -578,7 +578,9 @@ describe("rejected writes", () => {
       expect(calls).toContain("approve_split_review");
     });
     expect(calls).not.toContain("resolve_review");
-    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-split" });
+    // #177: one call sets the category and approves.
+    expect(calls).not.toContain("set_transaction_category");
+    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-split", p_category_id: "c1" });
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
   });
 
@@ -622,7 +624,9 @@ describe("rejected writes", () => {
       expect(calls).toContain("approve_split_review");
     });
     expect(calls).not.toContain("resolve_review");
-    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-shares" });
+    // #177: one call sets the category and approves.
+    expect(calls).not.toContain("set_transaction_category");
+    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-shares", p_category_id: "c1" });
   });
 
   it("unsplits an unallocated shared cost from the project picker", async () => {
