@@ -154,6 +154,9 @@ export const categoryRowSchema = z.object({
   split_lines: z.number().int().optional(),
   /** A loan or a loan payment part uses it, so delete_category refuses. */
   loan_used: z.boolean().optional(),
+  /** FLOW-404: the stored rehab choice (null follows the default) and whether it counts now. */
+  rehab: z.boolean().nullable().optional(),
+  in_rehab: z.boolean().optional(),
 });
 
 export const sumitStatusSchema = z.object({
