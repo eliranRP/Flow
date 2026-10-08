@@ -592,12 +592,15 @@ const NOT_FOUND = {
   body: { _error: JSON.stringify({ errors: { notFound: [`We couldn’t find the data associated with your request. Please contact ${EMAIL}`] } }) },
 };
 
+/** A createdAt that sorts as time: the fraction padded back to six digits. */
+const timeKey = (value: unknown) => String(value).replace(/(?:\.(\d+))?Z$/, (_, frac = "") => `.${frac.padEnd(6, "0")}Z`);
+
 const text = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
 /** Every fixture file, by name, as the exact text to commit. */
 export function buildFixtures(): Map<string, string> {
   const posted = postedRows().map(txn);
-  posted.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  posted.sort((a, b) => timeKey(b.createdAt).localeCompare(timeKey(a.createdAt)));
   if (posted.length !== 100) throw new Error(`expected 100 posted rows, got ${posted.length}`);
   const page1 = { transactions: posted.slice(0, 50), page: { nextPage: uuid("cursor:page1-next") } };
   const page2 = {
@@ -629,7 +632,7 @@ export function buildFixtures(): Map<string, string> {
   const ownIds = [...accounts.accounts.map((a) => a.id), CREDIT, TREASURY];
 
   const failed = failedRows().map(txn);
-  failed.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  failed.sort((a, b) => timeKey(a.createdAt).localeCompare(timeKey(b.createdAt)));
 
   const files = new Map<string, string>();
   files.set("accounts.json", text(accounts));
