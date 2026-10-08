@@ -458,6 +458,7 @@ export function TransactionScreen({
         transactionId={txn.id}
         docDate={txn.doc_date}
         loanPart={shownLoanPart}
+        categoryId={shownCategoryId || null}
         direction={txn.direction}
         active={sample == null}
         readOnly={holdWrites}

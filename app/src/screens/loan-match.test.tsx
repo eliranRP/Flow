@@ -556,6 +556,16 @@ describe("LoanTransactionSplit", () => {
     expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
+  it("offers שיוך on a loan's own principal category (FLOW-134)", async () => {
+    const own = { ...db.loans[0], interest_category_id: null, escrow_category_id: null, principal_category_id: "cat-own-p" };
+    db.loans = [own as (typeof db.loans)[number]];
+    renderSplit({ loanPart: null, categoryId: "cat-own-p" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    const other = renderSplit({ loanPart: null, categoryId: "cat-other" });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(within(other.container).queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
+  });
+
   it("does not offer שיוך while the read is loading", async () => {
     db.readHold = new Promise<void>(() => undefined);
     renderSplit();
