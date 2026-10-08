@@ -263,14 +263,19 @@ export function useCategoriesQuery(active = true) {
 }
 
 // syncing is the server claim of a running refresh: poll every 3s until it clears. A failing
-// read keeps the last data (still syncing), so back off by doubling up to a minute instead of
-// polling a failing endpoint every 3s.
-export function syncPollInterval(q: {
-  state: { data?: { syncing?: boolean } | undefined; fetchFailureCount: number };
-}): number | false {
+// read keeps the last data (still syncing), so back off instead of polling a failing endpoint
+// every 3s. fetchFailureCount cannot drive this: React Query resets it at the start of every
+// fetch, so with retry: 1 it never passes 2 (a flat 12s). The time since the last good read
+// grows by each interval, so using it as the next interval doubles the gap, up to a minute.
+export function syncPollInterval(
+  q: {
+    state: { data?: { syncing?: boolean } | undefined; dataUpdatedAt: number; errorUpdatedAt: number };
+  },
+  now: number = Date.now(),
+): number | false {
   if (q.state.data?.syncing !== true) return false;
-  const failures = q.state.fetchFailureCount;
-  return failures > 0 ? Math.min(3000 * 2 ** failures, 60_000) : 3000;
+  if (q.state.errorUpdatedAt <= q.state.dataUpdatedAt) return 3000;
+  return Math.min(Math.max(now - q.state.dataUpdatedAt, 3000), 60_000);
 }
 
 export function useSumitStatusQuery(active = true) {
