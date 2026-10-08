@@ -9,20 +9,21 @@ So QA has its own login that owns its own company, **Flow QA**. It is a normal o
 - Create, edit, split, assign, undo and delete anything inside Flow QA, in the app and through a Flow MCP key minted for Flow QA.
 - Leave test data in Flow QA. Prefix names with `QA ` so they are easy to spot.
 - Connect the owner's Mercury account to Flow QA, so sync runs against a copy of the real bank lines. Mercury is only read.
-- Seed a scenario straight in the database (Supabase SQL) when the app can't create it. Every insert or update names Flow QA's company id, and the statement first checks that the id belongs to the company named `Flow QA` with `is_demo` false.
+- Seed a scenario straight in the database when the app can't create it. This SQL runs through the owner's Supabase connector, which bypasses row-level security, so the company filter below is the only guard. Every insert or update names Flow QA's company id, and the statement first checks that the id belongs to the company named `Flow QA` with `is_demo` false.
 
 ## What QA must not do
 
 - Use any other login or key for writes. The NRO Momentum MCP key stays read-only (`readOnlyHint` tools only).
 - Join, view or invite into any other company. Never set `is_demo` on Flow QA.
 - Run SQL that touches a row of any other company, or that has no company filter.
-- Write with the NRO Momentum MCP key, or change NRO Momentum's own Mercury connection.
+- Change NRO Momentum's own Mercury connection.
+- Call any `/auth/v1/admin/` endpoint other than `generate_link`, or call `generate_link` for any email other than `ops+qa@nromomentum.com`. The secret below would allow it, so this rule is the guard.
 
 ## How it is set up
 
-- Login `ops+qa@nromomentum.com`. It has no password. QA signs in with a one-time magic link.
+- Login `ops+qa@nromomentum.com`. It has no password. QA signs in with a one-time token, as described under Sign in.
 - It owns one company, `Flow QA`, with `is_demo` false.
-- The project's cloud environment holds a network secret, `SUPABASE_SERVICE_ROLE`. The proxy adds it only to calls under `/auth/v1/admin/`, so a QA session can make sign-in links and nothing else with it. The key never appears in the session.
+- The project's cloud environment holds a network secret, `SUPABASE_SERVICE_ROLE`. The proxy adds it only to calls under `/auth/v1/admin/`, and the key never appears in the session. That path is still the whole user admin API: it can make a sign-in link for any user, and create, change or delete users. QA uses only `generate_link` for its own email (see What QA must not do). Narrowing the proxy to that one call would make the rule enforced rather than followed.
 - The "Production QA (sandbox)" thread runs the hourly deploy check as a routine at minute 14. It is the only thread that writes in Flow QA.
 
 ## Sign in
