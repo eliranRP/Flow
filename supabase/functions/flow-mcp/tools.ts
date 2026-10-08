@@ -566,7 +566,8 @@ const renameCategorySchema = z.object({
 const setCategoryGroupSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
-  group_name: z.string().max(40).nullable(),
+  group_name: z.string().trim().max(40).transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME }).nullable(),
 }).strict();
 const setCompanyCurrencySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -2153,7 +2154,7 @@ async function callWrite(
     };
   } else if (name === "set_category_group") {
     const parsed = setCategoryGroupSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_set_category_group";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,

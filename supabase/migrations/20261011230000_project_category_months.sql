@@ -113,33 +113,46 @@ begin
         cat.excluded_from_pnl, cat.loan_part
       )
   ),
+  sums as (
+    select category_id, currency, month, sum(amount)::bigint as amount
+    from entries
+    group by category_id, currency, month
+  ),
   keys as (
-    select distinct category_id, currency from entries
+    select category_id, currency,
+      coalesce(sum(amount) filter (where month = this_month), 0)::bigint as this_month_minor
+    from sums
+    group by category_id, currency
   ),
   per_month as (
-    select k.category_id, k.currency, m::date as month,
-      coalesce((
-        select sum(e.amount) from entries e
-        where e.category_id is not distinct from k.category_id and e.currency = k.currency and e.month = m::date
-      ), 0)::bigint as amount
+    select k.category_id, k.currency, m::date as month, coalesce(s.amount, 0)::bigint as amount
     from keys k
     cross join generate_series(first_month, this_month - interval '1 month', interval '1 month') m
+    left join sums s on s.category_id is not distinct from k.category_id
+      and s.currency = k.currency and s.month = m::date
+  ),
+  -- A month counts as seen only with a positive cost, so a refund-only month is not a cost.
+  past as (
+    select category_id, currency,
+      jsonb_agg(amount order by month) as months_minor,
+      (count(*) filter (where amount > 0))::integer as months_seen,
+      round(percentile_cont(0.5) within group (order by amount) filter (where amount > 0))::bigint as median_minor
+    from per_month
+    group by category_id, currency
+  ),
+  days as (
+    select category_id, currency,
+      round(percentile_cont(0.5) within group (order by day))::integer as typical_day
+    from entries
+    where month < this_month
+    group by category_id, currency
   ),
   rows as (
-    select k.category_id, k.currency,
-      coalesce((
-        select sum(e.amount) from entries e
-        where e.category_id is not distinct from k.category_id and e.currency = k.currency and e.month = this_month
-      ), 0)::bigint as this_month_minor,
-      (select jsonb_agg(pm.amount order by pm.month) from per_month pm
-       where pm.category_id is not distinct from k.category_id and pm.currency = k.currency) as months_minor,
-      (select count(*)::integer from per_month pm
-       where pm.category_id is not distinct from k.category_id and pm.currency = k.currency and pm.amount <> 0) as months_seen,
-      (select round(percentile_cont(0.5) within group (order by pm.amount))::bigint from per_month pm
-       where pm.category_id is not distinct from k.category_id and pm.currency = k.currency and pm.amount <> 0) as median_minor,
-      (select round(percentile_cont(0.5) within group (order by e.day))::integer from entries e
-       where e.category_id is not distinct from k.category_id and e.currency = k.currency and e.month < this_month) as typical_day
+    select k.category_id, k.currency, k.this_month_minor, p.months_minor, p.months_seen,
+      p.median_minor, d.typical_day
     from keys k
+    join past p on p.category_id is not distinct from k.category_id and p.currency = k.currency
+    left join days d on d.category_id is not distinct from k.category_id and d.currency = k.currency
   )
   select jsonb_build_object(
     'project_id', p_project_id,
@@ -186,7 +199,7 @@ as $$
 declare
   cid uuid;
   before text;
-  after text := nullif(btrim(p_group_name), '');
+  after text := nullif(btrim(private.plain_spaces(p_group_name)), '');
 begin
   cid := private.current_company_id();
   if cid is null then
@@ -197,6 +210,9 @@ begin
   end if;
   if p_category_id is null or char_length(after) > 40 then
     raise exception 'validation';
+  end if;
+  if private.name_has_hidden_char(after) then
+    raise exception 'name has an invisible or control character' using errcode = '23514';
   end if;
   select c.group_name into before
   from public.categories c
@@ -235,7 +251,7 @@ begin
     or char_length(p_idempotency_key) < 1
     or char_length(p_idempotency_key) > 128
     or p_category_id is null
-    or char_length(btrim(p_group_name)) > 40
+    or char_length(btrim(private.plain_spaces(p_group_name))) > 40
   then
     return private.mcp_error('validation', 'validation');
   end if;
@@ -245,7 +261,7 @@ begin
     return gate;
   end if;
   token := (gate->>'token_id')::uuid;
-  hash := 'category_group|' || p_category_id::text || '|' || coalesce(nullif(btrim(p_group_name), ''), '');
+  hash := 'category_group|' || p_category_id::text || '|' || coalesce(nullif(btrim(private.plain_spaces(p_group_name)), ''), '');
   prior := private.mcp_idempotency_lookup(token, p_idempotency_key, hash);
   if prior->>'state' = 'replay' then
     return prior->'response';
@@ -274,6 +290,8 @@ begin
     when others then
       if sqlerrm = 'validation' then
         response := private.mcp_error('validation', 'validation');
+      elsif sqlerrm = 'name has an invisible or control character' then
+        response := private.mcp_error('validation', sqlerrm);
       else
         response := private.mcp_refused(sqlerrm);
       end if;

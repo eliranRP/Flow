@@ -4111,6 +4111,7 @@ Deno.test("get_project_categories and set_category_group forward their input (FL
     ["get_project_categories", { id: CATEGORY, months: 6.5 }],
     ["set_category_group", { idempotency_key: "k", category_id: CATEGORY }],
     ["set_category_group", { idempotency_key: "k", category_id: CATEGORY, group_name: "א".repeat(41) }],
+    ["set_category_group", { idempotency_key: "k", category_id: CATEGORY, group_name: "חשבונות\u202E" }],
     ["set_category_group", { idempotency_key: "k", category_id: "not-a-uuid", group_name: "x" }],
   ] as const) {
     const scope = tool === "get_project_categories" ? ["read"] : ["write"];

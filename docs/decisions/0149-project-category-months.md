@@ -12,11 +12,11 @@ FLOW-401 asks for a project view by category that shows what each category usual
 1. **`public.project_category_months(project, months = 6, today)`**, for the owner or a viewer. For each expense category and currency of the project it returns this month so far, each of the last 3 to 12 complete months, `months_seen`, `expected_minor` and a `flag`.
    - It counts what `get_project` counts: approved lines, split parts and the project's share of shared lines, in the P&L only.
    - A month follows the document date (the invoiced basis, as the missing bills do), in Israel time.
-   - `expected_minor` is the median of the complete months that have a cost. It is set only when at least 3 of them have one.
+   - `expected_minor` is the median of the complete months with a positive cost. It is set only when at least 3 of them have one; a refund-only month is not a cost.
    - `flag` is `high` (above 1.5 × expected and at least ₪200, or 50 in another currency, above it), `new` (a cost now after none, of at least ₪500 or 150) or `missing` (expected is set, today is past the category's median day and nothing came yet).
    - The thresholds live in one function, `private.category_flag`, so changing one is a one-line migration.
    - The numbers and flags come from plain SQL; Jev only words them.
-2. **`categories.group_name`**, an optional group (trimmed, 1 to 40 letters). The owner sets it with `public.set_category_group`; null or blank clears it. A screen folds a group's categories into one row. The P&L, reports and every total stay per category. `list_categories` and `project_category_months` return it.
+2. **`categories.group_name`**, an optional group (trimmed, 1 to 40 letters, the same space and hidden-character rules as names). The owner sets it with `public.set_category_group`; null or blank clears it. A screen folds a group's categories into one row. The P&L, reports and every total stay per category. `list_categories` and `project_category_months` return it.
 3. **MCP:**
    - `get_project_categories(id, months)` is a read tool.
    - `set_category_group` has the idempotency key, the write rate limit and undo kind `category_group`. Undo is a conflict once the group was changed again.

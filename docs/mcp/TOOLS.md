@@ -112,7 +112,7 @@ On the company's overhead project (`is_overhead` true, see `set_overhead_project
 
 Read tool, `project_category_months(p_project_id, p_months)`. What each expense category usually costs this project a month, and whether this month looks off ([0149](../decisions/0149-project-category-months.md)). `months` is 3 to 12 (default 6); anything else is `validation`. An unknown project and another company's are `not_found`. It counts what `get_project`'s `categories_by_currency` counts: approved lines filed to the project, split parts filed to it and its share of shared lines, in the P&L only, by `doc_date` (the invoiced basis), with the month in Israel time.
 
-Output `data`: `project_id`, `today`, `this_month` (`YYYY-MM`), `months[]` (the first day of each complete month, oldest first) and `categories[]`, one row per category and currency with a cost this month or in those months: `id`, `name`, `group_name`, `currency`, `this_month_minor` (so far), `months_minor[]` (in the order of `months`, 0 when none), `months_seen` (complete months with a cost), `expected_minor` (the median of those months, null when fewer than 3), `typical_day` (the median day of the month its lines fall on in those months, null when none) and `flag`:
+Output `data`: `project_id`, `today`, `this_month` (`YYYY-MM-DD`, the first day of the current month), `months[]` (the first day of each complete month, oldest first) and `categories[]`, one row per category and currency with a cost this month or in those months: `id`, `name`, `group_name`, `currency`, `this_month_minor` (so far), `months_minor[]` (in the order of `months`, 0 when none), `months_seen` (complete months with a positive cost; a refund-only month does not count), `expected_minor` (the median of those months, null when fewer than 3), `typical_day` (the median day of the month its lines fall on in those months, null when none) and `flag`:
 
 - `high`: this month is already above 1.5 × expected and at least ₪200 above it ($50 in other currencies);
 - `new`: a cost now after none in those months, of at least ₪500 ($150);
@@ -372,7 +372,7 @@ Renames a category (owner only). `name` is trimmed, 2 to 120 letters, and not an
 { "idempotency_key": "group-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "group_name": "חשבונות" }
 ```
 
-Puts a category in a group (owner only), so a screen can fold the group's categories into one row; `null` or a blank name takes it out. The name is trimmed, up to 40 letters. Totals, the P&L and reports stay per category. Output `data`: `category_id`, `group_name`, `prior` (the group before, or null), `undo_kind: "category_group"` and `id`. Refused: `category not found`. Undo, with the category id, puts the group before back; it is `conflict` once the group was changed again ([0149](../decisions/0149-project-category-months.md)).
+Puts a category in a group (owner only), so a screen can fold the group's categories into one row; `null` or a blank name takes it out. The name is trimmed, up to 40 letters, with no invisible or control characters (that is `validation`, `name has an invisible or control character`). Totals, the P&L and reports stay per category. Output `data`: `category_id`, `group_name`, `prior` (the group before, or null), `undo_kind: "category_group"` and `id`. Refused: `category not found`. Undo, with the category id, puts the group before back; it is `conflict` once the group was changed again ([0149](../decisions/0149-project-category-months.md)).
 
 ### set_overhead_project
 

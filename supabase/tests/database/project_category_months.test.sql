@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(30);
+select plan(33);
 
 do $users$
 begin
@@ -172,6 +172,13 @@ select public.mcp_set_category_group('pcm-group-2', pg_temp.id('water'), 'חשב
 select public.set_category_group(pg_temp.id('water'), 'Utilities');
 select is(public.mcp_undo('pcm-undo-2', 'category_group', pg_temp.id('water'))->'error'->>'code', 'conflict',
   'undo is a conflict once the group was changed again');
+
+select is(public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->>'this_month', '2026-09-01',
+  'this_month is the first day of the month');
+select throws_ok($$select public.set_category_group(pg_temp.id('elec'), E'\u202Eabc')$$, '23514',
+  'name has an invisible or control character', 'a group with a hidden character is refused');
+select is(public.mcp_set_category_group('pcm-group-3', pg_temp.id('elec'), E'abc\n')->'error'->>'message',
+  'name has an invisible or control character', 'MCP answers validation for a hidden character');
 
 select * from finish();
 rollback;
