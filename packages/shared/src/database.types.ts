@@ -276,6 +276,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"jev_prefills": {
+                  Row: {
+                    "category_id": string | null,"company_id": string,"confidence": number | null,"created_at": string,"id": string,"model_version": string | null,"prior_allocations": NonNullable<Json>,"prior_category_id": string | null,"prior_category_suggested": boolean,"prior_project_id": string | null,"project_id": string | null,"transaction_id": string,"undone_at": string | null,"undone_by": string | null
+                  }
+                  Insert: {
+                    "category_id"?: string | null,"company_id": string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id": string,"undone_at"?: string | null,"undone_by"?: string | null
+                  }
+                  Update: {
+                    "category_id"?: string | null,"company_id"?: string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id"?: string,"undone_at"?: string | null,"undone_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jev_prefills_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"jev_usage": {
                   Row: {
                     "calls": number,"company_id": string,"failed": number,"finished_at": string | null,"id": string,"input_tokens": number,"output_tokens": number,"reserved": number,"run_id": string,"started_at": string,"tagged": number,"usage_day": string
@@ -919,7 +938,7 @@ isOneToOne: false
 { Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
                            },
 "jev_prefill":
-{ Args: { "p_category"?: string,"p_company": string,"p_project"?: string,"p_transaction": string }; Returns: Json
+{ Args: { "p_category"?: string,"p_company": string,"p_confidence"?: number,"p_model"?: string,"p_project"?: string,"p_transaction": string }; Returns: Json
                            },
 "jev_projects":
 { Args: { "p_company": string }; Returns: Json
@@ -1093,6 +1112,9 @@ isOneToOne: false
 "mcp_undo_batch":
 { Args: { "p_batch_key": string,"p_idempotency_key": string }; Returns: Json
                            },
+"mcp_undo_jev_prefill":
+{ Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
                            },
@@ -1233,6 +1255,9 @@ isOneToOne: false
                            },
 "undo_category_move":
 { Args: { "p_move_id": string }; Returns: undefined
+                           },
+"undo_jev_prefill":
+{ Args: { "p_transaction_id": string }; Returns: Json
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined
