@@ -71,6 +71,20 @@ Catch these before handoff. The matching lines are in the two checklists.
 17. An inline element's box is as wide as its text and never clips. Measure the nearest block ancestor, the one whose `display` is not `inline` or `contents`, once per container. A `<bdi>` inside a hint, mixed text, or a display amount is not the clipping box.
 18. Focus and blur hooks need a browser-mode test, because jsdom doesn't fire blur on removal.
 
+19. A contract change lists its consumers. Before changing a payload, list every reader of it (app screens, `packages/shared` schemas, MCP tools, stories, demo data, e2e) and update or test each one in the same pull request.
+20. A unit or currency change reaches every sum. Grep every total, header and export that adds the changed field, and test one of each.
+21. Two open pull requests that redefine the same SQL function agree the order up front. The later one patches the current definition (`pg_get_functiondef` with counted anchors) instead of copying an old one, and says which pull request it lands after.
+22. An idempotency store keeps only final outcomes. A constraint error, a lock timeout or another transient refusal is not stored, so a retry with the same key can succeed.
+23. A column that relaxes a security check (an allow flag, a role, a trusted source) is never writable by the owner, through RLS or any owner-callable write. Only a server path with its own check sets it.
+24. Every auth path gets a wrong-value test: a wrong token, a wrong company claim, a wrong scope, an expired key. A test that only sends no credential is not enough.
+25. Probe a restricted role (viewer, read-only token, another company) against every write path the pull request adds or changes, not just the new tool.
+26. An e2e wait waits for a state (a role, a text, a response), never a fixed timeout. A fixed `waitForTimeout` is a flake waiting to happen.
+27. A fix comes with a test that fails when the fix is reverted (self-check 6). Show the failing run once.
+28. A persisted flag is a hint, not a confirmation. A stored "marked", "synced" or "done" is checked against the source of truth before it gates money or a write.
+29. A test does not peek at another feature's query or cache with a second observer. It asserts what its own screen or call returns.
+30. Renaming something operations can see (a secret, a cron job, a function name, a bucket, a log key) needs an "Ops changes" section in the pull request with what to update and when.
+31. Database tests use the shared fixtures in `supabase/tests/helpers.sql` (`tests.fixture_company`, `fixture_project`, `fixture_category`, `fixture_line`) instead of re-writing the inserts. They encode the traps: an expense is negative, a line inserted with a category loses `category_suggested` unless it is set after the insert, a company comes with its loan-part categories, a viewer needs a demo company, and a Mercury line is USD.
+
 ## Order
 
 A fix delta for a pull request that is under review goes before other queued work.

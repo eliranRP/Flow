@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free (FLOW-210 and FLOW-409 done in #180) | Next `ready` non-UI task |
+| Dev lane 1 | Free (FLOW-808 done in #181) | Next `ready` non-UI task |
 | Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -1011,7 +1011,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-808"></a>
 ### FLOW-808 · Shared test fixtures and pitfalls upkeep
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#181: `tests.fixture_*` in `supabase/tests/helpers.sql`, PITFALLS findings 19 to 31, code checklist) · **Depends on:** —
 - **What:** Commit shared invented test fixtures so builders stop re-creating them, and fold the pending pitfall candidates from recent retros into [PITFALLS](../review/PITFALLS.md) and the checklists. Themes: a consumer matrix for every payload a contract change touches; a unit or currency change reaches every sum; two PRs redefining one SQL function agree the order up front; never cache constraint or transient refusals in an idempotency store; security-relaxing columns are never owner-writable; every auth path gets a wrong-value negative test; probe a restricted role against every write path; fixed-timeout e2e waits are flakes; a fix needs a test that fails when it is reverted; a persisted flag is a hint, not confirmation; don't peek at another feature's query with a second observer; renames of ops-visible objects need an "Ops changes" PR section.
 - **Acceptance:** PITFALLS and checklists updated; changelog.
 
