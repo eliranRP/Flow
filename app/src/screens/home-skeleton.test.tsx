@@ -9,11 +9,11 @@ describe("HomeSkeleton", () => {
     expectRtl();
     render(<MemoryRouter><HomeSkeleton /></MemoryRouter>);
     expect(screen.getByRole("status")).toHaveTextContent("טוען…");
-    expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
     expect(screen.queryByText("מצב תצוגה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(document.querySelector(".ui-spinner")).toBeNull();
-    expect(screen.getByRole("button", { name: "החודש" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /בחירת תקופה$/ })).toBeInTheDocument();
     expect(document.querySelector(".ui-skel-pill")).toBeNull();
     expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
     expect(document.querySelector(".ui-skel-explain")).not.toBeNull();

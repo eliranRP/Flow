@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProfitMonths, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { useCompanyCurrency } from "../company-currency";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from "react-router-dom";
@@ -13,7 +14,11 @@ import { useAuth } from "../auth";
 import { useHoldWrites, useIsViewer, useWriteGate, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
-import { periodLabel } from "../period";
+import { periodFromSearch, periodLabel, periodPhrase, spansMonths } from "../period";
+import { unpaidIsMarked, unpaidTotals } from "../unpaid";
+import { useProjectPeriod, withPeriodSearch } from "../project-period";
+import { PeriodBar } from "../ui/period-bar";
+import { profitMonthsSummary } from "./profit-months";
 import { keepPreview, useFlowSearch, useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import {
@@ -45,6 +50,7 @@ import {
   useProjectCategoryQuery,
   useProjectQuery,
   useProjectWaitingQuery,
+  useProfitMonthsQuery,
   useReviewQuery,
   useMercuryStatusQuery,
   useSumitStatusQuery,
@@ -90,7 +96,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, BellIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BellIcon, BuildingIcon, CalendarIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -455,14 +461,6 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
   );
 }
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function movesShown(state: unknown): boolean {
-  return isPlainRecord(state) && state.moves === true;
-}
-
 function ReservedMenuSlot() {
   return <span className="ui-menu-slot" aria-hidden="true" />;
 }
@@ -551,10 +549,13 @@ function withParam(search: string, key: string, value: string): string {
 function ProjectCategories({
   project,
   search,
+  categorySearch = search,
   categoryTo,
 }: {
   project: NonNullable<ProjectDetail>;
   search: string;
+  /** The category list opens on the project's period. */
+  categorySearch?: string;
   categoryTo?: string;
 }) {
   const pendingOther = project.pending_other_currencies ?? [];
@@ -598,7 +599,7 @@ function ProjectCategories({
           currency={currency}
           loss={false}
           chevron={category.id != null}
-          href={category.id != null ? (categoryTo ?? categoryHref(project.id, category.id, currency, search)) : undefined}
+          href={category.id != null ? (categoryTo ?? categoryHref(project.id, category.id, currency, categorySearch)) : undefined}
           wrapHint={category.has_shared_share === true}
           hint={category.has_shared_share === true ? (
             <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
@@ -635,37 +636,41 @@ function ProjectCategories({
 
 export function ProjectDetailScreen({
   sample,
+  sampleMonths,
   example,
   categoryTo,
 }: {
   sample?: NonNullable<ProjectDetail>;
+  /** The "לפי חודש" row's counts for a sample project (dev routes and Storybook). */
+  sampleMonths?: ProfitMonths;
   example?: ReactNode;
   /** Dev fixtures send a category row here. Production builds the project route. */
   categoryTo?: string;
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
-  const detail = useProjectQuery(sample ? "" : projectId);
+  // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
+  const [period, setPeriod] = useProjectPeriod();
+  const detail = useProjectQuery(sample ? "" : projectId, period);
+  const months = useProfitMonthsQuery(sample || !spansMonths(period) ? "" : projectId, period);
   const preview = useHomePreview();
+  const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const location = useLocation();
-  const navigate = useNavigate();
-  // Kept on the history entry, so Back from a card reopens the list at its scroll spot.
-  const [moves, setMoves] = useState(() => movesShown(location.state));
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
   const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
   const heldIds = heldTransactions.map((txn) => txn.id);
   const listFrom = `${location.pathname}${location.search}`;
-  const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null && moves);
+  const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null);
   useEffect(() => {
     if (sample) return;
     if (detail.data) setOverheadOn(detail.data.after_overhead === true);
   }, [sample, detail.data]);
   const saveOverhead = useWrite({
     failure: "לא הצלחנו לשמור את התצוגה.",
-    keys: ["project", "dashboard"],
+    keys: ["project", "dashboard", "profit-months"],
     run: async () => {
       const supabase = getSupabase();
       if (!supabase || projectId === "") throw new Error("supabase");
@@ -684,7 +689,7 @@ export function ProjectDetailScreen({
   if (!project) {
     return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
-  const currencyRows = projectRows(project);
+  const currencyRows = projectRows(project, companyCurrency);
   const singleCurrency = currencyRows.length === 1;
   const profitRows = currencyRows.map((row) => ({
     row,
@@ -700,6 +705,10 @@ export function ProjectDetailScreen({
     })()
     : null;
   const expenses = absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot);
+  // A loss is named in the label: red on the violet band does not read (DESIGN-RULES 3.5).
+  const bandLoss = singleCurrency && (profitRows[0]?.profit ?? 0n) < 0n;
+  const periodWords = periodPhrase(period, undefined, "project");
+  const periodQuery = withPeriodSearch(search, period);
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -708,13 +717,20 @@ export function ProjectDetailScreen({
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
+        // A new period shows the last figures until its read lands; the spinner says they are not its yet.
+        status={!sample && detail.isPlaceholderData ? (
+          <div className="ui-ptr">
+            <span className="ui-spinner" role="status" aria-label="מרענן" />
+          </div>
+        ) : null}
         trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
           <p className="t-label">{project.state_label ?? (project.status === "finished" ? "הסתיים" : "פעיל")}</p>
-          <p className="ui-band-label t-label">
-            רווח
+          <PeriodBar period={period} onChange={setPeriod} scope="project" />
+          <p className="ui-band-label t-label ui-project-period-label">
+            {bandLoss ? "הפסד" : "רווח"} {periodWords}
             {marginShown == null ? null : (
               <>
                 {" · רווחיות "}
@@ -738,6 +754,14 @@ export function ProjectDetailScreen({
           ))}
         </BandHero>
       </TopBand>
+      {spansMonths(period) ? (
+        <Banner
+          to={`/projects/${project.id}/months${periodQuery}`}
+          icon={<CalendarIcon />}
+          title="לפי חודש"
+          hint={profitMonthsSummary(sampleMonths ?? months.data ?? null, companyCurrency)}
+        />
+      ) : null}
       <div className="ui-page-pad ui-project-overhead">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
@@ -761,7 +785,7 @@ export function ProjectDetailScreen({
           }}
         />
       </div>
-      {project.budget_agorot != null ? (
+      {project.budget_agorot != null && period.kind === "all" ? (
         <div className="ui-page-pad">
           <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
         </div>
@@ -776,51 +800,64 @@ export function ProjectDetailScreen({
       <ProjectCategories
         project={project}
         search={search}
+        categorySearch={periodQuery}
         categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
       />
-      <p className="ui-page-pad ui-page-title-row">
-        <TextLink to={`/settings/categories${search}`} tone="quiet">כל הקטגוריות</TextLink>
-        <TextLink
-          tone="accent"
-          onClick={() => {
-            setMoves(true);
-            void navigate(`${location.pathname}${location.search}${location.hash}`, {
-              replace: true,
-              state: { ...(isPlainRecord(location.state) ? location.state : {}), moves: true },
-            });
-          }}
-        >
-          תנועות אחרונות
-        </TextLink>
-      </p>
-      {moves ? (
-        heldTransactions.length === 0 ? (
-          <EmptyState icon={<DocumentIcon />} title="אין עדיין תנועות" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
-        ) : (
-          <MonthList
-            rows={heldTransactions}
-            keyOf={(txn) => txn.id}
-            dateOf={(txn) => txn.doc_date}
-            amountOf={(txn) => ({ minor: txn.kept_out === true ? 0n : txn.amount_net, currency: txn.currency ?? "ILS", direction: txn.direction === "income" ? "income" : "expense" })}
-            complete={heldTransactions.length < PROJECT_RECENT_CAP}
-            renderRow={(txn) => (
-              <ListRow
-                variant="transaction"
-                title={txn.description}
-                {...loanRowProps(projectMarks.get(txn.id), `${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`)}
-                agorot={txn.amount_net}
-                sign={txn.direction === "income" ? "in" : "out"}
-                currency={txn.currency ?? "ILS"}
-                source="invoice"
-                href={`/transactions/${txn.id}${search}`}
-                state={txnListState(heldIds, txn.id, listFrom)}
-              />
-            )}
-          />
-        )
-      ) : null}
+      <SectionHead title="תנועות" />
+      {heldTransactions.length === 0 ? (
+        <EmptyState icon={<DocumentIcon />} title="אין תנועות בתקופה הזו" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
+      ) : (
+        <MonthList
+          rows={heldTransactions}
+          keyOf={(txn) => txn.id}
+          dateOf={(txn) => txn.doc_date}
+          amountOf={projectMonthAmount}
+          complete={heldTransactions.length < PROJECT_RECENT_CAP}
+          renderRow={(txn) => (
+            <ListRow
+              variant="transaction"
+              title={txn.description}
+              {...loanRowProps(projectMarks.get(txn.id), projectLineHint(txn))}
+              agorot={txn.amount_net}
+              sign={txn.direction === "income" ? "in" : "out"}
+              currency={txn.currency ?? "ILS"}
+              source="invoice"
+              href={`/transactions/${txn.id}${search}`}
+              state={txnListState(heldIds, txn.id, listFrom)}
+            />
+          )}
+        />
+      )}
     </div>
   );
+}
+
+type ProjectLine = NonNullable<ProjectDetail>["transactions"][number];
+
+/**
+ * What a project line adds to its month head. A kept-out line adds nothing (0099). A split line
+ * adds this project's share, `parts_minor`, taken as it comes: signed in the line's own terms, a
+ * reversal part already minus (decision 0138). Plus is the line's own way, so the share moves
+ * money the way the line does; a share the reversals push below zero moves it the other way.
+ */
+export function projectMonthAmount(txn: ProjectLine): { minor: bigint; currency: string; direction: "income" | "expense" } {
+  const direction = txn.direction === "income" ? "income" : "expense";
+  const currency = txn.currency ?? "ILS";
+  if (txn.kept_out === true) return { minor: 0n, currency, direction };
+  if (txn.parts_minor != null) {
+    const share = txn.parts_minor;
+    if (share >= 0n) return { minor: direction === "income" ? share : -share, currency, direction };
+    const other = direction === "income" ? "expense" : "income";
+    return { minor: other === "income" ? -share : share, currency, direction: other };
+  }
+  return { minor: txn.amount_net, currency, direction };
+}
+
+/** "מחוץ לרווח · category · date". The marker leads, so a kept-out line reads as one at a glance. */
+function projectLineHint(txn: ProjectLine): string {
+  return [txn.kept_out === true ? KEPT_OUT_SHORT : null, txn.category, formatDayMonth(txn.doc_date)]
+    .filter((part): part is string => part != null && part !== "")
+    .join(" · ");
 }
 
 function LegacyEmptyProject() {
@@ -2037,8 +2074,10 @@ export function ProjectCategoryScreen({
   const [params] = useSearchParams();
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "");
   const location = useLocation();
+  // The project's period travels in the URL, so the lines match the category row that opened them.
+  const period = periodFromSearch(new URLSearchParams(location.search));
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
@@ -2053,7 +2092,9 @@ export function ProjectCategoryScreen({
     return <ScreenHeader title="קטגוריה" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
   const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
-  const projectName = sample?.projectName ?? first?.project_name ?? "";
+  const projectName = [sample?.projectName ?? first?.project_name ?? "", period ? periodLabel(period, undefined, "project") : ""]
+    .filter((part) => part !== "")
+    .join(" · ");
   const rowCurrency = sample?.currency ?? first?.currency ?? "ILS";
   const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
@@ -2565,16 +2606,49 @@ function unpaidHintLine(row: UnpaidRow): string {
   return [date, project, age].filter((part) => part !== "").join(" · ");
 }
 
+/** FLOW-330. The marked row's line, and the toasts of a mark and a clear. */
+export const UNPAID_MARKED = "סומן כשולם · ממתין לסנכרון";
+const UNPAID_MARK_DONE = "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT.";
+const UNPAID_CLEAR_DONE = "הסימון בוטל.";
+
 export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const unpaid = useUnpaidQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, unpaid);
-  const [hidden, setHidden] = useState<string[]>([]);
-  const [marking, setMarking] = useState<UnpaidRow | null>(null);
-  const all = sample ?? unpaid.data ?? [];
-  const rows = useHeldOrder(all.filter((row) => !hidden.includes(row.id)), (row) => row.id);
-  const gross = all.reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n);
+  const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
+  const toast = useToast();
+  // A sample (Storybook, dev routes) keeps its marks on the screen; a live mark is the server's (0133).
+  const [sampleMarks, setSampleMarks] = useState<Record<string, string | null>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const all = (sample ?? unpaid.data ?? []).map((row) => (row.id in sampleMarks ? { ...row, marked_paid_at: sampleMarks[row.id] ?? null } : row));
+  const rows = useHeldOrder(all, (row) => row.id);
+  const totals = unpaidTotals(all);
+  const mark = useWrite<{ id: string; paid: boolean }>({
+    keys: ["unpaid"],
+    failure: (error) => (isTransientWriteError(error) ? { message: "לא הצלחנו לעדכן את הסימון.", retry: true } : "לא הצלחנו לעדכן את הסימון."),
+    onSuccess: ({ paid }) => {
+      setBusyId(null);
+      toast.show({ message: paid ? UNPAID_MARK_DONE : UNPAID_CLEAR_DONE });
+    },
+    run: async ({ id, paid }) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_invoice_paid", { p_id: id, p_paid: paid }));
+    },
+  });
+  function setPaid(row: UnpaidRow, paid: boolean) {
+    if (holdWrites || mark.isPending) return;
+    if (sample) {
+      setSampleMarks((current) => ({ ...current, [row.id]: paid ? new Date().toISOString() : null }));
+      toast.show({ message: paid ? UNPAID_MARK_DONE : UNPAID_CLEAR_DONE });
+      return;
+    }
+    if (blocked()) return;
+    setBusyId(row.id);
+    mark.mutate({ id: row.id, paid }, { onError: () => { setBusyId(null); } });
+  }
   return (
     <ScreenState
       title="חשבוניות שלא שולמו"
@@ -2584,51 +2658,46 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       empty={<EmptyState icon={<ReviewIcon />} title="הכל שולם" body="אין חשבוניות פתוחות כרגע." />}
     >
       <div className="ui-page-pad">
-        <p className="t-display"><bdi dir="ltr">{formatIls(gross)}</bdi></p>
+        <p className="t-display ui-unpaid-totals">
+          {totals.map((total) => (
+            <bdi key={total.currency} dir="ltr">{formatAmountText(total.minor, total.currency)}</bdi>
+          ))}
+        </p>
         <p className="t-label text-text-secondary">ממתין לתשלום · טרם נגבה</p>
       </div>
       <List>
-        {rows.map((row) => (
-          <ListRow
-            key={row.id}
-            variant="project"
-            title={row.customer_name ?? row.description}
-            hint={unpaidHintLine(row)}
-            wrapHint
-            agorot={absAgorot(row.open_gross_agorot)}
-            loss={false}
-            actionBelow
-            action={
-              <Button
-                variant="pill"
-                icon={<CheckIcon />}
-                onClick={() => {
-                  setMarking(row);
-                }}
-              >
-                סימון כשולם
-              </Button>
-            }
-          />
-        ))}
+        {rows.map((row) => {
+          const marked = unpaidIsMarked(row);
+          const busy = busyId === row.id && mark.isPending;
+          return (
+            <ListRow
+              key={row.id}
+              variant="project"
+              title={row.customer_name ?? row.description}
+              hint={marked ? `${UNPAID_MARKED} · ${unpaidHintLine(row)}` : unpaidHintLine(row)}
+              wrapHint
+              agorot={absAgorot(row.open_gross_agorot)}
+              currency={row.currency ?? "ILS"}
+              loss={false}
+              muted={marked}
+              actionBelow
+              action={holdWrites ? undefined : (
+                <Button
+                  variant="pill"
+                  icon={marked ? undefined : <CheckIcon />}
+                  busy={busy}
+                  disabled={mark.isPending && !busy}
+                  onClick={() => {
+                    setPaid(row, !marked);
+                  }}
+                >
+                  {busy ? (marked ? "מבטל…" : "מסמן…") : marked ? "ביטול הסימון" : "סימון כשולם"}
+                </Button>
+              )}
+            />
+          );
+        })}
       </List>
-      <Sheet
-        open={marking != null}
-        onOpenChange={(open) => {
-          if (!open) setMarking(null);
-        }}
-        title="סימון כשולם"
-      >
-        <p className="t-label">השורה תצא מהרשימה כש־SUMIT יראה את החשבונית כשולמה בסנכרון הבא. Flow לא מסמן תשלום ב־SUMIT.</p>
-        <Button
-          onClick={() => {
-            if (marking) setHidden((current) => [...current, marking.id]);
-            setMarking(null);
-          }}
-        >
-          הבנתי
-        </Button>
-      </Sheet>
     </ScreenState>
   );
 }

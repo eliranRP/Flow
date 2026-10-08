@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type L
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { homeSummarySchema, type Dashboard } from "@flow/shared";
-import { thisMonth } from "./period";
+import { defaultPeriod } from "./period";
 import { useAuth } from "./auth";
 import { SessionProviders } from "./session-providers";
 import { HomeSkeleton } from "./screens/home-skeleton";
@@ -52,6 +52,7 @@ import {
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { BreakdownLinesScreen, BreakdownScreen } from "./screens/breakdown";
+import { ProfitMonthsScreen } from "./screens/profit-months";
 import { LineSplitScreen } from "./screens/line-split";
 import { DevLineSplit } from "./dev/line-split-e2e";
 import { JevReviewE2e } from "./screens/jev-review-card";
@@ -140,6 +141,7 @@ function AppRoutes() {
               <Route path="/e2e/txn" element={<DevTransaction />} />
               <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
               <Route path="/e2e/project-category" element={<DevProjectCategory />} />
+              <Route path="/e2e/project-months" element={<DevProjectMonths />} />
               <Route path="/e2e/change" element={<DevChange />} />
               <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
               <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
@@ -167,6 +169,7 @@ function AppRoutes() {
               </Route>
               <Route path="projects" element={<ProjectsScreen />} />
               <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
+              <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
               <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
               <Route path="flow/:direction" element={<BreakdownScreen />} />
               <Route path="flow/:direction/excluded/:currency" element={<BreakdownLinesScreen excluded />} />
@@ -491,7 +494,7 @@ const devDashboard: Dashboard = {
 };
 
 function DevHome() {
-  const [period, setPeriod] = useState(thisMonth());
+  const [period, setPeriod] = useState(defaultPeriod());
   return (
     <HomeBooks
       data={devDashboard}
@@ -692,6 +695,30 @@ function DevProjectDetail() {
         }],
       }}
       categoryTo="/e2e/project-category"
+    />
+  );
+}
+
+/** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
+function DevProjectMonths() {
+  return (
+    <ProfitMonthsScreen
+      sample={{
+        projectName: "שיפוץ הרצל 12",
+        data: {
+          basis: "invoiced",
+          from: "2026-08-01",
+          to: "2026-10-08",
+          project_id: "p1",
+          after_overhead: false,
+          months: [
+            { month: "2026-10", from: "2026-10-01", to: "2026-10-08", open: true, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 40_000n, profit_minor: -40_000n }] },
+            { month: "2026-09", from: "2026-09-01", to: "2026-09-30", open: false, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 120_000n, profit_minor: -120_000n }] },
+            { month: "2026-08", from: "2026-08-01", to: "2026-08-31", open: false, by_currency: [{ currency: "ILS", income_minor: 1_000_000n, expense_minor: 300_000n, profit_minor: 700_000n }] },
+          ],
+          by_currency: [{ currency: "ILS", income_minor: 1_000_000n, expense_minor: 460_000n, profit_minor: 540_000n }],
+        },
+      }}
     />
   );
 }

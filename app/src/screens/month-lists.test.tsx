@@ -1,6 +1,6 @@
 import type { ProjectDetail, ReviewRow } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -61,7 +61,6 @@ describe("project recent list months", () => {
       txn("c", "2026-09-08", -40_000n, "expense", "USD"),
       txn("d", "2026-08-20", -220_000n, "expense"),
     ])} />);
-    fireEvent.click(screen.getByText("תנועות אחרונות"));
     expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000, הוצאות −₪3,500, הוצאות −$400, ");
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200, ");
   });
@@ -70,7 +69,6 @@ describe("project recent list months", () => {
     const rows = Array.from({ length: 40 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
     wrap(<ProjectDetailScreen sample={project(rows)} />);
-    fireEvent.click(screen.getByText("תנועות אחרונות"));
     expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪2,000, ");
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
@@ -83,16 +81,48 @@ describe("project recent list months", () => {
       { ...txn("d", "2026-08-20", 300_000n, "income"), kept_out: true },
       txn("e", "2026-08-18", -220_000n, "expense"),
     ])} />);
-    fireEvent.click(screen.getByText("תנועות אחרונות"));
     expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000, הוצאות −₪3,500, ");
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200, ");
+  });
+
+  it("adds this project's parts of a line split by category, with the line's sign", () => {
+    wrap(<ProjectDetailScreen sample={project([
+      { ...txn("a", "2026-09-14", -1_200_000n, "expense"), parts_minor: 800_000n },
+      { ...txn("b", "2026-09-12", 900_000n, "income"), parts_minor: 300_000n },
+      txn("c", "2026-09-10", -100_000n, "expense"),
+      { ...txn("d", "2026-08-20", -500_000n, "expense"), parts_minor: null },
+    ])} />);
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪3,000, הוצאות −₪9,000, ");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000, ");
+  });
+
+  it("takes a signed share as it comes: a reversal part is already minus (decision 0138)", () => {
+    wrap(<ProjectDetailScreen sample={project([
+      // A supplier refund filed as income: 70.00 left as income, 30.00 put back against expenses.
+      { ...txn("a", "2026-09-14", 10_000n, "income"), parts_minor: 4_000n },
+      // An expense line whose reversal parts outweigh its own on this project: money comes back.
+      { ...txn("b", "2026-09-12", -600_000n, "expense"), parts_minor: -50_000n },
+      // An income line whose share here is below zero: money goes out.
+      { ...txn("c", "2026-08-20", 1_000_000n, "income"), parts_minor: -200_000n },
+    ])} />);
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪540, ");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,000, ");
+  });
+
+  it("marks a kept-out line on the row and opens the lines without an extra tap (FLOW-411)", () => {
+    wrap(<ProjectDetailScreen sample={project([
+      { ...txn("a", "2026-09-14", -150_000n, "expense"), kept_out: true, category: "ציוד" },
+      txn("b", "2026-08-12", -100_000n, "expense"),
+    ])} />);
+    expect(screen.queryByText("תנועות אחרונות")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "כל הקטגוריות" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Line a/ })).toHaveTextContent(/מחוץ לרווח · ציוד/);
   });
 
   it("totals the last month when the list is under the cap", () => {
     const rows = Array.from({ length: 39 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
     wrap(<ProjectDetailScreen sample={project(rows)} />);
-    fireEvent.click(screen.getByText("תנועות אחרונות"));
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪1,900, ");
   });
 });

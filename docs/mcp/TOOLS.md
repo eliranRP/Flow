@@ -36,6 +36,14 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 | `detach_loan_payment` | `transaction_id` | `get_loan_schedule` payments, `get_expense.id` of a line with `loan_split` |
 | `undo` `kind: "loan_detach"` | `id` | the transaction id `detach_loan_payment` used |
+| `delete_loan` | `loan_id` | `list_loans` `loans[].id` |
+| `reorder_loans` | `loan_ids` | every `list_loans` `loans[].id` (open and closed) |
+| `undo` `kind: "loan_delete"` | `id` | the loan id `delete_loan` used |
+| `undo` `kind: "loan_order"` | `id` | the company id `reorder_loans` returned |
+| `set_project_investment` | `project_id` | `list_projects` `projects[].id` |
+| `set_category_rehab` | `category_id` | `list_categories` `categories[].id` |
+| `undo` `kind: "project_investment"` | `id` | the project id `set_project_investment` used |
+| `undo` `kind: "category_rehab"` | `id` | the category id `set_category_rehab` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -73,7 +81,7 @@ Output `data`: `basis` (the basis used, `cash` when omitted) and `projects[]`: `
 
 Input: `{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "basis": "cash", "from": "2026-09-01", "to": "2026-09-30" }`.
 
-Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `excluded_income_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `count`; FLOW-121), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `line_status`, `category`, `parts_minor`, `kept_out`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`, `status`, `closed_on`, `kind`), the loans filed under this project (FLOW-105; empty when none; `status`, `closed_on` and `kind` since [0132](../decisions/0132-loan-kinds-rates.md), as in `list_loans`). `loans` is read apart from the P&L and changes none of its numbers. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
+Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `excluded_income_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `count`; FLOW-121), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `line_status`, `category`, `parts_minor`, `kept_out`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`, `status`, `closed_on`, `kind`), the loans filed under this project (FLOW-105; empty when none; `status`, `closed_on` and `kind` since [0132](../decisions/0132-loan-kinds-rates.md), as in `list_loans`). `loans` is read apart from the P&L and changes none of its numbers. `investment` (FLOW-404, [0143](../decisions/0143-project-investment.md)) is in the project's investment currency, in its minor units (cents for USD): `currency` (default `ILS`; see `set_project_investment`), `purchase_minor`, `arv_minor`, `value_minor` and `value_date` (null until set), `rehab_minor`, `rehab_other_currencies[]` (`currency`, `amount_minor`), `loan_balance_minor`, `loan_balance_other_currencies[]` (`currency`, `balance_minor`; a currency whose open loans add up to 0 is left out), `forced_equity_minor` (ARV − purchase − rehab) and `current_equity_minor` (value − loan balance). Each equity is null while a figure it needs is null, and also while rehab (forced) or an open loan (current) has a currency other than the project's, rather than leave it out. Rehab is all time on the cash basis, whatever `from`, `to` and `basis` say: posted, paid expense lines filed to the project, plus its share of shared lines, whose category counts as rehab (`list_categories` `in_rehab`, see `set_category_rehab`); the project's currency in `rehab_minor`, other currencies in `rehab_other_currencies`. A line with no category counts. A loan payment's parts, fees included, are loan parts and stay out unless the category they sit in is switched on. Rehab follows the category as stored: a line's own `set_line_pnl` switch does not change it, and a guessed kept-out category (`category_suggested`) is out of rehab even while it still counts in `direct_*`. On the overhead project rehab is 0, since its own lines count as overhead. `loan_balance_minor` sums the open loans in the project's currency filed under it; open loans in other currencies are in `loan_balance_other_currencies` and not added in. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
 
 Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Income filed to the project that is out of the P&L (a kept-out income category, or a line taken out with `set_line_pnl`) is left out of `income_*` and listed by category in `excluded_income_by_currency`, on the same basis as `income_agorot`, in positive minor units with its line `count`. A line whose category is only a guess (`category_suggested`) counts in the P&L even when that category is kept out, until the category is confirmed; a loan category stays kept out either way ([0114](../decisions/0114-kept-out-guesses.md)). `categories`, `categories_by_currency` and `excluded_categories_by_currency` list only confirmed lines, so a guessed line is in `direct_*` but in none of the category lists until it is confirmed. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category. Each `count` in `other_currencies[]` and `pending_other_currencies[]` counts only lines in the P&L.
 
@@ -87,7 +95,7 @@ On the company's overhead project (`is_overhead` true, see `set_overhead_project
 
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`. `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
 
 ### list_review
 
@@ -282,6 +290,22 @@ Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the pri
 
 Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior `excluded_from_pnl` value. `refused` / `loan category is fixed` for the three loan categories (any category with a `loan_part` in `list_categories`, seeded as `ריבית משכנתא`, `מסים וביטוח`, and `תשלומי הלוואה`), whatever their current name. Since [0128](../decisions/0128-loan-part-categories.md) it is also refused for any other category that holds a loan part or that a loan names, when the flip would put interest or escrow outside the P&L or principal inside it. A fees part, or a loan's `fees_category_id`, does not hold a category: fees may sit on either side ([0130](../decisions/0130-loan-fees-installments.md)). A new category whose English name matches a default kept-out name ([0099](../decisions/0099-categories-outside-pnl.md); case, spaces, punctuation, `&` or `and`, and a plural `s` are ignored, so `Owner distribution` and `CapEx/Rehab` match) starts kept out, and so does a category renamed into one. Other refusals match `category not found` and the usual write envelope.
 
+### set_project_investment
+
+```json
+{ "idempotency_key": "inv-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "currency": "USD", "purchase_minor": 25000000, "arv_minor": 40000000, "value_date": null }
+```
+
+Sets a project's investment figures: `currency` (an ISO code such as `USD` or `ILS`, default `ILS`; it cannot be cleared, and changing it does not convert the figures), then `purchase_minor`, `arv_minor` (after-repair value) and `value_minor` (worth today), in minor units of that currency, and `value_date` (YYYY-MM-DD). Name at least one; a key left out keeps its figure and `null` clears it. An amount must be a whole number of minor units, 0 or more; anything else, a currency that is not three capital letters, an impossible date, another key or none of the five is `validation`. Output `data`: the currency and figures after, `project_id`, `undo_kind: "project_investment"` and `id`. Undo puts back the currency and figures before, and is `conflict` when any of them changed since. Another company's project is `refused` / `project not found`. `get_project` returns the figures with rehab and equity in `investment` ([0143](../decisions/0143-project-investment.md)).
+
+### set_category_rehab
+
+```json
+{ "idempotency_key": "rehab-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "rehab": true }
+```
+
+`rehab` is required: `true` counts the category as rehab on projects, `false` leaves it out, `null` follows the default. By default every category counts except those kept out of the P&L (`excluded_from_pnl`) and the loan parts (`loan_part` set), so the purchase and the loan payments stay out. A loan payment's fees part stays out too, even in a category that counts, unless that category is switched on (`true`). Switching on the principal category counts principal repayments as rehab, while the loan they repay is already in `current_equity_minor`. Output `data`: `category_id`, `rehab`, `in_rehab` (what the category comes to), `undo_kind: "category_rehab"` and `id`. Undo puts back the setting before, and is `conflict` when it changed since. Another company's category is `refused` / `category not found` ([0143](../decisions/0143-project-investment.md)).
+
 ### set_overhead_project
 
 ```json
@@ -362,7 +386,7 @@ Read tools use `mcp_list_loans` and shared schedule math. Writes use the same wr
 
 ### list_loans
 
-Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)).
+Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Loans come in the saved order: by name until `reorder_loans` changes it, and a loan added since goes last ([0142](../decisions/0142-loan-delete-and-order.md)). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)).
 
 ### get_loan_schedule
 
@@ -461,6 +485,24 @@ Takes one line off the loan it was attached to, by `attach_loan_payment` or in t
 
 Output `data`: `{ "transaction_id", "loan_id", "parts": [{ "part", "amount_minor" }], "undo_kind": "loan_detach", "id" }`, parts in the order interest, escrow, principal, fees, in minor units. Undo `kind: "loan_detach"` with the transaction id puts the same parts back (amounts, categories, review flags). It is `conflict` when the line was matched again since, when the parts no longer fit (the line's amount changed, the balance no longer takes the principal, a part's category no longer fits), or when the loan is a demand loan and a later payment of it was matched since (payments go in date order, [0132](../decisions/0132-loan-kinds-rates.md)), and `not_found` when the line or the loan was removed.
 
+### delete_loan
+
+```json
+{ "idempotency_key": "delete-loan-1", "loan_id": "<loan id>" }
+```
+
+Deletes a loan with its rate rows and the split parts of every payment matched to it ([FLOW-110](../backlog/TASKS.md#flow-110), [0142](../decisions/0142-loan-delete-and-order.md)). Those payments count whole again under their own categories, and the loan's principal no longer counts. An unknown loan or another company's is `refused` / `loan not found`. Output `data`: `{ "loan_id", "name", "payments", "undo_kind": "loan_delete", "id" }`, where `payments` is how many lines were unmatched.
+
+Undo `kind: "loan_delete"` with the loan id puts back the loan, its rates and its parts. It is `conflict` when one of those lines was matched again since, or when the parts no longer fit it. A project or loan category deleted since is left empty on the restored loan. It is `not_found` when the owner already put the loan back in the app.
+
+### reorder_loans
+
+```json
+{ "idempotency_key": "order-1", "loan_ids": ["<loan id>", "<loan id>"] }
+```
+
+Saves the order of the loans list, first to last. `loan_ids` names every loan of the company once, open and closed. A list that leaves one out, names one twice or names another company's loan is `validation`, so a list read before a loan was added or deleted is refused. Output `data`: `{ "loan_ids", "undo_kind": "loan_order", "id" }`, where `id` is the company id. Undo `kind: "loan_order"` puts back the order before. It is `conflict` when the order changed, or a loan was added or deleted, since.
+
 ### undo (loan kinds)
 
 | `kind` | `id` |
@@ -470,6 +512,8 @@ Output `data`: `{ "transaction_id", "loan_id", "parts": [{ "part", "amount_minor
 | `loan_split` | transaction id |
 | `loan_rate` | rate row id from `set_loan_rate` |
 | `loan_detach` | transaction id from `detach_loan_payment` |
+| `loan_delete` | loan id from `delete_loan` |
+| `loan_order` | company id from `reorder_loans` |
 
 Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, `invalid loan terms`, `project not found`, `payment below interest`, `invalid loan parts`, `rate before the loan start`, `rate not found`, `a demand loan has no schedule rows`, `payment before the loan start`, and `a later payment is already attached`.
 

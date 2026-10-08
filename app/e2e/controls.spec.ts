@@ -138,13 +138,31 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");
-  await page.getByRole("button", { name: "החודש" }).click();
-  await expect(page.getByRole("dialog", { name: "תקופה" })).toBeVisible();
-  await page.getByRole("radio", { name: "חודש קודם" }).click();
-  await expect(page.getByRole("dialog", { name: "תקופה" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "חודש קודם" })).toBeVisible();
+  // The period bar (decision 0141): a preset is one tap, the arrows step by its length.
+  const presets = page.locator(".ui-band").getByRole("radiogroup", { name: "תקופה" });
+  await presets.getByRole("radio", { name: "חודש", exact: true }).click();
+  await expect(presets.getByRole("radio", { name: "חודש", exact: true })).toHaveAttribute("aria-checked", "true");
+  const earlier = page.locator(".ui-pbar-arrow").first();
+  const later = page.locator(".ui-pbar-arrow").nth(1);
+  await expect(later).toHaveAttribute("aria-disabled", "true");
+  expect(await cursorOf(later)).toBe("not-allowed");
+  const label = page.getByRole("button", { name: /בחירת תקופה$/ });
+  const before = await label.textContent();
+  await earlier.click();
+  await expect(later).not.toHaveAttribute("aria-disabled", "true");
+  await expect(label).not.toHaveText(before ?? "");
+  await later.click();
+  await expect(later).toHaveAttribute("aria-disabled", "true");
+  await expect(label).toHaveText(before ?? "");
 
-  await page.getByRole("button", { name: "חודש קודם" }).click();
+  await label.click();
+  const periodSheet = page.getByRole("dialog", { name: "תקופה" });
+  await expect(periodSheet).toBeVisible();
+  await periodSheet.getByRole("radio", { name: "שנה" }).click();
+  await expect(periodSheet).toHaveCount(0);
+  await expect(presets.getByRole("radio", { name: "שנה" })).toHaveAttribute("aria-checked", "true");
+
+  await label.click();
   await page.getByRole("button", { name: "טווח מותאם" }).click();
   await expect(page.getByRole("dialog", { name: "תקופה" })).toHaveCount(0);
   const range = page.getByRole("dialog", { name: "טווח מותאם" });
@@ -316,11 +334,9 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   const overhead = page.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
-  await page.getByRole("link", { name: "כל הקטגוריות" }).click();
-  await expect(page).toHaveURL(/\/settings\/categories/);
-  await page.goto("/e2e/project-detail?preview=1");
-  await page.getByRole("button", { name: "תנועות אחרונות" }).click();
-  await page.getByRole("link", { name: "מלט" }).click();
+  // FLOW-411: the lines show on open, with no extra tap and no jump to Settings.
+  await expect(page.getByRole("link", { name: "כל הקטגוריות" })).toHaveCount(0);
+  await page.getByRole("link", { name: /^מלט/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t1/);
 
   await page.goto("/projects/missing?preview=1");
@@ -357,15 +373,35 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page).toHaveURL(/\/review\?preview=1$/);
 });
 
-test("unpaid explains the mark and then hides the row", async ({ page }) => {
+test("unpaid marks a row paid in one tap, keeps it listed, and clears the mark", async ({ page }) => {
   await page.goto("/e2e/unpaid?preview=1");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/e2e/unpaid?preview=1");
+  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
   await page.getByRole("button", { name: "סימון כשולם" }).click();
-  await expect(page.getByRole("dialog", { name: "סימון כשולם" })).toBeVisible();
-  await page.getByRole("button", { name: "הבנתי" }).click();
-  await expect(page.getByText("לקוח לדוגמה")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await toast(page, "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT.");
+  await expect(page.getByText("לקוח לדוגמה")).toBeVisible();
+  await expect(page.getByText(/סומן כשולם · ממתין לסנכרון/)).toBeVisible();
+  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪0");
+  await page.getByRole("button", { name: "ביטול הסימון" }).click();
+  await expect(page.getByRole("button", { name: "סימון כשולם" })).toBeVisible();
+  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
+});
+
+test("a project's by-month list opens a month, and Back steps back one screen at a time", async ({ page }) => {
+  await page.goto("/e2e/project-detail?preview=1");
+  await page.getByRole("link", { name: /לפי חודש/ }).click();
+  await expect(page).toHaveURL(/\/projects\/p1\/months\?preview=1&period=months3&at=\d{4}-\d{2}$/);
+  await page.getByRole("button", { name: "חזרה" }).click();
+  await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1$/);
+  await page.goto("/e2e/project-months?preview=1");
+  await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();
+  await page.getByRole("link", { name: /^ספטמבר, הפסד/ }).click();
+  await expect(page).toHaveURL(/\/projects\/p1\?preview=1&period=month&at=2026-09$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/e2e\/project-months\?preview=1$/);
 });
 
 test("a transaction shows its VAT, changes, and confirms delete", async ({ page }) => {
@@ -674,7 +710,7 @@ test("a preview toast stays clear of שמירה in the new-category sheet", asyn
 
 test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {
   await page.goto("/e2e/project-detail?preview=1");
-  await page.getByRole("link", { name: /חומרים/ }).click();
+  await page.getByRole("link", { name: /^חומרים/ }).click();
   await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
   await expect(page.getByText("מלט")).toBeVisible();
   await page.goto("/e2e/project-detail?preview=1");
@@ -825,6 +861,7 @@ const sweepPages = [
   "/e2e/unpaid?preview=1",
   "/e2e/txn?preview=1",
   "/e2e/project-detail?preview=1",
+  "/e2e/project-months?preview=1",
   "/e2e/change?preview=1",
   "/e2e/split",
   "/e2e/review",

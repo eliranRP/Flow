@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { useState, type ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { thisMonth } from "../period";
+import { defaultPeriod } from "../period";
 import { BooksProvider } from "../use-books";
 import { sheetStack } from "../ui/back";
 import { ToastProvider } from "../ui/toast";
@@ -766,7 +766,7 @@ describe("SUMIT status row", () => {
         return Promise.resolve({ data: null, error: null });
       };
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-      client.setQueryData(["dashboard", "off", thisMonth()], dashboard);
+      client.setQueryData(["dashboard", "off", defaultPeriod()], dashboard);
       client.setQueryData(["categories", "off"], []);
       const { unmount } = render(
         <QueryClientProvider client={client}>

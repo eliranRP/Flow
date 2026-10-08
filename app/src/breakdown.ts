@@ -87,14 +87,15 @@ export function excludedLinesPath(direction: BreakdownDirection, currency: strin
 }
 
 /**
- * How Home shows an expense total, like the breakdown does: a cost with a minus, and a month
- * where refunds beat costs as a plain positive amount.
+ * How Home shows an expense total under its "יצא" label: the label already says the money went
+ * out, so a cost reads with no minus (owner, FLOW-334 H3). The minus stays only for a period
+ * where refunds beat costs, the one case where the money came back.
  */
 export function expenseFigure(agorot: bigint): { agorot: bigint; direction: "expense" | undefined } {
-  return agorot < 0n ? { agorot: -agorot, direction: undefined } : { agorot, direction: "expense" };
+  return agorot < 0n ? { agorot: -agorot, direction: "expense" } : { agorot, direction: undefined };
 }
 
-/** "יצא החודש −₪48,320 – פירוט". Every currency is read, in Home's order. */
+/** "יצא החודש ₪48,320 – פירוט". Every currency is read, in Home's order. */
 export function flowLinkName(
   direction: BreakdownDirection,
   period: string,
