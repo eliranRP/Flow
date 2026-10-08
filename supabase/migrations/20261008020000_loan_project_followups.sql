@@ -622,12 +622,21 @@ begin
             and cur_project::text is not distinct from rec.prior->>'project_id'
             and cur_category::text is not distinct from rec.prior->>'category_id'
             -- The role the attach gave the line. Writes before FLOW-120 did not keep
-            -- it and only ever filed expense categories, so they expect project.
+            -- it; reassign_transaction gave project for an expense category and none
+            -- for an income (reversal) one, and the category is unchanged here.
             and (
               (rec.prior ? 'pnl_role'
                 and cur_role::text is not distinct from rec.prior->>'pnl_role')
               or (not (rec.prior ? 'pnl_role')
-                and cur_role is not distinct from 'project'::public.pnl_role)
+                and cur_role is not distinct from (
+                  case when exists (
+                    select 1 from public.categories c
+                    where c.id = cur_category
+                      and c.company_id = cid
+                      and c.kind = 'income'::public.category_kind
+                  ) then null::public.pnl_role
+                  else 'project'::public.pnl_role end
+                ))
             )
             and exists (
               select 1 from public.reassign_undo u
@@ -819,5 +828,8 @@ $$;
 
 revoke all on function public.mcp_undo(text, text, uuid) from public, anon, authenticated, service_role;
 grant execute on function public.mcp_undo(text, text, uuid) to authenticated;
+
+comment on column private.mcp_writes.reassign_id is
+  'reassign_undo id when kind is reassign, or the reassign a loan_split attach made (FLOW-120). Undo looks this id up for this user. Decisions 0080, 0105.';
 
 commit;

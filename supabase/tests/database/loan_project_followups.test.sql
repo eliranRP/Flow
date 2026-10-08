@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(33);
+select plan(38);
 
 do $users$
 begin
@@ -112,7 +112,7 @@ where name in ('Example Mortgage F', 'Example Demo Mortgage');
 
 -- Unassigned expense lines. g1 has a guessed category with an open review item,
 -- r1 sits under an income (reversal) category, f1 has an open shared review that
--- makes reassign_transaction raise, o1 is the old-style write.
+-- makes reassign_transaction raise, o1 and o2 (income category) are old-style writes.
 insert into public.transactions (
   company_id, direction, doc_kind, line_status, currency,
   amount_gross, amount_net, amount_original, vat_amount, vat_status,
@@ -128,11 +128,12 @@ from (values
   ('g1', 'cat_exp', true),
   ('r1', 'cat_inc', false),
   ('f1', 'cat_exp', false),
-  ('o1', 'cat_exp', false)
+  ('o1', 'cat_exp', false),
+  ('o2', 'cat_inc', false)
 ) as v(ikey, cat, suggested);
 insert into lf (label, id)
 select idempotency_key, id from public.transactions
-where idempotency_key in ('g1', 'r1', 'f1', 'o1');
+where idempotency_key in ('g1', 'r1', 'f1', 'o1', 'o2');
 
 -- Set the guess after the insert, as the categorize step would.
 update public.transactions set category_suggested = true
@@ -367,6 +368,57 @@ select is(
    where t.id = (select id from lf where label = 'o1') and t.project_id is null and t.pnl_role is null),
   1,
   'the older write''s line has no project again'
+);
+
+-- An older write whose line changed role since is left alone.
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_attach_loan_payment(
+    'lf-att-o1b', (select id from lf where label = 'o1'), (select id from lf where label = 'loan'), pg_temp.parts()
+  )->'data'->>'project_inherited',
+  'true',
+  'the old-style line is attached again'
+);
+reset role;
+update private.mcp_writes w
+set prior = (w.prior - 'pnl_role') || jsonb_build_object('reassign_id', w.reassign_id),
+    reassign_id = null
+where w.kind = 'loan_split' and w.transaction_id = (select id from lf where label = 'o1')
+  and w.undone_at is null;
+update public.transactions set pnl_role = 'overhead'
+where id = (select id from lf where label = 'o1');
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('lf-undo-o1b', 'loan_split', (select id from lf where label = 'o1'))->'data'->>'project_restored',
+  'false',
+  'undo of an older write leaves a line whose role changed since'
+);
+
+-- An older write of a line under an income (reversal) category: it got no role, and is restored.
+select is(
+  public.mcp_attach_loan_payment(
+    'lf-att-o2', (select id from lf where label = 'o2'), (select id from lf where label = 'loan'), pg_temp.parts()
+  )->'data'->>'project_inherited',
+  'true',
+  'the old-style reversal line is attached'
+);
+reset role;
+update private.mcp_writes w
+set prior = (w.prior - 'pnl_role') || jsonb_build_object('reassign_id', w.reassign_id),
+    reassign_id = null
+where w.kind = 'loan_split' and w.transaction_id = (select id from lf where label = 'o2')
+  and w.undone_at is null;
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('lf-undo-o2', 'loan_split', (select id from lf where label = 'o2'))->'data'->>'project_restored',
+  'true',
+  'undo of an older write restores a reversal-category line'
+);
+reset role;
+select is(
+  (select project_id from public.transactions where id = (select id from lf where label = 'o2')),
+  null::uuid,
+  'the older reversal line has no project again'
 );
 
 -- 9. A viewer of the company cannot change its loan through the table.

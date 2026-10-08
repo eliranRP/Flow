@@ -228,6 +228,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] (#104 design review) CONTROLS.md: note the static loan rows on the project screen.
 - [x] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column. (#121; undo still reads older writes from `prior`.)
 - [x] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company. (#121, `loan_project_followups.test.sql`.)
+- [ ] (#121 review) `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock.
+- [ ] (#121 review) `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
