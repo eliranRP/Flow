@@ -1,0 +1,1 @@
+Screen readers read the company name error when the field takes focus (FLOW-508 follow-up). In onboarding and the setup business step, focus moved to the name field before the error was on it, so only the label was read.

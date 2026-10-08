@@ -77,6 +77,16 @@ describe.each(forms)("%s company name", (_label, show) => {
     expect(creates(calls)).toHaveLength(0);
   });
 
+  it("marks the field invalid before it takes focus, so it is announced with the message", () => {
+    mockRpc();
+    show();
+    fireEvent.change(field(), { target: { value: "אלפא\tבטא" } });
+    let invalidAtFocus: string | null = null;
+    field().addEventListener("focus", () => { invalidAtFocus = field().getAttribute("aria-invalid"); });
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    expect(invalidAtFocus).toBe("true");
+  });
+
   it("refuses a short or a long name, and a typed change clears the error", () => {
     const calls = mockRpc();
     show();
