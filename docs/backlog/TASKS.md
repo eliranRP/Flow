@@ -1109,7 +1109,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** done (#219, #225, #227, #229, #232, #235, then the `flow-mcp/tools.ts` split: no source file is over 800 lines) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** done (#219, #225, #227, #229, #232, #235, then the `flow-mcp/tools.ts` split: no hand-written source file is over 800 lines; test files over the 1,200 test limit remain) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 

@@ -1,7 +1,7 @@
+// MCP tools: callTool checks the scope and runs each read; writes go to callWrite (tools_write.ts).
 // Cycle 2 reads, cycle 3a single-expense writes, cycle 4 project/category/sync, cycle 5 loans, cycle 6 batch. Decision 0080.
-// sync_bank starts a job and get_sync_status reads it. Decision 0102.
+// sync_bank and get_sync_status are in tools_sync.ts (decision 0102). Zod write schemas are in tools_schemas.ts.
 // Identity is not an argument. The handler signs from the credential row.
-// Zod checks write arguments. A failure is the fixed validation message.
 
 import { demandStatement, LoanScheduleError } from "../../../packages/shared/src/loan-schedule.ts";
 import {
