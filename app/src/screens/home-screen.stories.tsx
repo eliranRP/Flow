@@ -175,6 +175,7 @@ export const OfflineCached: Story = {
 
 const usdOnlyDashboard: Dashboard = {
   ...sampleDashboard,
+  base_currency: "USD",
   income_agorot: 0n,
   expense_agorot: 0n,
   net_profit_agorot: 0n,
@@ -187,6 +188,10 @@ const usdOnlyDashboard: Dashboard = {
     expense_minor: 200_000n,
     net_profit_minor: 300_000n,
     count: 3,
+    // FLOW-504: the change pill reads these (0147).
+    prev_income_minor: 400_000n,
+    prev_expense_minor: 200_000n,
+    prev_net_profit_minor: 200_000n,
   }],
   projects: [{
     id: "usd1",
@@ -231,6 +236,8 @@ export const HomeUsdOnly: Story = {
     </StoryRoute>
   ),
 };
+
+export const HomeUsdOnlyDark: Story = { ...HomeUsdOnly, globals: { theme: "dark" } };
 
 export const HomeMixedCurrency: Story = {
   render: () => (

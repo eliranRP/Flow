@@ -126,12 +126,11 @@ export function useCategoryRehab() {
 
 type Rename = { id: string; name: string; previous: string };
 
-/** rename_category (#228) returns { id, name, before, after }; called untyped until database.types.ts carries it. */
+/** rename_category (#228) returns { id, name, before, after }; ביטול calls it again with the old name. */
 async function renameCategory(id: string, name: string): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
-  const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: { message: string; code?: string } | null }>;
-  assertNoError(await rpc("rename_category", { p_category_id: id, p_name: name }));
+  assertNoError(await supabase.rpc("rename_category", { p_category_id: id, p_name: name }));
 }
 
 /** rename_category, then a "השם נשמר" toast whose ביטול writes the old name back. */

@@ -31,6 +31,10 @@ const companyByCurrencyRowSchema = z.object({
   excluded_expense_minor: agorotSchema.optional(),
   excluded_count: z.number().int().nonnegative().optional(),
   count: z.number().int().nonnegative(),
+  /** FLOW-504 (0147). The previous period in this currency; null without a period. Older payloads omit them. */
+  prev_income_minor: agorotOrNull.optional(),
+  prev_expense_minor: agorotOrNull.optional(),
+  prev_net_profit_minor: agorotOrNull.optional(),
 });
 
 export const projectRowSchema = z.object({
@@ -73,6 +77,8 @@ export const dashboardSchema = z.object({
   excluded_income_agorot: agorotSchema.optional(),
   excluded_expense_agorot: agorotSchema.optional(),
   by_currency: z.array(companyByCurrencyRowSchema).optional().default([]),
+  /** FLOW-504 (0147). The company currency; its row comes first. Older payloads omit it. */
+  base_currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
 });
 
 export const unpaidRowSchema = z.object({
@@ -194,6 +200,9 @@ export const projectDetailSchema = z
     profit_agorot: agorotSchema,
     after_overhead: z.boolean().optional(),
     overhead_share_agorot: agorotOrNull.optional(),
+    /** FLOW-504 (0147). The overhead share in `base_currency`. Older payloads omit both. */
+    overhead_share_minor: agorotOrNull.optional(),
+    base_currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
     profit_after_overhead_agorot: agorotSchema.optional(),
     overhead_weighted: z.boolean().optional(),
     by_currency: z.array(projectByCurrencyRowSchema).optional(),
@@ -456,8 +465,11 @@ export const profitMonthsSchema = z
         by_currency: z.array(profitMonthCurrencySchema).nullable().transform((rows) => rows ?? []),
         overhead_weighted: z.boolean().nullable().optional(),
         overhead_share_agorot: agorotOrNull.optional(),
+        /** FLOW-504 (0147). The share in `base_currency`. */
+        overhead_share_minor: agorotOrNull.optional(),
       }),
     ),
+    base_currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
     by_currency: z.array(profitMonthCurrencySchema),
   })
   .nullable();

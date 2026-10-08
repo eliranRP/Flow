@@ -9,6 +9,7 @@ import {
   CameraIcon,
   ChartIcon,
   CheckIcon,
+  CoinIcon,
   CopyIcon,
   DocumentIcon,
   DownloadIcon,
@@ -39,6 +40,7 @@ type Entry = [string, ComponentType<{ size?: number }>];
 const ICONS: Entry[] = [
   ["PlugIcon", PlugIcon],
   ["LoanIcon", LoanIcon],
+  ["CoinIcon", CoinIcon],
   ["HomeIcon", HomeIcon],
   ["ProjectsIcon", ProjectsIcon],
   ["ReviewIcon", ReviewIcon],

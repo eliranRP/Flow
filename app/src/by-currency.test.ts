@@ -70,6 +70,17 @@ describe("by-currency helpers", () => {
     expect(company[0]?.currency).toBe("ILS");
   });
 
+  it("puts the company currency first and ranks by it (0147)", () => {
+    const rows = [
+      { currency: "ILS", income_minor: 1n, direct_minor: 0n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 0n, net_profit_minor: 1n, count: 9 },
+      { currency: "USD", income_minor: 1n, direct_minor: 0n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 0n, net_profit_minor: 1n, count: 1 },
+    ];
+    const usd = dashboard({ base_currency: "USD", by_currency: rows });
+    expect(companyRows(usd, "USD").map((row) => row.currency)).toEqual(["USD", "ILS"]);
+    expect(primaryCurrency(usd)).toBe("USD");
+    expect(companyRows(dashboard({ by_currency: rows })).map((row) => row.currency)).toEqual(["ILS", "USD"]);
+  });
+
   it("breaks primaryCurrency ties toward ILS", () => {
     const rows = dashboard({
       by_currency: [
