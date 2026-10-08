@@ -441,6 +441,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "move_category_lines",
     "set_company_currency",
     "rename_category",
+    "set_category_group",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -455,6 +456,7 @@ Deno.test("write tools are listed only for a write scope", () => {
   assertEquals(toolsFor(["read", "write"]).map((tool) => tool.name), [
     "list_projects",
     "get_project",
+    "get_project_categories",
     "list_categories",
     "list_review",
     "get_expense",
@@ -502,6 +504,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "move_category_lines",
     "set_company_currency",
     "rename_category",
+    "set_category_group",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -4119,6 +4122,51 @@ Deno.test("rename_category forwards its input, undo takes category_name", async 
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, before);
+});
+
+Deno.test("get_project_categories and set_category_group forward their input (FLOW-401)", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "project_category_months") return { status: 200, json: { project_id: CATEGORY, months: [], categories: [] } };
+    return { status: 200, json: { ok: true, data: { undo_kind: "category_group", id: CATEGORY } } };
+  });
+  const months = await callTool("get_project_categories", { id: CATEGORY.toUpperCase() }, ["read"], rpc);
+  assertEquals(months.isError, false);
+  assertEquals(calls.at(-1), { name: "project_category_months", body: { p_project_id: CATEGORY, p_months: 6 } });
+  await callTool("get_project_categories", { id: CATEGORY, months: 12 }, ["read"], rpc);
+  assertEquals(calls.at(-1)?.body.p_months, 12);
+
+  const set = await callTool("set_category_group", { idempotency_key: "cg-1", category_id: CATEGORY, group_name: "חשבונות" }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_category_group", body: { p_idempotency_key: "cg-1", p_category_id: CATEGORY, p_group_name: "חשבונות" } });
+  await callTool("set_category_group", { idempotency_key: "cg-2", category_id: CATEGORY, group_name: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_group_name, null);
+  const undo = await callTool("undo", { idempotency_key: "u-cg", kind: "category_group", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-cg", p_kind: "category_group", p_id: CATEGORY } });
+
+  const before = calls.length;
+  for (const [tool, input] of [
+    ["get_project_categories", {}],
+    ["get_project_categories", { id: "not-a-uuid" }],
+    ["get_project_categories", { id: CATEGORY, months: 2 }],
+    ["get_project_categories", { id: CATEGORY, months: 13 }],
+    ["get_project_categories", { id: CATEGORY, months: 6.5 }],
+    ["set_category_group", { idempotency_key: "k", category_id: CATEGORY }],
+    ["set_category_group", { idempotency_key: "k", category_id: CATEGORY, group_name: "א".repeat(41) }],
+    ["set_category_group", { idempotency_key: "k", category_id: CATEGORY, group_name: "חשבונות\u202E" }],
+    ["set_category_group", { idempotency_key: "k", category_id: "not-a-uuid", group_name: "x" }],
+  ] as const) {
+    const scope = tool === "get_project_categories" ? ["read"] : ["write"];
+    const result = await callTool(tool, input, scope, rpc);
+    assertEquals(result.isError, true, JSON.stringify(input));
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+
+  const { rpc: missing } = rpcOf(() => ({ status: 200, json: null }));
+  const notFound = await callTool("get_project_categories", { id: CATEGORY }, ["read"], missing);
+  assertEquals(notFound.isError, true);
+  if (!notFound.structuredContent.ok) assertEquals(notFound.structuredContent.error.code, "not_found");
 });
 
 Deno.test("set_company_currency forwards the code, undo takes company_currency (FLOW-504)", async () => {

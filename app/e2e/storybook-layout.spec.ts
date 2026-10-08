@@ -809,9 +809,10 @@ async function checkFocusTitles(page: Page, part: number): Promise<void> {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 390, height: 844 });
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
+  // A play function clicks on purpose (a skip, a menu), so focus has moved on by the time it ends.
   const allStories = Object.values(index.entries).filter(
-    // A play function clicks on purpose (a skip, a menu), so focus has moved on by the time it ends.
-    (story) => story.type === "story" && story.id.startsWith("screens-routes--") && !story.tags?.includes("play-fn"),
+    (story) =>
+      story.type === "story" && story.id.startsWith("screens-routes--") && !story.tags?.includes("play-fn"),
   );
   expect(allStories.length).toBeGreaterThan(10);
   const stories = allStories.filter((_, i) => i % FOCUS_PARTS === part);

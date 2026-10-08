@@ -57,13 +57,13 @@ isOneToOne: false
                   ]
                 },"categories": {
                   Row: {
-                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"hidden": boolean,"id": string,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab": boolean | null,"sort_order": number,"updated_at": string
+                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"group_name": string | null,"hidden": boolean,"id": string,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab": boolean | null,"sort_order": number,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1067,6 +1067,9 @@ isOneToOne: false
 "mcp_review_anomalies":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"mcp_set_category_group":
+{ Args: { "p_category_id": string,"p_group_name": string,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_set_category_pnl":
 { Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
                            },
@@ -1145,6 +1148,9 @@ isOneToOne: false
 "note_sync_failure":
 { Args: { "p_code": string,"p_company": string }; Returns: string
                            },
+"project_category_months":
+{ Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
+                           },
 "project_waiting":
 { Args: { "p_project": string }; Returns: Json
                            },
@@ -1207,6 +1213,9 @@ isOneToOne: false
                            },
 "set_category_excluded_from_pnl":
 { Args: { "p_excluded": boolean,"p_id": string }; Returns: undefined
+                           },
+"set_category_group":
+{ Args: { "p_category_id": string,"p_group_name": string }; Returns: Json
                            },
 "set_category_hidden":
 { Args: { "p_hidden": boolean,"p_id": string }; Returns: undefined

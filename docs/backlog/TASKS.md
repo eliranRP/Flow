@@ -14,16 +14,16 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Category rename (MCP agent request, first), then FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups | The next plan-first server item |
+| Dev lane 1 | FLOW-802 health check (plan: the project's plans/flow-802-health-check.md; FLOW-401 server merged in #233, category rename in #228) | The next plan-first server item |
 | Dev lane 2 | FLOW-211: Flow MCP agent requests (amount filter on search, accrued interest on list_loans, company_id note) | More Flow MCP agent requests and Jev server items |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
-| UI lane 3 | FLOW-405 screen: the Settings → Categories ⋯ sheet (move all lines, delete with undo, the FLOW-404 "נספרת בשיפוץ" switch), PR #217 | Settings and other areas outside the review and transaction screens |
+| UI lane 3 | Category rename: the "שינוי שם" row and sheet in Settings → Categories (owner priority; server in #228), PR #230 | Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-504 screen part: currency choice in Settings, base currency on Home, overhead share and loan default | FLOW-702 app part: Jev mode and threshold chips in Settings; the card part with UI lane 2 |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807 follow-up (owner's pick "App files next"): `line-split.tsx`, `toast.tsx`, `change-sheet.tsx`, `loan-setup.tsx` and `App.tsx` under 800 lines (merged: screens #219, stories #225, CSS #227, review area #229) | `supabase/functions/flow-mcp/tools.ts` and `_shared/jev_tag.ts` after their open PRs merge |
+| File split | FLOW-807 follow-up: `_shared/jev_tag.ts` split into `jev_tag_plan.ts` and `jev_tag_rest.ts` (merged: screens #219, stories #225, CSS #227, review area #229, app files #232) | `supabase/functions/flow-mcp/tools.ts` after #221 and #233 merge |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -794,7 +794,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-401"></a>
 ### FLOW-401 · Project view by category
-- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP, dev lane 1; the owner chose "With groups", 2026-10-08; plan: the project's plans/flow-401-project-categories.md; the screen goes to a UI lane) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #233, [0149](../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08; plan: the project's plans/flow-401-project-categories.md; the screen needs a mockup and the owner's approval) · **Depends on:** —
 - **What:** Per project, expenses broken down by category with every line visible under its category (no extra taps or "show more"), category consolidation (for example all utilities under one group), a monthly expected amount per category from earlier months, and an alert when a month looks off (a new or missing recurring expense, or an amount well above usual). The math is plain SQL (median of the last 3–6 months, threshold rules); Jev only phrases. MCP: tools for the breakdown, the expected amounts and the anomaly list.
 - **Acceptance:** plan and mockup approved.
 
@@ -806,7 +806,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-403"></a>
 ### FLOW-403 · Project timeline and expected months
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** FLOW-401
+- **Type:** PLAN FIRST · **Status:** plan-first, screen only (server parts exist: `get_project` takes any date range, [0129](../decisions/0129-profit-by-month.md) and [0141](../decisions/0141-period-bar.md); `get_expected_months` takes a project, [0131](../decisions/0131-jev-patterns.md); `project_category_months` gives the expected cost per category, [0149](../decisions/0149-project-category-months.md)). A UI lane plans the screen with a mockup · **Depends on:** FLOW-401
 - **What:** Transactions by a chosen date range (for example last month), plus expected future months from past data, computed in SQL. Shares the recurring-pattern base with FLOW-701.
 - **Acceptance:** plan approved.
 
@@ -821,7 +821,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** in-progress (#217, UI lane 3: the Settings → Categories screen; server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** merged (#217, UI lane 3: the Settings → Categories screen; waits on the deploy check; server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 - [x] Mockup approved (2026-10-08; the project's plans/flow-405-category-mockup.html). The category ⋯ sheet gets two rows, drawn with the FLOW-404 switch. "העברת כל התנועות" shows the line count on the row and a hint that the category stays, and sits above מיזוג (whose hint says the category is hidden) and הסתרה. מחיקה comes last, after a line. A hidden category's sheet shows החזרה לרשימה, the move row and מחיקה.
@@ -1079,7 +1079,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-802"></a>
 ### FLOW-802 · Health check and usage monitoring
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (dev lane 1, 2026-10-08; plan: the project's plans/flow-802-health-check.md, option A recommended: checks plus a daily GitHub run that fails and emails on an alert) · **Depends on:** —
 - **What:** A `health()` RPC and a daily health-check workflow (stuck queues, cron runs, last sync), usage alerts against the free-tier limits, and a move-to-paid-plan runbook.
 - **Acceptance:** an alert on a simulated stuck queue.
 
@@ -1109,7 +1109,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229 merged; follow-up: the five app files over 800 lines, then the two server files) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229, #232 merged; `jev_tag.ts` in review; `flow-mcp/tools.ts` last) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 

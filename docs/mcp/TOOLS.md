@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -52,6 +52,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
 | `rename_category` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_name"` | `id` | the category id `rename_category` used |
+| `get_project_categories` | `id` | `list_projects` `projects[].id` |
+| `set_category_group` | `category_id` | `list_categories` `categories[].id` |
+| `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -103,9 +106,26 @@ Mercury income is `invoice_receipt` ([0097](../decisions/0097-mercury-income-inv
 
 On the company's overhead project (`is_overhead` true, see `set_overhead_project`), project-filed expense lines count as overhead, so `direct_*` and `categories*` leave them out and `transactions[]` still lists them. Its income and shared shares stay on the project.
 
+### get_project_categories
+
+```json
+{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "months": 6 }
+```
+
+Read tool, `project_category_months(p_project_id, p_months)`. What each expense category usually costs this project a month, and whether this month looks off ([0149](../decisions/0149-project-category-months.md)). `months` is 3 to 12 (default 6); anything else is `validation`. An unknown project and another company's are `not_found`. It counts what `get_project`'s `categories_by_currency` counts: approved lines filed to the project, split parts filed to it and its share of shared lines, in the P&L only, by `doc_date` (the invoiced basis), with the month in Israel time.
+
+Output `data`: `project_id`, `today`, `this_month` (`YYYY-MM-DD`, the first day of the current month), `months[]` (the first day of each complete month, oldest first) and `categories[]`, one row per category and currency with a cost this month or in those months: `id`, `name`, `group_name`, `currency`, `this_month_minor` (so far), `months_minor[]` (in the order of `months`, 0 when none), `months_seen` (complete months with a positive cost; a refund-only month does not count), `expected_minor` (the median of those months, null when fewer than 3), `typical_day` (the median day of the month its lines fall on in those months, null when none) and `flag`:
+
+- `high`: this month is already above 1.5 × expected and at least ₪200 above it ($50 in other currencies);
+- `new`: a cost now after none in those months, of at least ₪500 ($150);
+- `missing`: expected is set, today is past `typical_day` and nothing came yet;
+- otherwise null.
+
+Rows come base currency first, then by currency, then by this month's cost, highest first. Amounts are positive minor units of the row's currency. A category in a group still has its own row; fold rows by `group_name` to show the group.
+
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`), `lines` (lines on the books in it, whole or by a split part, not removed or void: what `delete_category` sends back to review), `split_lines` (how many of those have a split part in it; delete removes their whole split) and `loan_used` (a loan or a loan payment part uses it, so `delete_category` refuses). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`), `lines` (lines on the books in it, whole or by a split part, not removed or void: what `delete_category` sends back to review), `split_lines` (how many of those have a split part in it; delete removes their whole split), `group_name` (the group a screen folds it into, see `set_category_group`; null when none) and `loan_used` (a loan or a loan payment part uses it, so `delete_category` refuses). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
 
 ### list_review
 
@@ -348,6 +368,14 @@ Sets the company's base currency (owner only), three capital letters. Nothing is
 ```
 
 Renames a category (owner only). `name` is trimmed, 2 to 120 letters, and not another category's of the same kind; an income and an expense category may share a name. The id stays, so its lines, split parts, loans, remembered suppliers and flags stay. Loan categories can be renamed; match them by `loan_part`. Output `data`: `category_id`, `name`, `prior` (the old name), `undo_kind: "category_name"` and `id`. Refused: `category already exists`, `category name is too short`, `category name is too long`, `category not found`. Undo, with the category id, puts the old name back; it is `conflict` once the category was renamed again or while another category of the kind has the old name. A renamed `העברות` or `הכנסה אחרת` no longer gets the Mercury import's hint, which matches by name ([0148](../decisions/0148-category-rename.md)).
+
+### set_category_group
+
+```json
+{ "idempotency_key": "group-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "group_name": "חשבונות" }
+```
+
+Puts a category in a group (owner only), so a screen can fold the group's categories into one row; `null` or a blank name takes it out. The name is trimmed, up to 40 letters, with no invisible or control characters (that is `validation`, `name has an invisible or control character`). Totals, the P&L and reports stay per category. Output `data`: `category_id`, `group_name`, `prior` (the group before, or null), `undo_kind: "category_group"` and `id`. Refused: `category not found`. Undo, with the category id, puts the group before back; it is `conflict` once the group was changed again ([0149](../decisions/0149-project-category-months.md)).
 
 ### set_overhead_project
 

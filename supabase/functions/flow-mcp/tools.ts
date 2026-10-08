@@ -32,6 +32,7 @@ import { parseDecimalHalfEven } from "../../../packages/shared/src/money.ts";
 export const READ_TOOL_NAMES = [
   "list_projects",
   "get_project",
+  "get_project_categories",
   "list_categories",
   "list_review",
   "get_expense",
@@ -85,6 +86,7 @@ export const WRITE_TOOL_NAMES = [
   "move_category_lines",
   "set_company_currency",
   "rename_category",
+  "set_category_group",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -97,6 +99,7 @@ const TOOL_CODES = new Set(["forbidden", "validation", "not_found", "conflict", 
 const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
   get_project: new Set(["id", "basis", "from", "to"]),
+  get_project_categories: new Set(["id", "months"]),
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
@@ -148,6 +151,7 @@ const ALLOWED: Record<string, Set<string>> = {
   move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
   set_company_currency: new Set(["idempotency_key", "currency"]),
   rename_category: new Set(["idempotency_key", "category_id", "name"]),
+  set_category_group: new Set(["idempotency_key", "category_id", "group_name"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -235,7 +239,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -558,6 +562,12 @@ const renameCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
   name: visibleName(2, 120),
+}).strict();
+const setCategoryGroupSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+  group_name: z.string().trim().max(40).transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME }).nullable(),
 }).strict();
 const setCompanyCurrencySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -1063,6 +1073,10 @@ function readTools() {
       from: { type: "string" },
       to: { type: "string" },
     }),
+    toolSpec("get_project_categories", "One project's expense categories month by month, to spot what looks off. id is the project id from list_projects; months is how many complete months to look back (3 to 12, default 6). Returns months (the first day of each complete month, oldest first), this_month and today, and categories[]: id, name, group_name (set_category_group), currency, this_month_minor (so far), months_minor (one per month, 0 when none), months_seen (months with a cost), expected_minor (the median of those months, only when there are at least 3), typical_day, and flag: high (this month is above 1.5 x expected and at least ILS 200 / 50 in other currencies above it), new (a cost of at least ILS 500 / 150 after none in the months), missing (expected, past its typical day, nothing yet) or null. Amounts are positive minor units per currency, by document date, the same parts as get_project's categories (approved lines, split parts and the project's share of shared lines, P&L only). The company currency's rows come first. A project outside the company is not_found.", {
+      id: { type: "string" },
+      months: { type: "integer" },
+    }),
     toolSpec("list_categories", "The company's categories. rehab is the category's rehab switch (true, false, or null for the default) and in_rehab whether it counts as rehab (set_category_rehab). lines is how many lines on the books are in it (whole or by a split part; delete_category sends these back to review), split_lines how many of them have a split part in it, and loan_used whether a loan uses it (delete_category refuses).", {}),
     toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense). supplier matches part of the supplier's name, or of the customer's (customer_name) on an income line.", {
       direction: { type: "string", enum: ["expense", "income"] },
@@ -1416,13 +1430,18 @@ function writeTools() {
       category_id: { type: "string" },
       name: { type: "string" },
     }, true),
+    toolSpec("set_category_group", "Put a category in a group (owner only), for example חשבונות, so a screen can fold the group's categories into one row; null or blank takes it out. Up to 40 letters, trimmed. Totals stay per category. Returns category_id, group_name, prior and undo_kind. Undo is kind category_group with the category id, a conflict once the group was changed again.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+      group_name: { type: ["string", "null"] },
+    }, true),
     toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -2142,6 +2161,15 @@ async function callWrite(
       p_category_id: parsed.data.category_id,
       p_name: parsed.data.name,
     };
+  } else if (name === "set_category_group") {
+    const parsed = setCategoryGroupSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_set_category_group";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+      p_group_name: parsed.data.group_name,
+    };
   } else if (name === "set_company_currency") {
     const parsed = setCompanyCurrencySchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -2242,6 +2270,19 @@ export async function callTool(
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
     return ok({ ...(result.json as Review), basis });
+  }
+
+  if (name === "get_project_categories") {
+    const projectId = args.id;
+    if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
+    const months = args.months == null ? 6 : args.months;
+    if (typeof months !== "number" || !Number.isInteger(months) || months < 3 || months > 12) return fail("validation", "validation");
+    const result = await rpc("project_category_months", { p_project_id: projectId.toLowerCase(), p_months: months });
+    if (result.status >= 400) return fail("refused", READ_REFUSED);
+    // The RPC returns null for an unknown id and for another company's project.
+    if (result.json == null) return fail("not_found", "not found");
+    if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+    return ok(result.json as Review);
   }
 
   if (name === "get_profit_months") {
