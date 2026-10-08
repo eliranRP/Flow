@@ -70,14 +70,17 @@ cache="${FLOW_LOCAL_CI_CACHE:-$(git rev-parse --git-common-dir)/flow-local-ci-ca
 mkdir -p "$cache"
 skips=1
 if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi
-app_inputs=(app packages design supabase/functions/_shared package.json pnpm-lock.yaml
-  pnpm-workspace.yaml tsconfig.base.json eslint.config.js scripts/local-ci.sh)
+# What the app reads: its sources, the shared packages, the design tokens, _shared and the
+# migrations (tests import both), the scripts (vite.config.ts imports one), the root configs and the
+# untracked .env (vite's envDir).
+app_inputs=(app packages design supabase/functions/_shared supabase/migrations scripts package.json
+  pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json eslint.config.js)
 inputs_hash() {
-  git ls-tree -r HEAD -- "$@" | sha256sum | cut -c1-40
+  { git ls-tree -r HEAD -- "$@"; sha256sum .env 2>/dev/null || true; } | sha256sum | cut -c1-40
 }
-typecheck_key="typecheck-$(inputs_hash "${app_inputs[@]}" scripts)"
-build_key="build-$(inputs_hash "${app_inputs[@]}" scripts/stamp-build.mjs scripts/check-prod-bundle.mjs scripts/check-jev-bundle.mjs)"
 app_key="$(inputs_hash "${app_inputs[@]}")"
+typecheck_key="typecheck-$app_key"
+build_key="build-$app_key"
 green() {
   (( skips )) && [[ -f "$cache/$1" ]]
 }
@@ -85,16 +88,21 @@ mark_green() {
   touch "$cache/$1"
 }
 # The newest ancestor of HEAD (within 200 commits) where a test project last passed in full or in
-# part, when every file changed since then is an app, shared or _shared .ts/.tsx source: the vitest
-# module graph finds the tests those reach. Anything else (CSS, setup, config, lockfile) runs all.
+# part, when every file changed since then is an app, shared or _shared .ts/.tsx source or a
+# migration (a test globs them): the vitest module graph finds the tests those reach. Anything else
+# (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
 changed_base() {
   local project="$1" commit
   (( skips )) || return 1
+  local changed removed
   for commit in $(git rev-list --max-count=200 HEAD); do
     if [[ -f "$cache/commit-$project-$commit" ]]; then
-      if git diff --name-only "$commit" HEAD -- "${app_inputs[@]}" \
-        | grep -qvE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^app/src/test-setup\.ts$' \
-        || git diff --name-only "$commit" HEAD -- app/src/test-setup.ts | grep -q .; then
+      # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
+      # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
+      changed="$(git diff --name-only "$commit" HEAD -- "${app_inputs[@]}")"
+      removed="$(git diff --name-only --diff-filter=DR "$commit" HEAD -- "${app_inputs[@]}")"
+      if [[ -n "$removed" ]] || grep -qx 'app/src/test-setup.ts' <<<"$changed" \
+        || [[ -n "$(grep -vE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^supabase/migrations/[^/]+\.sql$' <<<"$changed" || true)" ]]; then
         return 1
       fi
       echo "$commit"
@@ -164,9 +172,20 @@ app_tests() {
     echo "local-ci: $project tests skipped: these app inputs already passed."
     return 0
   fi
+  if [[ "$project" == storybook ]]; then
+    pnpm --filter @flow/app exec playwright install chromium
+  fi
   if base="$(changed_base "$project")"; then
     echo "local-ci: $project tests related to the changes since ${base:0:7}."
     pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests
+    # The module graph doesn't see a glob of the migrations: run the tests that read them by name.
+    local globbing
+    globbing="$(git grep -l 'supabase/migrations' -- 'app/src/*.test.ts' 'app/src/*.test.tsx' || true)"
+    if [[ "$project" == unit && -n "$globbing" ]] \
+      && [[ -n "$(git diff --name-only "$base" HEAD -- supabase/migrations)" ]]; then
+      # shellcheck disable=SC2086
+      pnpm --filter @flow/app exec vitest run --project unit ${globbing//app\//}
+    fi
   elif [[ "$project" == unit ]]; then
     pnpm --filter @flow/app test
   else
@@ -219,10 +238,10 @@ else
 fi
 
 phase "check: Storybook"
-pnpm --filter @flow/app exec playwright install chromium
 if (( skips )); then
   app_tests storybook
 else
+  pnpm --filter @flow/app exec playwright install chromium
   pnpm test:storybook
 fi
 
