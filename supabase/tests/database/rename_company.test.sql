@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(52);
+select plan(54);
 
 do $users$
 begin
@@ -418,6 +418,22 @@ select is(
 );
 
 -- Table: a direct update of the name is held to the same rule (23514).
+
+select tests.authenticate_as('rename_owner');
+
+select throws_ok(
+  $$update public.companies set name = 'A' where id = (select id from rename_ids where label = 'company')$$,
+  '23514',
+  'company name is too short',
+  'table: the owner''s own direct update with a one-letter name is refused'
+);
+
+select lives_ok(
+  $$update public.companies set name = 'Example Owner' where id = (select id from rename_ids where label = 'company')$$,
+  'table: the owner''s own direct update with a valid name is stored'
+);
+
+reset role;
 
 select throws_ok(
   $$update public.companies set name = 'A' where id = (select id from rename_ids where label = 'company')$$,

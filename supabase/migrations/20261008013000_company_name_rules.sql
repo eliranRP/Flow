@@ -48,9 +48,12 @@ $$;
 
 revoke all on function private.company_name_problem(text) from public, anon, authenticated;
 
+-- Security definer: an owner's direct update runs this as authenticated, which
+-- cannot execute the two private helpers.
 create or replace function private.companies_name_check()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
