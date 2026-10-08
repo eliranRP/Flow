@@ -24,4 +24,4 @@ Cleaning real books showed three gaps in the P&L reads. A line with no project, 
 
 ## Consequences
 
-The Home and project screens do not show the unassigned bucket or the overhead-project setting yet; both are in the MCP and the API. Cash-basis expenses still count unpaid supplier invoices by document date, which [0007](0007-bank-statement-is-primary-input.md) does not intend; that is a follow-up, not part of this change.
+The Home and project screens do not show the unassigned bucket or the overhead-project setting yet; both are in the MCP and the API. Cash-basis expenses still count unpaid supplier invoices by document date, which [0007](0007-bank-statement-is-primary-input.md) does not intend; that is a follow-up, not part of this change. [0118](0118-unpaid-invoices-cash-basis.md) closes it: an unpaid supplier invoice now stays out of the cash basis.

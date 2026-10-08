@@ -31,7 +31,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | done (#116) |
-| 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | claimed (flow-128 builder, 2026-10-08, claude/project-thread-y7w1r6) |
+| 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | in-progress (#118) |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
@@ -143,9 +143,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-128"></a>
 ### FLOW-128 · Unpaid supplier invoices on the cash basis
-- **Type:** SMALL CYCLE · **Status:** claimed (flow-128 builder, 2026-10-08, claude/project-thread-y7w1r6) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** in-progress (#118) · **Depends on:** —
 - **What:** Split out of FLOW-116. On the cash basis an expense line counts by its document date, so a posted supplier invoice that is not paid yet counts, which [0007](../decisions/0007-bank-statement-is-primary-input.md) does not intend (follow-up named in [0101](../decisions/0101-unassigned-and-overhead-project.md)). Decide the rule (count by payment date, or leave unpaid invoices out of the cash basis) and apply it in `private.pnl_lines` so every P&L read follows.
 - **Acceptance:** decision; pgTAP on both bases for a paid and an unpaid supplier invoice; TOOLS.md and calculations.md updated.
+- **Answer:** an unpaid supplier invoice stays out of the cash basis; other expenses keep their document date (decision [0118](../decisions/0118-unpaid-invoices-cash-basis.md)). Built as recommended; the owner was asked on 2026-10-08 and can still pick "count by payment date".
 
 <a id="flow-107"></a>
 ### FLOW-107 · Loan split breakdown on the transaction

@@ -107,7 +107,7 @@ A company can name one of its projects as its overhead project ([0101](../decisi
 
 Lines that belong to no bucket are **unassigned**: income with no project, and cost with no role, a project role and no project, or a shared role and no split. Company figures are the sum of every project, overhead, and unassigned. Expenses are direct + shared + overhead + unassigned cost.
 
-On the invoiced basis, only income changes. An expense line counts by its document date on both bases, so a supplier invoice that is not paid yet counts on the invoiced basis. A bank line that has not settled (`pending`) counts on neither basis until it posts.
+An expense line counts by its document date on both bases. The one exception is a supplier invoice or credit note that is not paid yet (no cash date): it counts on the invoiced basis and stays out of the cash basis until it is paid ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)). A bank line that has not settled (`pending`) counts on neither basis until it posts.
 
 Home always paints overhead as its own row under the projects, including when the top 5 are sorted by losses. Overhead is not eligible for the top 5. If overhead's profit for the period is 0 and the company has no projects and no transactions, Home uses the empty state and hides the row.
 
