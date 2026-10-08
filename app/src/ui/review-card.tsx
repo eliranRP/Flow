@@ -50,8 +50,8 @@ export type ReviewSuggestion = {
   projectNoneJev?: boolean;
 };
 
-/** FLOW-703: Jev's "no project / overhead" answer on the project row. */
-export const JEV_NO_PROJECT = "ללא פרויקט · תקורה";
+/** FLOW-703: Jev's "no project / overhead" answer on the project row. תקורה first: at 320 the row cuts the end. */
+export const JEV_NO_PROJECT = "תקורה · ללא פרויקט";
 
 type ReviewCardProps = {
   supplier: string;

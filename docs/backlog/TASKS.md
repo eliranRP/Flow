@@ -976,7 +976,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
 - [x] A change sheet seeded with Jev's category starts with "לזכור לספק הזה" off, so saving never turns the guess into a supplier rule by default (#175).
-- [x] The review card shows Jev's "no project" answer (`no_project` from `jev_suggestions`, server in #177) as "ללא פרויקט · תקורה" with the Jev pill (#175).
+- [x] The review card shows Jev's "no project" answer (`no_project` from `jev_suggestions`, server in #177) as "תקורה · ללא פרויקט" (word order from design review r1, so 320 keeps תקורה) with the Jev pill (#175).
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups

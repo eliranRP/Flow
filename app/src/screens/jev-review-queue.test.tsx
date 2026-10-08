@@ -289,7 +289,7 @@ describe("Jev review one tap", () => {
     db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c1", confidence: 0.9 } } }];
     db.reasons = [{ transaction_id: "t1", project_id: null, category_id: "c1", no_project: true, reason: "model_only", party_filings: 0, matching_filings: 0 }];
     renderQueue();
-    expect(await screen.findByRole("button", { name: "פרויקט: ללא פרויקט · תקורה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
   });
 

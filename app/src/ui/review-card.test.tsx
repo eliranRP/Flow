@@ -96,7 +96,7 @@ describe("ReviewCard FLOW-327 additions", () => {
     const row = screen.getByRole("button", { name: `פרויקט: ${JEV_NO_PROJECT}, הצעת Jev` });
     expect(row.querySelector(".ui-row-title")).not.toHaveClass("ui-row-title-muted");
     expect(row.querySelector(".ui-suggest-tag-jev")).not.toBeNull();
-    expect(JEV_NO_PROJECT).toBe("ללא פרויקט · תקורה");
+    expect(JEV_NO_PROJECT).toBe("תקורה · ללא פרויקט");
   });
 });
 
