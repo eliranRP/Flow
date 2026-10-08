@@ -53,11 +53,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | done (#121; UI items go to the design PR, #121 review items to FLOW-129) |
 | 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | in-progress (#123) |
-| 32c | [FLOW-130](#flow-130) | Lock timeouts return retry in every MCP write (#123 review) | BACKLOG NIT | in-progress (#124) |
+| 32c | [FLOW-130](#flow-130) | Lock timeouts return retry in every MCP write (#123 review) | BACKLOG NIT | done (#124) |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
-| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
+| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | in-progress (#PRNUM) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
@@ -247,7 +247,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-130"></a>
 ### FLOW-130 · Lock timeouts return retry in every MCP write (#123 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#124) · **Depends on:** FLOW-129
+- **Type:** BACKLOG NIT · **Status:** done (#124) · **Depends on:** FLOW-129
 - [x] The other `mcp_*` write functions still send `lock_not_available` to `others`, so a lock timeout is stored as a refusal under the idempotency key. Map it to `unavailable` / `retry` in each, as #123 did for `attach_loan_payment` and `undo`, and update TOOLS.md. (Migration `20261008050000`, 18 tools, tested in `mcp_lock_retry.test.sql`.)
 
 <a id="flow-106"></a>
@@ -360,9 +360,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-209"></a>
 ### FLOW-209 · get_project follow-ups (#90 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] `transactions[]` rows carry no `line_status`, so a pending row looks the same as a posted one. Add it.
-- [ ] `other_currencies` leaves out a shared line whose own `project_id` is this project (`l.project_id is distinct from p.id`), while `by_currency` and `shared_agorot` count it. Check whether any write path stores such rows, then align or document.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#PRNUM) · **Depends on:** —
+- [x] `transactions[]` rows carry no `line_status`, so a pending row looks the same as a posted one. Add it. (#PRNUM)
+- [x] `other_currencies` leaves out a shared line whose own `project_id` is this project (`l.project_id is distinct from p.id`), while `by_currency` and `shared_agorot` count it. Check whether any write path stores such rows, then align or document. (#PRNUM: no write path stores one, since the app and MCP splits clear `project_id`; aligned anyway.)
 
 ## Transactions and app UX
 
