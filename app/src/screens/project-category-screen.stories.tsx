@@ -30,6 +30,17 @@ export const ProjectCategory: Story = {
   ),
 };
 
+/** FLOW-401 v5: in the month view, one quiet line gives the usual month, with the up mark when above it. */
+export const ProjectCategoryUsual: Story = {
+  name: "Project category, usual month",
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c1">
+      <ExampleBar />
+      <ProjectCategoryScreen sample={{ ...categorySample, usual: { expected: 410_000n, up: true } }} backTo="/projects/a" />
+    </StoryRoute>
+  ),
+};
+
 /** FLOW-107. Loan payments show their parts in the hint; one waits for review. */
 const loanCategorySample = {
   categoryName: "תשלומי הלוואה",

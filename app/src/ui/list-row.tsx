@@ -54,6 +54,10 @@ export type ListRowProps =
     currency?: string;
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
+    /** A small mark before the amount. The project page's up mark (FLOW-401). */
+    mark?: ReactNode;
+    /** No amount yet: a muted "—" with this hidden word instead (FLOW-401: a bill not in yet). */
+    missing?: string;
   })
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string; /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */ inWord?: string })
   | StatementRowProps
@@ -160,6 +164,7 @@ export function ListRow(props: ListRowProps) {
           ) : null}
         </CopyText>
       </CopyMain>
+      {props.variant === "project" ? props.mark : null}
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
       {props.actionBelow ? null : props.action}
@@ -237,6 +242,7 @@ export function ListRow(props: ListRowProps) {
         ? "ui-row"
         : "ui-row ui-hit",
     toneClass,
+    props.variant === "project" && props.className,
   );
   const row = props.href ? (
     <Link
@@ -348,6 +354,14 @@ function StatementRow(props: StatementRowProps) {
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
     return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
+  }
+  if (props.missing != null) {
+    return (
+      <span className="ui-row-missing t-amount">
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">{props.missing}</span>
+      </span>
+    );
   }
   if (props.amounts != null && props.amounts.length > 0) {
     return (
