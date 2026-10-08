@@ -73,7 +73,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | done (#131) |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | done (#131, #134) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
-| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll; server parts) |
+| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready for a UI lane (server parts done in #176) |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
@@ -84,7 +84,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
-| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll; server parts) |
+| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready for a UI lane (server parts done in #176) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
 | 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | done (#128) |
@@ -208,8 +208,8 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-125"></a>
 ### FLOW-125 · Loan split follow-ups (#83 review)
 - Renumbered from a second FLOW-121 (2026-10-07).
-- **Type:** BACKLOG NIT · **Status:** claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll; server parts) · **Depends on:** FLOW-107
-- [ ] Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
+- **Type:** BACKLOG NIT · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-107
+- [ ] (server done in #176: every list read returns `source`; the app still has to pass it on) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
 - [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
 - [ ] "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
 
@@ -222,9 +222,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-124"></a>
 ### FLOW-124 · One line out of the P&L follow-ups (#105)
-- **Type:** SMALL UI · **Status:** claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll; server parts) · **Depends on:** FLOW-108 (#105)
-- [ ] Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
-- [ ] A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
+- **Type:** SMALL UI · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-108 (#105)
+- [ ] (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [ ] (server done in #176: `get_transaction` returns `pnl_state` `in`/`out`/`mixed`; driving the pill and hint from it is the UI part) A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
 - [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
 
 <a id="flow-103"></a>
