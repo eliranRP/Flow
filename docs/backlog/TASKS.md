@@ -27,7 +27,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | in-progress (#113) |
 | 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | in-progress (#112) |
 | 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | done (#114) |
-| 10e | [FLOW-127](#flow-127) | Kept-out income and overhead undo review follow-ups (#114, #116 reviews) | BACKLOG NIT | in-progress (claude/project-thread-xkb7jn) |
+| 10e | [FLOW-127](#flow-127) | Kept-out income and overhead undo review follow-ups (#114, #116 reviews) | BACKLOG NIT | in-progress (#117) |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | done (#116) |
@@ -113,7 +113,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-127"></a>
 ### FLOW-127 · Kept-out income and overhead undo review follow-ups (#114, #116 reviews)
-- **Type:** BACKLOG NIT · **Status:** in-progress (claude/project-thread-xkb7jn) · **Depends on:** FLOW-126 (#114), FLOW-116 (#116)
+- **Type:** BACKLOG NIT · **Status:** in-progress (#117) · **Depends on:** FLOW-126 (#114), FLOW-116 (#116)
 - [x] `20261007224500_kept_out_income_review.sql`: the `user_assigned` / `category_assigned` checks next to `category_suggested` are redundant. Drop them in the next migration that replaces the function, or add a comment saying why they stay. (Kept with a comment: not every owner write clears `category_suggested`.)
 - [x] The same review queue can pick up a guessed loan category. Skip it through `private.line_category_out`, as the other review paths do.
 - [x] [TOOLS.md](../mcp/TOOLS.md): say that `set_expense_category` keeps the line's project.
