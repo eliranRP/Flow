@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TxnMeta } from "../txn-meta";
 import { lineSplitPartsLabel } from "../line-split-copy";
 import { jevReasonText, reviewFlagView } from "../review-copy";
-import { JEV_NO_PROJECT, REVIEW_MISMATCH_ID, REVIEW_MISSING_BOTH, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_LINE, type ReviewSuggestion } from "./review-card";
+import { JEV_FILLED, JEV_FILLED_UNDO, JEV_NO_PROJECT, REVIEW_MISMATCH_ID, REVIEW_MISSING_BOTH, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_LINE, type ReviewSuggestion } from "./review-card";
 
 describe("ReviewCard split_mismatch (FLOW-333 C2, C8)", () => {
   it("keeps the sentence, drops the link and shows one static row with the part count", () => {
@@ -295,5 +295,32 @@ describe("ReviewCard הצעת Jev", () => {
   it("prefers הצעת Jev over החזר on a Jev category of the other kind", () => {
     render(jevCard({ ...both, categoryJev: true, categoryReversal: true }));
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+  });
+});
+
+describe("ReviewCard Jev fill label (FLOW-702)", () => {
+  const jev: ReviewSuggestion = { project: "וילה רעננה", category: "חומרים", projectSuggested: true, categorySuggested: true, projectJev: true, categoryJev: true };
+
+  it("says מולא ע״י Jev with בטל, which calls back", () => {
+    const onUndo = vi.fn();
+    render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo }} onProject={() => undefined} onCategory={() => undefined} />);
+    expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} את המילוי של Jev` }));
+    expect(onUndo).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the label alone for a viewer, and nothing without a הצעת Jev pill or while pending", () => {
+    const { rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} />);
+    expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /בטל/ })).toBeNull();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ ...jev, projectJev: false, categoryJev: false }} jevFilled={{}} />);
+    expect(screen.queryByText(JEV_FILLED)).toBeNull();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} pending />);
+    expect(screen.queryByText(JEV_FILLED)).toBeNull();
+  });
+
+  it("marks בטל busy while the undo runs", () => {
+    render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
+    expect(screen.getByRole("button", { name: /בטל/ })).toHaveAttribute("aria-busy", "true");
   });
 });

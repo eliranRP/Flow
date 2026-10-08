@@ -27,6 +27,8 @@ const db = vi.hoisted(() => ({
   stallReasons: false,
   flags: [] as unknown[],
   failReopen: false,
+  fills: [] as unknown[],
+  undoError: null as string | null,
 }));
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
@@ -71,6 +73,7 @@ vi.mock("../lib/supabase", () => ({
       if (name === "company_integrations") return table(db.integration, { hold: "integration" });
       if (name === "tag_suggestions") return table(db.suggestions, { hold: "suggestions", fail: true });
       if (name === "projects") return table([{ id: "p1", name: "וילה רעננה", status: "active" }]);
+      if (name === "jev_prefills") return table(db.fills);
       return table([{ id: "c1", name: "חומרים", hidden: false }]);
     },
     rpc: (name: string, args?: Record<string, unknown>) => {
@@ -85,6 +88,7 @@ vi.mock("../lib/supabase", () => ({
       }
       if (name === "review_anomalies") return Promise.resolve({ data: db.flags, error: null });
       db.writes.push({ name, args });
+      if (name === "undo_jev_prefill" && db.undoError != null) return Promise.resolve({ data: null, error: { message: db.undoError } });
       if (name === "reopen_review" && db.failReopen) return Promise.resolve({ data: null, error: { message: "down" } });
       if (name === "approve_review_item" && args?.p_check_shown === true) {
         const id = typeof args.p_id === "string" ? args.p_id : "";
@@ -168,6 +172,8 @@ describe("Jev review one tap", () => {
     db.stallReasons = false;
     db.failReopen = false;
     db.flags = [];
+    db.fills = [];
+    db.undoError = null;
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
@@ -220,6 +226,40 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦כמו בפעם הקודמת");
     });
+  });
+
+  it("labels an auto fill and takes it back with בטל (FLOW-702)", async () => {
+    db.integration = { enabled: true, mode: "auto" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 }, category: { choice: "c1", confidence: 0.95 } } }];
+    db.fills = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null }];
+    const filled = { ...open, project_id: "p1", category_id: "c1", project_name: "וילה רעננה", category_name: "חומרים", project_suggested: true, category_suggested: true };
+    renderQueue([filled]);
+    fireEvent.click(await screen.findByRole("button", { name: "בטל את המילוי של Jev" }, { timeout: 3000 }));
+    await waitFor(() => {
+      expect(db.writes.find((call) => call.name === "undo_jev_prefill")?.args).toEqual({ p_transaction_id: "t1" });
+    });
+    expect(await screen.findByText("המילוי של Jev בוטל.")).toBeInTheDocument();
+    expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
+    expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+  });
+
+  it("says why בטל was refused and keeps the label (FLOW-702)", async () => {
+    db.integration = { enabled: true, mode: "auto" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c1", confidence: 0.95 } } }];
+    db.fills = [{ transaction_id: "t1", project_id: null, category_id: "c1", undone_at: null }];
+    db.undoError = "line changed since";
+    renderQueue([{ ...open, category_id: "c1", category_name: "חומרים", category_suggested: true }]);
+    fireEvent.click(await screen.findByRole("button", { name: "בטל את המילוי של Jev" }, { timeout: 3000 }));
+    expect(await screen.findByText("השורה השתנתה מאז המילוי, ולכן אי אפשר לבטל אותו.")).toBeInTheDocument();
+    expect(screen.getByText("מולא ע״י Jev")).toBeInTheDocument();
+  });
+
+  it("shows no label for a suggestion the job did not write (FLOW-702)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
   });
 
   it("names a new customer on an income line (FLOW-327 r1)", async () => {

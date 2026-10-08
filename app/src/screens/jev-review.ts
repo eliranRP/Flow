@@ -15,7 +15,15 @@ export type JevPrefill = {
    * #177). Optional: older servers never send it. It suggests nothing to save.
    */
   noProject?: true;
+  /**
+   * FLOW-702: the auto job's newest fill on this line (`jev_prefills`, decision 0145). "filled"
+   * still stands and can be undone; "undone" means the owner took it back, so the card shows the
+   * stored row and Jev fills nothing. Absent when there was no fill or that read failed.
+   */
+  auto?: JevAutoFill;
 };
+
+export type JevAutoFill = { state: "filled" | "undone"; projectId: string | null; categoryId: string | null };
 
 export type JevReviewState = {
   connectorOn: boolean;
@@ -82,7 +90,7 @@ const JEV_SHOWN_NONE: JevShown = { project: false, category: false };
  */
 export function jevShown(row: JevRow, state: JevReviewState): JevShown {
   const prefill = state.connectorOn ? state.prefill : null;
-  if (!prefill || prefill.transactionId !== row.transaction_id) return JEV_SHOWN_NONE;
+  if (!prefill || prefill.transactionId !== row.transaction_id || prefill.auto?.state === "undone") return JEV_SHOWN_NONE;
   return {
     project: prefill.project != null && projectOpen(row),
     category: prefill.category != null && categoryOpen(row),
@@ -95,7 +103,7 @@ export function withJev<T extends JevRow>(row: T, state: JevReviewState): T & {
   category_suggested?: boolean;
 } {
   const prefill = state.connectorOn ? state.prefill : null;
-  if (!prefill || prefill.transactionId !== row.transaction_id) return row;
+  if (!prefill || prefill.transactionId !== row.transaction_id || prefill.auto?.state === "undone") return row;
   const project = projectOpen(row) ? prefill.project : null;
   const category = categoryOpen(row) ? prefill.category : null;
   const fillProject = project != null
@@ -115,6 +123,47 @@ export function withJev<T extends JevRow>(row: T, state: JevReviewState): T & {
     next.category_suggested = true;
   }
   return next;
+}
+
+/**
+ * FLOW-702: the card says "מולא ע״י Jev" with בטל when the auto job's fill still stands on the
+ * stored row: a field Jev shows holds the value the job wrote. A visual-only suggestion is not a fill.
+ */
+export function jevFilledOnCard(row: JevRow, state: JevReviewState): boolean {
+  const auto = state.connectorOn ? state.prefill?.auto : undefined;
+  if (auto?.state !== "filled") return false;
+  const shown = jevShown(row, state);
+  return (shown.project && auto.projectId != null && row.project_id === auto.projectId)
+    || (shown.category && auto.categoryId != null && row.category_id === auto.categoryId);
+}
+
+/** Newest `jev_prefills` row per line. Optional: a failed read gives no fills, never an error. */
+export async function loadJevFills(ids: readonly string[], signal?: AbortSignal): Promise<Map<string, JevAutoFill>> {
+  const fills = new Map<string, JevAutoFill>();
+  const supabase = getSupabase();
+  if (!supabase || typeof supabase.from !== "function" || ids.length === 0) return fills;
+  try {
+    const chunks: string[][] = [];
+    for (let start = 0; start < ids.length; start += JEV_SUGGESTION_CHUNK) chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
+    const reads = await Promise.all(chunks.map((chunk) => signalled(
+      supabase.from("jev_prefills").select("transaction_id,project_id,category_id,undone_at").in("transaction_id", chunk).order("created_at", { ascending: false }),
+      signal,
+    )));
+    for (const read of reads) {
+      if (read.error || !Array.isArray(read.data)) continue;
+      for (const row of read.data as Array<{ transaction_id: string; project_id: string | null; category_id: string | null; undone_at: string | null }>) {
+        if (fills.has(row.transaction_id)) continue;
+        fills.set(row.transaction_id, {
+          state: row.undone_at == null ? "filled" : "undone",
+          projectId: row.project_id,
+          categoryId: row.category_id,
+        });
+      }
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+  }
+  return fills;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -519,10 +568,11 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
       if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
     }
   }
-  const [projects, categories, reasons] = await Promise.all([
+  const [projects, categories, reasons, fills] = await Promise.all([
     signalled(supabase.from("projects").select("id,name,status"), signal),
     signalled(supabase.from("categories").select("id,name,hidden"), signal),
     reasonsRead,
+    loadJevFills(ids, signal),
   ]);
   if (projects.error) throw new Error(projects.error.message);
   if (categories.error) throw new Error(categories.error.message);
@@ -539,7 +589,8 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
     const shown = prefill ?? (row && reason?.noProject === true
       ? { suggestionId: row.id, transactionId: row.transaction_id, project: null, category: null }
       : null);
-    byId[id] = shown == null ? null : withReason(shown, reason);
+    const fill = fills.get(id);
+    byId[id] = shown == null ? null : withReason(fill == null ? shown : { ...shown, auto: fill }, reason);
   }
   return { connectorOn: true, byId };
 }

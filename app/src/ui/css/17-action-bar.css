@@ -110,6 +110,15 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   overflow-wrap: anywhere;
 }
 
+/* FLOW-702: "✦ מולא ע״י Jev" with בטל at the end. The link keeps its 44px target; the line centres on it. */
+.ui-review-filled {
+  align-items: center;
+}
+
+.ui-review-filled-undo {
+  margin-inline-start: auto;
+}
+
 /* FLOW-327 / 0131: one anomaly flag, the last block of the card. Loud is a warning row; quiet is a hint. */
 .ui-review-flag.ui-row {
   min-block-size: var(--touch-min);
