@@ -96,8 +96,11 @@ type Shared = {
   projectNote?: string;
   /** The picker stays in this component instead of the page URL. */
   contained?: boolean;
-  /** With contained, open straight onto the project list. */
-  start?: "summary" | "project";
+  /**
+   * With contained, open straight onto that list. ✕, Escape, חזרה and Back then close
+   * the sheet, with no stop at the summary.
+   */
+  start?: "summary" | "project" | "category";
   /** The one-project picker hides the link that only returns to the split screen. */
   hideSplitLink?: boolean;
   /** Throw away an incomplete edit. The sheet then closes. */
@@ -116,7 +119,7 @@ type Shared = {
 
 type Props = Shared & (
   | { host: "route"; closeTo: string; returnFocusRef?: RefObject<HTMLElement | null> }
-  | { host: "overlay"; open: boolean; onOpenChange: (open: boolean) => void }
+  | { host: "overlay"; open: boolean; onOpenChange: (open: boolean) => void; returnFocusRef?: RefObject<HTMLElement | null> }
 );
 
 const skeletonKeys = ["a", "b", "c", "d", "e"] as const;
@@ -155,8 +158,11 @@ export function ChangeAssignment(props: Props) {
   const params = new URLSearchParams(location.search);
   const urlPick = params.get("pick");
   const [creatingNew, setCreatingNew] = useState(false);
-  const [containedView, setContainedView] = useState<ChangeView>(props.start === "project" ? "project" : "summary");
-  const wasOpen = useRef(false);
+  const startView: ChangeView = props.start === "project" || props.start === "category" ? props.start : "summary";
+  const [containedView, setContainedView] = useState<ChangeView>(startView);
+  /** The contained picker the sheet opened on. Leaving it closes the sheet. */
+  const [landed, setLanded] = useState(startView !== "summary");
+  const [openSeen, setOpenSeen] = useState(props.host === "overlay" ? props.open : true);
   const [query, setQuery] = useState(props.initialQuery ?? "");
   const [newName, setNewName] = useState("");
   const [nameError, setNameError] = useState("");
@@ -188,6 +194,17 @@ export function ChangeAssignment(props: Props) {
       ? containedView
       : urlView;
   const sheetOpen = props.host === "overlay" ? props.open : true;
+  if (openSeen !== sheetOpen) {
+    setOpenSeen(sheetOpen);
+    // Set during render, so the first open frame already shows the start view.
+    if (sheetOpen && props.contained) {
+      setContainedView(startView);
+      setLanded(startView !== "summary");
+      setCreatingNew(false);
+      setQuery("");
+      setReversalOpen(false);
+    }
+  }
 
   useEffect(() => {
     if (!props.hold) warned.current = false;
@@ -202,12 +219,7 @@ export function ChangeAssignment(props: Props) {
       settled.current = false;
       forceDiscard.current = false;
     }
-    if (props.contained && sheetOpen && !wasOpen.current) {
-      setContainedView(props.start === "project" ? "project" : "summary");
-      setCreatingNew(false);
-    }
-    wasOpen.current = sheetOpen;
-  }, [sheetOpen, props.contained, props.start]);
+  }, [sheetOpen]);
 
   useEffect(() => {
     function onPop() {
@@ -269,6 +281,7 @@ export function ChangeAssignment(props: Props) {
     setReversalOpen(false);
     setCreatingNew(false);
     if (props.contained) {
+      setLanded(false);
       setContainedView(next);
       return;
     }
@@ -308,15 +321,16 @@ export function ChangeAssignment(props: Props) {
   function back() {
     if (creatingNew) {
       setCreatingNew(false);
-      if (props.contained) setContainedView(props.start === "project" ? "project" : "summary");
+      if (props.contained && !landed) setContainedView("summary");
       return;
     }
     if (props.contained) {
-      if (props.start === "project" && props.host === "overlay") {
+      if (landed && props.host === "overlay") {
         props.onOpenChange(false);
         return;
       }
       pendingFocus.current = containedView === "category" ? "category" : "project";
+      setLanded(false);
       setContainedView("summary");
       return;
     }
@@ -377,15 +391,18 @@ export function ChangeAssignment(props: Props) {
   function finishPick(outcome: "stay" | "left" | "hold") {
     if (outcome === "left") return;
     if (outcome === "hold") {
-      if (props.contained) setContainedView("summary");
-      else closePickLevel();
+      if (props.contained) {
+        setLanded(false);
+        setContainedView("summary");
+      } else closePickLevel();
       return;
     }
     if (props.contained) {
-      if (props.start === "project" && props.host === "overlay") {
+      if (landed && props.host === "overlay") {
         props.onOpenChange(false);
         return;
       }
+      setLanded(false);
       setContainedView("summary");
       return;
     }
@@ -678,7 +695,7 @@ export function ChangeAssignment(props: Props) {
   if (props.host === "route") {
     return <RouteSheet closeTo={props.closeTo} returnFocusRef={props.returnFocusRef} {...chrome} />;
   }
-  return <Sheet open={props.open} onOpenChange={props.onOpenChange} {...chrome} />;
+  return <Sheet open={props.open} onOpenChange={props.onOpenChange} returnFocusRef={props.returnFocusRef} {...chrome} />;
 }
 
 function Picker({

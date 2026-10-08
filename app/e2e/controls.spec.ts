@@ -374,12 +374,12 @@ test("a transaction shows its VAT, changes, and confirms delete", async ({ page 
   await page.getByRole("button", { name: "מחיקה" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
-  await page.getByRole("button", { name: /פרויקט/ }).click();
-  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
-  await page.getByRole("button", { name: /קטגוריה:/ }).click();
+  // FLOW-320: the category row opens the category picker, and the pick closes it.
+  await page.getByRole("button", { name: /קטגוריה/ }).click();
+  await expect(page.getByRole("dialog", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
   await toast(page, "השיוך נשמר");
-  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /הובלה/ })).toBeVisible();
   await page.getByRole("link", { name: "פיצול בין פרויקטים" }).click();
   await expect(page).toHaveURL(/\/transactions\/t-manual\/split/);
@@ -388,16 +388,14 @@ test("a transaction shows its VAT, changes, and confirms delete", async ({ page 
 test("the transaction change sheet opens split in place", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
   await page.getByRole("button", { name: /פרויקט/ }).click();
-  const sheet = page.getByRole("dialog", { name: "שינוי שיוך" });
+  const sheet = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(sheet).toBeVisible();
-  await sheet.getByRole("button", { name: /פרויקט:/ }).click();
-  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
-  await page.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
+  await sheet.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
   await expect(page).toHaveURL(/\/transactions\/t-manual\/split\?preview=1$/);
   await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/txn\?preview=1$/);
-  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {

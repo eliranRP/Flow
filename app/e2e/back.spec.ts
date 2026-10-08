@@ -126,3 +126,28 @@ test("the add sheet closes back to the screen that opened it", async ({ page }) 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
 });
+
+test("a transaction row opens its picker, and Back, Escape and חזרה return to the detail", async ({ page }) => {
+  await page.goto("/e2e/project");
+  await page.goto("/reviewer/split-expense");
+  const row = page.getByRole("button", { name: /מלט/ });
+  const picker = page.getByRole("dialog", { name: "בחירת קטגוריה" });
+  await row.click();
+  await expect(picker).toBeVisible();
+  await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toHaveCount(0);
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/reviewer\/split-expense$/);
+  await expect(row).toBeFocused();
+  await row.click();
+  await expect(picker).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toBeFocused();
+  await row.click();
+  await picker.getByRole("button", { name: "חזרה" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/e2e\/project$/);
+});

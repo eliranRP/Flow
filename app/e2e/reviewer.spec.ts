@@ -358,16 +358,13 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await expect(page.getByText("01/07/2026")).toBeVisible();
   await expect(page.getByText("₪3,200")).toBeVisible();
+  // FLOW-320: the category row opens the category picker, and the pick closes it.
   await page.getByRole("button", { name: /מלט/ }).click();
-  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "בחירת קטגוריה" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
-  const category = page.getByRole("button", { name: "קטגוריה: מלט, שינוי" });
-  await category.click();
   await page.getByRole("radio", { name: "שינוע" }).click();
   await toast(page, "השיוך נשמר");
-  await expect(page.getByRole("button", { name: "קטגוריה: שינוע, שינוי" })).toBeVisible();
-  await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /שינוע/ })).toBeVisible();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
@@ -398,20 +395,6 @@ test("a split returns to one project and the project totals follow", async ({ pa
   await toastAction(page, "ביטול").click();
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
   await expect(alon.getByText("₪533.44")).toBeVisible();
-
-  await page.getByRole("button", { name: /מלט/ }).click();
-  await page.getByRole("button", { name: /פרויקט: מפוצל · 6 פרויקטים/ }).click();
-  await expect(page.getByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeVisible();
-  await page.getByRole("radio", { name: "מחסן הנמל" }).click();
-  await toast(page, "השיוך נשמר");
-  await expect(page.getByRole("button", { name: "פרויקט: מחסן הנמל, שינוי" })).toBeVisible();
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(namal.getByText("₪3,200")).toBeVisible();
-  await expect(alon.getByText("₪0")).toBeVisible();
-  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(0);
-  await toastAction(page, "ביטול").click();
-  await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
-  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
 });
 
 test("approving ברגי העמק adds the split to שויכו היום, and ביטול removes it", async ({ page }) => {

@@ -2482,6 +2482,10 @@ export function TransactionScreen({
   const [menu, setMenu] = useState(false);
   const moreRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
   const [changeOpen, setChangeOpen] = useState(false);
+  // FLOW-320: each row opens its own picker, and the sheet returns focus to that row.
+  const [changeStart, setChangeStart] = useState<"project" | "category">("project");
+  const projectRowRef = useRef<HTMLButtonElement>(null);
+  const categoryRowRef = useRef<HTMLButtonElement>(null);
   const leaveChange = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
@@ -2727,7 +2731,7 @@ export function TransactionScreen({
         : next.projectId !== "" && next.categoryId !== "";
     if (!complete) {
       setHold(collapsing ? COLLAPSE_PICK_HOLD : splitRow ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-      return undefined;
+      return "hold" as const;
     }
     setHold("");
     try {
@@ -2836,18 +2840,22 @@ export function TransactionScreen({
         {holdWrites ? (
           <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} />
         ) : (
-          <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
+          <ListRow variant="button" buttonRef={projectRowRef} eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
             if (splitRow) {
               openSplit();
               return;
             }
+            setChangeStart("project");
             setChangeSheet(true);
           }} />
         )}
         {holdWrites ? (
           <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} />
         ) : (
-          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} chevron onClick={() => { setChangeSheet(true); }} />
+          <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} chevron onClick={() => {
+            setChangeStart("category");
+            setChangeSheet(true);
+          }} />
         )}
       </List>
       <LoanTransactionSplit
@@ -2883,6 +2891,9 @@ export function TransactionScreen({
         host="overlay"
         open={changeOpen}
         onOpenChange={setChangeSheet}
+        contained
+        start={changeStart}
+        returnFocusRef={changeStart === "category" ? categoryRowRef : projectRowRef}
         supplier={party}
         amount={formatAmountText(absAgorot(txn.amount_net), txn.currency, {
           direction: txn.direction === "income" ? "income" : "expense",
