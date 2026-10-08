@@ -8,12 +8,15 @@ So QA has its own login that owns its own company, **Flow QA**. It is a normal o
 
 - Create, edit, split, assign, undo and delete anything inside Flow QA, in the app and through a Flow MCP key minted for Flow QA.
 - Leave test data in Flow QA. Prefix names with `QA ` so they are easy to spot.
+- Connect the owner's Mercury account to Flow QA, so sync runs against a copy of the real bank lines. Mercury is only read.
+- Seed a scenario straight in the database (Supabase SQL) when the app can't create it. Every insert or update names Flow QA's company id, and the statement first checks that the id belongs to the company named `Flow QA` with `is_demo` false.
 
 ## What QA must not do
 
 - Use any other login or key for writes. The NRO Momentum MCP key stays read-only (`readOnlyHint` tools only).
 - Join, view or invite into any other company. Never set `is_demo` on Flow QA.
-- Connect a real bank or SUMIT account to Flow QA. Sync stays untested here.
+- Run SQL that touches a row of any other company, or that has no company filter.
+- Write with the NRO Momentum MCP key, or change NRO Momentum's own Mercury connection.
 
 ## Provision once (owner)
 
