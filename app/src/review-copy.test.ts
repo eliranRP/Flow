@@ -47,7 +47,7 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     expect(dupLoud?.tone).toBe("loud");
     if (dupLoud?.tone !== "loud") throw new Error("loud");
     expect(copyText(dupLoud.title)).toBe("ייתכן שזה כפל");
-    expect(copyText(dupLoud.hint)).toBe("אותו ספק ואותו סכום ב־03/10");
+    expect(copyText(dupLoud.hint ?? [])).toBe("אותו ספק ואותו סכום ב־03/10");
     const dupQuiet = reviewFlagView([flag("duplicate", 0.2, { other_doc_date: "2026-10-03" })], { direction: "income" });
     if (dupQuiet?.tone !== "quiet") throw new Error("quiet");
     expect(copyText(dupQuiet.line)).toBe("שורה באותו סכום ב־03/10");
@@ -55,7 +55,7 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     const spikeLoud = reviewFlagView([flag("amount_spike", 0.7, { ratio: 4.2, typical_amount_minor: 120_000 })]);
     if (spikeLoud?.tone !== "loud") throw new Error("loud");
     expect(copyText(spikeLoud.title)).toBe("סכום גבוה מהרגיל");
-    expect(copyText(spikeLoud.hint)).toBe("פי 4.2 מהרגיל · בדרך כלל ₪1,200");
+    expect(copyText(spikeLoud.hint ?? [])).toBe("פי 4.2 מהרגיל · בדרך כלל ₪1,200");
     const spikeQuiet = reviewFlagView([flag("amount_spike", 0.69, { ratio: 3 })], { direction: "income" });
     if (spikeQuiet?.tone !== "quiet") throw new Error("quiet");
     expect(copyText(spikeQuiet.line)).toBe("פי 3 מהרגיל ללקוח");
@@ -66,7 +66,7 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     const newLoud = reviewFlagView([flag("new_party_large", 0.95)], { direction: "income" });
     if (newLoud?.tone !== "loud") throw new Error("loud");
     expect(copyText(newLoud.title)).toBe("לקוח חדש בסכום גבוה");
-    expect(copyText(newLoud.hint)).toBe("בין 10% השורות הגבוהות בשנה");
+    expect(copyText(newLoud.hint ?? [])).toBe("בין 10% השורות הגבוהות בשנה");
     const newQuiet = reviewFlagView([flag("new_party_large", null)]);
     if (newQuiet?.tone !== "quiet") throw new Error("quiet");
     expect(copyText(newQuiet.line)).toBe("ספק חדש בסכום גבוה");
@@ -84,6 +84,10 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     expect(copyText(dup.line)).toBe("שורה באותו סכום");
     const spike = reviewFlagView([flag("amount_spike", 0.9)]);
     if (spike?.tone !== "loud") throw new Error("loud");
-    expect(copyText(spike.hint)).toBe("גבוה מהרגיל");
+    // The title already says it is high: no ratio and no usual amount leaves no hint.
+    expect(spike.hint).toBeUndefined();
+    const usual = reviewFlagView([flag("amount_spike", 0.9, { typical_amount_minor: 120_000 })]);
+    if (usual?.tone !== "loud") throw new Error("loud");
+    expect(copyText(usual.hint ?? [])).toBe("בדרך כלל ₪1,200");
   });
 });

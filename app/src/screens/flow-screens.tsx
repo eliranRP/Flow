@@ -2,7 +2,7 @@ import { flushSync } from "react-dom";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit, ProjectLoanList, useLoanBalances, type LoanBalanceRow } from "./loan-match";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
@@ -58,6 +58,7 @@ import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
 import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
+import { reviewFocusPath } from "../review-paths";
 import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
@@ -130,11 +131,12 @@ function blockedPreview(preview: HomePreview, tell: (message: string) => void): 
   return true;
 }
 
-function useBlockedPreview(): (mode?: HomePreview) => boolean {
+/** `place: "bar"` puts the toast above a screen's pinned action bar (decision 0137). */
+function useBlockedPreview(place?: "bar"): (mode?: HomePreview) => boolean {
   const preview = useHomePreview();
   const toast = useToast();
   return (mode?: HomePreview) => blockedPreview(mode ?? preview, (message) => {
-    toast.show({ tone: "info", message });
+    toast.show({ tone: "info", message, ...(place == null ? {} : { place }) });
   });
 }
 
@@ -1035,14 +1037,7 @@ export function reviewListPath(search: string): string {
   return text === "" ? "/review/all" : `/review/all?${text}`;
 }
 
-export function reviewFocusPath(search: string, id: string): string {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  params.delete("pick");
-  params.delete("list");
-  params.set("item", id);
-  params.set("from", "all");
-  return `/review?${params.toString()}`;
-}
+export { reviewFocusPath };
 
 export function rotateReview<T extends { id: string }>(rows: T[], id: string): T[] {
   const index = rows.findIndex((row) => row.id === id);
@@ -1262,10 +1257,12 @@ export function ReviewAllList({
   const cardPath = useCallback((id: string) => reviewFocusPath(search, id), [search]);
   if (rows.length === 0) {
     const someSkipped = skipped && (skippedRead.isError || (skippedRead.data?.length ?? 0) > 0);
-    // FLOW-327 r1: while the skipped read loads, the page says nothing waits rather than הכל מאושר,
-    // which would flip to this layout once skipped rows land.
-    const skippedLoading = skipped && skippedRead.isLoading;
-    if (!someSkipped && !skippedLoading) return <ReviewEmpty search={search} backTo={backTo} />;
+    // FLOW-327 r1: while the skipped read loads, only the header shows, so הכל מאושר never flashes
+    // before the skipped rows land.
+    if (skipped && skippedRead.isLoading) {
+      return <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />;
+    }
+    if (!someSkipped) return <ReviewEmpty search={search} backTo={backTo} />;
     return (
       <div>
         <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
@@ -1419,7 +1416,7 @@ export function ReviewQueue({
   const [queueParams] = useSearchParams();
   const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
-  const blocked = useBlockedPreview();
+  const blocked = useBlockedPreview("bar");
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
@@ -1663,6 +1660,17 @@ export function ReviewQueue({
   });
   // FLOW-333 C8: the part count, read for a split_mismatch card only.
   const mismatchLine = shown?.reason === "split_mismatch" ? shown.transaction_id : "";
+  // The bar's buttons remount when the next card switches between a normal and a split_mismatch
+  // card. Focus that was in the bar moves to its first button instead of falling to the page.
+  const queueRoot = useRef<HTMLDivElement>(null);
+  const barFocus = useRef(false);
+  const barKind = shown?.reason === "split_mismatch";
+  useLayoutEffect(() => {
+    if (!barFocus.current) return;
+    const active = document.activeElement;
+    if (active != null && active !== document.body && queueRoot.current?.contains(active)) return;
+    queueRoot.current?.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]")?.focus({ preventScroll: true });
+  }, [barKind]);
   const splitRead = useLineSplitQuery(mismatchLine, mismatchLine !== "" && !sample && previewWrite == null);
   const splitParts: number | "loading" | undefined = splitRead.data != null
     ? splitRead.data.parts.length
@@ -1759,7 +1767,14 @@ export function ReviewQueue({
   );
   return (
     <ViewerScope>
-    <div className="ui-review-queue" data-bar={holdWrites ? undefined : ""}>
+    <div
+      className="ui-review-queue"
+      data-bar={holdWrites ? undefined : ""}
+      ref={queueRoot}
+      onFocusCapture={(event) => {
+        barFocus.current = event.target instanceof Element && event.target.closest(".ui-action-bar") != null;
+      }}
+    >
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
       {rows.length > 0 ? (
         <div className="ui-review-meter">

@@ -115,23 +115,11 @@ export const MissingCategory: Story = {
 };
 
 /** FLOW-312 item 2 / 0125: the bank changed a split line's amount, so the parts no longer match. */
-export const SplitMismatch: Story = {
-  args: {
-    ...OneCard.args,
-    project: "וילה רעננה",
-    category: "חומרים",
-    reason: "split_mismatch",
-  },
-};
-
-export const SplitMismatchDark: Story = {
-  args: SplitMismatch.args,
-  globals: { theme: "dark" },
-};
-
-export const SplitMismatch320: Story = {
-  args: SplitMismatch.args,
-  parameters: { viewport: { defaultViewport: "flow320" } },
+const splitMismatchArgs = {
+  ...OneCard.args,
+  project: "וילה רעננה",
+  category: "חומרים",
+  reason: "split_mismatch",
 };
 
 export const SharedCost: Story = {
@@ -239,11 +227,11 @@ export const JevBothLong320: Story = {
 };
 
 /** FLOW-327 item 3: the mismatch card names the parts in one row; the actions sit in the bar. */
-export const SplitMismatchParts: Story = { args: { ...SplitMismatch.args, splitParts: 2 } };
-export const SplitMismatchOnePart: Story = { args: { ...SplitMismatch.args, splitParts: 1 } };
+export const SplitMismatchParts: Story = { args: { ...splitMismatchArgs, splitParts: 2 } };
+export const SplitMismatchOnePart: Story = { args: { ...splitMismatchArgs, splitParts: 1 } };
 export const SplitMismatchPartsDark: Story = { ...dark, args: SplitMismatchParts.args };
 export const SplitMismatchParts320: Story = { ...narrow, args: SplitMismatchParts.args };
-export const SplitMismatchPartsLoading: Story = { args: { ...SplitMismatch.args, splitParts: "loading" } };
+export const SplitMismatchPartsLoading: Story = { args: { ...splitMismatchArgs, splitParts: "loading" } };
 
 /** FLOW-333 C8: both fields empty, so אישור is off and this line says why. */
 export const BothMissingHint: Story = { args: { ...OneCard.args, missingBoth: true } };

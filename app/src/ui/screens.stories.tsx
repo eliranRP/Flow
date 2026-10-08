@@ -2,6 +2,7 @@ import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from
 import { useState, type ReactElement, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { skippedReviewQueryKey, type SkippedReviewRow } from "../screens/review-skipped";
+import { reviewFlagsQueryKey, type ReviewFlagsData } from "../screens/jev-review";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { Route, Routes } from "react-router-dom";
@@ -2946,6 +2947,74 @@ const mismatchRow: ReviewRow = { ...plainRow, reason: "split_mismatch" };
 export const ReviewBarSplitMismatch375: Story = { ...se, render: () => <ReviewQueueStory row={mismatchRow} /> };
 export const ReviewBarSplitMismatch320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewQueueStory row={mismatchRow} /> };
 export const ReviewBarViewer375: Story = { ...se, render: () => <ReviewQueueStory viewer /> };
+
+/** FLOW-327 r1: a project's queue has Back; its header stays on one line so the bar clears the tab bar. */
+function ReviewFilteredBarStory({ row }: { row: ReviewRow }) {
+  return (
+    <StoryRoute entry="/review?project=a" tabs reviewCount={4}>
+      <ReviewQueue rows={[row]} search="?project=a" sample backTo="/projects/a" homeTo="/projects/a" homeLabel="חזרה לפרויקט" />
+    </StoryRoute>
+  );
+}
+const sharedBannerRow: ReviewRow = { ...sampleReview, project_id: null, project_name: null, reason: "unallocated_shared" };
+export const ReviewFilteredBarSharedBanner375: Story = { ...se, render: () => <ReviewFilteredBarStory row={sharedBannerRow} /> };
+export const ReviewFilteredBarSharedBanner375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewFilteredBarStory row={sharedBannerRow} /> };
+
+/** Puts flags in the story's cache under the key the real read uses. */
+function SeedFlags({ ids, flags }: { ids: string[]; flags: ReviewFlagsData }) {
+  const client = useQueryClient();
+  useState(() => {
+    client.setQueryData(reviewFlagsQueryKey(ids), flags);
+    return true;
+  });
+  return null;
+}
+const flagRow: ReviewRow = { ...plainRow };
+const loudSpike: ReviewFlagsData = {
+  [flagRow.transaction_id]: [{
+    transaction_id: flagRow.transaction_id, kind: "amount_spike", jev_score: 0.82, other_doc_date: null, typical_amount_minor: 120_000, ratio: 3.4,
+  }],
+};
+/** FLOW-327: a loud flag as the card's last block, the bar still clear of the tab bar at 375x667. */
+function ReviewQueueFlagStory() {
+  return (
+    <StoryRoute entry="/review" tabs reviewCount={4}>
+      <SeedFlags ids={[flagRow.transaction_id]} flags={loudSpike} />
+      <ReviewQueue rows={[flagRow]} search="" sample />
+    </StoryRoute>
+  );
+}
+export const ReviewQueueFlag375se: Story = { ...se, render: () => <ReviewQueueFlagStory /> };
+export const ReviewQueueFlag375seDark: Story = { ...se, ...darkTheme, render: () => <ReviewQueueFlagStory /> };
+
+/** FLOW-327 / 0137: after דלג, the undo toast sits just above the bar. */
+const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש הגליל", amount_net: -345_000n }];
+function ReviewQueueSkipStory() {
+  const [rows, setRows] = useState(skipRows);
+  return (
+    <StoryRoute entry="/review" tabs reviewCount={rows.length}>
+      <ReviewQueue
+        rows={rows}
+        search=""
+        sample
+        previewWrite={{
+          run: () => Promise.resolve(),
+          onDone: (id) => { setRows((current) => current.filter((row) => row.id !== id)); },
+          onUndo: () => { setRows(skipRows); },
+        }}
+      />
+    </StoryRoute>
+  );
+}
+export const ReviewQueueSkipToast: Story = {
+  ...se,
+  render: () => <ReviewQueueSkipStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "דלג" }));
+    await canvas.findByText("דילגנו על הפריט");
+  },
+};
 
 /** FLOW-309: the skipped cards at the end of הצג הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [

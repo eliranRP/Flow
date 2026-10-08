@@ -268,6 +268,8 @@ export const transactionDetailSchema = z
     project_name: z.string().nullable(),
     category_id: z.string().nullable().optional(),
     review_status: z.enum(["open", "approved", "skipped", "changed"]).nullable().optional(),
+    /** The open review's id, when the server sends it. Optional: get_transaction does not yet. */
+    review_id: z.string().nullable().optional(),
     paid: z.boolean().nullable().optional(),
     open_gross_agorot: agorotOrNull.optional(),
     allocations: z

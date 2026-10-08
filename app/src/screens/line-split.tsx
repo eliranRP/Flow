@@ -40,6 +40,7 @@ import {
   type LineSplitRefusal,
 } from "../line-split-copy";
 import { usePreviewSearch, useHomePreview } from "../preview";
+import { reviewFocusPath } from "../review-paths";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { isReversal, reversalChoices, type KindedCategory } from "../reversal";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useTransactionQuery } from "../use-books";
@@ -109,6 +110,8 @@ export type LineInfo = {
   docDate: string;
   /** An open review other than `split_mismatch` refuses the save (0125). */
   reviewBlocked: boolean;
+  /** That open review's id, when known: לתור opens its card. */
+  reviewId?: string | null;
   /** A loan split refuses a split by category (0104). */
   loanSplit: boolean;
 };
@@ -126,6 +129,7 @@ export function lineInfo(txn: NonNullable<TransactionDetail>, loanSplit = false)
     supplier: txn.supplier_name ?? txn.customer_name ?? txn.description,
     docDate: txn.doc_date,
     reviewBlocked: txn.review_status === "open" && txn.review_reason !== "split_mismatch",
+    reviewId: txn.review_status === "open" ? txn.review_id ?? null : null,
     loanSplit,
   };
 }
@@ -725,7 +729,7 @@ function LineSplitEditor({
             <Banner
               icon={<AlertIcon />}
               title={lineSplitCopy(bannerReason)}
-              hint={bannerReason === "line has an open review" ? <TextLink to={`/review${search}`}>לתור</TextLink> : undefined}
+              hint={bannerReason === "line has an open review" ? <TextLink to={line.reviewId ? reviewFocusPath(search, line.reviewId) : `/review${search}`}>לתור</TextLink> : undefined}
             />
           </div>
         ) : split?.partsMatch === false ? (

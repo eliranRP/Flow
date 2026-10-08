@@ -70,7 +70,7 @@ export const REVIEW_FLAG_LOUD = 0.7;
 const KIND_ORDER: Record<ReviewFlagKind, number> = { duplicate: 0, amount_spike: 1, new_party_large: 2 };
 
 export type ReviewFlagView =
-  | { tone: "loud"; kind: ReviewFlagKind; title: CopyPart[]; hint: CopyPart[] }
+  | { tone: "loud"; kind: ReviewFlagKind; title: CopyPart[]; hint?: CopyPart[] }
   | { tone: "quiet"; kind: ReviewFlagKind; line: CopyPart[] };
 
 export function flagTone(score: number | null | undefined): "loud" | "quiet" {
@@ -124,11 +124,15 @@ export function reviewFlagView(
         const typical = typeof flag.typical_amount_minor === "number" && Number.isFinite(flag.typical_amount_minor)
           ? formatAmountText(BigInt(Math.abs(Math.trunc(flag.typical_amount_minor))), context.currency ?? "ILS")
           : null;
+        // With no ratio the title already says it is high: the hint is the usual amount, or nothing.
+        const hint: CopyPart[] = ratio == null
+          ? typical == null ? [] : ["בדרך כלל ", { num: typical }]
+          : typical == null ? times : [...times, " · בדרך כלל ", { num: typical }];
         return {
           tone,
           kind: flag.kind,
           title: ["סכום גבוה מהרגיל"],
-          hint: typical == null ? times : [...times, " · בדרך כלל ", { num: typical }],
+          ...(hint.length === 0 ? {} : { hint }),
         };
       }
       return { tone, kind: flag.kind, line: [...times, ` ל${party}`] };

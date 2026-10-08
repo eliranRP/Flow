@@ -1660,6 +1660,8 @@ a.ui-row,
 }
 
 .ui-review-ai .ui-row-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
   flex-direction: row;
   align-items: baseline;
   gap: var(--space-2);
@@ -3697,7 +3699,7 @@ div.ui-check-row {
 }
 
 .ui-lsplit-banner {
-  margin: var(--space-4) var(--space-5) 0;
+  margin: var(--space-4) var(--space-side) 0;
 }
 
 .ui-lsplit-card {
@@ -4773,10 +4775,12 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   color: var(--color-text-muted);
 }
 
+/* The icon centres on the first line of the hint, whatever its size. */
 .ui-review-flag-icon {
   display: inline-flex;
   flex: none;
-  padding-block-start: calc((var(--type-hint-size) * var(--type-hint-line) - 16px) / 2);
+  align-items: center;
+  block-size: calc(var(--type-hint-size) * var(--type-hint-line));
 }
 
 .ui-review-flag-text {

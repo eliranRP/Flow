@@ -159,7 +159,8 @@ export function useReviewFlags(transactionIds: readonly string[], live: boolean)
     queryFn: ({ signal }) => loadReviewFlags(transactionIds, signal),
   });
   return function flagsFor(transactionId: string | null): ReviewFlag[] {
-    if (!readable || transactionId == null || query.isError || query.data == null) return NO_LINE_FLAGS;
+    // Not readable (a preview or a story) reads only what is already cached under the key.
+    if (transactionId == null || query.isError || query.data == null) return NO_LINE_FLAGS;
     return query.data[transactionId] ?? NO_LINE_FLAGS;
   };
 }

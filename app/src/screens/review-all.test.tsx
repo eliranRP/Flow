@@ -996,6 +996,26 @@ describe("the pinned review bar (FLOW-327)", () => {
     expect(within(toast.closest(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
   });
 
+  it("keeps focus on the bar's first button when the next card is a split_mismatch (FLOW-327 r1)", async () => {
+    let skipped = false;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        const mismatch = reviewRow("r2", "עגורני החוף", "p2", { reason: "split_mismatch" });
+        return Promise.resolve({ data: skipped ? [mismatch] : [reviewRow("r1", "מחסן הנמל", "p1"), mismatch], error: null });
+      }
+      if (name === "approve_review_item") skipped = true;
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    approve.focus();
+    fireEvent.click(approve);
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "עדכון הפיצול" })).toHaveFocus();
+    });
+  });
+
   it("disables דלג while אישור is writing (FLOW-327 r1)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
@@ -1251,7 +1271,7 @@ describe("the דולגו section under הצג הכול (FLOW-309)", () => {
     expect(screen.queryByText("הכל מאושר")).toBeNull();
   });
 
-  it("with nothing pending, says nothing waits while the skipped read loads, not הכל מאושר (FLOW-327 r1)", async () => {
+  it("with nothing pending, shows only the header while the skipped read loads, not הכל מאושר (FLOW-327 r1)", async () => {
     let release: (value: { data: unknown; error: null }) => void = () => undefined;
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [], error: null });
@@ -1259,10 +1279,15 @@ describe("the דולגו section under הצג הכול (FLOW-309)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review/all");
-    expect(await screen.findByText("אין פריטים שמחכים לאישור.")).toBeInTheDocument();
+    expect(await screen.findByText("תנועות שמחכות לשיוך")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "list_skipped_review")).toBe(true);
+    });
     expect(screen.queryByText("הכל מאושר")).toBeNull();
+    expect(screen.queryByText("אין פריטים שמחכים לאישור.")).toBeNull();
     release({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
     expect(await screen.findByRole("heading", { name: "דולגו" })).toBeInTheDocument();
+    expect(screen.getByText("אין פריטים שמחכים לאישור.")).toBeInTheDocument();
     expect(screen.queryByText("הכל מאושר")).toBeNull();
   });
 

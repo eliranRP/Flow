@@ -274,7 +274,7 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
             <CopyLine parts={flag.title} />
           </>
         )}
-        hint={<CopyLine parts={flag.hint} />}
+        hint={flag.hint == null ? undefined : <CopyLine parts={flag.hint} />}
         wrapHint
       />
     );
