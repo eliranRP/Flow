@@ -103,7 +103,7 @@ Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_defa
 
 ### list_review
 
-`list_review()`, then filter. `limit` defaults to 50 and cannot exceed 100.
+`list_review()`, then filter. `limit` defaults to 50 and cannot exceed 100. `supplier` matches part of the supplier's name, or of the customer's on an income line.
 
 Input:
 
