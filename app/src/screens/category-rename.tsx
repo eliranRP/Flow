@@ -30,9 +30,11 @@ export function CategoryRenameSheet({
     if (open && !wasOpen.current) {
       setName(currentName);
       setError(undefined);
+      // A failed save from an earlier opening would otherwise pull focus again.
+      rename.reset();
     }
     wasOpen.current = open;
-  }, [open, currentName]);
+  }, [open, currentName, rename]);
 
   // The field is disabled while saving, so a failed save hands focus back to it.
   const failed = rename.isError;

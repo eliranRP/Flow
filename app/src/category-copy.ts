@@ -117,6 +117,7 @@ export function categoryNameError(value: string): string | undefined {
 export function renameCategoryFailureText(error: Error): string {
   if ((error as Error & { code?: string }).code === "42501") return "רק בעלי העסק יכולים לשנות שם.";
   if (error.message.includes("already")) return RENAME_CATEGORY_TAKEN;
+  // The field checks the length first, so these come only from an undo.
   if (error.message.includes("too short") || error.message.includes("too long")) return "השם לא תקין.";
   if (error.message.includes("category not found")) return "הקטגוריה לא נמצאה.";
   return "השם לא נשמר.";
