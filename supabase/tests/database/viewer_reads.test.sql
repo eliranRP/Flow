@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(16);
+select plan(22);
 
 do $users$
 begin
@@ -23,6 +23,10 @@ insert into vr (label, id) select 'co', id from public.companies where name = 'V
 
 insert into public.categories (company_id, name, kind, sort_order, is_default)
 values ((select id from vr where label = 'co'), 'Viewer Supplies', 'expense', 90, false);
+insert into public.projects (company_id, name, status)
+values ((select id from vr where label = 'co'), 'Viewer Site', 'active');
+insert into vr (label, id) select 'project', id from public.projects where name = 'Viewer Site';
+insert into vr (label, id) select 'supplies', id from public.categories where name = 'Viewer Supplies';
 
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
@@ -34,6 +38,15 @@ values
    -1000, -1000, 1000, 0, 'unknown', current_date, 'manual', 'posted', 'vr:open', 'Viewer open line'),
   ((select id from vr where label = 'co'), 'expense', 'expense', 'project',
    -2000, -2000, 2000, 0, 'unknown', current_date, 'manual', 'posted', 'vr:skipped', 'Viewer skipped line');
+-- A filed project line (FLOW-507 follow-up: the viewer's project page).
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, project_id, category_id,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, source, line_status, idempotency_key, description
+)
+values ((select id from vr where label = 'co'), 'expense', 'expense', 'project',
+  (select id from vr where label = 'project'), (select id from vr where label = 'supplies'),
+  -3000, -3000, 3000, 0, 'unknown', current_date, 'manual', 'posted', 'vr:filed', 'Viewer filed line');
 insert into vr (label, id) select replace(idempotency_key, 'vr:', 'txn_'), id
 from public.transactions where idempotency_key like 'vr:%';
 
@@ -61,6 +74,15 @@ select ok(
   public.list_categories()::text like '%Viewer Supplies%',
   'and the categories');
 select is((select count(*)::integer from public.audit_log), 0, 'the audit log stays the owner''s');
+select is(public.get_project((select id from vr where label = 'project'))->>'name', 'Viewer Site',
+  'and a project page');
+select ok(
+  public.get_project((select id from vr where label = 'project'))::text like '%Viewer Supplies%',
+  'with its categories');
+select is(
+  jsonb_array_length(public.list_project_category(
+    (select id from vr where label = 'project'), (select id from vr where label = 'supplies'))->'rows'),
+  1, 'and the category drill-down');
 select throws_ok(
   format('select public.reopen_review(%L::uuid)',
     (select id from public.review_queue where transaction_id = (select id from vr where label = 'txn_skipped'))),
@@ -68,6 +90,8 @@ select throws_ok(
 
 select tests.authenticate_as('vr_owner');
 select is(jsonb_array_length(public.list_review()), 1, 'the owner reads the review queue as before');
+select is(public.get_project((select id from vr where label = 'project'))->>'name', 'Viewer Site',
+  'and the project page');
 select is((select count(*)::integer from public.audit_log), 1, 'and the audit log');
 
 reset role;
@@ -104,6 +128,28 @@ select is(
      and p.prosrc not like '%readable_company_id()%'),
   '{}'::text[],
   'no viewer-facing read is scoped to the owner only');
+select is(
+  (select coalesce(array_agg(p.proname::text order by p.proname), '{}')
+   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 's'
+     and p.proname not like 'mcp\_%'
+     and p.prosrc like '%owner_id = (select auth.uid())%'),
+  '{}'::text[],
+  'no viewer-facing read finds the company by its owner');
+-- The private read helpers those reads call. Excluded: the two company lookups themselves,
+-- MCP-only helpers (mcp_*) and the owner's SUMIT connection rows. A helper that must stay
+-- owner-only (a permission check for a write, say) goes in this exclusion list; switching it to
+-- readable_company_id() would let a viewer through.
+select is(
+  (select coalesce(array_agg(p.proname::text order by p.proname), '{}')
+   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'private' and p.prokind = 'f' and p.provolatile = 's'
+     and p.proname not in ('current_company_id', 'readable_company_id', 'sumit_connection_rows')
+     and p.proname not like 'mcp\_%'
+     and p.prosrc like '%current_company_id()%'
+     and p.prosrc not like '%readable_company_id()%'),
+  '{}'::text[],
+  'no private read helper is scoped to the owner only');
 select is(
   (select qual from pg_policies where tablename = 'audit_log' and policyname = 'audit_log_select'),
   '(company_id = ( SELECT private.current_company_id() AS current_company_id))',

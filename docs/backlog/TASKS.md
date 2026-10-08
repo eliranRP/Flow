@@ -14,13 +14,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free (FLOW-124 and FLOW-125 server parts done in #176; the list marks and the split-line pill are for a UI lane) | Next `ready` task in the queue |
+| Dev lane 1 | Free (FLOW-903 done in #186) | Next `ready` non-UI task in the queue (FLOW-510 waits for its design call) |
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-811: migration checker nested bodies, smoke write guard on the Supabase host | `get_project` for a viewer, next ready bug |
+| Backlog bug fixes | FLOW-508: Mercury's business-details link returns to the Mercury sheet | Next ready bug |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -338,14 +338,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-114"></a>
 ### FLOW-114 · Loans server follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (loan match server items done in #184; the screen parts for a UI lane; the backfill item open) · **Depends on:** —
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
 - [ ] Backfill existing loan lines into `loans` / `loan_splits`.
 - [x] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow. (Obsolete: the default parts resolve by `categories.loan_part`, not by name or visibility.)
 - [x] Date formatting for years below 1000. (Four digits, and real leap years for years 0 to 99.)
-- [ ] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view.
+- [ ] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view. (Server done: `save_loan_split` writes the split and checks the balance (20261010120000); `clear_loan_split` and MCP `detach_loan_payment` unmatch, and `get_transaction` returns `loan_split` (#184, [0136](../decisions/0136-loan-unmatch.md)). Left for a UI lane: write through `save_loan_split`, an unmatch button through `clear_loan_split`, the P&L cache keys after a match or unmatch, the category picker locked on a matched payment, and reading `loan_split` from the transaction instead of `get_loan_split`.)
 - [x] Follow-up to the owner's call: relax the interest-category check so split interest can use another category (pairs with FLOW-106 d). (FLOW-106 part 2, decision 0128.)
 
 <a id="flow-115"></a>
@@ -415,8 +415,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-210"></a>
 ### FLOW-210 · Bulk setup follow-ups (#119 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-206 (#119)
-- [ ] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`.
+- **Type:** BACKLOG NIT · **Status:** done (#180) · **Depends on:** FLOW-206 (#119)
+- [x] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`. (`bulk_setup_followups.test.sql`.)
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
@@ -516,7 +516,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
 - [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
 - [x] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
-- [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filters on `owner_id`, so a viewer's project page is empty: follow-up.)
+- [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filtered on `owner_id`, so a viewer's project page was empty: fixed in `20261010190000_viewer_project_page.sql` with the drill-down, category totals and filed-today helpers.)
 - [ ] Stored Mercury account labels lose their digits at import, so the account row never shows a last 4. Keep the label's last 4 at import if the owner wants it.
 - [ ] The review queue warms the first other row's details, not the next card's.
 
@@ -761,9 +761,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (item 1 in 0129, item 2 in #180) · **Depends on:** —
 - [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
-- [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
+- [x] No pgTAP for the ILS filter in `get_home` and `get_project`. (`ils_filter_totals.test.sql`: both bases, a range, shared costs and the overhead weights.)
 
 <a id="flow-410"></a>
 ### FLOW-410 · Find every project in project search
@@ -844,15 +844,16 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-508"></a>
 ### FLOW-508 · Settings and connect sheet follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Token and key fields render RTL; add `dir="ltr"` (Mercury and SUMIT).
-- [ ] An empty token goes to the server and comes back as a toast; add an inline client check with a reserved message line (both connectors).
-- [ ] The busy refresh row shows no spinner; keep the token field read-only while connect is busy.
-- [ ] A reloaded tab gets no message when a run fails; show the stored last error in the sheet.
-- [ ] Refresh completion is announced only by the toast; add a status text update.
+- [x] Token and key fields render RTL; add `dir="ltr"` (Mercury and SUMIT). (Already in both sheets.)
+- [x] An empty token goes to the server and comes back as a toast; add an inline client check with a reserved message line (both connectors). ("חסר מפתח.", "חסר מספר חברה."; focus moves to the first empty field.)
+- [x] The busy refresh row shows no spinner; keep the token field read-only while connect is busy. (The row already has `busy`; the key fields are read-only while connecting.)
+- [x] A reloaded tab gets no message when a run fails; show the stored last error in the sheet. (Already: the status sheet shows the stored `last_error`.)
+- [x] Refresh completion is announced only by the toast; add a status text update. (The sheet's "מחובר · עודכן …" line updates from `last_sync_at` after the refetch; the toast is `role="status"`.)
 - [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
-- [ ] Back off status polling on error; release only the run's own claim; consider a shorter claim expiry.
+- [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
+- [ ] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`).
 - [ ] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320.
-- [ ] Onboarding header back control goes to sign-in and drops `preview=1`; the onboarding round trip leaves no-op Back steps.
+- [x] Onboarding header back control goes to sign-in and drops `preview=1`; the onboarding round trip leaves no-op Back steps. (Back goes to `return` with preview kept, and a save replaces the entry. Also: Mercury's "פרטי העסק" link came back to the SUMIT sheet; it now returns to Mercury's.)
 
 <a id="flow-509"></a>
 ### FLOW-509 · Mercury connector hardening
@@ -943,7 +944,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go 2026-10-08) · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
-- [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0136](../decisions/0136-jev-corrections.md)).
+- [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0137](../decisions/0137-jev-corrections.md)).
 - [x] Auto prefill in one SQL call, `jev_prefill` (#177).
 - [x] `approve_split_review(review, category)`: set the category and approve a split line in one call (#177).
 - [x] A `none` project answer, never pre-filled, and the overhead project labelled (#177).
@@ -1018,7 +1019,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-808"></a>
 ### FLOW-808 · Shared test fixtures and pitfalls upkeep
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#181: `tests.fixture_*` in `supabase/tests/helpers.sql`, PITFALLS findings 19 to 31, code checklist) · **Depends on:** —
 - **What:** Commit shared invented test fixtures so builders stop re-creating them, and fold the pending pitfall candidates from recent retros into [PITFALLS](../review/PITFALLS.md) and the checklists. Themes: a consumer matrix for every payload a contract change touches; a unit or currency change reaches every sum; two PRs redefining one SQL function agree the order up front; never cache constraint or transient refusals in an idempotency store; security-relaxing columns are never owner-writable; every auth path gets a wrong-value negative test; probe a restricted role against every write path; fixed-timeout e2e waits are flakes; a fix needs a test that fails when it is reverted; a persisted flag is a hint, not confirmation; don't peek at another feature's query with a second observer; renames of ops-visible objects need an "Ops changes" PR section.
 - **Acceptance:** PITFALLS and checklists updated; changelog.
 
@@ -1071,7 +1072,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-903"></a>
 ### FLOW-903 · Generated Mercury fixtures
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#186) · **Depends on:** —
 - **What:** Regenerate the Mercury fixtures from a seeded generator script committed to the repo, so they can be rebuilt from scratch, and fix the fixtures README wording.
 - **Acceptance:** the generator reproduces the fixtures byte for byte; same edge cases covered.
 

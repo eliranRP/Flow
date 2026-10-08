@@ -247,7 +247,7 @@ select is(
   'cash: an unpaid credit does not move the weights'
 );
 
--- A viewer of a demo company reads the months; get_project stays owner-only.
+-- A viewer of a demo company reads the months and the project page.
 reset role;
 update public.companies set is_demo = true where id = (select id from pm_ref where label = 'co');
 insert into public.company_viewers (user_id, company_id)
@@ -263,9 +263,9 @@ select is(
   'a viewer reads the same months as the owner'
 );
 select is(
-  public.get_project((select id from pm_ref where label = 'alpha'), 'cash'),
-  null,
-  'get_project stays owner-only'
+  (public.get_project((select id from pm_ref where label = 'alpha'), 'cash') ->> 'overhead_share_agorot')::bigint,
+  60000::bigint,
+  'a viewer reads the project page as the owner does'
 );
 
 select tests.authenticate_as('pm_other');

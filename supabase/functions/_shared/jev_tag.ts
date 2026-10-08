@@ -41,14 +41,14 @@ export type TagMode = "shadow" | "auto";
 export type TagProject = {
   id: string;
   name: string;
-  /** A finished project: offered only on lines dated on or before its last line (decision 0136). */
+  /** A finished project: offered only on lines dated on or before its last line (decision 0137). */
   finished?: boolean;
   lastDocDate?: string | null;
   /** The company's overhead project (decision 0101). */
   overhead?: boolean;
 };
 
-/** The project answer for "no project": overhead, or not one project (decision 0136). Never pre-filled. */
+/** The project answer for "no project": overhead, or not one project (decision 0137). Never pre-filled. */
 export const JEV_NO_PROJECT = "none";
 export type TagCategory = { id: string; name: string };
 
@@ -94,7 +94,7 @@ export type TagFiling = {
   split: boolean;
   /** Expense when absent. */
   direction?: TagDirection;
-  /** What Jev suggested on that line, and whether the owner changed it (decision 0136). */
+  /** What Jev suggested on that line, and whether the owner changed it (decision 0137). */
   jevProjectId?: string | null;
   jevCategoryId?: string | null;
   jevCorrected?: boolean;
@@ -333,7 +333,7 @@ export function buildTagState(
         pnl_role: filing.pnlRole,
         split: filing.split,
       };
-      // Jev's own earlier guess on this line, and whether the owner corrected it (decision 0136).
+      // Jev's own earlier guess on this line, and whether the owner corrected it (decision 0137).
       if (filing.jevProjectId || filing.jevCategoryId) {
         entry.jev_suggested_project_id = filing.jevProjectId ?? null;
         entry.jev_suggested_category_id = filing.jevCategoryId ?? null;
@@ -991,7 +991,7 @@ export function createTagStore(
 
     async prefill(write: PrefillWrite): Promise<boolean> {
       // One SQL transaction: the project, its allocation (amount from the line) and the
-      // category, only while the line is open and the owner has not set them (decision 0136).
+      // category, only while the line is open and the owner has not set them (decision 0137).
       const result = await rest(fetch, `${base}/rest/v1/rpc/jev_prefill`, serviceKey, {
         method: "POST",
         body: {

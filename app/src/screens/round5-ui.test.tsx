@@ -670,6 +670,13 @@ describe("settings account", () => {
     expect(sumitSheet).toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
     expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dsumit");
     expect(calls.some((name) => name.includes("sumit-connect"))).toBe(false);
+    fireEvent.keyDown(sumitSheet, { key: "Escape" });
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: /Mercury/ }));
+    const mercurySheet = screen.getByRole("dialog", { name: "חיבור Mercury" });
+    expect(mercurySheet).toHaveTextContent("כדי לחבר את Mercury צריך עסק.");
+    // Back from the business details opens the Mercury sheet again, not SUMIT's.
+    expect(within(mercurySheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dmercury");
     unmount();
 
     render(
