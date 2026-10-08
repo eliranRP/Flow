@@ -1,4 +1,4 @@
--- FLOW-110, server part (the owner chose "unmatch with undo"). Decision 0141.
+-- FLOW-110, server part (the owner chose "unmatch with undo"). Decision 0142.
 -- 1. public.delete_loan(loan): the owner deletes a loan in one call. Its split parts and rate
 --    rows go with it, so its matched payments count whole again under their own categories.
 --    What it removed is kept in private.loan_deletions, so public.restore_loan(loan) (the
@@ -212,7 +212,7 @@ $$;
 revoke all on function public.delete_loan(uuid) from public, anon, authenticated, service_role;
 grant execute on function public.delete_loan(uuid) to authenticated;
 comment on function public.delete_loan(uuid) is
-  'Deletes a loan with its rates and split parts (owner only); its payments count whole again. restore_loan undoes it. Decision 0141.';
+  'Deletes a loan with its rates and split parts (owner only); its payments count whole again. restore_loan undoes it. Decision 0142.';
 
 -- The app's undo: puts back the latest delete of this loan.
 create function public.restore_loan(p_loan_id uuid)
@@ -261,7 +261,7 @@ $$;
 revoke all on function public.restore_loan(uuid) from public, anon, authenticated, service_role;
 grant execute on function public.restore_loan(uuid) to authenticated;
 comment on function public.restore_loan(uuid) is
-  'Puts back the latest deleted copy of a loan (owner only); loan cannot be restored when a payment changed since. Decision 0141.';
+  'Puts back the latest deleted copy of a loan (owner only); loan cannot be restored when a payment changed since. Decision 0142.';
 
 -- The loans list order, newest call wins. p_loan_ids names every loan of the company once.
 create function private.loan_order(p_company_id uuid)
@@ -320,7 +320,7 @@ $$;
 revoke all on function public.reorder_loans(uuid[]) from public, anon, authenticated, service_role;
 grant execute on function public.reorder_loans(uuid[]) to authenticated;
 comment on function public.reorder_loans(uuid[]) is
-  'Saves the loans list order (owner only); every loan of the company once. Decision 0141.';
+  'Saves the loans list order (owner only); every loan of the company once. Decision 0142.';
 
 create function public.mcp_delete_loan(p_idempotency_key text, p_loan_id uuid)
 returns jsonb
@@ -494,7 +494,7 @@ begin
     raise exception 'mcp_refused is not the expected definition';
   end if;
   execute replace(def, anchor, anchor || $n$,
-        -- FLOW-110 (decision 0141).
+        -- FLOW-110 (decision 0142).
         'loan cannot be restored'$n$);
 
   -- public.mcp_undo: loan_delete puts the loan back; loan_order puts the old order back.

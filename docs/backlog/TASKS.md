@@ -336,7 +336,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** server done (#197, owner chose "unmatch with undo", 2026-10-08); the screens wait for a mockup · **Depends on:** FLOW-501 (where loans live)
 - **What:** (1) Reorder loans (persisted order). (2) Edit and delete on each loan, with a confirm for delete. (3) A loan detail page with its attached payments (principal, interest, escrow, fees) linked to the bank rows. MCP: `reorder_loan`, `delete_loan` (update and list exist).
 - **Acceptance:** mockup approved; MCP tools with undo.
-- [x] Server and MCP: `delete_loan` with `restore_loan` and MCP undo `loan_delete` (payments unmatch, the owner's choice), `reorder_loans` with MCP undo `loan_order`, `list_loans` in the saved order (migration `20261011030000`, decision [0141](../decisions/0141-loan-delete-and-order.md)). Plan: the project's plans/flow-110-loans-server.md.
+- [x] Server and MCP: `delete_loan` with `restore_loan` and MCP undo `loan_delete` (payments unmatch, the owner's choice), `reorder_loans` with MCP undo `loan_order`, `list_loans` in the saved order (migration `20261011030000`, decision [0142](../decisions/0142-loan-delete-and-order.md)). Plan: the project's plans/flow-110-loans-server.md.
 - [ ] Screens in a UI lane, after a mockup: reorder on the loans list (read `sort_order`), delete with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section of the FLOW-106 detail page (`mcp_loan_payments`).
 
 <a id="flow-114"></a>
