@@ -1,0 +1,1 @@
+The review list now names the customer of an income line (`list_review` `customer_name`), and a line's details carry its open review's id (`get_transaction` `review_id`), so the review card can show who paid and the split editor's לתור link can open the right card. MCP `list_review` and `get_expense` return both.
