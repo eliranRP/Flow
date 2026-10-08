@@ -259,6 +259,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** done (#124) · **Depends on:** FLOW-129
 - [x] The other `mcp_*` write functions still send `lock_not_available` to `others`, so a lock timeout is stored as a refusal under the idempotency key. Map it to `unavailable` / `retry` in each, as #123 did for `attach_loan_payment` and `undo`, and update TOOLS.md. (Migration `20261008050000`, 18 tools, tested in `mcp_lock_retry.test.sql`.)
 
+<a id="flow-132"></a>
+### FLOW-132 · Closed loan follow-ups (#132 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 1 (#132)
+- [ ] A removed line dated after a loan's `closed_on` keeps its parts; if it comes back it counts against the closed loan without a check. Check it when the line is restored, as decision 0121 does for the balance.
+- [ ] Changing an attached line's `doc_date` to after its loan's `closed_on` is not checked.
+
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
 - **Type:** PLAN FIRST · **Status:** in-progress (#132, part 1 of 4) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")

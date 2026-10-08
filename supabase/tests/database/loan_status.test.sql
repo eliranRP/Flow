@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(24);
+select plan(26);
 
 do $users$
 begin
@@ -158,7 +158,7 @@ reset role;
 select is(pg_temp.listed()->>'status', 'open', 'a new loan is open');
 select is(pg_temp.listed()->'closed_on', 'null'::jsonb, 'and has no closed_on');
 
--- 3-7. Refusals and validation.
+-- 3-8. Refusals and validation.
 select is(
   pg_temp.update_loan('f106-no-date', '{"status": "paid_off"}')->'error'->>'message',
   'closed_on required',
@@ -240,11 +240,11 @@ select is(
 );
 reset role;
 
--- 17. Undo reopens the loan.
+-- 17-18. Undo reopens the loan.
 select is(pg_temp.undo('f106-undo-close')->>'ok', 'true', 'undo of the close succeeds');
 select is(pg_temp.loan_state(), 'open -', 'and the loan is open again with no date');
 
--- 19-20. Reopening with status open clears the date.
+-- 19-21. Reopening with status open clears the date.
 select pg_temp.update_loan('f106-close-2', '{"status": "closed", "closed_on": "2026-02-15"}');
 select is(pg_temp.loan_state(), 'closed 2026-02-15', 'closed on 2026-02-15');
 select is(
@@ -254,7 +254,23 @@ select is(
 );
 select is(pg_temp.loan_state(), 'open -', 'and clears closed_on');
 
--- 22. An edit kept before this change (no status in its snapshot) still undoes, and
+-- 22. Undoing the reopen would close the loan before a payment attached since.
+select pg_temp.app_split('f106:mar', '2026-03-01');
+select is(
+  pg_temp.undo('f106-undo-reopen')->'error'->>'message',
+  'payments after closed_on',
+  'undo of a reopen is refused when a later payment was attached since'
+);
+
+-- 23. Undo is a conflict when the date changed after the edit.
+select pg_temp.update_loan('f106-close-3', '{"status": "closed", "closed_on": "2026-03-01"}');
+reset role;
+update public.loans set closed_on = '2026-03-05' where id = (select id from f106 where label = 'loan');
+select is(pg_temp.undo('f106-undo-close-3')->'error'->>'code', 'conflict', 'undo is a conflict once closed_on changed');
+reset role;
+update public.loans set status = 'open', closed_on = null where id = (select id from f106 where label = 'loan');
+
+-- 24-25. An edit kept before this change (no status in its snapshot) still undoes, and
 -- leaves the status alone.
 select pg_temp.update_loan('f106-rename', '{"name": "Example Bank 2"}');
 reset role;
@@ -268,7 +284,7 @@ where w.id = (
   where w2.kind = 'loan_update' and w2.loan_id = (select id from f106 where label = 'loan')
   order by w2.created_at desc limit 1
 );
-update public.loans set status = 'closed', closed_on = '2026-02-20'
+update public.loans set status = 'closed', closed_on = '2026-03-10'
 where id = (select id from f106 where label = 'loan');
 select is(pg_temp.undo('f106-undo-rename')->>'ok', 'true', 'an older edit without status still undoes');
 select is(
@@ -277,7 +293,7 @@ select is(
   'it restores the name and leaves the status as it is'
 );
 
--- 24. The table refuses a closed loan without a date, whoever writes it.
+-- 26. The table refuses a closed loan without a date, whoever writes it.
 select tests.authenticate_as('f106_owner');
 select throws_ok(
   $$ update public.loans set closed_on = null where id = (select id from pg_temp.f106 where label = 'loan') $$,

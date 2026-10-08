@@ -61,24 +61,36 @@ create trigger loans_close_check
   for each row execute function private.loans_close_check();
 
 -- A payment dated after a closed loan's closed_on is refused, from MCP and the app alike.
+-- The loan is locked first (for no key update, the lock decision 0121's balance check
+-- takes later in the same transaction), so a close and a split of the same loan run one
+-- after the other: a close waits for an open split and then sees it, and a split waits
+-- for an open close and then reads the new status.
 create or replace function private.loan_splits_closed_check()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  cur_status public.loan_status;
+  loan_closed_on date;
 begin
-  if exists (
-    select 1
-    from public.loans l
-    join public.transactions t
-      on t.company_id = new.company_id
-     and t.id = new.transaction_id
-    where l.company_id = new.company_id
-      and l.id = new.loan_id
-      and l.status <> 'open'::public.loan_status
-      and t.doc_date > l.closed_on
-  ) then
+  select l.status, l.closed_on
+  into cur_status, loan_closed_on
+  from public.loans l
+  where l.company_id = new.company_id
+    and l.id = new.loan_id
+  for no key update;
+
+  if cur_status is distinct from 'open'::public.loan_status
+     and exists (
+       select 1
+       from public.transactions t
+       where t.company_id = new.company_id
+         and t.id = new.transaction_id
+         and t.doc_date > loan_closed_on
+     )
+  then
     raise exception 'loan_closed' using errcode = '23514';
   end if;
   return new;
