@@ -109,25 +109,31 @@ select (select id from jc_ref where label = 'co'), l.dir::public.txn_direction,
   case when l.dir = 'income' then (select id from jc_ref where label = l.party) end,
   (select id from jc_ref where label = l.project), (select id from jc_ref where label = l.category),
   l.user_set, l.cat_set, l.project is not null,
-  case when l.dir = 'expense' then -11800 else 11800 end,
-  case when l.dir = 'expense' then -10000 else 10000 end,
-  case when l.dir = 'expense' then -1800 else 1800 end,
+  -- Amounts differ a little per line, so no two lines look like a duplicate charge.
+  l.sign * (11800 + l.n * 118), l.sign * (10000 + l.n * 100), l.sign * (1800 + l.n * 18),
   'assumed', 'posted', l.doc_date, l.doc_date, 'sumit', 'sumit:jc-' || l.label, l.label
-from jc_lines l;
+from (
+  select j.*, case when j.dir = 'expense' then -1 else 1 end as sign,
+    row_number() over (order by j.label) as n
+  from jc_lines j
+) l;
 insert into jc_ref (label, id)
 select substr(idempotency_key, 10), id from public.transactions where idempotency_key like 'sumit:jc-%';
 
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
 select (select id from jc_ref where label = 'co'), (select id from jc_ref where label = l.label),
-  (select id from jc_ref where label = l.project), 10000, -10000
+  (select id from jc_ref where label = l.project), 10000,
+  (select t.amount_net from public.transactions t where t.id = (select id from jc_ref where label = l.label))
 from jc_lines l where l.project is not null and l.role = 'project';
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
 select (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'sp'),
-  (select id from jc_ref where label = p), 5000, -5000
+  (select id from jc_ref where label = p), 5000,
+  (select t.amount_net / 2 from public.transactions t where t.id = (select id from jc_ref where label = 'sp'))
 from unnest(array['p1', 'p2']) p;
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
 select (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'o8'),
-  (select id from jc_ref where label = p), 5000, -5000
+  (select id from jc_ref where label = p), 5000,
+  (select t.amount_net / 2 from public.transactions t where t.id = (select id from jc_ref where label = 'o8'))
 from unnest(array['p1', 'p2']) p;
 insert into public.projects (company_id, name, status)
 values ((select id from jc_ref where label = 'co_b'), 'פרויקט זר', 'active');
@@ -261,7 +267,8 @@ select is(
 select is(
   (select jsonb_agg(jsonb_build_array(a.share_bp, a.amount_net))
    from public.allocations a where a.transaction_id = (select id from jc_ref where label = 'o1')),
-  '[[10000, -10000]]'::jsonb,
+  (select jsonb_build_array(jsonb_build_array(10000, t.amount_net))
+   from public.transactions t where t.id = (select id from jc_ref where label = 'o1')),
   'one allocation, with the amount read from the line'
 );
 select is(
@@ -291,8 +298,8 @@ select is(
 );
 select is(
   (select result from jc_out where label = 'pre_o5'),
-  '{"project": false, "category": false}'::jsonb,
-  'income is never pre-filled'
+  '{"project": true, "category": false}'::jsonb,
+  'an income line gets a project, and no expense category (decision 0145)'
 );
 select is(
   (select jsonb_build_array(o.result, (select count(*) from public.allocations a where a.transaction_id = (select id from jc_ref where label = 'o6'))::int)
@@ -425,9 +432,9 @@ select throws_ok(
 );
 reset role;
 select ok(
-  not has_function_privilege('authenticated', 'public.jev_prefill(uuid, uuid, uuid, uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.jev_prefill(uuid, uuid, uuid, uuid)', 'execute')
-  and has_function_privilege('service_role', 'public.jev_prefill(uuid, uuid, uuid, uuid)', 'execute')
+  not has_function_privilege('authenticated', 'public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric)', 'execute')
+  and not has_function_privilege('anon', 'public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric)', 'execute')
+  and has_function_privilege('service_role', 'public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric)', 'execute')
   and not has_function_privilege('authenticated', 'public.jev_projects(uuid)', 'execute')
   and has_function_privilege('service_role', 'public.jev_projects(uuid)', 'execute'),
   'the job''s prefill and project reads are service role only'

@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-504 server and MCP: a stored company currency (no exchange rates) | The next ready non-UI task or plan card (FLOW-801 and FLOW-407 on hold) |
-| Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
+| Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
@@ -491,7 +491,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-302 (#98)
 - [x] The month totals add rows by direction: a shared line counts at its full amount and a refund counts as income, so a month header is not that project's P&L for the month. Owner to decide whether that's fine or the header should follow the P&L rules (Decisions needed). (Owner 2026-10-08: keep cash in and out, so the header adds up the rows it sits over.)
 - [x] Switching between the flat and the grouped list (a held order splitting a month, or a second month loading) remounts the rows, so a focused row loses focus. (The flat list is a headless section keyed by its first month, so its rows stay mounted when a month is added or removed; rows that move to another month's section still remount.)
-- [x] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines. (A hidden ", " after each figure.)
+- [x] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines. (A hidden ", " before each figure but the first.)
 - [ ] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed.
 - [x] `MonthList` takes a `className` no caller passes; drop it or use it. (Dropped.)
 
@@ -877,7 +877,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-504"></a>
 ### FLOW-504 · Display currency toggle and USD-base companies
-- **Type:** PLAN FIRST · **Status:** server and MCP done ([0146](../decisions/0146-company-currency.md)); the screen part is ready for a UI lane: the currency choice in Settings → company, `useCompanyCurrency` reads `base_currency`, Home shows `net_profit_minor` and its change from the `prev_*_minor` fields, the overhead share uses `overhead_share_minor`, and the loan form default · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** server and MCP done ([0147](../decisions/0147-company-currency.md)); the screen part is ready for a UI lane: the currency choice in Settings → company, `useCompanyCurrency` reads `base_currency`, Home shows `net_profit_minor` and its change from the `prev_*_minor` fields, the overhead share uses `overhead_share_minor`, and the loan form default · **Depends on:** —
 - **What:** A per-company `₪`/`$` display choice with mixed totals converted at display time ([0087](../decisions/0087-multi-currency.md)), and a decision on companies whose base currency is USD (there is no company currency column today).
 - **Acceptance:** owner decision; plan approved.
 
@@ -1006,13 +1006,18 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-702"></a>
 ### FLOW-702 · Jev auto mode
-- **Type:** PLAN FIRST · **Status:** ready to plan (owner's go 2026-10-08: plan card after FLOW-703, dev lane 2; build waits on the plan's approval) · **Depends on:** FLOW-703
+- **Type:** PLAN FIRST · **Status:** server side done (#200, decision 0145; plan approved by the owner 2026-10-08, plans/flow-702-jev-auto-mode.md in the project files); app part with a UI lane · **Depends on:** FLOW-703 (done, #177)
 - **What:** When the mode is `auto` and confidence is at or above the threshold, pre-fill the tag marked as AI and undoable in one tap; anomalies above a level always go to review; the toggle is the kill switch. Needs atomic allocation writes first. Show the threshold as a percent choice only in auto mode.
 - **Acceptance:** threshold edge tests; undo restores; audit trail.
+- [x] Anomaly gate: no fill on a flagged line unless Jev scored the flag below 0.5 (decision [0145](../decisions/0145-jev-auto-mode.md)).
+- [x] Income lines auto filled: project (no allocation) and income category.
+- [x] `jev_prefills` audit row per fill, `undo_jev_prefill` and MCP `undo_jev_prefill`; `get_jev_status` adds `prefilled_today` and `prefilled_open`, `get_jev_suggestions` adds `prefilled`.
+- [x] Threshold edge tests (at the threshold and 0.001 below, expense and income); off or shadow stops new fills.
+- [ ] App (UI lane): Settings mode choice הצעות בלבד / מילוי אוטומטי with threshold chips 80/85/90/95% in auto only; "✦ מולא ע״י Jev" with בטל (`undo_jev_prefill`) on a filled card; a held flagged line shows its flag and no fill.
 
 <a id="flow-703"></a>
 ### FLOW-703 · Jev corrections write-back
-- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go 2026-10-08) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (server side, #177); app part with the UI lane · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
 - [x] A change sheet seeded with Jev's category starts with "לזכור לספק הזה" off, so saving never turns the guess into a supplier rule by default (#175).
@@ -1022,7 +1027,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `approve_split_review(review, category)`: set the category and approve a split line in one call (#177).
 - [x] A `none` project answer, never pre-filled, and the overhead project labelled (#177).
 - [x] Finished projects offered on lines dated on or before their last line (#177).
-- [ ] #177 review nits (fold into FLOW-702's server PR): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
+- [x] #177 review nits (done in FLOW-702's server PR, decision 0145; a prefill does not set `pnl_role`): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
 - [x] App (UI lane): the change sheet seeded with a Jev guess starts with remember off, with a test; the split approve calls `approve_split_review(p_id, p_category_id)` instead of two calls; show `no_project` on the card. Done in #175: remember off (above), one `approve_split_review(p_id, p_category_id)` call, `no_project` on the card.
 
 <a id="flow-704"></a>

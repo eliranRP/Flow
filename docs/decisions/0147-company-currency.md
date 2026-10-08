@@ -1,7 +1,7 @@
 # A stored company currency, with no conversion
 
 **Date:** 2026-10-08
-**Status:** Accepted. Replaces the display part of [0087](0087-multi-currency.md) (no ₪/$ toggle and no conversion for now). Amends [0094](0094-usd-totals.md) and [0096](0096-currency-display.md) (the base currency's row comes first, not ILS) and [0129](0129-profit-by-month.md) (an empty month's zero row is in the base currency).
+**Status:** Accepted. Numbered 0146 when merged (the migration and its comments still say 0146, since a merged migration is locked). Replaces the display part of [0087](0087-multi-currency.md) (no ₪/$ toggle and no conversion for now). Amends [0094](0094-usd-totals.md) and [0096](0096-currency-display.md) (the base currency's row comes first, not ILS) and [0129](0129-profit-by-month.md) (an empty month's zero row is in the base currency).
 
 ## Context
 
