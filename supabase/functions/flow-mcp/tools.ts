@@ -624,6 +624,7 @@ function unpaidReport(rows: unknown[]) {
       open_gross_minor: Number(gross),
       open_net_minor: Number(BigInt(String(row.open_net_agorot ?? 0))),
       marked_paid_at: markedAt,
+      document_url: typeof row.document_url === "string" ? row.document_url : null,
     };
   });
   return {
@@ -1149,7 +1150,7 @@ function readTools() {
       months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
     }),
-    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
+    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid), and document_url: the SUMIT document link on pay.sumit.co.il (null until a sync reads it). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
   ];
 }
 

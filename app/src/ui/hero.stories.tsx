@@ -50,7 +50,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const ytd = "הכנסות פחות הוצאות, מ־1 בינואר עד היום";
+const ytd = "הכנסות פחות הוצאות";
 
 export const YearToDate: Story = {
   args: {
@@ -67,7 +67,7 @@ export const ThisMonth: Story = {
   args: {
     label: "רווח נקי החודש",
     agorot: "1840000",
-    explanation: "הכנסות פחות הוצאות, מ־1 בספטמבר עד היום",
+    explanation: "הכנסות פחות הוצאות",
     income: "8200000",
     expense: "6360000",
     pill: "החודש",

@@ -222,7 +222,55 @@ export function mapCrmEntity(entity: Record<string, unknown>): SumitDoc | null {
 export const SUMIT_ALLOWLIST = [
   "https://api.sumit.co.il/crm/schema/listfolders/",
   "https://api.sumit.co.il/crm/data/listentities/",
+  "https://api.sumit.co.il/accounting/documents/list/",
 ] as const;
+
+/** A SUMIT document link the app may open: SUMIT's own download page, nothing else. */
+export const SUMIT_DOCUMENT_URL = /^https:\/\/pay\.sumit\.co\.il\/[^\s"'<>\\]+$/;
+
+/**
+ * FLOW-335. DocumentID to DocumentDownloadURL from one `accounting/documents/list` page. The
+ * DocumentID is the CRM entity ID the sync keys documents by. Links on another host are dropped.
+ */
+export function documentUrls(data: unknown): Map<number, string> {
+  const urls = new Map<number, string>();
+  const documents = data && typeof data === "object" ? (data as Record<string, unknown>).Documents : null;
+  if (!Array.isArray(documents)) return urls;
+  for (const item of documents) {
+    if (!item || typeof item !== "object") continue;
+    const doc = item as Record<string, unknown>;
+    const id = doc.DocumentID;
+    const url = doc.DocumentDownloadURL;
+    if (typeof id !== "number" || !Number.isSafeInteger(id)) continue;
+    if (typeof url !== "string" || url.length > 500 || !SUMIT_DOCUMENT_URL.test(url)) continue;
+    urls.set(id, url);
+  }
+  return urls;
+}
+
+/**
+ * FLOW-335. The open SUMIT invoices (amount left after linked receipts and credit notes, as
+ * list_unpaid counts it) that have no stored link yet, and the earliest of their dates. The sync
+ * reads `documents/list` only for these, so a sync with nothing new to link costs no extra call.
+ */
+export function invoicesMissingLinks(docs: SumitDoc[], linked: ReadonlySet<string>): { ids: number[]; from: string | null } {
+  const open = new Map<number, number>();
+  for (const doc of docs) if (doc.kind === "inv") open.set(doc.sumit_id, doc.gross);
+  for (const doc of docs) {
+    if (doc.orig == null || !open.has(doc.orig)) continue;
+    if (doc.kind === "cred") open.set(doc.orig, (open.get(doc.orig) ?? 0) + doc.gross);
+    if (doc.kind === "rec") open.set(doc.orig, (open.get(doc.orig) ?? 0) - doc.gross);
+  }
+  const ids: number[] = [];
+  let from: string | null = null;
+  for (const doc of docs) {
+    if (doc.kind !== "inv" || linked.has(String(doc.sumit_id))) continue;
+    if (Math.abs(open.get(doc.sumit_id) ?? 0) < 0.005) continue;
+    ids.push(doc.sumit_id);
+    if (from == null || doc.date < from) from = doc.date;
+  }
+  return { ids, from };
+}
 
 export function assertSumitUrl(url: string): void {
   if (!(SUMIT_ALLOWLIST as readonly string[]).includes(url)) {

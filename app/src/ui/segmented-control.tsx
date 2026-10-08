@@ -6,6 +6,8 @@ type Option<T extends string> = {
   label: string;
   /** Drawn instead of the label under 360px. The label stays the accessible name. */
   short?: string;
+  /** The accessible name when it says more than the label ("3 חודשים, חזרה להיום"). */
+  name?: string;
 };
 
 type SegmentedControlProps<T extends string> = {
@@ -86,7 +88,7 @@ export function SegmentedControl<T extends string>({
             aria-checked={selected}
             // With no option selected (a custom period), the first one keeps the group's tab stop.
             tabIndex={selected || (found < 0 && optionIndex === 0) ? 0 : -1}
-            aria-label={option.label}
+            aria-label={option.name ?? option.label}
             disabled={disabled}
             onClick={() => {
               if (disabled) return;

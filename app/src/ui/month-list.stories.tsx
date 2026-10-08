@@ -32,7 +32,14 @@ const TWO: Row[] = [
   { id: "5", title: "אינסטלציה", date: "2026-08-12", minor: 220_075n, currency: "ILS", direction: "expense" },
 ];
 
-const SETS = { three: ROWS, large: LARGE, one: ROWS.slice(0, 2), two: TWO } as const;
+/** September has one expense in each currency, so its two currency lines fit side by side (FLOW-313). */
+const MIXED: Row[] = [
+  { id: "1", title: "חומרי בניין", date: "2026-09-14", minor: 35_000n, currency: "ILS", direction: "expense" },
+  { id: "2", title: "מנוי תוכנה", date: "2026-09-10", minor: 4_000n, currency: "USD", direction: "expense" },
+  { id: "3", title: "אינסטלציה", date: "2026-08-12", minor: 22_000n, currency: "ILS", direction: "expense" },
+];
+
+const SETS = { three: ROWS, large: LARGE, one: ROWS.slice(0, 2), two: TWO, mixed: MIXED } as const;
 
 function MonthListView({ set, complete = true, days = false }: { set: keyof typeof SETS; complete?: boolean; days?: boolean }) {
   const rows: readonly Row[] = SETS[set];
@@ -72,6 +79,7 @@ type Story = StoryObj<typeof meta>;
 export const ThreeMonths: Story = { args: { set: "three" } };
 export const StillLoading: Story = { args: { set: "three", complete: false } };
 export const LargeAmounts: Story = { args: { set: "large" } };
+export const TwoCurrenciesOneRow: Story = { args: { set: "mixed" } };
 export const OneMonth: Story = { args: { set: "one" } };
 
 /** Decision 0120: two months of income and expense rows, no hairlines, 32px between the months. */

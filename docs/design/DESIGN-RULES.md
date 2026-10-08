@@ -56,6 +56,12 @@ Sources: [design-system.md](../../design/system/design-system.md), [implementati
 From [design-system.md](../../design/system/design-system.md) and guide §1:
 
 - Calm and airy. White page, lots of space, few numbers, detail on the next screen.
+- **Light and clean, few words (owner, 2026-10-08).** He turned down every option for the FLOW-401 project page as too busy, with too much data, and noisy. A screen is light, with few words and little data. Before adding a figure, a word or a mark, ask whether it changes what the user does next on this screen. If not, leave it out or put it on the next screen. Checked in every design review and sign-off:
+  - A row stays short: a title, its value, and at most one meta line. Add a mark only when it changes what the user does with that row.
+  - A screen leads with one main figure. Every other figure needs a reason to be there, and Home keeps to its figure budget (§3.5).
+  - Labels are one or two words. Add a help sentence only where an existing rule calls for one (empty state, error, confirmation consequence).
+  - No new legends, keys or "X = Y" explanations on a screen. If a new screen needs one, it shows too much.
+  - When in doubt, draw the lighter option and recommend it.
 - One accent, violet. Filled violet at most about twice per screen area (normally the + button and one primary button).
 - The coloured band is only the top of Home and the Project header.
 - Figures use the main text colour. A loss is `bad` with a minus or ▼, a gain in a change pill is `good` with ▲, and money in is `income` green with no plus. Never colour on the band. [0120](../decisions/0120-income-green-type-scale.md)
@@ -592,6 +598,7 @@ Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-t
 **Don't**
 
 - Don't design busy, data-dense screens. Mercury-like P1 Graphite, P2 Cobalt, and P3 Petrol were rejected as too busy. [0023](../decisions/0023-violet-coloured-top-band.md).
+- Don't add hints, legends, "usually" figures or status chips to every row. The owner rejected a project page that did (FLOW-401, 2026-10-08). Show the one thing that needs attention, and keep the rest on the next screen.
 - Don't pile extra figures, charts, or breakdowns onto Home or Project. Put them on the next screen. Guide §1 P3.
 - Don't use a faint off-white tinted background. Styles A (`#F5F7F9`) and C (`#F3ECE1`) and the "faint off-white" alternative were rejected. The page is clean white, or a clear colour. [0023](../decisions/0023-violet-coloured-top-band.md), [design README](../module-1-project-pnl/design/README.md).
 - Don't use a stiff or thin face. IBM Plex was too stiff. Assistant and Varela Round were too thin. [0023](../decisions/0023-violet-coloured-top-band.md).
