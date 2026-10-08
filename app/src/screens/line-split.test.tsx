@@ -304,6 +304,8 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "הסרה" }));
     expect(await screen.findByText("הפיצול הוסר")).toBeInTheDocument();
     expect(saved).toEqual([[]]);
+    // The confirm sheet's own ביטול leaves with the sheet; only then is "no undo" meaningful.
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
     expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
   });
 
