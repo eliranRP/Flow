@@ -233,6 +233,8 @@ export const projectDetailSchema = z
         /** FLOW-209. A pending line is an unsettled bank line that no total counts yet. Omitted on older payloads. */
         line_status: z.enum(["pending", "posted", "void"]).optional().catch(undefined),
         category: z.string().nullable(),
+        /** Out of the P&L (its category, or the owner took the line out), so month sums leave it out. Omitted on older payloads. */
+        kept_out: z.boolean().optional().catch(undefined),
       }),
     ),
     /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
