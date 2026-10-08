@@ -80,11 +80,14 @@ type LinePnl = {
  * FLOW-124, decision 0135: the server's pnl_state reads the line's parts, so a line split by
  * category is in, out or mixed by its parts. A sample card that changed its override locally
  * passes no state. A loan line keeps its own mark, so its mixed state is not shown.
+ * A line split by category always writes true or false: null lets each part follow its own
+ * category, which the line's category can't predict, so a tap could leave the line as it was.
  */
 export function linePnlState(
   txn: { category_excluded_from_pnl?: boolean; category_suggested?: boolean; pnl_fixed?: boolean; in_pnl?: boolean },
   override: boolean | null,
   state?: "in" | "out" | "mixed" | null,
+  splitByCategory = false,
 ): LinePnl {
   // A loan line ignores the override, so the server's in_pnl is the category's say. Only a loan
   // category stays out as a guess; a loan-split line under a guessed other category counts.
@@ -99,9 +102,11 @@ export function linePnlState(
   const forcedIn = override === true && categoryOut;
   // Back in: true, unless the line's own false is all that keeps it out. Out: false, unless
   // clearing a forced-in override is enough.
-  const next = out
-    ? (override === false && !categoryOut && !partsOut ? null : true)
-    : (forcedIn ? null : false);
+  const next = splitByCategory
+    ? out
+    : out
+      ? (override === false && !categoryOut && !partsOut ? null : true)
+      : (forcedIn ? null : false);
   return { override, categoryOut, out, mixed, partsOut, forcedIn, next };
 }
 
@@ -410,14 +415,15 @@ export function TransactionScreen({
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
   const sampleChanged = sample != null && sampleOverride !== undefined;
-  const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged ? null : txn.pnl_state);
+  const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
+  const splitByCategory = lineSplit != null && lineSplit.parts.length > 0 && lineSplit.partsMatch;
+  const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged ? null : txn.pnl_state, splitByCategory);
   const pnlPill = pnl.out ? (
     <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
   ) : pnl.mixed ? (
     <StatusPill icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusPill>
   ) : pnl.forcedIn ? <StatusPill>ברווח והפסד</StatusPill> : null;
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
-  const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
   // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
   const lineSplitHint = lineSplitRowHint(lineSplit);
   // FLOW-329: ⋯ holds only delete, so it shows only on a manual line. ˄ ˅ keep their place without it.

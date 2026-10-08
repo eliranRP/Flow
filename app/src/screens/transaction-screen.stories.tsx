@@ -169,6 +169,43 @@ export const TransactionPnlLoanLine: Story = {
   ),
 };
 
+/** FLOW-124: the category is kept out, so the hint names it and the switch brings back this line only. */
+export const TransactionPnlCategoryOut: Story = {
+  name: "P&L kept out by its category",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ category_name: "פיקדונות", category_excluded_from_pnl: true, in_pnl: false, pnl_state: "out" })} sampleCategories={[{ id: "c1", name: "פיקדונות" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-124: one line of a kept-out category brought back in shows the "ברווח והפסד" pill. */
+export const TransactionPnlForcedIn: Story = {
+  name: "P&L forced back in",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ category_name: "פיקדונות", category_excluded_from_pnl: true, in_pnl_override: true, in_pnl: true, pnl_state: "in" })} sampleCategories={[{ id: "c1", name: "פיקדונות" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-329: ⋯ shows on a manual line only and holds מחיקה; the play opens it so clip-check measures it. */
+export const TransactionManualMore: Story = {
+  name: "Manual line ⋯ sheet",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ source: "manual", supplier_name: "רישום ידני" })} sampleCategories={[{ id: "c1", name: "חומרים" }]} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
+  },
+};
+
 /** FLOW-303: opened from a list, so ˄ ˅ sit before ⋯. The middle row has both. */
 export const TransactionInList: Story = {
   name: "In a list",

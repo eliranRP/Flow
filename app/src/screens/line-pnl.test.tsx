@@ -139,4 +139,11 @@ describe("linePnlState with the server's state", () => {
     expect(linePnlState({ category_excluded_from_pnl: true }, true, "in")).toMatchObject({ out: false, forcedIn: true, next: null });
     expect(linePnlState({ pnl_fixed: true, in_pnl: true }, null, "mixed")).toMatchObject({ out: false, mixed: false });
   });
+
+  it("a line split by category always writes true or false, never null", () => {
+    // Its parts follow their own categories under null, which the line's category can't predict.
+    expect(linePnlState({ category_excluded_from_pnl: false }, false, "out", true)).toMatchObject({ out: true, next: true });
+    expect(linePnlState({ category_excluded_from_pnl: true }, true, "in", true)).toMatchObject({ out: false, next: false });
+    expect(linePnlState({ category_excluded_from_pnl: false }, null, "mixed", true)).toMatchObject({ next: false });
+  });
 });
