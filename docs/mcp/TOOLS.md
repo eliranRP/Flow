@@ -50,6 +50,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category_delete"` | `id` | the category id `delete_category` used |
 | `undo` `kind: "category_move"` | `id` | the source category id `move_category_lines` used |
 | `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
+| `rename_category` | `category_id` | `list_categories` `categories[].id` |
+| `undo` `kind: "category_name"` | `id` | the category id `rename_category` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -335,6 +337,14 @@ Moves every line of one category to another of the same kind, and with them spli
 ```
 
 Sets the company's base currency (owner only), three capital letters. Nothing is converted. The base currency's row comes first in every `by_currency` list, it is the default for a new loan, a new project's investment currency and `get_breakdown`'s lines, and the base-currency twins of the ILS-only figures are in it: `by_currency[].prev_income_minor`, `prev_expense_minor`, `prev_net_profit_minor` (null without a period), `get_home` `net_profit_minor`, `get_project` `overhead_share_minor` and `get_profit_months` `months[].overhead_share_minor`. Each of those responses carries `base_currency`. Output `data`: `id` (the company), `base_currency`, `prior` and `undo_kind: "company_currency"`. A bad code is `validation`. Undo, with the company id, puts the prior currency back; it is `conflict` once the currency was changed again ([0147](../decisions/0147-company-currency.md)).
+
+### rename_category
+
+```json
+{ "idempotency_key": "rename-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "name": "חשמל ומים" }
+```
+
+Renames a category (owner only). `name` is trimmed, 2 to 120 letters, and not another category's of the same kind; an income and an expense category may share a name. The id stays, so its lines, split parts, loans, remembered suppliers and flags stay. Loan categories can be renamed; match them by `loan_part`. Output `data`: `category_id`, `name`, `prior` (the old name), `undo_kind: "category_name"` and `id`. Refused: `category already exists`, `category name is too short`, `category name is too long`, `category not found`. Undo, with the category id, puts the old name back; it is `conflict` once the category was renamed again or while another category of the kind has the old name. A renamed `העברות` or `הכנסה אחרת` no longer gets the Mercury import's hint, which matches by name ([0148](../decisions/0148-category-rename.md)).
 
 ### set_overhead_project
 
