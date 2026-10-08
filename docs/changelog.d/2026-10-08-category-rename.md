@@ -1,0 +1,1 @@
+A category can be renamed, keeping its lines, loans and flags (`rename_category`, MCP `rename_category` with undo `category_name`), for the ask that every category name be in Hebrew ([0148](decisions/0148-category-rename.md)).
