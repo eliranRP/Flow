@@ -608,6 +608,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.indexOf("if (( ! full )); then") < stamps[0]);
   assert.ok(stamps[1] > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
   assert.match(local, /--full\) full=1 ;;/);
+  // FLOW-813: --full and FLOW_LOCAL_CI_NO_SKIP never skip a part.
+  assert.ok(local.includes('if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi'));
+  assert.match(local, /green\(\) \{\n  \(\( skips \)\) && /);
   const hook = readFileSync(new URL("../.githooks/pre-push", import.meta.url), "utf8");
   assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" <\/dev\/null/);
   assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" --full <\/dev\/null/);

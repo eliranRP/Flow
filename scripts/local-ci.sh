@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # The pull-request gate. Pull requests have no GitHub CI: the pre-push hook (.githooks/pre-push) runs
 # this script, and main runs the full suite on GitHub before each batch deploy.
-#   default (about 4 minutes): lint, the migration checks, Deno, typecheck, unit and connector tests,
+#   default (about 4 minutes cold, under 2 when the app is unchanged): lint, the migration checks,
+#     Deno, typecheck, unit and connector tests,
 #     both dist builds, and the Storybook tests.
 #   --full (about 12 minutes): adds the every-story smoke, local Supabase (pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
 # On success it writes .git/flow-local-ci with the commit it passed on, so the hook can skip a repeat.
+# FLOW-813: the default run skips the app parts (typecheck, builds, app unit tests, Storybook) whose
+# inputs (the git tree of app, packages, design, _shared and the root configs) already passed here,
+# and runs only the app tests related to the files changed since the last green commit when only
+# .ts/.tsx sources changed. --full, or FLOW_LOCAL_CI_NO_SKIP=1, runs everything. The cache of green
+# runs is $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache.
 set -euo pipefail
 
 full=0
@@ -59,6 +65,53 @@ fi
 pnpm install --frozen-lockfile --silent
 git fetch -q origin main || true
 
+# FLOW-813. A part whose inputs (git trees) passed before is skipped in the default run.
+cache="${FLOW_LOCAL_CI_CACHE:-$(git rev-parse --git-common-dir)/flow-local-ci-cache}"
+mkdir -p "$cache"
+skips=1
+if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi
+# What the app reads: its sources, the shared packages, the design tokens, _shared and the
+# migrations (tests import both), the scripts (vite.config.ts imports one), the root configs and the
+# untracked .env (vite's envDir).
+app_inputs=(app packages design supabase/functions/_shared supabase/migrations scripts package.json
+  pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json eslint.config.js)
+inputs_hash() {
+  { git ls-tree -r HEAD -- "$@"; sha256sum .env 2>/dev/null || true; } | sha256sum | cut -c1-40
+}
+app_key="$(inputs_hash "${app_inputs[@]}")"
+typecheck_key="typecheck-$app_key"
+build_key="build-$app_key"
+green() {
+  (( skips )) && [[ -f "$cache/$1" ]]
+}
+mark_green() {
+  touch "$cache/$1"
+}
+# The newest ancestor of HEAD (within 200 commits) where a test project last passed in full or in
+# part, when every file changed since then is an app, shared or _shared .ts/.tsx source or a
+# migration (a test globs them): the vitest module graph finds the tests those reach. Anything else
+# (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
+changed_base() {
+  local project="$1" commit
+  (( skips )) || return 1
+  local changed removed
+  for commit in $(git rev-list --max-count=200 HEAD); do
+    if [[ -f "$cache/commit-$project-$commit" ]]; then
+      # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
+      # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
+      changed="$(git diff --name-only "$commit" HEAD -- "${app_inputs[@]}")"
+      removed="$(git diff --name-only --diff-filter=DR "$commit" HEAD -- "${app_inputs[@]}")"
+      if [[ -n "$removed" ]] || grep -qx 'app/src/test-setup.ts' <<<"$changed" \
+        || [[ -n "$(grep -vE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^supabase/migrations/[^/]+\.sql$' <<<"$changed" || true)" ]]; then
+        return 1
+      fi
+      echo "$commit"
+      return 0
+    fi
+  done
+  return 1
+}
+
 phase "lint and check: lint, static checks, and builds, side by side"
 logs="$(mktemp -d)"
 lint_part() {
@@ -81,10 +134,25 @@ static_part() {
   node scripts/check-migration-transaction.mjs
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
+}
+typecheck_part() {
   pnpm typecheck
 }
 unit_part() {
-  pnpm test:unit
+  if (( ! skips )); then
+    pnpm test:unit
+  else
+    # test:unit without the @flow/app suite, which app_unit_part runs (or skips) on its own.
+    local script rest
+    script="$(node -p 'require("./package.json").scripts["test:unit"]')"
+    rest="${script/pnpm -r --if-present test/pnpm -r --if-present --filter !flow --filter !@flow/app test}"
+    if [[ "$rest" == "$script" ]]; then
+      echo "local-ci: test:unit changed shape; running all of it." >&2
+      pnpm test:unit
+      return
+    fi
+    bash -c "$rest"
+  fi
   pnpm test:connectors
 }
 build_part() {
@@ -96,12 +164,50 @@ build_part() {
   pnpm check:reviewer-bundle
   test ! -f app/dist/build.txt
 }
-# Runs the named parts at the same time and prints the log of each one that fails.
+# One vitest project of @flow/app: skipped when its inputs passed, only the related tests when a
+# green base is near, else all of it. A pass records the tree and the commit.
+app_tests() {
+  local project="$1" base
+  if green "$project-$app_key"; then
+    echo "local-ci: $project tests skipped: these app inputs already passed."
+    return 0
+  fi
+  if [[ "$project" == storybook ]]; then
+    pnpm --filter @flow/app exec playwright install chromium
+  fi
+  if base="$(changed_base "$project")"; then
+    echo "local-ci: $project tests related to the changes since ${base:0:7}."
+    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests
+    # The module graph doesn't see a glob of the migrations: run the tests that read them by name.
+    local globbing
+    globbing="$(git grep -l 'supabase/migrations' -- 'app/src/*.test.ts' 'app/src/*.test.tsx' || true)"
+    if [[ "$project" == unit && -n "$globbing" ]] \
+      && [[ -n "$(git diff --name-only "$base" HEAD -- supabase/migrations)" ]]; then
+      # shellcheck disable=SC2086
+      pnpm --filter @flow/app exec vitest run --project unit ${globbing//app\//}
+    fi
+  elif [[ "$project" == unit ]]; then
+    pnpm --filter @flow/app test
+  else
+    pnpm test:storybook
+  fi
+  mark_green "$project-$app_key"
+  touch "$cache/commit-$project-$head"
+}
+# Runs the named parts at the same time and prints the log of each one that fails. A part named
+# with key=part is skipped when that key passed before, and records it when it passes.
 run_parts() {
-  local part entry
+  local entry part key
   local pids=() failed=()
-  for part in "$@"; do
-    ( set -euo pipefail; "${part}_part" ) >"$logs/$part.log" 2>&1 &
+  for entry in "$@"; do
+    part="${entry#*=}"
+    key=""
+    [[ "$entry" == *=* ]] && key="${entry%%=*}"
+    if [[ -n "$key" ]] && green "$key"; then
+      echo "local-ci: $part skipped: these inputs already passed."
+      continue
+    fi
+    ( set -euo pipefail; "${part}_part"; [[ -z "$key" ]] || mark_green "$key" ) >"$logs/$part.log" 2>&1 &
     pids+=("$!:$part")
   done
   for entry in "${pids[@]}"; do
@@ -116,15 +222,28 @@ run_parts() {
     exit 1
   fi
 }
-run_parts lint static build
-# The unit tests run alone: next to the builds, slow renders miss Testing Library's 1-second wait.
-phase "check: unit and connector tests"
-run_parts unit
-rm -rf "$logs"
+if (( skips )); then
+  # The server tests are short and run beside the static checks.
+  run_parts lint static unit "$typecheck_key=typecheck" "$build_key=build"
+  rm -rf "$logs"
+  # The app unit tests run alone: next to the builds, slow renders miss Testing Library's 1-second wait.
+  phase "check: app unit tests"
+  app_tests unit
+else
+  run_parts lint static "$typecheck_key=typecheck" "$build_key=build"
+  # pnpm test:unit includes the app unit tests, so it runs alone (see above).
+  phase "check: unit and connector tests"
+  run_parts unit
+  rm -rf "$logs"
+fi
 
 phase "check: Storybook"
-pnpm --filter @flow/app exec playwright install chromium
-pnpm test:storybook
+if (( skips )); then
+  app_tests storybook
+else
+  pnpm --filter @flow/app exec playwright install chromium
+  pnpm test:storybook
+fi
 
 if (( ! full )); then
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
