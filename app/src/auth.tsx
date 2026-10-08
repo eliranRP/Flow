@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "./lib/supabase";
 import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-review";
 import { forgetCompanyRole, keepOnlyCompanyRole } from "./company-role-cache";
+import { keepSplitDraftsFor } from "./split-drafts";
 
 export type AuthStatus = "loading" | "anon" | "authed" | "unconfigured";
 
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       noteJevAuthUser(nextId);
       // Also covers a session that ended while no tab was open: no "previous" here.
       keepOnlyCompanyRole(nextId);
+      keepSplitDraftsFor(nextId);
       if (previous != null && previous !== nextId) {
         // Sign-out, an expired session, another tab, or a user switch. The
         // query keys don't name the user, so nothing cached may outlive them.
