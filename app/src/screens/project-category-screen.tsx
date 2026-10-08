@@ -1,0 +1,123 @@
+import { useState } from "react";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
+import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
+import { periodFromSearch, periodLabel } from "../period";
+import { useHomePreview, usePreviewSearch } from "../preview";
+import { screenPhase } from "../query-phase";
+import { useProjectCategoryQuery } from "../use-books";
+import { useHeldOrder } from "../list-hold";
+import { txnListState } from "../txn-nav";
+import { Button } from "../ui/button";
+import { formatDayMonth } from "../ui/date-math";
+import { EmptyState } from "../ui/empty-state";
+import { DocumentIcon } from "../ui/icons";
+import { ListRow } from "../ui/list-row";
+import { MonthList } from "../ui/month-list";
+import { ScreenHeader } from "../ui/screen-header";
+import { ScreenState } from "../ui/screen-state";
+
+type CategorySample = {
+  categoryName: string;
+  projectName: string;
+  /** The rows' currency. Default ILS. */
+  currency?: string;
+  rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
+  /** Shows עוד תנועות until the rest of the sample rows are revealed. */
+  pageSize?: number;
+  /** FLOW-107. Loan split marks by row id, for stories. */
+  loanMarks?: Record<string, LoanMark>;
+};
+
+/** The drill-down for one category row; a row in another currency names it (`?currency=`). */
+export function categoryHref(projectId: string, categoryId: string, currency: string, search: string): string {
+  const path = `/projects/${projectId}/categories/${categoryId}`;
+  if (currency === "ILS") return `${path}${search}`;
+  return `${path}${search}${search === "" ? "?" : "&"}currency=${encodeURIComponent(currency)}`;
+}
+
+export function ProjectCategoryScreen({
+  sample,
+  backTo: backOverride,
+  rowHref,
+}: {
+  sample?: CategorySample;
+  backTo?: string;
+  rowHref?: (row: { id: string }) => string;
+} = {}) {
+  const { projectId = "", categoryId = "" } = useParams();
+  const [params] = useSearchParams();
+  const search = usePreviewSearch();
+  const preview = useHomePreview();
+  const location = useLocation();
+  // The project's period travels in the URL, so the lines match the category row that opened them.
+  const period = periodFromSearch(new URLSearchParams(location.search));
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
+  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
+  const [sampleOpen, setSampleOpen] = useState(false);
+  const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
+  const heldRows = useHeldOrder(loadedRows, (row) => row.id);
+  const liveMarks = useLoanMarks(heldRows.map((row) => row.id), sample == null);
+  const back = `/projects/${projectId}${search}`;
+  if (phase.kind === "loading" || phase.kind === "error") {
+    return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
+  }
+  const first = category.data?.pages[0];
+  if (!sample && (first == null)) {
+    return <ScreenHeader title="קטגוריה" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
+  }
+  const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
+  const projectName = [sample?.projectName ?? first?.project_name ?? "", period ? periodLabel(period, undefined, "project") : ""]
+    .filter((part) => part !== "")
+    .join(" · ");
+  const rowCurrency = sample?.currency ?? first?.currency ?? "ILS";
+  const allRows = heldRows;
+  const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
+  const rowIds = rows.map((row) => row.id);
+  const more = sample?.pageSize != null ? !sampleOpen && allRows.length > sample.pageSize : !sample && category.hasNextPage;
+  return (
+    <div>
+      <ScreenHeader title={name} subtitle={projectName} backTo={backOverride ?? back} />
+      {rows.length === 0 ? (
+        <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
+      ) : (
+        <MonthList
+          rows={rows}
+          keyOf={(txn) => txn.id}
+          dateOf={(txn) => txn.doc_date}
+          amountOf={(txn) => ({ minor: txn.amount_net, currency: rowCurrency, direction: "expense" })}
+          complete={!more}
+          renderRow={(txn) => (
+            <ListRow
+              variant="transaction"
+              title={txn.description}
+              {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
+              agorot={txn.amount_net}
+              currency={rowCurrency}
+              sign="out"
+              source="invoice"
+              href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
+              state={rowHref ? undefined : txnListState(rowIds, txn.id, `${location.pathname}${location.search}`)}
+            />
+          )}
+        />
+      )}
+      {more ? (
+        <div className="ui-page-pad">
+          <Button
+            variant="pill"
+            busy={!sample && category.isFetchingNextPage}
+            onClick={() => {
+              if (sample) {
+                setSampleOpen(true);
+                return;
+              }
+              void category.fetchNextPage();
+            }}
+          >
+            עוד תנועות
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,1 @@
+`list_categories` (app and MCP) now gives each category `lines` (lines on the books in it, whole or by a split part, the ones a delete sends back to review), `split_lines` (how many of those are split) and `loan_used` (a loan uses it, so delete is refused), for the delete confirm ([FLOW-405](backlog/TASKS.md#flow-405), [0144](decisions/0144-category-delete-and-move.md)).
