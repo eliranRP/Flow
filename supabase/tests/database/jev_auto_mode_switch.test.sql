@@ -1,6 +1,4 @@
--- pgTAP for supabase/pending/20261004120000_jev_auto_mode.sql.
--- CI does not load supabase/pending. Move this file to supabase/tests/database
--- in the same change that moves the migration into supabase/migrations and the lock.
+-- pgTAP for 20261012030000_jev_auto_mode_switch.sql (FLOW-702): mode auto can be stored.
 
 begin;
 

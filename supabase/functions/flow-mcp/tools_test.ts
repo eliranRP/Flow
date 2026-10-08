@@ -429,6 +429,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_company_currency",
     "rename_category",
     "set_category_group",
+    "set_jev_mode",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -492,6 +493,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_company_currency",
     "rename_category",
     "set_category_group",
+    "set_jev_mode",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -3759,7 +3761,7 @@ Deno.test("loan kind tools are described", () => {
 Deno.test("list_unpaid returns minor units and open and marked totals per currency and direction", async () => {
   const rows = [
     { id: TXN, description: "Invoice 1", doc_date: "2026-06-01", currency: "ILS", direction: "income", project_name: "North", customer_name: "Client A", open_gross_agorot: 11800, open_net_agorot: 10000, marked_paid_at: null },
-    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00" },
+    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00", document_url: "https://pay.sumit.co.il/example/doc-2" },
     { id: PROJECT_B, description: "Invoice 3", doc_date: "2026-06-03", currency: "USD", direction: "income", project_name: null, customer_name: null, open_gross_agorot: 2500, open_net_agorot: 2500, marked_paid_at: null },
     { id: CATEGORY, description: "Supplier bill", doc_date: "2026-06-04", currency: "ILS", direction: "expense", project_name: null, customer_name: null, open_gross_agorot: -5000, open_net_agorot: -5000, marked_paid_at: null },
   ];
@@ -3772,7 +3774,9 @@ Deno.test("list_unpaid returns minor units and open and marked totals per curren
   assertEquals(data.invoices[1], {
     id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null,
     customer_name: "Client B", open_gross_minor: 5900, open_net_minor: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00",
+    document_url: "https://pay.sumit.co.il/example/doc-2",
   });
+  assertEquals(data.invoices[0].document_url, null);
   assertEquals(data.totals, [
     { currency: "ILS", direction: "expense", open_gross_minor: -5000, marked_gross_minor: 0 },
     { currency: "ILS", direction: "income", open_gross_minor: 11800, marked_gross_minor: 5900 },
@@ -4125,6 +4129,36 @@ Deno.test("get_project_categories and set_category_group forward their input (FL
   const notFound = await callTool("get_project_categories", { id: CATEGORY }, ["read"], missing);
   assertEquals(notFound.isError, true);
   if (!notFound.structuredContent.ok) assertEquals(notFound.structuredContent.error.code, "not_found");
+});
+
+Deno.test("set_jev_mode forwards the switch, mode and threshold, undo takes jev_mode (#231 r1)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "jev_mode", mode: "auto" } } }));
+  const set = await callTool("set_jev_mode", { idempotency_key: "jm-1", enabled: true, mode: "auto", threshold: 0.85 }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_jev_mode", body: { p_idempotency_key: "jm-1", p_enabled: true, p_mode: "auto", p_threshold: 0.85 } });
+  await callTool("set_jev_mode", { idempotency_key: "jm-2", enabled: false }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_set_jev_mode", body: { p_idempotency_key: "jm-2", p_enabled: false, p_mode: null, p_threshold: null } });
+  const undo = await callTool("undo", { idempotency_key: "u-jm", kind: "jev_mode", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-jm", p_kind: "jev_mode", p_id: CATEGORY } });
+
+  const denied = await callTool("set_jev_mode", { idempotency_key: "k", enabled: true }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k" },
+    { idempotency_key: "k", enabled: "yes" },
+    { idempotency_key: "k", enabled: true, mode: "live" },
+    { idempotency_key: "k", enabled: true, threshold: 0.49 },
+    { idempotency_key: "k", enabled: true, threshold: 1.01 },
+    { idempotency_key: "k", enabled: true, company_id: CATEGORY },
+  ]) {
+    const result = await callTool("set_jev_mode", input, ["write"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(input));
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
 });
 
 Deno.test("set_company_currency forwards the code, undo takes company_currency (FLOW-504)", async () => {

@@ -197,6 +197,11 @@
   margin: var(--space-2) 0 var(--space-4);
 }
 
+/* FLOW-702: the mode and the threshold stack in the open panel, with room before the next section. */
+.ui-jev-options-panel {
+  padding-block: var(--space-2) var(--space-4);
+}
+
 /* At 34px (decision 0120) a one-word title and its action pill can pass 320 together; the action
    then wraps under the title instead of clipping it. */
 .ui-page-title-row {

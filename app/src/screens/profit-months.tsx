@@ -1,7 +1,7 @@
 import { formatAmountText, type ProfitMonth, type ProfitMonths } from "@flow/shared";
 import type { ReactNode } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { monthPeriod, periodFromSearch, windowLabel, type PeriodChoice } from "../period";
+import { allTime, monthPeriod, periodFromSearch, windowLabel, type PeriodChoice } from "../period";
 import { withPeriodSearch } from "../project-period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -76,7 +76,7 @@ function countWords(count: number, one: string, many: string): string {
 export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "ILS"): string | undefined {
   if (data == null) return undefined;
   const total = data.months.length;
-  if (total === 0) return "אין חודשים בתקופה הזו";
+  if (total === 0) return EMPTY_TITLE;
   let profit = 0;
   let loss = 0;
   let open = 0;
@@ -96,12 +96,17 @@ export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "
   return parts.length === 0 ? head : `${head} · ${parts.join(", ")}`;
 }
 
+const EMPTY_TITLE = "אין עדיין חודשים עם תנועות";
+const EMPTY_BODY = "חודשים עם הכנסות או הוצאות של הפרויקט יופיעו כאן.";
+
 export type ProfitMonthsSample = { projectName: string; data: NonNullable<ProfitMonths> };
 
 /**
- * The project's months for its period, newest first (profit by period, option A, plan §4). Each
- * row is the month, "נכנס · יצא", and the month's profit; a loss is `bad` with a minus. A tap
- * opens the same project screen with that month as its period. No chart (DESIGN-RULES §5).
+ * Every month of the project since its first line, newest first (FLOW-337, owner pick 2026-10-08):
+ * the page reads get_profit_months with no dates, which runs from the project's first month with a
+ * line to the current month (decision 0129), whatever period the band shows. Each row is the month,
+ * "נכנס · יצא", and the month's profit; a loss is `bad` with a minus. A tap opens the project with
+ * that month as its period; Back returns to the project on its own period. No chart (DESIGN-RULES §5).
  */
 export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } = {}) {
   const { projectId = "" } = useParams();
@@ -110,8 +115,10 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   const preview = useHomePreview();
   const books = useBooks();
   const companyCurrency = useCompanyCurrency();
+  // The project's own period: Back returns to it unchanged. The months themselves are the whole project.
   const period: PeriodChoice = periodFromSearch(new URLSearchParams(location.search)) ?? books.period;
-  const months = useProfitMonthsQuery(sample ? "" : projectId, period);
+  const whole = allTime();
+  const months = useProfitMonthsQuery(sample ? "" : projectId, whole);
   const project = useProjectQuery(sample ? "" : projectId, period);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, months);
   const data = sample?.data ?? months.data ?? null;
@@ -125,7 +132,9 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   const mainCurrency = currencies[0] ?? companyCurrency;
   const subtitle = data == null
     ? undefined
-    : `${windowLabel(period, undefined, "project")} · ${shownTotal < 0n ? "הפסד" : "רווח"} ${formatAmountText(shownTotal, mainCurrency)}${afterOverhead ? " · אחרי הוצאות כלליות" : ""}`;
+    : rows.length === 0
+      ? windowLabel(whole, undefined, "project")
+      : `${windowLabel(whole, undefined, "project")} · ${shownTotal < 0n ? "הפסד" : "רווח"} ${formatAmountText(shownTotal, mainCurrency)}${afterOverhead ? " · אחרי הוצאות כלליות" : ""}`;
   const projectPath = `/projects/${projectId || (data?.project_id ?? "")}`;
   return (
     <ScreenState
@@ -135,27 +144,26 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
       backTo={`${projectPath}${withPeriodSearch(search, period)}`}
       phase={phase.kind === "ready" && data == null ? { kind: "empty" } : phase}
       onRetry={() => { void months.refetch(); }}
-      empty={<EmptyState icon={<ChartIcon />} title="אין חודשים בתקופה הזו" body="חודשים עם הכנסות או הוצאות של הפרויקט יופיעו כאן." />}
+      empty={<EmptyState icon={<ChartIcon />} title={EMPTY_TITLE} body={EMPTY_BODY} />}
     >
+      {/* The page is already the whole project, so an empty one has no wider period to offer. */}
       {rows.length === 0 ? (
-        <EmptyState icon={<ChartIcon />} title="אין חודשים בתקופה הזו" body="חודשים עם הכנסות או הוצאות של הפרויקט יופיעו כאן." />
+        <EmptyState icon={<ChartIcon />} title={EMPTY_TITLE} body={EMPTY_BODY} />
       ) : (
-        <>
-          <List>
-            {rows.map((month) => (
-              <MonthRow
-                key={month.month}
-                month={month}
-                title={monthTitle(month.month, newestYear)}
-                afterOverhead={afterOverhead}
-                currencies={currencies}
-                baseCurrency={baseCurrency}
-                href={`${projectPath}${withPeriodSearch(search, monthPeriod(month.month))}`}
-              />
-            ))}
-          </List>
-          <p className="ui-page-pad t-hint ui-months-note">הקשה על חודש פותחת את הפרויקט עם החודש הזה, והתנועות שלו מתחת לסיכום.</p>
-        </>
+        // FLOW-335: no explainer under the list; each row carries a chevron (as FLOW-328 did elsewhere).
+        <List>
+          {rows.map((month) => (
+            <MonthRow
+              key={month.month}
+              month={month}
+              title={monthTitle(month.month, newestYear)}
+              afterOverhead={afterOverhead}
+              currencies={currencies}
+              baseCurrency={baseCurrency}
+              href={`${projectPath}${withPeriodSearch(search, monthPeriod(month.month))}`}
+            />
+          ))}
+        </List>
       )}
     </ScreenState>
   );
@@ -174,7 +182,8 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
         <span key={row.currency}>
           {index > 0 ? " · " : null}
           נכנס{" "}
-          <bdi dir="ltr" className={row.income_minor > 0n ? "ui-num ui-income" : "ui-num"}>{formatAmountText(row.income_minor, row.currency)}</bdi>
+          {/* Muted like the rest of the hint: green is for an income amount in the amount slot (0120). */}
+          <bdi dir="ltr" className="ui-num">{formatAmountText(row.income_minor, row.currency)}</bdi>
           {" · "}יצא{" "}
           <bdi dir="ltr" className="ui-num">{formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}</bdi>
         </span>
