@@ -30,10 +30,12 @@ function roleFromRow(userId: string, data: { id?: unknown; owner_id?: unknown } 
 /**
  * Viewer when this session can read a company it does not own.
  * The role stays loading until that read settles. A failed read uses the last
- * role saved for this user and company. With nothing saved, the role is
- * unknown: write controls stay hidden, and a later focus or reconnect tries
- * again. A missing company row is an owner with no company yet. The key
- * includes the user id.
+ * role saved for this user. The cache is keyed by user only: a user reads one
+ * company (their own, or the demo one as a viewer), and the failed read is
+ * the one that would name the company. The server refuses a viewer's writes
+ * either way. With nothing saved, the role is unknown: write controls stay
+ * hidden, and a later focus or reconnect tries again. A missing company row
+ * is an owner with no company yet.
  */
 export function useCompanyRole(): CompanyRole {
   const pinned = useContext(ViewerContext);
