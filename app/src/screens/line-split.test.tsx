@@ -198,7 +198,13 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "הסרה" }));
     expect(await screen.findByText("הפיצול הוסר", undefined, { timeout: 5000 })).toBeInTheDocument();
     await waitFor(() => { expect(saved[0]).toEqual([]); }, { timeout: 5000 });
-    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }, { timeout: 5000 }));
+    // The confirm sheet has its own ביטול, so press the toast's action, not whichever button is found first.
+    const undo = await waitFor(() => {
+      const action = document.querySelector(".ui-toast-host .ui-toast-action");
+      if (!(action instanceof HTMLButtonElement) || action.getAttribute("aria-label") !== "ביטול") throw new Error("no ביטול on the toast yet");
+      return action;
+    }, { timeout: 5000 });
+    fireEvent.click(undo);
     await waitFor(() => {
       expect(saved[1]).toEqual([
         { category_id: "c-elec", project_id: "p-herz", amount_minor: 144_000 },
