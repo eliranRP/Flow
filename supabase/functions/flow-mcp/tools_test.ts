@@ -376,6 +376,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_sync_status",
     "get_breakdown",
     "get_jev_status",
+    "get_jev_accuracy",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -2628,4 +2629,30 @@ Deno.test("get_jev_status passes the status through and refuses a failed read", 
   assertEquals(extra.isError, true);
   const writeOnly = await callTool("get_jev_status", {}, ["write"], () => Promise.resolve({ status: 200, json: status }));
   assertEquals(writeOnly.isError, true);
+});
+
+Deno.test("get_jev_accuracy checks its dates and passes the report through", async () => {
+  const report = { lines: 5, all_matched: 3, bands: [] };
+  const calls: Array<[string, unknown]> = [];
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    return Promise.resolve({ status: 200, json: report });
+  };
+  const all = await callTool("get_jev_accuracy", {}, ["read"], rpc);
+  assertEquals(all.structuredContent, { ok: true, data: report });
+  const month = await callTool("get_jev_accuracy", { from: "2026-10-01", to: "2026-10-31" }, ["read"], rpc);
+  assertEquals(month.isError, false);
+  assertEquals(calls, [
+    ["mcp_jev_accuracy", { p_from: null, p_to: null }],
+    ["mcp_jev_accuracy", { p_from: "2026-10-01", p_to: "2026-10-31" }],
+  ]);
+  assertEquals((await callTool("get_jev_accuracy", { from: "2026-10-31", to: "2026-10-01" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_jev_accuracy", { from: "yesterday" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_jev_accuracy", { basis: "cash" }, ["read"], rpc)).isError, true);
+  assertEquals(calls.length, 2);
+  const refused = await callTool("get_jev_accuracy", {}, ["read"], () => Promise.resolve({ status: 400, json: null }));
+  assertEquals(refused.isError, true);
+  const writeOnly = await callTool("get_jev_accuracy", {}, ["write"], rpc);
+  assertEquals(writeOnly.isError, true);
+  assertEquals(calls.length, 2);
 });

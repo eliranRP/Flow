@@ -309,6 +309,10 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 `mcp_jev_status`, no arguments ([0124](../decisions/0124-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (the end of the latest run, or its start while it runs; null before the first), and `lines_without_suggestion` (open expense lines in לאישור with no Jev suggestion for the pinned model, including lines waiting to retry after a failure). Counts only; no line text.
 
+### get_jev_accuracy
+
+`mcp_jev_accuracy`, optional `from` and `to` (`YYYY-MM-DD`, inclusive, by the UTC day the review was approved or changed; omit both for all time; `from` after `to` is `validation`) ([0126](../decisions/0126-jev-outcomes.md)). Read tool. Output `data`: `from`, `to`, `threshold`, `lines` (resolved lines that had a Jev suggestion), `all_matched` (every compared field matched), `project_compared`, `project_matched`, `category_compared`, `category_matched`, `at_threshold` (`lines`, `all_matched` for confidence at or above `threshold`, what auto mode would pre-fill), and `bands[]` (`band` high/medium/low, `min` 0.9/0.7/0, `lines`, `all_matched`). A shared, overhead or multi-project line is not compared on project; a line split by category is not compared on category. An undone approval drops out. Counts only.
+
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
 
 ## Loans · cycle 5

@@ -29,6 +29,7 @@ export const READ_TOOL_NAMES = [
   "get_sync_status",
   "get_breakdown",
   "get_jev_status",
+  "get_jev_accuracy",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -75,6 +76,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
   get_jev_status: new Set(),
+  get_jev_accuracy: new Set(["from", "to"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -746,6 +748,10 @@ function readTools() {
       offset: { type: "integer" },
     }),
     toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, and lines_without_suggestion (open expense lines in review that Jev has not labelled yet). Jev only suggests a project and category; it never approves a line. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
+    toolSpec("get_jev_accuracy", "How often Jev's suggestions matched what the owner filed, for lines resolved in a period (from and to are YYYY-MM-DD, by the UTC day the review was approved or changed; omit both for all time). lines counts resolved lines that had a Jev suggestion. all_matched counts lines where every compared field matched. project_compared/project_matched and category_compared/category_matched count each field; a shared, overhead or multi-project line is not compared on project, and a line split by category is not compared on category. at_threshold has lines and all_matched for suggestions at or above the company's threshold, which is what auto mode would pre-fill. bands splits by confidence: high from 0.9, medium from 0.7, low below.", {
+      from: { type: "string" },
+      to: { type: "string" },
+    }),
   ];
 }
 
@@ -1482,6 +1488,20 @@ export async function callTool(
       return fail("refused", READ_REFUSED);
     }
     return ok(status);
+  }
+
+  if (name === "get_jev_accuracy") {
+    const from = dateOf(args.from);
+    if (typeof from !== "string" && from != null) return from;
+    const to = dateOf(args.to);
+    if (typeof to !== "string" && to != null) return to;
+    if (from != null && to != null && from > to) return fail("validation", "validation");
+    const result = await rpc("mcp_jev_accuracy", { p_from: from, p_to: to });
+    const report = result.json;
+    if (result.status >= 400 || report === null || typeof report !== "object" || Array.isArray(report)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(report);
   }
 
   if (name === "get_breakdown") {

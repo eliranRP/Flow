@@ -104,3 +104,7 @@ unset SERVICE_ROLE_KEY
 The deploy step ships `jev-tag` with the same `supabase functions deploy` command as `flow-mcp`.
 
 `supabase/pending/20261004120000_jev_auto_mode.sql` allows `mode` `auto`. It is not in `supabase/migrations.lock`. Do not apply it until the migration slot is free.
+
+## Accuracy
+
+Each approved or changed review line that had a Jev suggestion gets a `jev_outcomes` row at commit: Jev's project and category, the filed ones, and whether each matched ([0126](../decisions/0126-jev-outcomes.md)). MCP `get_jev_accuracy` sums them for a period, at the company's threshold and by confidence band. Use it before turning on auto mode, and to pick the threshold.
