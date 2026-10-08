@@ -851,7 +851,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag.
 - [ ] Delete the old shared connector key once per launch, not on every read.
 - [ ] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות; a "no key" status once a key-status RPC exists.
-- [ ] Jev tagging job: a cron with a DB run lease, persisted usage per run.
+- [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 
 ## Infra and CI
 
