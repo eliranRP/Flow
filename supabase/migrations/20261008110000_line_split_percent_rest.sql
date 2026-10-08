@@ -30,6 +30,7 @@ declare
   line_minor bigint;
   line_direction public.txn_direction;
   line_category uuid;
+  line_kind text;
   item jsonb;
   n integer;
   i integer := 0;
@@ -70,6 +71,11 @@ begin
   if not found then
     raise exception 'transaction not found';
   end if;
+
+  -- The line's role was set for its own category's kind (the direction when it has none).
+  select coalesce(c.kind::text, line_direction::text) into line_kind
+  from (select 1) one
+  left join public.categories c on c.id = line_category and c.company_id = cid;
 
   if n = 0 then
     delete from public.line_splits where transaction_id = p_transaction_id and company_id = cid;
@@ -153,9 +159,9 @@ begin
     if kind is null then
       raise exception 'category not found';
     end if;
-    -- A reversal part needs its own project: the line's role was set for its own kind, so a
-    -- part of the other kind cannot borrow it. The line's own category already fits it.
-    if kind is distinct from line_direction::text and project is null
+    -- A part of another kind than the line's own category needs its own project: the line's
+    -- role was set for that kind, so the part cannot borrow it.
+    if kind is distinct from line_kind and project is null
       and category is distinct from line_category then
       raise exception 'a reversal part needs a project';
     end if;

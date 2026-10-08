@@ -142,7 +142,7 @@ const assignExpenseSplitSchema = z.object({
 const linePartSchema = z.object({
   category_id: UUID_TEXT.optional(),
   project_id: UUID_TEXT.nullable().optional(),
-  amount_minor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
+  amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
   percent: z.number().gt(0).max(100).refine((n) => Math.round(n * 10000) / 10000 === n).optional(),
   rest: z.literal(true).optional(),
 }).strict().refine((part) =>

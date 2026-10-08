@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(33);
+select plan(34);
 
 do $users$
 begin
@@ -47,7 +47,8 @@ from (values
   ('lpr:inflow', 'income',  'receipt', null,       10000, 'rent'),
   ('lpr:cent',   'expense', 'expense', 'project',     -1, 'repairs'),
   ('lpr:two',    'expense', 'expense', 'project',     -2, 'repairs'),
-  ('lpr:nocat',  'expense', 'expense', 'project',  -1000, null)
+  ('lpr:nocat',  'expense', 'expense', 'project',  -1000, null),
+  ('lpr:bounce', 'expense', 'expense', null,       -1000, 'rent')
 ) as v(key, direction, doc_kind, role, amount, category);
 insert into lpr (label, id) select replace(idempotency_key, 'lpr:', 'txn_'), id
 from public.transactions where idempotency_key like 'lpr:%';
@@ -165,6 +166,10 @@ select throws_ok(
   $$select public.save_line_split((select id from lpr where label = 'txn_inflow'), jsonb_build_array(
     pg_temp.part('repairs', null, 'amount', 3000), pg_temp.part(null, null, 'rest')))$$,
   'a reversal part needs a project', 'a reversal part with no project is refused');
+select throws_ok(
+  $$select public.save_line_split((select id from lpr where label = 'txn_bounce'), jsonb_build_array(
+    pg_temp.part('repairs', null, 'percent', 40), pg_temp.part(null, null, 'rest')))$$,
+  'a reversal part needs a project', 'on an outflow filed as income, an expense part with no project is refused');
 select throws_ok(
   $$select public.save_line_split((select id from lpr where label = 'txn_bill'), jsonb_build_array(
     pg_temp.part('repairs', 'north', 'percent', 60), pg_temp.part('repairs', 'south', 'percent', 50)))$$,
