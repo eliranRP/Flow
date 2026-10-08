@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-802 health check (plan: the project's plans/flow-802-health-check.md; FLOW-401 server merged in #233, category rename in #228) | The next plan-first server item |
+| Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
@@ -1069,7 +1069,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-802"></a>
 ### FLOW-802 · Health check and usage monitoring
-- **Type:** PLAN FIRST · **Status:** in-progress (dev lane 1, 2026-10-08; plan: the project's plans/flow-802-health-check.md, option A recommended: checks plus a daily GitHub run that fails and emails on an alert) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** on-hold (owner chose "Not now", 2026-10-08; built in #237 and reverted; migration 20261012020000 drops `private.health()` again, since merged migrations stay; the plan is the project's plans/flow-802-health-check.md, and the code can come back by reverting the revert) · **Depends on:** —
 - **What:** A `health()` RPC and a daily health-check workflow (stuck queues, cron runs, last sync), usage alerts against the free-tier limits, and a move-to-paid-plan runbook.
 - **Acceptance:** an alert on a simulated stuck queue.
 
