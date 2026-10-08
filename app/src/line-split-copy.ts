@@ -56,6 +56,11 @@ export const LINE_SPLIT_CHANGED = "משהו השתנה בינתיים. טענו 
  */
 export const LINE_HAS_CATEGORY_SPLIT = "לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.";
 export const LINE_HAS_CATEGORY_SPLIT_REASON = "line has a split by category";
+/** FLOW-333 C8. "מפוצל · N חלקים", and "מפוצל · חלק אחד" for one. */
+export function lineSplitPartsLabel(count: number): string {
+  return count === 1 ? "מפוצל · חלק אחד" : `מפוצל · ${String(count)} חלקים`;
+}
+
 export const LINE_SPLIT_PARTS_CHANGED = "סכום השורה השתנה מאז הפיצול. השורה נספרת כולה עד שתעדכנו.";
 
 function money(minor: bigint, currency: string): string {

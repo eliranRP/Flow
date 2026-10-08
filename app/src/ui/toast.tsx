@@ -8,7 +8,8 @@ type ToastInput = {
   onAction?: () => void;
   /** Sit under the page header even while a sheet is open. A card-line pick closes that sheet. */
   /** `tab` sits above the Home tab bar. A confirmation does not move it under the band. */
-  place?: "page" | "tab";
+  /** `bar` sits just above the screen's pinned action bar (decision 0137). A confirmation stays there too. */
+  place?: "page" | "tab" | "bar";
 };
 
 type ToastItem = ToastInput & { id: number };
@@ -92,7 +93,7 @@ export function toastMinBlock(): number {
 
 /** The open sheet, or the page header, and the spacing tokens that sit the toast under it. A page toast ignores the sheet. */
 export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
-  const page = layer?.dataset.place === "page" || layer?.dataset.place === "tab";
+  const page = layer?.dataset.place === "page" || layer?.dataset.place === "tab" || layer?.dataset.place === "bar";
   const sheet = page ? null : document.querySelector("[data-vaul-drawer][data-state='open']");
   const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
     ?? document.querySelector("header.ui-page, header.ui-band");
@@ -123,6 +124,18 @@ function tabBarObstacle(): ToastBox | null {
   const rect = bar.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return null;
   return { top: rect.top, bottom: rect.bottom };
+}
+
+/** The top of the topmost visible `[data-toast-floor]`, such as a pinned ActionBar; else the tab bar. */
+export function toastFloor(): ToastBox | null {
+  let best: ToastBox | null = null;
+  for (const node of document.querySelectorAll("[data-toast-floor]")) {
+    if (!(node instanceof HTMLElement)) continue;
+    const rect = node.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+    if (best == null || rect.top < best.top) best = { top: rect.top, bottom: rect.bottom };
+  }
+  return best ?? tabBarObstacle();
 }
 
 function toastHits(top: number, height: number, boxes: ToastBox[]): boolean {
@@ -261,6 +274,20 @@ export function placeToast(layer: HTMLElement): void {
     toast.style.overflow = "";
   }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
+  if (layer.dataset.place === "bar") {
+    // Decision 0137: just above the bar, near the thumb. It may cover the bottom of the
+    // scrolling card, never the bar. No control-collision pass, the same as `tab`.
+    const gap = cssPx("--space-2");
+    layer.style.paddingInline = "var(--space-card-inset)";
+    const safe = safeTopPx();
+    // No bar (the last card was handled): above the tab bar, else the screen edge (0137 §3).
+    const floor = toastFloor() ?? tabBarObstacle();
+    const top = floor && height > 0
+      ? Math.max(safe, floor.top - gap - height)
+      : Math.max(safe, window.innerHeight - gap - height);
+    layer.style.top = `${String(top)}px`;
+    return;
+  }
   if (layer.dataset.place === "tab") {
     const gap = cssPx("--space-4");
     layer.style.paddingInline = "var(--space-4)";
@@ -404,14 +431,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       acting.current = false;
       seq.current += 1;
       clearTimer();
-      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "tab";
+      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "tab" && input.place !== "bar";
       const next = confirmation ? { ...input, place: "page" as const } : input;
       remaining.current = toastMs(next);
       const current = phaseRef.current;
       revealNow.current = current === "pad" || current === "fade" || current === "in";
       if (!revealNow.current) setPhase("measure");
       if (host.current) {
-        if (next.place === "page" || next.place === "tab") host.current.dataset.place = next.place;
+        if (next.place === "page" || next.place === "tab" || next.place === "bar") host.current.dataset.place = next.place;
         else delete host.current.dataset.place;
       }
       const id = seq.current;
@@ -485,7 +512,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
     padToken.current += 1;
     const layer = node;
-    if (toast.place === "page" || toast.place === "tab") layer.dataset.place = toast.place;
+    if (toast.place === "page" || toast.place === "tab" || toast.place === "bar") layer.dataset.place = toast.place;
     else delete layer.dataset.place;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let generation = 0;
@@ -764,7 +791,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    // A bar toast follows the bar: when the bar comes or goes (the last card skipped), place again.
+    let floorWatch: MutationObserver | null = null;
+    if (layer.dataset.place === "bar" && typeof MutationObserver !== "undefined") {
+      floorWatch = new MutationObserver((records) => {
+        const floorMoved = records.some((record) => [...record.addedNodes, ...record.removedNodes].some((node) => (
+          node instanceof Element
+          && (node.hasAttribute("data-toast-floor") || node.querySelector("[data-toast-floor]") != null)
+        )));
+        if (floorMoved) placeToast(layer);
+      });
+      floorWatch.observe(document.body, { childList: true, subtree: true });
+    }
+
     return () => {
+      floorWatch?.disconnect();
       generation += 1;
       waiting = false;
       hold = true;
