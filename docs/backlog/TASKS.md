@@ -78,9 +78,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
-| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | PLAN FIRST | plan-first |
-| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | PLAN FIRST | plan-first |
-| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | PLAN FIRST | plan-first |
+| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | ready (owner chose: store it) |
+| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
+| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -595,22 +595,22 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** — · **Source:** cycle 1 (U4)
+- **Type:** SMALL CYCLE · **Status:** ready · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
 - **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`flow-screens.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
 - **MCP:** for (a), the unpaid tools return and can set the flag.
-- **Acceptance:** owner picks an option on a card; a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
+- **Acceptance:** a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
 
 <a id="flow-331"></a>
 ### FLOW-331 · A useful + tab while capture is not built
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** — · **Overlaps:** FLOW-306 · **Source:** cycle 1 (U1, U7)
+- **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** quick actions (new project, new loan, connect a bank) · **Depends on:** — · **Overlaps:** FLOW-306 · **Source:** cycle 1 (U1, U7)
 - **What:** The + in the middle of the tab bar is the best thumb spot in the app, and today it opens a sheet where both options are disabled. Until photo capture (FLOW-306) ships, + offers what works today: new project, new loan, connect a bank. "פרויקט חדש" then leaves the Projects header's top-left corner.
-- **Acceptance:** owner approves the sheet's rows on a card; no disabled-only sheet; design review.
+- **Acceptance:** no disabled-only sheet; design review.
 
 <a id="flow-332"></a>
 ### FLOW-332 · Swipe back from the edge on pushed screens
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
+- **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** approved · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
 - **What:** In the installed iOS app there is no system back gesture, so the only way back from a pushed screen is the chevron at the top corner (y≈12–43). Add a swipe from the start (right) edge on pushed screens, with the same gesture rules as FLOW-314, so it never fights horizontal scrolling or the transaction swipe.
-- **Acceptance:** owner approves; works on every pushed screen; doesn't trigger inside sheets or horizontal lists; e2e test with touch.
+- **Acceptance:** works on every pushed screen; doesn't trigger inside sheets or horizontal lists; e2e test with touch.
 
 ## Projects and reports
 
