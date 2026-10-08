@@ -29,6 +29,8 @@ import {
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS } from "./forecast-sample";
 
 const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
@@ -275,6 +277,8 @@ export function DevHome() {
       search="?preview=1"
       unpaidGross={50_000n}
       unpaidCount={1}
+      missingCount={SAMPLE_MISSING_BILLS.length}
+      missingTo="/e2e/missing-bills"
       period={period}
       onPeriod={setPeriod}
     />
@@ -384,6 +388,12 @@ export function DevUnpaid() {
   );
 }
 
+/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
+export function DevMissingBills() {
+  const [params] = useSearchParams();
+  return <MissingBillsScreen sample={params.get("empty") === "1" ? [] : SAMPLE_MISSING_BILLS} />;
+}
+
 export function DevTransactionGate() {
   const { transactionId = "" } = useParams();
   if (transactionId === "t-filed") return <DevTransaction />;
@@ -441,8 +451,10 @@ function DevStepTransaction({ n }: { n: number }) {
 }
 
 export function DevProjectDetail() {
+  const [params] = useSearchParams();
   return (
     <ProjectDetailScreen
+      sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       sample={{
         id: "p1",
         name: "שיפוץ הרצל 12",

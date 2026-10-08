@@ -1,4 +1,4 @@
-import { formatAmountText, type ProfitMonths, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type ExpectedMonths, type ProfitMonths, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -43,6 +43,7 @@ import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { categoryHref } from "./project-category-screen";
+import { ProjectExpectedMonths } from "./project-expected-months";
 
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
@@ -225,6 +226,7 @@ export function ProjectDetailScreen({
   sampleMonths,
   example,
   categoryTo,
+  sampleExpected,
 }: {
   sample?: NonNullable<ProjectDetail>;
   /** The "לפי חודש" row's counts for a sample project (dev routes and Storybook). */
@@ -232,6 +234,8 @@ export function ProjectDetailScreen({
   example?: ReactNode;
   /** Dev fixtures send a category row here. Production builds the project route. */
   categoryTo?: string;
+  /** FLOW-403. The "צפוי" months of a sample project (dev routes and Storybook). */
+  sampleExpected?: ExpectedMonths;
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
@@ -375,6 +379,8 @@ export function ProjectDetailScreen({
         categorySearch={periodQuery}
         categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
       />
+      {/* FLOW-403: expected months under the categories (plan option A3); its own block, one line here. */}
+      <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
       {/* FLOW-335: the switch sits under the categories, so the band's first row is in reach sooner. */}
       <div className="ui-page-pad ui-project-overhead">
         <Toggle
