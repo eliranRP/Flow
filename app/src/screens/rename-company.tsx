@@ -6,7 +6,7 @@ import { TextField } from "../ui/text-field";
 import { useToast } from "../ui/toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
-/** Same bounds as `public.rename_company` (FLOW-602). */
+/** Same bounds as `private.company_name_problem` (FLOW-602, FLOW-604). */
 export const COMPANY_NAME_MIN = 2;
 export const COMPANY_NAME_MAX = 100;
 
@@ -16,12 +16,29 @@ export const RENAME_REFUSED = "אין הרשאה לשנות את שם העסק."
 export const RENAME_UNDONE = "שם העסק הוחזר";
 export const RENAME_TOO_SHORT = `שם קצר מדי – לפחות ${String(COMPANY_NAME_MIN)} תווים`;
 export const RENAME_TOO_LONG = `שם ארוך מדי – עד ${String(COMPANY_NAME_MAX)} תווים`;
+export const RENAME_CONTROL_CHAR = "תו לא נתמך בשם – למשל טאב או ירידת שורה";
 
+/** A C0 or C1 control character, the class private.company_name_problem refuses. */
+function hasControlCharacter(text: string): boolean {
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+  }
+  return false;
+}
+
+/**
+ * The company-name rule of `create_company` and `rename_company` (FLOW-604, FLOW-606):
+ * trimmed the way `private.trim_name` trims (the same characters as JavaScript's
+ * trim()), 2 to 100 code points, and no control character.
+ */
 export function companyNameError(value: string): string | undefined {
+  const clean = value.trim();
   // Code points, like char_length in the RPC, so an emoji counts once.
-  const length = Array.from(value.trim()).length;
+  const length = Array.from(clean).length;
   if (length < COMPANY_NAME_MIN) return RENAME_TOO_SHORT;
   if (length > COMPANY_NAME_MAX) return RENAME_TOO_LONG;
+  if (hasControlCharacter(clean)) return RENAME_CONTROL_CHAR;
   return undefined;
 }
 

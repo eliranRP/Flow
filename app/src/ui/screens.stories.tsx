@@ -1674,6 +1674,26 @@ export const Onboarding: Story = {
   ),
 };
 
+/** FLOW-606: a pasted tab is refused on the field, as create_company refuses it. */
+const OnboardingNameErrorRoute = () => (
+  <StoryRoute entry="/onboarding">
+    <ExampleBar />
+    <OnboardingScreen initialName={"סטודיו אלפא\tלעיצוב"} />
+  </StoryRoute>
+);
+
+export const OnboardingNameError: Story = { name: "Onboarding, name error", render: OnboardingNameErrorRoute };
+export const OnboardingNameErrorDark: Story = {
+  name: "Onboarding, name error, dark",
+  render: OnboardingNameErrorRoute,
+  globals: { theme: "dark" },
+};
+export const OnboardingNameError320: Story = {
+  name: "Onboarding, name error, 320",
+  render: OnboardingNameErrorRoute,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
 export const HomeLongHero: Story = {
   render: () => (
     <StoryRoute entry="/" tabs>

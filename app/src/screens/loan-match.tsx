@@ -66,6 +66,14 @@ export type LoanBalanceRow = {
   projectName?: string | null;
 };
 
+/**
+ * FLOW-131. A line posted while another write held the loan is flagged even when it
+ * fits (`skip locked`, decision 0121). The flag has no reason column, so a busy loan,
+ * a payment past the balance and a re-synced amount look the same here: the hint says
+ * "may". Clearing runs the balance check again.
+ */
+export const LOAN_BUSY_HINT = "ייתכן שסומנה כי ההלוואה הייתה תפוסה. עדכון החלוקה יבדוק את היתרה מחדש.";
+
 function asCurrency(currency: string): LoanCurrency | null {
   if (currency === "ILS" || currency === "USD") return currency;
   return null;
@@ -184,7 +192,10 @@ export function LoanSplitPanel({
           {currencyMismatch ? (
             <p className="t-hint">המטבע של השורה לא מתאים להלוואה.</p>
           ) : readOnly ? null : (
-            <Button type="button" variant="secondary" busy={busy} onClick={onCorrect}>עדכון החלוקה</Button>
+            <>
+              <p className="t-hint">{LOAN_BUSY_HINT}</p>
+              <Button type="button" variant="secondary" busy={busy} onClick={onCorrect}>עדכון החלוקה</Button>
+            </>
           )}
         </div>
       ) : null}
@@ -338,6 +349,8 @@ function correctFailureText(error: Error): string {
   if (code === "42501") return "אין הרשאה לעדכן את החלוקה.";
   if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
   if (error.message.includes("loan_split_sum")) return "החלוקה לא מסתכמת לשורה.";
+  // The balance check clear_loan_split_review runs again (FLOW-131).
+  if (error.message.includes("loan_split_balance")) return "התשלום גבוה מיתרת ההלוואה.";
   return "לא הצלחנו לעדכן את החלוקה.";
 }
 

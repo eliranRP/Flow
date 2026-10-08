@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
+import { LOAN_BUSY_HINT, LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -24,6 +24,7 @@ const db = vi.hoisted(() => ({
   readError: null as { message: string } | null,
   readHold: null as Promise<void> | null,
   updateError: null as { message: string; code?: string } | null,
+  clearError: null as { message: string; code?: string } | null,
   loans: [{
     id: "loan-1",
     name: "הלוואת דוגמה",
@@ -157,7 +158,10 @@ vi.mock("../lib/supabase", () => ({
       }
       throw new Error(table);
     },
-    rpc: (name: string) => Promise.resolve({ data: name === "get_loan_split" ? db.counted : null, error: null }),
+    rpc: (name: string) => Promise.resolve({
+      data: name === "get_loan_split" ? db.counted : null,
+      error: name === "clear_loan_split_review" ? db.clearError : null,
+    }),
   }),
 }));
 
@@ -221,6 +225,7 @@ beforeEach(() => {
   db.readError = null;
   db.readHold = null;
   db.updateError = null;
+  db.clearError = null;
   db.loans = [{
     id: "loan-1",
     name: "הלוואת דוגמה",
@@ -265,6 +270,8 @@ describe("LoanSplitPanel", () => {
     expect(screen.getByText("−₪3")).toBeInTheDocument();
     expect(screen.getByText("−₪10")).toBeInTheDocument();
     expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
+    // FLOW-131: the flag cannot say why, so the hint names the busy loan as a maybe.
+    expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument();
     expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
     expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
@@ -323,6 +330,7 @@ describe("LoanSplitPanel", () => {
     expect(screen.getByText("ריבית")).toBeInTheDocument();
     expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "עדכון החלוקה" })).not.toBeInTheDocument();
+    expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
   });
 
   it("does not offer a one-tap correction when the currency does not match", () => {
@@ -337,6 +345,7 @@ describe("LoanSplitPanel", () => {
     });
     expect(screen.getByText("המטבע של השורה לא מתאים להלוואה.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "עדכון החלוקה" })).not.toBeInTheDocument();
+    expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
   });
 
   it("shows a busy radio while a match is saving", () => {
@@ -519,6 +528,19 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(screen.getByRole("button", { name: "עדכון החלוקה" })).toBeInTheDocument(); });
     fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
     await waitFor(() => { expect(screen.getByText("אין הרשאה לעדכן את החלוקה.")).toBeInTheDocument(); });
+  });
+
+  it("says the payment is above the balance when clearing re-checks it (FLOW-131)", async () => {
+    db.splits = [
+      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: true, loan_id: "loan-1" },
+      { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: true, loan_id: "loan-1" },
+      { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: true, loan_id: "loan-1" },
+    ];
+    db.clearError = { message: "loan_split_balance", code: "23514" };
+    renderSplit();
+    await waitFor(() => { expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
+    await waitFor(() => { expect(screen.getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument(); });
   });
 
   it("moves focus to the split heading after a successful match", async () => {

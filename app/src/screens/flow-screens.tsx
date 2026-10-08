@@ -67,7 +67,7 @@ import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
-import { RenameCompanySheet } from "./rename-company";
+import { COMPANY_NAME_MAX, RenameCompanySheet, companyNameError } from "./rename-company";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, jevSwitchOn, useJevIntegrationQuery, type JevCardState } from "./jev-settings";
@@ -164,13 +164,16 @@ async function saveNewProject(
   }
 }
 
-export function OnboardingScreen() {
+/** `initialName` lets a story open on a typed name, checked as if the field had been left. */
+export function OnboardingScreen({ initialName }: { initialName?: string } = {}) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
   const holdWrites = useHoldWrites();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName ?? "");
+  const [nameError, setNameError] = useState(() => (initialName == null ? undefined : companyNameError(initialName)));
+  const nameRef = useRef<HTMLInputElement>(null);
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const previewSearch = usePreviewSearch();
   const returnPath = safeAppPath(params.get("return")) ?? "/";
@@ -192,7 +195,15 @@ export function OnboardingScreen() {
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (holdWrites || blocked()) return;
+    if (holdWrites || save.isPending) return;
+    // The create_company rule (FLOW-606), on the field instead of a save toast.
+    const problem = companyNameError(name);
+    setNameError(problem);
+    if (problem) {
+      nameRef.current?.focus();
+      return;
+    }
+    if (blocked()) return;
     save.mutate();
   }
 
@@ -217,7 +228,20 @@ export function OnboardingScreen() {
       </div>
       <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." backTo={returnTo} />
       <form className="ui-page-pad" onSubmit={submit}>
-        <TextField label="שם העסק" value={name} onChange={(event) => { setName(event.target.value); }} required minLength={2} />
+        <TextField
+          ref={nameRef}
+          label="שם העסק"
+          value={name}
+          maxLength={COMPANY_NAME_MAX + 20}
+          error={nameError}
+          onChange={(event) => {
+            setName(event.target.value);
+            if (nameError) setNameError(undefined);
+          }}
+          onBlur={() => {
+            setNameError(companyNameError(name));
+          }}
+        />
         <SegmentedControl
           label="סוג העסק"
           value={vat}
