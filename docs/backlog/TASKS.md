@@ -67,7 +67,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | in-progress (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | in-progress |
 | 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | in-progress |
-| 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done |
+| 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
@@ -512,7 +512,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-321"></a>
 ### FLOW-321 · Two rows in Home's attention card (review and unpaid)
-- **Type:** SMALL UI · **Status:** done · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#130) · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. Unpaid invoices can't be reached while the review queue has items: the Home card links only to Review. When both exist, the card shows two rows, one to Review and one to Unpaid with its total; one row when only one exists. Singular copy for a count of 1.
 - **MCP:** none.
 - **Acceptance:** unpaid is 1 tap from Home with items waiting; tests for 0, 1 and many on each side; each row has its own accessible name; light, dark, 320px; design review.

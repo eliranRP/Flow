@@ -14,17 +14,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { title: "7 פריטים ממתינים לאישור", to: "/review" },
-  render: (args) => (
-    <Banner
-      {...args}
-      hint={
-        <>
-          3 חשבוניות לא שולמו · <bdi dir="ltr">₪23,400</bdi>
-        </>
-      }
-    />
-  ),
+  args: {
+    title: (
+      <>
+        <bdi dir="ltr">7</bdi> פריטים ממתינים לאישור
+      </>
+    ),
+    to: "/review",
+  },
 };
 export const UnpaidOnly: Story = {
   args: { title: "3 חשבוניות לא שולמו", to: "/unpaid" },
@@ -40,7 +37,7 @@ export const UnpaidOnly: Story = {
   ),
 };
 // FLOW-321. Home's pending card: a row to Review and a row to Unpaid with its total.
-const unpaidIcon = <DocumentIcon size={22} stroke={1.9} />;
+const unpaidIcon = <DocumentIcon size={24} stroke={1.9} />;
 const reviewRow: BannerRow = {
   id: "review",
   to: "/review",

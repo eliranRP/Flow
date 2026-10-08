@@ -81,6 +81,8 @@ describe("Home attention card (FLOW-321)", () => {
     expect(unpaid).toHaveAttribute("href", "/unpaid");
     expect(rows[0]).toBe(review);
     expect(rows[1]).toBe(unpaid);
+    expect(review.querySelector('bdi[dir="ltr"]')).toHaveTextContent("7");
+    expect(unpaid.querySelector('.ui-row-hint bdi[dir="ltr"]')).toHaveTextContent("₪23,400");
   });
 
   it("uses singular copy for one of each, with distinct names", () => {

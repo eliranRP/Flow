@@ -1899,7 +1899,8 @@ a.ui-row,
   .ui-chip-choice:hover,
   .ui-btn-ghost:hover,
   .ui-text-link:hover,
-  .ui-banner:hover {
+  .ui-banner:hover,
+  .ui-banner-row:hover {
     background: var(--surface-hover);
   }
 }
@@ -2933,7 +2934,9 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-banner .ui-row-title,
-.ui-banner .ui-row-hint {
+.ui-banner .ui-row-hint,
+.ui-banner-row .ui-row-title,
+.ui-banner-row .ui-row-hint {
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -2942,7 +2945,8 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   -webkit-line-clamp: 2;
 }
 
-.ui-banner bdi {
+.ui-banner bdi,
+.ui-banner-row bdi {
   white-space: nowrap;
 }
 

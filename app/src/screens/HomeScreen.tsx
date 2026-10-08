@@ -337,7 +337,7 @@ export function attentionRows({
     rows.push({
       id: "unpaid",
       to: `/unpaid${search}`,
-      icon: <DocumentIcon size={22} stroke={1.9} />,
+      icon: <DocumentIcon size={24} stroke={1.9} />,
       title: unpaidCount === 1 ? "חשבונית אחת לא שולמה" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות לא שולמו</>,
       hint: <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · טרם נגבה</>,
     });
