@@ -61,8 +61,6 @@ select pg_temp.as_mcp();
 select public.mcp_set_overhead_project('oud-set-b', (select id from oud_ref where label = 'b'));
 reset role;
 select pg_temp.age_writes();
-select pg_temp.as_mcp();
-reset role;
 delete from public.projects where id = (select id from oud_ref where label = 'a');
 
 select pg_temp.as_mcp();
@@ -83,8 +81,6 @@ select pg_temp.as_mcp();
 select public.mcp_set_overhead_project('oud-clear', null);
 reset role;
 select pg_temp.age_writes();
-select pg_temp.as_mcp();
-reset role;
 delete from public.projects where id = (select id from oud_ref where label = 'b');
 
 select pg_temp.as_mcp();
