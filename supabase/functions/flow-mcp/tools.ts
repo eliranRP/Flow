@@ -12,7 +12,8 @@ import {
   LOAN_TERM_MONTHS_MAX,
   type LoanScheduleRow,
 } from "../../../packages/shared/src/loan-schedule.ts";
-import { allocateLoanSplit, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
+import { allocateLoanSplit, loanTakesPaymentOn, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
+import type { LoanStatus } from "../../../packages/shared/src/loan-split.ts";
 import { parseDecimalHalfEven } from "../../../packages/shared/src/money.ts";
 
 export const READ_TOOL_NAMES = [
@@ -68,7 +69,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_expense: new Set(["transaction_id"]),
   search_expenses: new Set(["scope", "query", "limit", "offset"]),
   get_totals: new Set(["from", "to", "basis"]),
-  list_loans: new Set([]),
+  list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit"]),
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
@@ -89,7 +90,7 @@ const ALLOWED: Record<string, Set<string>> = {
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
@@ -208,6 +209,9 @@ const updateLoanSchema = z.object({
   escrow: z.union([z.number(), z.string()]).optional(),
   // null clears the project, an absent key leaves it.
   project_id: UUID_TEXT.nullable().optional(),
+  status: z.enum(["open", "paid_off", "closed"]).optional(),
+  // null clears the date (status open does too), an absent key leaves it.
+  closed_on: z.string().regex(DATE).nullable().optional(),
 }).strict();
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -520,6 +524,8 @@ type LoanRow = {
   flagged_transaction_ids?: string[];
   project_id?: string | null;
   project_name?: string | null;
+  status?: LoanStatus;
+  closed_on?: string | null;
 };
 
 function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
@@ -692,7 +698,9 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null.", {}),
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true).", {
+      include_closed: { type: "boolean" },
+    }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
       loan_id: { type: "string" },
       from: { type: "integer" },
@@ -851,7 +859,7 @@ function writeTools() {
       currency: { type: "string" },
       project_id: { type: "string" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. Undo restores the previous project.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. Undo restores the previous project, status and closed_on.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -862,8 +870,10 @@ function writeTools() {
       payment: { type: "string" },
       escrow: { type: "string" },
       project_id: { type: ["string", "null"] },
+      status: { type: "string", enum: ["open", "paid_off", "closed"] },
+      closed_on: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
@@ -1129,6 +1139,8 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     patch.escrow_minor = Number(minor);
   }
   if (parsed.data.project_id !== undefined) patch.project_id = parsed.data.project_id;
+  if (parsed.data.status != null) patch.status = parsed.data.status;
+  if (parsed.data.closed_on !== undefined) patch.closed_on = parsed.data.closed_on;
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
   const result = await rpc("mcp_update_loan", {
     p_idempotency_key: parsed.data.idempotency_key,
@@ -1160,6 +1172,9 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   const loan = loans.find((row) => row.id === parsed.data.loan_id);
   if (loan == null) return fail("refused", "loan not found");
   if (loan.currency !== currency) return fail("refused", "loan currency mismatch");
+  if (!loanTakesPaymentOn({ status: loan.status, closedOn: loan.closed_on }, docDate)) {
+    return fail("refused", "loan closed");
+  }
   if (BigInt(loan.balance_minor) <= 0n) return fail("refused", "loan balance exceeded");
   const schedule = storedLoanSchedule(loan);
   if (!("rows" in schedule)) return schedule;
@@ -1558,9 +1573,11 @@ export async function callTool(
   }
 
   if (name === "list_loans") {
+    const includeClosed = args.include_closed ?? true;
+    if (typeof includeClosed !== "boolean") return fail("validation", "validation");
     const loans = await loadLoans(rpc);
     if (!Array.isArray(loans)) return loans;
-    return ok({ loans });
+    return ok({ loans: includeClosed ? loans : loans.filter((loan) => (loan.status ?? "open") === "open") });
   }
 
   if (name === "get_loan_schedule") {
