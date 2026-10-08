@@ -1,8 +1,9 @@
 -- FLOW-602: rename_company RPC and MCP rename_company. Owner only, idempotent, undo.
+-- FLOW-604: one name rule for the MCP, the RPC and the table; audit rows.
 
 begin;
 
-select plan(38);
+select plan(52);
 
 do $users$
 begin
@@ -11,6 +12,7 @@ begin
   perform tests.create_supabase_user('rename_demo_owner', 'rename-demo-owner@example.com');
   perform tests.create_supabase_user('rename_viewer', 'rename-viewer@example.com');
   perform tests.create_supabase_user('rename_nobody', 'rename-nobody@example.com');
+  perform tests.create_supabase_user('rename_short', 'rename-short@example.com');
 end
 $users$;
 
@@ -120,6 +122,29 @@ select lives_ok(
 );
 
 select lives_ok(
+  $$select public.rename_company((select id from rename_ids where label = 'company'), repeat(U&'\+01F600', 100))$$,
+  'a name is counted in code points: 100 emoji are accepted'
+);
+
+select throws_ok(
+  $$select public.rename_company((select id from rename_ids where label = 'company'), repeat(U&'\+01F600', 101))$$,
+  'company name is too long',
+  '101 emoji are refused'
+);
+
+select is(
+  public.rename_company((select id from rename_ids where label = 'company'), U&'\00A0\0009Example Tabs\2003\FEFF')->>'name',
+  'Example Tabs',
+  'tabs, no-break and other Unicode spaces are trimmed like JavaScript trim()'
+);
+
+select throws_ok(
+  $$select public.rename_company((select id from rename_ids where label = 'company'), 'Example' || chr(7) || 'Bell')$$,
+  'company name has a control character',
+  'a control character is refused'
+);
+
+select lives_ok(
   $$select public.rename_company((select id from rename_ids where label = 'company'), 'Example Holdings')$$,
   'positive control: the owner renames their own company back'
 );
@@ -218,9 +243,36 @@ select is(
   'mcp: a viewer is refused'
 );
 
--- MCP: write, replay, conflict.
+-- MCP: write, replay, conflict. Audit rows are counted from here.
+
+reset role;
+create temp table audit_mark as
+select count(*)::int as n from public.audit_log a
+where a.entity = 'companies'
+  and a.action = 'update'
+  and a.entity_id = (select id from rename_ids where label = 'company')
+  and a.actor_id = tests.get_supabase_uid('rename_owner');
+grant all on audit_mark to authenticated;
+
+create or replace function pg_temp.audit_since_mark()
+returns int
+language sql
+as $$
+  select (count(*)::int - (select n from pg_temp.audit_mark))
+  from public.audit_log a
+  where a.entity = 'companies'
+    and a.action = 'update'
+    and a.entity_id = (select id from pg_temp.rename_ids where label = 'company')
+    and a.actor_id = tests.get_supabase_uid('rename_owner');
+$$;
 
 select pg_temp.as_mcp('write', 'rename_owner');
+
+select is(
+  public.mcp_rename_company('rename-control', 'Example' || chr(7) || 'North')->'error'->>'code',
+  'validation',
+  'mcp: a control character is validation'
+);
 
 create temp table rename_first as
 select public.mcp_rename_company('rename-1', 'Example North') as response;
@@ -262,6 +314,12 @@ select is(
    where w.kind = 'company' and w.company_id = (select id from rename_ids where label = 'company')),
   1,
   'mcp: one undo row for the replayed write'
+);
+
+select is(
+  pg_temp.audit_since_mark(),
+  1,
+  'audit: the MCP rename writes one row by the owner; the refused, replayed and conflicting calls write none'
 );
 
 -- MCP: another owner renames only their own company (positive control).
@@ -312,6 +370,8 @@ select is(
   'undo: the prior name is back'
 );
 
+select is(pg_temp.audit_since_mark(), 2, 'audit: the undo writes one more row');
+
 select pg_temp.as_mcp('write', 'rename_owner');
 
 select is(
@@ -349,6 +409,55 @@ select is(
   (select c.name from public.companies c where c.id = (select id from rename_ids where label = 'company')),
   'Example West',
   'undo: the conflict leaves the newer name'
+);
+
+select is(
+  pg_temp.audit_since_mark(),
+  4,
+  'audit: the second MCP rename and the app rename add a row each; the conflicting undo adds none'
+);
+
+-- Table: a direct update of the name is held to the same rule (23514).
+
+select throws_ok(
+  $$update public.companies set name = 'A' where id = (select id from rename_ids where label = 'company')$$,
+  '23514',
+  'company name is too short',
+  'table: a one-letter name is refused'
+);
+
+select throws_ok(
+  $$update public.companies set name = repeat('a', 101) where id = (select id from rename_ids where label = 'company')$$,
+  '23514',
+  'company name is too long',
+  'table: a name over 100 characters is refused'
+);
+
+select throws_ok(
+  $$update public.companies set name = U&'Example West\00A0' where id = (select id from rename_ids where label = 'company')$$,
+  '23514',
+  'company name is not trimmed',
+  'table: a name with surrounding whitespace is refused'
+);
+
+select throws_ok(
+  $$update public.companies set name = 'Example' || chr(10) || 'West' where id = (select id from rename_ids where label = 'company')$$,
+  '23514',
+  'company name has a control character',
+  'table: a control character is refused'
+);
+
+insert into public.companies (owner_id, name)
+values (tests.get_supabase_uid('rename_short'), 'Z');
+
+select lives_ok(
+  $$update public.companies set vat_registered = false where owner_id = tests.get_supabase_uid('rename_short')$$,
+  'table: an older name that breaks the rule does not block an update of another column'
+);
+
+select lives_ok(
+  $$update public.companies set name = 'Example Direct' where id = (select id from rename_ids where label = 'company')$$,
+  'table: positive control, a valid name is stored'
 );
 
 -- Grants.

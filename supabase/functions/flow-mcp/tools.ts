@@ -168,9 +168,19 @@ const undoSchema = z.object({
   kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"]),
   id: UUID_TEXT,
 }).strict();
+// Same rule as private.company_name_problem: 2 to 100 code points after trim()
+// (SQL private.trim_name strips the same whitespace) and no control character.
+function companyNameIsValid(name: string): boolean {
+  const points = Array.from(name);
+  if (points.length < 2 || points.length > 100) return false;
+  return points.every((point) => {
+    const code = point.codePointAt(0) ?? 0;
+    return code >= 0x20 && (code < 0x7f || code > 0x9f);
+  });
+}
 const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().min(2).max(100),
+  name: z.string().trim().refine(companyNameIsValid),
 }).strict();
 const LOAN_NAME = z.string().trim().min(1).max(80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -823,7 +833,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       project_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("rename_company", "Rename this company. 2 to 100 characters after trimming. Undo restores the prior name.", {
+    toolSpec("rename_company", "Rename this company. 2 to 100 characters (code points) after trimming, with no control character. Undo restores the prior name.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
     }, true),
