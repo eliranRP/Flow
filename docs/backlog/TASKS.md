@@ -394,11 +394,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] `mcp_sync_bank_finish` accepts any 1–200 character failure message for a known code; allow-list the fixed strings the edge sends, like `mcp_refused`.
-- [ ] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs.
-- [ ] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
-- [ ] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
+- **Type:** BACKLOG NIT · **Status:** done (#156) · **Depends on:** —
+- [x] `mcp_sync_bank_finish` accepts any 1–200 character failure message for a known code; allow-list the fixed strings the edge sends, like `mcp_refused`. (Only the fixed pairs `pullBank` sends.)
+- [x] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs. (`mcp_sync_bank_begin` drops the user's jobs finished over 7 days ago, or running over a day.)
+- [x] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
+- [x] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
 
 <a id="flow-208"></a>
 ### FLOW-208 · Split and undo follow-ups (#88 review)
@@ -827,8 +827,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The cron path doesn't take the connector claim, so cron and manual runs can overlap; the Mercury cron path doesn't release its claim when it skips.
+- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, #156) · **Depends on:** —
+- [x] The cron path doesn't take the connector claim, so cron and manual runs can overlap; the Mercury cron path doesn't release its claim when it skips. (Both cron paths claim; a skip or a throw releases it, `_shared/cron_claim.ts`; a SUMIT request that finds a manual run busy goes back to the queue.)
 - [ ] From the original plan: a schema-drift check on the SUMIT payload with a fallback and alert, and an optional debounced webhook behind a flag.
 
 ## Multi-company and team

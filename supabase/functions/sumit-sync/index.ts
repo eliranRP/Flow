@@ -49,7 +49,14 @@ Deno.serve(async (req) => {
           .select("id");
         if (claim.error || claim.data == null || claim.data.length === 0) continue;
         try {
-          results.push(await syncCompany(admin, row.company_id, decodeKek(kekSecret), false, false));
+          // The cron path claims the connection too, so it never overlaps a manual run
+          // (FLOW-510). When a manual run holds it, the request goes back to the queue.
+          const synced = await syncCompany(admin, row.company_id, decodeKek(kekSecret), false, true);
+          if (synced.busy === true) {
+            await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
+            continue;
+          }
+          results.push(synced);
         } catch (error) {
           await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
           const message = error instanceof Error ? error.message : "sync failed";
@@ -104,7 +111,7 @@ async function syncCompany(
   kek: Uint8Array,
   force: boolean,
   claim: boolean,
-): Promise<{ ok: boolean; documents: number; skipped?: boolean; sumit_reads: number }> {
+): Promise<{ ok: boolean; documents: number; skipped?: boolean; busy?: boolean; sumit_reads: number }> {
   const connection = await admin
     .from("sumit_connections")
     .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, last_sync_at, last_error, next_attempt_at")
@@ -119,8 +126,8 @@ async function syncCompany(
   const last = row.last_sync_at ? Date.parse(row.last_sync_at as string) : 0;
   const minGap = force ? 60_000 : 6 * 60 * 60 * 1000;
   if (last && Date.now() - last < minGap) return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
-  // The manual path claims the connection like mercury-sync does. Settings reads the
-  // claim as `syncing`, so the busy row survives a reload, and a second tap is skipped.
+  // Both paths claim the connection like mercury-sync does. Settings reads the claim as
+  // `syncing`, so the busy row survives a reload, and a second tap or a cron run is skipped.
   if (claim) {
     const cutoff = new Date(Date.now() - CLAIM_MS).toISOString();
     const claimed = await admin
@@ -132,7 +139,7 @@ async function syncCompany(
       .select("company_id");
     if (claimed.error) throw new Error("sync_failed");
     if (claimed.data == null || claimed.data.length === 0) {
-      return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
+      return { ok: true, documents: 0, skipped: true, busy: true, sumit_reads: 0 };
     }
   }
   try {
