@@ -98,7 +98,7 @@ export const LongHebrew: Story = {
   args: { title: longHebrew, hint: longHebrew, to: "/review" },
 };
 export const WithAction: Story = {
-  args: { title: "3 תנועות שויכו אוטומטית היום" },
+  args: { title: "3 שויכו אוטומטית היום" },
   render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">לרשימה</TextLink>} />,
 };
 // The one-line banner on לאישור: the hint sits after the title, the close button at the end.

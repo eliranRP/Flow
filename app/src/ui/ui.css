@@ -5155,8 +5155,11 @@ html[data-kb="open"] .ui-search-dock {
   -webkit-line-clamp: 2;
 }
 
+/* The hint is only the link, which cuts its own label: no clip box here, so its focus ring shows. */
 .ui-banner.ui-banner-slim .ui-row-hint {
+  display: block;
   flex: none;
   margin: 0;
-  -webkit-line-clamp: 1;
+  max-inline-size: 100%;
+  overflow: visible;
 }
