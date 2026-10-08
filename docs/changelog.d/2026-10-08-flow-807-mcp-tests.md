@@ -1,0 +1,1 @@
+FLOW-807 follow-up: the Flow MCP tools test file (4,249 lines) is split by area into `tools_reads_test.ts`, `tools_writes_test.ts`, `tools_setup_test.ts`, `tools_loans_test.ts` and `tools_loan_attach_test.ts`, with the shared ids and fake RPC in `tools_test_support.ts`. Every test moved unchanged; the same 123 tests run.
