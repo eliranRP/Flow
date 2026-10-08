@@ -77,6 +77,8 @@ export const WRITE_TOOL_NAMES = [
   "set_lines_pnl",
   "set_invoice_paid",
   "detach_loan_payment",
+  "delete_loan",
+  "reorder_loans",
   "undo",
   "undo_batch",
 ] as const;
@@ -131,6 +133,8 @@ const ALLOWED: Record<string, Set<string>> = {
   set_lines_pnl: new Set(["idempotency_key", "items"]),
   set_invoice_paid: new Set(["idempotency_key", "transaction_id", "paid"]),
   detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
+  delete_loan: new Set(["idempotency_key", "loan_id"]),
+  reorder_loans: new Set(["idempotency_key", "loan_ids"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -217,7 +221,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -498,6 +502,14 @@ const setInvoicePaidSchema = z.object({
 const detachLoanPaymentSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
+}).strict();
+const deleteLoanSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  loan_id: UUID_TEXT,
+}).strict();
+const reorderLoansSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  loan_ids: z.array(UUID_TEXT).min(1).max(200),
 }).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
@@ -1022,7 +1034,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
+    toolSpec("list_loans", "Loans in the company with current principal balance, in the order reorder_loans saved (by name before any order is saved; a loan added since goes last). flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
       include_closed: { type: "boolean" },
     }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left (for an amortizing loan whose payment is below the term annuity, over the months left in the amortization period that payment implies, so the balloon stays at the term). An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest due on as_of (YYYY-MM-DD, default today): carried (interest earlier payments left unpaid, simple interest) plus what accrued from the last one (or the start), daily on actual/365, with since, days, carried, interest and balance.", {
@@ -1302,9 +1314,17 @@ function writeTools() {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),
+    toolSpec("delete_loan", "Delete a loan with its rate rows and the split parts of every payment matched to it: those payments count whole again under their own categories, and the loan's principal no longer counts. Returns the loan's name and payments (how many lines were unmatched). Undo is kind loan_delete with the loan id: it puts back the loan, its rates and its parts, and is a conflict when a payment was removed, matched again or changed since, or not_found when the owner already restored it in the app.", {
+      idempotency_key: { type: "string" },
+      loan_id: { type: "string" },
+    }, true),
+    toolSpec("reorder_loans", "Save the order of the loans list: loan_ids names every loan of the company once (open and closed; list_loans gives them), first to last. A list that leaves one out, names one twice or names another company's loan is validation. list_loans returns loans in this order; a loan added since goes last. Undo is kind loan_order with the id this returns (the company id): it puts back the order before, and is a conflict when the order changed or a loan was added or deleted since.", {
+      idempotency_key: { type: "string" },
+      loan_ids: { type: "array", items: { type: "string" } },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1950,6 +1970,22 @@ async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
+    };
+  } else if (name === "delete_loan") {
+    const parsed = deleteLoanSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_delete_loan";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_loan_id: parsed.data.loan_id,
+    };
+  } else if (name === "reorder_loans") {
+    const parsed = reorderLoansSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_reorder_loans";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_loan_ids: parsed.data.loan_ids,
     };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);

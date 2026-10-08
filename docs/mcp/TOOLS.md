@@ -36,6 +36,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 | `detach_loan_payment` | `transaction_id` | `get_loan_schedule` payments, `get_expense.id` of a line with `loan_split` |
 | `undo` `kind: "loan_detach"` | `id` | the transaction id `detach_loan_payment` used |
+| `delete_loan` | `loan_id` | `list_loans` `loans[].id` |
+| `reorder_loans` | `loan_ids` | every `list_loans` `loans[].id` (open and closed) |
+| `undo` `kind: "loan_delete"` | `id` | the loan id `delete_loan` used |
+| `undo` `kind: "loan_order"` | `id` | the company id `reorder_loans` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -362,7 +366,7 @@ Read tools use `mcp_list_loans` and shared schedule math. Writes use the same wr
 
 ### list_loans
 
-Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)).
+Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Loans come in the order `reorder_loans` saved; before any order is saved they come by name, and a loan added since goes last ([0141](../decisions/0141-loan-delete-and-order.md)). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)).
 
 ### get_loan_schedule
 
@@ -461,6 +465,24 @@ Takes one line off the loan it was attached to, by `attach_loan_payment` or in t
 
 Output `data`: `{ "transaction_id", "loan_id", "parts": [{ "part", "amount_minor" }], "undo_kind": "loan_detach", "id" }`, parts in the order interest, escrow, principal, fees, in minor units. Undo `kind: "loan_detach"` with the transaction id puts the same parts back (amounts, categories, review flags). It is `conflict` when the line was matched again since, when the parts no longer fit (the line's amount changed, the balance no longer takes the principal, a part's category no longer fits), or when the loan is a demand loan and a later payment of it was matched since (payments go in date order, [0132](../decisions/0132-loan-kinds-rates.md)), and `not_found` when the line or the loan was removed.
 
+### delete_loan
+
+```json
+{ "idempotency_key": "delete-loan-1", "loan_id": "<loan id>" }
+```
+
+Deletes a loan with its rate rows and the split parts of every payment matched to it ([FLOW-110](../backlog/TASKS.md#flow-110), [0141](../decisions/0141-loan-delete-and-order.md)). Those payments count whole again under their own categories, and the loan's principal no longer counts. An unknown loan or another company's is `refused` / `loan not found`. Output `data`: `{ "loan_id", "name", "payments", "undo_kind": "loan_delete", "id" }`, where `payments` is how many lines were unmatched.
+
+Undo `kind: "loan_delete"` with the loan id puts back the loan, its rates and its parts. It is `conflict` when one of those lines was removed or matched again since, or when the parts no longer fit it. It is `not_found` when the owner already put the loan back in the app.
+
+### reorder_loans
+
+```json
+{ "idempotency_key": "order-1", "loan_ids": ["<loan id>", "<loan id>"] }
+```
+
+Saves the order of the loans list, first to last. `loan_ids` names every loan of the company once, open and closed. A list that leaves one out, names one twice or names another company's loan is `validation`, so a list read before a loan was added or deleted is refused. Output `data`: `{ "loan_ids", "undo_kind": "loan_order", "id" }`, where `id` is the company id. Undo `kind: "loan_order"` puts back the order before. It is `conflict` when the order changed, or a loan was added or deleted, since.
+
 ### undo (loan kinds)
 
 | `kind` | `id` |
@@ -470,8 +492,10 @@ Output `data`: `{ "transaction_id", "loan_id", "parts": [{ "part", "amount_minor
 | `loan_split` | transaction id |
 | `loan_rate` | rate row id from `set_loan_rate` |
 | `loan_detach` | transaction id from `detach_loan_payment` |
+| `loan_delete` | loan id from `delete_loan` |
+| `loan_order` | company id from `reorder_loans` |
 
-Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, `invalid loan terms`, `project not found`, `payment below interest`, `invalid loan parts`, `rate before the loan start`, `rate not found`, `a demand loan has no schedule rows`, `payment before the loan start`, and `a later payment is already attached`.
+Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, `invalid loan terms`, `project not found`, `payment below interest`, `invalid loan parts`, `rate before the loan start`, `rate not found`, `a demand loan has no schedule rows`, `payment before the loan start`, `a later payment is already attached`, and `loan cannot be restored`.
 
 ## Line splits · FLOW-311
 
