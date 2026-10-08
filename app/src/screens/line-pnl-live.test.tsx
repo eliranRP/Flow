@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
@@ -84,9 +84,8 @@ function pnlCalls() {
   return rpc.calls.filter((call) => call.name === "set_transaction_pnl").map((call) => call.args);
 }
 
-async function openMore() {
-  fireEvent.click(await screen.findByRole("button", { name: "עוד" }));
-  return screen.getByRole("dialog");
+async function pnlSwitch() {
+  return screen.findByRole("switch", { name: "ברווח והפסד" });
 }
 
 beforeEach(() => {
@@ -99,8 +98,7 @@ beforeEach(() => {
 describe("one line out of the P&L, live", () => {
   it("writes false, and ביטול writes the previous null back", async () => {
     showLive();
-    const sheet = await openMore();
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    fireEvent.click(await pnlSwitch());
     await waitFor(() => { expect(pnlCalls()).toEqual([{ p_id: "tx", p_in_pnl: false }]); });
     expect(await screen.findByText("מחוץ לרווח")).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
@@ -110,25 +108,22 @@ describe("one line out of the P&L, live", () => {
   it("writes true for a line of a kept-out category", async () => {
     rpc.excluded = true;
     showLive();
-    const sheet = await openMore();
-    fireEvent.click(within(sheet).getByRole("button", { name: "החזרה לרווח והפסד" }));
+    fireEvent.click(await pnlSwitch());
     await waitFor(() => { expect(pnlCalls()).toEqual([{ p_id: "tx", p_in_pnl: true }]); });
   });
 
-  it("toasts the failure and keeps the sheet open", async () => {
+  it("toasts the failure and leaves the switch as it was", async () => {
     rpc.fail = { message: "transaction not found", code: "P0001" };
     showLive();
-    const sheet = await openMore();
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    fireEvent.click(await pnlSwitch());
     expect(await screen.findByText("לא הצלחנו לעדכן את השורה.")).toBeTruthy();
-    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(await pnlSwitch()).toBeChecked();
   });
 
   it("says a refused viewer has no permission", async () => {
     rpc.fail = { message: "forbidden", code: "42501" };
     showLive();
-    const sheet = await openMore();
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    fireEvent.click(await pnlSwitch());
     expect(await screen.findByText("אין הרשאה לעדכן את השורה.")).toBeTruthy();
   });
 });

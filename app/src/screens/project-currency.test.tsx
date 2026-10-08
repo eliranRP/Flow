@@ -77,7 +77,8 @@ describe("ProjectDetailScreen currency", () => {
 
   it("links a USD category to its drill-down in dollars", () => {
     renderProject(usdProject());
-    const row = screen.getByText("Utilities").closest("a");
+    // A transaction row's hint names the category too; the category row is the one titled Utilities.
+    const row = screen.getAllByText("Utilities").find((el) => el.closest(".ui-row-title") != null)?.closest("a");
     // The project's period travels with it (FLOW-411), then the currency.
     expect(row?.getAttribute("href")).toMatch(/^\/projects\/p-usd\/categories\/cat-1\?period=[^&]+(&at=[^&]+)?&currency=USD$/);
   });

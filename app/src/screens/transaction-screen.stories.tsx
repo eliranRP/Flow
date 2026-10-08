@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useState } from "react";
-import type { TransactionLoanSplit } from "@flow/shared";
+import type { TransactionDetail, TransactionLoanSplit } from "@flow/shared";
 import { LoanMatchSampleProvider, type LoanMatchApi } from "./loan-match-api";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
@@ -118,6 +118,94 @@ export const TransactionOutOfPnl: Story = {
       />
     </StoryRoute>
   ),
+};
+
+function pnlSample(extra: Partial<NonNullable<TransactionDetail>>): NonNullable<TransactionDetail> {
+  return {
+    id: "t1",
+    description: "חומרי בניין",
+    direction: "expense",
+    doc_date: "2026-09-21",
+    amount_gross: -240_000n,
+    amount_net: -240_000n,
+    vat_amount: 0n,
+    vat_status: "unknown",
+    doc_kind: "expense",
+    source: "sumit",
+    project_id: "holon",
+    project_name: "בניין מגורים חולון",
+    category_id: "c1",
+    category_name: "חומרים",
+    supplier_name: "ספק לדוגמה",
+    customer_name: null,
+    review_status: "approved",
+    paid: false,
+    open_gross_agorot: null,
+    in_pnl_override: null,
+    category_excluded_from_pnl: false,
+    in_pnl: true,
+    pnl_fixed: false,
+    ...extra,
+  };
+}
+
+/** FLOW-124: a line split by category with one part kept out reads "חלקית ברווח" from pnl_state. */
+export const TransactionPnlMixed: Story = {
+  name: "P&L partly kept out (split by category)",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ pnl_state: "mixed" })} sampleCategories={[{ id: "c1", name: "חומרים" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-329: a loan line's P&L row is locked; its parts decide what counts. */
+export const TransactionPnlLoanLine: Story = {
+  name: "P&L locked (loan payment)",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ category_name: "תשלומי הלוואה", pnl_fixed: true, pnl_state: "mixed" })} sampleCategories={[{ id: "c1", name: "תשלומי הלוואה" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-124: the category is kept out, so the hint names it and the switch brings back this line only. */
+export const TransactionPnlCategoryOut: Story = {
+  name: "P&L kept out by its category",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ category_name: "פיקדונות", category_excluded_from_pnl: true, in_pnl: false, pnl_state: "out" })} sampleCategories={[{ id: "c1", name: "פיקדונות" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-124: one line of a kept-out category brought back in shows the "ברווח והפסד" pill. */
+export const TransactionPnlForcedIn: Story = {
+  name: "P&L forced back in",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ category_name: "פיקדונות", category_excluded_from_pnl: true, in_pnl_override: true, in_pnl: true, pnl_state: "in" })} sampleCategories={[{ id: "c1", name: "פיקדונות" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-329: ⋯ shows on a manual line only and holds מחיקה; the play opens it so clip-check measures it. */
+export const TransactionManualMore: Story = {
+  name: "Manual line ⋯ sheet",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ source: "manual", supplier_name: "רישום ידני" })} sampleCategories={[{ id: "c1", name: "חומרים" }]} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
+  },
 };
 
 /** FLOW-303: opened from a list, so ˄ ˅ sit before ⋯. The middle row has both. */

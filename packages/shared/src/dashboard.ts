@@ -145,6 +145,10 @@ export const filedTodaySchema = z.object({
   supplier_name: z.string().nullable(),
   project_name: z.string().nullable(),
   category_name: z.string().nullable(),
+  /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
+  source: z.string().optional().catch(undefined),
+  /** The line is out of the P&L (FLOW-124, decision 0135). Older payloads omit it. */
+  kept_out: z.boolean().optional().catch(undefined),
 });
 
 export const categoryRowSchema = z.object({
@@ -386,6 +390,8 @@ export const transactionDetailSchema = z
     /** FLOW-121: a guessed category. A guessed kept-out category still counts in the P&L. */
     category_suggested: z.boolean().optional(),
     in_pnl: z.boolean().optional(),
+    /** Decision 0135: whether the line's parts count (all in, all out, or mixed), split lines included. */
+    pnl_state: z.enum(["in", "out", "mixed"]).nullable().optional(),
     /** A loan line: its parts decide what counts, so the override is refused. */
     pnl_fixed: z.boolean().optional(),
   })
@@ -405,6 +411,10 @@ export const projectCategorySchema = z
         description: z.string(),
         doc_date: z.string(),
         amount_net: agorotSchema,
+        /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
+        source: z.string().optional().catch(undefined),
+        /** Its parts on this project and category are out of the P&L (FLOW-124). Older payloads omit it. */
+        kept_out: z.boolean().optional().catch(undefined),
       }),
     ),
     next_offset: z.number().int().nonnegative().nullable(),
@@ -424,6 +434,10 @@ export const projectWaitingRowSchema = z.object({
   category_id: z.string().nullable(),
   category_name: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
+  source: z.string().optional().catch(undefined),
+  /** Its parts on this project are out of the P&L (FLOW-124). Older payloads omit it. */
+  kept_out: z.boolean().optional().catch(undefined),
 });
 
 export const projectWaitingSchema = z.array(projectWaitingRowSchema);
@@ -472,6 +486,8 @@ export const breakdownLinesSchema = z
         currency: z.string().regex(/^[A-Z]{3}$/),
         amount_minor: agorotSchema,
         shared: z.boolean(),
+        /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
+        source: z.string().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

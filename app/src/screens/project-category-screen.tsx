@@ -14,6 +14,8 @@ import { formatDayMonth } from "../ui/date-math";
 import { UpMark } from "../ui/category-group-row";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
+import { KeptOutTag, rowSource } from "../ui/line-marks";
+import { KEPT_OUT } from "./screen-shared";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { ScreenHeader } from "../ui/screen-header";
@@ -24,7 +26,7 @@ type CategorySample = {
   projectName: string;
   /** The rows' currency. Default ILS. */
   currency?: string;
-  rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
+  rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint; source?: string; kept_out?: boolean }>;
   /** Shows עוד תנועות until the rest of the sample rows are revealed. */
   pageSize?: number;
   /** FLOW-107. Loan split marks by row id, for stories. */
@@ -101,7 +103,8 @@ export function ProjectCategoryScreen({
               agorot={txn.amount_net}
               currency={rowCurrency}
               sign="out"
-              source="invoice"
+              source={rowSource(txn.source)}
+              tag={txn.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
               state={rowHref ? undefined : txnListState(rowIds, txn.id, `${location.pathname}${location.search}`)}
             />

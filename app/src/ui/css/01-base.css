@@ -433,6 +433,11 @@ a.ui-row,
   white-space: nowrap;
 }
 
+/* FLOW-125: a Latin title runs LTR and still sits on the row's start side. */
+.ui-row-title-ltr {
+  text-align: end;
+}
+
 .ui-row-title-muted {
   color: var(--color-text-muted);
 }

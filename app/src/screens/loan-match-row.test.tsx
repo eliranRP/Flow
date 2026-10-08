@@ -21,6 +21,7 @@ const db = vi.hoisted(() => ({
   amountOriginal: 620_000,
   splits: [] as Array<Record<string, unknown>>,
   loanSplit: null as Record<string, unknown> | null,
+  pnlFixed: true,
 }));
 
 const STORED = [
@@ -105,7 +106,7 @@ vi.mock("../lib/supabase", () => ({
             in_pnl_override: null,
             category_excluded_from_pnl: true,
             in_pnl: true,
-            pnl_fixed: true,
+            pnl_fixed: db.pnlFixed,
             loan_split: db.loanSplit,
           },
           error: null,
@@ -151,6 +152,7 @@ function calls(name: string) {
 
 beforeEach(() => {
   db.holdWrites = false;
+  db.pnlFixed = true;
   db.reads = [];
   db.rpcs = [];
   db.saveError = null;
@@ -424,6 +426,14 @@ describe("the transaction card with a matched payment", () => {
     fireEvent.click(row);
     expect(await screen.findByRole("dialog", { name: "משכנתא לדוגמה" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the P&L switch locked on a matched line even when pnl_fixed is false", async () => {
+    db.pnlFixed = false;
+    showLive();
+    await screen.findByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ });
+    expect(await screen.findByText("תשלום הלוואה · נספר לפי הפיצול")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /ברווח והפסד/ })).not.toBeInTheDocument();
   });
 
   it("gives a viewer the row and a read-only sheet", async () => {
