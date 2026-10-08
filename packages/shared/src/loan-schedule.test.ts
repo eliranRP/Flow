@@ -5,6 +5,7 @@ import {
   contractualPaymentMinor,
   demandAccrual,
   demandStatement,
+  impliedAmortizationMonths,
   LoanScheduleError,
   rateOnDate,
   regularPaymentMinor,
@@ -554,6 +555,39 @@ describe("loan kinds and rate changes (decision 0132)", () => {
     expect(rows.at(-1)?.balanceMinor).toBe(0n);
   });
 
+  it("a rate change on an amortizing loan with an implicit balloon recasts over the period its payment implies", () => {
+    // 100,000.00 at 6% for 60 months, with the payment of a 360-month annuity (599.55).
+    const terms: LoanTerms = { ...base, termMonths: 60, paymentMinor: 59_955n };
+    expect(impliedAmortizationMonths(terms)).toBe(360);
+    // A payment that covers the term annuity implies the term.
+    expect(impliedAmortizationMonths(base)).toBe(360);
+    const plain = buildLoanSchedule(terms);
+    expect(plain.balloon).not.toBeNull();
+    // 6.5% from month 6 (2026-07-01).
+    const rates = [{ effectiveDate: "2026-07-01", annualRatePpm: 65_000 }];
+    const { rows, balloon } = buildLoanSchedule({ ...terms, rates });
+    expect(rows.slice(0, 5)).toEqual(plain.rows.slice(0, 5));
+    const balance = rows[4]?.balanceMinor ?? 0n;
+    const recast = contractualPaymentMinor({ principalMinor: balance, annualRatePpm: 65_000, termMonths: 355 });
+    expect(rows[5]?.paymentMinor).toBe(recast);
+    expect(rows[58]?.paymentMinor).toBe(recast);
+    // The payment moves a little, not about 3.5 times as over the 55 months left in the term.
+    expect(recast > 59_955n && recast < 65_000n).toBe(true);
+    // The balloon stays at the term.
+    expect(rows).toHaveLength(60);
+    expect(rows[59]?.balanceMinor).toBe(0n);
+    expect(balloon?.amountMinor).toBe(rows[59]?.paymentMinor);
+    expect((balloon?.amountMinor ?? 0n) > 9_000_000n).toBe(true);
+    // Below the 600-month annuity (but above the interest) the period is capped at 600.
+    const thin = { ...terms, paymentMinor: 52_000n };
+    expect(impliedAmortizationMonths(thin)).toBe(600);
+    // A payment between two annuities takes the first period whose annuity fits under it.
+    const between = { ...terms, paymentMinor: 70_000n };
+    const months = impliedAmortizationMonths(between);
+    expect(contractualPaymentMinor({ principalMinor: 10_000_000n, annualRatePpm: 60_000, termMonths: months }) <= 70_000n).toBe(true);
+    expect(contractualPaymentMinor({ principalMinor: 10_000_000n, annualRatePpm: 60_000, termMonths: months - 1 }) > 70_000n).toBe(true);
+  });
+
   it("refuses two rate rows on one date and a bad rate", () => {
     const twice = [{ effectiveDate: "2027-01-01", annualRatePpm: 1 }, { effectiveDate: "2027-01-01", annualRatePpm: 2 }];
     expect(codeOf(() => buildLoanSchedule({ ...base, rates: twice }))).toBe("rate_date");
@@ -568,7 +602,7 @@ describe("demand loans (decision 0132)", () => {
   it("accrues daily on actual/365 from the start, rounded half to even", () => {
     // 50,000.00 at 7.3%: 10.00 a day.
     const accrual = demandAccrual(demand, [], "2026-01-31");
-    expect(accrual).toEqual({ fromDate: "2026-01-01", days: 30, balanceMinor: 5_000_000n, interestMinor: 30_000n });
+    expect(accrual).toEqual({ fromDate: "2026-01-01", days: 30, balanceMinor: 5_000_000n, carriedMinor: 0n, interestMinor: 30_000n });
     // Half a minor unit rounds to even: 10.00 at 18.25% for one day is 0.5 minor units.
     expect(demandAccrual({ principalMinor: 1_000n, annualRatePpm: 182_500, startDate: "2026-01-01" }, [], "2026-01-02").interestMinor).toBe(0n);
     expect(demandAccrual({ principalMinor: 3_000n, annualRatePpm: 182_500, startDate: "2026-01-01" }, [], "2026-01-02").interestMinor).toBe(2n);
@@ -588,15 +622,19 @@ describe("demand loans (decision 0132)", () => {
 
   it("a 0% demand loan accrues nothing, so a payment is all principal", () => {
     const zero = { ...demand, annualRatePpm: 0 };
-    expect(demandAccrual(zero, [], "2027-01-01")).toEqual({ fromDate: "2026-01-01", days: 365, balanceMinor: 5_000_000n, interestMinor: 0n });
+    expect(demandAccrual(zero, [], "2027-01-01")).toEqual({ fromDate: "2026-01-01", days: 365, balanceMinor: 5_000_000n, carriedMinor: 0n, interestMinor: 0n });
   });
 
   it("splits the days at a rate change", () => {
     const rates = [{ effectiveDate: "2026-01-11", annualRatePpm: 146_000 }];
     // 10 days at 10.00 a day, then 20 days at 20.00 a day.
     expect(demandAccrual({ ...demand, rates }, [], "2026-01-31").interestMinor).toBe(50_000n);
-    // A change before the period sets the rate for all of it.
-    expect(demandAccrual({ ...demand, rates }, [{ date: "2026-01-20", interestMinor: 0n, escrowMinor: 0n, principalMinor: 0n, feesMinor: 0n }], "2026-01-30").interestMinor).toBe(20_000n);
+    // A change before the period sets the rate for all of it. The payment on 2026-01-20
+    // pays the 280.00 accrued to it (10 days at 10.00, 9 at 20.00), so nothing is carried.
+    const paid = [{ date: "2026-01-20", interestMinor: 28_000n, escrowMinor: 0n, principalMinor: 0n, feesMinor: 0n }];
+    expect(demandAccrual({ ...demand, rates }, paid, "2026-01-30")).toEqual({
+      fromDate: "2026-01-20", days: 10, balanceMinor: 5_000_000n, carriedMinor: 0n, interestMinor: 20_000n,
+    });
   });
 
   it("the statement lists the attached payments with the balance after each, then what has accrued", () => {
@@ -611,8 +649,39 @@ describe("demand loans (decision 0132)", () => {
     ]);
     expect(accrued.fromDate).toBe("2026-04-01");
     expect(accrued.balanceMinor).toBe(3_500_000n);
-    // 35,000.00 at 7.3% for 10 days: 70.00.
-    expect(accrued.interestMinor).toBe(7_000n);
+    // 40,000.00 at 7.3% from 2026-02-01 to 2026-04-01 (59 days at 8.00) is 472.00; the
+    // payment paid 100.00 of it, so 372.00 is carried. Then 35,000.00 for 10 days: 70.00.
+    expect(accrued.carriedMinor).toBe(37_200n);
+    expect(accrued.interestMinor).toBe(37_200n + 7_000n);
+  });
+
+  it("carries the interest a short payment leaves unpaid, and a later payment pays it as interest first", () => {
+    // 50,000.00 at 8% from 2026-01-01: 90 days to 2026-04-01 accrue 986.30.
+    const loan = { principalMinor: 5_000_000n, annualRatePpm: 80_000, startDate: "2026-01-01" };
+    const due = demandAccrual(loan, [], "2026-04-01");
+    expect(due.interestMinor).toBe(98_630n);
+    // A 500.00 payment is all interest; 486.30 is still owed.
+    const short = { date: "2026-04-01", interestMinor: 50_000n, escrowMinor: 0n, principalMinor: 0n, feesMinor: 0n };
+    const after = demandAccrual(loan, [short], "2026-05-01");
+    expect(after.fromDate).toBe("2026-04-01");
+    expect(after.carriedMinor).toBe(48_630n);
+    // 30 more days on 50,000.00 (simple interest: the carried 486.30 earns nothing): 328.77.
+    const month = divHalfEven(5_000_000n * 80_000n * 30n, 365n * 1_000_000n);
+    expect(month).toBe(32_877n);
+    expect(after.interestMinor).toBe(48_630n + 32_877n);
+    // A 2,000.00 payment on 2026-05-01 then books 815.07 of interest and 1,184.93 of principal.
+    const principal = 200_000n - after.interestMinor;
+    expect(principal).toBe(118_493n);
+    const paid = { date: "2026-05-01", interestMinor: after.interestMinor, escrowMinor: 0n, principalMinor: principal, feesMinor: 0n };
+    const settled = demandAccrual(loan, [paid, short], "2026-05-11");
+    expect(settled.carriedMinor).toBe(0n);
+    expect(settled.balanceMinor).toBe(5_000_000n - principal);
+    expect(settled.interestMinor).toBe(divHalfEven((5_000_000n - principal) * 80_000n * 10n, 365n * 1_000_000n));
+    // An interest part above what was due carries nothing back.
+    const over = { ...short, interestMinor: 200_000n };
+    expect(demandAccrual(loan, [over], "2026-04-02").carriedMinor).toBe(0n);
+    // The statement shows the same carried figure.
+    expect(demandStatement(loan, [short], "2026-05-01").accrued).toEqual(after);
   });
 
   it("refuses a bad principal, rate or date", () => {

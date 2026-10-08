@@ -3382,7 +3382,8 @@ const DEMAND_LOAN = {
 };
 
 Deno.test("attach_loan_payment on a demand loan: interest for the days since the last payment, the rest principal", async () => {
-  const earlier = paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 0n, principalMinor: 1_000_000n }, { doc_date: "2026-01-31" });
+  // The earlier payment paid the 300.00 accrued to it, so nothing is carried.
+  const earlier = paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 30_000n, principalMinor: 1_000_000n }, { doc_date: "2026-01-31" });
   const loan = { ...DEMAND_LOAN, balance_minor: 4_000_000 };
   // 40,000.00 for 10 days at 7.3%: 80.00 of interest.
   const { calls, rpc } = feesRpc(loan, 108_000, "2026-02-10", null, [earlier]);
@@ -3416,6 +3417,52 @@ Deno.test("attach_loan_payment on a demand loan: interest for the days since the
     { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
     { part: "principal", amount_minor: 0, scheduled_minor: 0 },
   ]);
+});
+
+Deno.test("attach_loan_payment on a demand loan collects the interest a short payment left unpaid as interest first", async () => {
+  // 50,000.00 at 8% from 2026-01-01: 986.30 by 2026-04-01. A 500.00 payment paid 500.00 of
+  // it, so 486.30 is carried; 30 more days on 50,000.00 add 328.77.
+  const loan = { ...DEMAND_LOAN, annual_rate_ppm: 80_000 };
+  const short = paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 50_000n, principalMinor: 0n }, { doc_date: "2026-04-01" });
+  const { calls, rpc } = feesRpc(loan, 200_000, "2026-05-01", null, [short]);
+  const out = await callTool("attach_loan_payment", { idempotency_key: "d-c", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(attachedParts(calls), [
+    { part: "interest", amount_minor: 81_507, scheduled_minor: 81_507 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 118_493, scheduled_minor: 118_493 },
+  ]);
+  // get_loan_schedule shows the carried part of the interest due.
+  const page = await callTool("get_loan_schedule", { loan_id: LOAN, as_of: "2026-05-01" }, ["read"], rpc);
+  if (!page.structuredContent.ok) throw new Error("schedule failed");
+  assertEquals((page.structuredContent.data as { accrued: unknown }).accrued, {
+    as_of: "2026-05-01", since: "2026-04-01", days: 30, carried: "486.30", carried_minor: 48_630, interest: "815.07", interest_minor: 81_507, balance: "50000", balance_minor: 5_000_000,
+  });
+});
+
+Deno.test("attach_loan_payment on a demand loan replays an attach after a later payment was attached", async () => {
+  // The line was attached on 2026-02-01; a payment dated 2026-03-01 came after it. The same
+  // attach again is a replay, not an out-of-order payment: it rebuilds the same parts.
+  const later = paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 18_000n, principalMinor: 100_000n }, { doc_date: "2026-03-01" });
+  const own = paidRow(LOAN_TXN, { interestMinor: 31_000n, principalMinor: 69_000n }, { doc_date: "2026-02-01" });
+  const split = {
+    loan_id: LOAN,
+    needs_review: false,
+    parts: [{ part: "interest", amount_minor: 31_000 }, { part: "escrow", amount_minor: 0 }, { part: "principal", amount_minor: 69_000 }],
+  };
+  const loan = { ...DEMAND_LOAN, balance_minor: 5_000_000 - 169_000 };
+  const { calls, rpc } = feesRpc(loan, 100_000, "2026-02-01", split, [own, later]);
+  const out = await callTool("attach_loan_payment", { idempotency_key: "d-replay", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(attachedParts(calls), [
+    { part: "interest", amount_minor: 31_000, scheduled_minor: 31_000 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 69_000, scheduled_minor: 69_000 },
+  ]);
+  // A line split on another loan is not a replay: the later payment still refuses it.
+  const other = feesRpc(loan, 100_000, "2026-02-01", { ...split, loan_id: CATEGORY }, [later]);
+  const refused = await callTool("attach_loan_payment", { idempotency_key: "d-other", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], other.rpc);
+  assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message: "a later payment is already attached" } });
 });
 
 Deno.test("attach_loan_payment on a demand loan refuses installments, a date before the start or before an attached payment, and more than the balance", async () => {
@@ -3502,7 +3549,7 @@ Deno.test("get_loan_schedule on a demand loan lists the payments and the interes
   assertEquals(data.rows[0], { ...data.rows[0], date: "2026-01-31", interest_minor: 30_000, principal_minor: 1_000_000, payment_minor: 1_030_000, balance_minor: 4_000_000 });
   // 40,000.00 for 30 days at 7.3%: 240.00.
   assertEquals(data.accrued, {
-    as_of: "2026-03-02", since: "2026-01-31", days: 30, interest: "240", interest_minor: 24_000, balance: "40000", balance_minor: 4_000_000,
+    as_of: "2026-03-02", since: "2026-01-31", days: 30, carried: "0", carried_minor: 0, interest: "240", interest_minor: 24_000, balance: "40000", balance_minor: 4_000_000,
   });
   const bad = await callTool("get_loan_schedule", { loan_id: LOAN, as_of: "2026-02-30" }, ["read"], rpc);
   assertEquals(bad.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });

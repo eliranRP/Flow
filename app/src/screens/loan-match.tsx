@@ -55,7 +55,7 @@ type LoanChoice = {
   currency: string;
   principalMinor: number;
   annualRatePpm: number;
-  /** Null for a demand loan only (decision 0131). */
+  /** Null for a demand loan only (decision 0132). */
   termMonths: number | null;
   startDate: string;
   /** Null for a demand loan only. */
@@ -486,7 +486,7 @@ export function LoanTransactionSplit({
   if (parts == null && !offerMatch) return null;
   const loan = loaded.loans.find((item) => item.id === parts?.[0]?.loanId);
   // A paid-off or closed loan is offered only for payments on or before the day it ended.
-  // A demand loan has no schedule to split by; MCP attach_loan_payment splits it (0131).
+  // A demand loan has no schedule to split by; MCP attach_loan_payment splits it (0132).
   const offered = loaded.loans.filter((item) =>
     item.id === loan?.id || (loanTakesPaymentOn(item, docDate) && item.kind !== "demand"));
   const lineCurrency = loaded.currency;

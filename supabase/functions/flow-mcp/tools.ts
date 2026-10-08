@@ -916,7 +916,7 @@ function readTools() {
     toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
       include_closed: { type: "boolean" },
     }),
-    toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left. An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest from the last one (or the start) to as_of (YYYY-MM-DD, default today), daily on actual/365, with since, days, interest and balance.", {
+    toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left (for an amortizing loan whose payment is below the term annuity, over the months left in the amortization period that payment implies, so the balloon stays at the term). An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest due on as_of (YYYY-MM-DD, default today): carried (interest earlier payments left unpaid, simple interest) plus what accrued from the last one (or the start), daily on actual/365, with since, days, carried, interest and balance.", {
       loan_id: { type: "string" },
       from: { type: "integer" },
       limit: { type: "integer" },
@@ -1126,7 +1126,7 @@ function writeTools() {
       interest_only_months: { type: "integer" },
       amortization_months: { type: "integer" },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, plus an optional fees part. Interest, escrow and principal go under the loan's own category for that part or the default. Fees have no default: they go under this call's fees_category_id (allowed only with fees), else the loan's fees_category_id, else the attach is refused (fees category required). A fees category is any expense category, in or out of the P&L, that is not a built-in loan category or is the built-in interest one (category does not fit the loan part; category not found for another company's). By default the parts follow the schedule row for the line's date: principal takes what is left over, and a shortfall comes out of principal, then escrow, then interest. installments (1 to 12) makes the payment cover that many schedule rows from the first one not yet paid (the first row whose scheduled interest plus principal through it is more than the interest plus principal already attached, pending lines included), using their sums (not enough schedule rows when they run past the schedule). A demand loan has no rows: interest is the balance times the rate for the days since the last attached payment (or the start), on actual/365, rounded half to even, and the rest is principal; installments are refused (a demand loan has no schedule rows), and so are a line dated before the loan start (payment before the loan start) and one dated before a payment already attached (a later payment is already attached). fees (an amount above zero) comes off the line first, then the rest splits as usual (fees exceed the line when the line is smaller). parts {interest, escrow, principal, fees?} gives the exact amounts, used as given; they must add up to the line exactly (parts don't add up), fees must be above zero, and parts cannot be combined with installments or fees. Amounts take at most two decimals. The schedule figures are still kept for comparison (0 when no row fits the date). Principal above the loan balance is refused (loan balance exceeded). The response lists each part, the fees part too when there is one. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, plus an optional fees part. Interest, escrow and principal go under the loan's own category for that part or the default. Fees have no default: they go under this call's fees_category_id (allowed only with fees), else the loan's fees_category_id, else the attach is refused (fees category required). A fees category is any expense category, in or out of the P&L, that is not a built-in loan category or is the built-in interest one (category does not fit the loan part; category not found for another company's). By default the parts follow the schedule row for the line's date: principal takes what is left over, and a shortfall comes out of principal, then escrow, then interest. installments (1 to 12) makes the payment cover that many schedule rows from the first one not yet paid (the first row whose scheduled interest plus principal through it is more than the interest plus principal already attached, pending lines included), using their sums (not enough schedule rows when they run past the schedule). A demand loan has no rows: interest is the balance times the rate for the days since the last attached payment (or the start), on actual/365, rounded half to even, plus interest earlier payments left unpaid (carried, simple interest), and the rest is principal; installments are refused (a demand loan has no schedule rows), and so are a line dated before the loan start (payment before the loan start) and one dated before a payment already attached (a later payment is already attached; a replay of the same attach is not refused). fees (an amount above zero) comes off the line first, then the rest splits as usual (fees exceed the line when the line is smaller). parts {interest, escrow, principal, fees?} gives the exact amounts, used as given; they must add up to the line exactly (parts don't add up), fees must be above zero, and parts cannot be combined with installments or fees. Amounts take at most two decimals. The schedule figures are still kept for comparison (0 when no row fits the date). Principal above the loan balance is refused (loan balance exceeded). The response lists each part, the fees part too when there is one. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
@@ -1475,27 +1475,29 @@ function exactLoanPartsOf(parts: {
 }
 
 /**
- * The principal this line already counts toward the loan's balance, when it is split on
- * this loan: a replay of the same attach then sees the balance as it was the first time,
- * so installments start on the same row and the payload rebuilds the same. A split that
- * needs review does not count in the balance, so it adds nothing.
+ * Whether this line is already split on this loan (`split`), and the principal it already
+ * counts toward the loan's balance: a replay of the same attach then sees the balance as it
+ * was the first time, so installments start on the same row and the payload rebuilds the
+ * same. A split that needs review does not count in the balance, so it adds nothing.
  */
 async function principalAlreadyAttached(
   transactionId: string,
   loanId: string,
   rpc: ToolRpc,
-): Promise<bigint | ToolResult> {
+): Promise<{ split: boolean; principalMinor: bigint } | ToolResult> {
   const result = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (result.status >= 400) return fail("refused", READ_REFUSED);
   const split = result.json as { loan_id?: unknown; needs_review?: unknown; parts?: unknown } | null;
-  if (split == null || typeof split !== "object" || split.loan_id !== loanId || split.needs_review === true) {
-    return 0n;
+  if (split == null || typeof split !== "object" || split.loan_id !== loanId) {
+    return { split: false, principalMinor: 0n };
   }
-  if (!Array.isArray(split.parts)) return 0n;
+  if (split.needs_review === true || !Array.isArray(split.parts)) return { split: true, principalMinor: 0n };
   for (const part of split.parts as Array<{ part?: unknown; amount_minor?: unknown }>) {
-    if (part.part === "principal" && typeof part.amount_minor === "number") return BigInt(part.amount_minor);
+    if (part.part === "principal" && typeof part.amount_minor === "number") {
+      return { split: true, principalMinor: BigInt(part.amount_minor) };
+    }
   }
-  return 0n;
+  return { split: true, principalMinor: 0n };
 }
 
 async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
@@ -1535,10 +1537,10 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (!loanTakesPaymentOn({ status: loan.status, closedOn: loan.closed_on }, docDate)) {
     return fail("refused", "loan closed");
   }
-  const attachedMinor = await principalAlreadyAttached(parsed.data.transaction_id, loan.id, rpc);
-  if (typeof attachedMinor !== "bigint") return attachedMinor;
+  const attached = await principalAlreadyAttached(parsed.data.transaction_id, loan.id, rpc);
+  if (!("split" in attached)) return attached;
   // The balance before this line's own split, if it is already attached (an idempotent replay).
-  let balanceMinor = BigInt(loan.balance_minor) + attachedMinor;
+  let balanceMinor = BigInt(loan.balance_minor) + attached.principalMinor;
   if (balanceMinor <= 0n) return fail("refused", "loan balance exceeded");
   // The scheduled figures: several rows from the first unpaid one, the row for the date, or
   // for a demand loan the interest accrued since the last payment (decision 0132).
@@ -1549,8 +1551,13 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     const payments = await loadLoanPayments(loan.id, rpc);
     if (!Array.isArray(payments)) return payments;
     const counted = countedPayments(payments, parsed.data.transaction_id);
-    // Interest runs from the last payment, so payments are attached in date order.
-    if (counted.some((row) => row.doc_date > docDate)) return fail("refused", "a later payment is already attached");
+    // Interest runs from the last payment, so payments are attached in date order. A line
+    // already split on this loan is a replay (or a refused re-attach): the database answers
+    // it, and the payments dated after it do not change its accrual.
+    if (!attached.split && counted.some((row) => row.doc_date > docDate)) {
+      return fail("refused", "a later payment is already attached");
+    }
+    // The interest accrued since the last payment, plus what earlier payments left unpaid.
     const accrual = demandAccrual(demandTermsOf(loan), demandPaymentsOf(counted), docDate);
     // Pending payments lower it too, so two quick attaches do not both take the same principal.
     if (accrual.balanceMinor < balanceMinor) balanceMinor = accrual.balanceMinor;
@@ -2115,6 +2122,8 @@ export async function callTool(
           as_of: asOf,
           since: accrued.fromDate,
           days: accrued.days,
+          carried: majorString(accrued.carriedMinor),
+          carried_minor: Number(accrued.carriedMinor),
           interest: majorString(accrued.interestMinor),
           interest_minor: Number(accrued.interestMinor),
           balance: majorString(accrued.balanceMinor),

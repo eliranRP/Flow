@@ -684,7 +684,7 @@ describe("LoanTransactionSplit", () => {
     expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
   });
 
-  it("does not offer a demand loan: it has no schedule to split by (decision 0131)", async () => {
+  it("does not offer a demand loan: it has no schedule to split by (decision 0132)", async () => {
     const demand = { ...db.loans[0], kind: "demand", term_months: null, payment_minor: null };
     db.loans = [demand as unknown as (typeof db.loans)[number]];
     renderSplit({ docDate: "2026-02-01" });

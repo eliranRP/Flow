@@ -286,6 +286,34 @@ function finalAdjustmentOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): 
 }
 
 /**
+ * The amortization period an `amortizing` loan's stored payment implies (decision 0132):
+ * the term when principal-and-interest covers the term annuity (within the one cent band),
+ * else the smallest n from the term on whose annuity, rounded half to even like
+ * `contractualPaymentMinor`, is at or below the stored principal-and-interest, at most
+ * `LOAN_TERM_MONTHS_MAX`. A rate change on a loan with an implicit balloon recasts over
+ * these months, not the term's, so the payment does not jump and the balloon stays.
+ */
+export function impliedAmortizationMonths(terms: LoanTerms): number {
+  if (!piBelowAnnuity(terms)) return terms.termMonths;
+  const pi = terms.paymentMinor - terms.escrowMinor;
+  const annuity = (months: number) => contractualPaymentMinor({
+    principalMinor: terms.principalMinor,
+    annualRatePpm: terms.annualRatePpm,
+    termMonths: months,
+  });
+  if (annuity(LOAN_TERM_MONTHS_MAX) > pi) return LOAN_TERM_MONTHS_MAX;
+  // The annuity does not rise as the months grow, so search for the first that fits.
+  let low = terms.termMonths;
+  let high = LOAN_TERM_MONTHS_MAX;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (annuity(middle) <= pi) high = middle;
+    else low = middle + 1;
+  }
+  return low;
+}
+
+/**
  * Monthly schedule in the loan's minor units.
  * Interest is the remaining balance times the nominal annual rate in force on the row's
  * due date divided by 12, rounded half to even. A month that would not finish inside the
@@ -299,9 +327,12 @@ function finalAdjustmentOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): 
  *
  * A rate change (`rates`) recasts the payment: from the first amortizing row whose rate
  * differs from the rate the payment was set at, principal-and-interest becomes the annuity
- * of the balance over the months left to amortize (to the term, or to `amortizationMonths`
- * for a balloon), rounded half to even. Without rate rows nothing is recast, so every loan
- * saved before this change keeps its schedule exactly.
+ * of the balance over the months left to amortize, rounded half to even. Those run to the
+ * term, to `amortizationMonths` for a balloon, or, for an `amortizing` loan whose stored
+ * payment is below the term annuity (an implicit balloon, decision 0088), to the end of the
+ * amortization period that payment implies (`impliedAmortizationMonths`), so the balloon
+ * stays at the term. Without rate rows nothing is recast, so every loan saved before this
+ * change keeps its schedule exactly.
  *
  * `balloon` is set only when principal-and-interest is more than one cent below
  * the exact, unrounded annuity (always for a `balloon` loan that runs its term, and for an
@@ -316,7 +347,9 @@ export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
   const start = parseStartDate(terms.startDate);
   const kind = terms.kind ?? "amortizing";
   const ioMonths = kind === "interest_only" ? (terms.interestOnlyMonths ?? 0) : 0;
-  const amortizeTo = kind === "balloon" ? (terms.amortizationMonths ?? terms.termMonths) : terms.termMonths;
+  const amortizeTo = kind === "balloon"
+    ? (terms.amortizationMonths ?? terms.termMonths)
+    : kind === "amortizing" ? impliedAmortizationMonths(terms) : terms.termMonths;
   const rows: LoanScheduleRow[] = [];
   let balance = terms.principalMinor;
   let levelPi = terms.paymentMinor - terms.escrowMinor;
@@ -469,6 +502,12 @@ export type DemandAccrual = {
   readonly days: number;
   /** Principal left after the attached payments. */
   readonly balanceMinor: bigint;
+  /**
+   * Interest accrued before the last attached payment that the payments did not pay
+   * (decision 0132). It is part of `interestMinor`, and earns no interest itself.
+   */
+  readonly carriedMinor: bigint;
+  /** Interest due on `asOf`: `carriedMinor` plus what accrued since `fromDate`. */
   readonly interestMinor: bigint;
 };
 
@@ -480,29 +519,42 @@ function assertDemand(terms: DemandTerms): LoanRate[] {
 }
 
 /**
- * Interest due on a demand loan on `asOf` (decision 0132): the balance left after the
- * attached payments, times the rate in force on each day, for the days since the last
- * attached payment (or since the start), on an actual/365 basis, rounded half to even.
- * Payments are those dated on or before `asOf`; a later one is the caller's to refuse.
- * A date before the start, or on the last payment's date, accrues nothing.
+ * Interest due on a demand loan on `asOf` (decision 0132). Simple interest, no compounding:
+ * each period between attached payments (from the start, then from each payment to the
+ * next) accrues the balance left at its start times the rate in force on each day, on an
+ * actual/365 basis, and that period's exact figure is rounded half to even. A payment's
+ * interest part pays that period's accrual and any carried before it; what it leaves
+ * unpaid is carried forward (an interest part above what was due carries nothing back).
+ * The result is the carried interest plus what has accrued since the last payment.
+ * Payments are those dated on or before `asOf`, taken in date order; a later one is the
+ * caller's to refuse. A date before the start, or on the last payment's date, accrues
+ * nothing new.
  */
 export function demandAccrual(terms: DemandTerms, payments: readonly DemandPayment[], asOf: string): DemandAccrual {
   const rates = assertDemand(terms);
   parseStartDate(asOf);
+  const counted = payments
+    .filter((payment) => payment.date <= asOf)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const accrue = (balance: bigint, from: string, to: string): bigint =>
+    divHalfEven(demandNumerator(balance, terms.annualRatePpm, rates, from, to), DEMAND_DENOMINATOR);
   let balanceMinor = terms.principalMinor;
   let fromDate = terms.startDate;
-  for (const payment of payments) {
-    if (payment.date > asOf) continue;
+  let carriedMinor = 0n;
+  for (const payment of counted) {
+    const open = balanceMinor < 0n ? 0n : balanceMinor;
+    if (payment.date > fromDate) {
+      carriedMinor += accrue(open, fromDate, payment.date);
+      fromDate = payment.date;
+    }
+    carriedMinor -= payment.interestMinor;
+    if (carriedMinor < 0n) carriedMinor = 0n;
     balanceMinor -= payment.principalMinor;
-    if (payment.date > fromDate) fromDate = payment.date;
   }
   if (balanceMinor < 0n) balanceMinor = 0n;
   const days = Math.max(dayNumber(asOf) - dayNumber(fromDate), 0);
-  const interestMinor = divHalfEven(
-    demandNumerator(balanceMinor, terms.annualRatePpm, rates, fromDate, asOf),
-    DEMAND_DENOMINATOR,
-  );
-  return { fromDate, days, balanceMinor, interestMinor };
+  const interestMinor = carriedMinor + accrue(balanceMinor, fromDate, asOf);
+  return { fromDate, days, balanceMinor, carriedMinor, interestMinor };
 }
 
 /**
