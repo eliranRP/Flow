@@ -80,6 +80,8 @@ fi
 
 pnpm install --frozen-lockfile
 pnpm --filter @flow/app exec playwright install --with-deps chromium
+# Pull requests have no GitHub CI: the pre-push hook runs scripts/local-ci.sh.
+git config core.hooksPath .githooks
 
 echo "cloud agent install ready: pnpm $(pnpm --version), $(deno --version | head -n 1), supabase $(supabase --version)"
 pnpm --filter @flow/app exec playwright --version

@@ -65,8 +65,13 @@ export const ByPartsDark320: Story = { ...dark320 };
 /** A shekel loan: agorot hide when they are zero. */
 export const Shekels: Story = { args: { lineCurrency: "ILS", displayCurrency: "ILS" }, ...light390 };
 
-/** A part waits for review, so the whole line counts and the correction shows. */
+/**
+ * A part waits for review, so the whole line counts and the correction shows, with the
+ * FLOW-131 hint that the loan may have been busy when the line posted.
+ */
 export const NeedsReview: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...light390 };
+export const NeedsReviewDark: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...dark390 };
+export const NeedsReview320: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...light320 };
 export const NeedsReviewDark320: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...dark320 };
 
 /** A line with VAT keeps its parts on screen but counts as one line. */

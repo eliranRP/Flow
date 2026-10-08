@@ -6,6 +6,8 @@ import { longHebrew } from "../ui/story-support";
 import { SetupCard } from "./card";
 import { JEV_HINT } from "./copy";
 import { SetupStep } from "./shell";
+import { StepBusiness } from "./steps";
+import { StoryRoute } from "../ui/story-route";
 
 const meta = {
   title: "Screens/Setup",
@@ -43,4 +45,26 @@ export const SmartTag: Story = {
 export const HomeCard: Story = {
   args: SmartTag.args,
   render: () => <SetupCard done={4} steps={[5]} onDismiss={() => undefined} />,
+};
+
+/** FLOW-606: a pasted tab is refused on the field, as create_company refuses it. */
+const businessNameError = {
+  args: SmartTag.args,
+  render: () => (
+    <StoryRoute entry="/setup/0">
+      <StepBusiness userId={null} onDone={() => undefined} initialName={"סטודיו אלפא\tלעיצוב"} />
+    </StoryRoute>
+  ),
+};
+
+export const BusinessNameError: Story = { ...businessNameError, name: "Business step, name error" };
+export const BusinessNameErrorDark: Story = {
+  ...businessNameError,
+  name: "Business step, name error, dark",
+  globals: { theme: "dark" },
+};
+export const BusinessNameError320: Story = {
+  ...businessNameError,
+  name: "Business step, name error, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
 };

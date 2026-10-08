@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type ReactNode, type RefObject } from "react";
+import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
@@ -70,6 +70,20 @@ export type LoanBalanceRow = {
   projectName?: string | null;
 };
 
+/**
+ * FLOW-131. A line posted while another write held the loan is flagged even when it
+ * fits (`skip locked`, decision 0121). The flag has no reason column, so a busy loan,
+ * a payment past the balance and a re-synced amount look the same here: the hint says
+ * "may". Clearing runs the balance check again.
+ */
+export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. עדכון החלוקה יבדוק את היתרה מחדש.";
+/** The re-sync flagged the parts because the line's amount changed; the client can tell this one apart. */
+export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. עדכון החלוקה יחלק אותו מחדש.";
+
+function absMinor(value: bigint): bigint {
+  return value < 0n ? -value : value;
+}
+
 function asCurrency(currency: string): LoanCurrency | null {
   if (currency === "ILS" || currency === "USD") return currency;
   return null;
@@ -89,6 +103,7 @@ export function LoanSplitPanel({
   byParts = false,
   loans,
   needsReview,
+  amountChanged = false,
   currencyMismatch,
   busy,
   matchHint,
@@ -109,6 +124,8 @@ export function LoanSplitPanel({
   byParts?: boolean;
   loans: readonly LoanChoice[];
   needsReview: boolean;
+  /** The parts no longer sum to the line, so the flag came from a re-synced amount. */
+  amountChanged?: boolean;
   currencyMismatch: boolean;
   busy: boolean;
   matchHint?: string;
@@ -123,6 +140,7 @@ export function LoanSplitPanel({
   onCorrect: () => void;
 }) {
   const setSheet = onSheetOpenChange;
+  const hintId = useId();
   const localRowRef = useRef<HTMLButtonElement>(null);
   const rowRef = matchButtonRef ?? localRowRef;
   if (parts == null && (!offerMatch || readOnly)) return null;
@@ -188,7 +206,10 @@ export function LoanSplitPanel({
           {currencyMismatch ? (
             <p className="t-hint">המטבע של השורה לא מתאים להלוואה.</p>
           ) : readOnly ? null : (
-            <Button type="button" variant="secondary" busy={busy} onClick={onCorrect}>עדכון החלוקה</Button>
+            <>
+              <p className="t-hint" id={hintId}>{amountChanged ? LOAN_AMOUNT_CHANGED_HINT : LOAN_BUSY_HINT}</p>
+              <Button type="button" variant="secondary" busy={busy} onClick={onCorrect} aria-describedby={hintId}>עדכון החלוקה</Button>
+            </>
           )}
         </div>
       ) : null}
@@ -342,6 +363,8 @@ function correctFailureText(error: Error): string {
   if (code === "42501") return "אין הרשאה לעדכן את החלוקה.";
   if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
   if (error.message.includes("loan_split_sum")) return "החלוקה לא מסתכמת לשורה.";
+  // The balance check clear_loan_split_review runs again (FLOW-131).
+  if (error.message.includes("loan_split_balance")) return "התשלום גבוה מיתרת ההלוואה.";
   return "לא הצלחנו לעדכן את החלוקה.";
 }
 
@@ -463,6 +486,7 @@ export function LoanTransactionSplit({
       byParts={loaded.byParts}
       loans={offered}
       needsReview={parts?.some((part) => part.needsReview) ?? false}
+      amountChanged={parts != null && absMinor(parts.reduce((sum, part) => sum + part.amountMinor, 0n)) !== absMinor(loaded.lineMinor)}
       currencyMismatch={loan != null && loan.currency !== lineCurrency}
       busy={match.isPending || correct.isPending}
       matchHint={matchHint}
