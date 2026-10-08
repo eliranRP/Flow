@@ -151,14 +151,21 @@ begin
   with moved as (
     update public.transactions t
     set category_id = p_into,
-        user_assigned = true
+        user_assigned = true,
+        category_assigned = true,
+        category_suggested = false
     from public.transactions old
     where old.id = t.id
       and t.company_id = p_company_id
       and t.category_id = p_from
-    returning t.id, old.user_assigned
+    returning t.id, old.user_assigned, old.category_suggested, old.category_assigned
   )
-  select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'user_assigned', m.user_assigned) order by m.id), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'id', m.id,
+      'user_assigned', m.user_assigned,
+      'category_suggested', m.category_suggested,
+      'category_assigned', m.category_assigned
+    ) order by m.id), '[]'::jsonb)
   into txns
   from moved m;
 
@@ -236,10 +243,11 @@ begin
   if p_from = p_into then
     raise exception 'pick a different category';
   end if;
+  -- no key update: it keeps out a delete or another move, not a line being filed under either.
   perform 1 from public.categories c
   where c.company_id = p_company_id and c.id in (p_from, p_into)
   order by c.id
-  for update;
+  for no key update;
   select c.kind into from_kind from public.categories c where c.company_id = p_company_id and c.id = p_from;
   select c.kind into into_kind from public.categories c where c.company_id = p_company_id and c.id = p_into and not c.hidden;
   if from_kind is null or into_kind is null then
@@ -318,7 +326,7 @@ begin
   perform 1 from public.categories c
   where c.company_id = p_company_id and c.id in (mv.from_id, mv.into_id)
   order by c.id
-  for update;
+  for no key update;
   perform 1 from public.loans l
   where l.company_id = p_company_id
     and l.id in (select (x->>'id')::uuid from jsonb_array_elements(mv.moved->'loans') x)
@@ -336,7 +344,9 @@ begin
 
   update public.transactions t
   set category_id = mv.from_id,
-      user_assigned = (x->>'user_assigned')::boolean
+      user_assigned = (x->>'user_assigned')::boolean,
+      category_assigned = (x->>'category_assigned')::boolean,
+      category_suggested = (x->>'category_suggested')::boolean
   from jsonb_array_elements(mv.moved->'transactions') x
   where t.id = (x->>'id')::uuid and t.company_id = p_company_id and t.category_id = mv.into_id;
   get diagnostics n = row_count;
@@ -483,6 +493,15 @@ begin
   where t.company_id = cid
     and (t.category_id = p_category_id or t.id = any (split_txns));
 
+  -- A split mismatch review goes with the split (the split sync would close it at commit and
+  -- leave the line out of review); the line gets a missing_category row below instead. Restore
+  -- puts the split back, and the sync opens a mismatch review again if it still does not add up.
+  delete from public.review_queue q
+  where q.company_id = cid
+    and q.status = 'open'
+    and q.reason = 'split_mismatch'
+    and q.transaction_id = any (split_txns);
+
   delete from public.line_splits s where s.company_id = cid and s.transaction_id = any (split_txns);
 
   -- category_assigned true: the owner left the line with no category, so nothing guesses one.
@@ -616,13 +635,22 @@ begin
     when unique_violation then
       raise exception 'category cannot be restored' using errcode = '23514';
   end;
+  -- The insert trigger sets the P&L switch from the name; put back the owner's own setting.
+  update public.categories
+  set excluded_from_pnl = (d.snapshot->'category'->>'excluded_from_pnl')::boolean
+  where id = (d.snapshot->'category'->>'id')::uuid;
 
-  update public.transactions t
-  set category_id = (x->>'category_id')::uuid,
-      category_assigned = (x->>'category_assigned')::boolean,
-      category_suggested = (x->>'category_suggested')::boolean
-  from jsonb_array_elements(d.snapshot->'lines') x
-  where t.id = (x->>'id')::uuid and t.company_id = p_company_id;
+  begin
+    update public.transactions t
+    set category_id = (x->>'category_id')::uuid,
+        category_assigned = (x->>'category_assigned')::boolean,
+        category_suggested = (x->>'category_suggested')::boolean
+    from jsonb_array_elements(d.snapshot->'lines') x
+    where t.id = (x->>'id')::uuid and t.company_id = p_company_id;
+  exception
+    when foreign_key_violation then
+      raise exception 'category cannot be restored' using errcode = '23514';
+  end;
 
   begin
     insert into public.line_splits
@@ -645,9 +673,12 @@ begin
     and s.id in (select (x #>> '{}')::uuid from jsonb_array_elements(d.snapshot->'suppliers') x);
 
   update public.review_queue q
-  set prior_category_id = case when (x->>'prior')::boolean then (d.snapshot->'category'->>'id')::uuid else q.prior_category_id end,
-      prior_remembered_category_id = case when (x->>'prior_remembered')::boolean then (d.snapshot->'category'->>'id')::uuid else q.prior_remembered_category_id end,
-      written_remembered_category_id = case when (x->>'written_remembered')::boolean then (d.snapshot->'category'->>'id')::uuid else q.written_remembered_category_id end
+  set prior_category_id = case when (x->>'prior')::boolean and q.prior_category_id is null
+        then (d.snapshot->'category'->>'id')::uuid else q.prior_category_id end,
+      prior_remembered_category_id = case when (x->>'prior_remembered')::boolean and q.prior_remembered_category_id is null
+        then (d.snapshot->'category'->>'id')::uuid else q.prior_remembered_category_id end,
+      written_remembered_category_id = case when (x->>'written_remembered')::boolean and q.written_remembered_category_id is null
+        then (d.snapshot->'category'->>'id')::uuid else q.written_remembered_category_id end
   from jsonb_array_elements(d.snapshot->'review_refs') x
   where q.id = (x->>'id')::uuid and q.company_id = p_company_id;
 

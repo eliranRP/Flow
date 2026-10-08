@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(66);
+select plan(71);
 
 do $users$
 begin
@@ -36,6 +36,7 @@ insert into cdm (label, id) values
   ('fees', tests.fixture_category(pg_temp.id('co'), 'Bank fees')),
   ('shut', tests.fixture_category(pg_temp.id('co'), 'Shut')),
   ('sales', tests.fixture_category(pg_temp.id('co'), 'Sales', 'income')),
+  ('capex', tests.fixture_category(pg_temp.id('co'), 'Capex & Rehab')),
   ('other_cat', tests.fixture_category(pg_temp.id('other_co'), 'Other company'));
 update public.categories set hidden = true where id = pg_temp.id('shut');
 insert into cdm (label, id)
@@ -115,11 +116,24 @@ reset role;
 -- Whatever review rows the splits opened go, so the counts below are the delete's.
 delete from public.review_queue where transaction_id in (pg_temp.id('gs'), pg_temp.id('os'));
 
+-- A line split between Gone and Spare whose parts fall short of it, so it sits in review as a
+-- split mismatch. The split's review sync is deferred; immediate runs it now.
+insert into cdm (label, id) values
+  ('gm', tests.fixture_line(pg_temp.id('co'), 'cdm:gm', 10000, p_project => pg_temp.id('house'), p_category => pg_temp.id('other')));
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+values
+  (pg_temp.id('co'), pg_temp.id('gm'), 1, pg_temp.id('gone'), pg_temp.id('house'), 3000),
+  (pg_temp.id('co'), pg_temp.id('gm'), 2, pg_temp.id('spare'), pg_temp.id('house'), 5000);
+set constraints all immediate;
+set constraints all deferred;
+select is((select string_agg(reason, ',') from public.review_queue where transaction_id = pg_temp.id('gm') and status = 'open'),
+  'split_mismatch', 'the short split line is in review as a split mismatch');
+
 -- Delete with lines.
 select tests.authenticate_as('cdm_owner');
 insert into cdm_out (label, body) values ('del', public.delete_category(pg_temp.id('gone')));
-select is((select (body->>'lines')::integer from cdm_out where label = 'del'), 4,
-  'delete counts the lines on the books: three plain ones and the split one, not the void one');
+select is((select (body->>'lines')::integer from cdm_out where label = 'del'), 5,
+  'delete counts the lines on the books: three plain ones and the two split ones, not the void one');
 select is((select body->>'name' from cdm_out where label = 'del'), 'Gone', 'and names the category');
 select is((select count(*)::integer from public.categories where id = pg_temp.id('gone')), 0, 'the category is gone');
 select is(pg_temp.cat_of('g1'), null::uuid, 'its lines have no category');
@@ -132,6 +146,10 @@ select is(pg_temp.open_reviews('g1') + pg_temp.open_reviews('g2') + pg_temp.open
 select is((select reason from public.review_queue where transaction_id = pg_temp.id('g1') and status = 'open'),
   'missing_category', 'as a line with no category');
 select is(pg_temp.open_reviews('g3'), 1, 'a line already in review gets no second row');
+set constraints all immediate;
+set constraints all deferred;
+select is((select string_agg(reason, ',') from public.review_queue where transaction_id = pg_temp.id('gm') and status = 'open'),
+  'missing_category', 'a split mismatch line stays in review, now as a line with no category');
 select is(pg_temp.open_reviews('gv'), 0, 'a void line does not go to review');
 select is(pg_temp.remembered('sup_gone'), null::uuid, 'the supplier forgets the category');
 
@@ -147,6 +165,10 @@ select is(pg_temp.cat_of('g1'), pg_temp.id('gone'), 'its lines are back in it');
 select is((select category_assigned from public.transactions where id = pg_temp.id('g1')), true,
   'with their old flags');
 select is(pg_temp.parts('gs'), 'Gone:40000,Spare:60000', 'the split is back');
+set constraints all immediate;
+set constraints all deferred;
+select is((select string_agg(reason, ',') from public.review_queue where transaction_id = pg_temp.id('gm') and status = 'open'),
+  'split_mismatch', 'the short split is back in review as a split mismatch');
 select is(pg_temp.open_reviews('g1') + pg_temp.open_reviews('g2') + pg_temp.open_reviews('gs'), 0,
   'the reviews the delete opened are gone');
 select is(pg_temp.open_reviews('g3'), 1, 'the review that was there before stays');
@@ -176,6 +198,16 @@ delete from public.categories where id = pg_temp.id('gone2');
 select tests.authenticate_as('cdm_owner');
 select lives_ok(format('select public.restore_category(%L)', pg_temp.id('gone')), 'and works once it is free');
 
+-- A category whose name keeps it out of the P&L by default, switched on by the owner, comes
+-- back switched on.
+reset role;
+update public.categories set excluded_from_pnl = false where id = pg_temp.id('capex');
+select tests.authenticate_as('cdm_owner');
+select public.delete_category(pg_temp.id('capex'));
+select public.restore_category(pg_temp.id('capex'));
+select is((select excluded_from_pnl from public.categories where id = pg_temp.id('capex')), false,
+  'restore keeps the owner''s P&L switch, not the name''s default');
+
 -- Refusals.
 select throws_ok(format('select public.delete_category(%L)', pg_temp.id('interest')),
   'P0001', 'loan category is fixed', 'a loan category cannot be deleted');
@@ -199,6 +231,8 @@ select lives_ok(format('select public.undo_category_move(%L)', (select body->>'m
   'undo moves them back');
 select is(pg_temp.cat_of('o1'), pg_temp.id('old'), 'the lines are in Old again');
 select is((select user_assigned from public.transactions where id = pg_temp.id('o2')), false, 'with their old flags');
+select is((select category_suggested from public.transactions where id = pg_temp.id('o2')), true,
+  'a guessed line is a guess again');
 select is(pg_temp.parts('os'), 'Old:500,Spare:1500', 'the split part too');
 select is(pg_temp.cat_of('k1'), pg_temp.id('kept'), 'a line that was in Kept before stays there');
 select is(pg_temp.remembered('sup_old'), pg_temp.id('old'), 'the supplier remembers Old again');
@@ -262,7 +296,7 @@ select pg_temp.as_mcp('write');
 insert into cdm_out (label, body) values ('mcp_del', public.mcp_delete_category('cdm-del-1', pg_temp.id('gone')));
 select is((select body->'data'->>'undo_kind' from cdm_out where label = 'mcp_del'), 'category_delete',
   'MCP delete_category answers with its undo kind');
-select is((select (body->'data'->>'lines')::integer from cdm_out where label = 'mcp_del'), 4, 'and the line count');
+select is((select (body->'data'->>'lines')::integer from cdm_out where label = 'mcp_del'), 5, 'and the line count');
 select is(public.mcp_delete_category('cdm-del-1', pg_temp.id('gone')), (select body from cdm_out where label = 'mcp_del'),
   'a replay returns the same answer');
 select is(public.mcp_undo('cdm-undo-1', 'category_delete', pg_temp.id('gone'))->>'ok', 'true', 'undo puts it back');
@@ -278,7 +312,7 @@ select public.restore_category(pg_temp.id('gone'));
 select is(public.mcp_undo('cdm-undo-3', 'category_delete', pg_temp.id('gone'))->'error'->>'code', 'not_found',
   'undo after the app restored it finds nothing');
 
-select is((public.mcp_move_category_lines('cdm-move-1', pg_temp.id('gone'), pg_temp.id('kept'))->'data'->>'lines')::integer, 4,
+select is((public.mcp_move_category_lines('cdm-move-1', pg_temp.id('gone'), pg_temp.id('kept'))->'data'->>'lines')::integer, 5,
   'MCP move_category_lines moves the lines and counts those on the books');
 select is(pg_temp.cat_of('gv'), pg_temp.id('kept'), 'a void line moves too');
 select is(public.mcp_undo('cdm-undo-4', 'category_move', pg_temp.id('gone'))->>'ok', 'true', 'undo moves them back');

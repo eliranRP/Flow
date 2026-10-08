@@ -31,4 +31,4 @@ A new user sets up their own categories, and the seven defaults rarely fit. With
 
 ## Consequences
 
-Settings → Categories can offer delete with a count ("N lines will go back to review") and a ביטול toast through `restore_category`, and a "העברת כל התנועות" action through `move_category_lines` and `undo_category_move`. What a delete or a move changed is kept in `private.category_deletions` and `private.category_moves`.
+Settings → Categories can offer delete with a count ("N lines will go back to review") and a ביטול toast through `restore_category`, and a "העברת כל התנועות" action through `move_category_lines` and `undo_category_move`. What a delete or a move changed is kept in `private.category_deletions` and `private.category_moves`. An older MCP write whose undo would put a deleted category back on a line (a categorize or a split) is refused at undo once that category is gone; restoring the category first makes it undoable again.
