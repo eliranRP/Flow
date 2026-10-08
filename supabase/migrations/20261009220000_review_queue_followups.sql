@@ -4,7 +4,10 @@
 --    suggested), or is removed when the posted line needs no review. A settled row only drops
 --    the pending_income label, as before.
 -- 2. A row the owner resolved as changed was queued again for income and pending income;
---    changed now counts like approved there.
+--    changed now counts like approved there. Open income rows the old code queued next to a
+--    changed row are dropped once, at the end of this file.
+-- 3. An open income row with a null reason (a settled row reopened after its line posted)
+--    takes the same reason as in 1.
 -- sync_review_queue is otherwise as in 20261008001000_kept_out_review_followups.sql. Grants
 -- are kept by create or replace.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
@@ -175,8 +178,9 @@ begin
   get diagnostics pending_inserted = row_count;
 
   -- FLOW-309: an open pending_income row whose line has posted takes the reason the income
-  -- insert above would give it, or is closed when the posted line needs no review. A settled
-  -- row only drops the pending label, as before.
+  -- insert above would give it, or is removed when the posted line needs no review. A settled
+  -- row only drops the pending label, as before. An open income row with a null reason (a
+  -- settled row reopened after its line posted) takes the same reason; it is never removed.
   update public.review_queue q
   set reason = case
       when t.category_id is null then 'missing_category'
@@ -188,9 +192,17 @@ begin
   where q.company_id = p_company_id
     and q.transaction_id = t.id
     and q.status = 'open'
-    and q.reason = 'pending_income'
+    and (q.reason = 'pending_income' or q.reason is null)
+    and private.is_connector_source(t.source)
+    and t.direction = 'income'
     and t.line_status = 'posted'
     and t.removed_at is null
+    -- Same as the income insert: a line with a settled row is not queued, so an open row
+    -- the old code queued after a changed row is removed below, not relabelled.
+    and not exists (
+      select 1 from public.review_queue s
+      where s.transaction_id = t.id and s.status in ('approved', 'changed')
+    )
     and (
       (t.project_id is null
         and (t.category_id is null
@@ -243,5 +255,19 @@ begin
   return inserted + income_inserted + pending_inserted;
 end;
 $$;
+
+
+-- The old code queued settled income again after a changed row. Drop those open rows now;
+-- a later sync no longer adds them. An undo or reopen moves the settled row itself back to
+-- open, so it never sits next to a settled row of the same line.
+delete from public.review_queue q
+using public.transactions t
+where q.transaction_id = t.id
+  and q.status = 'open'
+  and t.direction = 'income'
+  and exists (
+    select 1 from public.review_queue s
+    where s.transaction_id = q.transaction_id and s.status in ('approved', 'changed')
+  );
 
 commit;
