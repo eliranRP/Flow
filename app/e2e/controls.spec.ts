@@ -706,7 +706,7 @@ test("a preview toast stays clear of שמירה in the new-category sheet", asyn
 
 test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {
   await page.goto("/e2e/project-detail?preview=1");
-  await page.getByRole("link", { name: /חומרים/ }).click();
+  await page.getByRole("link", { name: /^חומרים/ }).click();
   await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
   await expect(page.getByText("מלט")).toBeVisible();
   await page.goto("/e2e/project-detail?preview=1");
