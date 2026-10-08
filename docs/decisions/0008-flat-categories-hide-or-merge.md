@@ -1,7 +1,7 @@
 # Flat categories, hide or merge when used
 
 **Date:** 2026-09-26
-**Status:** Accepted
+**Status:** Accepted. Delete with lines replaced by [0144](0144-category-delete-and-move.md).
 
 ## Context
 

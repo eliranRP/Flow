@@ -773,7 +773,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP, dev lane 1; the owner chose "Server now", 2026-10-08; plan: the project's plans/flow-405-category-management.md) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (#207: server and MCP, dev lane 1; the owner chose "Server now", 2026-10-08; decision [0144](../decisions/0144-category-delete-and-move.md); the Settings → Categories screen goes to a UI lane) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 
