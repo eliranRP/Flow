@@ -73,11 +73,13 @@ describe("one line out of the P&L", () => {
     show(base);
     expect(screen.queryByText("מחוץ לרווח")).toBeNull();
     expect(pnlSwitch()).toBeChecked();
-    expect(screen.getByText("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.")).toBeTruthy();
+    // On: no hint (design review).
+    expect(pnlSwitch()).not.toHaveAttribute("aria-describedby");
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · מחוץ לרווח והפסד")).toBeTruthy();
     expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
+    expect(screen.getByText("רק השורה הזו. הקטגוריה לא משתנה.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
     await waitFor(() => { expect(screen.queryByText("מחוץ לרווח")).toBeNull(); });
@@ -113,12 +115,12 @@ describe("one line out of the P&L", () => {
     expect(within(sheet).queryByText(/רווח והפסד/)).toBeNull();
   });
 
-  it("drives a split line's pill and hint from pnl_state (FLOW-124)", () => {
+  it("locks a mixed split and opens its split by category (FLOW-124)", () => {
     // The line's own category counts, but some of its parts are kept out.
     show({ ...base, pnl_state: "mixed" });
     expect(screen.getByText("חלקית ברווח")).toBeTruthy();
-    expect(screen.getByText("חלק מהשורה מחוץ לרווח והפסד, לפי הקטגוריות בפיצול.")).toBeTruthy();
-    expect(pnlSwitch()).toBeChecked();
+    expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
+    expect(screen.getByRole("link", { name: /ברווח והפסד, לפי הקטגוריות בפיצול/ })).toHaveAttribute("href", "/transactions/t-1/split-category");
   });
 
   it("marks a split line whose parts are all kept out, and brings it back in with true", async () => {

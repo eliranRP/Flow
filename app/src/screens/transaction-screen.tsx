@@ -16,7 +16,7 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { StatusPill } from "../ui/chip";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
-import { CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { ChartIcon, CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Toggle } from "../ui/toggle";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
@@ -110,13 +110,12 @@ export function linePnlState(
   return { override, categoryOut, out, mixed, partsOut, forcedIn, next };
 }
 
-function linePnlHint(pnl: LinePnl, categoryName: string): string {
-  if (pnl.mixed) return "חלק מהשורה מחוץ לרווח והפסד, לפי הקטגוריות בפיצול.";
+/** The switch row's one line of scope, shown only while the line is out (DESIGN-RULES §2.1). */
+function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
+  if (!pnl.out) return undefined;
   if (pnl.partsOut) return "הקטגוריות בפיצול מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.";
-  if (pnl.out && pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
-  if (pnl.out) return `הקטגוריה ${categoryName} מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.`;
-  if (pnl.forcedIn) return `כמו שאר הקטגוריה ${categoryName}.`;
-  return "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.";
+  if (pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
+  return `הקטגוריה ${categoryName} מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.`;
 }
 
 export function TransactionScreen({
@@ -431,11 +430,40 @@ export function TransactionScreen({
   const menuButton = canDelete
     ? <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>
     : <ReservedMenuSlot />;
-  const pnlHint = (
-    <>
-      {linePnlHint(pnl, txn.category_name ?? "")}
-      {pnlSplit && !pnl.mixed && !pnl.partsOut ? " כל הפרויקטים בשורה." : null}
-    </>
+  const pnlScope = linePnlHint(pnl, txn.category_name ?? "");
+  const pnlHint = pnlScope == null ? undefined : `${pnlScope}${pnlSplit && !pnl.partsOut ? " כל הפרויקטים בשורה." : ""}`;
+  const splitCategoryTo = onOpenSplit || holdWrites ? undefined : `/transactions/${txn.id}/split-category${search}`;
+  // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
+  // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
+  const pnlRow = txn.pnl_fixed === true ? (
+    <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="תשלום הלוואה · נספר לפי הפיצול" />
+  ) : pnl.mixed ? (
+    splitCategoryTo ? (
+      <ListRow variant="item" href={splitCategoryTo} title="ברווח והפסד" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" label="ברווח והפסד, לפי הקטגוריות בפיצול, פיצול לפי קטגוריות" chevron />
+    ) : (
+      <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" />
+    )
+  ) : (
+    // FLOW-329: one tap takes the line out of the P&L or brings it back.
+    <Toggle
+      label="ברווח והפסד"
+      hint={pnlHint}
+      icon={<ChartIcon />}
+      checked={!pnl.out}
+      disabled={holdWrites}
+      busy={pnlLine.isPending}
+      onChange={() => {
+        if (holdWrites || pnlLine.isPending || (sample == null && blocked())) return;
+        pnlLine.mutate({
+          id: txn.id,
+          party,
+          override: pnl.next,
+          previous: pnl.override,
+          out: !pnl.out,
+          undo: false,
+        });
+      }}
+    />
   );
   return (
     <div>
@@ -495,30 +523,6 @@ export function TransactionScreen({
             setChangeSheet(true);
           }} />
         )}
-        {txn.pnl_fixed === true ? (
-          <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="תשלום הלוואה · נספר לפי הפיצול" />
-        ) : (
-          // FLOW-329: one tap takes the line out of the P&L or brings it back, under the category it overrides.
-          <Toggle
-            label="ברווח והפסד"
-            hint={pnlHint}
-            icon={<KeptOutIcon />}
-            checked={!pnl.out}
-            disabled={holdWrites}
-            busy={pnlLine.isPending}
-            onChange={() => {
-              if (holdWrites || pnlLine.isPending || (sample == null && blocked())) return;
-              pnlLine.mutate({
-                id: txn.id,
-                party,
-                override: pnl.next,
-                previous: pnl.override,
-                out: !pnl.out,
-                undo: false,
-              });
-            }}
-          />
-        )}
       </List>
       <LoanTransactionSplit
         transactionId={txn.id}
@@ -536,6 +540,7 @@ export function TransactionScreen({
           {vatStatusLabel(txn.vat_status)}
         </p>
       ) : null}
+      <List>{pnlRow}</List>
       {lineMeta.isError && lineMeta.data == null ? (
         <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
       ) : (
