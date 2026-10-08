@@ -562,7 +562,9 @@ describe("LoanTransactionSplit", () => {
     renderSplit({ loanPart: null, categoryId: "cat-own-p" });
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     const other = renderSplit({ loanPart: null, categoryId: "cat-other" });
-    await new Promise((r) => { setTimeout(r, 50); });
+    // Wait for this instance's read to land: a line on another category renders nothing while it loads too.
+    await waitFor(() => { expect(other.client.isFetching()).toBe(0); });
+    await waitFor(() => { expect(other.client.getQueryCache().getAll().every((query) => query.state.status === "success")).toBe(true); });
     expect(within(other.container).queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
