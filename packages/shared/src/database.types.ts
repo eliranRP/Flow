@@ -57,13 +57,13 @@ isOneToOne: false
                   ]
                 },"categories": {
                   Row: {
-                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"hidden": boolean,"id": string,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"sort_order": number,"updated_at": string
+                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"hidden": boolean,"id": string,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab": boolean | null,"sort_order": number,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"sort_order": number,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"sort_order"?: number,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -513,13 +513,13 @@ isOneToOne: false
                   ]
                 },"projects": {
                   Row: {
-                    "after_overhead": boolean | null,"budget_agorot": number | null,"company_id": string,"created_at": string,"id": string,"name": string,"state_label": string | null,"status": Database["public"]['Enums']["project_status"],"sumit_budget_section_id": number | null,"updated_at": string
+                    "after_overhead": boolean | null,"arv_agorot": number | null,"budget_agorot": number | null,"company_id": string,"created_at": string,"id": string,"name": string,"purchase_agorot": number | null,"state_label": string | null,"status": Database["public"]['Enums']["project_status"],"sumit_budget_section_id": number | null,"updated_at": string,"value_agorot": number | null,"value_date": string | null
                   }
                   Insert: {
-                    "after_overhead"?: boolean | null,"budget_agorot"?: number | null,"company_id": string,"created_at"?: string,"id"?: string,"name": string,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string
+                    "after_overhead"?: boolean | null,"arv_agorot"?: number | null,"budget_agorot"?: number | null,"company_id": string,"created_at"?: string,"id"?: string,"name": string,"purchase_agorot"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_agorot"?: number | null,"value_date"?: string | null
                   }
                   Update: {
-                    "after_overhead"?: boolean | null,"budget_agorot"?: number | null,"company_id"?: string,"created_at"?: string,"id"?: string,"name"?: string,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string
+                    "after_overhead"?: boolean | null,"arv_agorot"?: number | null,"budget_agorot"?: number | null,"company_id"?: string,"created_at"?: string,"id"?: string,"name"?: string,"purchase_agorot"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_agorot"?: number | null,"value_date"?: string | null
                   }
                   Relationships: [
                     {
@@ -1039,6 +1039,9 @@ isOneToOne: false
 "mcp_set_category_pnl":
 { Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
                            },
+"mcp_set_category_rehab":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_rehab": boolean }; Returns: Json
+                           },
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
@@ -1056,6 +1059,9 @@ isOneToOne: false
                            },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
+                           },
+"mcp_set_project_investment":
+{ Args: { "p_idempotency_key": string,"p_patch": Json,"p_project_id": string }; Returns: Json
                            },
 "mcp_split_line":
 { Args: { "p_idempotency_key": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
@@ -1159,6 +1165,9 @@ isOneToOne: false
 "set_category_hidden":
 { Args: { "p_hidden": boolean,"p_id": string }; Returns: undefined
                            },
+"set_category_rehab":
+{ Args: { "p_category_id": string,"p_rehab": boolean }; Returns: Json
+                           },
 "set_company_integration":
 { Args: { "p_enabled": boolean,"p_mode"?: string,"p_provider"?: string,"p_threshold"?: number }; Returns: Json
                            },
@@ -1170,6 +1179,9 @@ isOneToOne: false
                            },
 "set_overhead_project":
 { Args: { "p_project_id": string }; Returns: undefined
+                           },
+"set_project_investment":
+{ Args: { "p_patch": Json,"p_project_id": string }; Returns: Json
                            },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
