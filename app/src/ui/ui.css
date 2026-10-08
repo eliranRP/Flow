@@ -1685,6 +1685,8 @@ a.ui-row,
 .ui-review-ai .ui-row-title-with-tag {
   display: flex;
   align-items: center;
+  /* A full value still keeps a gap before the pill, LTR names included. */
+  gap: var(--space-2);
 }
 
 .ui-review-ai .ui-row-title-text {
@@ -4707,8 +4709,9 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   padding-inline: var(--space-card-inset);
 }
 
-/* FLOW-327 1.6: at 320 the הצעת Jev pill shows only ✦; the words stay the accessible name. */
-@container review (inline-size < 18rem) {
+/* FLOW-327 1.6, r1: on a phone-width card (up to 412 phones, a card under 25rem) the הצעת Jev pill
+   shows only ✦, so the value is not cut; the words stay the accessible name. */
+@container review (inline-size < 25rem) {
   .ui-suggest-tag-jev {
     padding-inline: var(--space-1);
   }
