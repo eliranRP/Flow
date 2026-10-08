@@ -189,6 +189,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "set_category_rehab",
     "delete_category",
     "move_category_lines",
+    "set_company_currency",
+    "undo_jev_prefill",
     "undo",
     "undo_batch",
   ], "read and write tools");
@@ -1020,6 +1022,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "set_category_rehab",
     "delete_category",
     "move_category_lines",
+    "set_company_currency",
+    "undo_jev_prefill",
     "undo",
     "undo_batch",
     "get_sync_status",

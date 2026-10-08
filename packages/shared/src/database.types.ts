@@ -76,13 +76,13 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "after_overhead": boolean,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
+                    "after_overhead": boolean,"base_currency": string,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
                     {
@@ -274,6 +274,25 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "tag_suggestions"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"jev_prefills": {
+                  Row: {
+                    "category_id": string | null,"company_id": string,"confidence": number | null,"created_at": string,"id": string,"model_version": string | null,"prior_allocations": NonNullable<Json>,"prior_category_id": string | null,"prior_category_suggested": boolean,"prior_project_id": string | null,"project_id": string | null,"transaction_id": string,"undone_at": string | null,"undone_by": string | null
+                  }
+                  Insert: {
+                    "category_id"?: string | null,"company_id": string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id": string,"undone_at"?: string | null,"undone_by"?: string | null
+                  }
+                  Update: {
+                    "category_id"?: string | null,"company_id"?: string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id"?: string,"undone_at"?: string | null,"undone_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jev_prefills_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"jev_usage": {
@@ -919,7 +938,7 @@ isOneToOne: false
 { Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
                            },
 "jev_prefill":
-{ Args: { "p_category"?: string,"p_company": string,"p_project"?: string,"p_transaction": string }; Returns: Json
+{ Args: { "p_category"?: string,"p_company": string,"p_confidence"?: number,"p_model"?: string,"p_project"?: string,"p_transaction": string }; Returns: Json
                            },
 "jev_projects":
 { Args: { "p_company": string }; Returns: Json
@@ -1051,6 +1070,9 @@ isOneToOne: false
 "mcp_set_category_rehab":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_rehab": boolean }; Returns: Json
                            },
+"mcp_set_company_currency":
+{ Args: { "p_currency": string,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
@@ -1089,6 +1111,9 @@ isOneToOne: false
                            },
 "mcp_undo_batch":
 { Args: { "p_batch_key": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_undo_jev_prefill":
+{ Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
@@ -1183,6 +1208,9 @@ isOneToOne: false
 "set_category_rehab":
 { Args: { "p_category_id": string,"p_rehab": boolean }; Returns: Json
                            },
+"set_company_currency":
+{ Args: { "p_currency": string }; Returns: Json
+                           },
 "set_company_integration":
 { Args: { "p_enabled": boolean,"p_mode"?: string,"p_provider"?: string,"p_threshold"?: number }; Returns: Json
                            },
@@ -1227,6 +1255,9 @@ isOneToOne: false
                            },
 "undo_category_move":
 { Args: { "p_move_id": string }; Returns: undefined
+                           },
+"undo_jev_prefill":
+{ Args: { "p_transaction_id": string }; Returns: Json
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined

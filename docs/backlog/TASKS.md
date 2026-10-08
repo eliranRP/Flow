@@ -14,10 +14,10 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Review card gaps for UI lane 2: `customer_name` on list_review, `review_id` on get_transaction | Next `ready` non-UI task (FLOW-510 waits for its design call) |
-| Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
-| UI lane 1 | FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0147), "לפי חודש" for the whole project, Unpaid polish, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
-| UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
+| Dev lane 1 | FLOW-504 server and MCP: a stored company currency (no exchange rates) | The next ready non-UI task or plan card (FLOW-801 and FLOW-407 on hold) |
+| Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
+| UI lane 1 | FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0148), "לפי חודש" for the whole project, Unpaid polish, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
@@ -95,13 +95,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | done (#165) |
-| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
+| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | in-progress (#175) |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | done (#165; whole-unit amounts item open, conflicts with 0120) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
-| 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | ready (owner chose 2026-10-08) |
+| 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | in progress (PR #TBD) |
 | 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | in progress (PR #TBD; owner chose the swipe, 2026-10-08) |
@@ -491,7 +491,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-302 (#98)
 - [x] The month totals add rows by direction: a shared line counts at its full amount and a refund counts as income, so a month header is not that project's P&L for the month. Owner to decide whether that's fine or the header should follow the P&L rules (Decisions needed). (Owner 2026-10-08: keep cash in and out, so the header adds up the rows it sits over.)
 - [x] Switching between the flat and the grouped list (a held order splitting a month, or a second month loading) remounts the rows, so a focused row loses focus. (The flat list is a headless section keyed by its first month, so its rows stay mounted when a month is added or removed; rows that move to another month's section still remount.)
-- [x] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines. (A hidden ", " after each figure.)
+- [x] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines. (A hidden ", " before each figure but the first.)
 - [ ] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed.
 - [x] `MonthList` takes a `className` no caller passes; drop it or use it. (Dropped.)
 
@@ -568,7 +568,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
 - [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
-- [ ] App: a דולגו section under הצג הכול that lists `list_skipped_review` with החזרה לתור (`reopen_review`). Mercury UI thread. Also drop the reviewer preview's approved split from its filed-today sample (`fileReviewerApproval`).
+- [x] App: a דולגו section under הצג הכול that lists `list_skipped_review` with החזרה לתור (`reopen_review`). Mercury UI thread. Also drop the reviewer preview's approved split from its filed-today sample (`fileReviewerApproval`). (FLOW-327 PR #175; the empty queue links to it with "{N} פריטים דולגו", owner 2026-10-08.)
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
@@ -652,11 +652,11 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-327 · Review card: actions in the thumb zone, tidy spacing
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
 - **What:** Approving one card at a time is the most repeated job, and אישור moves between y=449 and y=584 depending on the card, with about 250px empty below; on a 375x667 phone with the banner, שינוי and דלג sit under the tab bar. Pin אישור / שינוי / דלג in a bar just above the tab bar; the card scrolls above it. Also: a gap of `--space-3`–`--space-4` between the auto-filed banner and the card (they touch today); label and value columns aligned on the card with tighter rows (mockup 03); the counter reads "1 מתוך 3" without padding spaces; a disabled אישור says why ("בחרו פרויקט וקטגוריה").
-- [ ] (cycle 2, deploy 9ea1e9a) The "✦ הצעת Jev" pill trails each value, so on a card where Jev filled both fields the two pills start at different points; with values in an aligned column (above) the pills line up too.
-- [ ] (cycle 2) At 320 the pill takes about 90px and long project or category names are cut to a few words ("וילה רעננה – …"). Let the name keep priority: wrap the pill under the value, or shorten it to "✦" with the full label as its accessible name.
-- [ ] (cycle 3, deploy a77efd8) The skip-undo toast sits at the top (y≈102–149) and covers the counter; show it just above the action bar, near the thumb (owner chose this 2026-10-08; supersedes the toast position in decision 0069, so the build adds a decision record). The DevReview fixture also lacks the ביטול action, so add it there for screenshots.
-- [ ] (cycle 4, deploy 6b3a05e, high) Regression from #165: a review queue with Back (filtered to a project, opened from הצג הכול, the sample reviewer queue) now gets the stacked header, so the card and buttons drop 50–76px; with the banner and a shared-cost card at 375x667, שינוי (y≈582–661) and דלג sit on the tab bar. Give those headers `layout="inline"` (`flow-screens.tsx` ReviewQueue ~1656, ~1866, `setup/sample-review.tsx:55`); the counter says where you are. Add "filtered queue + banner + shared cost at 375x667" to this task's stories.
-- [ ] (cycle 4) "הצג הכול" is a 58x44 link in the top-left corner, the farthest point from a right thumb; on a card opened from the list it and Back both go to `/review/all`. Hide it when `from=all`, and put it on the start side of the counter row (or in the pinned bar as a secondary action).
+- [x] (cycle 2, deploy 9ea1e9a) The "✦ הצעת Jev" pill trails each value, so on a card where Jev filled both fields the two pills start at different points; with values in an aligned column (above) the pills line up too.
+- [x] (cycle 2) At 320 the pill takes about 90px and long project or category names are cut to a few words ("וילה רעננה – …"). Let the name keep priority: wrap the pill under the value, or shorten it to "✦" with the full label as its accessible name.
+- [x] (cycle 3, deploy a77efd8) The skip-undo toast sits at the top (y≈102–149) and covers the counter; show it just above the action bar, near the thumb (owner chose this 2026-10-08; supersedes the toast position in decision 0069, so the build adds a decision record). The DevReview fixture also lacks the ביטול action, so add it there for screenshots.
+- [x] (cycle 4, deploy 6b3a05e, high) Regression from #165: a review queue with Back (filtered to a project, opened from הצג הכול, the sample reviewer queue) now gets the stacked header, so the card and buttons drop 50–76px; with the banner and a shared-cost card at 375x667, שינוי (y≈582–661) and דלג sit on the tab bar. Give those headers `layout="inline"` (`flow-screens.tsx` ReviewQueue ~1656, ~1866, `setup/sample-review.tsx:55`); the counter says where you are. Add "filtered queue + banner + shared cost at 375x667" to this task's stories. Done in #175 r1: `layout="inline"` on every review header with Back; story `ReviewFilteredBarSharedBanner375`.
+- [x] (cycle 4) "הצג הכול" is a 58x44 link in the top-left corner, the farthest point from a right thumb; on a card opened from the list it and Back both go to `/review/all`. Hide it when `from=all`, and put it on the start side of the counter row (or in the pinned bar as a secondary action). Done in #175 r1: on the start side of the counter row, hidden on a card opened from the list.
 - **Acceptance:** אישור at the same position on every card state at 375, 393, 412; nothing under the tab bar at 375x667; stories for plain, banner, shared-cost, disabled and Jev-filled cards; design review.
 
 <a id="flow-328"></a>
@@ -710,15 +710,15 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** C2 "עדכון הפיצול" as the main button; C3b and C3c approved as proposed; C4 "הוספת חלק" in the bottom bar · **Depends on:** FLOW-325 (#150, #161); C2 and C8 after FLOW-327 (pinned action bar, same `review-card.tsx`) · **Overlaps:** FLOW-327, FLOW-325 (splitting from the review card) · **Source:** mobile UI/UX review cycle 3 (2026-10-08, deploy a77efd8)
 - **What:** Findings on the split-by-category editor and the split_mismatch review card, shot at 375x667, 393x852 (light and dark) and 412x915.
 - [ ] C1 (high) The ₪ field in a part is a fixed `6rem` (`ui.css` `.ui-lsplit-entry > .ui-field:last-child`), so "₪ 12,345.67" is cut off, and the percent hint shows "25720.16%" with no separators. Put the entry on its own full-width line with `flex: 1` (or size it by `--money-digits`), format the hint; add a 320 story with 9,999,999.99.
-- [ ] C2 (high, owner chose this) On a split_mismatch card the primary button is still אישור, which keeps the wrong P&L; "עדכון הפיצול" is only a text link. Build: "עדכון הפיצול" becomes the primary in the action bar, אישור becomes a secondary "להשאיר כך"; remove the link from `ReviewCard`.
+- [x] C2 (high, owner chose this) On a split_mismatch card the primary button is still אישור, which keeps the wrong P&L; "עדכון הפיצול" is only a text link. Build: "עדכון הפיצול" becomes the primary in the action bar, אישור becomes a secondary "להשאיר כך"; remove the link from `ReviewCard`.
 - [ ] C3a After a part's project or category picker closes, focus that part's value field (today 4 taps per amount part, 5 per percent part, 6 per refund part, against the plan's 3).
 - [ ] C3b (owner approved) The ₪/% unit of a new part follows the unit of the last part typed.
 - [ ] C3c (owner approved) On an inflow (refund) line, open the reversal section expanded.
 - [ ] C4 (owner chose the bottom bar) "הוספת חלק" moves down the screen with each part (y=311, 445, 602) and ends under the sticky footer; put it in the sticky bottom bar next to the totals.
 - [ ] C5 The hold sentence shows live before any ✕ and twice, and the footer grows to about 27% of a 375x667 screen; show it once, only after the first ✕ (`showHold`).
-- [ ] C6 Disabled controls look active: style `.ui-text-link:disabled`, give the rest row a disabled look, add a "לתור" link to the banner, and line the banner's inset up with the card.
+- [x] C6 Disabled controls look active: style `.ui-text-link:disabled`, give the rest row a disabled look, add a "לתור" link to the banner, and line the banner's inset up with the card.
 - [ ] C7 The ₪/% segment buttons are 34px wide; `min-inline-size: var(--touch-min)` on `.ui-seg-btn`.
-- [ ] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
+- [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
 - [ ] C9 The line's own project appears twice in a part's project picker.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
@@ -767,13 +767,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-336"></a>
 ### FLOW-336 · Step the period one-handed
-- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0147) · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0148) · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
 - **What:** The period bar sits in the top third on Home (presets y≈15–51, stepper y≈62–111 at 375x667) and on the project band (y≈162–258). Stepping a month from Home's default takes 2 taps at the top edge and each further month another, about 550px above a resting thumb. Proposal: keep the bar where the owner put it, and add a sideways swipe on the band's hero figure that steps the window by the preset's length (same rules as the stepper: the later step stops at the current window), with a short haptic and the label updating. Swipe is the one-handed path; the arrows stay for accessibility.
 - **Acceptance:** owner's choice on a card; works in RTL (swipe toward the start side goes earlier); does not fight the edge swipe-back (FLOW-332) or vertical scroll; a decision record.
 
 <a id="flow-337"></a>
 ### FLOW-337 · A period on the "לפי חודש" page
-- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0147) · **Owner (2026-10-08):** the page always lists every month since the project started, whatever the band shows · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0148) · **Owner (2026-10-08):** the page always lists every month since the project started, whatever the band shows · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
 - **What:** "לפי חודש" follows the project's period, so at the default 3 חודשים it lists three months with about 300px empty, and seeing the year takes Back, שנה and לפי חודש again (two of them in the top third). Options: the page opens on the whole project ("מתחילת הפרויקט") whatever the band shows, or it gets a compact preset row of its own (`PeriodBar tone="page"`).
 - **Acceptance:** owner's choice on a card; Back returns to the project with its own period unchanged.
 
@@ -820,7 +820,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-407"></a>
 ### FLOW-407 · Export for the accountant
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** on-hold (the owner chose "Not now" on the plan, 2026-10-08; plan: a Hebrew CSV from one export_lines function matching company_pnl, plus MCP export_lines) · **Depends on:** —
 - **What:** From the original plan: an Excel/CSV export with Hebrew headers and net plus VAT columns, carrying each line's original currency and rate date. MCP: an export tool.
 - **Acceptance:** opens correctly in Excel; numbers match the P&L for the period.
 
@@ -877,7 +877,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-504"></a>
 ### FLOW-504 · Display currency toggle and USD-base companies
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** server and MCP done ([0147](../decisions/0147-company-currency.md)); the screen part is ready for a UI lane: the currency choice in Settings → company, `useCompanyCurrency` reads `base_currency`, Home shows `net_profit_minor` and its change from the `prev_*_minor` fields, the overhead share uses `overhead_share_minor`, and the loan form default · **Depends on:** —
 - **What:** A per-company `₪`/`$` display choice with mixed totals converted at display time ([0087](../decisions/0087-multi-currency.md)), and a decision on companies whose base currency is USD (there is no company currency column today).
 - **Acceptance:** owner decision; plan approved.
 
@@ -1006,22 +1006,29 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-702"></a>
 ### FLOW-702 · Jev auto mode
-- **Type:** PLAN FIRST · **Status:** ready to plan (owner's go 2026-10-08: plan card after FLOW-703, dev lane 2; build waits on the plan's approval) · **Depends on:** FLOW-703
+- **Type:** PLAN FIRST · **Status:** server side done (#200, decision 0145; plan approved by the owner 2026-10-08, plans/flow-702-jev-auto-mode.md in the project files); app part with a UI lane · **Depends on:** FLOW-703 (done, #177)
 - **What:** When the mode is `auto` and confidence is at or above the threshold, pre-fill the tag marked as AI and undoable in one tap; anomalies above a level always go to review; the toggle is the kill switch. Needs atomic allocation writes first. Show the threshold as a percent choice only in auto mode.
 - **Acceptance:** threshold edge tests; undo restores; audit trail.
+- [x] Anomaly gate: no fill on a flagged line unless Jev scored the flag below 0.5 (decision [0145](../decisions/0145-jev-auto-mode.md)).
+- [x] Income lines auto filled: project (no allocation) and income category.
+- [x] `jev_prefills` audit row per fill, `undo_jev_prefill` and MCP `undo_jev_prefill`; `get_jev_status` adds `prefilled_today` and `prefilled_open`, `get_jev_suggestions` adds `prefilled`.
+- [x] Threshold edge tests (at the threshold and 0.001 below, expense and income); off or shadow stops new fills.
+- [ ] App (UI lane): Settings mode choice הצעות בלבד / מילוי אוטומטי with threshold chips 80/85/90/95% in auto only; "✦ מולא ע״י Jev" with בטל (`undo_jev_prefill`) on a filled card; a held flagged line shows its flag and no fill.
 
 <a id="flow-703"></a>
 ### FLOW-703 · Jev corrections write-back
-- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go 2026-10-08) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (server side, #177); app part with the UI lane · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
+- [x] A change sheet seeded with Jev's category starts with "לזכור לספק הזה" off, so saving never turns the guess into a supplier rule by default (#175).
+- [x] The review card shows Jev's "no project" answer (`no_project` from `jev_suggestions`, server in #177) as "תקורה · ללא פרויקט" (word order from design review r1, so 320 keeps תקורה) with the Jev pill (#175).
 - [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0139](../decisions/0139-jev-corrections.md)).
 - [x] Auto prefill in one SQL call, `jev_prefill` (#177).
 - [x] `approve_split_review(review, category)`: set the category and approve a split line in one call (#177).
 - [x] A `none` project answer, never pre-filled, and the overhead project labelled (#177).
 - [x] Finished projects offered on lines dated on or before their last line (#177).
-- [ ] #177 review nits (fold into FLOW-702's server PR): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
-- [ ] App (UI lane): the change sheet seeded with a Jev guess starts with remember off, with a test; the split approve calls `approve_split_review(p_id, p_category_id)` instead of two calls; show `no_project` on the card.
+- [x] #177 review nits (done in FLOW-702's server PR, decision 0145; a prefill does not set `pnl_role`): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
+- [x] App (UI lane): the change sheet seeded with a Jev guess starts with remember off, with a test; the split approve calls `approve_split_review(p_id, p_category_id)` instead of two calls; show `no_project` on the card. Done in #175: remember off (above), one `approve_split_review(p_id, p_category_id)` call, `no_project` on the card.
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups
@@ -1048,7 +1055,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** on-hold (the owner chose "Not now" on the plan, 2026-10-08; plan: nightly age-encrypted pg_dump to R2 with a weekly restore test) · **Depends on:** —
 - **What:** From the original plan: a nightly encrypted dump to off-site storage with failure alerts, a weekly storage sync, a monthly restore test (row counts and P&L checksums), and a quarterly drill runbook.
 - **Acceptance:** plan approved (storage, keys, cost); seven nightly dumps; an alert fires on a forced failure.
 

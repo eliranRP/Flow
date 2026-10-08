@@ -426,6 +426,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_category_rehab",
     "delete_category",
     "move_category_lines",
+    "set_company_currency",
+    "undo_jev_prefill",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -484,6 +486,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_category_rehab",
     "delete_category",
     "move_category_lines",
+    "set_company_currency",
+    "undo_jev_prefill",
     "undo",
     "undo_batch",
   ]);
@@ -2467,6 +2471,7 @@ Deno.test("get_breakdown calls the group totals, then a group's lines, and check
     if (name === "get_breakdown") {
       return { status: 200, json: { direction: "expense", totals: [], groups: [], excluded: [], review_count: 0 } };
     }
+    if (name === "mcp_company_loan_currency") return { status: 200, json: "USD" };
     return { status: 200, json: { rows: [], has_more: false } };
   });
   const groups = await callTool("get_breakdown", { direction: "expense" }, ["read"], rpc);
@@ -2506,9 +2511,11 @@ Deno.test("get_breakdown calls the group totals, then a group's lines, and check
 
   const kept = await callTool("get_breakdown", { direction: "expense", excluded: true }, ["read"], rpc);
   assertEquals(kept.isError, false);
-  assertEquals(calls[2]?.name, "get_breakdown_lines");
-  assertEquals(calls[2]?.body.p_excluded, true);
-  assertEquals(calls[2]?.body.p_group_key, null);
+  assertEquals(calls[2]?.name, "mcp_company_loan_currency", "no currency reads the company currency (FLOW-504)");
+  assertEquals(calls[3]?.name, "get_breakdown_lines");
+  assertEquals(calls[3]?.body.p_excluded, true);
+  assertEquals(calls[3]?.body.p_group_key, null);
+  assertEquals(calls[3]?.body.p_currency, "USD");
 
   const before = calls.length;
   for (const bad of [
@@ -3974,6 +3981,27 @@ Deno.test("detach_loan_payment validates input, refuses read tokens and passes t
   if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "line has no loan split");
 });
 
+Deno.test("undo_jev_prefill forwards the line, refuses read tokens and passes conflicts through", async () => {
+  let reply: unknown = { ok: true, data: { transaction_id: TXN, project_id: null, category_id: null } };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: reply }));
+  const out = await callTool("undo_jev_prefill", { idempotency_key: "j-1", transaction_id: TXN.toUpperCase() }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], { name: "mcp_undo_jev_prefill", body: { p_idempotency_key: "j-1", p_transaction_id: TXN } });
+  const denied = await callTool("undo_jev_prefill", { idempotency_key: "k", transaction_id: TXN }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  for (const input of [{ idempotency_key: "k" }, { idempotency_key: "k", transaction_id: "x" }, { idempotency_key: "k", transaction_id: TXN, project_id: TXN }]) {
+    const result = await callTool("undo_jev_prefill", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1);
+  reply = { ok: false, error: { code: "conflict", message: "line changed since" } };
+  const changed = await callTool("undo_jev_prefill", { idempotency_key: "k", transaction_id: TXN }, ["write"], rpc);
+  assertEquals(changed.isError, true);
+  if (!changed.structuredContent.ok) assertEquals(changed.structuredContent.error.code, "conflict");
+});
+
 Deno.test("get_expense takes the loan split from get_transaction when it carries one", async () => {
   const split = { loan_id: TXN, loan_name: "Example loan", needs_review: false, by_parts: true, parts: [] };
   const { calls, rpc } = rpcOf((name) => {
@@ -4016,6 +4044,32 @@ Deno.test("delete_category and move_category_lines forward their input, undo tak
     ["move_category_lines", { idempotency_key: "k", from: CATEGORY, into: INCOME_CATEGORY }],
   ] as const) {
     const result = await callTool(tool, input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+});
+
+Deno.test("set_company_currency forwards the code, undo takes company_currency (FLOW-504)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "company_currency", base_currency: "USD" } } }));
+  const set = await callTool("set_company_currency", { idempotency_key: "cc-1", currency: "USD" }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_company_currency", body: { p_idempotency_key: "cc-1", p_currency: "USD" } });
+  const undo = await callTool("undo", { idempotency_key: "u-cc", kind: "company_currency", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-cc", p_kind: "company_currency", p_id: CATEGORY } });
+
+  const denied = await callTool("set_company_currency", { idempotency_key: "k", currency: "USD" }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k" },
+    { idempotency_key: "k", currency: "usd" },
+    { idempotency_key: "k", currency: "DOLLAR" },
+    { idempotency_key: "k", currency: "USD", company_id: CATEGORY },
+  ]) {
+    const result = await callTool("set_company_currency", input, ["write"], rpc);
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }

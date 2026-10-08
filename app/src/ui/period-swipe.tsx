@@ -3,7 +3,7 @@ import { canStep, stepPeriod, type PeriodChoice } from "../period";
 import { cx } from "./cx";
 
 /**
- * FLOW-336 (decision 0147): a sideways swipe on the band's profit figure steps the period by the
+ * FLOW-336 (decision 0148): a sideways swipe on the band's profit figure steps the period by the
  * preset's length, as the stepper arrows do. The rules are FLOW-314's, so the transaction swipe and
  * the edge swipe-back (FLOW-332) never fight it:
  * - touch only, one finger;
