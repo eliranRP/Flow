@@ -700,8 +700,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The overhead split weights by invoiced income even on the cash form of `get_project`.
+- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
 - [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
 
 <a id="flow-410"></a>
@@ -717,6 +717,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** From the 2026-10-07 tap-count review. Show a project's recent lines (the month list, capped) under its categories without the extra "תנועות אחרונות" tap; the band says the figure is since the project started; the "כל הקטגוריות" link that jumps to Settings goes. FLOW-402 keeps the full page with filters; FLOW-403 adds a period.
 - **MCP:** none (`get_project` returns the lines).
 - **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.
+
+<a id="flow-412"></a>
+### FLOW-412 · Category drill-down on the cash basis
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review.
 
 ## Onboarding, Settings and connectors
 

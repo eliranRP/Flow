@@ -377,6 +377,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",
+    "get_profit_months",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -2083,10 +2084,67 @@ Deno.test("get_project is listed for a read scope only, as a read", () => {
     properties: {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
+      from: { type: "string" },
+      to: { type: "string" },
     },
     additionalProperties: false,
   });
   assertEquals(spec?.description.includes("cash"), true);
+});
+
+Deno.test("get_project passes a period, both dates or neither", async () => {
+  const { calls, rpc } = rpcOf((name) => name === "get_project" ? { status: 200, json: PROJECT_FIXTURE } : { status: 500, json: null });
+  const result = await callTool("get_project", { id: PROJECT, basis: "invoiced", from: "2026-08-01", to: "2026-08-31" }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls, [{ name: "get_project", body: { p_id: PROJECT, p_basis: "invoiced", p_from: "2026-08-01", p_to: "2026-08-31" } }]);
+  for (const args of [
+    { id: PROJECT, to: "2026-08-31" },
+    { id: PROJECT, from: "2026-09-01", to: "2026-08-31" },
+    { id: PROJECT, from: "2026-8-1", to: "2026-08-31" },
+  ]) {
+    const refused = await callTool("get_project", args, ["read"], rpc);
+    assertEquals(refused.isError, true);
+    if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error, { code: "validation", message: "validation" });
+  }
+  assertEquals(calls.length, 1);
+});
+
+Deno.test("get_profit_months reads the company or one project by month", async () => {
+  const months = { basis: "cash", months: [{ month: "2026-09", by_currency: [{ currency: "ILS", income_minor: 100, expense_minor: 40, profit_minor: 60 }] }], by_currency: [] };
+  const { calls, rpc } = rpcOf((name, body) => name !== "get_profit_months"
+    ? { status: 500, json: null }
+    : body.p_project_id === PROJECT_B ? { status: 200, json: null } : { status: 200, json: months });
+  const company = await callTool("get_profit_months", { from: "2026-07-01", to: "2026-09-30" }, ["read"], rpc);
+  assertEquals(company.isError, false);
+  if (company.structuredContent.ok) assertEquals(company.structuredContent.data, months);
+  const project = await callTool("get_profit_months", { project_id: PROJECT, basis: "invoiced" }, ["read"], rpc);
+  assertEquals(project.isError, false);
+  const missing = await callTool("get_profit_months", { project_id: PROJECT_B }, ["read"], rpc);
+  assertEquals(missing.isError, true);
+  if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error.code, "not_found");
+  assertEquals(calls.map((call) => call.body), [
+    { p_from: "2026-07-01", p_to: "2026-09-30", p_basis: "cash", p_project_id: null },
+    { p_from: null, p_to: null, p_basis: "invoiced", p_project_id: PROJECT },
+    { p_from: null, p_to: null, p_basis: "cash", p_project_id: PROJECT_B },
+  ]);
+});
+
+Deno.test("get_profit_months rejects bad arguments before any read", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: {} }));
+  for (const args of [
+    { from: "2026-07-01" },
+    { from: "2026-09-01", to: "2026-08-31" },
+    { from: "2006-01-01", to: "2026-01-01" },
+    { basis: "accrual" },
+    { project_id: "not-a-uuid" },
+    { project_id: PROJECT, company_id: "other" },
+  ]) {
+    const result = await callTool("get_profit_months", args, ["read"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
+  }
+  assertEquals(calls.length, 0);
+  assertEquals((await callTool("get_profit_months", { from: "2006-02-01", to: "2026-01-31" }, ["read"], rpc)).isError, false);
 });
 
 Deno.test("get_project calls get_project with the id and each basis", async () => {
