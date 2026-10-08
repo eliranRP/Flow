@@ -1,12 +1,26 @@
 # Flow backlog
 
-Open tasks only. How to claim and finish a task is in the [backlog guide](README.md). Keep each task's status line current; a claim lives in an open draft PR titled `FLOW-<id>: <title>`.
+Open tasks only. How to claim and finish a task is in the [backlog guide](README.md). Keep each task's status line current; a claim lives in an open draft PR titled `FLOW-<id>: <title>` with a `Claim` block in its body ([how](README.md#tracking-progress-so-lanes-dont-collide)). Before you start, read the open PRs and the table below.
 
 Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI change, design review), `PLAN FIRST` (plan and mockup, owner approval before any build), `BUG`, `MCP` (flow-mcp work), `BACKLOG NIT` (reviewer follow-ups, batch several per PR).
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `blocked`, `done`.
 
 Last full sync: 2026-10-07.
+
+## Lanes now
+
+Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Update it in the next PR that touches TASKS.md when a lane starts, stops, or changes what it owns.
+
+| Lane | Owns now | Next |
+| --- | --- | --- |
+| Dev lane 1 | FLOW-106 loans (parts 1 to 3 merged) | FLOW-106 part 4 |
+| Dev lane 2 | Free | Next `ready` task in the queue |
+| UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
+| UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
+| Backlog bug fixes | FLOW-309 (#158) | Next small, high-impact `BUG` or `BACKLOG NIT` |
+| MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
 
