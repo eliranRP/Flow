@@ -1,4 +1,4 @@
--- FLOW-114 (loan match server items). Decision 0137.
+-- FLOW-114 (loan match server items). Decision 0136.
 -- 1. public.clear_loan_split(transaction): the owner takes a loan payment off its loan in one
 --    call (the app's unmatch). The line keeps its project and category and counts whole again.
 -- 2. public.mcp_detach_loan_payment: the same for MCP (idempotency key, write rate limit),
@@ -99,7 +99,7 @@ revoke all on function public.clear_loan_split(uuid) from public, anon, authenti
 grant execute on function public.clear_loan_split(uuid) to authenticated;
 
 comment on function public.clear_loan_split(uuid) is
-  'Takes a loan payment off its loan (owner only). Returns the removed parts. Decision 0137.';
+  'Takes a loan payment off its loan (owner only). Returns the removed parts. Decision 0136.';
 
 create or replace function public.mcp_detach_loan_payment(
   p_idempotency_key text,
@@ -212,7 +212,7 @@ begin
     raise exception 'mcp_refused is not the expected definition';
   end if;
   execute replace(def, anchor, anchor || $n$,
-        -- FLOW-114 (decision 0137).
+        -- FLOW-114 (decision 0136).
         'line has no loan split'$n$);
 
   -- public.mcp_undo: kind loan_detach puts the parts back.

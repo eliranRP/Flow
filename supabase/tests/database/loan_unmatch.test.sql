@@ -1,4 +1,4 @@
--- FLOW-114 (decision 0137). The owner takes a loan payment off its loan (clear_loan_split), MCP
+-- FLOW-114 (decision 0136). The owner takes a loan payment off its loan (clear_loan_split), MCP
 -- does the same with detach_loan_payment and undo kind loan_detach, and get_transaction returns
 -- the loan split. Invented data only. Amounts are agorot.
 
