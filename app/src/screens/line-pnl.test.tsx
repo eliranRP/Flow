@@ -32,9 +32,9 @@ const base: NonNullable<TransactionDetail> = {
   pnl_fixed: false,
 };
 
-function show(sample: NonNullable<TransactionDetail>) {
+function show(sample: NonNullable<TransactionDetail>, client = new QueryClient()) {
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <ToastProvider>
         <BooksProvider>
           <MemoryRouter>
@@ -113,6 +113,16 @@ describe("one line out of the P&L", () => {
     const sheet = screen.getByRole("dialog", { name: "עוד" });
     expect(within(sheet).getAllByRole("button").map((button) => button.textContent)).toContain("מחיקה");
     expect(within(sheet).queryByText(/רווח והפסד/)).toBeNull();
+  });
+
+  it("locks a line with a loan split as a loan line, not as a split by category", () => {
+    const client = new QueryClient();
+    client.setQueryData(["loan-split", "t-1"], { splits: [{}, {}, {}] });
+    show({ ...base, pnl_state: "mixed" }, client);
+    expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /לפי הקטגוריות בפיצול/ })).toBeNull();
+    expect(screen.getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
+    expect(screen.queryByText("חלקית ברווח")).toBeNull();
   });
 
   it("locks a mixed split and opens its split by category (FLOW-124)", () => {

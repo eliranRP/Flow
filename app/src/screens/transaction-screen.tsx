@@ -416,7 +416,11 @@ export function TransactionScreen({
   const sampleChanged = sample != null && sampleOverride !== undefined;
   const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
   const splitByCategory = lineSplit != null && lineSplit.parts.length > 0 && lineSplit.partsMatch;
-  const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged ? null : txn.pnl_state, splitByCategory);
+  // A line with a loan split is fixed too: set_transaction_pnl refuses it, and its mixed state is
+  // the loan's parts, not a split by category. get_transaction's pnl_fixed reads only the line's
+  // category, which misses a loan's own (unkeyed) principal category (FLOW-134 item 3).
+  const loanLine = txn.pnl_fixed === true || loanSplitFlag;
+  const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged || loanLine ? null : txn.pnl_state, splitByCategory);
   const pnlPill = pnl.out ? (
     <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
   ) : pnl.mixed ? (
@@ -432,10 +436,12 @@ export function TransactionScreen({
     : <ReservedMenuSlot />;
   const pnlScope = linePnlHint(pnl, txn.category_name ?? "");
   const pnlHint = pnlScope == null ? undefined : `${pnlScope}${pnlSplit && !pnl.partsOut ? " כל הפרויקטים בשורה." : ""}`;
-  const splitCategoryTo = onOpenSplit || holdWrites ? undefined : `/transactions/${txn.id}/split-category${search}`;
+  // Like the פיצול section's rows: no link for the reviewer preview, a viewer, or a line with an open review.
+  const reviewBlocked = txn.review_status === "open" && txn.review_reason !== "split_mismatch";
+  const splitCategoryTo = onOpenSplit || holdWrites || reviewBlocked ? undefined : `/transactions/${txn.id}/split-category${search}`;
   // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
   // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
-  const pnlRow = txn.pnl_fixed === true ? (
+  const pnlRow = loanLine ? (
     <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="תשלום הלוואה · נספר לפי הפיצול" />
   ) : pnl.mixed ? (
     splitCategoryTo ? (
