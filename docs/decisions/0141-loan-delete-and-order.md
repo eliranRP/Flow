@@ -15,7 +15,7 @@ FLOW-110 asks the owner to be able to delete a loan, with a confirm, and to reor
 **Deleting unmatches, and can be undone (the owner's choice).**
 - `delete_loan(loan)` is an owner call. It takes the loan lock, then each matched line's lock, the order every loan split write takes.
 - It deletes the loan, which takes its rate rows and split parts with it. The matched payments count whole again under their own categories, and the loan's principal no longer counts.
-- It returns the loan's name and how many payments it unmatched, so the confirm and the toast can say so.
+- It returns the loan's name and how many payments it unmatched (lines not removed), so the confirm and the toast can say so.
 - A viewer is `forbidden`. Another company's loan, or one that is gone, is `loan not found`.
 - The delete policy on `loans` is dropped, so every delete goes through this call. Add-loan undo already deletes through its own definer function.
 
@@ -23,11 +23,12 @@ FLOW-110 asks the owner to be able to delete a loan, with a confirm, and to reor
 - `private.loan_deletions` holds the loan row, its rates and its parts.
 - `restore_loan(loan)` is the app's undo. It puts back the latest delete of that loan.
 - MCP `delete_loan` records undo kind `loan_delete`, which points at the same snapshot.
-- Both restore through one function. It refuses with `loan cannot be restored` (`conflict` in MCP) when the loan id is taken again, a line was removed or matched again since, or the parts no longer fit the line (`loan_splits_check`). Nothing is half restored.
+- Both restore through one function. It refuses with `loan cannot be restored` (`conflict` in MCP) when the loan id is taken again, a line was matched again since, or the parts no longer fit the line (`loan_splits_check`). Nothing is half restored.
+- A line a sync removed keeps its parts, as it did before the delete (0136). A project or loan category deleted since is left empty, as `on delete set null` would have left it.
 - Once restored by either path, the snapshot is spent: the app gets `loan not found`, and MCP undo gets `not_found`.
 
 **The list keeps a saved order.**
-- `loans.sort_order` starts as today's order by name.
+- `loans.sort_order` starts as today's order by name, so the list reads the same until the owner changes it.
 - `reorder_loans(ids)` takes the full order in one call: every loan of the company once, open and closed. A list that leaves one out, names one twice or names another company's loan is `validation`, so a list made before a loan was added or deleted is refused rather than half applied.
 - A new loan has no place and goes last, by name.
 - `mcp_list_loans` (MCP `list_loans`) reads in this order. The app list moves to it with the UI lane's screen.

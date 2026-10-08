@@ -51,8 +51,10 @@ revoke all on table private.loan_deletions from public, anon, authenticated, ser
 -- Puts a deleted loan back from its snapshot: the loan row, its rates, then its parts, each
 -- line checked as save_loan_split checks it. Raises check_violation ('loan cannot be
 -- restored') when it no longer fits: the loan id is taken again, a line is gone or matched
--- again, or the parts no longer fit the line. The caller holds no locks; this takes the
--- lines in id order (the loan does not exist yet, so nothing else can take its lock).
+-- again, or the parts no longer fit the line. A removed line keeps its parts, as it did
+-- before the delete. A project or loan category deleted since is left empty, as its
+-- on delete set null would have left it. The caller holds no locks; this takes the lines in
+-- id order (the loan does not exist yet, so nothing else can take its lock).
 create function private.loan_restore(p_company_id uuid, p_snapshot jsonb)
 returns void
 language plpgsql
@@ -69,6 +71,21 @@ begin
   if loan_row.id is null or loan_row.company_id is distinct from p_company_id then
     raise exception 'loan cannot be restored' using errcode = '23514';
   end if;
+  if not exists (select 1 from public.projects p where p.id = loan_row.project_id and p.company_id = p_company_id) then
+    loan_row.project_id := null;
+  end if;
+  if not exists (select 1 from public.categories c where c.id = loan_row.interest_category_id and c.company_id = p_company_id) then
+    loan_row.interest_category_id := null;
+  end if;
+  if not exists (select 1 from public.categories c where c.id = loan_row.escrow_category_id and c.company_id = p_company_id) then
+    loan_row.escrow_category_id := null;
+  end if;
+  if not exists (select 1 from public.categories c where c.id = loan_row.principal_category_id and c.company_id = p_company_id) then
+    loan_row.principal_category_id := null;
+  end if;
+  if not exists (select 1 from public.categories c where c.id = loan_row.fees_category_id and c.company_id = p_company_id) then
+    loan_row.fees_category_id := null;
+  end if;
 
   select coalesce(array_agg(distinct (e.value->>'transaction_id')::uuid), '{}')
   into lines
@@ -80,7 +97,6 @@ begin
     from public.transactions t
     where t.company_id = p_company_id
       and t.id = any (lines)
-      and t.removed_at is null
     order by t.id
     for update
   ) l;
@@ -110,7 +126,7 @@ begin
     perform private.loan_splits_check(line);
   end loop;
 exception
-  when check_violation or foreign_key_violation or unique_violation then
+  when check_violation or foreign_key_violation or unique_violation or not_null_violation then
     raise exception 'loan cannot be restored' using errcode = '23514';
 end;
 $$;
@@ -170,9 +186,10 @@ begin
       'category_id', s.category_id,
       'needs_review', s.needs_review
     ) order by s.transaction_id, s.part), '[]'::jsonb),
-    count(distinct s.transaction_id)::integer
+    count(distinct s.transaction_id) filter (where t.removed_at is null)::integer
   into parts, payments
   from public.loan_splits s
+  join public.transactions t on t.id = s.transaction_id and t.company_id = s.company_id
   where s.loan_id = p_loan_id and s.company_id = cid;
 
   -- The parts and rates go with the loan (on delete cascade).

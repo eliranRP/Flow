@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(42);
+select plan(45);
 
 do $users$
 begin
@@ -167,6 +167,23 @@ reset role;
 delete from public.loan_splits where transaction_id = pg_temp.id('txn_two');
 select tests.authenticate_as('ldo_owner');
 select lives_ok($$select public.restore_loan(pg_temp.id('a'))$$, 'once that line is free again, restore works');
+
+-- A removed payment and a deleted project do not block the restore.
+reset role;
+insert into ldo (label, id) values ('proj', tests.fixture_project(pg_temp.id('co'), 'Example Street'));
+update public.loans set project_id = pg_temp.id('proj') where id = pg_temp.id('a');
+update public.transactions set removed_at = now() where id = pg_temp.id('txn_one');
+select tests.authenticate_as('ldo_owner');
+select is((public.delete_loan(pg_temp.id('a'))->>'payments')::int, 1, 'the count leaves out a removed payment');
+reset role;
+delete from public.projects where id = pg_temp.id('proj');
+select tests.authenticate_as('ldo_owner');
+select lives_ok($$select public.restore_loan(pg_temp.id('a'))$$, 'restore works with a removed payment and a deleted project');
+select ok((select project_id is null from public.loans where id = pg_temp.id('a'))
+  and pg_temp.parts('txn_one') <> '', 'the project is left empty and the removed line keeps its parts');
+reset role;
+update public.transactions set removed_at = null where id = pg_temp.id('txn_one');
+select tests.authenticate_as('ldo_owner');
 
 -- Refusals.
 select throws_ok($$select public.delete_loan(pg_temp.id('other_loan'))$$, 'P0001', 'loan not found',
