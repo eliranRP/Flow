@@ -126,7 +126,7 @@ export function useCategoryRehab() {
 
 type Rename = { id: string; name: string; previous: string };
 
-/** rename_category until database.types.ts carries it (dev lane 1's endpoint). */
+/** rename_category (#228) returns { id, name, before, after }; called untyped until database.types.ts carries it. */
 async function renameCategory(id: string, name: string): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");

@@ -101,7 +101,7 @@ export function undoMoveFailureText(error: Error): string {
 
 /** Category rename (rename_category): the same bounds as create_category, trimmed. */
 export const CATEGORY_NAME_MIN = 2;
-export const CATEGORY_NAME_MAX = 60;
+export const CATEGORY_NAME_MAX = 120;
 export const RENAME_CATEGORY_SAVED = "השם נשמר";
 export const RENAME_CATEGORY_UNDONE = "השם הוחזר";
 export const RENAME_CATEGORY_TAKEN = "יש כבר קטגוריה בשם הזה.";
@@ -115,6 +115,7 @@ export function categoryNameError(value: string): string | undefined {
 
 /** rename_category's refusals: the name is taken in the same kind, or the name or category is not valid. */
 export function renameCategoryFailureText(error: Error): string {
+  if ((error as Error & { code?: string }).code === "42501") return "רק בעלי העסק יכולים לשנות שם.";
   if (error.message.includes("already")) return RENAME_CATEGORY_TAKEN;
   if (error.message.includes("too short") || error.message.includes("too long")) return "השם לא תקין.";
   if (error.message.includes("category not found")) return "הקטגוריה לא נמצאה.";
