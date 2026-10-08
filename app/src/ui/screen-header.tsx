@@ -52,7 +52,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     || (props.layout == null && !barOnly && start != null && size !== "compact");
   const kickerLine = kicker ? <p className="t-hint">{kicker}</p> : null;
   return (
-    <header className={stacked ? "ui-page ui-page-stacked" : "ui-page"}>
+    <header className={stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page"}>
       {stacked ? null : kickerLine}
       <div className="ui-page-title-row">
         {start}

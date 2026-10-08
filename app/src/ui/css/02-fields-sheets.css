@@ -1,0 +1,390 @@
+.t-hint {
+  text-wrap: pretty;
+}
+
+.ui-loan-caution {
+  color: var(--color-warning);
+}
+
+.ui-loan-skel .ui-row {
+  min-height: calc(var(--touch-min) + 28px);
+}
+
+.ui-loan-amount {
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* FLOW-107. A part kept out of the profit: icon and words, muted, never only colour. */
+.ui-loan-out {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ui-loan-out svg {
+  flex: none;
+}
+
+.ui-loan-spacer {
+  display: block;
+  inline-size: 24px;
+}
+
+.ui-loan-total .ui-row-title {
+  font-weight: var(--type-title-3-weight);
+}
+
+.ui-num-field {
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  text-align: start;
+}
+
+.ui-date-field .ui-num {
+  flex: 1;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field:disabled {
+  cursor: not-allowed;
+}
+
+/* FLOW-119. The loan's project: one line, the empty value muted. */
+.ui-pick-value {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-pick-value[data-empty="true"] {
+  color: var(--color-text-muted);
+}
+
+.ui-row-hint {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+/* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0120 moves only
+   the row secondary line to `meta`). Matches the skeleton and status reserve. */
+.ui-row-hint.t-hint {
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-hint-weight);
+  line-height: var(--type-hint-line);
+}
+
+.ui-row-hint-wrap {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.ui-row-hint-skel {
+  display: flex;
+  align-items: center;
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
+.ui-row-hint[role="status"] {
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
+.ui-row-tone-warning :is(.ui-row-hint, .ui-row-icon) {
+  color: var(--color-warning);
+}
+
+.ui-row-tone-muted .ui-row-icon {
+  color: var(--color-text-muted);
+}
+
+.ui-nowrap {
+  white-space: nowrap;
+}
+
+.ui-row-icon {
+  color: var(--color-text-secondary);
+}
+
+.ui-row-icon > .ui-spinner {
+  display: block;
+  margin: calc((20px - var(--spinner)) / 2);
+}
+
+.ui-sheet-surface {
+  display: flex;
+  min-block-size: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-2) 0 var(--space-4);
+  padding-top: calc(var(--space-2) + var(--toast-pad, 0px));
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  transition: padding-top var(--dur-base) var(--ease-standard);
+}
+
+.ui-sheet-body {
+  display: flex;
+  min-width: 0;
+  min-block-size: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-inline: var(--space-side);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap) - 11rem);
+  padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
+
+[data-vaul-drawer].ui-sheet-panel {
+  /* Vaul writes an inline height while the keyboard is up and later restores the height
+     it first measured, which --vvh had already shrunk. Content height, capped here, wins. */
+  height: auto !important;
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
+  /* The toast pad grows padding above the header. Scroll anchoring would
+     scroll that padding away and leave ✕ under the toast. */
+  overflow-anchor: none;
+}
+
+[data-vaul-drawer].ui-sheet-panel.ui-sheet-fit {
+  height: auto !important;
+  padding-bottom: 0;
+}
+
+[data-vaul-drawer].ui-sheet-panel.ui-sheet-tall {
+  height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
+  padding-bottom: 0;
+}
+
+.ui-sheet-tall .ui-sheet-surface {
+  padding-bottom: 0;
+}
+
+.ui-sheet-tall .ui-sheet-body {
+  max-height: none;
+}
+
+.ui-sheet-fit .ui-sheet-surface {
+  padding-bottom: 0;
+}
+
+.ui-sheet-fit .ui-sheet-body {
+  padding-block-end: var(--space-4);
+}
+
+.ui-sheet-foot {
+  flex: none;
+  padding: var(--space-3) var(--space-side) 0;
+}
+
+.ui-sheet-foot-safe {
+  padding-bottom: calc(var(--safe-bottom) + var(--space-4));
+}
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--label-gap);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ui-field-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-hint-weight);
+  line-height: var(--type-hint-line);
+}
+
+.ui-code-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--label-gap);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ui-code-field-box {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
+  direction: ltr;
+}
+
+.ui-code-field-input {
+  direction: ltr;
+  text-align: start;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  user-select: text;
+  touch-action: pan-x;
+}
+
+/* Vaul sets touch-action: none on the drawer. The field has to win so a sideways swipe pans the value. */
+[data-vaul-drawer] .ui-code-field-input {
+  touch-action: pan-x;
+}
+
+.ui-code-field-copy {
+  position: absolute;
+  z-index: 1;
+  /* Sit inside the field border so the surface does not cover the end edge. */
+  inset-inline-end: 1px;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  background: var(--color-surface);
+}
+
+/* The shared icon ring is offset 2px, which runs past this field's end border. */
+.ui-code-field-copy.ui-icon-btn:focus-visible {
+  outline-offset: -2px;
+}
+
+.ui-assistant-step {
+  min-block-size: 22rem;
+}
+
+.ui-assistant-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-assistant-header {
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  vertical-align: bottom;
+}
+
+.ui-field-control {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  min-height: var(--touch-min);
+  padding-inline: var(--field-pad);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-sizing: border-box;
+  font-size: max(16px, var(--type-body-size));
+  font-weight: var(--type-body-weight);
+}
+
+/* After .ui-field-control. That rule's padding-inline would otherwise put the value under the copy button. */
+.ui-code-field-box[data-copy="on"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: calc(var(--touch-min) + var(--space-2));
+}
+
+.ui-code-field-box[data-copy="off"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: var(--field-pad);
+}
+
+.ui-money-field.ui-field-control {
+  padding: 0;
+}
+
+.ui-field-control:focus {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+  outline: none;
+}
+
+.ui-field-error .ui-field-control {
+  border-color: var(--color-error);
+}
+
+.ui-field-message {
+  color: var(--color-error);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-hint-weight);
+  line-height: var(--type-hint-line);
+}
+
+.ui-field-message-slot {
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
+.ui-money-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  direction: ltr;
+  cursor: text;
+}
+
+.ui-money-prefix,
+.ui-percent-suffix {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.ui-money-prefix {
+  /* Sits just to the left of the right-aligned digits. --money-digits is the text width. */
+  inset-inline-end: calc(var(--field-pad) + var(--money-digits, 0ch) + 0.35em);
+}
+
+.ui-money-field input {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: var(--touch-min);
+  margin: 0;
+  padding-inline: var(--field-pad);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: max(16px, var(--type-body-size));
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+  outline: none;
+}
+
+.ui-money-field:focus-within {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+  outline: none;
+}

@@ -26,7 +26,7 @@ function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {})
     api: sampleSplitApi(line),
     ...sample,
   };
-  render(
+  return render(
     <QueryClientProvider client={new QueryClient()}>
       <ToastProvider>
         <BooksProvider>
@@ -154,6 +154,14 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(await screen.findByText("אשרו את התנועה בתור לאישור, ואז פצלו.")).toBeInTheDocument();
     expect(screen.queryByText("פרטי התנועה")).toBeNull();
+  });
+
+  it("an open review's לתור opens that card when its id is known, else the queue (FLOW-327 r1)", () => {
+    const first = showEditor({ parts: expenseParts, line: { ...SAMPLE_EXPENSE_LINE, reviewBlocked: true, reviewId: "rv-9" } });
+    expect(screen.getByRole("link", { name: "לתור" }).getAttribute("href")).toMatch(/^\/review\?item=rv-9&from=all/);
+    first.unmount();
+    showEditor({ parts: expenseParts, line: { ...SAMPLE_EXPENSE_LINE, reviewBlocked: true } });
+    expect(screen.getByRole("link", { name: "לתור" }).getAttribute("href")).toMatch(/^\/review(\?|$)/);
   });
 
   it("a dropped connection toasts ניסיון חוזר and keeps the values", async () => {
@@ -296,6 +304,8 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "הסרה" }));
     expect(await screen.findByText("הפיצול הוסר")).toBeInTheDocument();
     expect(saved).toEqual([[]]);
+    // The confirm sheet's own ביטול leaves with the sheet; only then is "no undo" meaningful.
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
     expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
   });
 

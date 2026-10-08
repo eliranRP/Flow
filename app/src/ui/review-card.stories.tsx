@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ReviewCard } from "./review-card";
+import { jevReasonText, reviewFlagView, type JevReasonKind, type ReviewFlag } from "../review-copy";
 import { userEvent, within } from "@storybook/test";
 import type { TxnMeta } from "../txn-meta";
 import { padded, storyMeta } from "./story-support";
@@ -18,13 +19,27 @@ type CardArgs = {
   /** Jev filled the suggested project or category: הצעת Jev instead of הצעה. */
   projectJev?: boolean;
   categoryJev?: boolean;
-  /** FLOW-325: a split_mismatch card offers עדכון הפיצול. */
-  fixSplit?: boolean;
+  /** FLOW-327: a split_mismatch card names the parts; "loading" while the split is read. */
+  splitParts?: number | "loading";
+  /** FLOW-327: Jev's reason line (decision 0134). */
+  why?: JevReasonKind;
+  partyFilings?: number;
+  matchingFilings?: number;
+  /** FLOW-327: the anomaly flags (decision 0131); the card shows at most one. */
+  flags?: ReviewFlag[];
+  direction?: "income" | "expense";
+  /** FLOW-327 / C8: the hint under the rows when both fields are empty. */
+  missingBoth?: boolean;
+  /** FLOW-703: Jev answered "no project". */
+  projectNoneJev?: boolean;
 };
 
-function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev, fixSplit }: CardArgs) {
+function CardView({
+  supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev,
+  splitParts, why, partyFilings = 5, matchingFilings = 3, flags, direction, missingBoth, projectNoneJev,
+}: CardArgs) {
   const shared = reason === "unallocated_shared";
-  const suggestion = project || category
+  const suggestion = project || category || projectNoneJev
     ? {
         project,
         category,
@@ -33,8 +48,10 @@ function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category,
         categorySuggested: Boolean(category),
         projectJev,
         categoryJev,
+        projectNoneJev,
       }
     : undefined;
+  const jevWhy = why ? jevReasonText({ reason: why, partyFilings, matchingFilings }, direction) : null;
   return (
     <ReviewCard
       supplier={supplier}
@@ -47,7 +64,11 @@ function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category,
       currency={currency}
       onProject={projectJev || categoryJev ? () => undefined : undefined}
       onCategory={projectJev || categoryJev ? () => undefined : undefined}
-      onFixSplit={fixSplit ? () => undefined : undefined}
+      splitParts={splitParts}
+      jevWhy={jevWhy}
+      flag={reviewFlagView(flags, { direction, currency })}
+      direction={direction}
+      missingBoth={missingBoth}
     />
   );
 }
@@ -94,24 +115,11 @@ export const MissingCategory: Story = {
 };
 
 /** FLOW-312 item 2 / 0125: the bank changed a split line's amount, so the parts no longer match. */
-export const SplitMismatch: Story = {
-  args: {
-    ...OneCard.args,
-    project: "וילה רעננה",
-    category: "חומרים",
-    reason: "split_mismatch",
-    fixSplit: true,
-  },
-};
-
-export const SplitMismatchDark: Story = {
-  args: SplitMismatch.args,
-  globals: { theme: "dark" },
-};
-
-export const SplitMismatch320: Story = {
-  args: SplitMismatch.args,
-  parameters: { viewport: { defaultViewport: "flow320" } },
+const splitMismatchArgs = {
+  ...OneCard.args,
+  project: "וילה רעננה",
+  category: "חומרים",
+  reason: "split_mismatch",
 };
 
 export const SharedCost: Story = {
@@ -217,3 +225,46 @@ export const JevBothLong320: Story = {
     category: "חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי והסביבה הקרובה",
   },
 };
+
+/** FLOW-327 item 3: the mismatch card names the parts in one row; the actions sit in the bar. */
+export const SplitMismatchParts: Story = { args: { ...splitMismatchArgs, splitParts: 2 } };
+export const SplitMismatchOnePart: Story = { args: { ...splitMismatchArgs, splitParts: 1 } };
+export const SplitMismatchPartsDark: Story = { ...dark, args: SplitMismatchParts.args };
+export const SplitMismatchParts320: Story = { ...narrow, args: SplitMismatchParts.args };
+export const SplitMismatchPartsLoading: Story = { args: { ...splitMismatchArgs, splitParts: "loading" } };
+
+/** FLOW-333 C8: both fields empty, so אישור is off and this line says why. */
+export const BothMissingHint: Story = { args: { ...OneCard.args, missingBoth: true } };
+export const BothMissingHint320: Story = { ...narrow, args: BothMissingHint.args };
+export const BothMissingHintDark: Story = { ...dark, args: BothMissingHint.args };
+
+/** FLOW-327 / 0134: Jev's reason, one line under the rows. Invented data. */
+const jevBoth = { ...jevCard, projectJev: true, categoryJev: true };
+export const JevReasonSameAsLast: Story = { name: "Jev reason: same as last", args: { ...jevBoth, why: "same_as_last" } };
+export const JevReasonUsual: Story = { name: "Jev reason: usual for party", args: { ...jevBoth, why: "usual_for_party", partyFilings: 5, matchingFilings: 3 } };
+export const JevReasonNewParty: Story = { name: "Jev reason: new party", args: { ...jevBoth, why: "new_party" } };
+export const JevReasonNewPartyIncome: Story = { name: "Jev reason: new party, income", args: { ...jevBoth, why: "new_party", direction: "income", netAgorot: "1850000" } };
+export const JevReasonModelOnly: Story = { name: "Jev reason: model only", args: { ...jevBoth, why: "model_only" } };
+export const JevReasonUsual320: Story = { ...narrow, name: "Jev reason: usual, 320", args: JevReasonUsual.args };
+export const JevReasonUsualDark: Story = { ...dark, name: "Jev reason: usual, dark", args: JevReasonUsual.args };
+
+/** FLOW-703: Jev's answer is "no project"; the field shows it with the pill. */
+export const JevNoProject: Story = { name: "Jev: no project", args: { ...OneCard.args, category: "משרד", categoryJev: true, projectNoneJev: true, why: "usual_for_party" } };
+export const JevNoProject320: Story = { ...narrow, name: "Jev: no project, 320", args: JevNoProject.args };
+export const JevNoProjectDark: Story = { ...dark, name: "Jev: no project, dark", args: JevNoProject.args };
+
+/** FLOW-327 / 0131: one flag per card, loud from a Jev score of 0.7. Invented data. */
+const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<ReviewFlag> = {}): ReviewFlag => ({
+  transaction_id: "t1", kind, jev_score: score, ...extra,
+});
+export const FlagDuplicateLoud: Story = { name: "Flag: duplicate, loud", args: { ...jevCard, flags: [flag("duplicate", 0.86, { other_doc_date: "2026-10-03" })] } };
+export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 4.2, typical_amount_minor: 120_000 })] } };
+export const FlagNewPartyLoudIncome: Story = { name: "Flag: new party, loud, income", args: { ...jevCard, direction: "income", netAgorot: "4800000", flags: [flag("new_party_large", 0.9)] } };
+export const FlagDuplicateQuiet: Story = { name: "Flag: duplicate, quiet", args: { ...jevCard, flags: [flag("duplicate", 0.4, { other_doc_date: "2026-10-03" })] } };
+export const FlagSpikeQuietIncome: Story = { name: "Flag: amount spike, quiet, income", args: { ...jevCard, direction: "income", flags: [flag("amount_spike", 0.5, { ratio: 3 })] } };
+export const FlagNewPartyUnscored: Story = { name: "Flag: new party, unscored (Jev off)", args: { ...jevCard, flags: [flag("new_party_large", null)] } };
+export const FlagWithJevReason: Story = { name: "Flag: loud, with Jev reason", args: { ...jevBoth, why: "usual_for_party", flags: [flag("amount_spike", 0.8, { ratio: 3.1, typical_amount_minor: 95_000 })] } };
+export const FlagLoud320: Story = { ...narrow, name: "Flag: loud, 320", args: FlagWithJevReason.args };
+export const FlagLoudDark: Story = { ...dark, name: "Flag: loud, dark", args: FlagWithJevReason.args };
+export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: FlagDuplicateQuiet.args };
+export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };

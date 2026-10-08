@@ -1,0 +1,438 @@
+:root {
+  --size-chip: 36px;
+  --size-period: 32px;
+  --size-search: 46px;
+  --size-switch: 46px;
+  --switch-track-h: 28px;
+  --switch-knob: 22px;
+  --switch-inset: 3px;
+  --radius-check: 7px;
+  --radius-segment: 9px;
+  --field-pad: 14px;
+  --seg-gap: 3px;
+  --badge-size: 17px;
+  --badge-nudge: 6px;
+  --badge-ring: 2px;
+  --badge-lift: 3px;
+  --toast-gap: 10px;
+  --icon-app: 72px;
+  --radius-app: 18px;
+  --icon-note: 38px;
+  --radius-note: 9px;
+  --doc-tile-w: 84px;
+  --doc-tile-h: 100px;
+  --invoice-w: 188px;
+  --invoice-h: 248px;
+  --lock-time: 5.5rem;
+  --sheet-foot-h: calc(var(--control-height) + var(--space-3) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+  --sheet-gap: 56px;
+  --bar-h: 8px;
+  --spinner: 18px;
+  --spinner-radio: 12px;
+  --icon-check: 24px;
+  --empty-measure: 280px;
+  --figure-gap: 6px;
+  --day-mark: var(--space-10);
+  --skel-block: 12px;
+  --skel-block-lg: 14px;
+  --skel-sm: 72px;
+  --skel-md: 148px;
+  --skel-lg: 220px;
+  --skel-hero: 52px;
+  --skel-pill: 88px;
+  --review-gap: 14px;
+  --review-tile-w: 52px;
+  --review-tile-h: 64px;
+  --review-radius: 10px;
+}
+
+.ui-btn {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--touch-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-6);
+  border: 0;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--dur-press);
+}
+
+.ui-btn-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
+}
+
+.ui-pill-label,
+.ui-chip-label,
+.ui-period-label,
+.ui-text-link-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-btn.ui-btn-primary {
+  min-height: var(--control-height);
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--type-label-size);
+}
+
+.ui-btn.ui-btn-primary:active:not(:disabled) {
+  background: var(--color-accent-pressed);
+}
+
+.ui-btn.ui-btn-secondary {
+  min-height: var(--control-height);
+  border-radius: var(--radius-button);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-label-size);
+}
+
+.ui-btn.ui-btn-secondary:active:not(:disabled) {
+  background: var(--color-tint-pressed);
+}
+
+.ui-band {
+  background: var(--color-band);
+  color: var(--color-on-band);
+}
+
+.ui-btn:focus-visible,
+.ui-icon-btn:focus-visible,
+.ui-field-control:focus-visible,
+.ui-chip:focus-visible,
+.ui-seg-btn:focus-visible,
+.ui-hit:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-btn,
+.ui-icon-btn,
+.ui-chip,
+.ui-seg-btn,
+.ui-text-link,
+.ui-hit,
+.ui-band-period,
+.ui-radio,
+.ui-radio-row,
+.ui-check,
+.ui-check-row,
+.ui-toggle,
+.ui-tab-slot,
+.ui-banner,
+.ui-banner-row,
+a.ui-row,
+.ui-toast button {
+  cursor: pointer;
+}
+
+/*
+  One rule for every disabled control. The element keeps pointer events so the
+  cursor stays visible. A disabled attribute, or the click handler, blocks the action.
+  Busy is progress, and it follows this rule so it wins over not-allowed.
+*/
+:is(button, [role="button"], input, select, textarea, a):is(:disabled, [aria-disabled="true"]),
+:is(label, .ui-field-control, .ui-search):has(:is(input, select, textarea):is(:disabled, [aria-disabled="true"])) {
+  cursor: not-allowed;
+}
+
+:is(button, [role="button"], a)[aria-busy="true"],
+:is(button, [role="button"], a):is(:disabled, [aria-disabled="true"])[aria-busy="true"] {
+  cursor: progress;
+}
+
+.ui-btn-primary:disabled,
+.ui-btn-secondary:disabled,
+.ui-btn-pill:disabled,
+.ui-btn-danger-tint:disabled,
+.ui-field-control:disabled,
+.ui-field-control:has(input:disabled),
+.ui-money-field:has(input:disabled) {
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  border-color: transparent;
+}
+
+.ui-money-field:has(input:disabled) .ui-money-prefix {
+  color: var(--color-disabled-text);
+}
+
+.ui-btn-ghost:disabled,
+.ui-btn-danger:disabled,
+.ui-icon-btn:disabled {
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
+.ui-btn-primary[aria-busy="true"] {
+  background: var(--color-accent-pressed);
+  color: var(--color-on-accent);
+}
+
+.ui-btn-secondary[aria-busy="true"],
+.ui-btn-pill[aria-busy="true"] {
+  background: var(--color-tint-pressed);
+  color: var(--color-accent-text);
+}
+
+.ui-btn-full {
+  width: 100%;
+}
+
+.ui-btn-pill {
+  height: var(--size-chip);
+  min-height: var(--size-chip);
+  max-width: 100%;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-label-size);
+}
+
+.ui-btn-pill,
+.ui-chip,
+.ui-seg-btn,
+.ui-band-period {
+  --hit-block: var(--touch-min);
+}
+
+.ui-btn-pill::after,
+.ui-chip::after,
+.ui-seg-btn::after,
+.ui-band-period::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block: calc((var(--hit-block) - 100%) / -2);
+}
+
+.ui-btn-pill:active:not(:disabled) {
+  background: var(--color-tint-pressed);
+}
+
+.ui-btn-retry {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-btn-retry:active:not(:disabled) {
+  background: var(--color-accent-pressed);
+}
+
+.ui-btn-danger,
+.ui-btn-danger-tint {
+  min-height: var(--touch-min);
+  border-radius: var(--radius-button);
+  color: var(--color-bad);
+  font-size: var(--type-label-size);
+}
+
+.ui-btn-danger {
+  background: transparent;
+}
+
+.ui-btn-danger-tint {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  background: var(--color-bad-tint);
+}
+
+.ui-btn-danger:active:not(:disabled) {
+  background: var(--color-bad-tint);
+}
+
+.ui-btn-danger-tint:active:not(:disabled) {
+  background: color-mix(in srgb, var(--color-bad) 18%, var(--color-bad-tint));
+}
+
+.ui-btn-ghost {
+  min-height: var(--touch-min);
+  background: transparent;
+  color: var(--color-accent-text);
+  font-size: var(--type-label-size);
+}
+
+.ui-btn-ghost.ui-btn-quiet {
+  color: var(--color-text-secondary);
+}
+
+.ui-btn-ghost:active:not(:disabled) {
+  background: var(--color-tint);
+}
+
+.ui-icon-btn {
+  display: inline-grid;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.ui-icon-btn:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-icon-btn-on-band {
+  color: var(--color-on-band);
+}
+
+.ui-icon-btn-on-band:active {
+  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
+  color: var(--color-on-band);
+}
+
+.ui-hit,
+.ui-tab-slot {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+}
+
+.ui-loss {
+  color: var(--color-bad);
+}
+
+/* Money in: income rows, income totals, Home נכנס, an income detail. Only on a figure with no
+   minus, never on the band, and always with words beside it (decision 0120). */
+.ui-income {
+  color: var(--color-income);
+}
+
+/* Detail amounts draw agorot smaller and raised; the dot and digits stay real text. */
+.ui-num-cents {
+  font-size: 0.6em;
+  vertical-align: 0.62em;
+}
+
+.ui-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow: visible;
+  min-height: var(--touch-min);
+  padding-block: var(--row-pad);
+  padding-inline: 0;
+  /* No row hairlines anywhere: rows are separated by their padding (decision 0120, option C). */
+  border-bottom: 0;
+  color: inherit;
+  /* A row rendered as <button> would centre its copy (FLOW-326). */
+  text-align: start;
+  text-decoration: none;
+}
+
+.ui-row > .ui-num,
+.ui-row > .t-title-3,
+.ui-row > .t-amount {
+  flex: none;
+}
+
+.ui-row,
+.ui-radio-row,
+.ui-review-line {
+  position: relative;
+  z-index: 0;
+}
+
+/* Tint sits behind the words. It grows by --space-3 each side and does not move the content. */
+.ui-row::before,
+.ui-radio-row::before,
+.ui-review-line::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-inline: calc(var(--space-3) * -1);
+  inset-block: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  pointer-events: none;
+}
+
+.ui-show-hover {
+  display: contents;
+}
+
+.ui-row:is(:focus-visible, [aria-pressed="true"])::before,
+.ui-radio-row:is(:focus-visible, [aria-checked="true"])::before,
+.ui-review-line:focus-visible::before {
+  background: var(--color-tint);
+}
+
+.ui-show-hover > :is(.ui-row, .ui-radio-row, .ui-review-line)::before {
+  background: var(--surface-hover);
+}
+
+/* The square focus ring would draw a second box. The tint is the indicator. */
+.ui-row:focus-visible,
+.ui-radio-row:focus-visible,
+.ui-review-line:focus-visible {
+  outline: none;
+}
+
+.ui-row-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+.ui-row-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+/* Row titles 17/400 like Mercury (decision 0120, option C): title-3 size and line at the 400 weight.
+   Inputs stay body 16/500. */
+.ui-row-title {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--type-title-3-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-title-3-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-row-title-with-tag {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.ui-row-title-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-row-title-muted {
+  color: var(--color-text-muted);
+}

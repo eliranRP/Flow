@@ -5,15 +5,15 @@ export const FILED_TODAY_EMPTY_TITLE = "אין תנועות ששויכו היו�
 export const FILED_TODAY_EMPTY_BODY =
   "כש־SUMIT משייך תנועה בלי תור, או כשהעוזר מאשר תנועה היום, היא תופיע כאן.";
 
-/** Banner on לאישור. A count of 1 is singular. */
+/** The one-line banner on לאישור: short enough to sit on one line beside לרשימה at 320. A count of 1 is singular. */
 export function filedTodayBannerTitle(count: number): ReactNode {
   if (count === 1) {
-    return "תנועה אחת שויכה אוטומטית היום";
+    return "אחת שויכה אוטומטית היום";
   }
   return (
     <>
       <bdi dir="ltr">{String(count)}</bdi>
-      {" תנועות שויכו אוטומטית היום"}
+      {" שויכו אוטומטית היום"}
     </>
   );
 }

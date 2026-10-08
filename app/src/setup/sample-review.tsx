@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { CheckIcon } from "../ui/icons";
+import { ActionBar } from "../ui/action-bar";
 import { Button } from "../ui/button";
 import { ReviewCard } from "../ui/review-card";
 import { ScreenHeader } from "../ui/screen-header";
@@ -51,8 +52,8 @@ export function SetupSampleReview({
   }
 
   return (
-    <div className="ui-review-queue">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+    <div className="ui-review-queue" data-bar="">
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
       <p className="ui-example-bar t-hint">{SAMPLE_TAG}</p>
       <ReviewCard
         supplier="ספק לדוגמה בע״מ"
@@ -60,11 +61,11 @@ export function SetupSampleReview({
         netAgorot={850_000n}
         vatLine="לפני מע״מ"
       />
-      <div className="ui-review-actions">
+      <ActionBar>
         <Button full icon={<CheckIcon />} disabled={userId == null || companyId == null} onClick={approve}>
           אישור
         </Button>
-      </div>
+      </ActionBar>
     </div>
   );
 }
