@@ -14,6 +14,7 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
+import { CategoryRenameSheet } from "./category-rename";
 import { KEPT_OUT } from "./screen-shared";
 
 /** FLOW-405 + FLOW-404: the sheet a category's ⋯ opens in Settings → Categories, and the move and delete it starts. */
@@ -60,6 +61,7 @@ export function CategoryMenuSheet({
 }) {
   const [moveFrom, setMoveFrom] = useState<ManagedCategory | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedCategory | null>(null);
+  const [renameTarget, setRenameTarget] = useState<ManagedCategory | null>(null);
   const rehab = useCategoryRehab();
   const { move } = useMoveCategoryLines({ onMoved: () => { setMoveFrom(null); } });
   const { remove } = useDeleteCategory({ onDeleted: () => { setDeleteTarget(null); } });
@@ -125,6 +127,15 @@ export function CategoryMenuSheet({
                   }}
                 />
               ) : null}
+              <ListRow
+                variant="button"
+                title="שינוי שם"
+                disabled={pnlBusy}
+                onClick={() => {
+                  onClose();
+                  setRenameTarget(category);
+                }}
+              />
               {loanLine == null && !hidden ? (
                 <ListRow
                   variant="button"
@@ -210,6 +221,12 @@ export function CategoryMenuSheet({
           </div>
         )}
       </Sheet>
+      <CategoryRenameSheet
+        category={renameTarget}
+        onClose={() => { setRenameTarget(null); }}
+        blocked={blocked}
+        returnFocusRef={returnFocusRef}
+      />
       <ConfirmSheet
         open={deleteTarget != null}
         onOpenChange={(open) => {

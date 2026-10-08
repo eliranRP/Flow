@@ -33,7 +33,7 @@ Approving the line when confidence is high. Treating `auto` as [0011](0011-auto-
 
 The card shows a stored suggestion as הצעה when the connector is on (amended 2026-10-08: a field whose value is Jev's answer reads "✦ הצעת Jev"), and אישור sends that project and category in one tap. A stored supplier rule stays, including when `user_assigned` and the field flag are both false. With the connector off, or with no suggestion, the card is unchanged. A confirm or fix row in `corrections` is a follow-up (superseded in part by [0126](0126-jev-outcomes.md), which records outcomes in the database and removes the pending file). The job is not scheduled. A `pg_cron` row would be a migration, and this change does not add one. The next SUMIT sync can replace a pre-fill the user has not accepted, because `project_assigned` and `category_assigned` stay false. The suggestion row remains.
 
-`mode` `auto` is implemented here and covered by the mock. The connector migration refused to store `auto` until `20261011230000_jev_auto_mode_switch.sql` (FLOW-702, 2026-10-08) allowed it.
+`mode` `auto` is implemented here and covered by the mock. The connector migration refused to store `auto` until `20261011233000_jev_auto_mode_switch.sql` (FLOW-702, 2026-10-08) allowed it.
 
 ## Decisions needed
 

@@ -163,6 +163,30 @@ export const categoryRowSchema = z.object({
   /** FLOW-404: the stored rehab choice (null follows the default) and whether it counts now. */
   rehab: z.boolean().nullable().optional(),
   in_rehab: z.boolean().optional(),
+  /** The group a screen folds this category into (set_category_group); null when none. */
+  group_name: z.string().nullable().optional(),
+});
+
+/** One expense category and currency of a project, month by month (project_category_months). */
+export const projectCategoryMonthRowSchema = z.object({
+  id: z.string().nullable(),
+  name: z.string().nullable(),
+  group_name: z.string().nullable(),
+  currency: z.string(),
+  this_month_minor: z.number().int(),
+  months_minor: z.array(z.number().int()),
+  months_seen: z.number().int(),
+  expected_minor: z.number().int().nullable(),
+  typical_day: z.number().int().nullable(),
+  flag: z.enum(["high", "new", "missing"]).nullable(),
+});
+
+export const projectCategoryMonthsSchema = z.object({
+  project_id: z.string(),
+  today: z.string(),
+  this_month: z.string(),
+  months: z.array(z.string()),
+  categories: z.array(projectCategoryMonthRowSchema),
 });
 
 export const sumitStatusSchema = z.object({
@@ -487,6 +511,8 @@ export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
 export type ReviewRow = z.infer<typeof reviewRowSchema>;
 export type FiledTodayRow = z.infer<typeof filedTodaySchema>;
 export type CategoryRow = z.infer<typeof categoryRowSchema>;
+export type ProjectCategoryMonthRow = z.infer<typeof projectCategoryMonthRowSchema>;
+export type ProjectCategoryMonths = z.infer<typeof projectCategoryMonthsSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type MercuryStatus = z.infer<typeof mercuryStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
