@@ -168,6 +168,33 @@ test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
+test("the split-by-category stories stay inside 320 and 390, light and dark (FLOW-325)", async ({ page }) => {
+  test.setTimeout(180_000);
+  const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
+  const stories = Object.values(index.entries).filter(
+    (story) => story.type === "story" && story.id.startsWith("screens-line-split--") && !/dark|320/i.test(story.id),
+  );
+  expect(stories.length).toBeGreaterThanOrEqual(8);
+  const failures: string[] = [];
+  for (const theme of ["light", "dark"]) {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const story of stories) {
+        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        await page.goto(`/iframe.html?id=${story.id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
+        await page.locator("#storybook-root").waitFor({ state: "attached" });
+        await page.waitForTimeout(400);
+        const problems = await layoutProblems(page);
+        const clipped = await page.locator(".ui-lsplit-name, .ui-lsplit-project, .ui-lsplit-msg").evaluateAll((nodes) =>
+          nodes.filter((node) => node instanceof HTMLElement && node.getClientRects().length > 0 && node.getBoundingClientRect().width < 24).map((node) => node.textContent));
+        problems.push(...clipped.map((text) => `squeezed: ${text}`));
+        if (problems.length > 0) failures.push(`${theme} ${String(width)} ${story.id}: ${problems.join(" | ")}`);
+      }
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("the closed period picker is only the band and the on-band pill", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-periodpicker--closed&viewMode=story", { waitUntil: "domcontentloaded" });

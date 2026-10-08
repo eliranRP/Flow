@@ -51,6 +51,8 @@ import {
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { BreakdownLinesScreen, BreakdownScreen } from "./screens/breakdown";
+import { LineSplitScreen } from "./screens/line-split";
+import { DevLineSplit } from "./dev/line-split-e2e";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
@@ -141,6 +143,7 @@ function AppRoutes() {
               <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
               <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
               <Route path="/e2e/split" element={<DevSplit />} />
+              <Route path="/e2e/split-category" element={<DevLineSplit />} />
               <Route path="/reviewer/*" element={<ReviewerPreviewRoute />} />
             </>
           ) : import.meta.env.VITE_REVIEWER_BUILD === "1" ? (
@@ -153,6 +156,7 @@ function AppRoutes() {
               <Route path="setup/:step" element={<SetupStepScreen />} />
               <Route path="transactions/:transactionId" element={<TransactionRoute />} />
               <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
+              <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
               <Route path="install" element={<InstallRoute />} />
             </Route>
             <Route element={<Shell />}>

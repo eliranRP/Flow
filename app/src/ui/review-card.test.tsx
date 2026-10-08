@@ -4,6 +4,34 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TxnMeta } from "../txn-meta";
 import { ReviewCard, type ReviewSuggestion } from "./review-card";
 
+describe("ReviewCard split_mismatch (FLOW-312, decision 0125)", () => {
+  it("says the split no longer matches the bank amount and opens the parts editor", () => {
+    const onFixSplit = vi.fn();
+    render(
+      <ReviewCard
+        supplier="ספק לדוגמה"
+        sourceLine="הוצאה · 06/10/2026"
+        netAgorot={-480_000n}
+        reason="split_mismatch"
+        suggestion={{ project: "וילה רעננה", category: "חומרים" }}
+        onFixSplit={onFixSplit}
+      />,
+    );
+    expect(screen.getByText("הפיצול לא תואם את סכום השורה בבנק.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
+    expect(onFixSplit).toHaveBeenCalledTimes(1);
+  });
+
+  it("a viewer reads the line with no action, and other reasons show neither", () => {
+    const { unmount } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="split_mismatch" />);
+    expect(screen.getByText("הפיצול לא תואם את סכום השורה בבנק.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עדכון הפיצול" })).toBeNull();
+    unmount();
+    render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="missing_project" onFixSplit={() => undefined} />);
+    expect(screen.queryByText("הפיצול לא תואם את סכום השורה בבנק.")).toBeNull();
+  });
+});
+
 describe("ReviewCard", () => {
   it("shows no note for a missing project, mutes empty rows, hides VAT, and shows income project", () => {
     const onProject = vi.fn();

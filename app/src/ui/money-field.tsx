@@ -4,9 +4,13 @@ import { holdFieldMouse, holdFieldPointer } from "./field-pointer";
 
 type MoneyFieldProps = {
   label: string;
+  /** The row already names the part. The label stays for the input (FLOW-325). */
+  hideLabel?: boolean;
   value: string;
   onValueChange: (raw: string) => void;
   error?: string;
+  /** The id of a message outside the field that describes it, such as a row's message (FLOW-325). */
+  describedBy?: string;
   id?: string;
   disabled?: boolean;
   /** Defaults to ₪. A dollar loan passes $. */
@@ -20,6 +24,11 @@ type MoneyFieldProps = {
   onFocus?: () => void;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 };
+
+function describedByIds(...ids: Array<string | undefined>): string | undefined {
+  const list = ids.filter((id): id is string => id != null && id !== "");
+  return list.length > 0 ? list.join(" ") : undefined;
+}
 
 function digitsOnly(raw: string, keepMinus: boolean): string {
   const negative = keepMinus && raw.trim().startsWith("-");
@@ -46,9 +55,11 @@ function grouped(raw: string): string {
  */
 export function MoneyField({
   label,
+  hideLabel = false,
   value,
   onValueChange,
   error,
+  describedBy,
   id,
   disabled = false,
   prefix = "₪",
@@ -66,7 +77,7 @@ export function MoneyField({
   const shellStyle = { "--money-digits": `${String(shown.length)}ch` } as CSSProperties;
   return (
     <div className={error ? "ui-field ui-field-error" : "ui-field"}>
-      <label className="ui-field-label" htmlFor={fieldId}>
+      <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
         {label}
       </label>
       <div
@@ -93,7 +104,7 @@ export function MoneyField({
           disabled={disabled}
           enterKeyHint={enterKeyHint}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedByIds(error ? errorId : undefined, describedBy)}
           onPointerDown={holdFieldPointer}
           onFocus={onFocus}
           onBlur={onBlur}
@@ -122,6 +133,8 @@ type PercentFieldProps = {
   id?: string;
   name?: string;
   error?: string;
+  /** The id of a message outside the field that describes it, such as a row's message (FLOW-325). */
+  describedBy?: string;
   disabled?: boolean;
   /** The last row in a split uses "done". */
   enterKeyHint?: "next" | "done";
@@ -153,6 +166,7 @@ export function PercentField({
   id,
   name,
   error,
+  describedBy,
   disabled = false,
   enterKeyHint = "next",
   decimals = 1,
@@ -192,7 +206,7 @@ export function PercentField({
           type="text"
           value={value}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedByIds(error ? errorId : undefined, describedBy)}
           onPointerDown={holdFieldPointer}
           onFocus={(event) => {
             event.currentTarget.select();

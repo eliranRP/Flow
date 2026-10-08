@@ -57,6 +57,8 @@
 /flow/:direction/ /flow/:direction 301
 /transactions/:transactionId/split /app-shell 200
 /transactions/:transactionId/split/ /transactions/:transactionId/split 301
+/transactions/:transactionId/split-category /app-shell 200
+/transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200
 /transactions/:transactionId/ /transactions/:transactionId 301
 /setup/:step /app-shell 200
