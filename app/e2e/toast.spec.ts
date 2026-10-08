@@ -25,7 +25,9 @@ test("a skip toast stays clear of the actions and leaves on its own", async ({ p
 
   await change.click();
   await expect(page.getByText("השינוי נפתח")).toBeVisible();
-  await expect(toast).toHaveCount(0, { timeout: 5_000 });
+  // The undo toast lives 5s from when it is placed, and placing waits for the sheet to settle,
+  // so a slow runner needs more than 5s here (main's CI failed at exactly 5s).
+  await expect(toast).toHaveCount(0, { timeout: 12_000 });
 });
 
 type ToastFrame = {
