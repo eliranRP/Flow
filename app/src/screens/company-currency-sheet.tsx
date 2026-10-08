@@ -53,15 +53,13 @@ export function CompanyCurrencySheet({
       await setCompanyCurrency(previous);
     },
   });
-  const saved = useRef<Change | null>(null);
+  // The sheet's history-aware close for the last pick; a retry from the failure toast reuses it.
+  const closeSheet = useRef<() => void>(() => { onOpenChange(false); });
   const save = useWrite<Change>({
     failure: currencyFailure,
     keys: CURRENCY_KEYS,
-    // Also runs after a retry from the failure toast, so it reads the last payload.
-    onSuccess: () => {
-      const payload = saved.current;
-      if (payload == null) return;
-      onOpenChange(false);
+    onSuccess: (payload) => {
+      closeSheet.current();
       toast.show({
         message: CURRENCY_SAVED,
         action: "ביטול",
@@ -69,7 +67,6 @@ export function CompanyCurrencySheet({
       });
     },
     run: async (payload) => {
-      saved.current = payload;
       await setCompanyCurrency(payload.currency);
     },
   });
@@ -78,10 +75,12 @@ export function CompanyCurrencySheet({
       open={open}
       onOpenChange={onOpenChange}
       value={currency}
-      saving={save.isPending ? (saved.current?.currency ?? null) : null}
+      saving={save.isPending ? save.variables.currency : null}
       returnFocusRef={returnFocusRef}
-      onPick={(next) => {
-        if (save.isPending || blocked()) return;
+      onPick={(next, close) => {
+        // An undo in flight still writes; a new pick would race it.
+        if (save.isPending || undo.isPending || blocked()) return;
+        closeSheet.current = close;
         save.mutate({ currency: next, previous: currency });
       }}
     />

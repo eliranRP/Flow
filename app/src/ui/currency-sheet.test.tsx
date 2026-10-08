@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { CurrencySheet, CURRENCY_SHEET_NOTE, currencyChoiceLabel } from "./currency-sheet";
@@ -28,7 +28,7 @@ describe("CurrencySheet", () => {
     expect(onPick).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
     fireEvent.click(screen.getByRole("radio", { name: "$ דולר" }));
-    expect(onPick).toHaveBeenCalledWith("USD");
+    expect(onPick).toHaveBeenCalledWith("USD", expect.any(Function));
   });
 
   it("spins the saving row and holds the other one", () => {
@@ -38,6 +38,17 @@ describe("CurrencySheet", () => {
     expect(other).toBeDisabled();
     fireEvent.click(other);
     expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("waits for the save before it closes on Escape or Back (0075)", async () => {
+    const { onOpenChange } = renderSheet({ saving: "USD" });
+    fireEvent.keyDown(document, { key: "Escape" });
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+      await Promise.resolve();
+    });
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(screen.getByRole("radio", { name: "₪ שקל" })).toHaveAttribute("aria-checked", "false");
   });
 
   it("labels a known currency and falls back to the code", () => {

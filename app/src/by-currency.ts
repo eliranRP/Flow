@@ -118,9 +118,19 @@ export function companyRows(dashboard: Dashboard, emptyCurrency = "ILS"): Compan
     : [fallbackCompanyRow(dashboard)];
   const filtered = base.filter((row) => !companyBucketAllZero(row));
   const fallback = fallbackCompanyRow(dashboard);
-  const empty = emptyCurrency === "ILS" || !companyBucketAllZero(fallback)
+  const zero = emptyCurrency === "ILS" || !companyBucketAllZero(fallback)
     ? fallback
     : { ...fallback, currency: emptyCurrency };
+  // A quiet period keeps its currency's previous figures (0147), so Home can still compare.
+  const quiet = fromPayload.find((row) => row.currency === zero.currency);
+  const empty = quiet == null
+    ? zero
+    : {
+      ...zero,
+      prev_income_minor: quiet.prev_income_minor,
+      prev_expense_minor: quiet.prev_expense_minor,
+      prev_net_profit_minor: quiet.prev_net_profit_minor,
+    };
   const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency, emptyCurrency));
   return rows;
 }

@@ -132,6 +132,35 @@ describe("Home hero", () => {
     expect(screen.getByText("₪600")).toBeInTheDocument();
     expect(screen.getByText("$1,500")).toBeInTheDocument();
     expect(screen.getByText("רווח נקי החודש")).toBeInTheDocument();
+    expect(screen.queryByText("מחודש שעבר")).not.toBeInTheDocument();
+  });
+
+  it("compares a quiet month of a USD company with its previous one (0147)", () => {
+    renderHome(books({
+      base_currency: "USD",
+      income_agorot: 0n,
+      expense_agorot: 0n,
+      direct_agorot: 0n,
+      net_profit_agorot: 0n,
+      prev_income_agorot: 0n,
+      prev_expense_agorot: 0n,
+      prev_net_agorot: 0n,
+      by_currency: [{
+        currency: "USD",
+        income_minor: 0n,
+        direct_minor: 0n,
+        shared_minor: 0n,
+        overhead_minor: 0n,
+        expense_minor: 0n,
+        net_profit_minor: 0n,
+        count: 0,
+        prev_income_minor: 400_000n,
+        prev_expense_minor: 200_000n,
+        prev_net_profit_minor: 200_000n,
+      }],
+    }));
+    expect(screen.getByRole("heading", { name: "$0" })).toBeInTheDocument();
+    expect(screen.getByText("מחודש שעבר")).toBeInTheDocument();
   });
 
   it("names a loss in the label", () => {

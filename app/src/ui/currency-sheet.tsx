@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useSheetHistory } from "./back";
 import { RadioRow } from "./radio-row";
 import { Sheet } from "./sheet";
@@ -37,11 +37,19 @@ export function CurrencySheet({
   value: string;
   /** The currency being written, or null. */
   saving: CurrencyChoice | null;
-  /** A tap on the current currency only closes the sheet. */
-  onPick: (currency: CurrencyChoice) => void;
+  /**
+   * A tap on the current currency only closes the sheet. `close` closes it through the sheet's
+   * history entry once the save has settled, so Back is not left on a dead step.
+   */
+  onPick: (currency: CurrencyChoice, close: () => void) => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
-  const setOpen = useSheetHistory("company-currency", open, onOpenChange, () => saving == null);
+  // Set by `close`: the save has settled, so Back's popstate must not wait on a stale `saving`.
+  const closing = useRef(false);
+  useEffect(() => {
+    if (open) closing.current = false;
+  }, [open]);
+  const setOpen = useSheetHistory("company-currency", open, onOpenChange, () => closing.current || saving == null);
   return (
     <Sheet
       open={open}
@@ -65,7 +73,10 @@ export function CurrencySheet({
                 setOpen(false);
                 return;
               }
-              onPick(choice.value);
+              onPick(choice.value, () => {
+                closing.current = true;
+                setOpen(false);
+              });
             }}
           />
         ))}

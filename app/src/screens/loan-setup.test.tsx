@@ -7,6 +7,7 @@ import { contractualPaymentMinor } from "@flow/shared";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
+import { readCompanyCurrency } from "../company-currency";
 import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "./loan-form";
 import { LoanProjectPicker, LoanSettingsSection, LoanSetupForm } from "./loan-setup";
 
@@ -183,10 +184,14 @@ describe("company currency", () => {
     expect(await readCompanyLoanCurrency()).toBe("USD");
     db.baseCurrency = null;
     expect(await readCompanyLoanCurrency()).toBe("ILS");
+    db.baseCurrency = "EUR";
+    expect(await readCompanyCurrency()).toBe("EUR");
+    db.baseCurrency = "usd";
+    expect(await readCompanyCurrency()).toBe("ILS");
     db.baseCurrency = "USD";
     db.currencyError = { message: "down" };
     expect(await readCompanyLoanCurrency()).toBe("ILS");
-    expect(db.selects).toBe(4);
+    expect(db.selects).toBe(6);
   });
 });
 
