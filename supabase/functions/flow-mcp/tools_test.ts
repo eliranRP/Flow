@@ -57,6 +57,61 @@ Deno.test("search_expenses filed and all call search_transactions", async () => 
   assertEquals(calls[2]?.body.p_scope, "all");
 });
 
+Deno.test("search_expenses passes its filters to search_transactions (FLOW-323)", async () => {
+  const line = "11111111-1111-4000-8000-000000000323";
+  const project = "22222222-2222-4000-8000-000000000323";
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    if (name === "list_review") {
+      return { status: 200, json: [
+        { id: "r1", transaction_id: line, description: "א", reason: "missing_project" },
+        { id: "r2", transaction_id: "11111111-1111-4000-8000-000000000999", description: "ב" },
+      ] };
+    }
+    return { status: 200, json: { total: 1, expenses: [{ id: line }] } };
+  });
+  const filed = await callTool("search_expenses", {
+    scope: "filed", from: "2026-06-01", to: "2026-06-30", direction: "income", project_id: project.toUpperCase(), category_id: "none",
+  }, ["read"], rpc);
+  assertEquals(filed.isError, false);
+  assertEquals(calls[0]?.body, {
+    p_query: null, p_scope: "filed", p_limit: 50, p_offset: 0,
+    p_from: "2026-06-01", p_to: "2026-06-30", p_project: project, p_category: "none", p_direction: "income",
+  });
+
+  // Pending with a filter: search_transactions picks the page, the rows are list_review's.
+  const pending = await callTool("search_expenses", { scope: "pending", project_id: "none" }, ["read"], rpc);
+  assertEquals(pending.isError, false);
+  const search = calls.filter((call) => call.name === "search_transactions").at(-1);
+  assertEquals(search?.body.p_scope, "pending");
+  assertEquals(search?.body.p_project, "none");
+  if (pending.structuredContent.ok) {
+    const data = pending.structuredContent.data as { total: number; expenses: Array<Record<string, unknown>> };
+    assertEquals(data.total, 1);
+    assertEquals(data.expenses.map((row) => [row.id, row.reason]), [[line, "missing_project"]]);
+  }
+
+  // Without a filter, pending still filters list_review and filed sends no filter arguments.
+  const before = calls.length;
+  await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
+  assertEquals(calls.slice(before).some((call) => call.name === "search_transactions"), false);
+  await callTool("search_expenses", { scope: "all" }, ["read"], rpc);
+  assertEquals(Object.keys(calls.filter((call) => call.name === "search_transactions").at(-1)?.body ?? {}).sort(),
+    ["p_limit", "p_offset", "p_query", "p_scope"]);
+
+  for (const bad of [
+    { from: "2026-07-01", to: "2026-06-01" },
+    { direction: "transfer" },
+    { project_id: "alpha" },
+    { category_id: "12" },
+    { from: "06-01" },
+  ]) {
+    const result = await callTool("search_expenses", { scope: "all", ...bad }, ["read"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+});
+
 Deno.test("the eight read tools call their own functions", async () => {
   const { calls, rpc } = rpcOf((name) => {
     if (name === "get_dashboard") {
