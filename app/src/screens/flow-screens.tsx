@@ -4851,7 +4851,7 @@ export function ConnectionsScreen({
           <p>
             מחובר
             {sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
-            {syncPhrase != null ? <span className="ui-nowrap">{` · ${syncPhrase}`}</span> : null}
+            {syncPhrase != null ? <><br /><span className="ui-nowrap">{syncPhrase}</span></> : null}
           </p>
           {refreshHeld && rawError != null && rawError !== "sumit_auth" ? <p>הרענון נכשל</p> : null}
           {!refreshHeld && rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}
@@ -4922,7 +4922,7 @@ export function ConnectionsScreen({
         <div className="ui-stack">
           <p>
             מחובר
-            {mercurySyncPhrase != null ? <span className="ui-nowrap">{` · ${mercurySyncPhrase}`}</span> : null}
+            {mercurySyncPhrase != null ? <><br /><span className="ui-nowrap">{mercurySyncPhrase}</span></> : null}
           </p>
           {mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" ? <p>הרענון נכשל</p> : null}
           {!mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" && mercuryLastError ? <p>{mercuryLastError}</p> : null}
