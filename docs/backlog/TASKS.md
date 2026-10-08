@@ -47,11 +47,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | in-progress (#111) |
-| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | in-progress (#120) |
+| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
-| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
+| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | in-progress (#121; UI items go to the design PR) |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
@@ -225,16 +225,18 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-120"></a>
 ### FLOW-120 · Loan project follow-ups (#89 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-105
-- [ ] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag.
-- [ ] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead.
-- [ ] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104.
-- [ ] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#121; UI items go to the design PR) · **Depends on:** FLOW-105
+- [x] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag. (#121: skipped, reason `line category is a guess`; the owner was asked and can still pick "keep the flag".)
+- [x] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead. (#121: reason `project not set`.)
+- [x] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104. (#121: said so in 0105.)
+- [x] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo. (#121: the attach keeps the role it gave the line and undo checks that role, so such a line is restored; tested both ways.)
 - [x] (#104 design review, in #111) Show project codes in the loan project picker once the dashboard projects carry `code`, with the "חיפוש פרויקט או קוד" placeholder.
 - [x] (#104 design review, in #111) Keep the loan sheet's height when it swaps between the form and the project picker; wrap the loan-project stories in a sheet-like decorator.
 - [x] (#104 design review, in #111) CONTROLS.md: note the static loan rows on the project screen.
-- [ ] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column.
-- [ ] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company.
+- [x] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column. (#121; undo still reads older writes from `prior`.)
+- [x] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company. (#121, `loan_project_followups.test.sql`.)
+- [ ] (#121 review) `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock.
+- [ ] (#121 review) `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
@@ -694,7 +696,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-604"></a>
 ### FLOW-604 · rename_company follow-ups (#77 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#120) · **Depends on:** FLOW-602
+- **Type:** BACKLOG NIT · **Status:** done (#120) · **Depends on:** FLOW-602
 - **What:** (1) The MCP length check counts UTF-16 units, SQL counts code points; align them. (2) SQL `btrim` strips only spaces while the MCP trims all whitespace; trim all whitespace and reject control characters in `rename_company`. (3) A direct table update can still set any name; add a not-valid check constraint for 2 to 100 characters, or revoke `update(name)` once the screen uses the RPC. (4) pgTAP: assert an `audit_log` row after the MCP rename and after undo, and cover the refused path.
 - **Acceptance:** the same name is accepted or refused by the MCP, the RPC, and the table; audit rows tested.
 - **Built (#120):** `private.trim_name` trims what JavaScript `trim()` trims and `private.company_name_problem` holds the rule (2 to 100 code points, no control character) for `rename_company` and `mcp_rename_company`; the MCP counts code points. (3) is a `before update of name` trigger, not a check constraint, so a name that already breaks the rule never blocks an update of another column; it refuses with `23514`.
