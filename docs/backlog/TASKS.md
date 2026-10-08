@@ -21,7 +21,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807: last PR, the review area out of `flow-screens.tsx` (merged: screens #219, stories #225, CSS #227) | Stops after this; `review-queue.tsx` (about 640 lines) and `split-screen.tsx` are the biggest screen files left |
+| File split | FLOW-807: last PR, the review area out of `flow-screens.tsx` (merged: screens #219, stories #225, CSS #227) | Stops after this; `split-screen.tsx` (about 780 lines) and `connections-screen.tsx` (about 750) are the biggest screen files left |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
