@@ -102,8 +102,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | done (#165; whole-unit amounts item open, conflicts with 0120) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
-| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
-| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | in-progress (UI lane 3) |
+| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | claimed (UI lane 4, 2026-10-08) |
+| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | merged (#238) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
