@@ -7,10 +7,10 @@ The generator draws ids, times, amounts, balances, merchant ids and page cursors
 Rebuild every file after changing the generator:
 
 ```sh
-deno run --allow-read --allow-write supabase/tests/connectors/mercury/generate_fixtures.ts
+pnpm fixtures:mercury
 ```
 
-`../fixtures_test.ts` fails when a committed file differs from the generator output by one byte, and when a JSON file here is not one the generator writes. Do not edit a fixture by hand; change the generator and rebuild. `canonical-snapshot.json` is `snapshotOf()` in `../replay_fixture.ts` over the two posted pages, so it is rebuilt with the rest.
+`../fixtures_test.ts` fails when a committed file differs from the generator output by one byte, and when a JSON file here is not one the generator writes. Do not edit a fixture by hand; change the generator and rebuild. `canonical-snapshot.json` is `snapshotOf()` in `../snapshot.ts` over the two posted pages, so it is rebuilt with the rest.
 
 The generated rows cover the edge cases the adapter handles: paired autopay legs between own checking and the own credit card, cashback, treasury liquidation pairs (one settling days later), transfers between own checking accounts, loan servicer payments, a card refund linked to its charge, one check deposit that failed five times and cleared once, failed debit card lines with an authorisation hold in a foreign merchant currency, and lines whose Jerusalem doc date and cash date differ.
 

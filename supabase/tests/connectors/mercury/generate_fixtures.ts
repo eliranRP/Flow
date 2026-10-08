@@ -3,10 +3,10 @@
  * account: ids, times, amounts and balances are drawn from a seeded generator, and names are
  * labels. Each value is drawn from its own key, so adding a row does not move the others.
  *
- * Rebuild the fixtures:   deno run --allow-read --allow-write supabase/tests/connectors/mercury/generate_fixtures.ts
+ * Rebuild the fixtures:   pnpm fixtures:mercury
  * fixtures_test.ts checks the committed files match buildFixtures() byte for byte.
  */
-import { snapshotOf } from "./replay_fixture.ts";
+import { snapshotOf } from "./snapshot.ts";
 
 export const SEED = "flow-mercury-fixtures-1";
 
@@ -94,8 +94,9 @@ function hex(key: string, length: number): string {
 
 /** An ISO time with microseconds, as Mercury writes it. */
 function iso(ms: number, key: string): string {
-  const micros = String(rand(`micros:${key}`).int(0, 999_999)).padStart(6, "0");
-  return `${new Date(ms).toISOString().slice(0, 19)}.${micros}Z`;
+  // Mercury drops trailing zeros from the fraction, so some times have fewer than six digits.
+  const micros = String(rand(`micros:${key}`).int(0, 999_999)).padStart(6, "0").replace(/0+$/, "");
+  return `${new Date(ms).toISOString().slice(0, 19)}${micros ? `.${micros}` : ""}Z`;
 }
 
 /** A whole second inside [fromHour, toHour) UTC on the day. */
@@ -624,6 +625,7 @@ export function buildFixtures(): Map<string, string> {
   const credit = creditFile();
   const treasury = treasuryFile();
   const liquidation = posted.find((row) => row.kind === "treasuryTransfer" && row.accountId === TREASURY && String(row.createdAt).startsWith("2026-06-30"));
+  if (!liquidation) throw new Error("no treasury liquidation leg on 2026-06-30");
   const ownIds = [...accounts.accounts.map((a) => a.id), CREDIT, TREASURY];
 
   const failed = failedRows().map(txn);
@@ -640,7 +642,7 @@ export function buildFixtures(): Map<string, string> {
   files.set("transactions-status-failed.json", text({ transactions: failed, page: { nextPage: uuid("cursor:failed-next") } }));
   files.set("transaction-by-id.json", text(page1.transactions[0]));
   files.set("transaction-not-found-404.json", text(NOT_FOUND));
-  files.set("SYNTHETIC-treasury-transactions.json", text(treasuryTransactions(Number(liquidation?.amount))));
+  files.set("SYNTHETIC-treasury-transactions.json", text(treasuryTransactions(Number(liquidation.amount))));
   files.set("SYNTHETIC-pending.json", text({ transactions: [pending], page: {} }));
   files.set("SYNTHETIC-pending-then-sent.json", text({ transactions: [sent], page: {} }));
   files.set("canonical-snapshot.json", text(snapshotOf([...page1.transactions, ...page2.transactions], ownIds)));
