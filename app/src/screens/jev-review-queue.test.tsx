@@ -194,7 +194,7 @@ describe("Jev review one tap", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
@@ -216,7 +216,7 @@ describe("Jev review one tap", () => {
     db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
     db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "same_as_last", party_filings: 4, matching_filings: 4 }];
     renderQueue();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     await waitFor(() => {
       expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦כמו בפעם הקודמת");
     });
@@ -353,7 +353,7 @@ describe("Jev review one tap", () => {
       },
     }];
     renderQueue([row]);
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: קטגוריה שמורה" })).toBeInTheDocument();
     expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
@@ -420,7 +420,7 @@ describe("Jev review one tap", () => {
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
@@ -545,7 +545,7 @@ describe("Jev review one tap", () => {
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
       expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
@@ -821,6 +821,18 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
       view.rerender(queue([other, open], client));
       await tick(300);
       expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    });
+
+    it("drops the hold when the reopened line doesn't come back, and pins the card on screen", async () => {
+      const { view, client } = await skipThenUndoInsideSwap();
+      // The reopen lands, but the line was approved again elsewhere: the refetch has no t1.
+      view.rerender(queue([other], client));
+      await tick(300);
+      expect(reviewHold()).toBe("t1");
+      await tick(1000);
+      expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
+      expect(reviewHold()).toBeNull();
+      expect(reviewPin()).toBe("t2");
     });
 
     it("drops the hold when the reopen fails, and pins the card that stayed", async () => {

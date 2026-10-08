@@ -6,7 +6,9 @@
  * ביטול sets a hold on the line it brings back (FLOW-327 r1). Until that line is the card on
  * screen, the queue's own pin of the card it shows cannot replace it, so the next card can't stay
  * on screen after the undo. The hold clears when the held line is shown, when its reopen fails,
- * or with a null pin (sign-out, a test reset).
+ * when its reopen lands and the line still isn't back in the queue a moment later, or with a null
+ * pin (sign-out, a test reset). Leaving the queue drops the hold but keeps the pin, so coming back
+ * from /review/change right after ביטול shows the undone card first.
  */
 let pinned: string | null = null;
 let held: string | null = null;

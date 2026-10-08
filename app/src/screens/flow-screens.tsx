@@ -1470,12 +1470,25 @@ export function ReviewQueue({
   }, [fromList, shown]);
   const shownRef = useRef(shown);
   shownRef.current = shown;
-  // A hold names a line this queue was bringing back; it does not outlive the queue.
+  // A hold names a line this queue was bringing back; it does not outlive the queue. (Under
+  // StrictMode in dev, the mount-cleanup-mount cycle drops a hold set before mount; prod is not affected.)
   useEffect(() => () => { releaseReviewHold(reviewHold()); }, []);
   /** ביטול's reopen failed: drop the hold and pin the card that stayed on screen. */
   const undoFailed = useCallback((line: string | null) => {
     releaseReviewHold(line);
     if (!fromList && shownRef.current != null) pinReviewLine(shownRef.current.transaction_id);
+  }, [fromList]);
+  // ביטול's reopen landed. If the line is still not in the queue a moment later (approved again
+  // elsewhere, or hidden by a filter), the hold would outlive its use and freeze the pin.
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const undoSettled = useCallback((line: string | null) => {
+    window.setTimeout(() => {
+      if (line == null || reviewHold() !== line) return;
+      if (rowsRef.current.some((row) => row.transaction_id === line)) return;
+      releaseReviewHold(line);
+      if (!fromList && shownRef.current != null) pinReviewLine(shownRef.current.transaction_id);
+    }, REVIEW_HOLD_SETTLE_MS);
   }, [fromList]);
   const jevQueue = useJevQueue(
     rows.map((item) => item.transaction_id),
@@ -1642,7 +1655,7 @@ export function ReviewQueue({
         place: "bar",
         onAction: () => {
           pinReviewLine(line, { hold: true });
-          void reopenReview(id, invalidate, toast, undefined, { line, failed: undoFailed });
+          void reopenReview(id, invalidate, toast, undefined, { line, failed: undoFailed, settled: undoSettled });
         },
       });
     },
@@ -1686,7 +1699,7 @@ export function ReviewQueue({
             previewWrite.onUndo(id);
             return;
           }
-          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.", { line, failed: undoFailed });
+          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.", { line, failed: undoFailed, settled: undoSettled });
         },
       });
     },
@@ -1977,19 +1990,23 @@ function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShown) {
   };
 }
 
+/** How long after ביטול's reopen lands the queue waits for the line before it drops the hold. */
+const REVIEW_HOLD_SETTLE_MS = 1000;
+
 async function reopenReview(
   id: string,
   invalidate: (keys: string[]) => Promise<void>,
   toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void; place?: "bar" }) => void },
   done = "הפריט חזר לתור, והשיוך הקודם שוחזר.",
   /** ביטול's held line (review-pin.ts): a failed reopen drops the hold, ניסיון חוזר sets it again. */
-  undo?: { line: string | null; failed: (line: string | null) => void },
+  undo?: { line: string | null; failed: (line: string | null) => void; settled?: (line: string | null) => void },
 ) {
   try {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
     await invalidate(["review", "review-skipped", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
+    undo?.settled?.(undo.line);
     toast.show({ message: done, place: "bar" });
   } catch {
     undo?.failed(undo.line);
