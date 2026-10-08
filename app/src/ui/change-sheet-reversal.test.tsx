@@ -95,6 +95,14 @@ describe("reversal helpers", () => {
     expect(reversalChoices(rows, "income")).toEqual([{ id: "e1", name: "חומרים" }]);
   });
 
+  it("keeps the line's own hidden, loan or kept-out category of the other kind, so it shows with החזר", () => {
+    expect(reversalChoices(rows, "expense", "i2")).toEqual([{ id: "i1", name: "שכירות" }, { id: "i2", name: "ישנה" }]);
+    expect(reversalChoices(rows, "expense", "i3")).toEqual([{ id: "i1", name: "שכירות" }, { id: "i3", name: "העברות" }]);
+    expect(reversalChoices(rows, "income", "e2")).toEqual([{ id: "e1", name: "חומרים" }, { id: "e2", name: "ריבית" }]);
+    // An own-kind current category changes nothing.
+    expect(reversalChoices(rows, "expense", "e2")).toEqual([{ id: "i1", name: "שכירות" }]);
+  });
+
   it("marks a line whose category is of the other kind", () => {
     expect(isReversal(rows, "i1", "expense")).toBe(true);
     expect(isReversal(rows, "e1", "expense")).toBe(false);

@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { SettingsScreen } from "./flow-screens";
+import { ConnectionsScreen } from "./flow-screens";
 
 const state = vi.hoisted(() => ({
   sumit: null as Record<string, unknown> | null,
@@ -111,7 +111,7 @@ function mercury(partial: Record<string, unknown>) {
   };
 }
 
-function renderSettings(ui: ReactNode = <SettingsScreen />) {
+function renderSettings(ui: ReactNode = <ConnectionsScreen />) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={client}>

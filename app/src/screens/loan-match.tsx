@@ -7,6 +7,7 @@ import {
   type LoanSplitPart,
 } from "@flow/shared";
 import { BankIcon, AlertIcon, EyeOffIcon, HomeIcon, PercentIcon } from "../ui/icons";
+import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
@@ -151,7 +152,7 @@ export function LoanSplitPanel({
                 hint={showCounted && part.inPnl === false ? (
                   <span className="ui-loan-out"><EyeOffIcon size={16} />מחוץ לרווח</span>
                 ) : undefined}
-                meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
+                meta={<bdi className="ui-num ui-loan-amount t-amount" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
               />
             ))}
             <ListRow
@@ -159,7 +160,7 @@ export function LoanSplitPanel({
               className="ui-loan-total"
               icon={<span className="ui-loan-spacer" aria-hidden="true" />}
               title="סה״כ"
-              meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
+              meta={<bdi className="ui-num ui-loan-amount t-amount" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
             />
           </List>
         </>
@@ -219,6 +220,17 @@ function loanRowHint(row: LoanBalanceRow): string | undefined {
   return project ?? undefined;
 }
 
+/** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
+function LoanBalance({ minor, currency }: { minor: bigint; currency: string }) {
+  const { whole, cents } = splitCents(withCents(showMoney(minor, currency)), "detail");
+  return (
+    <bdi className="ui-num ui-loan-amount" dir="ltr">
+      {whole}
+      {cents != null ? <span className="ui-num-cents">{cents}</span> : null}
+    </bdi>
+  );
+}
+
 export function LoanBalanceList({
   rows,
   onOpen,
@@ -238,14 +250,14 @@ export function LoanBalanceList({
           icon: <BankIcon />,
           tone: row.flaggedParts > 0 ? ("warning" as const) : undefined,
           hint: loanRowHint(row),
-          meta: <bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balanceMinor, row.currency)}</bdi>,
+          meta: <LoanBalance minor={row.balanceMinor} currency={row.currency} />,
         };
         return onOpen ? (
           <ListRow
             key={row.id}
             variant="button"
             {...common}
-            label={`${row.name}, ${showMoney(row.balanceMinor, row.currency)}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
+            label={`${row.name}, ${withCents(showMoney(row.balanceMinor, row.currency))}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
             chevron
             buttonRef={(node) => { rowRef?.(row.id, node); }}
             onClick={() => { onOpen(row); }}

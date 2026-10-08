@@ -10,7 +10,7 @@ export function BandHero({ children }: { children: ReactNode }) {
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="ui-page-pad ui-stack">
-      <h2 className="t-title-3">{title}</h2>
+      <h2 className="t-heading">{title}</h2>
       {children}
     </section>
   );
@@ -53,7 +53,7 @@ export function SharedCostNote() {
 export function SectionHead({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="ui-section-head">
-      <h2 className="t-title-3">{title}</h2>
+      <h2 className="t-heading">{title}</h2>
       {children}
     </div>
   );

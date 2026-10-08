@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
-import { BackIcon, BankIcon, CalendarIcon, ChevronDownIcon } from "../ui/icons";
+import { BackIcon, CalendarIcon, ChevronDownIcon, InfoIcon, LoanIcon, PlusIcon, RefreshIcon } from "../ui/icons";
+import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { RadioRow } from "../ui/radio-row";
 import { SearchField } from "../ui/search-field";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import { List, ListRow } from "../ui/list-row";
-import { SectionHead } from "../ui/layout";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { DateSheet } from "../ui/date-sheet";
@@ -352,7 +352,7 @@ const NO_PROJECT = "ללא פרויקט";
 const PROJECT_SEARCH_FROM = 8;
 const projectSkeleton = ["a", "b", "c", "d"] as const;
 
-export type LoanProjectChoice = { id: string; name: string; status?: "active" | "finished" };
+export type LoanProjectChoice = { id: string; name: string; status?: "active" | "finished"; code?: string | null };
 
 export type LoanProjectField = {
   /** null shows ללא פרויקט. */
@@ -389,7 +389,12 @@ export function LoanProjectPicker({
   const listed = source.rows.filter((row) => row.status !== "finished" || row.id === selectedId);
   const needle = query.trim();
   const searchable = !loading && !failed && listed.length > PROJECT_SEARCH_FROM;
-  const shown = searchable && needle !== "" ? listed.filter((row) => row.name.includes(needle)) : listed;
+  const lowered = needle.toLowerCase();
+  const shown = searchable && needle !== ""
+    ? listed.filter((row) => row.name.includes(needle) || (row.code ?? "").toLowerCase().includes(lowered))
+    : listed;
+  // "או קוד" only once a project has a code to search by.
+  const withCodes = listed.some((row) => row.code != null && row.code !== "");
   const busy = saving != null;
   return (
     <div className="ui-change-picker">
@@ -398,7 +403,7 @@ export function LoanProjectPicker({
           label="חיפוש פרויקט"
           value={query}
           onChange={setQuery}
-          placeholder="חיפוש פרויקט"
+          placeholder={withCodes ? "חיפוש פרויקט או קוד" : "חיפוש פרויקט"}
           autoFocus={false}
         />
       ) : null}
@@ -416,6 +421,7 @@ export function LoanProjectPicker({
             key={row.id}
             layout="picker"
             label={row.name}
+            code={row.code ?? undefined}
             description={row.status === "finished" ? "הסתיים" : undefined}
             selected={row.id === selectedId}
             busy={busy && saving.id === row.id}
@@ -535,11 +541,25 @@ function LoanProjectSheet({
   );
 }
 
+/** Sample balances for stories and preview. Live omits it and reads `loans`. */
+export type LoanRowsSample = readonly LoanBalanceRow[] | "loading" | "error";
+
+export const LOANS_EMPTY_TITLE = "אין הלוואות עדיין";
+export const LOANS_EMPTY_OWNER = "הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.";
+export const LOANS_EMPTY_VIEWER = "כשיתווספו הלוואות הן יופיעו כאן.";
+export const LOANS_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואות";
+
+/**
+ * The body of `/settings/loans` (FLOW-501): the balances, then הלוואה חדשה.
+ * A viewer reads the balances as static rows and gets no new-loan row (U10).
+ * A row tap opens the project sheet (FLOW-119) until FLOW-110's detail page.
+ */
 export function LoanSettingsSection({
   companyId,
   companyCurrency,
   blocked,
   projects,
+  sample,
 }: {
   companyId: string | null;
   /** Preview passes this. Live omits it and reads the company's lines. */
@@ -547,11 +567,15 @@ export function LoanSettingsSection({
   blocked?: () => boolean;
   /** FLOW-119. The projects the loan can sit under. */
   projects?: LoanProjectSource;
+  sample?: LoanRowsSample;
 }) {
   const source: LoanProjectSource = projects ?? { rows: [] };
   const [open, setOpenState] = useState(false);
   const [view, setView] = useState<"form" | "project">("form");
   const [draftProject, setDraftProject] = useState<string | null>(null);
+  // The picker keeps the form's height, so the sheet does not jump when they swap.
+  const [formHeight, setFormHeight] = useState<number | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLButtonElement>(null);
   const projectFieldRef = useRef<HTMLButtonElement>(null);
   const sheetTitle = useRef<HTMLHeadingElement>(null);
@@ -582,8 +606,9 @@ export function LoanSettingsSection({
   const setEditSheet = useSheetHistory("loan-project", editOpen, setEditOpen, () => !editBusy.current);
   const loanRows = useRef(new Map<string, HTMLButtonElement>());
   const editReturn = useRef<HTMLElement | null>(null);
-  const balances = useLoanBalances(companyId);
+  const balances = useLoanBalances(sample == null ? companyId : null);
   const holdWrites = useHoldWrites();
+  const emptyButton = useRef<HTMLButtonElement>(null);
   const query = useQuery({
     queryKey: ["loan-currency", companyId],
     enabled: companyCurrency == null && companyId != null,
@@ -622,6 +647,7 @@ export function LoanSettingsSection({
   }
 
   function openPicker() {
+    setFormHeight(formRef.current?.offsetHeight ?? null);
     setView("project");
     // The פרויקט field is hidden now. Focus the title, like the change sheet's picker.
     requestAnimationFrame(() => { sheetTitle.current?.focus({ preventScroll: true }); });
@@ -633,23 +659,53 @@ export function LoanSettingsSection({
   }
 
   const picking = view === "project";
+  const loading = sample === "loading" || (sample == null && balances.isLoading);
+  const failed = sample === "error" || (sample == null && balances.isError);
+  const rows: readonly LoanBalanceRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
+  const empty = !loading && !failed && rows.length === 0;
+  const newLoanReturn = empty ? emptyButton : rowRef;
 
   return (
     <>
-      <SectionHead title="הלוואות" />
-      {balances.isLoading ? (
-        <List>
-          <ListRow variant="skeleton" />
-        </List>
-      ) : balances.isError ? (
-        <LoanReadError
-          label="יתרות הלוואות"
-          busy={balances.isFetching}
-          onRetry={() => { void balances.refetch(); }}
+      {loading ? (
+        <>
+          <p className="sr-only" role="status">טוען…</p>
+          <List>
+            <ListRow variant="skeleton" />
+            <ListRow variant="skeleton" />
+          </List>
+        </>
+      ) : failed ? (
+        <EmptyState
+          icon={<InfoIcon size={36} />}
+          title={LOANS_ERROR_TITLE}
+          body="נסו שוב בעוד רגע"
+          action={(
+            <Button
+              variant="pill"
+              className="ui-btn-retry"
+              icon={<RefreshIcon />}
+              busy={sample == null && balances.isFetching}
+              onClick={() => { if (sample == null) void balances.refetch(); }}
+            >
+              ניסיון חוזר
+            </Button>
+          )}
+        />
+      ) : empty ? (
+        <EmptyState
+          icon={<LoanIcon />}
+          title={LOANS_EMPTY_TITLE}
+          body={holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
+          action={holdWrites ? undefined : (
+            <Button variant="pill" icon={<PlusIcon />} buttonRef={emptyButton} onClick={() => { setLoanSheet(true); }}>
+              הלוואה חדשה
+            </Button>
+          )}
         />
       ) : (
         <LoanBalanceList
-          rows={balances.data ?? []}
+          rows={rows}
           onOpen={holdWrites ? undefined : (row) => {
             if (blocked?.()) return;
             editReturn.current = loanRows.current.get(row.id) ?? null;
@@ -662,12 +718,12 @@ export function LoanSettingsSection({
           }}
         />
       )}
-      {holdWrites ? null : (
+      {holdWrites || failed || empty ? null : (
         <List>
           <ListRow
             variant="button"
             title="הלוואה חדשה"
-            icon={<BankIcon />}
+            icon={<LoanIcon />}
             chevron
             buttonRef={rowRef}
             onClick={() => { setLoanSheet(true); }}
@@ -679,7 +735,7 @@ export function LoanSettingsSection({
         onOpenChange={setLoanSheet}
         title={picking ? "פרויקט" : "הלוואה"}
         titleRef={sheetTitle}
-        returnFocusRef={rowRef}
+        returnFocusRef={newLoanReturn}
         leading={picking ? (
           <IconButton label="חזרה" onClick={backToForm}>
             <BackIcon />
@@ -692,16 +748,18 @@ export function LoanSettingsSection({
         ) : (
           <>
             {picking ? (
-              <LoanProjectPicker
-                source={source}
-                selectedId={draftProject}
-                onSelect={(id) => {
-                  setDraftProject(id);
-                  backToForm();
-                }}
-              />
+              <div style={formHeight ? { minHeight: formHeight } : undefined}>
+                <LoanProjectPicker
+                  source={source}
+                  selectedId={draftProject}
+                  onSelect={(id) => {
+                    setDraftProject(id);
+                    backToForm();
+                  }}
+                />
+              </div>
             ) : null}
-            <div hidden={picking}>
+            <div hidden={picking} ref={formRef}>
               <LoanSetupForm
                 companyCurrency={currency}
                 initial={draftRef.current ?? undefined}

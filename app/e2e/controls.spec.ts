@@ -135,7 +135,7 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
 test("home connects, filters the period, and opens a project", async ({ page }) => {
   await page.goto("/?preview=1");
   await page.getByRole("link", { name: "חיבור SUMIT" }).click();
-  await expect(page).toHaveURL(/\/settings\?preview=1$/);
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");
   await page.getByRole("button", { name: "החודש" }).click();
@@ -401,7 +401,7 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
 });
 
 test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1");
+  await page.goto("/e2e/connections?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   const sheet = page.getByRole("dialog", { name: "חיבור עוזר AI" });
   await expect(sheet).toBeVisible();
@@ -410,7 +410,7 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await sheet.getByRole("button", { name: "יצירת קוד" }).click();
   await toast(page, previewToast);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/e2e/settings?preview=1&assistant=connected");
+  await page.goto("/e2e/connections?preview=1&assistant=connected");
   const assistantRow = page.getByRole("button", { name: "עוזר AI", exact: true });
   await expect(assistantRow).toContainText("מחובר · קריאה וכתיבה");
   await expect(page.getByText("שימוש אחרון ב-30.9")).toHaveCount(0);
@@ -427,13 +427,13 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await confirm.getByRole("button", { name: "ניתוק" }).click();
   await expect(confirm).toBeHidden();
   await toast(page, previewToast);
-  await page.goto("/e2e/settings?preview=1&assistant=loading");
+  await page.goto("/e2e/connections?preview=1&assistant=loading");
   const loadingRow = page.locator(".ui-row", { hasText: "עוזר AI" });
   await expect(loadingRow).toHaveAttribute("aria-busy", "true");
   await expect(page.getByRole("button", { name: "עוזר AI", exact: true })).toHaveCount(0);
   await expect(loadingRow).not.toContainText("מחובר");
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/e2e/settings?preview=1");
+  await page.goto("/e2e/connections?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   const narrow = page.getByRole("dialog", { name: "חיבור עוזר AI" });
   await expect(narrow).toBeVisible();
@@ -445,12 +445,13 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
 });
 
 test("settings connect, refresh, categories, and the account row", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1");
+  await page.goto("/e2e/connections?preview=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
   await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
   await page.getByRole("button", { name: "חיבור" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "סגירה" }).click();
+  await page.goto("/e2e/settings?preview=1");
   await expect(page.getByText("owner@example.com")).toBeVisible();
   await page.getByRole("button", { name: "שם העסק: בדיקה" }).click();
   const rename = page.getByRole("dialog", { name: "שם העסק" });
@@ -476,7 +477,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.getByRole("link", { name: "התקנה למסך הבית" }).click();
   await expect(page).toHaveURL(/\/install/);
 
-  await page.goto("/e2e/settings?preview=1&connected=1");
+  await page.goto("/e2e/connections?preview=1&connected=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
   const connectedSheet = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await connectedSheet.getByRole("button", { name: "רענון עכשיו" }).click();
@@ -491,6 +492,8 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
   await expect(page.getByRole("switch", { name: "רווח אחרי כלליות" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "הלוואות" })).toHaveCount(0);
+  await page.goto("/e2e/connections?preview=1&nocompany=1");
   const sumit = page.getByRole("button", { name: "SUMIT" });
   await expect(sumit).toBeEnabled();
   await expect(sumit).toContainText("לא מחובר");
@@ -518,7 +521,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   }, longEmail);
   expect(emailStart).toBe(true);
 
-  await page.goto("/e2e/settings?preview=1&connected=auth");
+  await page.goto("/e2e/connections?preview=1&connected=auth");
   const reconnect = page.getByRole("button", { name: "SUMIT" });
   await expect(reconnect).toContainText("צריך לחבר מחדש");
   await reconnect.click();
@@ -788,6 +791,8 @@ const sweepPages = [
   "/unpaid?preview=1",
   "/settings?preview=1",
   "/settings/categories?preview=1",
+  "/settings/connections?preview=1",
+  "/settings/loans?preview=1",
   "/onboarding?preview=1",
   "/install?preview=1",
   "/notifications?preview=1",
@@ -806,8 +811,10 @@ const sweepPages = [
   "/e2e/home?preview=1",
   "/e2e/projects?preview=1",
   "/e2e/settings?preview=1",
-  "/e2e/settings?preview=1&connected=1",
-  "/e2e/settings?preview=1&connected=auth",
+  "/e2e/connections?preview=1",
+  "/e2e/connections?preview=1&connected=1",
+  "/e2e/connections?preview=1&connected=auth",
+  "/e2e/loans?preview=1",
   "/e2e/categories?preview=1",
   "/e2e/unpaid?preview=1",
   "/e2e/txn?preview=1",
@@ -889,3 +896,26 @@ for (const url of sweepPages) {
     expect(failures).toEqual([]);
   });
 }
+
+test("settings opens the Connections and Loans pages, and Back returns to the row (FLOW-501)", async ({ page }) => {
+  await page.goto("/settings?preview=1");
+  const connections = page.getByRole("link", { name: "חיבורים" });
+  await expect(connections).toBeVisible();
+  await connections.click();
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
+  await expect(page.getByRole("heading", { name: "חיבורים" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("button", { name: "חזרה" }).click();
+  await expect(page).toHaveURL(/\/settings\?preview=1$/);
+  await expect(connections).toBeFocused();
+  const loans = page.getByRole("link", { name: "הלוואות" });
+  await loans.click();
+  await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
+  await expect(page.getByText("משכנתא אלון")).toBeVisible();
+  await page.goBack();
+  await expect(loans).toBeFocused();
+
+  await page.goto("/settings?preview=1&sheet=sumit");
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1/);
+  await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
+});

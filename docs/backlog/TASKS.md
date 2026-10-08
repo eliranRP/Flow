@@ -46,7 +46,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | in-progress (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | in-progress (#122) |
@@ -63,6 +63,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
+| 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | in-progress (#111) |
+| 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | ready |
+| 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | ready |
+| 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | ready |
+| 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
+| 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
+| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -208,7 +215,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited. (#122: kept. `mcp_assign_expense_split` and `save_line_split` still raise it.)
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
 - [ ] (#101 review) Overhead lines (`pnl_role` overhead) still offer the picker's reversal section; settle with the shared-line call above. Split and shared lines don't offer it.
-- [ ] (#101 review) A hidden, loan or kept-out other-kind category already on a line (filed through MCP) shows החזר on the review card but sits in the own-kind list with no mark in the change sheet.
+- [x] (in #111) A hidden, loan or kept-out other-kind category already on a line (filed through MCP) shows החזר on the review card but sits in the own-kind list with no mark in the change sheet.
 - [ ] (#101 review) The picker's search shows above 8 own-kind categories only; consider counting the reversal section too.
 - [ ] (#101 review) If a suggestion can ever be of the other kind, the summary shows הצעה, not החזר. Rules never learn reversals today.
 
@@ -225,9 +232,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead. (#121: reason `project not set`.)
 - [x] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104. (#121: said so in 0105.)
 - [x] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo. (#121: the attach keeps the role it gave the line and undo checks that role, so such a line is restored; tested both ways.)
-- [ ] (#104 design review) Show project codes in the loan project picker once the dashboard projects carry `code`, with the "חיפוש פרויקט או קוד" placeholder.
-- [ ] (#104 design review) Keep the loan sheet's height when it swaps between the form and the project picker; wrap the loan-project stories in a sheet-like decorator.
-- [ ] (#104 design review) CONTROLS.md: note the static loan rows on the project screen.
+- [x] (#104 design review, in #111) Show project codes in the loan project picker once the dashboard projects carry `code`, with the "חיפוש פרויקט או קוד" placeholder.
+- [x] (#104 design review, in #111) Keep the loan sheet's height when it swaps between the form and the project picker; wrap the loan-project stories in a sheet-like decorator.
+- [x] (#104 design review, in #111) CONTROLS.md: note the static loan rows on the project screen.
 - [x] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column. (#121; undo still reads older writes from `prior`.)
 - [x] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company. (#121, `loan_project_followups.test.sql`.)
 - [ ] (#121 review) Two review items moved to [FLOW-129](#flow-129).
@@ -235,7 +242,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-129"></a>
 ### FLOW-129 · Loan attach follow-ups (#121 review)
 - **Type:** BACKLOG NIT · **Status:** in-progress (#123) · **Depends on:** FLOW-120
-- [x] `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock. (Migration `20261008040000`, tested in `loan_project_followups_reraise.test.sql`.)
+- [x] `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock. (Migration `20261008043000`, tested in `loan_project_followups_reraise.test.sql`.)
 - [x] `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead. (No trigger queues it; the test asserts that and inserts the item.)
 
 <a id="flow-130"></a>
@@ -432,7 +439,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-305"></a>
 ### FLOW-305 · Review list in a bank-statement style
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (#111) · **Depends on:** —
 - **What:** Rows grouped by day headers (today, yesterday, date), a round initials avatar, the counterparty in bold with the payment method under it, the amount at the end with small cents, income in green, a pending chip, dense rows without card borders.
 - **Acceptance:** mockup approved; design review.
 
@@ -444,13 +451,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-307"></a>
 ### FLOW-307 · Large amounts on the transaction detail at 320px
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (#111; design reviewer's option A, stepped fit for display amounts) · **Depends on:** —
 - **What:** The detail amount (36px display) doesn't step down, so a 10-digit amount with cents starts past the side padding at 320px (also on main). Reuse the hero step-down logic.
 - **Acceptance:** clip-check story at 320 with the largest amount; design review.
 
 <a id="flow-308"></a>
 ### FLOW-308 · Return to the intended route after sign-in
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (#111; design reviewer's option C, built under the owner's standing UI rule) · **Depends on:** —
 - **What:** Sign-in always lands on Home, so a deep link (for example the evening review nudge to `/review`) is lost. Return to the requested route after sign-in, through a strict allowlist like the existing `?return=` handling.
 - **Acceptance:** e2e for a signed-out deep link to `/review`; an off-list route still goes Home.
 
@@ -480,6 +487,40 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
+
+<a id="flow-319"></a>
+### FLOW-319 · Type sizes, headers and text colours, income in green
+- **Type:** SMALL UI · **Status:** in-progress (#111) · **Depends on:** —
+- **What:** The owner's ask (2026-10-07), with a bank app's transaction list as the reference: clean up type sizes and header sizes, review text colours and sizes across screens, and show income amounts in green. Done at the token and shared-component level (type scale, page titles, section and month headers, row title and secondary line, list amounts), so one PR moves every screen. Income green replaces the "green only with ▲" rule for amounts, through a new decision. Row layout changes (avatars, bank-statement rows) stay in FLOW-305.
+- **Acceptance:** the design reviewer's recommended option built; WCAG AA for the income colour in light and dark; decision record; clip-check at 320; design review.
+
+<a id="flow-320"></a>
+### FLOW-320 · Open the picker that was tapped on the transaction detail
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **What:** From the 2026-10-07 tap-count review. On the transaction detail, the project row opens the change sheet straight on the project picker and the category row on the category picker, instead of the summary sheet. The review card's שינוי keeps the summary. A split row keeps opening the split.
+- **MCP:** none new; `assign_expense` and `set_expense_category` cover the write.
+- **Acceptance:** re-filing a project or category from the detail is 2 taps; Back from the picker returns to the detail with no dead history step; focus returns to the tapped row; tests for both rows; design review.
+
+<a id="flow-321"></a>
+### FLOW-321 · Two rows in Home's attention card (review and unpaid)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **What:** From the 2026-10-07 tap-count review. Unpaid invoices can't be reached while the review queue has items: the Home card links only to Review. When both exist, the card shows two rows, one to Review and one to Unpaid with its total; one row when only one exists. Singular copy for a count of 1.
+- **MCP:** none.
+- **Acceptance:** unpaid is 1 tap from Home with items waiting; tests for 0, 1 and many on each side; each row has its own accessible name; light, dark, 320px; design review.
+
+<a id="flow-322"></a>
+### FLOW-322 · Copy and dead-end fixes from the UX review
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **What:** From the 2026-10-07 UX review: a period control on the group-lines screen and an empty state that offers choosing a period (today a dead end); singular copy for one waiting item on the breakdown; the detail's document-row hint names only what the row shows; the Review subtitle covers bank lines too; category rows in Settings open that category's lines; the `/notifications` route that nothing links to is removed or linked.
+- **MCP:** none.
+- **Acceptance:** each string in a test; no empty state is a dead end; a category row opens its lines; design review.
+
+<a id="flow-323"></a>
+### FLOW-323 · Search and all transactions
+- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** FLOW-302
+- **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
+- **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
+- **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
 
 ## Projects and reports
 
@@ -537,13 +578,27 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The overhead split weights by invoiced income even on the cash form of `get_project`.
 - [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
 
+<a id="flow-410"></a>
+### FLOW-410 · Find every project in project search
+- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **What:** From the 2026-10-07 tap-count review. Project search doesn't find an active project past the first six or a finished one, so those take 3 taps or more. Search filters all projects, finished included, whenever the query is not empty; every active project shows by default, finished ones stay behind their link.
+- **MCP:** none (`list_projects` exists).
+- **Acceptance:** tests: a seventh active project and a finished project are found by name; 320px check; design review.
+
+<a id="flow-411"></a>
+### FLOW-411 · Project screen: lines on open, honest period label
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-302
+- **What:** From the 2026-10-07 tap-count review. Show a project's recent lines (the month list, capped) under its categories without the extra "תנועות אחרונות" tap; the band says the figure is since the project started; the "כל הקטגוריות" link that jumps to Settings goes. FLOW-402 keeps the full page with filters; FLOW-403 adds a period.
+- **MCP:** none (`get_project` returns the lines).
+- **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.
+
 ## Onboarding, Settings and connectors
 
 <a id="flow-501"></a>
 ### FLOW-501 · Tabs reorg: connectors and loans pages
-- **Type:** PLAN FIRST · **Status:** on-hold (owner's go) · **Depends on:** —
-- **What:** Dedicated pages for connectors (SUMIT, Mercury, Jev, עוזר AI) and for loans, so Settings keeps only the account, display and "more" rows. A plan exists with two layout options for the owner.
-- **Acceptance:** owner picks the option; mockup approved.
+- **Type:** PLAN FIRST · **Status:** in-progress (#111) · **Depends on:** —
+- **What:** Dedicated pages for connectors (SUMIT, Mercury, Jev, עוזר AI) and for loans, so Settings keeps only the account, display and "more" rows. The owner approved option A on 2026-10-07: two rows in Settings (חיבורים, הלוואות) open `/settings/connections` and `/settings/loans`; the tab bar and Home stay as they are; viewers can read loans ([0116](../decisions/0116-settings-connections-and-loans-pages.md)).
+- **Acceptance:** owner picks the option; mockup approved; shared `ConnectorRow`, `PlugIcon`, `LoanIcon` and stories; old `/settings?sheet=` links redirect.
 
 <a id="flow-502"></a>
 ### FLOW-502 · Web push notifications

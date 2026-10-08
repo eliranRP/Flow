@@ -20,6 +20,8 @@ for k, v in T["type"].items():
     type_lines.append(f"  --type-{k}-size: {v['size']/16:g}rem; /* {v['size']}px */")
     type_lines.append(f"  --type-{k}-line: {v['lineHeight']};")
     type_lines.append(f"  --type-{k}-weight: {v['weight']};")
+    if "tracking" in v:
+        type_lines.append(f"  --type-{k}-tracking: {v['tracking']};")
 space = "\n".join(f"  --space-{k}: {v}px;" for k, v in T["space"].items())
 radius = "\n".join(f"  --radius-{k}: {v}px;" for k, v in T["radius"].items())
 f = T["font"]

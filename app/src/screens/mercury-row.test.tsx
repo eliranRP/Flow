@@ -8,7 +8,7 @@ import { israelSyncPhrase } from "../sumit-copy";
 import { ViewerPreview } from "../use-is-viewer";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { SettingsScreen } from "./flow-screens";
+import { ConnectionsScreen } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
   impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string } | null }> =>
@@ -92,7 +92,7 @@ function mercury(partial: Record<string, unknown>) {
   };
 }
 
-function renderSettings(ui: ReactNode = <SettingsScreen />) {
+function renderSettings(ui: ReactNode = <ConnectionsScreen />) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -216,7 +216,7 @@ describe("Mercury status row", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderSettings(
-      <SettingsScreen sample={{ name: "אלפא", connected: true, companyId: 1001, lastError: null, mercuryConnected: true, mercuryLastError: null, mercuryLastSyncAt: "2026-09-30T11:05:00.000Z" }} />,
+      <ConnectionsScreen sample={{ name: "אלפא", connected: true, companyId: 1001, lastError: null, mercuryConnected: true, mercuryLastError: null, mercuryLastSyncAt: "2026-09-30T11:05:00.000Z" }} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Mercury" }));
     const disconnect = within(screen.getByRole("dialog", { name: "Mercury" })).getByRole("button", { name: "ניתוק" });
@@ -242,7 +242,7 @@ describe("Mercury status row", () => {
     mockLive(mercury({ connected: true }));
     renderSettings(
       <ViewerPreview>
-        <SettingsScreen />
+        <ConnectionsScreen />
       </ViewerPreview>,
     );
     const title = await screen.findByText("Mercury");

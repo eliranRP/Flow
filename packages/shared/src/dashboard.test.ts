@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryRowSchema, dashboardSchema, projectDetailSchema } from "./dashboard";
+import { categoryRowSchema, dashboardSchema, projectDetailSchema, reviewRowSchema } from "./dashboard";
 
 const project = {
   id: "p",
@@ -119,5 +119,38 @@ describe("dashboardSchema", () => {
       }],
     });
     expect(parsed.excluded_income_agorot).toBe(100n);
+  });
+});
+
+describe("reviewRowSchema (FLOW-305)", () => {
+  const row = {
+    id: "r",
+    transaction_id: "t",
+    description: "חשמל השרון",
+    doc_date: "2026-10-05",
+    amount_net: -120050,
+    direction: "expense",
+    reason: "missing_project",
+    project_id: null,
+    category_id: null,
+    supplier_name: null,
+  };
+
+  it("keeps line_status and source", () => {
+    const parsed = reviewRowSchema.parse({ ...row, line_status: "pending", source: "mercury" });
+    expect(parsed.line_status).toBe("pending");
+    expect(parsed.source).toBe("mercury");
+  });
+
+  it("parses an older payload without the fields", () => {
+    const parsed = reviewRowSchema.parse(row);
+    expect(parsed.line_status).toBeUndefined();
+    expect(parsed.source).toBeUndefined();
+  });
+
+  it("drops an unknown value instead of failing the whole list", () => {
+    const parsed = reviewRowSchema.parse({ ...row, line_status: "held", source: "hapoalim" });
+    expect(parsed.line_status).toBeUndefined();
+    expect(parsed.source).toBeUndefined();
   });
 });
