@@ -15,6 +15,7 @@ import {
   type JevQuestion,
   type JevResult,
   type JevState,
+  type JsonValue,
   type JevTimer,
 } from "./jev.ts";
 import { readJevApiKey } from "./jev_key.ts";
@@ -46,6 +47,9 @@ export type TagExpense = {
   description: string;
   docDate: string;
   supplierName: string | null;
+  supplierId?: string | null;
+  /** How the owner filed this supplier before, newest first (decision 0127). */
+  history?: TagFiling[];
   amountGross: number;
   amountNet: number;
   vatAmount: number;
@@ -57,6 +61,20 @@ export type TagExpense = {
   pnlRole: string | null;
   allocationCount: number;
 };
+
+/** A line the owner filed (approved or changed), from SQL. */
+export type TagFiling = {
+  docDate: string;
+  description: string;
+  amountNet: number;
+  projectId: string | null;
+  categoryId: string | null;
+  pnlRole: string | null;
+  split: boolean;
+};
+
+/** Filed lines per supplier that go into a request. */
+export const JEV_HISTORY_PER_SUPPLIER = 5;
 
 export type TagCompanyWork = {
   companyId: string;
@@ -193,9 +211,17 @@ export function buildTagQuestions(
   return questions;
 }
 
-/** Amounts are context for the model. planTag does not write them back. */
-export function buildTagState(expense: TagExpense): JevState {
-  return {
+/**
+ * Amounts are context for the model. planTag does not write them back.
+ * `past_filings` is how the owner filed the same supplier before, with the same ids the
+ * questions offer; an archived project or hidden category comes through as a name of null.
+ */
+export function buildTagState(
+  expense: TagExpense,
+  projects: readonly TagProject[],
+  categories: readonly TagCategory[],
+): JevState {
+  const state: Record<string, JsonValue> = {
     description: expense.description,
     doc_date: expense.docDate,
     direction: "expense",
@@ -204,6 +230,23 @@ export function buildTagState(expense: TagExpense): JevState {
     amount_net: expense.amountNet,
     vat_amount: expense.vatAmount,
   };
+  const history = expense.history ?? [];
+  if (history.length > 0) {
+    const projectNames = new Map(projects.map((row) => [row.id, row.name]));
+    const categoryNames = new Map(categories.map((row) => [row.id, row.name]));
+    state.past_filings = history.slice(0, JEV_HISTORY_PER_SUPPLIER).map((filing) => ({
+      doc_date: filing.docDate,
+      description: filing.description,
+      amount_net: filing.amountNet,
+      project_id: filing.projectId,
+      project_name: filing.projectId ? projectNames.get(filing.projectId) ?? null : null,
+      category_id: filing.categoryId,
+      category_name: filing.categoryId ? categoryNames.get(filing.categoryId) ?? null : null,
+      pnl_role: filing.pnlRole,
+      split: filing.split,
+    }));
+  }
+  return state;
 }
 
 function readChoice(value: unknown, allowed: ReadonlySet<string>): { id: string; confidence: number } | null {
@@ -413,7 +456,10 @@ export async function tagWork(
       let result: JevResult;
       usage.calls += 1;
       try {
-        result = await call(apiKey, { state: buildTagState(expense), questions });
+        result = await call(apiKey, {
+          state: buildTagState(expense, company.projects, company.categories),
+          questions,
+        });
       } catch (error) {
         if (error instanceof JevError && (error.code === "unauthorized" || error.code === "missing_key")) {
           logTagRun(report, options.log);
@@ -617,6 +663,7 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
     description: asString(row.description) ?? "",
     docDate,
     supplierName: supplier,
+    supplierId: asString(row.supplier_id),
     amountGross: asNumber(row.amount_gross),
     amountNet: asNumber(row.amount_net),
     vatAmount: asNumber(row.vat_amount),
@@ -628,6 +675,56 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
     pnlRole: asString(row.pnl_role),
     allocationCount: embeddedRows(row.allocations).length,
   }];
+}
+
+function filingFromRow(row: RestRow): [string, TagFiling] | [] {
+  const supplierId = asString(row.supplier_id);
+  const docDate = asString(row.doc_date);
+  const amountNet = asNumber(row.amount_net);
+  if (!supplierId || !docDate || !Number.isFinite(amountNet)) return [];
+  const projectId = asString(row.project_id);
+  const categoryId = asString(row.category_id);
+  return [supplierId, {
+    docDate,
+    description: (asString(row.description) ?? "").slice(0, 120),
+    amountNet,
+    projectId: projectId && isUuid(projectId) ? projectId : null,
+    categoryId: categoryId && isUuid(categoryId) ? categoryId : null,
+    pnlRole: asString(row.pnl_role),
+    split: asBool(row.split),
+  }];
+}
+
+/** One SQL call per company: the newest filed lines of each supplier in the run (decision 0127). */
+async function attachHistory(
+  fetch: FetchLike,
+  base: string,
+  serviceKey: string,
+  companyId: string,
+  expenses: TagExpense[],
+): Promise<void> {
+  const suppliers = [...new Set(expenses.flatMap((expense) =>
+    expense.supplierId && isUuid(expense.supplierId) ? [expense.supplierId] : []
+  ))].sort();
+  if (suppliers.length === 0) return;
+  const filed = rows(await rest(fetch, `${base}/rest/v1/rpc/jev_supplier_history`, serviceKey, {
+    method: "POST",
+    body: { p_company: companyId, p_suppliers: suppliers, p_per: JEV_HISTORY_PER_SUPPLIER },
+  }));
+  const bySupplier = new Map<string, TagFiling[]>();
+  for (const row of filed) {
+    const entry = filingFromRow(row);
+    if (entry.length === 0) continue;
+    const [supplierId, filing] = entry;
+    const list = bySupplier.get(supplierId) ?? [];
+    list.push(filing);
+    bySupplier.set(supplierId, list);
+  }
+  for (const expense of expenses) {
+    if (!expense.supplierId) continue;
+    const list = bySupplier.get(expense.supplierId);
+    if (list) expense.history = list.slice(0, JEV_HISTORY_PER_SUPPLIER);
+  }
 }
 
 type EnabledCompany = { companyId: string; mode: TagMode; threshold: number };
@@ -682,13 +779,15 @@ export function createTagStore(
         });
         const transactions = rows(await get(transactionsPath(company.companyId, quota, new Date(now()).toISOString())));
         const loaded = transactions.flatMap((row) => expenseFromRow(row, company.companyId));
+        const expenses = capNewest(loaded, quota);
+        await attachHistory(fetch, base, serviceKey, company.companyId, expenses);
         work.push({
           companyId: company.companyId,
           mode: company.mode,
           threshold: company.threshold,
           projects,
           categories,
-          expenses: capNewest(loaded, quota),
+          expenses,
         });
       }
       return work;
