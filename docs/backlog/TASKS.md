@@ -27,10 +27,10 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | in-progress (#113) |
 | 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | in-progress (#112) |
 | 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | done (#114) |
-| 10e | [FLOW-127](#flow-127) | Kept-out income review follow-ups (#114 review) | BACKLOG NIT | ready |
+| 10e | [FLOW-127](#flow-127) | Kept-out income and overhead undo review follow-ups (#114, #116 reviews) | BACKLOG NIT | in-progress (claude/project-thread-xkb7jn) |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
-| 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | in-progress (#116) |
+| 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | done (#116) |
 | 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | ready |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
@@ -112,11 +112,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Income that already has a project and a guessed kept-out category is never queued for review, so the guess is never confirmed and the line keeps counting. Owner call: queue a guessed kept-out category for income too, or leave it. (#114: queued with reason `suggested`, the recommended answer; the owner was asked on 2026-10-07 and can still pick "leave it".)
 
 <a id="flow-127"></a>
-### FLOW-127 · Kept-out income review follow-ups (#114 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-126 (#114)
-- [ ] `20261007224500_kept_out_income_review.sql`: the `user_assigned` / `category_assigned` checks next to `category_suggested` are redundant. Drop them in the next migration that replaces the function, or add a comment saying why they stay.
-- [ ] The same review queue can pick up a guessed loan category. Skip it through `private.line_category_out`, as the other review paths do.
-- [ ] [TOOLS.md](../mcp/TOOLS.md): say that `set_expense_category` keeps the line's project.
+### FLOW-127 · Kept-out income and overhead undo review follow-ups (#114, #116 reviews)
+- **Type:** BACKLOG NIT · **Status:** in-progress (claude/project-thread-xkb7jn) · **Depends on:** FLOW-126 (#114), FLOW-116 (#116)
+- [x] `20261007224500_kept_out_income_review.sql`: the `user_assigned` / `category_assigned` checks next to `category_suggested` are redundant. Drop them in the next migration that replaces the function, or add a comment saying why they stay. (Kept with a comment: not every owner write clears `category_suggested`.)
+- [x] The same review queue can pick up a guessed loan category. Skip it through `private.line_category_out`, as the other review paths do.
+- [x] [TOOLS.md](../mcp/TOOLS.md): say that `set_expense_category` keeps the line's project.
+- [x] #116 review: `private.overhead_share` has one mis-indented `in_pnl` line.
+- [x] #116 review: `undo` kind `overhead_project` checks that the prior project still exists without locking it, so a delete at the same moment turns `conflict` into `refused`. Lock it with `for key share`.
+- [x] #116 review: `overhead_project_undo_deleted.test.sql` has two no-op `as_mcp()` / `reset role` pairs before the deletes.
 
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
@@ -133,7 +136,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-116"></a>
 ### FLOW-116 · Overhead project follow-ups (#71 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#116) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#116) · **Depends on:** —
 - [x] `private.overhead_share` counts the overhead project's own income in the weights, so the overhead project gets a share of overhead. (#116: left out, share 0, the recommended answer; owner asked 2026-10-07 by card. Decision [0117](../decisions/0117-overhead-project-weights.md).)
 - [x] `undo` kind `overhead_project` after the prior overhead project was deleted is `refused` / `project not found`; `conflict` would match the other undo kinds. (#116)
 - [ ] Cash-basis expenses count an unpaid supplier invoice by document date. Moved to [FLOW-128](#flow-128).
