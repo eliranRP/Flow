@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(67);
+select plan(68);
 
 do $users$
 begin
@@ -164,7 +164,7 @@ select public.set_project_investment(pg_temp.id('house'), '{"purchase_minor": 10
 select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": -1}')$$,
   'P0001', 'validation', 'a negative amount is validation');
 select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": 12.5}')$$,
-  'P0001', 'validation', 'a fraction of an agora');
+  'P0001', 'validation', 'a fraction of a minor unit');
 select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": "100"}')$$,
   'P0001', 'validation', 'an amount as text');
 select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"value_date": "2026-02-30"}')$$,
@@ -223,6 +223,11 @@ select is((pg_temp.inv('barn')->>'loan_balance_minor')::bigint, 500000::bigint, 
 select is((pg_temp.inv('barn')->>'current_equity_minor')::bigint, 1800000::bigint - 500000,
   'current equity in dollars');
 select is(pg_temp.inv('barn')->>'forced_equity_minor', null, 'forced equity waits while rehab has shekels');
+reset role;
+delete from public.allocations where project_id = pg_temp.id('barn');
+select tests.authenticate_as('pin_owner');
+select is((pg_temp.inv('barn')->>'forced_equity_minor')::bigint, 2000000::bigint - 1000000 - 5000,
+  'with dollar costs only, forced equity is in dollars');
 select throws_ok($$select public.set_project_investment(pg_temp.id('barn'), '{"currency": "usd"}')$$,
   'P0001', 'validation', 'a currency is three capital letters');
 select throws_ok($$select public.set_project_investment(pg_temp.id('barn'), '{"currency": null}')$$,

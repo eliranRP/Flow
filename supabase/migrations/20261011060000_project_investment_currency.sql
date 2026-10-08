@@ -34,6 +34,8 @@ comment on column public.projects.arv_minor is
   'The after-repair value, in minor units of investment_currency. Null until set. Decision 0143.';
 comment on column public.projects.value_minor is
   'What the property is worth today, in minor units of investment_currency. Null until set. Decision 0143.';
+comment on column public.projects.value_date is
+  'When value_minor was last estimated. Decision 0143.';
 comment on column public.projects.investment_currency is
   'The currency of the investment figures, rehab and equity on this project (default ILS). Decision 0143.';
 

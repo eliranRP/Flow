@@ -1342,16 +1342,16 @@ function writeTools() {
       idempotency_key: { type: "string" },
       loan_ids: { type: "array", items: { type: "string" } },
     }, true),
-    toolSpec("set_project_investment", "Set a project's investment figures: currency (ISO code like USD or ILS, default ILS: the currency of the figures, rehab and equity; it cannot be cleared), purchase_minor (what it cost to buy), arv_minor (the after-repair value), value_minor (what it is worth today), all in minor units of that currency (cents for USD), and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole minor units, 0 or more. Changing the currency does not convert the figures. get_project returns them in investment with rehab and equity. Returns the figures after. Undo is kind project_investment with the project id: it puts back the figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
+    toolSpec("set_project_investment", "Set a project's investment figures: currency (ISO code like USD or ILS, default ILS: the currency of the figures, rehab and equity; it cannot be cleared), purchase_minor (what it cost to buy), arv_minor (the after-repair value), value_minor (what it is worth today), all in minor units of that currency (cents for USD), and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole minor units, 0 or more. Changing the currency does not convert the figures. get_project returns them in investment with rehab and equity. Returns the currency and figures after. Undo is kind project_investment with the project id: it puts back the currency and figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
-      currency: { type: "string" },
+      currency: { type: "string", pattern: "^[A-Z]{3}$" },
       purchase_minor: { type: ["integer", "null"] },
       arv_minor: { type: ["integer", "null"] },
       value_minor: { type: ["integer", "null"] },
       value_date: { type: ["string", "null"] },
     }, true),
-    toolSpec("set_category_rehab", "Count a category as rehab on projects (rehab true), leave it out (false), or follow the default (null). By default every category counts but those kept out of the P&L and the loan parts (interest, escrow, principal, and a payment's fees part in any category unless that category is switched on). Switching on the principal category counts repayments, while the loan is already in current equity. rehab is get_project's investment.rehab_agorot. Returns rehab and in_rehab (what the category comes to). Undo is kind category_rehab with the category id: it puts back the setting before, and is a conflict when it changed since.", {
+    toolSpec("set_category_rehab", "Count a category as rehab on projects (rehab true), leave it out (false), or follow the default (null). By default every category counts but those kept out of the P&L and the loan parts (interest, escrow, principal, and a payment's fees part in any category unless that category is switched on). Switching on the principal category counts repayments, while the loan is already in current equity. rehab is get_project's investment.rehab_minor. Returns rehab and in_rehab (what the category comes to). Undo is kind category_rehab with the category id: it puts back the setting before, and is a conflict when it changed since.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
       rehab: { type: ["boolean", "null"] },
