@@ -31,6 +31,7 @@ import { IconButton } from "../ui/icon-button";
 import { CalendarIcon, CameraIcon, DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { rowSource } from "../ui/line-marks";
 import { MonthList } from "../ui/month-list";
 import { FocusTitle } from "../ui/focus-title";
 import { BudgetBar } from "../ui/progress-bar";
@@ -330,7 +331,7 @@ export function ProjectDetailScreen({
               agorot={txn.amount_net}
               sign={txn.direction === "income" ? "in" : "out"}
               currency={txn.currency ?? "ILS"}
-              source="invoice"
+              source={rowSource(txn.source)}
               href={`/transactions/${txn.id}${search}`}
               state={txnListState(heldIds, txn.id, listFrom)}
             />

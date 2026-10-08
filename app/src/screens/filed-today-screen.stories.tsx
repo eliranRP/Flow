@@ -40,3 +40,31 @@ export const FiledTodayEmpty: Story = {
     </StoryRoute>
   ),
 };
+
+const filedLine: FiledTodayRow = {
+  id: "t-line",
+  description: "חשבונית",
+  doc_date: "2026-09-29",
+  amount_net: -350_000n,
+  direction: "expense",
+  supplier_name: "ספק לדוגמה",
+  project_name: "שיפוץ הרצל 12",
+  category_name: "חומרים",
+};
+
+/** FLOW-124 and FLOW-125: a bank line shows the bank icon; a line out of the P&L carries the ⊘. */
+export const FiledTodayLineMarks: Story = {
+  name: "Filed today, bank line and a line out of the P&L",
+  render: () => (
+    <StoryRoute entry="/review/filed" tabs>
+      <ExampleBar />
+      <FiledTodayScreen
+        sample={[
+          { ...filedLine, id: "t-bank", supplier_name: "Home Depot", source: "mercury" },
+          { ...filedLine, id: "t-out", supplier_name: "ריבית בנק לדוגמה", category_name: "ריבית", source: "sumit", kept_out: true },
+          { ...filedLine, id: "t-doc", source: "sumit" },
+        ]}
+      />
+    </StoryRoute>
+  ),
+};

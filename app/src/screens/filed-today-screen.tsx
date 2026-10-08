@@ -10,6 +10,8 @@ import { txnListState } from "../txn-nav";
 import { EmptyState } from "../ui/empty-state";
 import { ReviewIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
+import { KeptOutTag, rowSource } from "../ui/line-marks";
+import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
 
 /** Dev-only rows so the review banner can open a list that has a transaction. */
@@ -66,7 +68,8 @@ export function FiledTodayScreen({
             {...loanRowProps(filedMarks.get(row.id), [row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · "))}
             agorot={row.amount_net}
             sign={row.direction === "income" ? "in" : "out"}
-            source="invoice"
+            source={rowSource(row.source)}
+            tag={row.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
             href={rowHref ? rowHref(row) : `/transactions/${row.id}${search}`}
             state={rowHref ? undefined : txnListState(rowIds, row.id, `${location.pathname}${location.search}`)}
           />

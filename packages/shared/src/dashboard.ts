@@ -145,6 +145,10 @@ export const filedTodaySchema = z.object({
   supplier_name: z.string().nullable(),
   project_name: z.string().nullable(),
   category_name: z.string().nullable(),
+  /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
+  source: z.string().optional().catch(undefined),
+  /** The line is out of the P&L (FLOW-124, decision 0135). Older payloads omit it. */
+  kept_out: z.boolean().optional().catch(undefined),
 });
 
 export const categoryRowSchema = z.object({
@@ -362,6 +366,10 @@ export const projectCategorySchema = z
         description: z.string(),
         doc_date: z.string(),
         amount_net: agorotSchema,
+        /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
+        source: z.string().optional().catch(undefined),
+        /** Its parts on this project and category are out of the P&L (FLOW-124). Older payloads omit it. */
+        kept_out: z.boolean().optional().catch(undefined),
       }),
     ),
     next_offset: z.number().int().nonnegative().nullable(),

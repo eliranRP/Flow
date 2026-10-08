@@ -30,6 +30,26 @@ export const ProjectCategory: Story = {
   ),
 };
 
+/** FLOW-124 and FLOW-125: a bank line shows the bank icon; a line out of the P&L carries the ⊘. */
+export const ProjectCategoryLineMarks: Story = {
+  name: "Project category, bank line and a line out of the P&L",
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c1">
+      <ExampleBar />
+      <ProjectCategoryScreen
+        sample={{
+          ...categorySample,
+          rows: [
+            { id: "t1", description: "Home Depot", doc_date: "2026-09-14", amount_net: -8_500_000n, source: "mercury" },
+            { id: "t2", description: "ריבית בנק לדוגמה", doc_date: "2026-09-20", amount_net: -41_200n, source: "sumit", kept_out: true },
+          ],
+        }}
+        backTo="/projects/a"
+      />
+    </StoryRoute>
+  ),
+};
+
 /** FLOW-401 v5: in the month view, one quiet line gives the usual month, with the up mark when above it. */
 export const ProjectCategoryUsual: Story = {
   name: "Project category, usual month",
