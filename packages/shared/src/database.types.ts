@@ -939,7 +939,7 @@ isOneToOne: false
             }[]
                            },
 "list_project_category":
-{ Args: { "p_basis"?: string,"p_category": string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
+{ Args: { "p_basis"?: string,"p_category": string,"p_currency"?: string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
                            },
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json

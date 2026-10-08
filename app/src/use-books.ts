@@ -342,10 +342,11 @@ export function useProjectQuery(projectId: string) {
 
 const CATEGORY_PAGE = 40;
 
-export function useProjectCategoryQuery(projectId: string, categoryId: string) {
+/** `currency` is the bucket the project page row was in; empty lets the server pick (ILS first). */
+export function useProjectCategoryQuery(projectId: string, categoryId: string, currency = "") {
   const preview = useHomePreview();
   return useInfiniteQuery({
-    queryKey: ["project-category", preview, projectId, categoryId],
+    queryKey: ["project-category", preview, projectId, categoryId, currency],
     enabled: preview === "off" && projectId !== "" && categoryId !== "",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
@@ -358,6 +359,7 @@ export function useProjectCategoryQuery(projectId: string, categoryId: string) {
         p_offset: pageParam,
         p_limit: CATEGORY_PAGE,
         p_basis: BOOKS_BASIS,
+        ...(currency === "" ? {} : { p_currency: currency }),
       });
       if (error) throw error;
       return projectCategorySchema.parse(data);
