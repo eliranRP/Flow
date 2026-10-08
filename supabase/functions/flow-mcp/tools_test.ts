@@ -1748,6 +1748,27 @@ Deno.test("assign_expenses forwards split rows next to plain rows and validates 
   assertEquals(calls.length, before, "a bad split row never reaches the database");
 });
 
+Deno.test("assign_expenses lowercases ids and refuses remember on a category-only row (FLOW-205)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { batch_key: "b", ok_count: 1, results: [] } } }));
+  const upper = await callTool("assign_expenses", {
+    idempotency_key: "batch-case-1",
+    items: [{ transaction_id: TXN.toUpperCase(), project_id: PROJECT.toUpperCase(), category_id: CATEGORY.toUpperCase(), remember: true }],
+  }, ["write"], rpc);
+  assertEquals(upper.isError, false);
+  assertEquals(calls[0]?.body.p_items, [{ transaction_id: TXN, project_id: PROJECT, category_id: CATEGORY, remember: true }]);
+
+  for (const items of [
+    [{ transaction_id: TXN, category_id: CATEGORY, remember: true }],
+    [{ transaction_id: TXN, category_id: CATEGORY, remember: false }],
+    [{ transaction_id: TXN, project_id: PROJECT, category_id: CATEGORY }, { transaction_id: TXN.toUpperCase(), category_id: CATEGORY }],
+  ]) {
+    const refused = await callTool("assign_expenses", { idempotency_key: "k", items }, ["write"], rpc);
+    assertEquals(refused.isError, true, JSON.stringify(items));
+    if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1, "a refused call never reaches the database");
+});
+
 Deno.test("assign_expenses lists shares[] on its items like assign_expense_split", () => {
   const tools = toolsFor(["write"]);
   const batch = tools.find((tool) => tool.name === "assign_expenses");

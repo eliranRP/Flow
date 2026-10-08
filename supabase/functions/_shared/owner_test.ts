@@ -7,7 +7,8 @@ function assertEquals(actual: unknown, expected: unknown): void {
 }
 
 const b64 = (value: unknown) => btoa(JSON.stringify(value)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
-const bearer = (sub: string) => `Bearer ${b64({ alg: "HS256" })}.${b64({ sub, role: "authenticated" })}.sig`;
+const bearer = (sub: string, extra: Record<string, unknown> = { mcp_tid: "tid-1", company_id: "c-1" }) =>
+  `Bearer ${b64({ alg: "HS256" })}.${b64({ sub, role: "authenticated", ...extra })}.sig`;
 
 Deno.test("jwtSub reads sub and rejects junk", () => {
   assertEquals(jwtSub(bearer("u-1")), "u-1");
@@ -46,4 +47,17 @@ Deno.test("viewer token and rejected token are refused", async () => {
     readableCompanies: () => Promise.resolve(null),
   });
   assertEquals(rejected, { error: "unauthorized" });
+});
+
+Deno.test("the fallback takes only a flow-mcp token for its own company (FLOW-205)", async () => {
+  const deps = {
+    getUserId: () => Promise.resolve(null),
+    ownedBy: () => Promise.reject(new Error("not used")),
+    readableCompanies: () => Promise.resolve([{ id: "c-1", owner_id: "u-1" }, { id: "c-2", owner_id: "u-1" }]),
+  };
+  assertEquals(await resolveOwnerCompany(bearer("u-1", {}), deps), { error: "unauthorized" });
+  assertEquals(await resolveOwnerCompany(bearer("u-1", { company_id: "c-1" }), deps), { error: "unauthorized" });
+  assertEquals(await resolveOwnerCompany(bearer("u-1", { mcp_tid: "tid-1" }), deps), { error: "unauthorized" });
+  assertEquals(await resolveOwnerCompany(bearer("u-1", { mcp_tid: "tid-1", company_id: "c-2" }), deps), { companyId: "c-2" });
+  assertEquals(await resolveOwnerCompany(bearer("u-1", { mcp_tid: "tid-1", company_id: "c-9" }), deps), { error: "no company" });
 });

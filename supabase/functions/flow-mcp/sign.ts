@@ -65,7 +65,4 @@ export async function signUserJwt(key: SigningKey, input: {
   return `${signingInput}.${base64url(new Uint8Array(signature))}`;
 }
 
-export function decodeJwtPart(part: string): Record<string, unknown> {
-  const padded = part.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - (part.length % 4)) % 4);
-  return JSON.parse(atob(padded)) as Record<string, unknown>;
-}
+export { decodeJwtPart } from "../_shared/jwt.ts";

@@ -640,11 +640,20 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     await waitFor(() => {
       expect(db.writes.find((call) => call.name === "resolve_review")?.args).toEqual({ p_id: "r1", p_action: "skipped" });
     });
+    // The skipped card leaves; the next one takes the screen.
+    view.rerender(queue([other], client));
+    expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => {
       expect(db.writes.find((call) => call.name === "reopen_review")?.args).toEqual({ p_id: "r1" });
     });
     expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
+    // It comes back behind the card on screen in queue order, but ביטול puts it in front.
+    view.rerender(queue([other, open], client));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
+    });
   });
 
   it("moves on once the card leaves the queue", async () => {

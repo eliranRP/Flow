@@ -127,7 +127,8 @@ const ALLOWED: Record<string, Set<string>> = {
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const UUID_TEXT = z.string().regex(UUID);
+// Any case is accepted; the database compares ids in lower case (FLOW-205).
+const UUID_TEXT = z.string().regex(UUID).transform((id) => id.toLowerCase());
 const IDEMPOTENCY_KEY = z.string().min(1).max(128);
 // A batch key leaves room for ":" and a three-digit ordinal on each row key.
 const BATCH_KEY = z.string().min(1).max(124);
@@ -427,6 +428,10 @@ const batchItemSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
   if (item.project_id != null && item.category_id == null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+  // remember saves a project for the supplier, so a category-only row can't take it (FLOW-205).
+  if (item.project_id == null && item.remember != null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
@@ -1018,7 +1023,7 @@ function writeTools() {
       category_id: { type: "string" },
       shares: SHARES_SPEC,
     }, true),
-    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. undo_batch with the returned batch_key undoes the rows that succeeded.", {
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. remember needs project_id on the same row. undo_batch with the returned batch_key undoes the rows that succeeded.", {
       idempotency_key: { type: "string" },
       items: {
         type: "array",
