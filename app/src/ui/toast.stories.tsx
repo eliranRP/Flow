@@ -32,10 +32,10 @@ function BelowHeader(props: { children: string; action: string; tone?: "ok" | "b
         <p className="t-label mt-4 text-text-secondary">מסמכים שמחכים לשיוך</p>
       </header>
       <div className="ui-toast-slot" />
-      <div className="ui-review-actions">
+      <ActionBar>
         <button className="ui-btn ui-btn-primary" type="button">אישור</button>
         <button className="ui-btn ui-btn-ghost" type="button">דלג</button>
-      </div>
+      </ActionBar>
       <div className="ui-toast-host" ref={host}>
         <Toast action={props.action} onAction={() => undefined} tone={props.tone}>
           {props.children}

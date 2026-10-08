@@ -34,7 +34,6 @@ import {
   type JevPrefill,
   type JevQueueData,
   type JevReviewState,
-  type ReviewFlagsData,
 } from "./jev-review";
 import type { ReviewFlag } from "../review-copy";
 
@@ -142,13 +141,12 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   return { loadingFor, stateFor };
 }
 
-const NO_FLAGS: ReviewFlagsData = {};
 const NO_LINE_FLAGS: ReviewFlag[] = [];
 
 /**
- * FLOW-327. One `review_anomalies` read for the queue, with the same one-second window as Jev.
- * The flags are SQL (decision 0131), so they read with Jev off too, unscored. A failed or slow
- * read shows no flag and no error.
+ * FLOW-327. One `review_anomalies` read for the queue. The flags are SQL (decision 0131), so they
+ * read with Jev off too, unscored. A failed read shows no flag and no error; a slow one shows
+ * when it lands.
  */
 export function useReviewFlags(transactionIds: readonly string[], live: boolean) {
   const supabase = live ? getSupabase() : null;
@@ -158,7 +156,7 @@ export function useReviewFlags(transactionIds: readonly string[], live: boolean)
     enabled: readable,
     retry: false,
     placeholderData: keepPreviousData,
-    queryFn: ({ signal }) => withJevDeadline(signal, (linked) => loadReviewFlags(transactionIds, linked), NO_FLAGS),
+    queryFn: ({ signal }) => loadReviewFlags(transactionIds, signal),
   });
   return function flagsFor(transactionId: string | null): ReviewFlag[] {
     if (!readable || transactionId == null || query.isError || query.data == null) return NO_LINE_FLAGS;

@@ -7,6 +7,7 @@ import { AuthProvider } from "../auth";
 import { refreshLedger } from "../books-focus";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
+import { ViewerPreview } from "../use-is-viewer";
 import { ChangeForm, ReviewAllList, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
@@ -184,7 +185,7 @@ describe("review list paths", () => {
 });
 
 describe("review queue list", () => {
-  it("puts הצג הכול on the counter line, after the bar and above the filed banner", async () => {
+  it("puts הצג הכול on the start side of the counter line, before the bar and above the filed banner", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -200,7 +201,8 @@ describe("review queue list", () => {
     const meter = screen.getByRole("meter", { name: "התקדמות התור" });
     const banner = screen.getByText(/שויכו אוטומטית היום/);
     const card = screen.getByRole("heading", { name: "מחסן הנמל" });
-    expect(meter.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.parentElement).toHaveClass("ui-review-meter");
     expect(link.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -249,6 +251,11 @@ describe("review queue list", () => {
     };
     renderAt("/review?item=r2&from=all");
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    // FLOW-327 r1: Back already goes to the list, so the card leaves הצג הכול out; with Back the
+    // header stays on one line so the pinned bar clears the tab bar at 375x667.
+    expect(screen.queryByRole("link", { name: "הצג הכול" })).toBeNull();
+    const title = screen.getByRole("heading", { name: "לאישור" });
+    expect(title.closest("header")).not.toHaveClass("ui-page-stacked");
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
@@ -286,6 +293,7 @@ describe("review queue list", () => {
     renderAt("/review?project=p1");
     const link = await screen.findByRole("link", { name: "הצג הכול" });
     expect(link).toHaveAttribute("href", "/review/all?project=p1");
+    expect(screen.getByRole("heading", { name: "לאישור" }).closest("header")).not.toHaveClass("ui-page-stacked");
     fireEvent.click(link);
     expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /עגורני החוף/ })).not.toBeInTheDocument();
@@ -938,21 +946,24 @@ describe("review amounts keep their currency", () => {
   });
 });
 
-function renderWithLine(path: string) {
+function renderWithLine(path: string, options?: { viewer?: boolean }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const routes = (
+    <Routes>
+      <Route path="/review" element={<ReviewScreen />} />
+      <Route path="/review/all" element={<ReviewScreen />} />
+      <Route path="/review/change" element={<h1>שינוי</h1>} />
+      <Route path="/transactions/:transactionId/split-category" element={<h1>עורך הפיצול</h1>} />
+      <Route path="/transactions/:transactionId" element={<h1>תנועה</h1>} />
+    </Routes>
+  );
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={[path]}>
           <AuthProvider>
             <BooksProvider>
-              <Routes>
-                <Route path="/review" element={<ReviewScreen />} />
-                <Route path="/review/all" element={<ReviewScreen />} />
-                <Route path="/review/change" element={<h1>שינוי</h1>} />
-                <Route path="/transactions/:transactionId/split-category" element={<h1>עורך הפיצול</h1>} />
-                <Route path="/transactions/:transactionId" element={<h1>תנועה</h1>} />
-              </Routes>
+              {options?.viewer ? <ViewerPreview>{routes}</ViewerPreview> : routes}
             </BooksProvider>
           </AuthProvider>
         </MemoryRouter>
@@ -983,6 +994,27 @@ describe("the pinned review bar (FLOW-327)", () => {
     const toast = await screen.findByText("דילגנו על הפריט");
     expect(toast.closest(".ui-toast-host")).toHaveAttribute("data-place", "bar");
     expect(within(toast.closest(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+  });
+
+  it("disables דלג while אישור is writing (FLOW-327 r1)", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
+      if (name === "approve_review_item") return new Promise(() => undefined);
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    const skip = screen.getByRole("button", { name: "דלג" });
+    expect(skip).toBeEnabled();
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "דלג" })).toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
   });
 
   it("says why when both fields are missing, and points the button at it", async () => {
@@ -1120,7 +1152,35 @@ describe("the דולגו section under הצג הכול (FLOW-309)", () => {
     expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
   });
 
-  it("says when the reopen failed and offers ניסיון חוזר", async () => {
+  it("moves focus to the next row's החזרה לתור after a reopen, then to the page heading (FLOW-327 r1)", async () => {
+    let skipped = [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")];
+    rpc.impl = (name, args) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: skipped, error: null });
+      if (name === "reopen_review") {
+        const id = (args as { p_id: string }).p_id;
+        skipped = skipped.filter((row) => row.id !== id);
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all");
+    const first = await screen.findByRole("button", { name: "החזרה לתור: ברזל הצפון" });
+    first.focus();
+    fireEvent.click(first);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "החזרה לתור: צבע וגבס" })).toHaveFocus();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "החזרה לתור: צבע וגבס" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "דולגו" })).toBeNull();
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toHaveClass("ui-focus-title");
+    });
+  });
+
+  it("says when the reopen failed, reads the list again and offers ניסיון חוזר", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
       if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
@@ -1129,11 +1189,29 @@ describe("the דולגו section under הצג הכול (FLOW-309)", () => {
     };
     renderWithLine("/review/all");
     fireEvent.click(await screen.findByRole("button", { name: "החזרה לתור: ברזל הצפון" }));
+    const reads = rpc.calls.filter((call) => call.name === "list_skipped_review").length;
     expect(await screen.findByText("לא הצלחנו להחזיר לתור.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.filter((call) => call.name === "list_skipped_review").length).toBeGreaterThan(reads);
+    });
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
     await waitFor(() => {
       expect(rpc.calls.filter((call) => call.name === "reopen_review")).toHaveLength(2);
     });
+  });
+
+  it("shows a viewer the skipped rows with no החזרה לתור and never reopens (FLOW-327 r1)", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all", { viewer: true });
+    const heading = await screen.findByRole("heading", { name: "דולגו" });
+    const section = heading.closest("section") as HTMLElement;
+    expect(within(section).getByRole("link", { name: /ברזל הצפון/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /החזרה לתור/ })).toBeNull();
+    expect(rpc.calls.some((call) => call.name === "reopen_review")).toBe(false);
   });
 
   it("renders nothing with no skipped rows, and a read error with ניסיון חוזר", async () => {
@@ -1170,6 +1248,21 @@ describe("the דולגו section under הצג הכול (FLOW-309)", () => {
     renderWithLine("/review/all");
     expect(await screen.findByRole("heading", { name: "דולגו" })).toBeInTheDocument();
     expect(screen.getByText("אין פריטים שמחכים לאישור.")).toBeInTheDocument();
+    expect(screen.queryByText("הכל מאושר")).toBeNull();
+  });
+
+  it("with nothing pending, says nothing waits while the skipped read loads, not הכל מאושר (FLOW-327 r1)", async () => {
+    let release: (value: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_skipped_review") return new Promise((resolve) => { release = resolve; });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all");
+    expect(await screen.findByText("אין פריטים שמחכים לאישור.")).toBeInTheDocument();
+    expect(screen.queryByText("הכל מאושר")).toBeNull();
+    release({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+    expect(await screen.findByRole("heading", { name: "דולגו" })).toBeInTheDocument();
     expect(screen.queryByText("הכל מאושר")).toBeNull();
   });
 

@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { reviewHold, reviewPin } from "../review-pin";
 import { ToastProvider } from "../ui/toast";
 import { ReviewQueue } from "./flow-screens";
 import { bindJevConnectorScope, jevConnectorStorageKey, jevQueueQueryKey, type JevConnectorScope } from "./jev-review";
@@ -22,7 +23,10 @@ const db = vi.hoisted(() => ({
   rows: [] as ReviewRow[],
   closed: new Set<string>(),
   reasons: [] as unknown[],
+  /** The reasons rpc never answers. */
+  stallReasons: false,
   flags: [] as unknown[],
+  failReopen: false,
 }));
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
@@ -75,9 +79,13 @@ vi.mock("../lib/supabase", () => ({
       // FLOW-304. The card's bank details are a read too.
       if (name === "get_line_meta") return Promise.resolve({ data: [], error: null });
       // FLOW-327. Jev's reasons and the anomaly flags are reads too.
-      if (name === "jev_suggestions") return Promise.resolve({ data: db.reasons, error: null });
+      if (name === "jev_suggestions") {
+        if (db.stallReasons) return new Promise(() => undefined);
+        return Promise.resolve({ data: db.reasons, error: null });
+      }
       if (name === "review_anomalies") return Promise.resolve({ data: db.flags, error: null });
       db.writes.push({ name, args });
+      if (name === "reopen_review" && db.failReopen) return Promise.resolve({ data: null, error: { message: "down" } });
       if (name === "approve_review_item" && args?.p_check_shown === true) {
         const id = typeof args.p_id === "string" ? args.p_id : "";
         const row = db.rows.find((item) => item.id === id);
@@ -157,6 +165,8 @@ describe("Jev review one tap", () => {
     db.rows = [];
     db.closed = new Set();
     db.reasons = [];
+    db.stallReasons = false;
+    db.failReopen = false;
     db.flags = [];
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
@@ -212,12 +222,44 @@ describe("Jev review one tap", () => {
     });
   });
 
+  it("names a new customer on an income line (FLOW-327 r1)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "new_party", party_filings: 0, matching_filings: 0 }];
+    renderQueue([{ ...open, direction: "income", amount_net: 2_200_000n, supplier_name: null, customer_name: "דירות הים בע״מ" }]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦לקוח חדש · בלי היסטוריה");
+    });
+  });
+
+  it("says בלי היסטוריה קודמת on an income line that names no customer", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "new_party", party_filings: 0, matching_filings: 0 }];
+    renderQueue([{ ...open, direction: "income", amount_net: 2_200_000n, supplier_name: null }]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦בלי היסטוריה קודמת");
+    });
+  });
+
   it("shows no reason line when the reasons read fails, and still prefills", async () => {
     db.integration = { enabled: true, mode: "shadow" };
     db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
     db.reasons = "not an array" as unknown as unknown[];
     renderQueue();
     expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-review-reason")).toBeNull();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+
+  it("still prefills when the reasons read never answers, with no reason line (FLOW-327 r1)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "same_as_last", party_filings: 4, matching_filings: 4 }];
+    db.stallReasons = true;
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     expect(document.querySelector(".ui-review-reason")).toBeNull();
     expect(document.querySelector(".ui-toast-bad")).toBeNull();
   });
@@ -710,6 +752,69 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("ביטול inside the 200ms swap (FLOW-327 r1)", () => {
+    const tick = async (ms: number) => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    beforeEach(() => {
+      vi.useFakeTimers();
+      db.writes = [];
+      db.failReopen = false;
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function skipThenUndoInsideSwap() {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(queue([open, other], client));
+      await tick(50);
+      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+      await tick(0);
+      expect(db.writes.some((call) => call.name === "resolve_review")).toBe(true);
+      // The skip's refetch: the card leaves and the 200ms swap starts.
+      view.rerender(queue([other], client));
+      await tick(50);
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+      expect(reviewHold()).toBe("t1");
+      return { view, client };
+    }
+
+    it("shows the restored card when the reopen refetch is slower than the swap", async () => {
+      const { view, client } = await skipThenUndoInsideSwap();
+      // The swap lands the next card before the reopen's refetch comes back.
+      await tick(300);
+      expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
+      expect(reviewPin()).toBe("t1");
+      // The refetch brings the undone line back behind it in queue order.
+      view.rerender(queue([other, open], client));
+      await tick(300);
+      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
+      expect(reviewHold()).toBeNull();
+      expect(reviewPin()).toBe("t1");
+      // The pin guarantee holds again: a reorder can't swap the card under אישור.
+      view.rerender(queue([other, open], client));
+      await tick(300);
+      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    });
+
+    it("drops the hold when the reopen fails, and pins the card that stayed", async () => {
+      db.failReopen = true;
+      const { view, client } = await skipThenUndoInsideSwap();
+      await tick(300);
+      expect(screen.getByText("לא הצלחנו לבטל.")).toBeInTheDocument();
+      expect(reviewHold()).toBeNull();
+      expect(reviewPin()).toBe("t2");
+      view.rerender(queue([open, other], client));
+      await tick(300);
+      expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
     });
   });
 

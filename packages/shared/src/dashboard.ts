@@ -104,6 +104,8 @@ export const reviewRowSchema = z.object({
   project_id: z.string().nullable(),
   category_id: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  /** The customer on an income line. Optional: today's list_review does not send it yet. FLOW-327. */
+  customer_name: z.string().nullable().optional(),
   doc_kind: z.string().optional(),
   vat_agorot: agorotSchema.optional(),
   project_name: z.string().nullable().optional(),

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { getSupabase } from "../lib/supabase";
@@ -81,8 +81,11 @@ export function skippedRowView(row: SkippedReviewRow, search: string): SkippedRo
   };
 }
 
-/** What a reopen refreshes: the queue, this list, and a project's waiting list. */
-export const SKIPPED_REOPEN_KEYS = ["review", SKIPPED_REVIEW_KEY, "project-waiting"];
+/**
+ * What a reopen refreshes: the queue, this list, and every count of what waits for review
+ * (home, a project and its categories, a project's waiting list, the transaction).
+ */
+export const SKIPPED_REOPEN_KEYS = ["review", SKIPPED_REVIEW_KEY, "dashboard", "project", "project-category", "project-waiting", "txn"];
 export const SKIPPED_REOPEN_DONE = "הפריט חזר לתור.";
 export const SKIPPED_REOPEN_TO_CARD = "לכרטיס";
 export const SKIPPED_REOPEN_FAILED = "לא הצלחנו להחזיר לתור.";
@@ -107,6 +110,15 @@ export function ReviewSkippedSection({
   const [busyId, setBusyId] = useState<string | null>(null);
   const { hash } = useLocation();
   const shown = skipped.isError || (skipped.data?.length ?? 0) > 0;
+  // After a reopen the row leaves the list: focus moves to the row that takes its place.
+  const focusAfter = useRef<{ gone: string; next: string | null } | null>(null);
+  useEffect(() => {
+    const target = focusAfter.current;
+    if (target == null || skipped.data == null) return;
+    if (skipped.data.some((row) => row.id === target.gone)) return;
+    focusAfter.current = null;
+    focusAfterReopen(target.next);
+  }, [skipped.data]);
   // The empty queue's "N פריטים דולגו" opens here: bring the heading into view and focus it.
   useEffect(() => {
     if (hash !== `#${SKIPPED_SECTION_ID}` || !shown) return;
@@ -129,10 +141,13 @@ export function ReviewSkippedSection({
   if (rows.length === 0) return null;
   async function reopen(id: string) {
     setBusyId(id);
+    const at = rows.findIndex((row) => row.id === id);
+    const next = rows[at + 1] ?? rows[at - 1] ?? null;
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
+      focusAfter.current = { gone: id, next: next?.id ?? null };
       await invalidate(SKIPPED_REOPEN_KEYS);
       toast.show({
         message: SKIPPED_REOPEN_DONE,
@@ -140,6 +155,8 @@ export function ReviewSkippedSection({
         onAction: () => { void navigate(cardPath(id)); },
       });
     } catch {
+      // The row may have left the list on another device: read it again.
+      void invalidate([SKIPPED_REVIEW_KEY]);
       toast.show({
         tone: "bad",
         message: SKIPPED_REOPEN_FAILED,
@@ -158,6 +175,21 @@ export function ReviewSkippedSection({
       onReopen={holdWrites ? undefined : (id) => { void reopen(id); }}
     />
   );
+}
+
+/**
+ * Focus after a reopen: the next row's החזרה לתור, else the section heading, else the page
+ * heading, so focus never falls back to the body.
+ */
+function focusAfterReopen(nextId: string | null) {
+  const section = document.getElementById(SKIPPED_SECTION_ID);
+  const button = nextId == null
+    ? null
+    : section?.querySelector<HTMLElement>(`[data-skipped-id="${CSS.escape(nextId)}"] .ui-review-skipped-action button`);
+  const target = button
+    ?? section?.querySelector<HTMLElement>("h2")
+    ?? document.querySelector<HTMLElement>("main .ui-focus-title, .ui-page .ui-focus-title");
+  target?.focus({ preventScroll: true });
 }
 
 /** The link to the skipped cards in הצג הכול. */

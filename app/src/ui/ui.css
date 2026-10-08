@@ -1594,8 +1594,7 @@ a.ui-row,
 
 .ui-review-meter,
 .ui-review-doc,
-.ui-review-line,
-.ui-review-actions-row {
+.ui-review-line {
   display: flex;
   align-items: center;
 }
@@ -1612,8 +1611,8 @@ a.ui-row,
 
 .ui-review-show-all {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  margin-inline-start: auto;
   min-block-size: var(--touch-min);
 }
 
@@ -1849,13 +1848,6 @@ a.ui-row,
   gap: var(--space-3);
 }
 
-.ui-review-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: var(--space-4) var(--space-card-inset) 0;
-}
-
 /* Short phones (320×693): keep the primary action above the tab bar. */
 @media (max-height: 720px) {
   .ui-review {
@@ -1865,10 +1857,6 @@ a.ui-row,
 
   .ui-review-queue .ui-banner + .ui-review-motion > .ui-review {
     margin-top: var(--space-3);
-  }
-
-  .ui-review-actions {
-    margin-block-start: var(--space-2);
   }
 
   /* With the filed-today banner, the subtitle is what pushes אישור under the tab bar. */
@@ -1898,14 +1886,6 @@ a.ui-row,
 
 .ui-review-approve {
   display: contents;
-}
-
-.ui-review-actions-row {
-  gap: var(--space-2);
-}
-
-.ui-review-actions-row > * {
-  flex: 1;
 }
 
 .ui-band-figures {

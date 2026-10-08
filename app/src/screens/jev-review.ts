@@ -497,6 +497,9 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
   const supabase = getSupabase();
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
   if (!supabase || typeof supabase.from !== "function" || ids.length === 0) return { connectorOn: true, byId: {} };
+  // The reasons read is optional: it starts now, beside the suggestions, and has its own shorter
+  // deadline so a slow rpc never holds the prefill.
+  const reasonsRead = loadJevReasonsWithin(ids, signal);
   const chunks: string[][] = [];
   for (let start = 0; start < ids.length; start += JEV_SUGGESTION_CHUNK) {
     chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
@@ -516,7 +519,7 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
   const [projects, categories, reasons] = await Promise.all([
     signalled(supabase.from("projects").select("id,name,status"), signal),
     signalled(supabase.from("categories").select("id,name,hidden"), signal),
-    loadJevReasons(ids, signal),
+    reasonsRead,
   ]);
   if (projects.error) throw new Error(projects.error.message);
   if (categories.error) throw new Error(categories.error.message);
@@ -601,6 +604,50 @@ export async function loadJevReasons(ids: readonly string[], signal?: AbortSigna
     if (signal?.aborted) throw error;
   }
   return reasons;
+}
+
+/** The reasons read's own deadline, inside the one-second suggestion read. */
+export const JEV_REASONS_MS = 600;
+
+/**
+ * `loadJevReasons` with its own child abort linked to `parent`. Its own timeout gives no
+ * reasons; only the parent's abort rejects.
+ */
+export function loadJevReasonsWithin(
+  ids: readonly string[],
+  parent?: AbortSignal,
+  ms: number = JEV_REASONS_MS,
+): Promise<Map<string, JevReasonRow>> {
+  if (parent?.aborted) return Promise.reject(abortError(parent.reason));
+  const child = new AbortController();
+  const onParent = () => {
+    child.abort(parent?.reason);
+  };
+  parent?.addEventListener("abort", onParent, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<Map<string, JevReasonRow>>((resolve, reject) => {
+    const settle = () => {
+      if (parent?.aborted) reject(abortError(parent.reason));
+      else resolve(new Map());
+    };
+    timer = setTimeout(() => {
+      child.abort();
+    }, ms);
+    child.signal.addEventListener("abort", settle, { once: true });
+  });
+  const read = loadJevReasons(ids, child.signal).catch((error: unknown) => {
+    if (parent?.aborted) throw abortError(parent.reason);
+    if (child.signal.aborted) return new Map<string, JevReasonRow>();
+    throw error;
+  });
+  const settled = Promise.race([read, expired]).finally(() => {
+    clearTimeout(timer);
+    parent?.removeEventListener("abort", onParent);
+  });
+  // Started before the suggestions read is awaited: a parent abort that lands first must not
+  // surface as an unhandled rejection.
+  settled.catch(() => undefined);
+  return settled;
 }
 
 /** The reason belongs to the suggestion on the card only when it names the same project and category. */

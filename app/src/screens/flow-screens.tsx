@@ -57,7 +57,7 @@ import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-re
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
-import { pinReviewHead, pinReviewLine, reviewPin } from "../review-pin";
+import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
 import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
@@ -1262,10 +1262,13 @@ export function ReviewAllList({
   const cardPath = useCallback((id: string) => reviewFocusPath(search, id), [search]);
   if (rows.length === 0) {
     const someSkipped = skipped && (skippedRead.isError || (skippedRead.data?.length ?? 0) > 0);
-    if (!someSkipped) return <ReviewEmpty search={search} backTo={backTo} />;
+    // FLOW-327 r1: while the skipped read loads, the page says nothing waits rather than הכל מאושר,
+    // which would flip to this layout once skipped rows land.
+    const skippedLoading = skipped && skippedRead.isLoading;
+    if (!someSkipped && !skippedLoading) return <ReviewEmpty search={search} backTo={backTo} />;
     return (
       <div>
-        <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} />
+        <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
         <p className="t-hint ui-page-pad ui-review-none-waiting">{REVIEW_NONE_WAITING}</p>
         <ReviewSkippedSection search={search} cardPath={cardPath} />
       </div>
@@ -1273,7 +1276,7 @@ export function ReviewAllList({
   }
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
       <MonthList
         rows={ordered}
         keyOf={(row) => row.id}
@@ -1325,7 +1328,7 @@ export function ProjectWaitingList({
   const ordered = useHeldOrder(rows, (row) => row.transaction_id);
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} layout="inline" />
       <MonthList
         rows={ordered}
         keyOf={(row) => row.transaction_id}
@@ -1427,8 +1430,18 @@ export function ReviewQueue({
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
   useEffect(() => {
+    // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
     if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
   }, [fromList, shown]);
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  // A hold names a line this queue was bringing back; it does not outlive the queue.
+  useEffect(() => () => { releaseReviewHold(reviewHold()); }, []);
+  /** ביטול's reopen failed: drop the hold and pin the card that stayed on screen. */
+  const undoFailed = useCallback((line: string | null) => {
+    releaseReviewHold(line);
+    if (!fromList && shownRef.current != null) pinReviewLine(shownRef.current.transaction_id);
+  }, [fromList]);
   const jevQueue = useJevQueue(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
@@ -1575,7 +1588,7 @@ export function ReviewQueue({
           action: "ביטול",
           place: "bar",
           onAction: () => {
-            pinReviewLine(line);
+            pinReviewLine(line, { hold: true });
             previewWrite.onUndo(id);
           },
         });
@@ -1598,8 +1611,8 @@ export function ReviewQueue({
         action: "ביטול",
         place: "bar",
         onAction: () => {
-          pinReviewLine(line);
-          void reopenReview(id, invalidate, toast);
+          pinReviewLine(line, { hold: true });
+          void reopenReview(id, invalidate, toast, undefined, { line, failed: undoFailed });
         },
       });
     },
@@ -1638,12 +1651,12 @@ export function ReviewQueue({
         action: "ביטול",
         place: "bar",
         onAction: () => {
-          pinReviewLine(line);
+          pinReviewLine(line, { hold: true });
           if (previewWrite) {
             previewWrite.onUndo(id);
             return;
           }
-          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.");
+          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.", { line, failed: undoFailed });
         },
       });
     },
@@ -1700,7 +1713,7 @@ export function ReviewQueue({
   const missingBoth = settled && needProject && needCategory;
   // FLOW-333 C2: a split whose bank amount changed leads with עדכון הפיצול; להשאיר כך approves it as it stands.
   const mismatch = card.reason === "split_mismatch";
-  const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, card.supplier_name != null);
+  const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, reviewHasParty(card));
   const flag = reviewFlagView(flagsFor(card.transaction_id), { direction: card.direction, currency: card.currency });
   function runApprove() {
     if (approveGuard.current || !settled) return;
@@ -1734,7 +1747,7 @@ export function ReviewQueue({
     <Button
       variant="ghost"
       busy={skip.isPending}
-      disabled={leaving || (mismatch && approve.isPending)}
+      disabled={leaving || approve.isPending}
       onClick={() => {
         if (leaving) return;
         if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
@@ -1747,9 +1760,14 @@ export function ReviewQueue({
   return (
     <ViewerScope>
     <div className="ui-review-queue" data-bar={holdWrites ? undefined : ""}>
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
       {rows.length > 0 ? (
         <div className="ui-review-meter">
+          {/* FLOW-327 r1: on the start side, near the thumb. A card opened from the list leaves it
+              out: Back already goes to the list. */}
+          {changeTo == null && listPlace == null ? (
+            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+          ) : null}
           {listPlace == null ? (
             <ProgressBar
               variant="thin"
@@ -1770,9 +1788,6 @@ export function ReviewQueue({
               </>
             )}
           </span>
-          {changeTo == null ? (
-            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
-          ) : null}
         </div>
       ) : null}
       {auto > 0 && !hideAuto ? (
@@ -1789,7 +1804,7 @@ export function ReviewQueue({
       ) : null}
       <div className="ui-review-motion" data-motion={motion === "still" ? undefined : motion} key={card.id}>
         <ReviewCard
-          supplier={card.supplier_name ?? card.description}
+          supplier={card.supplier_name ?? card.customer_name ?? card.description}
           sourceLine={`${card.direction === "income" ? "הכנסה" : docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
           netAgorot={card.amount_net}
           currency={card.currency}
@@ -1919,6 +1934,8 @@ async function reopenReview(
   invalidate: (keys: string[]) => Promise<void>,
   toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void; place?: "bar" }) => void },
   done = "הפריט חזר לתור, והשיוך הקודם שוחזר.",
+  /** ביטול's held line (review-pin.ts): a failed reopen drops the hold, ניסיון חוזר sets it again. */
+  undo?: { line: string | null; failed: (line: string | null) => void },
 ) {
   try {
     const supabase = getSupabase();
@@ -1927,13 +1944,15 @@ async function reopenReview(
     await invalidate(["review", "review-skipped", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
     toast.show({ message: done, place: "bar" });
   } catch {
+    undo?.failed(undo.line);
     toast.show({
       place: "bar",
       tone: "bad",
       message: "לא הצלחנו לבטל.",
       action: "ניסיון חוזר",
       onAction: () => {
-        void reopenReview(id, invalidate, toast, done);
+        if (undo != null) pinReviewLine(undo.line, { hold: true });
+        void reopenReview(id, invalidate, toast, done, undo);
       },
     });
   }
@@ -1959,7 +1978,7 @@ export function ReviewEmpty({
   const skippedCount = skippedLink && !filtered && !skipped.isError ? (skipped.data?.length ?? 0) : 0;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
       <EmptyState
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
@@ -2102,6 +2121,15 @@ type ChangeSample = {
 function withChoice(options: ChangeChoice[], id: string, name: string | null | undefined): ChangeChoice[] {
   if (id === "" || name == null || name === "" || options.some((option) => option.id === id)) return options;
   return [{ id, name }, ...options];
+}
+
+/**
+ * FLOW-327 r1: the line names its party. An income line's party is its customer, so a new customer
+ * reads "לקוח חדש · בלי היסטוריה".
+ */
+export function reviewHasParty(row: Pick<ReviewRow, "direction" | "supplier_name"> & { customer_name?: string | null }): boolean {
+  const party = row.direction === "income" ? row.customer_name ?? row.supplier_name : row.supplier_name;
+  return party != null && party !== "";
 }
 
 export function reviewIsSplit(row: { reason?: string | null; pnl_role?: string | null; share_count?: number | null } | null | undefined): boolean {

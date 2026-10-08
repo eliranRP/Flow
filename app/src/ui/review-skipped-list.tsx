@@ -91,7 +91,7 @@ export function ReviewSkippedList({
       ) : (
         <List className="ui-review-skipped-list">
           {rows.map((row) => (
-            <div className="ui-row-stack ui-review-skipped-row" key={row.id}>
+            <div className="ui-row-stack ui-review-skipped-row" key={row.id} data-skipped-id={row.id}>
               <ListRow
                 variant="statement"
                 title={row.title}
