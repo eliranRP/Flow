@@ -2,7 +2,9 @@
 -- private.health(p_now) reads the queues, syncs, cron runs and usage, and returns
 -- { ok, checked_at, alerts[] }. Each alert is { check, count, detail } with counts only: no
 -- company names, ids or amounts, since the run's log is public. Read only; it changes nothing.
--- The thresholds are the constants below, so changing one is a one-line migration.
+-- The thresholds are the constants below, so changing one is a one-line migration. p_now moves
+-- the clock for the time checks only; Jev calls and the database size are read as of now.
+-- An alert with level 'warning' is listed but leaves ok true.
 
 begin;
 
@@ -47,17 +49,20 @@ begin
       'detail', 'refresh requests waiting more than 2 hours for the drain');
   end if;
 
+  -- Claimed requests stay in the table after a sync, so the request row cannot show a run that
+  -- died; the connection's claim can, since every way out of a sync clears it.
   select count(*) into n
-  from public.connector_refresh_requests r
-  where r.claimed_at is not null and r.claimed_at < now_at - claim_limit;
+  from public.connector_connections c
+  where c.sync_claimed_at < now_at - claim_limit;
   if n > 0 then
     alerts := alerts || jsonb_build_object('check', 'refresh_claimed', 'count', n,
-      'detail', 'refresh requests claimed more than 1 hour ago and not finished');
+      'detail', 'connections whose sync claim is more than 1 hour old (a sync died mid-run)');
   end if;
 
   select count(*) into n
   from public.connector_connections c
-  where coalesce(c.last_sync_at, c.created_at) < now_at - sync_limit;
+  where coalesce(c.last_sync_at, c.created_at) < now_at - sync_limit
+    and c.last_error is distinct from 'auth';
   if n > 0 then
     alerts := alerts || jsonb_build_object('check', 'sync_stale', 'count', n,
       'detail', 'connections with no sync in 36 hours');
@@ -65,7 +70,10 @@ begin
 
   select count(*) into n
   from public.connector_connections c
-  where c.last_error is not null or c.reject_attempts >= reject_limit;
+  -- A sync_sweep_* note stays until a reconnect while syncs succeed (decision 0065), so it is not
+  -- a failure here.
+  where (c.last_error is not null and c.last_error not like 'sync_sweep%')
+     or c.reject_attempts >= reject_limit;
   if n > 0 then
     alerts := alerts || jsonb_build_object('check', 'sync_error', 'count', n,
       'detail', 'connections whose last sync failed or was rejected 3 times');
@@ -73,7 +81,10 @@ begin
 
   select count(*) into n
   from private.mcp_sync_jobs j
-  where j.state = 'running' and j.started_at < now_at - job_limit;
+  -- Nothing closes a job left running, so each one alerts for one day only.
+  where j.state = 'running'
+    and j.started_at < now_at - job_limit
+    and j.started_at >= now_at - cron_window - job_limit;
   if n > 0 then
     alerts := alerts || jsonb_build_object('check', 'mcp_sync_stuck', 'count', n,
       'detail', 'MCP sync_bank jobs running more than 30 minutes');
@@ -119,7 +130,7 @@ begin
     and private.jev_calls_today(i.company_id) >= usage_share * i.daily_call_cap;
   if n > 0 then
     alerts := alerts || jsonb_build_object('check', 'jev_cap', 'count', n,
-      'detail', 'companies at 80% or more of their daily Jev call cap');
+      'detail', 'companies at 80% or more of their daily Jev call cap', 'level', 'warning');
   end if;
 
   bytes := pg_catalog.pg_database_size(pg_catalog.current_database());
@@ -128,8 +139,9 @@ begin
       'detail', 'database size in MB, at 80% or more of the free plan''s 500 MB');
   end if;
 
+  -- A warning is listed but does not make the check fail: a big import day can reach the cap.
   return jsonb_build_object(
-    'ok', jsonb_array_length(alerts) = 0,
+    'ok', not exists (select 1 from jsonb_array_elements(alerts) a where a->>'level' is distinct from 'warning'),
     'checked_at', now_at,
     'alerts', alerts
   );

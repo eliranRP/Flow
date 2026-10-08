@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(16);
+select plan(22);
 
 do $users$
 begin
@@ -22,6 +22,9 @@ returns uuid
 language sql
 as $$ select id from pg_temp.hc where label = p_label; $$;
 
+grant all on hc to service_role;
+grant execute on function pg_temp.hc_id(text) to service_role;
+
 -- The count of one check's alert, 0 when it is not raised.
 create or replace function pg_temp.alert(p_check text)
 returns integer
@@ -34,7 +37,7 @@ as $$
   ), 0);
 $$;
 
--- Earlier tests in the same run may leave rows behind; start from a clean slate here.
+-- Start from a clean slate: the seed data may hold connections and cron runs.
 delete from public.connector_refresh_requests;
 delete from public.connector_connections;
 delete from private.mcp_sync_jobs;
@@ -59,15 +62,34 @@ select is(pg_temp.alert('refresh_unclaimed'), 1, 'a request unclaimed for 3 hour
 update public.connector_connections set last_error = 'auth' where company_id = pg_temp.hc_id('a');
 select is(pg_temp.alert('refresh_unclaimed'), 0, 'not while its connection waits on a new key (that is a sync error)');
 update public.connector_connections set last_error = null where company_id = pg_temp.hc_id('a');
-update public.connector_refresh_requests set claimed_at = now() - interval '2 hours' where company_id = pg_temp.hc_id('a');
-select is(pg_temp.alert('refresh_claimed'), 1, 'a request claimed 2 hours ago and still open is stuck');
 delete from public.connector_refresh_requests;
+
+-- A sync that claimed and finished leaves its request claimed; only a claim left on the
+-- connection means a sync died.
+insert into public.connector_refresh_requests (company_id, provider, requested_at)
+values (pg_temp.hc_id('a'), 'sumit', now() - interval '3 hours');
+set local role service_role;
+select set_config('request.jwt.claim.role', 'service_role', true);
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select is((select count(*)::integer from public.claim_connector_refreshes(20, 'sumit')), 1, 'the drain claims the request');
+do $$ begin perform public.stamp_connector_sync(pg_temp.hc_id('a'), 'sumit'); end $$;
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+select is(private.health(now() + interval '3 hours')->'alerts' @> '[{"check": "refresh_claimed"}]', false,
+  'a finished sync is not stuck, though its request stays claimed');
+delete from public.connector_refresh_requests;
+update public.connector_connections set sync_claimed_at = now() - interval '2 hours' where company_id = pg_temp.hc_id('a');
+select is(pg_temp.alert('refresh_claimed'), 1, 'a sync claim 2 hours old is a sync that died');
+update public.connector_connections set sync_claimed_at = null;
 
 -- Syncs.
 update public.connector_connections set last_sync_at = now() - interval '2 days' where company_id = pg_temp.hc_id('b');
 select is(pg_temp.alert('sync_stale'), 1, 'a connection with no sync in 2 days is stale');
 update public.connector_connections set last_sync_at = now(), last_error = 'timeout' where company_id = pg_temp.hc_id('b');
 select is(pg_temp.alert('sync_error'), 1, 'a connection whose last sync failed is an error');
+update public.connector_connections set last_error = 'sync_sweep_empty' where company_id = pg_temp.hc_id('b');
+select is(pg_temp.alert('sync_error'), 0, 'a sweep note on a syncing connection is not a failure');
 update public.connector_connections set last_error = null, reject_attempts = 3 where company_id = pg_temp.hc_id('b');
 select is(pg_temp.alert('sync_error'), 1, 'so is one rejected 3 times');
 update public.connector_connections set reject_attempts = 0;
@@ -83,6 +105,8 @@ insert into private.mcp_sync_jobs (token_id, user_id, company_id, state, started
 select id, tests.get_supabase_uid('hc_owner'), pg_temp.hc_id('a'), 'running', now() - interval '1 hour'
 from private.mcp_credentials where token_hash = 'hash-hc-write001';
 select is(pg_temp.alert('mcp_sync_stuck'), 1, 'an MCP sync job running for an hour is stuck');
+select is(private.health(now() + interval '2 days')->'alerts' @> '[{"check": "mcp_sync_stuck"}]', false,
+  'it alerts for one day, not every day after');
 delete from private.mcp_sync_jobs;
 
 -- Jev calls near the daily cap.
@@ -94,6 +118,7 @@ select is(pg_temp.alert('jev_cap'), 0, '3 of 5 calls is under 80%');
 insert into public.jev_usage (company_id, run_id, usage_day, reserved, calls, started_at, finished_at)
 values (pg_temp.hc_id('a'), gen_random_uuid(), (now() at time zone 'utc')::date, 1, 1, now(), now());
 select is(pg_temp.alert('jev_cap'), 1, '4 of 5 calls is at 80%');
+select is((private.health()->>'ok')::boolean, true, 'a Jev cap warning alone leaves the check ok');
 delete from public.jev_usage;
 
 -- Cron: a Flow job whose last run is old is late; a failed run in the last day is a failure.
@@ -111,6 +136,10 @@ select is(pg_temp.alert('cron_late'), 0, 'and the job is no longer late');
 select is((private.health()->>'ok')::boolean, false, 'any alert makes the check not ok');
 select ok(position(pg_temp.hc_id('a')::text in private.health()::text) = 0,
   'alerts carry no company id');
+
+set local role service_role;
+select lives_ok($$select private.health()$$, 'the service role can run the check');
+reset role;
 
 select tests.authenticate_as('hc_owner');
 select throws_ok($$select private.health()$$, '42501', null, 'a signed-in user cannot run the check');

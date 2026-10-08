@@ -1,7 +1,9 @@
 name: health
 
 # FLOW-802: a daily read-only health check of production (decision 0151). A failed run means an
-# alert, and GitHub emails the repo owner. What each alert means: docs/runbooks/health-check.md.
+# alert; GitHub emails the user who last changed the schedule line, when their Actions
+# notifications are on. What each alert means: docs/runbooks/health-check.md.
+# The database URL lives on the production environment, which only main can use.
 on:
   schedule:
     - cron: "0 6 * * *"
@@ -17,9 +19,12 @@ concurrency:
 jobs:
   health:
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install psql
         timeout-minutes: 5
         run: bash scripts/ci-apt-cache.sh psql
