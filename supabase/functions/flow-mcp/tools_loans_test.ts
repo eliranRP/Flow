@@ -646,7 +646,7 @@ Deno.test("set_loan_index takes a signed margin and null unlinks; set_index_rate
     assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
   }
   assertEquals(calls.length, before);
-  for (const message of ["no loan linked to this index", "every linked loan starts after this date"]) {
+  for (const message of ["no loan linked to this index", "no linked loan is open on this date"]) {
     const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
     const refused = await callTool("set_index_rate", { idempotency_key: "p-db", rate_index: "il_prime", effective_date: "2027-01-01", annual_rate_percent: 5 }, ["write"], db.rpc);
     assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });

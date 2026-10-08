@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(35);
+select plan(38);
 
 do $users$
 begin
@@ -176,7 +176,8 @@ insert into f137 (label, id) values
   ('a', pg_temp.add_demand('f137-a', '2026-01-01')),
   ('b', pg_temp.add_demand('f137-b', '2026-01-01')),
   ('late', pg_temp.add_demand('f137-late', '2026-09-01')),
-  ('plain', pg_temp.add_demand('f137-plain', '2026-01-01'));
+  ('plain', pg_temp.add_demand('f137-plain', '2026-01-01')),
+  ('done', pg_temp.add_demand('f137-done', '2026-01-01'));
 
 -- Link: validation, then the two partner loans and a late one.
 select is(pg_temp.link('f137-bad-1', 'a', 'us_prime', 7500)->'error'->>'code', 'validation', 'an unknown index is validation');
@@ -187,6 +188,8 @@ select is(pg_temp.link('f137-bad-4', 'a', 'il_prime', 1000001)->'error'->>'code'
 select is(pg_temp.link('f137-link-a', 'a', 'il_prime', 7500)->'data'->>'undo_kind', 'loan_index', 'set_loan_index links a loan');
 select is(pg_temp.link('f137-link-b', 'b', 'il_prime', 2500)->'data'->'previous', '{"rate_index": null, "rate_margin_ppm": null}'::jsonb, 'the reply carries what it was before');
 select ok((pg_temp.link('f137-link-late', 'late', 'il_prime', -2500)->>'ok')::boolean, 'a negative margin is allowed');
+select ok((pg_temp.link('f137-link-done', 'done', 'il_prime', 5000)->>'ok')::boolean, 'a loan that will be paid off is linked too');
+update public.loans set status = 'paid_off', closed_on = '2026-05-31' where id = pg_temp.id('done');
 select is(
   (select jsonb_build_array(rate_index, rate_margin_ppm) from public.loans where id = pg_temp.id('a')),
   '["il_prime", 7500]'::jsonb,
@@ -201,8 +204,14 @@ select is(
 -- Index rate: validation, then the fan-out.
 select is(pg_temp.index_rate('f137-ir-bad', '2026-06-01', -1)->'error'->>'code', 'validation', 'a negative index rate is validation');
 select is(pg_temp.index_rate('f137-ir-bad-2', '2026-06-01', null)->'error'->>'code', 'validation', 'a missing index rate is validation');
+select is(
+  pg_temp.index_rate('f137-ir-early', '2025-12-01', 60000)->'error'->>'message',
+  'no linked loan is open on this date',
+  'a date before every linked loan starts is refused'
+);
 
--- Prime at 6.00% from June: A gets 6.75%, B 6.25%; the loan starting in September is skipped.
+-- Prime at 6.00% from June: A gets 6.75%, B 6.25%; the loan starting in September and the one
+-- paid off in May are skipped.
 create temp table f137_out (label text primary key, body jsonb);
 grant all on f137_out to authenticated, service_role;
 insert into f137_out values ('june', pg_temp.index_rate('f137-ir-june', '2026-06-01', 60000));
@@ -217,10 +226,11 @@ select is(
   'the reply lists the two loans it wrote'
 );
 select is(
-  (select body->'data'->'skipped'->0->>'reason' from f137_out where label = 'june'),
-  'rate before the loan start',
-  'the reply lists the skipped loan and why'
+  (select jsonb_agg(s->>'reason' order by s->>'reason') from f137_out o, jsonb_array_elements(o.body->'data'->'skipped') s where o.label = 'june'),
+  '["rate after the loan closed", "rate before the loan start"]'::jsonb,
+  'the reply lists the skipped loans and why'
 );
+select is(pg_temp.rate_on('done', '2026-06-01'), null, 'a loan paid off before the date gets no row');
 select is(
   pg_temp.index_rate('f137-ir-june', '2026-06-01', 60000),
   (select body from f137_out where label = 'june'),

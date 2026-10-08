@@ -5,7 +5,8 @@
 --    loan_index puts back what it was while the link still reads as written).
 -- 3. MCP set_index_rate records a new index rate from a date: every loan linked to that index
 --    gets a loan_rates row on that date at index plus margin (clamped to 0..100%), the same row
---    set_loan_rate writes. A loan that starts after the date is skipped and listed. One undo
+--    set_loan_rate writes. A loan that starts after the date, or was paid off or closed before
+--    it, is skipped and listed. One undo
 --    (kind index_rate, the write id) puts every row back, all or nothing: a conflict when any
 --    of those rows changed since.
 -- 4. mcp_list_loans shows rate_index and rate_margin_ppm.
@@ -194,7 +195,7 @@ begin
   begin
     -- The loans first, in id order, as every loan write does (0121); then each rate row.
     for loan in
-      select l.id, l.name, l.start_date, l.rate_margin_ppm
+      select l.id, l.name, l.start_date, l.closed_on, l.rate_margin_ppm
       from public.loans l
       where l.company_id = cid and l.rate_index = p_rate_index
       order by l.id
@@ -203,6 +204,12 @@ begin
       if p_effective_date < loan.start_date then
         skipped := skipped || jsonb_build_object(
           'loan_id', loan.id, 'name', loan.name, 'reason', 'rate before the loan start');
+        continue;
+      end if;
+      -- A paid off or closed loan takes no rate after the day it ended.
+      if loan.closed_on is not null and p_effective_date > loan.closed_on then
+        skipped := skipped || jsonb_build_object(
+          'loan_id', loan.id, 'name', loan.name, 'reason', 'rate after the loan closed');
         continue;
       end if;
       target := greatest(0, least(1000000, p_annual_rate_ppm + loan.rate_margin_ppm));
@@ -232,7 +239,7 @@ begin
     if jsonb_array_length(written_rows) = 0 then
       response := private.mcp_refused(
         case when jsonb_array_length(skipped) = 0 then 'no loan linked to this index'
-        else 'every linked loan starts after this date' end);
+        else 'no linked loan is open on this date' end);
     else
       insert into private.mcp_writes (token_id, user_id, kind, company_id, prior, created_at)
       values (
@@ -417,7 +424,7 @@ $n$ || anchor);
   def := replace(def, anchor, $n$'a loan uses this category for a part the other category cannot take',
         -- FLOW-137 (decision 0160).
         'no loan linked to this index',
-        'every linked loan starts after this date'
+        'no linked loan is open on this date'
       ) then$n$);
   execute def;
 
