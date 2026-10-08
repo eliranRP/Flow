@@ -101,11 +101,9 @@ describe("period labels", () => {
     expect(periodPhrase(allTime(), now, "project")).toBe("מתחילת הפרויקט");
   });
 
-  it("explains the dates, and compares with the window before", () => {
-    expect(heroExplanation(presetPeriod("months3", now), now)).toBe("הכנסות פחות הוצאות, מ־1 באוגוסט עד היום");
-    expect(heroExplanation(monthPeriod("2026-09", now), now)).toBe("הכנסות פחות הוצאות, מ־1 בספטמבר עד 30 בספטמבר");
-    expect(heroExplanation(customRange("2025-12-01", "2026-01-15"), now)).toBe("הכנסות פחות הוצאות, מ־1 בדצמבר 2025 עד 15 בינואר");
-    expect(heroExplanation(allTime(), now)).toBe("הכנסות פחות הוצאות, בכל התקופה");
+  it("explains income less expenses without the dates, and compares with the window before", () => {
+    // FLOW-335: the dates live in the period bar and the label, not a third time here.
+    expect(heroExplanation()).toBe("הכנסות פחות הוצאות");
     expect(comparisonWords(thisMonth(now), now)).toBe("מחודש שעבר");
     expect(comparisonWords(monthPeriod("2026-09", now), now)).toBe("מהחודש שלפניו");
     expect(comparisonWords(presetPeriod("months3", now), now)).toBe("מ־3 החודשים שלפניהם");

@@ -1,6 +1,6 @@
--- Allow mode auto for the Jev tagging job. Decision 0084.
--- Not in supabase/migrations.lock. Do not apply until the migration slot is free.
--- Move this file to supabase/migrations/ and append its sha256 to the lock then.
+-- FLOW-702 (app part): the owner can store mode auto, so Settings can turn Jev's auto fill on.
+-- The job already fills only in auto (decisions 0084 and 0145); until now the check and the RPC
+-- refused it. A viewer still cannot write (private.current_company_id() is null for a viewer).
 
 alter table public.company_integrations
   drop constraint company_integrations_mode_chk;

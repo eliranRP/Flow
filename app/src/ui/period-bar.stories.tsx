@@ -44,7 +44,7 @@ function Demo({ start, tone = "band", scope = "company" }: DemoArgs) {
       <TopBand wordmark={false}>
         <BandHero>
           <p className="t-band-title">שיפוץ דירה לדוגמה</p>
-          <PeriodBar period={period} onChange={setPeriod} scope="project" />
+          <PeriodBar period={period} onChange={setPeriod} scope="project" toDateHint={false} />
         </BandHero>
       </TopBand>
     );
@@ -72,7 +72,8 @@ export const ThreeMonths: Story = {
     await expect(later).toHaveAttribute("aria-disabled", "true");
     await userEvent.click(canvas.getByRole("button", { name: "3 חודשים קודמים" }));
     await expect(later).not.toHaveAttribute("aria-disabled");
-    await expect(canvas.getByRole("radio", { name: "3 חודשים" })).toHaveAttribute("aria-checked", "true");
+    // Stepped back, the selected preset is named for the way back (FLOW-335).
+    await expect(canvas.getByRole("radio", { name: "3 חודשים, חזרה להיום" })).toHaveAttribute("aria-checked", "true");
     // The start-side arrow points right and the end-side one points left: both point outward.
     const svgs = canvasElement.querySelectorAll(".ui-pbar-arrow svg");
     await expect(svgs[0]?.getAttribute("data-points")).toBe("right");
@@ -84,13 +85,32 @@ export const ThreeMonths: Story = {
 export const ThreeMonthsDark: Story = { ...ThreeMonths, name: "Three months, dark", ...dark };
 export const ThreeMonths320: Story = { args: { start: "months3" }, name: "Three months, 320 (short labels)", ...at320 };
 export const ThreeMonthsDark320: Story = { args: { start: "months3" }, name: "Three months, dark, 320", ...at320, ...dark };
-/** One month stepped back: both arrows work, and the label is the month. */
-export const MonthStepped: Story = { args: { start: "month-back" } };
+/** One month stepped back: both arrows work, the label is the month, and its hint says חזרה להיום (FLOW-335). */
+export const MonthStepped: Story = {
+  args: { start: "month-back" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const label = canvas.getByRole("button", { name: /בחירת תקופה/ });
+    await expect(within(label).getByText("חזרה להיום")).toBeVisible();
+    await expect(label.querySelector(".ui-pbar-caret svg")).not.toBeNull();
+    await expect(canvas.getByRole("radio", { name: "חודש, חזרה להיום" })).toHaveAttribute("aria-checked", "true");
+  },
+};
 export const MonthSteppedDark: Story = { args: { start: "month-back" }, name: "Month stepped, dark", ...dark };
 export const Year: Story = { args: { start: "year" } };
 /** הכול hides the arrows and keeps their slots, so the label stays centred. */
 export const All: Story = { args: { start: "all" } };
 export const AllOnProject: Story = { args: { start: "all", scope: "project" }, name: "All, on a project (מתחילת הפרויקט)" };
+/** The project band leaves עד היום out of the current window (FLOW-335). */
+export const ThreeMonthsOnProject: Story = {
+  args: { start: "months3", scope: "project" },
+  name: "Three months, on a project (no עד היום)",
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText("עד היום")).toBeNull();
+  },
+};
+export const ThreeMonthsOnProjectDark: Story = { ...ThreeMonthsOnProject, name: "Three months, on a project, dark", ...dark };
+export const ThreeMonthsOnProject320: Story = { ...ThreeMonthsOnProject, name: "Three months, on a project, 320", ...at320 };
 export const AllOnProjectDark: Story = { args: { start: "all", scope: "project" }, name: "All, on a project, dark", ...dark };
 /** A custom range from the sheet: no preset is selected and the label shows the dates. */
 export const Custom: Story = { args: { start: "custom" } };

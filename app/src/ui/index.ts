@@ -59,5 +59,6 @@ export { SearchEntry, SEARCH_FOCUS_STATE, wantsSearchFocus } from "./search-entr
 export { MatchText, matchRange } from "./match-text";
 export type { StatementDetail } from "./statement";
 export { CurrencySheet, CURRENCY_CHOICES, currencyChoiceLabel } from "./currency-sheet";
+export { PeriodSwipe } from "./period-swipe";
 export { InvestmentCard, currencyWord, currentEquityNote, forcedEquityNote } from "./investment-card";
 export type { EquityNote, InvestmentField, InvestmentFigures, InvestmentRow, MinorInCurrency } from "./investment-card";

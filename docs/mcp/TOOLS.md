@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -55,6 +55,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `get_project_categories` | `id` | `list_projects` `projects[].id` |
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
+| `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -438,6 +439,14 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 `mcp_jev_suggestions`, no arguments ([0134](../decisions/0134-jev-reasons-income-scores.md), [0139](../decisions/0139-jev-corrections.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `no_project` (true when Jev answered no project: overhead, or not one project), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null), `prefilled` (auto mode filled this line and it was not undone, [0145](../decisions/0145-jev-auto-mode.md)). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). A `no_project` suggestion matches a filed line with no project, filed as shared or overhead, or filed to the company's overhead project. Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
 
+### set_jev_mode
+
+```json
+{ "idempotency_key": "jev-mode-1", "enabled": true, "mode": "auto", "threshold": 0.9 }
+```
+
+Turns the Jev tagger on or off and sets its mode and threshold, as Settings → חיבורים → תיוג חכם does ([FLOW-702](../backlog/TASKS.md#flow-702), [0145](../decisions/0145-jev-auto-mode.md)). Write tool, `mcp_set_jev_mode`, which calls `set_company_integration` for the token's company; a viewer cannot write. `enabled` is required; `mode` is `off`, `shadow` (suggestions only) or `auto` (Jev fills what it is sure of at or above the threshold; every line still waits for approval, and `undo_jev_prefill` takes a fill back); `threshold` is 0.50 to 1 (the app offers 0.80, 0.85, 0.90 and 0.95). A mode or threshold left out keeps the stored one (`shadow` and 0.90 at first). Output `data`: `id` (the company), `enabled`, `mode`, `threshold`, `prior` (the values before, or null when Jev was never set) and `undo_kind: "jev_mode"`. Undo, with the company id, puts the values before back (or removes the setting when there was none); it is `conflict` once they were changed again.
+
 ### undo_jev_prefill
 
 ```json
@@ -680,7 +689,7 @@ SUMIT invoices still open, and a mark the owner sets when one was paid before SU
 
 Read. No arguments. The open documents the Unpaid screen shows: SUMIT invoices with an amount still open after their linked receipts and credit notes, oldest first. Customer invoices have `direction` `income` and a positive amount; supplier invoices have `direction` `expense` and a negative one.
 
-Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at" }`; `id` is the transaction id, and `marked_paid_at` is when the document was marked paid (`null` when not). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
+Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at", "document_url" }`; `id` is the transaction id, `marked_paid_at` is when the document was marked paid (`null` when not), and `document_url` is the SUMIT document link on `https://pay.sumit.co.il/` (`null` until a sync reads it). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
 
 ### set_invoice_paid
 

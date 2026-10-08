@@ -193,7 +193,7 @@ export const ProjectPeriod: Story = {
 export const ProjectPeriodDark: Story = { ...ProjectPeriod, name: "Project, own period, dark", ...dark };
 export const ProjectPeriod320: Story = { ...ProjectPeriod, name: "Project, own period, 320", ...at320 };
 export const ProjectPeriodDark320: Story = { ...ProjectPeriod, name: "Project, own period, dark, 320", ...dark, ...at320 };
-/** A month from the "לפי חודש" list: one month, so the list row is not shown. */
+/** A month from the "לפי חודש" list. The row still shows: the page lists the whole project (FLOW-337). */
 export const ProjectOneMonth: Story = {
   name: "Project, one month opened from by month",
   render: () => (

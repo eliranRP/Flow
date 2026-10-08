@@ -168,8 +168,8 @@ select throws_ok(
 );
 select throws_ok(
   $$insert into public.company_integrations (company_id, provider, mode)
-    select id, 'jev', 'auto' from jev_ref where label = 'company_b'$$,
-  '23514', null, 'auto is refused until the tagging job'
+    select id, 'jev', 'manual' from jev_ref where label = 'company_b'$$,
+  '23514', null, 'a mode outside off, shadow and auto is refused'
 );
 select lives_ok(
   $$update public.company_integrations set mode = 'off'$$,
@@ -451,8 +451,8 @@ select is(
   'the owner can store a threshold'
 );
 select throws_ok(
-  $$select public.set_company_integration(true, 'auto', null)$$,
-  'P0001', 'validation', 'auto is refused by the RPC'
+  $$select public.set_company_integration(true, 'manual', null)$$,
+  'P0001', 'validation', 'a mode outside off, shadow and auto is refused by the RPC'
 );
 select throws_ok(
   $$select public.set_company_integration(true, 'shadow', 0.49)$$,

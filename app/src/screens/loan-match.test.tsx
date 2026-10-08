@@ -556,6 +556,18 @@ describe("LoanTransactionSplit", () => {
     expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
+  it("offers שיוך on a loan's own principal category (FLOW-134)", async () => {
+    const own = { ...db.loans[0], interest_category_id: null, escrow_category_id: null, principal_category_id: "cat-own-p" };
+    db.loans = [own as (typeof db.loans)[number]];
+    renderSplit({ loanPart: null, categoryId: "cat-own-p" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    const other = renderSplit({ loanPart: null, categoryId: "cat-other" });
+    // Wait for this instance's read to land: a line on another category renders nothing while it loads too.
+    await waitFor(() => { expect(other.client.isFetching()).toBe(0); });
+    await waitFor(() => { expect(other.client.getQueryCache().getAll().every((query) => query.state.status === "success")).toBe(true); });
+    expect(within(other.container).queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
+  });
+
   it("does not offer שיוך while the read is loading", async () => {
     db.readHold = new Promise<void>(() => undefined);
     renderSplit();

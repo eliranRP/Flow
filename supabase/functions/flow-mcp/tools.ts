@@ -87,6 +87,7 @@ export const WRITE_TOOL_NAMES = [
   "set_company_currency",
   "rename_category",
   "set_category_group",
+  "set_jev_mode",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -152,6 +153,7 @@ const ALLOWED: Record<string, Set<string>> = {
   set_company_currency: new Set(["idempotency_key", "currency"]),
   rename_category: new Set(["idempotency_key", "category_id", "name"]),
   set_category_group: new Set(["idempotency_key", "category_id", "group_name"]),
+  set_jev_mode: new Set(["idempotency_key", "enabled", "mode", "threshold"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -239,7 +241,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -563,6 +565,12 @@ const renameCategorySchema = z.object({
   category_id: UUID_TEXT,
   name: visibleName(2, 120),
 }).strict();
+const setJevModeSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  enabled: z.boolean(),
+  mode: z.enum(["off", "shadow", "auto"]).optional(),
+  threshold: z.number().min(0.5).max(1).optional(),
+}).strict();
 const setCategoryGroupSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
@@ -616,6 +624,7 @@ function unpaidReport(rows: unknown[]) {
       open_gross_minor: Number(gross),
       open_net_minor: Number(BigInt(String(row.open_net_agorot ?? 0))),
       marked_paid_at: markedAt,
+      document_url: typeof row.document_url === "string" ? row.document_url : null,
     };
   });
   return {
@@ -1141,7 +1150,7 @@ function readTools() {
       months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
     }),
-    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
+    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid), and document_url: the SUMIT document link on pay.sumit.co.il (null until a sync reads it). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
   ];
 }
 
@@ -1426,13 +1435,19 @@ function writeTools() {
       category_id: { type: "string" },
       group_name: { type: ["string", "null"] },
     }, true),
+    toolSpec("set_jev_mode", "Turn the Jev AI tagger on or off and choose its mode, as Settings → תיוג חכם does (members who can write, not a viewer). enabled is the switch; mode is shadow (suggestions only), auto (Jev fills a project and category at or above the threshold; the owner still approves every line, and undo_jev_prefill takes a fill back) or off; threshold is 0.50 to 1 (the app offers 0.80, 0.85, 0.90 and 0.95). A mode or threshold left out keeps the stored one (shadow and 0.90 at first). Returns id (the company), enabled, mode, threshold, prior (the values before, or null when Jev was never set) and undo_kind. Undo is kind jev_mode with the company id: it puts the values before back, a conflict once they changed again. get_jev_status reads the current values.", {
+      idempotency_key: { type: "string" },
+      enabled: { type: "boolean" },
+      mode: { type: "string", enum: ["off", "shadow", "auto"] },
+      threshold: { type: "number" },
+    }, true),
     toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -2070,6 +2085,16 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_paid: parsed.data.paid,
+    };
+  } else if (name === "set_jev_mode") {
+    const parsed = setJevModeSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_jev_mode";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_enabled: parsed.data.enabled,
+      p_mode: parsed.data.mode ?? null,
+      p_threshold: parsed.data.threshold ?? null,
     };
   } else if (name === "undo_jev_prefill") {
     const parsed = undoJevPrefillSchema.safeParse(args);

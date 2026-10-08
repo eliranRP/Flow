@@ -32,11 +32,13 @@ type CardArgs = {
   missingBoth?: boolean;
   /** FLOW-703: Jev answered "no project". */
   projectNoneJev?: boolean;
+  /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no בטל. */
+  filled?: "undo" | "label" | "busy";
 };
 
 function CardView({
   supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev,
-  splitParts, why, partyFilings = 5, matchingFilings = 3, flags, direction, missingBoth, projectNoneJev,
+  splitParts, why, partyFilings = 5, matchingFilings = 3, flags, direction, missingBoth, projectNoneJev, filled,
 }: CardArgs) {
   const shared = reason === "unallocated_shared";
   const suggestion = project || category || projectNoneJev
@@ -69,6 +71,7 @@ function CardView({
       flag={reviewFlagView(flags, { direction, currency })}
       direction={direction}
       missingBoth={missingBoth}
+      jevFilled={filled == null ? null : filled === "label" ? {} : { busy: filled === "busy", onUndo: () => undefined }}
     />
   );
 }
@@ -268,3 +271,11 @@ export const FlagLoud320: Story = { ...narrow, name: "Flag: loud, 320", args: Fl
 export const FlagLoudDark: Story = { ...dark, name: "Flag: loud, dark", args: FlagWithJevReason.args };
 export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: FlagDuplicateQuiet.args };
 export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };
+
+// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev · <reason>" with בטל at the end, one line.
+export const JevFilled: Story = { name: "Jev filled: undo", args: { ...jevBoth, why: "usual_for_party", filled: "undo" } };
+export const JevFilledDark: Story = { ...dark, name: "Jev filled: undo, dark", args: JevFilled.args };
+export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", args: JevFilled.args };
+export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
+export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
+export const JevFilledFlag320: Story = { ...narrow, name: "Jev filled: with quiet flag, 320", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(37);
+select plan(40);
 
 do $users$
 begin
@@ -289,10 +289,23 @@ select is(
   'a line filed to the overhead project matches a no-project suggestion'
 );
 
--- 3. Undo.
+-- 3. Undo. Decision 0145: a fill stays undoable after the owner turns Jev off (FLOW-706).
+reset role;
+insert into public.company_integrations (company_id, provider, enabled, mode, threshold)
+select company_id, 'jev', false, 'off', 0.9
+from public.transactions where id = (select id from ja_ref where label = 'a1')
+on conflict (company_id, provider) do update set enabled = false, mode = 'off';
+select is(
+  (select jsonb_build_array(i.enabled, i.mode) from public.company_integrations i
+   join public.transactions t on t.company_id = i.company_id
+   where t.id = (select id from ja_ref where label = 'a1') and i.provider = 'jev'),
+  '[false, "off"]'::jsonb,
+  'Jev is off for the owner''s company'
+);
+select tests.authenticate_as('ja_owner');
 select lives_ok(
   format($$select public.undo_jev_prefill(%L)$$, (select id from ja_ref where label = 'a1')),
-  'the owner undoes Jev''s fill in one call'
+  'the owner undoes Jev''s fill in one call, with Jev off'
 );
 reset role;
 select is(
@@ -450,6 +463,23 @@ select is(
   (select count(*)::integer from public.jev_prefills),
   0,
   'another company sees none of the audit rows'
+);
+reset role;
+
+-- The review card reads these rows (#231): the owner still reads their own, the undone mark included.
+insert into ja_out (label, result)
+select 'fills_co', to_jsonb(count(*)::integer) from public.jev_prefills
+where company_id = (select id from ja_ref where label = 'co');
+select tests.authenticate_as('ja_owner');
+select is(
+  (select count(*)::integer from public.jev_prefills),
+  (select (result #>> '{}')::integer from ja_out where label = 'fills_co'),
+  'the owner reads every audit row of their company'
+);
+select is(
+  (select undone_at is not null from public.jev_prefills where transaction_id = (select id from ja_ref where label = 'a1')),
+  true,
+  'including the undone mark the card reads'
 );
 reset role;
 
