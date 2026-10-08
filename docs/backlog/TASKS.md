@@ -18,7 +18,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
-| UI lane 3 | FLOW-124 item 1 + FLOW-125 item 1: ⊘ and source on project and שויכו היום rows (FLOW-401 merged #244) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-124 item 1 + FLOW-125, PR #253: ⊘ and the bank icon on list rows, loan part count, Latin titles (FLOW-401 merged #244) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -76,7 +76,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | done (#131) |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | done (#131, #134) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
-| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready for a UI lane (server parts done in #176) |
+| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | done (#253) |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
@@ -215,10 +215,10 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-125"></a>
 ### FLOW-125 · Loan split follow-ups (#83 review)
 - Renumbered from a second FLOW-121 (2026-10-07).
-- **Type:** BACKLOG NIT · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-107
-- [x] (UI lane 3, 2026-10-08: the category drill-down, the project list and שויכו היום pass the line's source through `rowSource`, so a Mercury line shows the bank icon) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/project-category-screen.tsx`, `project-detail-screen.tsx`, `filed-today-screen.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
-- [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
-- [ ] "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
+- **Type:** BACKLOG NIT · **Status:** done (#253) · **Depends on:** FLOW-107
+- [x] (UI lane 3, 2026-10-08: the category drill-down, the project list, שויכו היום, a project's לאישור list and the breakdown lines pass the line's source through `rowSource`, so a Mercury line shows the bank icon) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/project-category-screen.tsx`, `project-detail-screen.tsx`, `filed-today-screen.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
+- [x] (UI lane 3, 2026-10-08: `ListRow` runs a Latin string title LTR, aligned to the row's start side, with or without a tag) A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
+- [x] (UI lane 3, 2026-10-08: `useLoanMarks` counts the loan_splits rows of each line, and the hint says "2 חלקים", "3 חלקים", …) "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
@@ -230,7 +230,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-124"></a>
 ### FLOW-124 · One line out of the P&L follow-ups (#105)
 - **Type:** SMALL UI · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-108 (#105)
-- [x] (UI lane 3, 2026-10-08, for the category drill-down and שויכו היום: the shared `KeptOutTag` ⊘ through `ListRow` `tag`; the project list already says "מחוץ לרווח" in its hint. לאישור and the breakdown lines stay with their lanes) (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [x] (UI lane 3, 2026-10-08, for the category drill-down, שויכו היום and a project's לאישור list: the shared `KeptOutTag` ⊘ through `ListRow` `tag`; the project list already says "מחוץ לרווח" in its hint, and every breakdown line in the excluded view is out, so it gets no ⊘) (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
 - [ ] (server done in #176: `get_transaction` returns `pnl_state` `in`/`out`/`mixed`; driving the pill and hint from it is the UI part) A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
 - [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
 

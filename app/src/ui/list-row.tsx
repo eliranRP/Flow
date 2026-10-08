@@ -129,11 +129,22 @@ export function ListRow(props: ListRowProps) {
   const blockCopy = props.variant === "static";
   const CopyMain = blockCopy ? "div" : "span";
   const CopyText = blockCopy ? "div" : "span";
-  const titleClass = cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false);
-  const titleDir = props.ltrTitle ? "ltr" : undefined;
+  // FLOW-125: a Latin title in an RTL row runs LTR, so a long one is cut at its end, not its start.
+  const autoLtr = !props.ltrTitle && typeof props.title === "string" && textDir(props.title) === "ltr";
+  const titleClass = cx(
+    "ui-row-title",
+    props.muted && "ui-row-title-muted",
+    props.tag ? "ui-row-title-with-tag" : false,
+    autoLtr && !props.tag && "ui-row-title-ltr",
+  );
+  const titleDir = props.ltrTitle || (autoLtr && !props.tag) ? "ltr" : undefined;
   const titleBody = (
     <>
-      {props.tag ? <span className="ui-row-title-text" data-clip-ok="">{titleText(props)}</span> : titleText(props)}
+      {props.tag ? (
+        <span className={cx("ui-row-title-text", autoLtr && "ui-row-title-ltr")} dir={autoLtr ? "ltr" : undefined} data-clip-ok="">
+          {titleText(props)}
+        </span>
+      ) : titleText(props)}
       {props.tag}
     </>
   );

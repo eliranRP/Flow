@@ -104,6 +104,22 @@ describe("ListRow", () => {
     expect(email.closest(".ui-row")?.tagName).toBe("DIV");
   });
 
+  it("runs a Latin title LTR so a long one is cut at its end (FLOW-125)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="Example Mortgage Home Loans" agorot={100n} sign="out" source="invoice" />
+        <ListRow variant="transaction" title="Example Bank Loan" agorot={100n} sign="out" source="invoice" tag={<span>⊘</span>} />
+        <ListRow variant="transaction" title="חשבונית 12" agorot={100n} sign="out" source="invoice" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Example Mortgage Home Loans")).toHaveAttribute("dir", "ltr");
+    expect(screen.getByText("Example Mortgage Home Loans")).toHaveClass("ui-row-title-ltr");
+    const tagged = screen.getByText("Example Bank Loan");
+    expect(tagged).toHaveAttribute("dir", "ltr");
+    expect(tagged.closest(".ui-row-title-with-tag")).not.toHaveAttribute("dir");
+    expect(screen.getByText("חשבונית 12")).not.toHaveAttribute("dir");
+  });
+
   it("drops the chevron on a static row and exposes aria-expanded on a disclosure", () => {
     const { container } = render(
       <MemoryRouter>

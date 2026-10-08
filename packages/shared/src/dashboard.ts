@@ -389,6 +389,10 @@ export const projectWaitingRowSchema = z.object({
   category_id: z.string().nullable(),
   category_name: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
+  source: z.string().optional().catch(undefined),
+  /** Its parts on this project are out of the P&L (FLOW-124). Older payloads omit it. */
+  kept_out: z.boolean().optional().catch(undefined),
 });
 
 export const projectWaitingSchema = z.array(projectWaitingRowSchema);
@@ -437,6 +441,8 @@ export const breakdownLinesSchema = z
         currency: z.string().regex(/^[A-Z]{3}$/),
         amount_minor: agorotSchema,
         shared: z.boolean(),
+        /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
+        source: z.string().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

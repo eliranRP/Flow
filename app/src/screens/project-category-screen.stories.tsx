@@ -66,11 +66,11 @@ const loanCategorySample = {
   categoryName: "תשלומי הלוואה",
   projectName: "וילה רעננה",
   rows: [
-    { id: "l1", description: "Northgate Home Loans", doc_date: "2026-09-05", amount_net: -245_000n },
-    { id: "l2", description: "Northgate Home Loans", doc_date: "2026-08-05", amount_net: -245_000n },
-    { id: "l3", description: "Northgate Home Loans", doc_date: "2026-07-05", amount_net: -245_000n },
+    { id: "l1", description: "Northgate Home Loans", doc_date: "2026-09-05", amount_net: -245_000n, source: "mercury" },
+    { id: "l2", description: "Northgate Home Loans", doc_date: "2026-08-05", amount_net: -245_000n, source: "mercury" },
+    { id: "l3", description: "Northgate Home Loans", doc_date: "2026-07-05", amount_net: -245_000n, source: "mercury" },
   ],
-  loanMarks: { l1: "split", l2: "split", l3: "review" } as const,
+  loanMarks: { l1: { parts: 3, review: false }, l2: { parts: 2, review: false }, l3: { parts: 3, review: true } },
 };
 
 export const ProjectCategoryLoanSplit: Story = {

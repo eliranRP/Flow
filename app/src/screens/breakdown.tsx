@@ -27,6 +27,7 @@ import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { ChartIcon, DocumentIcon, ReviewIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
+import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { PeriodPicker, RangeSheet } from "../ui/period-picker";
 import { ScreenHeader } from "../ui/screen-header";
@@ -311,7 +312,7 @@ function LinesBody({
                 currency={row.currency}
                 sign={outgoing ? "out" : "in"}
                 inWord={direction === "expense" ? "זיכוי" : undefined}
-                source="invoice"
+                source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}
               />
             );
