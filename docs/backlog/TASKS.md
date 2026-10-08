@@ -49,10 +49,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | in-progress (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
-| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
+| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | in-progress (#122) |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
-| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | in-progress (#121; UI items go to the design PR) |
-| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
+| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | done (#121; UI items go to the design PR, #121 review items to FLOW-129) |
+| 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | ready |
+| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
@@ -208,9 +209,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-118"></a>
 ### FLOW-118 · Reversals follow-ups (#76 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-104
-- [ ] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message.
-- [ ] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#122) · **Depends on:** FLOW-104
+- [x] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message. (#122: 'category not found'; the composite foreign key keeps it unreachable.)
+- [x] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited. (#122: kept. `mcp_assign_expense_split` and `save_line_split` still raise it.)
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
 - [ ] (#101 review) Overhead lines (`pnl_role` overhead) still offer the picker's reversal section; settle with the shared-line call above. Split and shared lines don't offer it.
 - [x] (in #111) A hidden, loan or kept-out other-kind category already on a line (filed through MCP) shows החזר on the review card but sits in the own-kind list with no mark in the change sheet.
@@ -225,7 +226,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-120"></a>
 ### FLOW-120 · Loan project follow-ups (#89 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#121; UI items go to the design PR) · **Depends on:** FLOW-105
+- **Type:** BACKLOG NIT · **Status:** done (#121; the three design-review items go to the design PR, the two #121 review items moved to FLOW-129) · **Depends on:** FLOW-105
 - [x] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag. (#121: skipped, reason `line category is a guess`; the owner was asked and can still pick "keep the flag".)
 - [x] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead. (#121: reason `project not set`.)
 - [x] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104. (#121: said so in 0105.)
@@ -235,8 +236,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (#104 design review, in #111) CONTROLS.md: note the static loan rows on the project screen.
 - [x] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column. (#121; undo still reads older writes from `prior`.)
 - [x] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company. (#121, `loan_project_followups.test.sql`.)
-- [ ] (#121 review) `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock.
-- [ ] (#121 review) `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead.
+- [ ] (#121 review) Two review items moved to [FLOW-129](#flow-129).
+
+<a id="flow-129"></a>
+### FLOW-129 · Loan attach follow-ups (#121 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-120
+- [ ] `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock.
+- [ ] `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
@@ -341,10 +347,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-208"></a>
 ### FLOW-208 · Split and undo follow-ups (#88 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`.
-- [ ] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1).
-- [ ] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#122) · **Depends on:** —
+- [x] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`. (#122)
+- [x] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1). (#122; older snapshots keep the old rule. `save_split` still stores no flags.)
+- [x] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess. (#122, `review_undo_followups.test.sql`.)
 
 <a id="flow-209"></a>
 ### FLOW-209 · get_project follow-ups (#90 review)
@@ -882,6 +888,7 @@ Recently finished tasks move here with their PR, so the history stays readable. 
 
 | Id | Title | PR |
 | --- | --- | --- |
+| FLOW-120 | Loan project follow-ups (#89 review) | #121 |
 | FLOW-104 | Reversals across directions | #76 |
 | FLOW-101 | Loan payments count by their split parts | #70 |
 | — | Categories kept out of the P&L, `set_category_pnl` | #67 |
