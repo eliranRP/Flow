@@ -19,7 +19,9 @@ grant all on usd_ref, usd_out to authenticated;
 
 create function pg_temp.cur(p jsonb, c text) returns jsonb
 language sql immutable
-as $$ select x from jsonb_array_elements(p) x where x ->> 'currency' = c $$;
+-- The prev_* fields are checked in company_base_currency.test.sql.
+as $$ select x - 'prev_income_minor' - 'prev_expense_minor' - 'prev_net_profit_minor'
+  from jsonb_array_elements(p) x where x ->> 'currency' = c $$;
 
 create function pg_temp.proj(p jsonb, n text) returns jsonb
 language sql immutable
@@ -219,7 +221,8 @@ select is(
 
 -- Tenancy: B sees its own ILS and none of A's USD; B cannot read A
 select is(
-  pg_temp.out_of('b_sep_cash') -> 'by_currency',
+  jsonb_build_array(pg_temp.cur(pg_temp.out_of('b_sep_cash') -> 'by_currency', 'ILS'))
+    || coalesce(pg_temp.cur(pg_temp.out_of('b_sep_cash') -> 'by_currency', 'USD'), '[]'::jsonb),
   '[{"currency": "ILS", "income_minor": 1000, "direct_minor": 0, "shared_minor": 0, "overhead_minor": 0, "expense_minor": 0, "net_profit_minor": 1000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 1, "loan_split_fallback_count": 0, "unassigned_income_minor": 1000, "unassigned_expense_minor": 0}]'::jsonb,
   'another company sees its own totals and none of the usd company lines'
 );

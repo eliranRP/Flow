@@ -26,6 +26,7 @@ import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodBar } from "../ui/period-bar";
 import { ProfitMark } from "../ui/profit-mark";
+import { SearchEntry } from "../ui/search-entry";
 import { HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
@@ -216,8 +217,11 @@ export function HomeBooks({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
-        trailing={<PeriodBar period={period} onChange={onPeriod} />}
+        trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
+        <div className="ui-band-pbar">
+          <PeriodBar period={period} onChange={onPeriod} />
+        </div>
         <Hero
           label={heroProfitLabel(period, hero)}
           figures={heroFigures}

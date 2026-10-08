@@ -53,6 +53,7 @@ import {
 } from "./screens/flow-screens";
 import { BreakdownLinesScreen, BreakdownScreen } from "./screens/breakdown";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { SearchScreen } from "./screens/search";
 import { LineSplitScreen } from "./screens/line-split";
 import { DevLineSplit } from "./dev/line-split-e2e";
 import { JevReviewE2e } from "./screens/jev-review-card";
@@ -157,6 +158,7 @@ function AppRoutes() {
               <Route path="onboarding" element={<OnboardingScreen />} />
               <Route path="setup" element={<SetupIndex />} />
               <Route path="setup/:step" element={<SetupStepScreen />} />
+              <Route path="search" element={<SearchScreen />} />
               <Route path="transactions/:transactionId" element={<TransactionRoute />} />
               <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
               <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />

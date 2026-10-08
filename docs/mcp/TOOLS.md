@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -44,6 +44,11 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_rehab` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "project_investment"` | `id` | the project id `set_project_investment` used |
 | `undo` `kind: "category_rehab"` | `id` | the category id `set_category_rehab` used |
+| `delete_category` | `category_id` | `list_categories` `categories[].id` |
+| `move_category_lines` | `from_category_id`, `into_category_id` | `list_categories` `categories[].id` (the target not hidden) |
+| `undo` `kind: "category_delete"` | `id` | the category id `delete_category` used |
+| `undo` `kind: "category_move"` | `id` | the source category id `move_category_lines` used |
+| `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -99,7 +104,7 @@ Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_defa
 
 ### list_review
 
-`list_review()`, then filter. `limit` defaults to 50 and cannot exceed 100.
+`list_review()`, then filter. `limit` defaults to 50 and cannot exceed 100. `supplier` matches part of the supplier's name, or of the customer's on an income line.
 
 Input:
 
@@ -116,7 +121,7 @@ Input:
 }
 ```
 
-Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, `meta` (the line's bank details, see [get_expense](#get_expense)), `line_status` (`pending`, `posted`, or `void`; a pending bank line may still change) and `source` (`sumit`, `mercury`, `manual`, or `photo`) ([FLOW-305](../backlog/TASKS.md#flow-305)). `kept_out` is true when the line does not count in the P&L at all (a line split with one part kept out is not) ([0135](../decisions/0135-line-state-in-lists.md)). `search_expenses` with `scope: "pending"` returns the same rows, so it carries these fields too.
+Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, `customer_name` (an income line's customer, null when none), `meta` (the line's bank details, see [get_expense](#get_expense)), `line_status` (`pending`, `posted`, or `void`; a pending bank line may still change) and `source` (`sumit`, `mercury`, `manual`, or `photo`) ([FLOW-305](../backlog/TASKS.md#flow-305)). `kept_out` is true when the line does not count in the P&L at all (a line split with one part kept out is not) ([0135](../decisions/0135-line-state-in-lists.md)). `search_expenses` with `scope: "pending"` returns the same rows, so it carries these fields too.
 
 Income that already has a project but only a guess of a kept-out category is queued with `reason` `suggested`: the guess counts in the P&L until it is confirmed, and approving it (or `assign_expense` / `set_expense_category`) confirms it ([FLOW-126](../backlog/TASKS.md#flow-126), [0114](../decisions/0114-kept-out-guesses.md)). A guessed loan category is not queued: it is out of the P&L even as a guess ([FLOW-127](../backlog/TASKS.md#flow-127)).
 
@@ -124,7 +129,7 @@ A line split with `split_line` whose amount the bank sync changed is queued with
 
 ### get_expense
 
-`get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
+`get_transaction` with the transaction id. A missing row is `not_found`. `review_status` is the line's latest review state; while it is `open`, `review_reason` is its reason and `review_id` its review-queue id (the `id` in `list_review`), else `review_id` is null. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
 
 Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, then fees when the payment has a fees part ([0130](../decisions/0130-loan-fees-installments.md)), each `{part, amount_minor, in_pnl}`. `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, or four with fees, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read. Since [0136](../decisions/0136-loan-unmatch.md) `get_transaction` carries `loan_split` itself, so `get_expense` makes no second read.
 
@@ -142,7 +147,7 @@ Filters, all optional ([FLOW-323](../backlog/TASKS.md#flow-323), [0140](../decis
 - `project_id` matches the line's project, a share of a shared cost on it, or a split part on it. `none` lists lines on no project.
 - `category_id` matches the line's category, or a split or loan split part in it. `none` lists lines with no category and no parts.
 
-`query` matches the description, the supplier or the customer, in any case. `filed` and `all` rows come newest first. They also carry `currency`, `amount_original`, `line_status`, `customer_name`, `waiting_review`, `kept_out` (as in [0135](../decisions/0135-line-state-in-lists.md)), `split_parts` (the line split's part count, 0 when whole) and `loan_matched`. With a filter, `pending` lets `search_transactions` pick the page, and the rows stay `list_review` rows, newest first. Without one, it filters `list_review` as before.
+`query` matches the description, the supplier or the customer, in any case. `filed` and `all` rows come newest first. They also carry `currency`, `amount_original`, `line_status`, `customer_name`, `waiting_review`, `kept_out` (as in [0135](../decisions/0135-line-state-in-lists.md)), `split_parts` (the line split's part count, 0 when whole) and `loan_matched`. With a filter or a `query`, `pending` lets `search_transactions` pick the page, and the rows stay `list_review` rows, newest first. Without either, it lists `list_review` as before.
 
 Input: `{ "scope": "all", "query": "מלט", "from": "2026-06-01", "to": "2026-06-30", "project_id": "…", "limit": 50, "offset": 0 }`.
 
@@ -305,6 +310,30 @@ Sets a project's investment figures: `currency` (an ISO code such as `USD` or `I
 ```
 
 `rehab` is required: `true` counts the category as rehab on projects, `false` leaves it out, `null` follows the default. By default every category counts except those kept out of the P&L (`excluded_from_pnl`) and the loan parts (`loan_part` set), so the purchase and the loan payments stay out. A loan payment's fees part stays out too, even in a category that counts, unless that category is switched on (`true`). Switching on the principal category counts principal repayments as rehab, while the loan they repay is already in `current_equity_minor`. Output `data`: `category_id`, `rehab`, `in_rehab` (what the category comes to), `undo_kind: "category_rehab"` and `id`. Undo puts back the setting before, and is `conflict` when it changed since. Another company's category is `refused` / `category not found` ([0143](../decisions/0143-project-investment.md)).
+
+### delete_category
+
+```json
+{ "idempotency_key": "catdel-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1" }
+```
+
+Deletes a category, even one with lines. Its lines keep their project, lose the category and go back to לאישור as lines with no category (an open review row with reason `missing_category`, unless one is open already); nothing guesses a new category for them. A line split by category with a part in it loses its whole split. Suppliers forget it as their remembered category. Output `data`: `category_id`, `name`, `lines` (how many lines on the books, not removed and not void, went back to review), `undo_kind: "category_delete"` and `id`. Refused: a loan category (`refused` / `loan category is fixed`), a category a loan or a loan payment part uses (`a loan uses this category`; move those first with `move_category_lines` or `update_loan`), another company's (`category not found`). Undo puts back the category with the same id, its lines, splits and remembered suppliers, and closes the review rows the delete opened; it is `conflict` once one of those lines has a category or a split again or the name is taken again, and `not_found` when the owner already undid it in the app ([0144](../decisions/0144-category-delete-and-move.md)).
+
+### move_category_lines
+
+```json
+{ "idempotency_key": "catmove-1", "from_category_id": "c0ffee00-1111-4000-8000-0000000000a1", "into_category_id": "c0ffee00-1111-4000-8000-0000000000a2" }
+```
+
+Moves every line of one category to another of the same kind, and with them split parts, loan payment parts, loan part categories and remembered supplier categories. Neither category is hidden (`merge_category` in the app is this move plus hiding the source). A moved line counts as the owner's choice. Output `data`: `from`, `into`, `lines` (lines on the books moved, a split line once), `undo_kind: "category_move"` and `id` (the source). Refused: the same category (`pick a different category`), a hidden or another company's target (`category not found`), another kind (`categories must be the same kind`), a split line with parts in both (`a split line has both categories`), a loan part the target cannot take (`a loan uses this category for a part the other category cannot take`). Undo, with the source category id, moves exactly those back with their old flags; it is `conflict` once any of them was moved or re-tagged since. A remembered category the owner changed since stays ([0144](../decisions/0144-category-delete-and-move.md)).
+
+### set_company_currency
+
+```json
+{ "idempotency_key": "currency-1", "currency": "USD" }
+```
+
+Sets the company's base currency (owner only), three capital letters. Nothing is converted. The base currency's row comes first in every `by_currency` list, it is the default for a new loan, a new project's investment currency and `get_breakdown`'s lines, and the base-currency twins of the ILS-only figures are in it: `by_currency[].prev_income_minor`, `prev_expense_minor`, `prev_net_profit_minor` (null without a period), `get_home` `net_profit_minor`, `get_project` `overhead_share_minor` and `get_profit_months` `months[].overhead_share_minor`. Each of those responses carries `base_currency`. Output `data`: `id` (the company), `base_currency`, `prior` and `undo_kind: "company_currency"`. A bad code is `validation`. Undo, with the company id, puts the prior currency back; it is `conflict` once the currency was changed again ([0146](../decisions/0146-company-currency.md)).
 
 ### set_overhead_project
 

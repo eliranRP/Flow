@@ -5009,3 +5009,120 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
 .ui-months-note {
   margin-block-start: var(--space-4);
 }
+
+/*
+  FLOW-323 (option A) and FLOW-402: the transaction search. The results read top down; the chips
+  and the field sit in a dock at the bottom, above the keyboard (--kb), in the thumb zone.
+*/
+.ui-search-screen {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  min-inline-size: 0;
+  /* The dock rides above the keyboard, so the last rows clear both. */
+  padding-block-end: calc(var(--search-dock, 8.5rem) + var(--kb, 0px));
+}
+
+.ui-search-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--space-6);
+  margin-block-start: var(--space-2);
+  padding-inline: var(--space-side);
+  color: var(--color-text-secondary);
+}
+
+.ui-search-count .ui-spinner {
+  flex: none;
+}
+
+.ui-search-results {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-search-more {
+  margin-block-start: var(--space-4);
+}
+
+.ui-search-dock {
+  position: fixed;
+  z-index: 15;
+  inset-inline: 0;
+  bottom: var(--kb, 0px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-1) 0 calc(var(--safe-bottom) + var(--space-3));
+  border-top: 1px solid var(--color-line);
+  background: var(--color-bg);
+}
+
+html[data-kb="open"] .ui-search-dock {
+  padding-block-end: var(--space-2);
+}
+
+/* One row of chips that scrolls sideways; the block padding keeps each chip's 44px hit area. */
+.ui-search-chips {
+  display: flex;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  overflow-x: auto;
+  padding: var(--space-1) var(--space-side);
+  scroll-padding-inline: var(--space-side);
+  scrollbar-width: none;
+}
+
+.ui-search-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.ui-search-chips .ui-chip {
+  flex: none;
+  max-inline-size: 14rem;
+}
+
+.ui-search-dock-field {
+  padding-inline: var(--space-side);
+}
+
+/* The typed text inside a result's name: the tint behind it, the row's own text colour. */
+.ui-match {
+  background: var(--color-tint);
+  color: inherit;
+  font-weight: var(--type-title-3-weight);
+}
+
+/* A result's line 2 (date · project · category), cut at the end like the suggestion. */
+.ui-statement-details {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-statement-accent {
+  color: var(--color-accent-text);
+}
+
+/* The search entry on Home's band sits on the end side of the bar, as ⋯ does on a project. */
+.ui-band-row > .ui-search-entry {
+  margin-inline-start: auto;
+}
+
+.ui-band-pbar {
+  padding: var(--space-2) var(--space-side) 0;
+}
+
+.ui-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}

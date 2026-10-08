@@ -115,6 +115,7 @@ import { ReviewSkippedLink } from "../ui/review-skipped-list";
 import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
+import { SearchEntry } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
@@ -314,7 +315,14 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
       <ScreenState
         title="פרויקטים"
         subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
-        action={holdWrites ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+        // FLOW-323: the search icon sits in the bar's end corner, as on Home, with פרויקט חדש before it; the title stacks under.
+        stacked
+        trailing={(
+          <span className="ui-head-actions">
+            {holdWrites ? null : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+            <SearchEntry to={`/search${search}`} />
+          </span>
+        )}
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
         loading={
@@ -803,7 +811,10 @@ export function ProjectDetailScreen({
         categorySearch={periodQuery}
         categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
       />
-      <SectionHead title="תנועות" />
+      <SectionHead title="תנועות">
+        {/* FLOW-402: every line of the project, in the search with the project chip set. */}
+        <TextLink to={`/search${withParam(search, "project", project.id)}`} tone="quiet">כל התנועות</TextLink>
+      </SectionHead>
       {heldTransactions.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בתקופה הזו" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
       ) : (

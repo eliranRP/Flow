@@ -147,7 +147,8 @@ create function pg_temp.cur(p_co text, p_from date, p_to date, p_basis text, p_c
 returns jsonb
 language sql
 as $$
-  select x
+  -- The prev_* fields are checked in company_base_currency.test.sql.
+  select x - 'prev_income_minor' - 'prev_expense_minor' - 'prev_net_profit_minor'
   from jsonb_array_elements(pg_temp.pnl(p_co, p_from, p_to, p_basis) -> 'by_currency') x
   where x->>'currency' = p_cur;
 $$;

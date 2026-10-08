@@ -91,6 +91,13 @@ Deno.test("search_expenses passes its filters to search_transactions (FLOW-323)"
     assertEquals(data.expenses.map((row) => [row.id, row.reason]), [[line, "missing_project"]]);
   }
 
+  // A query alone also goes to search_transactions, which matches the supplier and the customer
+  // in any case, not only the description.
+  const queried = await callTool("search_expenses", { scope: "pending", query: "Example Tenant" }, ["read"], rpc);
+  assertEquals(queried.isError, false);
+  const byQuery = calls.filter((call) => call.name === "search_transactions").at(-1);
+  assertEquals([byQuery?.body.p_scope, byQuery?.body.p_query], ["pending", "Example Tenant"]);
+
   // Without a filter, pending still filters list_review and filed sends no filter arguments.
   const before = calls.length;
   await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
@@ -250,7 +257,8 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "get_transaction") return { status: 200, json: { id: review.transaction_id, description: "אלפא" } };
     if (name === "get_line_split") return { status: 200, json: null };
     if (name === "get_loan_split") return { status: 200, json: null };
-    if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
+    // A pending query goes through search_transactions, which picks the line; the row is list_review's.
+    if (name === "search_transactions") return { status: 200, json: { total: 1, expenses: [{ id: review.transaction_id }] } };
     if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
@@ -416,6 +424,9 @@ Deno.test("write tools are listed only for a write scope", () => {
     "reorder_loans",
     "set_project_investment",
     "set_category_rehab",
+    "delete_category",
+    "move_category_lines",
+    "set_company_currency",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -472,6 +483,9 @@ Deno.test("write tools are listed only for a write scope", () => {
     "reorder_loans",
     "set_project_investment",
     "set_category_rehab",
+    "delete_category",
+    "move_category_lines",
+    "set_company_currency",
     "undo",
     "undo_batch",
   ]);
@@ -2455,6 +2469,7 @@ Deno.test("get_breakdown calls the group totals, then a group's lines, and check
     if (name === "get_breakdown") {
       return { status: 200, json: { direction: "expense", totals: [], groups: [], excluded: [], review_count: 0 } };
     }
+    if (name === "mcp_company_loan_currency") return { status: 200, json: "USD" };
     return { status: 200, json: { rows: [], has_more: false } };
   });
   const groups = await callTool("get_breakdown", { direction: "expense" }, ["read"], rpc);
@@ -2494,9 +2509,11 @@ Deno.test("get_breakdown calls the group totals, then a group's lines, and check
 
   const kept = await callTool("get_breakdown", { direction: "expense", excluded: true }, ["read"], rpc);
   assertEquals(kept.isError, false);
-  assertEquals(calls[2]?.name, "get_breakdown_lines");
-  assertEquals(calls[2]?.body.p_excluded, true);
-  assertEquals(calls[2]?.body.p_group_key, null);
+  assertEquals(calls[2]?.name, "mcp_company_loan_currency", "no currency reads the company currency (FLOW-504)");
+  assertEquals(calls[3]?.name, "get_breakdown_lines");
+  assertEquals(calls[3]?.body.p_excluded, true);
+  assertEquals(calls[3]?.body.p_group_key, null);
+  assertEquals(calls[3]?.body.p_currency, "USD");
 
   const before = calls.length;
   for (const bad of [
@@ -3973,4 +3990,84 @@ Deno.test("get_expense takes the loan split from get_transaction when it carries
   assertEquals(out.isError, false);
   if (out.structuredContent.ok) assertEquals((out.structuredContent.data as { loan_split: unknown }).loan_split, split);
   assertEquals(calls.some((call) => call.name === "get_loan_split"), false, "no second read");
+});
+
+Deno.test("delete_category and move_category_lines forward their input, undo takes both kinds (FLOW-405)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "category_delete", id: CATEGORY } } }));
+  const deleted = await callTool("delete_category", { idempotency_key: "cd-1", category_id: CATEGORY.toUpperCase() }, ["write"], rpc);
+  assertEquals(deleted.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_delete_category", body: { p_idempotency_key: "cd-1", p_category_id: CATEGORY } });
+  const moved = await callTool("move_category_lines", {
+    idempotency_key: "cm-1", from_category_id: CATEGORY, into_category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(moved.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_move_category_lines", body: { p_idempotency_key: "cm-1", p_from: CATEGORY, p_into: INCOME_CATEGORY } });
+  for (const kind of ["category_delete", "category_move"]) {
+    const undo = await callTool("undo", { idempotency_key: "u-" + kind, kind, id: CATEGORY }, ["write"], rpc);
+    assertEquals(undo.isError, false);
+    assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-" + kind, p_kind: kind, p_id: CATEGORY } });
+  }
+
+  const denied = await callTool("delete_category", { idempotency_key: "k", category_id: CATEGORY }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const [tool, input] of [
+    ["delete_category", { idempotency_key: "k" }],
+    ["delete_category", { idempotency_key: "k", category_id: "not-a-uuid" }],
+    ["delete_category", { idempotency_key: "k", category_id: CATEGORY, force: true }],
+    ["move_category_lines", { idempotency_key: "k", from_category_id: CATEGORY }],
+    ["move_category_lines", { idempotency_key: "k", from_category_id: CATEGORY, into_category_id: "not-a-uuid" }],
+    ["move_category_lines", { idempotency_key: "k", from: CATEGORY, into: INCOME_CATEGORY }],
+  ] as const) {
+    const result = await callTool(tool, input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+});
+
+Deno.test("set_company_currency forwards the code, undo takes company_currency (FLOW-504)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "company_currency", base_currency: "USD" } } }));
+  const set = await callTool("set_company_currency", { idempotency_key: "cc-1", currency: "USD" }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_company_currency", body: { p_idempotency_key: "cc-1", p_currency: "USD" } });
+  const undo = await callTool("undo", { idempotency_key: "u-cc", kind: "company_currency", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-cc", p_kind: "company_currency", p_id: CATEGORY } });
+
+  const denied = await callTool("set_company_currency", { idempotency_key: "k", currency: "USD" }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k" },
+    { idempotency_key: "k", currency: "usd" },
+    { idempotency_key: "k", currency: "DOLLAR" },
+    { idempotency_key: "k", currency: "USD", company_id: CATEGORY },
+  ]) {
+    const result = await callTool("set_company_currency", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+});
+
+Deno.test("list_review supplier filter finds an income line by its customer", async () => {
+  const rows = [
+    { id: "q1", transaction_id: "t1", direction: "income", supplier_name: null, customer_name: "דירות הים", doc_date: "2026-09-10" },
+    { id: "q2", transaction_id: "t2", direction: "expense", supplier_name: "חומרי הים", customer_name: null, doc_date: "2026-09-11" },
+    { id: "q3", transaction_id: "t3", direction: "expense", supplier_name: "שיש", customer_name: null, doc_date: "2026-09-12" },
+  ];
+  const { rpc } = rpcOf((name) => {
+    if (name === "list_review") return { status: 200, json: rows };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    return { status: 500, json: null };
+  });
+  const page = await callTool("list_review", { supplier: "הים" }, ["read"], rpc);
+  assertEquals(page.isError, false);
+  if (page.structuredContent.ok) {
+    const data = page.structuredContent.data as { total: number; reviews: { id: string }[] };
+    assertEquals(data.reviews.map((row) => row.id), ["q1", "q2"]);
+  }
 });

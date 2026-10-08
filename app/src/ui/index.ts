@@ -55,3 +55,6 @@ export { toastFloor } from "./toast";
 export { OutwardChevron, PeriodBar } from "./period-bar";
 export { PeriodSheet } from "./period-picker";
 export { ProfitMark } from "./profit-mark";
+export { SearchEntry, SEARCH_FOCUS_STATE, wantsSearchFocus } from "./search-entry";
+export { MatchText, matchRange } from "./match-text";
+export type { StatementDetail } from "./statement";

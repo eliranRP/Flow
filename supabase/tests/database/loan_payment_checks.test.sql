@@ -365,33 +365,25 @@ select lives_ok(
 );
 reset role;
 
--- The currency default reads the newest 1000 lines, like the app.
+-- The currency default is the stored company currency (FLOW-504, decision 0146), not a guess
+-- from the lines: an ILS line does not change it.
 
 insert into public.transactions (
   company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
   vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
 )
 select c.id, 'expense', 'expense', -100, -100, 100, 0, 'unknown',
-  '2025-01-01', 'ILS', 'manual', 'f111:old-ils', 'Example old line'
+  '2026-04-01', 'ILS', 'manual', 'f111:new-ils', 'Example new line'
 from f111 c where c.label = 'company';
-insert into public.transactions (
-  company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
-  vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
-)
-select c.id, 'expense', 'expense', -100, -100, 100, 0, 'unknown',
-  '2026-03-01', 'USD', 'manual', 'f111:usd-' || g, 'Example line'
-from f111 c, generate_series(1, 1000) g where c.label = 'company';
--- The earlier fixture lines are USD and dated 2026-01-01, inside the newest 1000 cut or not.
-update public.transactions set removed_at = now()
-where company_id = (select id from f111 where label = 'company') and idempotency_key in ('f111:pay', 'f111:big');
+update public.companies set base_currency = 'USD' where id = (select id from f111 where label = 'company');
 
 select pg_temp.as_mcp('write');
-select is(public.mcp_company_loan_currency(), 'USD', 'an ILS line past the newest 1000 does not change the default');
+select is(public.mcp_company_loan_currency(), 'USD', 'the stored company currency is the loan default');
 
 reset role;
-update public.transactions set doc_date = '2026-04-01' where idempotency_key = 'f111:old-ils';
+update public.companies set base_currency = 'ILS' where id = (select id from f111 where label = 'company');
 select pg_temp.as_mcp('write');
-select is(public.mcp_company_loan_currency(), 'ILS', 'an ILS line inside the newest 1000 makes the default ILS');
+select is(public.mcp_company_loan_currency(), 'ILS', 'changing the company currency changes the default');
 
 select * from finish();
 

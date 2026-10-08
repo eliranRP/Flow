@@ -391,6 +391,38 @@ export const breakdownLinesSchema = z
   })
   .nullable();
 
+/**
+ * One page of `search_transactions` (FLOW-323, decision 0140): every matching line, newest first,
+ * with how it stands. `amount_net` is signed in the line's own currency, minor units.
+ */
+export const searchPageSchema = z.object({
+  total: z.number().int().nonnegative(),
+  expenses: z.array(
+    z.object({
+      id: z.string(),
+      description: z.string(),
+      doc_date: z.string(),
+      doc_kind: z.string().nullable().optional(),
+      amount_net: agorotSchema,
+      vat_agorot: agorotOrNull.optional(),
+      direction: z.enum(["income", "expense"]),
+      currency: z.string().regex(/^[A-Z]{3}$/),
+      amount_original: agorotOrNull.optional(),
+      line_status: z.enum(["pending", "posted", "void"]).nullable().optional().catch(undefined),
+      project_id: z.string().nullable(),
+      category_id: z.string().nullable(),
+      project_name: z.string().nullable(),
+      category_name: z.string().nullable(),
+      supplier_name: z.string().nullable(),
+      customer_name: z.string().nullable(),
+      waiting_review: z.boolean(),
+      kept_out: z.boolean(),
+      split_parts: z.number().int().nonnegative(),
+      loan_matched: z.boolean(),
+    }),
+  ),
+});
+
 const profitMonthCurrencySchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
   income_minor: agorotSchema,
@@ -426,6 +458,8 @@ export type BreakdownGroupBy = z.infer<typeof breakdownGroupBySchema>;
 export type BreakdownDirection = z.infer<typeof breakdownDirectionSchema>;
 export type Breakdown = z.infer<typeof breakdownSchema>;
 export type BreakdownLinesPage = z.infer<typeof breakdownLinesSchema>;
+export type SearchPage = z.infer<typeof searchPageSchema>;
+export type SearchRow = SearchPage["expenses"][number];
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
 export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
