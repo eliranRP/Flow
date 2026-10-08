@@ -293,6 +293,24 @@ describe("Jev review one tap", () => {
     expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
   });
 
+  it("shows the no-project answer from the real #177 shape, choice none, with the reasons read failing", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "none", confidence: 0.8 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = "not an array" as unknown as unknown[];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+  });
+
+  it("shows the no-project answer alone, when Jev named no category", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "none", confidence: 0.8 } } }];
+    db.reasons = [{ transaction_id: "t1", direction: "expense", project_id: null, project_name: null, no_project: true, category_id: null, category_name: null, confidence: 0.8, reason: "usual_for_party", party_filings: 4, matching_filings: 3, anomaly_score: null }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
+  });
+
   it("approves a Jev-filled category with the stored shown ids", async () => {
     const row: ReviewRow = {
       ...stored,

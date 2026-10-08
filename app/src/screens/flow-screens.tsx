@@ -1540,14 +1540,9 @@ export function ReviewQueue({
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       if (reviewIsSplit(filled) && filled.reason !== "unallocated_shared") {
-        if (filled.category_id !== target.category_id && target.transaction_id) {
-          assertNoError(await supabase.rpc("set_transaction_category", {
-            p_id: target.transaction_id,
-            p_category_id: filled.category_id,
-            p_resolve: false,
-          }));
-        }
-        assertNoError(await supabase.rpc("approve_split_review", { p_id: filled.id }));
+        // #177: one call sets the category (when it changed) and approves, so a failure can't
+        // leave the category saved with the card still open.
+        assertNoError(await supabase.rpc("approve_split_review", { p_id: filled.id, p_category_id: filled.category_id }));
         markHandled(filled.id);
         return;
       }

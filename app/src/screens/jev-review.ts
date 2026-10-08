@@ -142,8 +142,11 @@ export function parseJevSuggestion(
   if (!isRecord(answers)) return null;
   const project = readChoice(answers.project, projects);
   const category = readChoice(answers.category, categories);
-  if (!project && !category) return null;
-  return { suggestionId, transactionId, project, category };
+  // #177: Jev answers the project question with choice "none" (no project / overhead). It
+  // pre-fills nothing, but the card shows it, with or without the reasons read.
+  const noProject = project == null && isRecord(answers.project) && answers.project.choice === "none";
+  if (!project && !category && !noProject) return null;
+  return { suggestionId, transactionId, project, category, ...(noProject ? { noProject: true as const } : {}) };
 }
 
 type NameRow = { id: string; name: string; status?: string; hidden?: boolean };
