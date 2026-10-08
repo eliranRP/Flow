@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { allTime, presetPeriod, stepPeriod, windowLabel, type PeriodChoice } from "../period";
 import { COMMIT_RATIO, EDGE_PX, FLICK_MIN_PX, FLICK_SPEED, PeriodSwipe, inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
 
-describe("swipe rules (FLOW-314's, decision 0148)", () => {
+describe("swipe rules (FLOW-314's, decision 0149)", () => {
   it("decides nothing under 10px, then the larger axis", () => {
     expect(swipeAxis(6, 3)).toBeNull();
     expect(swipeAxis(12, 4)).toBe("x");

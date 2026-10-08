@@ -1,5 +1,5 @@
 /*
-  FLOW-335 + FLOW-336 + FLOW-337 (decision 0148): period bar, project band, by-month and Unpaid
+  FLOW-335 + FLOW-336 + FLOW-337 (decision 0149): period bar, project band, by-month and Unpaid
   polish. Loaded after the other area files, so a rule here overrides the block it names.
 */
 
@@ -68,7 +68,7 @@
 }
 
 /*
-  FLOW-336 (decision 0148): the band figure steps the period with a sideways swipe. pan-y keeps
+  FLOW-336 (decision 0149): the band figure steps the period with a sideways swipe. pan-y keeps
   the page's vertical scroll with the browser; the figure follows the finger and settles back.
 */
 .ui-pswipe {

@@ -4,6 +4,9 @@ import {
   deleteFailureText,
   movedToast,
   moveFailureText,
+  RENAME_CATEGORY_SAVED,
+  RENAME_CATEGORY_UNDONE,
+  renameCategoryFailureText,
   restoreFailureText,
   undoMoveFailureText,
 } from "../category-copy";
@@ -119,6 +122,43 @@ export function useCategoryRehab() {
     },
   });
   return write;
+}
+
+type Rename = { id: string; name: string; previous: string };
+
+/** rename_category (#228) returns { id, name, before, after }; ביטול calls it again with the old name. */
+async function renameCategory(id: string, name: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  assertNoError(await supabase.rpc("rename_category", { p_category_id: id, p_name: name }));
+}
+
+/** rename_category, then a "השם נשמר" toast whose ביטול writes the old name back. */
+export function useRenameCategory(options: { onRenamed?: () => void } = {}) {
+  const toast = useToast();
+  const undo = useWrite<Rename>({
+    failure: renameCategoryFailureText,
+    success: RENAME_CATEGORY_UNDONE,
+    keys: CATEGORY_WRITE_KEYS,
+    run: async ({ id, previous }) => { await renameCategory(id, previous); },
+  });
+  const saved = useRef<Rename | null>(null);
+  const rename = useWrite<Rename>({
+    failure: renameCategoryFailureText,
+    keys: CATEGORY_WRITE_KEYS,
+    // Also runs after a retry from the failure toast, so it reads the last payload.
+    onSuccess: () => {
+      const done = saved.current;
+      if (done == null) return;
+      toast.show({ message: RENAME_CATEGORY_SAVED, action: "ביטול", onAction: () => { undo.mutate(done); } });
+      options.onRenamed?.();
+    },
+    run: async (payload) => {
+      saved.current = payload;
+      await renameCategory(payload.id, payload.name);
+    },
+  });
+  return { rename, undo };
 }
 
 function record(value: unknown): Record<string, unknown> {

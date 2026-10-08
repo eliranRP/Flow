@@ -318,7 +318,7 @@ export function ProjectDetailScreen({
           {/* FLOW-335: an active project says nothing here; only another state takes the line. */}
           {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
           <PeriodBar period={period} onChange={setPeriod} scope="project" toDateHint={false} />
-          {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0148). */}
+          {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0149). */}
           <PeriodSwipe period={period} onChange={setPeriod}>
             <p className="ui-band-label t-label ui-project-period-label">
               {bandLoss ? "הפסד" : "רווח"} {periodWords}

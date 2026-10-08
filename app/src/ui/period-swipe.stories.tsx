@@ -8,7 +8,7 @@ import { PeriodSwipe } from "./period-swipe";
 import { TopBand } from "./top-band";
 
 /**
- * FLOW-336 (decision 0148): the band's hero figure takes a sideways swipe that steps the period,
+ * FLOW-336 (decision 0149): the band's hero figure takes a sideways swipe that steps the period,
  * as the stepper does. On a touch screen, a finger moving right goes earlier and left goes later.
  */
 function Demo({ start }: { start: "months3" | "all" }) {

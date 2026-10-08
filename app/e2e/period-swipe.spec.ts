@@ -1,6 +1,6 @@
 import { expect, test, type CDPSession, type Page } from "@playwright/test";
 
-// FLOW-336 (decision 0148): a sideways swipe on the band figure steps the period, with real touch
+// FLOW-336 (decision 0149): a sideways swipe on the band figure steps the period, with real touch
 // events from the browser (CDP), on a phone-sized touch viewport. Chromium only.
 test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
 
