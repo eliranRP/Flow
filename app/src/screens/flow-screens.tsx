@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
@@ -202,7 +203,8 @@ export function OnboardingScreen({ initialName }: { initialName?: string } = {})
     if (holdWrites || save.isPending) return;
     // The create_company rule (FLOW-606), on the field instead of a save toast.
     const problem = companyNameError(name);
-    setNameError(problem);
+    // Commit the message before focus, so the field is announced with it.
+    flushSync(() => { setNameError(problem); });
     if (problem) {
       nameRef.current?.focus();
       return;

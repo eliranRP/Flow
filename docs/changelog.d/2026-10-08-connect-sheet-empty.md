@@ -1,0 +1,1 @@
+The Mercury and SUMIT connect sheets catch an empty key or company number in place (FLOW-508). Before, an empty field went to the server and came back as a toast. Now the field says "חסר מפתח." or "חסר מספר חברה." and gets the focus. The fields can't be edited while a connect is running.
