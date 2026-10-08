@@ -882,6 +882,9 @@ isOneToOne: false
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"list_skipped_review":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "list_unpaid":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

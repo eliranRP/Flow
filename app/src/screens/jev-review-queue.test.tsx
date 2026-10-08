@@ -581,3 +581,77 @@ describe("Jev review one tap", () => {
     expect(db.writes).toEqual([]);
   });
 });
+
+describe("review card pin (prod QA: אישור approved another line)", () => {
+  beforeEach(() => {
+    db.integration = null;
+    db.suggestions = [];
+    db.writes = [];
+    db.closed = new Set();
+    bindJevConnectorScope(scope);
+  });
+
+  const other: ReviewRow = {
+    ...open,
+    id: "r2",
+    transaction_id: "t2",
+    description: "קבלן משנה",
+    supplier_name: "קבלן משנה בע״מ",
+    doc_date: "2026-04-01",
+  };
+
+  function queue(rows: ReviewRow[], client: QueryClient) {
+    db.rows = rows;
+    return (
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={rows} search="" />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  it("keeps the card on screen when a refetch reorders the queue", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(queue([open, other], client));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    view.rerender(queue([other, open], client));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
+  });
+
+  it("returns to the same card after the picker, whatever order the queue comes back in", async () => {
+    const first = render(queue([open, other], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    first.unmount();
+    render(queue([other, open], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+  });
+
+  it("skips the card on screen and ביטול reopens it", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(queue([open, other], client));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    view.rerender(queue([other, open], client));
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    await waitFor(() => {
+      expect(db.writes.find((call) => call.name === "resolve_review")?.args).toEqual({ p_id: "r1", p_action: "skipped" });
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    await waitFor(() => {
+      expect(db.writes.find((call) => call.name === "reopen_review")?.args).toEqual({ p_id: "r1" });
+    });
+    expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
+  });
+
+  it("moves on once the card leaves the queue", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(queue([open, other], client));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    view.rerender(queue([other], client));
+    expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();
+  });
+});

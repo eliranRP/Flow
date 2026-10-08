@@ -56,6 +56,7 @@ import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-re
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
+import { pinReviewHead, pinReviewLine, reviewPin } from "../review-pin";
 import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
@@ -1394,9 +1395,15 @@ export function ReviewQueue({
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
-  const rows = useHeldOrder(incoming, (item) => item.id);
+  const held = useHeldOrder(incoming, (item) => item.id);
+  // The card on screen stays the head until it is handled, so a refetch that reorders the
+  // queue can't swap another line under אישור. A card opened from the list keeps its focus.
+  const rows = fromList ? held : pinReviewHead(held, reviewPin());
   const [hideAuto, setHideAuto] = useState(false);
-  const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
+  const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
+  useEffect(() => {
+    if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
+  }, [fromList, shown]);
   const jevQueue = useJevQueue(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
@@ -1411,6 +1418,9 @@ export function ReviewQueue({
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
   const approvedId = useRef<string | null>(null);
+  const approvedLine = useRef<string | null>(null);
+  const skippedId = useRef<string | null>(null);
+  const skippedLine = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
   const approveGuard = useRef(false);
   const setupHandoffShown = useRef(false);
@@ -1422,7 +1432,6 @@ export function ReviewQueue({
     visit.current = noteHandled(visit.current, id);
     bumpVisit((value) => value + 1);
   }
-  const row = rows[0];
   const leaving = motion === "out";
   const nextCard = rows[0] ?? null;
   const nextCardRef = useRef(nextCard);
@@ -1478,6 +1487,7 @@ export function ReviewQueue({
     run: async () => {
       const target = shown;
       approvedId.current = target?.id ?? null;
+      approvedLine.current = target?.transaction_id ?? null;
       if (previewWrite) {
         await previewWrite.run();
         if (target) markHandled(target.id);
@@ -1526,12 +1536,15 @@ export function ReviewQueue({
     onSuccess: () => {
       const id = approvedId.current;
       if (!id) return;
+      // ביטול brings the undone card back to the front.
+      const line = approvedLine.current;
       if (previewWrite) {
         previewWrite.onDone(id);
         toast.show({
           message: "הפריט אושר",
           action: "ביטול",
           onAction: () => {
+            pinReviewLine(line);
             previewWrite.onUndo(id);
           },
         });
@@ -1553,6 +1566,7 @@ export function ReviewQueue({
         message: "הפריט אושר",
         action: "ביטול",
         onAction: () => {
+          pinReviewLine(line);
           void reopenReview(id, invalidate, toast);
         },
       });
@@ -1560,25 +1574,44 @@ export function ReviewQueue({
   });
   const skip = useWrite({
     failure: previewWrite ? changeSaveFailure : "לא הצלחנו לדלג.",
-    success: "דילגנו על הפריט",
     keys: ["review", "project", "project-category", "project-waiting"],
     run: async () => {
+      // The card on screen, like אישור; rows[0] can differ while the queue reorders.
+      const target = shown;
+      skippedId.current = target?.id ?? null;
+      skippedLine.current = target?.transaction_id ?? null;
       if (previewWrite) {
         await previewWrite.run();
-        if (row) markHandled(row.id);
+        if (target) markHandled(target.id);
         return;
       }
-      if (!row) throw new Error("missing");
+      if (!target) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("resolve_review", {
-        p_id: row.id,
+        p_id: target.id,
         p_action: "skipped",
       }));
-      markHandled(row.id);
+      markHandled(target.id);
     },
     onSuccess: () => {
-      if (previewWrite && row) previewWrite.onDone(row.id);
+      const id = skippedId.current;
+      if (!id) return;
+      if (previewWrite) previewWrite.onDone(id);
+      // ביטול puts the skipped card back at the front (Eliran 2026-10-08: list + undo).
+      const line = skippedLine.current;
+      toast.show({
+        message: "דילגנו על הפריט",
+        action: "ביטול",
+        onAction: () => {
+          pinReviewLine(line);
+          if (previewWrite) {
+            previewWrite.onUndo(id);
+            return;
+          }
+          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.");
+        },
+      });
     },
   });
   const card = shown;
@@ -1796,20 +1829,21 @@ async function reopenReview(
   id: string,
   invalidate: (keys: string[]) => Promise<void>,
   toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void }) => void },
+  done = "הפריט חזר לתור, והשיוך הקודם שוחזר.",
 ) {
   try {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
     await invalidate(["review", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
-    toast.show({ message: "הפריט חזר לתור, והשיוך הקודם שוחזר." });
+    toast.show({ message: done });
   } catch {
     toast.show({
       tone: "bad",
       message: "לא הצלחנו לבטל.",
       action: "ניסיון חוזר",
       onAction: () => {
-        void reopenReview(id, invalidate, toast);
+        void reopenReview(id, invalidate, toast, done);
       },
     });
   }

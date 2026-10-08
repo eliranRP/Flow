@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
 | UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-309 (#158) | Next small, high-impact `BUG` or `BACKLOG NIT` |
+| Backlog bug fixes | Review prod-QA fixes: card pin, skip undo, filed-today count (#161) | FLOW-507, FLOW-315 server parts, rest of FLOW-205 |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -547,6 +547,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [ ] Income always reports `missing_project` even when the category is missing too. (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
 - [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
+- [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
+- [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
+- [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
+- [ ] App: a דולגו section under הצג הכול that lists `list_skipped_review` with החזרה לתור (`reopen_review`). Mercury UI thread. Also drop the reviewer preview's approved split from its filed-today sample (`fileReviewerApproval`).
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
@@ -922,6 +926,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Infra and CI
 
+
+<a id="flow-705"></a>
+### FLOW-705 · Jev anomalies follow-ups (#160 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] A voided credit note still suppresses a duplicate flag.
+- [ ] An income receipt that pays several invoices can be flagged as a spike.
+- [ ] pgTAP cases for a pending line, two loans and an uneven median.
+- [ ] `mcp_review_anomalies` scans many rows when few lines are open.
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
