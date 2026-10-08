@@ -95,13 +95,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | ready |
-| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
+| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | claimed (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc) |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | in-progress (#163 server and MCP; the screen goes to the UI lane) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
-| 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | ready (owner chose 2026-10-08) |
+| 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
 
 Everything else follows by area, roughly in priority order inside each area.
 
