@@ -45,6 +45,7 @@ const modulePatterns = [
   /[/\\]reviewer-preview\./,
   /[/\\]reviewer-sample\./,
   /[/\\]review-e2e-fixture\./,
+  /[/\\]search-e2e-fixture\./,
   /[/\\]assistant-sample\./,
 ];
 

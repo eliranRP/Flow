@@ -12,7 +12,8 @@ type Common = {
 type AsButton = Common &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "aria-label" | "className"> & { to?: undefined };
 
-type AsLink = Common & { to: string };
+/** `state` rides on the link's history entry; the search entry uses it to focus the field on arrival. */
+type AsLink = Common & { to: string; state?: unknown };
 
 export type IconButtonProps = AsButton | AsLink;
 
@@ -34,6 +35,7 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
           assignRef(ref, node);
         }}
         to={props.to}
+        state={props.state}
         aria-label={props.label}
         className={className}
       >

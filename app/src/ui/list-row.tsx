@@ -1,10 +1,11 @@
-import { useId, type ReactNode, type Ref } from "react";
+import { Fragment, useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { BigNumber } from "./big-number";
 import { StatusPill } from "./chip";
 import { cx } from "./cx";
-import { statementRowLabel, textDir, type StatementMethod } from "./statement";
+import { MatchText } from "./match-text";
+import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
 
@@ -88,6 +89,10 @@ export type StatementRowProps = {
   state?: unknown;
   /** Replaces the built name (statementRowLabel). */
   label?: string;
+  /** Typed search text: its first match in the name is tinted (FLOW-323). */
+  match?: string;
+  /** Muted facts on line 2 after the suggestion, joined with " · " (date, project, state). FLOW-323. */
+  details?: StatementDetail[];
 };
 
 export function ListRow(props: ListRowProps) {
@@ -294,13 +299,16 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
 function StatementRow(props: StatementRowProps) {
   const dir = textDir(props.title);
   const label = props.label ?? statementRowLabel(props);
-  const line2 = props.pending === true || (props.suggestion != null && props.suggestion !== "");
+  const details = (props.details ?? []).filter((detail) => detail.text !== "");
+  const line2 = props.pending === true || (props.suggestion != null && props.suggestion !== "") || details.length > 0;
   return (
     <Link to={props.href} state={props.state} className="ui-row ui-hit ui-row-statement" aria-label={label}>
       <span className="ui-row-main">
         <Avatar name={props.title} fallback={props.fallback} />
         <span className="ui-row-text">
-          <span className="ui-row-title ui-statement-title" dir={dir}>{props.title}</span>
+          <span className="ui-row-title ui-statement-title" dir={dir}>
+            <MatchText text={props.title} match={props.match} />
+          </span>
           {line2 ? (
             <span className="ui-row-hint ui-statement-line">
               {props.pending === true ? <StatusPill>בהמתנה</StatusPill> : null}
@@ -308,6 +316,16 @@ function StatementRow(props: StatementRowProps) {
                 <span className="ui-statement-suggest" data-clip-ok="">
                   <span className="ui-statement-spark" aria-hidden="true">✦ </span>
                   {props.suggestion}
+                </span>
+              ) : null}
+              {details.length > 0 ? (
+                <span className="ui-statement-details" data-clip-ok="">
+                  {details.map((detail, index) => (
+                    <Fragment key={`${String(index)}:${detail.text}`}>
+                      {index > 0 ? " · " : null}
+                      <span className={detail.tone === "accent" ? "ui-statement-accent" : undefined}>{detail.text}</span>
+                    </Fragment>
+                  ))}
                 </span>
               ) : null}
             </span>

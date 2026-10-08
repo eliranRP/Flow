@@ -11,6 +11,9 @@ import { BankIcon, CameraIcon, CardIcon, DocumentIcon, TransferIcon } from "./ic
  */
 export type StatementMethod = { icon: ReactNode; text: string; spoken?: string; ltr?: boolean };
 
+/** One muted fact on a statement row's second line. Accent marks a state to act on ("ממתינה לאישור"). */
+export type StatementDetail = { text: string; tone?: "accent" };
+
 export type StatementSource = "sumit" | "mercury" | "manual" | "photo";
 
 /**
@@ -60,7 +63,7 @@ export function docKindShort(kind: string | undefined): string {
 
 /**
  * The statement row's link name, in reading order: counterparty, method in words, the suggestion,
- * the direction word and the amount, then "בהמתנה". The avatar, icons and ✦ are hidden.
+ * the line-2 details, the direction word and the amount, then "בהמתנה". The avatar, icons and ✦ are hidden.
  */
 export function statementRowLabel(input: {
   title: string;
@@ -71,6 +74,7 @@ export function statementRowLabel(input: {
   sign: "in" | "out";
   inWord?: string;
   pending?: boolean;
+  details?: readonly StatementDetail[];
 }): string {
   const abs = input.agorot < 0n ? -input.agorot : input.agorot;
   const income = input.sign === "in" && input.agorot >= 0n;
@@ -80,6 +84,7 @@ export function statementRowLabel(input: {
     input.title,
     input.method ? input.method.spoken ?? input.method.text : null,
     input.suggestion ? `הצעה: ${input.suggestion}` : null,
+    ...(input.details ?? []).map((detail) => detail.text),
     `${word} ${amount}`,
     input.pending ? "בהמתנה" : null,
   ];
