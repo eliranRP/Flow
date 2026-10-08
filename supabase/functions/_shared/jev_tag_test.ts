@@ -312,6 +312,7 @@ function filing(overrides: Partial<TagFiling> = {}): TagFiling {
     categoryId: CATEGORY,
     pnlRole: "project",
     split: false,
+    direction: "expense",
     ...overrides,
   };
 }
@@ -1463,7 +1464,7 @@ Deno.test("the run sends only the calls the cap granted, logs usage, and frees t
     p_tagged: 1,
     p_failed: 0,
   }]);
-  assertEquals(log.rpc, ["jev_take_lease", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
+  assertEquals(log.rpc, ["jev_take_lease", "jev_line_flags", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
 });
 
 Deno.test("a spent cap does not read the key or call Jev", async () => {
@@ -1475,7 +1476,7 @@ Deno.test("a spent cap does not read the key or call Jev", async () => {
   assertEquals(log.jev, 0);
   assertEquals(log.key, 0);
   assertEquals((finished as { p_calls: number }[]).map((row) => row.p_calls), [0]);
-  assertEquals(log.rpc, ["jev_take_lease", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
+  assertEquals(log.rpc, ["jev_take_lease", "jev_line_flags", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
 });
 
 Deno.test("a stopped run still records the call it made and frees the lease", async () => {
@@ -1528,4 +1529,178 @@ Deno.test("three provider failures in a row end the run without sending the rest
   }, "jev-test-key", { log: () => {} });
   assertEquals(mixed, 5);
   assertEquals(bad.failed, 5);
+});
+
+const INCOME_CATEGORY = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const CUSTOMER = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const incomeCategories = [{ id: INCOME_CATEGORY, name: "הכנסות" }];
+
+function incomeAnswers(confidence = 0.97) {
+  return {
+    project: { type: "choice", choice: PROJECT, confidence },
+    category: { type: "choice", choice: INCOME_CATEGORY, confidence },
+  };
+}
+
+Deno.test("an income line gets a project and an income category, and auto does not pre-fill it", async () => {
+  const seen: JevCall[] = [];
+  const store = memoryStore();
+  const income = expense({
+    direction: "income",
+    supplierName: "לקוח",
+    supplierId: CUSTOMER,
+    amountGross: 11800,
+    amountNet: 10000,
+    vatAmount: 1800,
+    pnlRole: null,
+    allocationCount: 0,
+  });
+  const report = await tagWork(
+    [company({ incomeCategories, expenses: [income] })],
+    store,
+    (_key, input) => {
+      seen.push(input);
+      return Promise.resolve({ model: JEV_MODEL, answers: incomeAnswers(), usage: null });
+    },
+    "jev-test-key",
+  );
+  assertEquals(report.tagged, 1);
+  assertEquals(report.prefilled, 0);
+  assertEquals(store.writes.length, 0);
+  const questions = seen[0].questions;
+  assertEquals(Object.keys(questions).sort(), ["category", "project"]);
+  assertEquals(questions.category.type === "choice" && Object.keys(questions.category.criteria), [INCOME_CATEGORY]);
+  assert(String(questions.project.instructions).includes("income line"));
+  const state = seen[0].state as Record<string, unknown>;
+  assertEquals(state.direction, "income");
+  assertEquals(state.customer, "לקוח");
+  assertEquals("supplier" in state, false);
+  assertEquals(store.suggestions[0].confidence, 0.97);
+  assertEquals((store.suggestions[0].answers.category as { choice: string }).choice, INCOME_CATEGORY);
+});
+
+Deno.test("an expense category is not a valid answer on an income line", () => {
+  const income = expense({ direction: "income", pnlRole: null, allocationCount: 0 });
+  const plan = planTag(income, "auto", 0.5, projects, incomeCategories, answers());
+  assertEquals(plan.write, null);
+  // The category answer is the expense id, which income does not offer: it scores 0.
+  assertEquals(plan.confidence, 0);
+});
+
+Deno.test("a flagged line's call also asks Jev to score the flag, with the flags in the state", async () => {
+  const seen: JevCall[] = [];
+  const store = memoryStore();
+  const flagged = expense({ flags: [{ kind: "amount_spike", detail: { typical_amount_minor: 1000, ratio: 10 } }] });
+  await tagWork(
+    [company({ mode: "shadow", expenses: [flagged, expense({ id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" })] })],
+    store,
+    (_key, input) => {
+      seen.push(input);
+      return Promise.resolve({
+        model: JEV_MODEL,
+        answers: { ...answers(0.9, 0.8), anomaly: { type: "noul", noul: 0.72 } },
+        usage: null,
+      });
+    },
+    "jev-test-key",
+  );
+  assertEquals(seen.length, 2);
+  assertEquals(seen[0].questions.anomaly?.type, "noul");
+  assertEquals((seen[0].state as Record<string, unknown>).flags, [
+    { kind: "amount_spike", typical_amount_minor: 1000, ratio: 10 },
+  ]);
+  assertEquals("anomaly" in seen[1].questions, false);
+  assertEquals("flags" in (seen[1].state as Record<string, unknown>), false);
+  // The score is kept with the answers and does not change the suggestion's confidence.
+  assertEquals(store.suggestions[0].answers.anomaly, { type: "noul", noul: 0.72 });
+  assertEquals(store.suggestions[0].confidence, 0.8);
+});
+
+Deno.test("a flag alone does not make a call when there is nothing to ask", () => {
+  assertEquals(buildTagQuestions([], [], "expense", true), {});
+  assertEquals(Object.keys(buildTagQuestions([], categories, "expense", true)).sort(), ["anomaly", "category"]);
+});
+
+Deno.test("the store reads income lines with the customer, income categories, and flags", async () => {
+  const urls: string[] = [];
+  const bodies = new Map<string, unknown>();
+  const income = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const fetch: typeof globalThis.fetch = (input, init) => {
+    const url = String(input);
+    urls.push(url);
+    if (init?.body) bodies.set(url, JSON.parse(String(init.body)));
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/categories") && url.includes("kind=eq.income")) {
+      return Promise.resolve(Response.json(incomeCategories));
+    }
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/rpc/jev_supplier_history")) {
+      return Promise.resolve(Response.json([
+        { supplier_id: CUSTOMER, direction: "income", doc_date: "2026-03-01", description: "חשבונית", amount_net: 5000, project_id: PROJECT, category_id: INCOME_CATEGORY, pnl_role: null, split: false },
+        { supplier_id: CUSTOMER, direction: "expense", doc_date: "2026-02-01", description: "החזר", amount_net: -100, project_id: null, category_id: null, pnl_role: null, split: false },
+      ]));
+    }
+    if (url.includes("/rpc/jev_line_flags")) {
+      return Promise.resolve(Response.json([
+        { transaction_id: income, kind: "duplicate", other_transaction_id: EXPENSE, other_doc_date: "2026-04-10" },
+      ]));
+    }
+    if (url.includes("/transactions")) {
+      return Promise.resolve(Response.json([
+        txnRow(),
+        txnRow({
+          id: income,
+          direction: "income",
+          doc_date: "2026-04-11",
+          supplier_id: null,
+          customer_id: CUSTOMER,
+          suppliers: null,
+          customers: { name: "לקוח" },
+          pnl_role: null,
+          allocations: [],
+        }),
+      ]));
+    }
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
+  const transactions = urls.find((url) => url.includes("/transactions"));
+  assert(transactions && !transactions.includes("direction=eq."));
+  assert(transactions.includes("customers(name)"));
+  assertEquals(work[0].incomeCategories, incomeCategories);
+  const line = work[0].expenses.find((item) => item.id === income);
+  assert(line);
+  assertEquals(line.direction, "income");
+  assertEquals(line.supplierName, "לקוח");
+  assertEquals(line.supplierId, CUSTOMER);
+  assertEquals(line.history?.map((filing) => filing.description), ["חשבונית"]);
+  assertEquals(line.flags, [{ kind: "duplicate", detail: { other_doc_date: "2026-04-10" } }]);
+  assertEquals(work[0].expenses.find((item) => item.id === EXPENSE)?.flags, undefined);
+  const flagsUrl = urls.find((url) => url.includes("/rpc/jev_line_flags"));
+  assert(flagsUrl);
+  assertEquals((bodies.get(flagsUrl) as { p_ids: string[] }).p_ids.sort(), [EXPENSE, income].sort());
+});
+
+Deno.test("expense-only runs do not read income categories, and a failed flag read still tags", async () => {
+  const urls: string[] = [];
+  const fetch: typeof globalThis.fetch = (input) => {
+    const url = String(input);
+    urls.push(url);
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/rpc/jev_line_flags")) return Promise.resolve(new Response(null, { status: 500 }));
+    if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
+  assertEquals(work[0].expenses.length, 1);
+  assertEquals(work[0].expenses[0].flags, undefined);
+  assertEquals(work[0].incomeCategories, []);
+  assert(urls.every((url) => !url.includes("kind=eq.income")));
 });

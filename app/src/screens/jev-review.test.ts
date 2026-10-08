@@ -137,6 +137,12 @@ describe("Jev review prefill", () => {
     });
   });
 
+  it("suggests a project on an income line, which needs one in review", () => {
+    const income = { ...empty, direction: "income" as const };
+    expect(withJev(income, on).project_id).toBe("p1");
+    expect(jevShown(income, on)).toEqual({ project: true, category: true });
+  });
+
   it("fills an empty category when list_review reports category_suggested false", () => {
     expect(empty.category_suggested).toBe(false);
     expect(empty.category_id).toBeNull();

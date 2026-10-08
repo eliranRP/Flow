@@ -940,10 +940,10 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-705"></a>
 ### FLOW-705 · Jev anomalies follow-ups (#160 review)
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] A voided credit note still suppresses a duplicate flag.
-- [ ] An income receipt that pays several invoices can be flagged as a spike.
+- [x] A voided credit note still suppresses a duplicate flag. (#168)
+- [x] An income receipt that pays several invoices can be flagged as a spike. (#168)
 - [ ] pgTAP cases for a pending line, two loans and an uneven median.
-- [ ] `mcp_review_anomalies` scans many rows when few lines are open.
+- [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —

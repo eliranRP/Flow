@@ -876,6 +876,9 @@ isOneToOne: false
 "jev_finish_usage":
 { Args: { "p_calls": number,"p_company": string,"p_failed"?: number,"p_input_tokens"?: number,"p_output_tokens"?: number,"p_run": string,"p_tagged"?: number }; Returns: undefined
                            },
+"jev_line_flags":
+{ Args: { "p_company": string,"p_ids": (string)[] }; Returns: Json
+                           },
 "jev_mark_failed":
 { Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
                            },
@@ -884,6 +887,9 @@ isOneToOne: false
                            },
 "jev_reserve_calls":
 { Args: { "p_company": string,"p_run": string,"p_want": number }; Returns: number
+                           },
+"jev_suggestions":
+{ Args: { "p_transaction_ids": (string)[] }; Returns: Json
                            },
 "jev_supplier_history":
 { Args: { "p_company": string,"p_per"?: number,"p_suppliers": (string)[] }; Returns: Json
@@ -965,6 +971,9 @@ isOneToOne: false
 { Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
                            },
 "mcp_jev_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_jev_suggestions":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mcp_list_loans":
