@@ -92,7 +92,8 @@ create trigger transactions_line_split_review
 
 -- A line can wait behind another open review (one open review per line). When that review
 -- closes, judge the line again. A split_mismatch review that is reopened (reopen_review, undo)
--- is judged again too, so it does not stay open on parts that match. Closing a split_mismatch
+-- is judged again too, so it does not stay open on parts that match; another review that is
+-- reopened takes the line back from an open split_mismatch. Closing a split_mismatch
 -- review itself (approve, skip, or the delete above) changes nothing here.
 create or replace function private.review_queue_line_split_review()
 returns trigger
@@ -117,6 +118,17 @@ begin
     and new.reason = 'split_mismatch'
   then
     perform private.line_split_review_sync(new.transaction_id);
+  elsif tg_op = 'UPDATE'
+    and new.status = 'open'
+    and old.status is distinct from 'open'
+    and new.reason is distinct from 'split_mismatch'
+  then
+    -- Another review came back (undo of a skip): it holds the line again, one open review.
+    delete from public.review_queue q
+    where q.transaction_id = new.transaction_id
+      and q.company_id = new.company_id
+      and q.status = 'open'
+      and q.reason = 'split_mismatch';
   end if;
   return null;
 end;

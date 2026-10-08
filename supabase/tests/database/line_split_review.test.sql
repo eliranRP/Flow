@@ -7,7 +7,7 @@ begin;
 -- The review follows the parts at commit (a deferred trigger); judge after each statement.
 set constraints all immediate;
 
-select plan(34);
+select plan(38);
 
 do $users$
 begin
@@ -178,6 +178,16 @@ select lives_ok($$select public.resolve_review((select id from public.review_que
   'the owner skips the other review');
 reset role;
 select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'then the mismatch gets its own review');
+select tests.authenticate_as('lsr_owner');
+select lives_ok($$select public.reopen_review((select id from public.review_queue where transaction_id = (select id from lsr where label = 'txn_busy') and reason = 'suggested'))$$,
+  'the owner undoes the skip');
+reset role;
+select is(pg_temp.open_reviews('txn_busy'), '["suggested"]'::jsonb, 'the line is back to one open review');
+select tests.authenticate_as('lsr_owner');
+select lives_ok($$select public.resolve_review((select id from public.review_queue where transaction_id = (select id from lsr where label = 'txn_busy') and status = 'open'), 'skipped')$$,
+  'and skips it again');
+reset role;
+select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'the mismatch review is back');
 
 -- A skipped split_mismatch that is reopened after the parts were fixed does not stay open.
 select tests.authenticate_as('lsr_owner');
