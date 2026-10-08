@@ -169,6 +169,9 @@ describe("ReviewCard הצעת Jev", () => {
       const title = tag.closest(".ui-row-title");
       expect(title?.firstElementChild).toHaveClass("ui-row-title-text");
       expect(title?.lastElementChild).toBe(tag);
+      const chevron = tag.closest("button")?.querySelector(".ui-row-chevron");
+      expect(chevron).not.toBeNull();
+      expect(title?.compareDocumentPosition(chevron as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     }
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
   });
