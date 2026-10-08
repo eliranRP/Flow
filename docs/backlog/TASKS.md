@@ -21,6 +21,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
+| File split | FLOW-807: split the big files, one PR per file (#219: `flow-screens.tsx` minus the review area) | Review screens out of `flow-screens.tsx`, then `screens.stories.tsx`, then `ui.css`; `split-screen.tsx` and `connections-screen.tsx` are near 800 lines |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -178,7 +179,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
 - **Type:** SMALL CYCLE · **Status:** done (#112) · **Depends on:** FLOW-112 (#81); FLOW-304 (#107), whose `upsert_connector_lines` this PR's migration builds on
-- **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name; the categories screen's locked loan line (`loanCategoryLine` in `app/src/screens/flow-screens.tsx`, FLOW-113) matches the Hebrew names too. Read `categories.loan_part` instead. No visible change.
+- **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name; the categories screen's locked loan line (`loanCategoryLine` in `app/src/screens/categories-screen.tsx`, FLOW-113) matches the Hebrew names too. Read `categories.loan_part` instead. No visible change.
 - **Acceptance:** app unit test with a renamed loan category; connector test; no design review needed.
 
 <a id="flow-113"></a>
@@ -213,7 +214,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-125 · Loan split follow-ups (#83 review)
 - Renumbered from a second FLOW-121 (2026-10-07).
 - **Type:** BACKLOG NIT · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-107
-- [ ] (server done in #176: every list read returns `source`; the app still has to pass it on) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
+- [ ] (server done in #176: every list read returns `source`; the app still has to pass it on) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/project-category-screen.tsx`, `project-detail-screen.tsx`, `filed-today-screen.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
 - [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
 - [ ] "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
 
@@ -687,7 +688,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
 - **Type:** SMALL CYCLE · **Status:** done (#199; server and MCP #163) · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
-- **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`flow-screens.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
+- **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`unpaid-screen.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
 - **MCP:** for (a), the unpaid tools return and can set the flag.
 - **Acceptance:** a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
 - [x] Server and MCP (#163, decision [0133](../decisions/0133-invoice-paid-marks.md)): `set_invoice_paid(id, paid)` stores the mark, `list_unpaid` keeps the row with `marked_paid_at`; MCP `list_unpaid` and `set_invoice_paid` (undo `invoice_paid`).
@@ -729,12 +730,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] H1 (owner chose the sticky bar, 2026-10-08) Long pushed lists lose Back: `header.ui-page` is static, so on שויכו היום (2.8–4.3 screens), the breakdown lines, the category lines and the review list Back scrolls off with no way out but scrolling up. Build: a compact sticky bar (Back + small title, 44px) appears once the large title scrolls off, like iOS large titles. A new header pattern, so the PR adds a design log rule.
 - [ ] H2 (owner chose the labelled Back, 2026-10-08) Back is a lone 44x44 icon at the top start corner (y≈16–60), about 520px above the thumb, and the kicker under it ("הגדרות") repeats where it goes. Build: a labelled Back ("‹ הגדרות", "‹ שיפוץ הרצל 12", cut at about 16 characters) that replaces the kicker; about 3x the target and 22px back on every settings sub-screen. This changes the mockups 07/14 header rule, so the PR adds a decision record and a design log rule.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
-- [ ] Split hints still say "מתחלק שווה" (`flow-screens.tsx:3057`, `:3571`); use "מתפצל שווה" and update the tests.
+- [ ] Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
 - [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`ui.css:2418`). Give the ✕ a −8px block margin.
 - [ ] Split footers (`.ui-split-cta`, `ui.css:3660`) still use a 20px gutter; use `--space-side`.
 - [ ] Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
 - [ ] Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
-- [ ] Notifications has the same Back to Settings but no "הגדרות" kicker (`flow-screens.tsx:5354`); H2's labelled Back covers it.
+- [ ] Notifications has the same Back to Settings but no "הגדרות" kicker (`settings-screen.tsx` `NotificationsScreen`); H2's labelled Back covers it.
 - [ ] Project band: 47px from Back to the title against 26px on other stacked headers (`.ui-band-hero` `padding-top`, `ui.css:1981`); `--space-2` when the band has a Back bar.
 - [ ] Home at 375x667: the first "פרויקטים מובילים" row shows only 22px above the tab bar; tighten the נכנס / יצא rows from a 76px to about a 52px pitch. Cycle 5: since the period bar (#199) no project row shows above the fold at all (the "פרויקטים" head sits at y≈640), so this also needs FLOW-335's band trims.
 - [ ] Breakdown: the period chip moved to the top-left corner (Back took the start side), the hardest reach and a different corner than Home; put it under the title on the start side.
@@ -755,13 +756,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The period label is the only way to the period sheet and a custom range, but it reads as plain text. Add a small ▼ (or calendar) icon after it, sized like the band pill's. When the window isn't the current one, the label's hint reads "חזרה להיום" and tapping the selected preset (which already jumps back) gets the same `aria-label`.
 - [ ] Home's band names the window three or four times (the preset, the label, "רווח נקי ב־3 חודשים" and "מ־1 באוגוסט עד היום"). The explanation line reads only "הכנסות פחות הוצאות" (`heroExplanation`).
 - [ ] Project band: Back and the "earlier" arrow are the same right-pointing chevron in the same 44px column, about 150px apart. FLOW-334 H2's labelled Back tells them apart; until then give the stepper `--space-2` more inset than Back.
-- [ ] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `flow-screens.tsx` ~752).
+- [ ] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `project-detail-screen.tsx`).
 - [ ] "לפי חודש": drop the `.ui-months-note` explainer (rows carry chevrons, as FLOW-328 did elsewhere), and keep the hint's "נכנס ₪…" muted: green is for an income amount in the amount slot only (0120).
 - [ ] "לפי חודש" empty state ("אין חודשים בתקופה הזו") is a dead end: add the tint button "כל התקופה" that sets הכול, and an empty-state story.
 - [ ] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it.
 - [ ] Unpaid after a mark: the row says "ממתין לסנכרון" but the page has no way to sync (5 taps through Settings). When any row is marked, show a "רענון מ־SUMIT" row at the bottom that starts the connector sync, or let pull-to-refresh start it.
 - [ ] Home and Project: the "מצב תצוגה" tag sits 6px above the band's bottom, inside the 28px corner curve (regression of a FLOW-328 fix); give it `--space-3`.
-- [ ] Connector status sheets: "ניתוק" is the bottom row right under "רענון עכשיו", where the thumb lands first. Put ניתוק in its own group after a section gap (`flow-screens.tsx` ~4929 and ~5003).
+- [ ] Connector status sheets: "ניתוק" is the bottom row right under "רענון עכשיו", where the thumb lands first. Put ניתוק in its own group after a section gap (`connections-screen.tsx`).
 - [ ] Review-cycle fixtures: add the "לפי חודש" empty state, an Unpaid row already marked, and the connector status and connect sheets so the next cycle can shoot them.
 - **Acceptance:** shared components (`period-bar.tsx`, `segmented-control.tsx`, `ui.css`) and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; contrast check on the band; design review.
 
@@ -1093,7 +1094,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#219, part 1: every screen but the review area; review screens, `screens.stories.tsx` and `ui.css` next) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 
