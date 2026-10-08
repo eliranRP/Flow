@@ -136,6 +136,34 @@ async function layoutProblems(page: Page): Promise<string[]> {
   });
 }
 
+test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW-321)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const cases = [
+    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות לא שולמו"]],
+    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית אחת לא שולמה"]],
+    ["screens-routes--home-attention-review-only", ["7 פריטים ממתינים לאישור"]],
+    ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות לא שולמו"]],
+    ["components-banner--rows-long-hebrew", []],
+  ] as const;
+  const failures: string[] = [];
+  for (const theme of ["light", "dark"]) {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const [id, names] of cases) {
+        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
+        await page.locator("#storybook-root").waitFor({ state: "attached" });
+        for (const name of names) await expect(page.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
+        const rows = page.locator(".ui-banner-rows a");
+        await expect(rows).toHaveCount(names.length === 1 ? 0 : 2);
+        const problems = await layoutProblems(page);
+        if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
+      }
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("the closed period picker is only the band and the on-band pill", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-periodpicker--closed&viewMode=story", { waitUntil: "domcontentloaded" });

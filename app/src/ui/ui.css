@@ -133,6 +133,7 @@
 .ui-toggle,
 .ui-tab-slot,
 .ui-banner,
+.ui-banner-row,
 a.ui-row,
 .ui-toast button {
   cursor: pointer;
@@ -1089,6 +1090,45 @@ a.ui-row,
 }
 
 .ui-banner:active {
+  background: var(--color-tint-pressed);
+}
+
+/*
+  FLOW-321. Two or more rows share the one tinted pending card. Each row is its own
+  link with its own pressed state; padding, not a hairline, separates them (0120).
+*/
+.ui-banner-rows {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  margin: var(--space-6) var(--space-card-inset) 0;
+  padding: var(--space-1);
+  list-style: none;
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-banner-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  box-sizing: border-box;
+  min-height: var(--touch-min);
+  padding: var(--space-3);
+  border-radius: calc(var(--radius-card) - var(--space-1));
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-banner-row .ui-row-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-banner-row:active {
   background: var(--color-tint-pressed);
 }
 

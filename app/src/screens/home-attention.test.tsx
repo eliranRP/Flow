@@ -1,0 +1,129 @@
+import type { Dashboard } from "@flow/shared";
+import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it } from "vitest";
+import { HomeBooks } from "./HomeScreen";
+import { thisMonth } from "../period";
+
+function books(review: number): Dashboard {
+  return {
+    company_id: "co",
+    name: "Flow Test",
+    vat_registered: true,
+    basis: "invoiced",
+    from: "2026-09-01",
+    to: "2026-09-28",
+    income_agorot: 10_000_000n,
+    direct_agorot: 4_000_000n,
+    shared_agorot: 0n,
+    overhead_agorot: 0n,
+    expense_agorot: 4_000_000n,
+    net_profit_agorot: 6_000_000n,
+    prev_income_agorot: null,
+    prev_expense_agorot: null,
+    prev_net_agorot: null,
+    active_projects: 0,
+    review_count: review,
+    projects: [],
+    by_currency: [],
+  };
+}
+
+function renderHome({
+  review,
+  unpaid,
+  gross = 0n,
+  phase = "ready",
+  search = "",
+}: {
+  review: number;
+  unpaid: number;
+  gross?: bigint;
+  phase?: "loading" | "error" | "empty" | "ready";
+  search?: string;
+}) {
+  return render(
+    <MemoryRouter>
+      <HomeBooks
+        data={books(review)}
+        previewing={false}
+        search={search}
+        unpaidGross={gross}
+        unpaidCount={unpaid}
+        unpaidPhase={phase}
+        period={thisMonth()}
+        onPeriod={() => undefined}
+      />
+    </MemoryRouter>,
+  );
+}
+
+const reviewLink = () => screen.queryByRole("link", { name: /ממתינ\S* לאישור/ });
+const unpaidLink = () => screen.queryByRole("link", { name: /לא שולמ/ });
+
+describe("Home attention card (FLOW-321)", () => {
+  it("shows no card when nothing waits and nothing is unpaid", () => {
+    renderHome({ review: 0, unpaid: 0 });
+    expect(reviewLink()).toBeNull();
+    expect(unpaidLink()).toBeNull();
+    expect(document.querySelector(".ui-banner, .ui-banner-rows")).toBeNull();
+  });
+
+  it("shows two rows when both exist, so unpaid is one tap from Home", () => {
+    renderHome({ review: 7, unpaid: 3, gross: 2_340_000n });
+    const card = document.querySelector(".ui-banner-rows");
+    expect(card).not.toBeNull();
+    const rows = within(card as HTMLElement).getAllByRole("link");
+    expect(rows).toHaveLength(2);
+    const review = screen.getByRole("link", { name: "7 פריטים ממתינים לאישור" });
+    const unpaid = screen.getByRole("link", { name: "3 חשבוניות לא שולמו ₪23,400 · טרם נגבה" });
+    expect(review).toHaveAttribute("href", "/review");
+    expect(unpaid).toHaveAttribute("href", "/unpaid");
+    expect(rows[0]).toBe(review);
+    expect(rows[1]).toBe(unpaid);
+  });
+
+  it("uses singular copy for one of each, with distinct names", () => {
+    renderHome({ review: 1, unpaid: 1, gross: 468_000n });
+    expect(screen.getByRole("link", { name: "פריט אחד ממתין לאישור" })).toHaveAttribute("href", "/review");
+    expect(screen.getByRole("link", { name: "חשבונית אחת לא שולמה ₪4,680 · טרם נגבה" })).toHaveAttribute("href", "/unpaid");
+    expect(screen.queryByText(/פריטים/)).toBeNull();
+    expect(screen.queryByText(/חשבוניות/)).toBeNull();
+  });
+
+  it("shows one review row when nothing is unpaid, singular and plural", () => {
+    const { unmount } = renderHome({ review: 1, unpaid: 0 });
+    expect(screen.getByRole("link", { name: "פריט אחד ממתין לאישור" })).toHaveClass("ui-banner");
+    expect(unpaidLink()).toBeNull();
+    expect(document.querySelector(".ui-banner-rows")).toBeNull();
+    unmount();
+    renderHome({ review: 12, unpaid: 0 });
+    expect(screen.getByRole("link", { name: "12 פריטים ממתינים לאישור" })).toHaveAttribute("href", "/review");
+    expect(unpaidLink()).toBeNull();
+  });
+
+  it("shows one unpaid row with its total when nothing waits, singular and plural", () => {
+    const { unmount } = renderHome({ review: 0, unpaid: 1, gross: 100_000n });
+    expect(screen.getByRole("link", { name: "חשבונית אחת לא שולמה ₪1,000 · טרם נגבה" })).toHaveClass("ui-banner");
+    expect(reviewLink()).toBeNull();
+    unmount();
+    renderHome({ review: 0, unpaid: 4, gross: 2_340_000n });
+    expect(screen.getByRole("link", { name: "4 חשבוניות לא שולמו ₪23,400 · טרם נגבה" })).toHaveAttribute("href", "/unpaid");
+    expect(reviewLink()).toBeNull();
+  });
+
+  it("keeps the preview search on both rows", () => {
+    renderHome({ review: 2, unpaid: 2, gross: 200_000n, search: "?preview=1" });
+    expect(reviewLink()).toHaveAttribute("href", "/review?preview=1");
+    expect(unpaidLink()).toHaveAttribute("href", "/unpaid?preview=1");
+  });
+
+  it("drops the unpaid row while unpaid is loading or failed", () => {
+    for (const phase of ["loading", "error"] as const) {
+      const { unmount } = renderHome({ review: 3, unpaid: 2, gross: 200_000n, phase });
+      expect(screen.getByRole("link", { name: "3 פריטים ממתינים לאישור" })).toBeInTheDocument();
+      expect(unpaidLink()).toBeNull();
+      unmount();
+    }
+  });
+});
