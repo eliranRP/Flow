@@ -150,3 +150,122 @@ grant execute on all functions in schema tests to postgres, service_role;
 grant execute on function tests.authenticate_as(text) to anon, authenticated;
 grant execute on function tests.clear_authentication() to anon, authenticated;
 grant execute on function tests.get_supabase_uid(text) to anon, authenticated;
+
+-- Shared invented fixtures (FLOW-808), so a test does not re-create the same company, project,
+-- category and line inserts. Call them as postgres, before tests.authenticate_as. Each returns
+-- the new row's id. Use invented names and @example.com emails only.
+
+-- A company owned by a test user made with tests.create_supabase_user. The insert trigger adds
+-- the default categories, including interest, escrow and principal (one per loan_part). A viewer
+-- (company_viewers) needs p_demo true.
+create or replace function tests.fixture_company(p_owner text, p_name text, p_demo boolean default false)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  owner uuid;
+  company uuid;
+begin
+  owner := tests.get_supabase_uid(p_owner);
+  if owner is null then
+    raise exception 'User with identifier % not found', p_owner;
+  end if;
+  insert into public.companies (owner_id, name, is_demo)
+  values (owner, p_name, p_demo)
+  returning id into company;
+  return company;
+end;
+$$;
+
+create or replace function tests.fixture_project(p_company uuid, p_name text, p_status text default 'active')
+returns uuid
+language sql
+set search_path = ''
+as $$
+  insert into public.projects (company_id, name, status)
+  values (p_company, p_name, p_status::public.project_status)
+  returning id;
+$$;
+
+-- A category after the company's last one. p_excluded keeps it out of the P&L.
+create or replace function tests.fixture_category(
+  p_company uuid,
+  p_name text,
+  p_kind text default 'expense',
+  p_excluded boolean default false
+)
+returns uuid
+language sql
+set search_path = ''
+as $$
+  insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl)
+  values (
+    p_company, p_name, p_kind::public.category_kind,
+    coalesce((select max(c.sort_order) + 1 from public.categories c where c.company_id = p_company), 1),
+    false, p_excluded
+  )
+  returning id;
+$$;
+
+-- One ledger line. p_key is both its idempotency key and its description. p_amount is the
+-- size in minor units; an expense is stored negative, income positive. The line is paid
+-- (cash date = doc date), has no VAT, and is filed by the owner unless p_suggested, which
+-- leaves the category a guess (set after the insert: the insert trigger clears it). A Mercury
+-- line must be USD.
+create or replace function tests.fixture_line(
+  p_company uuid,
+  p_key text,
+  p_amount bigint,
+  p_direction text default 'expense',
+  p_project uuid default null,
+  p_category uuid default null,
+  p_doc_date date default '2026-06-10',
+  p_currency text default 'ILS',
+  p_line_status text default 'posted',
+  p_source text default 'manual',
+  p_pnl_role text default 'project',
+  p_doc_kind text default 'receipt',
+  p_suggested boolean default false
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  line uuid;
+  signed bigint;
+begin
+  signed := case when p_direction = 'expense' then -abs(p_amount) else abs(p_amount) end;
+  insert into public.transactions (
+    company_id, direction, doc_kind, line_status, currency,
+    amount_gross, amount_net, amount_original, vat_amount, vat_status,
+    doc_date, cash_date, source, idempotency_key, project_id, category_id, description,
+    user_assigned, category_assigned, category_suggested, pnl_role
+  )
+  values (
+    p_company, p_direction::public.txn_direction, p_doc_kind::public.doc_kind,
+    p_line_status::public.line_status, p_currency,
+    signed, signed, abs(p_amount), 0, 'source',
+    p_doc_date, p_doc_date, p_source::public.txn_source, p_key, p_project, p_category, p_key,
+    not p_suggested, not p_suggested, false, p_pnl_role::public.pnl_role
+  )
+  returning id into line;
+  if p_suggested then
+    update public.transactions set category_suggested = true where id = line;
+  end if;
+  return line;
+end;
+$$;
+
+-- Fixtures write as postgres only, like create_supabase_user.
+revoke all on function tests.fixture_company(text, text, boolean) from public, anon, authenticated;
+revoke all on function tests.fixture_project(uuid, text, text) from public, anon, authenticated;
+revoke all on function tests.fixture_category(uuid, text, text, boolean) from public, anon, authenticated;
+revoke all on function tests.fixture_line(uuid, text, bigint, text, uuid, uuid, date, text, text, text, text, text, boolean)
+  from public, anon, authenticated;
+grant execute on function tests.fixture_company(text, text, boolean) to postgres, service_role;
+grant execute on function tests.fixture_project(uuid, text, text) to postgres, service_role;
+grant execute on function tests.fixture_category(uuid, text, text, boolean) to postgres, service_role;
+grant execute on function tests.fixture_line(uuid, text, bigint, text, uuid, uuid, date, text, text, text, text, text, boolean)
+  to postgres, service_role;
