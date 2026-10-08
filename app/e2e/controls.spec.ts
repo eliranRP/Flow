@@ -282,7 +282,7 @@ test("projects search, expand, open, and the new-project sheet", async ({ page }
   await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("ישן");
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toContainText("הסתיים");
   await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("");
-  await page.getByRole("button", { name: /הסתיימו/ }).click();
+  await page.getByRole("button", { name: /שהסתיים/ }).click();
   await expect(page.getByRole("link", { name: "פרויקט ישן" })).toBeVisible();
   await page.getByRole("link", { name: "וילה רעננה" }).click();
   await expect(page).toHaveURL(/\/projects\/p2/);

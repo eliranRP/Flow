@@ -723,12 +723,9 @@ export const ProjectsSearch: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsSearch} />
+      <ProjectsScreen sample={projectsSearch} initialQuery="תמר" />
     </StoryRoute>
   ),
-  play: async ({ canvasElement }) => {
-    await userEvent.type(within(canvasElement).getByRole("searchbox", { name: "חיפוש פרויקט" }), "תמר");
-  },
 };
 export const ProjectsSearchDark: Story = { ...ProjectsSearch, name: "Projects, search finds a finished project, dark", globals: { theme: "dark" } };
 export const ProjectsSearch320: Story = {

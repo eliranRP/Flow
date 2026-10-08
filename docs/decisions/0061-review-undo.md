@@ -1,7 +1,7 @@
 # Review undo returns the item to the queue
 
 **Date:** 2026-09-28
-**Status:** Accepted. The undo sentence below is amended by [0063](0063-owner-ledger.md).
+**Status:** Accepted. The undo sentence below is amended by [0063](0063-owner-ledger.md). The projects footer link is amended by FLOW-410: every active project shows, and the link reads `עוד M שהסתיימו` (`עוד פרויקט אחד שהסתיים` for one).
 
 ## Context
 

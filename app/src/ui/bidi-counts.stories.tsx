@@ -6,7 +6,7 @@ function Counts() {
   return (
     <div>
       <p data-bidi="projects">
-        <span>עוד</span> <bdi dir="ltr">4</bdi> <span>פעילים</span> · <bdi dir="ltr">2</bdi> <span>הסתיימו</span>
+        <span>עוד</span> <bdi dir="ltr">2</bdi> <span>שהסתיימו</span>
       </p>
       <p data-bidi="queue">
         <bdi dir="ltr">1</bdi> <span>מתוך</span> <bdi dir="ltr">7</bdi>

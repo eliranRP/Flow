@@ -31,14 +31,14 @@ const sample = {
   ],
 } as unknown as Dashboard;
 
-function renderProjects() {
+function renderProjects(data: Dashboard = sample) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <BooksProvider>
           <MemoryRouter initialEntries={["/projects"]}>
-            <ProjectsScreen sample={sample} />
+            <ProjectsScreen sample={data} />
           </MemoryRouter>
         </BooksProvider>
       </ToastProvider>
@@ -90,5 +90,10 @@ describe("project search (FLOW-410)", () => {
     expect(screen.getByRole("link", { name: rowName("חנות רימון") })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: rowName("מחסן תמר") })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: rowName("בית אלון") })).not.toBeInTheDocument();
+  });
+
+  it("names a single finished project in the singular", () => {
+    renderProjects({ projects: [project("a", "בית ארז"), project("f", "מחסן תמר", "finished")] } as unknown as Dashboard);
+    expect(screen.getByRole("button", { name: /שהסתיים/ })).toHaveTextContent("עוד פרויקט אחד שהסתיים");
   });
 });

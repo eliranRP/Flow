@@ -816,7 +816,7 @@ test("hebrew counts keep their reading order around the numbers", async ({ page 
     }
     return parts.sort((left, right) => right.x - left.x).map((part) => part.text);
   });
-  expect(order.slice(0, 3)).toEqual(["עוד", "4", "פעילים"]);
+  expect(order.slice(0, 3)).toEqual(["עוד", "2", "שהסתיימו"]);
   const used = await page.locator(".ui-row-hint").evaluate((node) => {
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
     let word: DOMRect | null = null;

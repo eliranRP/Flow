@@ -75,7 +75,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Projects | search field | FLOW-410. Filters every project by name or status, finished ones included, whenever the query is not empty. A finished match reads "הסתיים" as its hint. With an empty query every active project shows, with no cap. | never | no | rows match the query | none | unit, e2e |
 | Projects | ניקוי החיפוש | Clears the query. Shown when the filter matches nothing. | never | no | the query is empty | none | pass |
 | Projects | a project row | Opens that project. | never | no | route `/projects/:id` | none | pass |
-| Projects | finished expander | "עוד N שהסתיימו", shown when the query is empty and there is a finished project. Reveals finished projects. | never | no | the extra rows appear | none | pass |
+| Projects | finished expander | "עוד N שהסתיימו" ("עוד פרויקט אחד שהסתיים" for one), shown when the query is empty and there is a finished project. Reveals finished projects. | never | no | the extra rows appear | none | pass |
 | Projects | פרויקט חדש | Opens the project sheet. | never | no | sheet title פרויקט | none | pass |
 | Projects | שמירה on the new-project sheet | Calls `upsert_project`. | never | the button is busy | toast "הפרויקט נשמר", sheet closes | toast "לא הצלחנו לשמור את הפרויקט." | pass |
 | Projects | ביטול on the new-project sheet | Closes the sheet without saving. | never | no | sheet gone | none | pass |
