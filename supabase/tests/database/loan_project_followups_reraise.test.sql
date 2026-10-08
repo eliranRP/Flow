@@ -1,10 +1,12 @@
 -- FLOW-120: a deadlock, serialization failure or lock timeout inside reassign_transaction
 -- still ends mcp_attach_loan_payment as before, it is not reported as 'project not set'.
--- A test-only trigger raises the error codes. Invented data only. @example.com only.
+-- FLOW-129: a lock timeout in the attach or in mcp_undo returns unavailable / retry and is
+-- not stored, so a retry with the same key runs again.
+-- Test-only triggers raise the error codes. Invented data only. @example.com only.
 
 begin;
 
-select plan(7);
+select plan(11);
 
 select tests.create_supabase_user('lr_owner', 'lr-owner@example.com');
 
@@ -126,9 +128,9 @@ select is(
 );
 
 select is(
-  pg_temp.attach('lr-att-lock', '55P03')->>'ok',
-  'false',
-  'a lock timeout while filing the line refuses the attach'
+  pg_temp.attach('lr-att-lock', '55P03')->'error'->>'code',
+  'unavailable',
+  'a lock timeout while filing the line ends the attach as unavailable'
 );
 reset role;
 select is(
@@ -143,17 +145,82 @@ select is(
   'the line is left as it was'
 );
 
--- Positive control: without the error the line is filed.
+-- The timed-out attach stored nothing: the same key runs again and files the line.
 select is(
-  pg_temp.attach('lr-att-ok', '')->'data'->>'project_inherited',
+  pg_temp.attach('lr-att-lock', '')->'data'->>'project_inherited',
   'true',
-  'positive control: the attach files the line under the loan''s project'
+  'a retry with the timed-out key runs again and files the line'
 );
 reset role;
 select is(
   (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
   3,
-  'positive control: the parts are attached'
+  'the retried attach kept the parts'
+);
+
+-- mcp_undo: a lock timeout while removing the parts returns unavailable and stores nothing.
+create function public.lr_fail_split_delete()
+returns trigger
+language plpgsql
+as $$
+begin
+  if current_setting('lr.fail', true) = '55P03' then
+    raise exception 'lr test lock timeout' using errcode = 'lock_not_available';
+  end if;
+  return old;
+end;
+$$;
+create trigger lr_fail_split_delete
+  before delete on public.loan_splits
+  for each row execute function public.lr_fail_split_delete();
+
+create or replace function pg_temp.undo(p_key text, p_fail text)
+returns jsonb
+language plpgsql
+as $$
+declare
+  uid uuid := tests.get_supabase_uid('lr_owner');
+  result jsonb;
+begin
+  perform set_config('lr.fail', p_fail, true);
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claim.sub', uid::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object(
+      'sub', uid, 'role', 'authenticated', 'aal', 'aal1',
+      'mcp_tid', (select id from pg_temp.lr where label = 'write')
+    )::text,
+    true
+  );
+  result := public.mcp_undo(p_key, 'loan_split', (select id from pg_temp.lr where label = 'd1'));
+  perform set_config('lr.fail', '', true);
+  return result;
+end;
+$$;
+
+select is(
+  pg_temp.undo('lr-undo-lock', '55P03')->'error'->>'code',
+  'unavailable',
+  'a lock timeout in undo returns unavailable'
+);
+reset role;
+select is(
+  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  3,
+  'the timed-out undo kept the parts'
+);
+select is(
+  pg_temp.undo('lr-undo-lock', '')->>'ok',
+  'true',
+  'a retry with the timed-out key runs the undo'
+);
+reset role;
+select is(
+  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  0,
+  'the retried undo removed the parts'
 );
 
 select * from finish();

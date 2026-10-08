@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(38);
+select plan(39);
 
 do $users$
 begin
@@ -144,14 +144,17 @@ select is(
   'g1''s category is a guess'
 );
 
--- The trigger may already have queued g1; make sure exactly one item is open.
+-- No trigger queues review items; sync_review_queue does, on its schedule.
+select is(
+  (select count(*)::int from public.review_queue
+   where transaction_id = (select id from lf where label = 'g1')),
+  0,
+  'setting the guess queues no review item by itself'
+);
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'missing_category'
-from public.transactions t
-where t.id = (select id from lf where label = 'g1')
-  and not exists (
-    select 1 from public.review_queue q where q.transaction_id = t.id and q.status = 'open'
-  );
+values (
+  (select id from lf where label = 'co'), (select id from lf where label = 'g1'), 'open', 'missing_category'
+);
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select company_id, id, 'open', 'unallocated_shared'
 from public.transactions where id = (select id from lf where label = 'f1');
