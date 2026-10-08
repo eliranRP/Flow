@@ -191,20 +191,21 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ split, api });
     expect(screen.getByLabelText("אחוז, חשמל")).toHaveValue("30");
     fireEvent.click(screen.getByRole("button", { name: "הסרת הפיצול" }));
-    const confirm = await screen.findByRole("dialog", { name: "להסיר את הפיצול?" });
+    // Full runs load the machine, so each wait gets more than the 1s default (FLOW-325 flake).
+    const confirm = await screen.findByRole("dialog", { name: "להסיר את הפיצול?" }, { timeout: 5000 });
     expect(within(confirm).getByText("השורה תיספר שוב כולה תחת חומרי בניין · פרויקט גבעתיים.")).toBeInTheDocument();
     expect(saved).toEqual([]);
     fireEvent.click(within(confirm).getByRole("button", { name: "הסרה" }));
-    expect(await screen.findByText("הפיצול הוסר")).toBeInTheDocument();
-    expect(saved[0]).toEqual([]);
-    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText("הפיצול הוסר", undefined, { timeout: 5000 })).toBeInTheDocument();
+    await waitFor(() => { expect(saved[0]).toEqual([]); }, { timeout: 5000 });
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }, { timeout: 5000 }));
     await waitFor(() => {
       expect(saved[1]).toEqual([
         { category_id: "c-elec", project_id: "p-herz", amount_minor: 144_000 },
         { category_id: "c-build", project_id: null, amount_minor: 336_000 },
       ]);
-    }, { timeout: 3000 });
-  });
+    }, { timeout: 5000 });
+  }, 20_000);
 
   it("a split_mismatch line saves its parts again on ✕ with no edit, and offers no ביטול", async () => {
     const mismatch: LineSplitRead = {

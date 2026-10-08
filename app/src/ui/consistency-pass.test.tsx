@@ -28,7 +28,13 @@ describe("mobile UI consistency pass (FLOW-328)", () => {
     expect(declared(".ui-split-card", "margin")).toContain("var(--space-side)");
     for (const row of [".ui-split-card .ui-radio-row", ".ui-split-card .ui-check-row", ".ui-split-card .ui-split-manual"]) {
       expect(declared(row, "border-bottom")).toMatch(/^(0|0px|none)/);
+      // The card's surface shows in dark, so the choices keep their inset from its edge.
+      expect(declared(row, "padding-inline")).toBe("var(--space-4)");
     }
+  });
+
+  it("keeps the turning save spinner inside the line split total", () => {
+    expect(declared(".ui-lsplit-total .ui-spinner", "margin-inline")).toBe("var(--space-1) var(--space-2)");
   });
 
   it("draws the install steps with no hairlines and the number centred on its text", () => {

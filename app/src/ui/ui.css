@@ -3423,11 +3423,12 @@ html:has(.ui-split) {
   background: var(--color-surface);
 }
 
-/* No hairlines between the choices; rows are separated by their padding (FLOW-328, decision 0120). */
+/* No hairlines between the choices; rows are separated by their padding (FLOW-328, decision 0120).
+   The inline padding stays: in dark the card's surface shows, and the radios must not touch its edge. */
 .ui-split-card .ui-radio-row,
 .ui-split-card .ui-check-row,
 .ui-split-card .ui-split-manual {
-  padding-inline: 0;
+  padding-inline: var(--space-4);
   border-bottom: 0;
 }
 
@@ -3851,8 +3852,10 @@ div.ui-check-row {
   text-align: end;
 }
 
+/* A turning 18px square reaches ~3.7px past its box on each side; the start margin keeps that
+   corner inside the total so the saving figure does not overflow (clip-check at 320/360/390). */
 .ui-lsplit-total .ui-spinner {
-  margin-inline-end: var(--space-2);
+  margin-inline: var(--space-1) var(--space-2);
 }
 
 .ui-lsplit-read .ui-row-meta {

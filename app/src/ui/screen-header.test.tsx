@@ -36,6 +36,7 @@ describe("ScreenHeader", () => {
     expect(title).toHaveClass("t-title-1");
     expect(title.closest("header")).toHaveClass("ui-page-stacked");
     expect(screen.getByText("מלט")).toHaveClass("ui-split-context");
+    expect(screen.getByText("מלט")).toHaveClass("text-text-secondary");
   });
 
   it("puts a title with Back on its own line, on the start side, under the bar (FLOW-326)", () => {

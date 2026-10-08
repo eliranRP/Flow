@@ -27,7 +27,9 @@ export type ScreenHeaderProps =
   | (HeaderChrome & { layout: "stacked"; title: string; barOnly?: false });
 
 function subtitleClass(extra: string | undefined, stacked: boolean): string {
-  if (stacked) return extra ? `t-label ${extra}` : "t-label text-text-secondary";
+  // A stacked subtitle keeps the secondary colour with an extra class too: the reviewer card's
+  // supplier line (`ui-party`) stacks now that Back stacks by default (FLOW-326).
+  if (stacked) return extra ? `t-label text-text-secondary ${extra}` : "t-label text-text-secondary";
   return extra ? `t-label mt-4 text-text-secondary ${extra}` : "t-label mt-4 text-text-secondary";
 }
 
