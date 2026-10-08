@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(35);
+select plan(42);
 
 do $users$
 begin
@@ -220,6 +220,21 @@ select ok((pg_temp.row_of('draw')->>'kept_out')::boolean
   and not (pg_temp.row_of('bricks')->>'kept_out')::boolean, 'a row says whether it is kept out of the P&L');
 select ok((pg_temp.row_of('split')->>'split_parts')::int = 2 and (pg_temp.row_of('loan')->>'loan_matched')::boolean
   and (pg_temp.row_of('bricks')->>'split_parts')::int = 0, 'a row says how it is split');
+
+-- Amount (FLOW-211): the bank figure without its sign, in the line's own currency.
+select is(pg_temp.keys(public.search_transactions(p_amount_min => 120000, p_amount_max => 120000)), 'sfl:bricks',
+  'an exact amount finds the expense whatever its sign');
+select is(pg_temp.keys(public.search_transactions(p_amount_min => 30000, p_amount_max => 30000)), 'sfl:drill',
+  'a dollar line is found by its dollar figure');
+select is(pg_temp.keys(public.search_transactions(p_amount_min => 100000)), 'sfl:bricks,sfl:rent,sfl:split',
+  'a minimum alone includes its end, income too');
+select is(pg_temp.keys(public.search_transactions(p_amount_max => 9000, p_scope => 'pending')), 'sfl:loose_100%',
+  'a maximum combines with the other filters');
+select is((pg_temp.row_of('bricks')->>'amount_gross')::bigint, -120000::bigint, 'a row carries its bank amount');
+select throws_ok($$select public.search_transactions(p_amount_min => 5, p_amount_max => 4)$$,
+  'P0001', 'validation', 'a minimum above the maximum is validation');
+select throws_ok($$select public.search_transactions(p_amount_min => -1)$$,
+  'P0001', 'validation', 'a negative amount is validation');
 
 -- Paging: lines on the same date never repeat across pages.
 select is(
