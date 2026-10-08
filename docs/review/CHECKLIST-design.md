@@ -10,6 +10,7 @@ Use this with [PITFALLS.md](PITFALLS.md) before changing a screen, and again bef
 - [ ] The changed row was walked next to the states it shares a screen with. A failed load shows an error and a retry. It does not show an empty state with an active primary action.
 - [ ] No state is shown unless the screen knows that state.
 - [ ] New or changed controls are rows in `docs/qa/CONTROLS.md`, marked pass only after a test.
+- [ ] A PR that changes a look or a behavior adds `docs/design/log/YYYY-MM-DD-flow-<id>.md` with `Kind`, `Changed` and a `Rule:` line (or `Rule: none`).
 - [ ] Copy that fails says what failed and asks for a retry. It does not reuse another action's error sentence.
 - [ ] `aria-label` and `aria-labelledby` name a control. They do not name a generic element.
 - [ ] A prop that only a story passes is not on a production component.

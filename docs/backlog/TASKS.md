@@ -14,10 +14,11 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-330 server and MCP (mark paid stays marked) batched with FLOW-412 | FLOW-330 screen goes to the UI lane |
-| Dev lane 2 | FLOW-701 (Jev phase 1) | Next `ready` task in the queue |
-| UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, 333 (split editor follow-ups), the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
-| UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
+| Dev lane 1 | FLOW-330 server and MCP (mark paid stays marked) batched with FLOW-412 | FLOW-330 screen goes to UI lane 1 |
+| Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
+| UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
+| UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
+| UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-205: name rule in the database, edge function type checks, TOOLS errors | FLOW-315 server items, FLOW-811 |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
@@ -59,7 +60,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | done (MCP side: #132 #151 #157 #162; screen fields with the UI lane) |
-| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | done (#101) |
@@ -404,7 +405,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A race test (dblink pgTAP or e2e) for the undo row lock. (`mcp_undo_race.test.sql`.)
 - [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
 - [x] The MCP review schema still requires `project_id` for kept-out income that doesn't need one. (FLOW-205 part 1: `assign_expense` takes no project for a kept-out income category; any other category without one is `validation`.)
-- [x] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space. (Migration `20261010150000`: the database refuses hidden characters in project, category, loan and company names and stores wide spaces as plain ones; a refused MCP name says `name has an invisible or control character`.)
+- [x] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space. (Migration `20261010160000`: the database refuses hidden characters in project, category, loan and company names and stores wide spaces as plain ones; a refused MCP name says `name has an invisible or control character`.)
 
 <a id="flow-206"></a>
 ### FLOW-206 · Bulk setup without rate-limit stalls
@@ -598,7 +599,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-322"></a>
 ### FLOW-322 · Copy and dead-end fixes from the UX review
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** ready; split: UI lane 2 takes the transaction detail's document-row hint, UI lane 1 the rest. Mark `done` only when both PRs merged · **Depends on:** —
 - **What:** From the 2026-10-07 UX review: a period control on the group-lines screen and an empty state that offers choosing a period (today a dead end); singular copy for one waiting item on the breakdown; the detail's document-row hint names only what the row shows; the Review subtitle covers bank lines too; category rows in Settings open that category's lines; the `/notifications` route that nothing links to is removed or linked.
 - **MCP:** none.
 - **Acceptance:** each string in a test; no empty state is a dead end; a category row opens its lines; design review.
@@ -926,7 +927,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-701"></a>
 ### FLOW-701 · Jev phase 1
-- **Type:** PLAN FIRST · **Status:** ready (plan answered 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; parts 1-4 merged in #137, #143, #149, #160) · **Depends on:** —
 - **What:** The proposed first phase: (1) make Jev run after syncs and learn from confirmations, and produce the shadow accuracy report on approved lines; (2) faster review (reasons, "approve all sure ones", income suggestions); (3) anomalies v1 in one list (SQL detects, Jev scores only candidates); (4) recurring patterns in SQL that feed missing bills and expected months. Also a review of other features where Jev can help. The numbers always come from SQL; Jev never approves ([0084](../decisions/0084-jev-auto-prefill.md)). A daily call cap per company in SQL and a usage log, since the provider has no spend cap.
 - **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions are reviewed one by one like every line, with no approve-all in the app (FLOW-324 dropped; MCP keeps `assign_expenses`); anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
 - **Acceptance:** owner answers the plan's open questions, then one PR per item.
@@ -962,10 +963,10 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-705"></a>
 ### FLOW-705 · Jev anomalies follow-ups (#160 review)
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] A voided credit note still suppresses a duplicate flag.
-- [ ] An income receipt that pays several invoices can be flagged as a spike.
+- [x] A voided credit note still suppresses a duplicate flag. (#168)
+- [x] An income receipt that pays several invoices can be flagged as a spike. (#168)
 - [ ] pgTAP cases for a pending line, two loans and an uneven median.
-- [ ] `mcp_review_anomalies` scans many rows when few lines are open.
+- [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —

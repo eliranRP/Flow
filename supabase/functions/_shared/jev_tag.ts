@@ -46,8 +46,13 @@ export type TagExpense = {
   companyId: string;
   description: string;
   docDate: string;
+  /** Expense when absent. Income lines are sent too (decision 0134). */
+  direction?: TagDirection;
+  /** The party's name and id: the supplier on an expense, the customer on income. */
   supplierName: string | null;
   supplierId?: string | null;
+  /** SQL anomaly flags on this line (decision 0131). The same call asks Jev to score them. */
+  flags?: TagFlag[];
   /** How the owner filed this supplier before, newest first (decision 0127). */
   history?: TagFiling[];
   amountGross: number;
@@ -62,6 +67,11 @@ export type TagExpense = {
   allocationCount: number;
 };
 
+export type TagDirection = "expense" | "income";
+
+/** One SQL flag: its kind and the numbers behind it, as SQL returned them. */
+export type TagFlag = { kind: string; detail: Record<string, JsonValue> };
+
 /** A line the owner filed (approved or changed), from SQL. */
 export type TagFiling = {
   docDate: string;
@@ -71,6 +81,8 @@ export type TagFiling = {
   categoryId: string | null;
   pnlRole: string | null;
   split: boolean;
+  /** Expense when absent. */
+  direction?: TagDirection;
 };
 
 /** Filed lines per supplier that go into a request. */
@@ -82,6 +94,8 @@ export type TagCompanyWork = {
   threshold: number;
   projects: TagProject[];
   categories: TagCategory[];
+  /** Income categories, offered on income lines. */
+  incomeCategories?: TagCategory[];
   expenses: TagExpense[];
 };
 
@@ -190,13 +204,16 @@ function choiceCriteria(rows: readonly { id: string; name: string }[]): Record<s
 export function buildTagQuestions(
   projects: readonly TagProject[],
   categories: readonly TagCategory[],
+  direction: TagDirection = "expense",
+  flagged = false,
 ): Record<string, JevQuestion> {
   const questions: Record<string, JevQuestion> = {};
+  const line = direction === "income" ? "income line" : "expense";
   const projectCriteria = choiceCriteria(projects);
   if (projectCriteria) {
     questions.project = {
       type: "choice",
-      instructions: "Choose the project id for this expense.",
+      instructions: `Choose the project id for this ${line}.`,
       criteria: projectCriteria,
     };
   }
@@ -204,11 +221,42 @@ export function buildTagQuestions(
   if (categoryCriteria) {
     questions.category = {
       type: "choice",
-      instructions: "Choose the expense category id for this expense.",
+      instructions: `Choose the ${direction} category id for this ${line}.`,
       criteria: categoryCriteria,
     };
   }
+  // Only with a project or category question: a flagged line alone does not spend a call.
+  if (flagged && Object.keys(questions).length > 0) {
+    questions.anomaly = {
+      type: "noul",
+      instructions:
+        "A check flagged this line (see flags in the state). Is it a real problem the owner should look at before approving?",
+      criteria: {
+        true: "A real problem: a double charge, a wrong amount, or a line that does not belong here.",
+        false: "An ordinary line that the check flagged by chance.",
+      },
+    };
+  }
   return questions;
+}
+
+function lineDirection(expense: TagExpense): TagDirection {
+  return expense.direction === "income" ? "income" : "expense";
+}
+
+/** The questions for one line: income lines get the income categories. */
+export function lineQuestions(expense: TagExpense, company: TagCompanyWork): Record<string, JevQuestion> {
+  const direction = lineDirection(expense);
+  return buildTagQuestions(
+    skipsProjectQuestion(expense) ? [] : company.projects,
+    lineCategories(expense, company),
+    direction,
+    (expense.flags ?? []).length > 0,
+  );
+}
+
+function lineCategories(expense: TagExpense, company: TagCompanyWork): TagCategory[] {
+  return lineDirection(expense) === "income" ? company.incomeCategories ?? [] : company.categories;
 }
 
 /**
@@ -221,15 +269,20 @@ export function buildTagState(
   projects: readonly TagProject[],
   categories: readonly TagCategory[],
 ): JevState {
+  const direction = lineDirection(expense);
   const state: Record<string, JsonValue> = {
     description: expense.description,
     doc_date: expense.docDate,
-    direction: "expense",
-    supplier: expense.supplierName,
+    direction,
+    [direction === "income" ? "customer" : "supplier"]: expense.supplierName,
     amount_gross: expense.amountGross,
     amount_net: expense.amountNet,
     vat_amount: expense.vatAmount,
   };
+  const flags = expense.flags ?? [];
+  if (flags.length > 0) {
+    state.flags = flags.map((flag) => ({ kind: flag.kind, ...flag.detail }));
+  }
   const history = expense.history ?? [];
   if (history.length > 0) {
     const projectNames = new Map(projects.map((row) => [row.id, row.name]));
@@ -289,7 +342,7 @@ export function planTag(
   answers: Record<string, unknown>,
 ): TagPlan {
   const askProject = !skipsProjectQuestion(expense);
-  const questions = buildTagQuestions(askProject ? projects : [], categories);
+  const questions = buildTagQuestions(askProject ? projects : [], categories, lineDirection(expense));
   const parts: number[] = [];
   const projectAllowed = new Set(projects.map((row) => row.id));
   const categoryAllowed = new Set(categories.map((row) => row.id));
@@ -298,7 +351,8 @@ export function planTag(
   if (project !== undefined) parts.push(project?.confidence ?? 0);
   if (category !== undefined) parts.push(category?.confidence ?? 0);
   const confidence = parts.length === 0 ? 0 : Math.min(...parts);
-  const gate = mode === "auto" && parts.length > 0 && confidence >= threshold;
+  // Auto does not pre-fill income: its suggestion shows on the card like shadow (decision 0134).
+  const gate = mode === "auto" && lineDirection(expense) === "expense" && parts.length > 0 && confidence >= threshold;
 
   const write: PrefillWrite = {
     companyId: expense.companyId,
@@ -421,7 +475,10 @@ export async function tagWork(
       report.budget_skipped += company.expenses.length;
       continue;
     }
-    if (Object.keys(buildTagQuestions(company.projects, company.categories)).length === 0) {
+    if (
+      Object.keys(buildTagQuestions(company.projects, company.categories)).length === 0
+      && Object.keys(buildTagQuestions(company.projects, company.incomeCategories ?? [])).length === 0
+    ) {
       report.skipped += company.expenses.length;
       continue;
     }
@@ -445,10 +502,7 @@ export async function tagWork(
         report.failed += 1;
         continue;
       }
-      const questions = buildTagQuestions(
-        skipsProjectQuestion(expense) ? [] : company.projects,
-        company.categories,
-      );
+      const questions = lineQuestions(expense, company);
       if (Object.keys(questions).length === 0) {
         report.skipped += 1;
         continue;
@@ -457,7 +511,7 @@ export async function tagWork(
       usage.calls += 1;
       try {
         result = await call(apiKey, {
-          state: buildTagState(expense, company.projects, company.categories),
+          state: buildTagState(expense, company.projects, lineCategories(expense, company)),
           questions,
         });
       } catch (error) {
@@ -483,7 +537,7 @@ export async function tagWork(
         company.mode,
         company.threshold,
         company.projects,
-        company.categories,
+        lineCategories(expense, company),
         result.answers,
       );
       try {
@@ -552,12 +606,12 @@ export function projectsPath(companyId: string): string {
   return `/rest/v1/projects?company_id=eq.${companyId}&status=eq.active&select=id,name`;
 }
 
-export function categoriesPath(companyId: string): string {
-  return `/rest/v1/categories?company_id=eq.${companyId}&kind=eq.expense&hidden=eq.false&select=id,name`;
+export function categoriesPath(companyId: string, kind: TagDirection = "expense"): string {
+  return `/rest/v1/categories?company_id=eq.${companyId}&kind=eq.${kind}&hidden=eq.false&select=id,name`;
 }
 
 /**
- * Open untagged expenses, newest first, limited in SQL.
+ * Open untagged lines (expense and income), newest first, limited in SQL.
  * `tagged=is.null` with the model filter is the PostgREST anti-join: no
  * tag_suggestions row for the pin. `failed=is.null` skips a line Jev failed on
  * until its retry time (decision 0124). The URL does not list transaction ids.
@@ -566,10 +620,9 @@ export function transactionsPath(companyId: string, limit: number, nowIso: strin
   const cap = clampTagLimit(limit);
   return [
     `/rest/v1/transactions?company_id=eq.${companyId}`,
-    "direction=eq.expense",
     "removed_at=is.null",
     "review_queue.status=eq.open",
-    "select=id,company_id,description,doc_date,supplier_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,review_queue!inner(status),allocations(id),suppliers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
+    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
     `tagged.model_version=eq.${JEV_MODEL}`,
     "tagged=is.null",
     `failed.model_version=eq.${JEV_MODEL}`,
@@ -656,14 +709,21 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
   const docDate = asString(row.doc_date);
   const rowCompany = asString(row.company_id);
   if (!id || !isUuid(id) || !docDate || rowCompany !== companyId) return [];
-  const supplier = isObject(row.suppliers) ? asString(row.suppliers.name) : null;
+  const income = row.direction === "income";
+  // The party is the supplier, else the customer, as SQL reads it (coalesce(supplier_id,
+  // customer_id) for the history and the flags), so an income refund from a supplier keeps it.
+  const supplierName = isObject(row.suppliers) ? asString(row.suppliers.name) : null;
+  const customerName = isObject(row.customers) ? asString(row.customers.name) : null;
+  const supplierId = asString(row.supplier_id);
+  const customerId = asString(row.customer_id);
   return [{
     id,
     companyId,
     description: asString(row.description) ?? "",
     docDate,
-    supplierName: supplier,
-    supplierId: asString(row.supplier_id),
+    direction: income ? "income" : "expense",
+    supplierName: supplierId ? supplierName : customerId ? customerName : supplierName ?? customerName,
+    supplierId: supplierId ?? customerId,
     amountGross: asNumber(row.amount_gross),
     amountNet: asNumber(row.amount_net),
     vatAmount: asNumber(row.vat_amount),
@@ -692,6 +752,7 @@ function filingFromRow(row: RestRow): [string, TagFiling] | [] {
     categoryId: categoryId && isUuid(categoryId) ? categoryId : null,
     pnlRole: asString(row.pnl_role),
     split: asBool(row.split),
+    direction: row.direction === "income" ? "income" : "expense",
   }];
 }
 
@@ -722,8 +783,51 @@ async function attachHistory(
   }
   for (const expense of expenses) {
     if (!expense.supplierId) continue;
-    const list = bySupplier.get(expense.supplierId);
-    if (list) expense.history = list.slice(0, JEV_HISTORY_PER_SUPPLIER);
+    const direction = lineDirection(expense);
+    const list = (bySupplier.get(expense.supplierId) ?? []).filter((filing) =>
+      (filing.direction ?? "expense") === direction
+    );
+    if (list.length > 0) expense.history = list.slice(0, JEV_HISTORY_PER_SUPPLIER);
+  }
+}
+
+/** One SQL call per company: the anomaly flags of the lines in the run (decision 0134). A failed read skips scores. */
+async function attachFlags(
+  fetch: FetchLike,
+  base: string,
+  serviceKey: string,
+  companyId: string,
+  expenses: TagExpense[],
+): Promise<void> {
+  const ids = expenses.map((expense) => expense.id).filter(isUuid);
+  if (ids.length === 0) return;
+  let flagged: RestRow[];
+  try {
+    flagged = rows(await rest(fetch, `${base}/rest/v1/rpc/jev_line_flags`, serviceKey, {
+      method: "POST",
+      body: { p_company: companyId, p_ids: ids },
+    }));
+  } catch {
+    // Scores are extra. Without the flags the lines are still tagged, just not scored.
+    return;
+  }
+  const byLine = new Map<string, TagFlag[]>();
+  for (const row of flagged) {
+    const id = asString(row.transaction_id);
+    const kind = asString(row.kind);
+    if (!id || !kind) continue;
+    const detail: Record<string, JsonValue> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (key === "transaction_id" || key === "kind" || key.endsWith("transaction_id")) continue;
+      if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") detail[key] = value;
+    }
+    const list = byLine.get(id) ?? [];
+    list.push({ kind, detail });
+    byLine.set(id, list);
+  }
+  for (const expense of expenses) {
+    const list = byLine.get(expense.id);
+    if (list) expense.flags = list;
   }
 }
 
@@ -781,12 +885,21 @@ export function createTagStore(
         const loaded = transactions.flatMap((row) => expenseFromRow(row, company.companyId));
         const expenses = capNewest(loaded, quota);
         await attachHistory(fetch, base, serviceKey, company.companyId, expenses);
+        await attachFlags(fetch, base, serviceKey, company.companyId, expenses);
+        const incomeCategories = expenses.some((expense) => expense.direction === "income")
+          ? rows(await get(categoriesPath(company.companyId, "income"))).flatMap((row) => {
+            const id = asString(row.id);
+            const name = asString(row.name);
+            return id && name ? [{ id, name }] : [];
+          })
+          : [];
         work.push({
           companyId: company.companyId,
           mode: company.mode,
           threshold: company.threshold,
           projects,
           categories,
+          incomeCategories,
           expenses,
         });
       }

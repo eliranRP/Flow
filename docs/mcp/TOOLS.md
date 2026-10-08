@@ -322,7 +322,7 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_jev_status
 
-`mcp_jev_status`, no arguments ([0124](../decisions/0124-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (the end of the latest run, or its start while it runs; null before the first), and `lines_without_suggestion` (open expense lines in לאישור with no Jev suggestion for the pinned model, including lines waiting to retry after a failure). Counts only; no line text.
+`mcp_jev_status`, no arguments ([0124](../decisions/0124-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (the end of the latest run, or its start while it runs; null before the first), and `lines_without_suggestion` (open expense and income lines in לאישור with no Jev suggestion for the pinned model, including lines waiting to retry after a failure). Counts only; no line text.
 
 ### get_jev_accuracy
 
@@ -330,7 +330,11 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_anomalies
 
-`mcp_review_anomalies`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days; not an invoice and its receipt, a cancelled invoice, or two loans' payments), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile posted line over the year up to the newest open line). A flag is a reason to look; it changes nothing.
+`mcp_review_anomalies`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days; not an invoice and its receipt, a cancelled invoice, or two loans' payments), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile posted line over the year up to the newest open line). Income is compared on invoices only, so a receipt paying several invoices is not a spike. Each flag also has `jev_score` (0 to 1: how likely Jev thinks the flag is a real problem, asked in the same call that labelled the line; null when Jev did not score it) ([0134](../decisions/0134-jev-reasons-income-scores.md)). A flag is a reason to look; it changes nothing.
+
+### get_jev_suggestions
+
+`mcp_jev_suggestions`, no arguments ([0134](../decisions/0134-jev-reasons-income-scores.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
 
 ### get_missing_bills
 
