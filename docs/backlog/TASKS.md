@@ -316,6 +316,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** `create_project` and `create_category` hit HTTP 429 after about 10 calls in a row during a company setup. Add batch create tools (like `assign_expenses`) or a higher burst for setup. Also send the MCP `tools/list_changed` notification so clients refresh a stale tool list after a deploy.
 - **Acceptance:** a setup of 30 projects and categories runs without a 429; tests for the batch and the notification.
 
+<a id="flow-210"></a>
+### FLOW-210 · Bulk setup follow-ups (#119 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-206 (#119)
+- [ ] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`.
+
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —

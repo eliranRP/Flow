@@ -239,7 +239,7 @@ For a company setup: up to 100 rows in one write, so a setup of dozens of projec
 
 Rows take the same fields as `create_project` and `create_category`. The same name twice in one call (per kind for categories), an empty list, or more than 100 rows is `validation` for the whole call. Each row uses the key `idempotency_key:ordinal`, so the key is 1–124 characters. A bad row does not block good rows.
 
-Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is `{ "name", "ok": true, "id", "undo_kind" }` (categories add `kind`) or `{ "name", "ok": false, "code" }`. A name that is already taken is `refused` and adds `existing_id`, so a rerun of a setup still returns every id. [undo_batch](#undo_batch) with `batch_key` removes the rows that were created; a row that something already uses is `conflict` and stays.
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is `{ "name", "ok": true, "id", "undo_kind" }` or `{ "name", "ok": false, "code" }`; category rows add `kind`. A name that is already taken is `refused` and adds `existing_id`, so a rerun of a setup still returns every id. [undo_batch](#undo_batch) with `batch_key` removes the rows that were created; a row that something already uses is `conflict` and stays.
 
 ### hide_category
 
@@ -458,7 +458,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` for a created project or category. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Not in tools/list
 

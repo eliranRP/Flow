@@ -211,7 +211,7 @@ select is(
     ) r
     limit 1
   ),
-  '{"name": "Cost 1", "ok": true}'::jsonb,
+  '{"name": "Cost 1", "kind": "income", "ok": true}'::jsonb,
   'an undone category row is named, not a transaction'
 );
 

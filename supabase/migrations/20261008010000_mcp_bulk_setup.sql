@@ -18,7 +18,9 @@ set search_path = ''
 as $$
   select case
     when p_row ? 'transaction_id' then jsonb_build_object('transaction_id', p_row->>'transaction_id')
-    else jsonb_build_object('id', p_row->>'undo_id', 'name', coalesce(p_row->>'name', ''))
+    else jsonb_strip_nulls(jsonb_build_object(
+      'id', p_row->>'undo_id', 'name', coalesce(p_row->>'name', ''), 'kind', p_row->>'kind'
+    ))
   end;
 $$;
 
@@ -98,8 +100,9 @@ begin
     row_result := null;
     found_id := null;
 
-    if jsonb_typeof(item) <> 'object'
-      or jsonb_typeof(item->'name') is distinct from 'string'
+    if jsonb_typeof(item) <> 'object' then
+      row_result := private.mcp_error('validation', 'validation');
+    elsif jsonb_typeof(item->'name') is distinct from 'string'
       or item ? 'status' and (
         jsonb_typeof(item->'status') <> 'string' or item->>'status' not in ('active', 'finished')
       )
@@ -219,7 +222,7 @@ begin
     select 1
     from jsonb_array_elements(p_items) elem
     where jsonb_typeof(elem) = 'object' and jsonb_typeof(elem->'name') = 'string'
-    group by (elem->>'kind') || '|' || btrim(elem->>'name')
+    group by coalesce(elem->>'kind', '') || '|' || btrim(elem->>'name')
     having count(*) > 1
   ) then
     return private.mcp_error('validation', 'validation');
@@ -247,8 +250,9 @@ begin
     row_result := null;
     found_id := null;
 
-    if jsonb_typeof(item) <> 'object'
-      or jsonb_typeof(item->'name') is distinct from 'string'
+    if jsonb_typeof(item) <> 'object' then
+      row_result := private.mcp_error('validation', 'validation');
+    elsif jsonb_typeof(item->'name') is distinct from 'string'
       or jsonb_typeof(item->'kind') is distinct from 'string'
       or item->>'kind' not in ('expense', 'income')
       or exists (select 1 from jsonb_object_keys(item) k where k not in ('name', 'kind'))
@@ -277,6 +281,7 @@ begin
       row_writes := row_writes || jsonb_build_array(jsonb_build_object(
         'ordinal', ord,
         'name', btrim(item->>'name'),
+        'kind', item->>'kind',
         'undo_kind', 'category',
         'undo_id', row_result->'data'->>'id'
       ));
@@ -294,6 +299,7 @@ begin
       results := results || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
         'name', case when jsonb_typeof(item) = 'object' and jsonb_typeof(item->'name') = 'string'
           then btrim(item->>'name') else '' end,
+        'kind', case when jsonb_typeof(item) = 'object' then item->>'kind' end,
         'ok', false,
         'code', coalesce(row_result->'error'->>'code', 'refused'),
         'existing_id', found_id

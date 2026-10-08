@@ -1224,6 +1224,18 @@ Deno.test("initialize stamps the tool list, and a stale session hears list_chang
   assertEquals(noStream.headers.get("content-type"), "application/json", "no stream accepted, plain JSON");
   const noSession = await post(call, { accept: stream });
   assertEquals(noSession.headers.get("content-type"), "application/json", "no session id, plain JSON");
+
+  // Without a signing key tools/list is empty, so the stamp differs and the key's arrival is announced.
+  const keyless = { ...localDeps, env: (name: string) => name === "FLOW_MCP_SIGNING_KEY" ? undefined : localEnv[name] };
+  const bare = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "initialize", params: {} }),
+  }), keyless);
+  const bareSession = bare.headers.get("mcp-session-id") ?? "";
+  assert(bareSession.split(".")[1] !== session.split(".")[1], "an empty list has its own stamp");
+  const afterKey = await post(call, { "mcp-session-id": bareSession, accept: stream });
+  assertEquals(afterKey.headers.get("content-type"), "text/event-stream", "the key's arrival is announced");
 });
 
 const SYNC_JOB = "abababab-abab-4000-8000-0000000000ab";

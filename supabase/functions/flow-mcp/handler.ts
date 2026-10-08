@@ -84,8 +84,8 @@ function sseResponse(req: Request, messages: unknown[]): Response {
 
 // The tool list a scope sees, as a short hash. initialize puts it in the session id, so a
 // later call from a session that listed an older set can be told to list the tools again.
-async function toolsVersion(scope: string[]): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify(toolsFor(scope)));
+async function toolsVersion(deps: Deps, scope: string[]): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(signingKey(deps) ? toolsFor(scope) : []));
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(digest.slice(0, 8), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -546,7 +546,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
         capabilities: { tools: { listChanged: true } },
         serverInfo: { name: "flow-mcp", version: "0.1.0" },
       },
-    }, 200, { "mcp-session-id": `${crypto.randomUUID()}.${await toolsVersion(scope)}` });
+    }, 200, { "mcp-session-id": `${crypto.randomUUID()}.${await toolsVersion(deps, scope)}` });
   }
   if (method === "ping") return jsonResponse(req, { jsonrpc: "2.0", id, result: {} }, 200);
   if (method === "tools/list") {
@@ -560,7 +560,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     const session = req.headers.get("mcp-session-id");
     const stale = session != null &&
       (req.headers.get("accept") ?? "").includes("text/event-stream") &&
-      session.slice(session.lastIndexOf(".") + 1) !== await toolsVersion(scope);
+      session.slice(session.lastIndexOf(".") + 1) !== await toolsVersion(deps, scope);
     const reply = (message: unknown) =>
       stale ? sseResponse(req, [LIST_CHANGED, message]) : jsonResponse(req, message, 200);
     const toolError = (code: string, message: string) => {
