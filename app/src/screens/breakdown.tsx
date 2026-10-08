@@ -299,7 +299,8 @@ function LinesBody({
         <List>
           {rows.map((row) => {
             const outgoing = (direction === "expense") === (row.amount_minor >= 0n);
-            const hint = [lineHint(groupBy, row), formatDayMonth(row.doc_date), row.shared ? "חלק משותף" : null]
+            // The date leads, so at 320 the name is the part that drops (design lead, FLOW-125 review).
+            const hint = [formatDayMonth(row.doc_date), lineHint(groupBy, row), row.shared ? "חלק משותף" : null]
               .filter((part): part is string => part != null && part !== "")
               .join(" · ");
             return (
