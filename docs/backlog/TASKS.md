@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
 | UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Security batch: viewer reads, owner fallback, MCP batch ids (FLOW-507, FLOW-315, FLOW-205) | FLOW-205 undo items, then the kept-out month header after FLOW-106 part 4 |
+| Backlog bug fixes | Project month header leaves kept-out lines out (get_project kept_out) | Loan backend batch: save_loan_split, viewer loan payments, demand-loan and rate checks, FLOW-136 nits; then FLOW-205 undo items |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue

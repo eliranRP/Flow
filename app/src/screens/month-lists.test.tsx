@@ -75,6 +75,19 @@ describe("project recent list months", () => {
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
+  it("leaves lines kept out of the P&L out of the month totals", () => {
+    wrap(<ProjectDetailScreen sample={project([
+      txn("a", "2026-09-14", 1_200_000n, "income"),
+      { ...txn("b", "2026-09-12", 500_000n, "income"), kept_out: true },
+      txn("c", "2026-09-10", -350_000n, "expense"),
+      { ...txn("d", "2026-08-20", 300_000n, "income"), kept_out: true },
+      txn("e", "2026-08-18", -220_000n, "expense"),
+    ])} />);
+    fireEvent.click(screen.getByText("תנועות אחרונות"));
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000הוצאות −₪3,500");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200");
+  });
+
   it("totals the last month when the list is under the cap", () => {
     const rows = Array.from({ length: 39 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
