@@ -516,6 +516,8 @@ type LoanRow = {
   payment_minor: number;
   escrow_minor: number;
   balance_minor: number;
+  flagged_parts?: number;
+  flagged_transaction_ids?: string[];
   project_id?: string | null;
   project_name?: string | null;
 };
@@ -690,7 +692,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. project_id and project_name show the project a loan is filed under, or null.", {}),
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null.", {}),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
       loan_id: { type: "string" },
       from: { type: "integer" },

@@ -60,7 +60,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
-| 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | claimed (thread oq6sez, 2026-10-08, claude/project-thread-oq6sez) |
+| 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | in-progress (#129; the review UI hint goes to the Mercury thread) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -104,10 +104,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-131"></a>
 ### FLOW-131 · Loan balance checks follow-ups (#127 review)
-- **Type:** BACKLOG NIT · **Status:** claimed (thread oq6sez, 2026-10-08, claude/project-thread-oq6sez) · **Depends on:** FLOW-123 (#127)
-- [ ] MCP `list_loans` returns only `balance_minor`, so the data agent cannot see a payment the bank sync flagged for review. Return `flagged_parts` (or the flagged transaction ids).
-- [ ] A line posted while another write holds the loan is flagged even when it fits (`skip locked`). The owner has to clear it; consider a hint in the review UI (through the Mercury thread).
-- [ ] The lock order is checked by hand with two sessions. Add a two-session pgTAP test (dblink) if CI has it.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#129) · **Depends on:** FLOW-123 (#127)
+- [x] MCP `list_loans` returns only `balance_minor`, so the data agent cannot see a payment the bank sync flagged for review. Return `flagged_parts` (or the flagged transaction ids). (#129: both, migration `20261008080000`.)
+- [ ] A line posted while another write holds the loan is flagged even when it fits (`skip locked`). The owner has to clear it; consider a hint in the review UI (through the Mercury thread). Handed to the Mercury thread; the MCP side is covered by `flagged_transaction_ids`.
+- [x] The lock order is checked by hand with two sessions. Add a two-session pgTAP test (dblink) if CI has it. (#129: `loan_lock_order.test.sql`.)
 
 <a id="flow-112"></a>
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
