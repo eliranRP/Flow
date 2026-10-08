@@ -157,8 +157,8 @@ export function JevReviewCard({
         netAgorot={-2_200_000n}
         vatLine="לפני מע״מ · מע״מ ₪3,960"
         suggestion={project || category ? {
-          ...(project ? { project: project.name, projectSuggested: true } : {}),
-          ...(category ? { category: category.name, categorySuggested: true } : {}),
+          ...(project ? { project: project.name, projectSuggested: true, projectJev: true } : {}),
+          ...(category ? { category: category.name, categorySuggested: true, categoryJev: true } : {}),
         } : undefined}
         onProject={() => undefined}
         onCategory={() => undefined}

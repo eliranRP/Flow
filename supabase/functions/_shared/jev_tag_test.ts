@@ -9,6 +9,7 @@ import {
   StoreConflict,
   TagStop,
   allowTagRun,
+  applyDailyCap,
   buildTagQuestions,
   buildTagState,
   capNewest,
@@ -16,6 +17,7 @@ import {
   clampTagLimit,
   companyQuotas,
   connectorDisabled,
+  createTagJobStore,
   createTagStore,
   handleJevTag,
   integrationsPath,
@@ -25,6 +27,7 @@ import {
   tagJevCall,
   tagWork,
   transactionsPath,
+  type CompanyUsage,
   type PrefillWrite,
   type SuggestionRow,
   type TagCompanyWork,
@@ -37,6 +40,7 @@ const OTHER = "22222222-2222-4222-8222-222222222222";
 const CATEGORY = "33333333-3333-4333-8333-333333333333";
 const EXPENSE = "44444444-4444-4444-8444-444444444444";
 const COMPANY = "55555555-5555-4555-8555-555555555555";
+const NOW_ISO = "2026-10-08T05:00:00.000Z";
 
 function expense(overrides: Partial<TagExpense> = {}): TagExpense {
   return {
@@ -362,7 +366,7 @@ Deno.test("a returned model other than the pin is stored on the suggestion", asy
   });
 });
 
-function memoryStore(): TagStore & { suggestions: SuggestionRow[]; writes: PrefillWrite[]; failPrefill: boolean } {
+function memoryStore(): TagStore & { suggestions: SuggestionRow[]; writes: PrefillWrite[]; failPrefill: boolean; failed: string[] } {
   const suggestions: SuggestionRow[] = [];
   const writes: PrefillWrite[] = [];
   const store = {
@@ -385,6 +389,11 @@ function memoryStore(): TagStore & { suggestions: SuggestionRow[]; writes: Prefi
     deleteSuggestion: (transactionId: string, modelVersion: string) => {
       const index = suggestions.findIndex((row) => row.transactionId === transactionId && row.modelVersion === modelVersion);
       if (index >= 0) suggestions.splice(index, 1);
+      return Promise.resolve();
+    },
+    failed: [] as string[],
+    markFailed: (_companyId: string, transactionId: string) => {
+      store.failed.push(transactionId);
       return Promise.resolve();
     },
   };
@@ -430,6 +439,7 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   assertEquals(brokenReport.failed, 1);
   assertEquals(brokenReport.prefilled, 0);
   assertEquals(broken.suggestions.length, 0);
+  assertEquals(broken.failed, [EXPENSE]);
 
   let calls = 0;
   const again = await tagWork([company()], auto, () => {
@@ -456,10 +466,10 @@ Deno.test("a Jev failure does not store a suggestion, and unauthorized stops the
 Deno.test("off and a bad cron secret do not call Jev", async () => {
   const calls: string[] = [];
   const response = await handleJevTag(new Request("http://local/jev-tag", { method: "POST" }), {
-    fetch: () => {
+    fetch: withJobs(() => {
       calls.push("fetch");
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: () => "",
     call: () => {
       calls.push("jev");
@@ -473,11 +483,11 @@ Deno.test("off and a bad cron secret do not call Jev", async () => {
     method: "POST",
     headers: { "x-flow-cron": "cron-test" },
   }), {
-    fetch: (input) => {
+    fetch: withJobs((input) => {
       calls.push(String(input));
       if (String(input).includes("read_jev_api_key")) return Promise.resolve(Response.json("jev-test-key"));
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: (name) => {
       if (name === "CRON_SECRET") return "cron-test";
       if (name === "SUPABASE_URL") return "http://db.test";
@@ -551,10 +561,10 @@ Deno.test("only the cron secret or the service role key may run the job", async 
     method: "POST",
     headers: { authorization: "Bearer service-role-test" },
   }), {
-    fetch: (input) => {
+    fetch: withJobs((input) => {
       calls.push(String(input));
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: tagEnv,
     rateState: { lastAt: -1 },
     readKey: () => Promise.resolve("jev-test-key"),
@@ -584,7 +594,7 @@ Deno.test("a second run inside the interval is rate limited and does not call Je
     method: "POST",
     headers: { "x-flow-cron": "cron-test" },
   }), {
-    fetch: (input) => {
+    fetch: withJobs((input) => {
       const url = String(input);
       calls.push(url);
       if (url.includes("/company_integrations")) {
@@ -596,7 +606,7 @@ Deno.test("a second run inside the interval is rate limited and does not call Je
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
       return Promise.resolve(new Response(null, { status: 204 }));
-    },
+    }),
     env: tagEnv,
     now: () => now,
     rateState,
@@ -644,10 +654,10 @@ Deno.test("a wrong non-empty cron header is 401 and does not call Jev", async ()
     method: "POST",
     headers: { "x-flow-cron": "not-the-secret" },
   }), {
-    fetch: () => {
+    fetch: withJobs(() => {
       calls.push("fetch");
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: tagEnv,
     rateState: { lastAt: -1 },
     call: () => {
@@ -676,10 +686,10 @@ Deno.test("a missing service key fails closed and ignores the legacy env var", a
     method: "POST",
     headers: { "x-flow-cron": "cron-test" },
   }), {
-    fetch: () => {
+    fetch: withJobs(() => {
       calls.push("fetch");
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: (name) => {
       if (name === "CRON_SECRET") return "cron-test";
       if (name === "SUPABASE_URL") return "http://db.test";
@@ -708,7 +718,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
     },
     body,
   }), {
-    fetch: (input) => {
+    fetch: withJobs((input) => {
       const url = String(input);
       urls.push(url);
       if (url.includes("/company_integrations")) {
@@ -718,7 +728,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
         ]));
       }
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: tagEnv,
     rateState,
     log: () => {},
@@ -745,7 +755,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
     headers: { "x-flow-cron": "cron-test", "content-type": "application/json" },
     body: JSON.stringify({ limit: 1 }),
   }), {
-    fetch: (input) => {
+    fetch: withJobs((input) => {
       const url = String(input);
       enabledUrls.push(url);
       if (url.includes("/company_integrations")) {
@@ -761,7 +771,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
       }
       if (url.includes("/transactions")) return Promise.resolve(Response.json([]));
       return Promise.resolve(new Response(null, { status: 204 }));
-    },
+    }),
     env: tagEnv,
     rateState: { lastAt: -1 },
     log: () => {},
@@ -782,7 +792,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
     headers: { "x-flow-cron": "cron-test", "content-type": "application/json" },
     body: JSON.stringify({ limit: 1000 }),
   }), {
-    fetch: (input) => {
+    fetch: withJobs((input) => {
       const url = String(input);
       hardCapUrls.push(url);
       if (url.includes("/company_integrations")) {
@@ -794,7 +804,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) return Promise.resolve(Response.json([]));
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: tagEnv,
     rateState: { lastAt: -1 },
     log: () => {},
@@ -875,15 +885,31 @@ Deno.test("the run stops at the time budget and reports the expenses it skipped"
 });
 
 Deno.test("the candidate query orders by date descending and limits to the cap", () => {
-  const path = transactionsPath(COMPANY, 1000);
+  const path = transactionsPath(COMPANY, 1000, NOW_ISO);
   assert(path.includes("order=doc_date.desc,id.desc"));
   assert(path.endsWith("limit=100"));
   assert(path.includes("tagged=is.null"));
   assert(path.includes("review_queue!inner(status)"));
   assert(!path.includes("id=in."));
   assert(!path.includes(EXPENSE));
-  assertEquals(transactionsPath(COMPANY, 20).includes("limit=20"), true);
+  assertEquals(transactionsPath(COMPANY, 20, NOW_ISO).includes("limit=20"), true);
 });
+
+/** Lets the job's lease and cap RPCs succeed: the lease is free and the cap grants every call. */
+function withJobs(fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>): typeof globalThis.fetch {
+  return (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/rpc/jev_take_lease")) return Promise.resolve(Response.json(true));
+    if (url.endsWith("/rpc/jev_reserve_calls")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { p_want?: number };
+      return Promise.resolve(Response.json(body.p_want ?? 0));
+    }
+    if (/\/rpc\/jev_(release_lease|finish_usage|mark_failed)$/.test(url)) {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
+    return fetch(input, init);
+  };
+}
 
 const quietTimer: JevTimer = {
   sleep() {
@@ -920,10 +946,10 @@ Deno.test("each expense gets at most two attempts and the body has no max-output
   let uncapped = 0;
   await assertRejects(() => callJev("test-key", sample, {
     timer: quietTimer,
-    fetch: () => {
+    fetch: withJobs(() => {
       uncapped += 1;
       return Promise.resolve(new Response("{}", { status: 429 }));
-    },
+    }),
   }), JevError, "rate_limited");
   assertEquals(uncapped, 4);
 });
@@ -956,7 +982,7 @@ Deno.test("a 450-line backlog does not starve the other company", async () => {
     method: "POST",
     headers: { "x-flow-cron": "cron-test" },
   }), {
-    fetch: (input, init) => {
+    fetch: withJobs((input, init) => {
       const url = String(input);
       if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
       if (url.includes("/company_integrations")) {
@@ -980,7 +1006,7 @@ Deno.test("a 450-line backlog does not starve the other company", async () => {
         }))));
       }
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: tagEnv,
     rateState: { lastAt: -1 },
     log: () => {},
@@ -1010,7 +1036,7 @@ Deno.test("an approved line is not sent to TypeSafe", async () => {
     method: "POST",
     headers: { "x-flow-cron": "cron-test" },
   }), {
-    fetch: (input, init) => {
+    fetch: withJobs((input, init) => {
       const url = String(input);
       urls.push(url);
       if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
@@ -1032,7 +1058,7 @@ Deno.test("an approved line is not sent to TypeSafe", async () => {
         ]));
       }
       return Promise.resolve(Response.json([]));
-    },
+    }),
     env: tagEnv,
     rateState: { lastAt: -1 },
     log: () => {},
@@ -1141,4 +1167,238 @@ Deno.test("an overhead or shared line is not asked for a project", async () => {
   assertEquals(auto.writes.length, 1);
   assertEquals(auto.writes[0].projectId, undefined);
   assertEquals(auto.writes[0].categoryId, CATEGORY);
+});
+
+const SECOND = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const THIRD = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const RUN = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+
+Deno.test("the daily cap keeps only the granted lines, newest first, per company", async () => {
+  const other = "66666666-6666-4666-8666-666666666666";
+  const asked: Array<[string, string, number]> = [];
+  const granted: Record<string, number> = { [COMPANY]: 1, [other]: 0 };
+  const capped = await applyDailyCap([
+    company({ expenses: [expense(), expense({ id: SECOND }), expense({ id: THIRD })] }),
+    company({ companyId: other, expenses: [expense({ id: SECOND, companyId: other })] }),
+    company({ companyId: "77777777-7777-4777-8777-777777777777", expenses: [] }),
+  ], {
+    reserveCalls: (companyId, runId, want) => {
+      asked.push([companyId, runId, want]);
+      return Promise.resolve(granted[companyId] ?? 0);
+    },
+  }, RUN);
+  assertEquals(asked, [[COMPANY, RUN, 3], [other, RUN, 1]]);
+  assertEquals(capped.capSkipped, 3);
+  assertEquals(capped.reserved, [COMPANY, other]);
+  assertEquals(capped.work.length, 1);
+  assertEquals(capped.work[0].expenses.map((row) => row.id), [EXPENSE]);
+});
+
+Deno.test("the job store reads the lease and the grant from SQL and fails closed", async () => {
+  const bodies: Array<[string, unknown]> = [];
+  let lease: unknown = true;
+  let grant: unknown = 2;
+  const jobs = createTagJobStore((input, init) => {
+    const url = String(input);
+    bodies.push([url.replace("http://db.test/rest/v1/rpc/", ""), JSON.parse(String(init?.body))]);
+    if (url.endsWith("jev_take_lease")) return Promise.resolve(Response.json(lease));
+    if (url.endsWith("jev_reserve_calls")) return Promise.resolve(Response.json(grant));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  }, "http://db.test/", "service-role-test");
+  assertEquals(await jobs.takeLease(RUN, 180), true);
+  lease = false;
+  assertEquals(await jobs.takeLease(RUN, 180), false);
+  lease = [];
+  assertEquals(await jobs.takeLease(RUN, 180), false);
+  assertEquals(await jobs.reserveCalls(COMPANY, RUN, 3), 2);
+  grant = 9;
+  assertEquals(await jobs.reserveCalls(COMPANY, RUN, 3), 3);
+  grant = -1;
+  await assertRejects(() => jobs.reserveCalls(COMPANY, RUN, 3), Error, "store");
+  grant = "x";
+  await assertRejects(() => jobs.reserveCalls(COMPANY, RUN, 3), Error, "store");
+  const usage: CompanyUsage = { calls: 2, input_tokens: 10, output_tokens: 4, tagged: 1, failed: 1 };
+  await jobs.finishUsage(COMPANY, RUN, usage);
+  await jobs.releaseLease(RUN);
+  assertEquals(bodies[0], ["jev_take_lease", { p_holder: RUN, p_seconds: 180 }]);
+  assertEquals(bodies[3], ["jev_reserve_calls", { p_company: COMPANY, p_run: RUN, p_want: 3 }]);
+  assertEquals(bodies.at(-2), ["jev_finish_usage", {
+    p_company: COMPANY,
+    p_run: RUN,
+    p_calls: 2,
+    p_input_tokens: 10,
+    p_output_tokens: 4,
+    p_tagged: 1,
+    p_failed: 1,
+  }]);
+  assertEquals(bodies.at(-1), ["jev_release_lease", { p_holder: RUN }]);
+});
+
+Deno.test("a failed call marks the line, and usage counts every call per company", async () => {
+  const store = memoryStore();
+  const usage = new Map<string, CompanyUsage>();
+  let calls = 0;
+  const report = await tagWork([company({
+    mode: "shadow",
+    expenses: [expense(), expense({ id: SECOND })],
+  })], store, () => {
+    calls += 1;
+    if (calls === 1) return Promise.reject(new JevError("timeout"));
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: { input_tokens: 7, output_tokens: 2 } });
+  }, "jev-test-key", { usage, log: () => {} });
+  assertEquals(report.failed, 1);
+  assertEquals(report.tagged, 1);
+  assertEquals(store.failed, [EXPENSE]);
+  assertEquals(usage.get(COMPANY), { calls: 2, input_tokens: 7, output_tokens: 2, tagged: 1, failed: 1 });
+});
+
+Deno.test("the candidate query skips a failed line until its retry time", () => {
+  const path = transactionsPath(COMPANY, 10, NOW_ISO);
+  assert(path.includes("failed:jev_line_failures()"));
+  assert(path.includes(`failed.model_version=eq.${JEV_MODEL}`));
+  assert(path.includes(`failed.retry_after=gt.${encodeURIComponent(NOW_ISO)}`));
+  assert(path.includes("failed=is.null"));
+});
+
+type JobLog = { rpc: string[]; jev: number; key: number };
+
+function jobRun(options: { lease?: boolean; grant?: (want: number) => number; fail?: "unauthorized" }) {
+  const log: JobLog = { rpc: [], jev: 0, key: 0 };
+  const finished: unknown[] = [];
+  const run = handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test" },
+  }), {
+    fetch: (input, init) => {
+      const url = String(input);
+      const rpc = /\/rpc\/(\w+)$/.exec(url)?.[1];
+      if (rpc) {
+        log.rpc.push(rpc);
+        const body = JSON.parse(String(init?.body ?? "{}"));
+        if (rpc === "jev_take_lease") return Promise.resolve(Response.json(options.lease ?? true));
+        if (rpc === "jev_reserve_calls") return Promise.resolve(Response.json((options.grant ?? ((want) => want))(body.p_want)));
+        if (rpc === "jev_finish_usage") finished.push(body);
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+      }
+      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+      if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+      if (url.includes("/transactions")) {
+        return Promise.resolve(Response.json([txnRow(), txnRow({ id: SECOND }), txnRow({ id: THIRD })]));
+      }
+      return Promise.resolve(Response.json([]));
+    },
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+    runId: () => RUN,
+    log: () => {},
+    readKey: () => {
+      log.key += 1;
+      return Promise.resolve("jev-test-key");
+    },
+    call: () => {
+      log.jev += 1;
+      if (options.fail) return Promise.reject(new JevError(options.fail));
+      return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: { input_tokens: 5, output_tokens: 1 } });
+    },
+  });
+  return { run, log, finished };
+}
+
+Deno.test("a run that finds the lease taken is 409 and does not call Jev", async () => {
+  const { run, log } = jobRun({ lease: false });
+  const response = await run;
+  assertEquals(response.status, 409);
+  assertEquals((await response.json()).error, "busy");
+  assertEquals(log.jev, 0);
+  assertEquals(log.key, 0);
+  assertEquals(log.rpc, ["jev_take_lease"]);
+});
+
+Deno.test("the run sends only the calls the cap granted, logs usage, and frees the lease", async () => {
+  const { run, log, finished } = jobRun({ grant: () => 1 });
+  const response = await run;
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.tagged, 1);
+  assertEquals(body.cap_skipped, 2);
+  assertEquals(body.skipped, 2);
+  assertEquals(log.jev, 1);
+  assertEquals(finished, [{
+    p_company: COMPANY,
+    p_run: RUN,
+    p_calls: 1,
+    p_input_tokens: 5,
+    p_output_tokens: 1,
+    p_tagged: 1,
+    p_failed: 0,
+  }]);
+  assertEquals(log.rpc, ["jev_take_lease", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
+});
+
+Deno.test("a spent cap does not read the key or call Jev", async () => {
+  const { run, log, finished } = jobRun({ grant: () => 0 });
+  const response = await run;
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.cap_skipped, 3);
+  assertEquals(log.jev, 0);
+  assertEquals(log.key, 0);
+  assertEquals((finished as { p_calls: number }[]).map((row) => row.p_calls), [0]);
+  assertEquals(log.rpc, ["jev_take_lease", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
+});
+
+Deno.test("a stopped run still records the call it made and frees the lease", async () => {
+  const { run, log, finished } = jobRun({ fail: "unauthorized" });
+  const response = await run;
+  assertEquals(response.status, 500);
+  assertEquals(log.jev, 1);
+  assertEquals((finished[0] as { p_calls: number }).p_calls, 1);
+  assertEquals(log.rpc.at(-1), "jev_release_lease");
+});
+
+Deno.test("a reserve that throws for one company still finishes the companies before it", async () => {
+  const other = "66666666-6666-4666-8666-666666666666";
+  const reserved: string[] = [];
+  await assertRejects(() => applyDailyCap([
+    company(),
+    company({ companyId: other, expenses: [expense({ id: SECOND, companyId: other })] }),
+  ], {
+    reserveCalls: (companyId) => companyId === other ? Promise.reject(new Error("store")) : Promise.resolve(1),
+  }, RUN, reserved));
+  assertEquals(reserved, [COMPANY, other]);
+});
+
+Deno.test("a suggestion that cannot be saved marks the line", async () => {
+  const store = memoryStore();
+  store.saveSuggestion = () => Promise.reject(new Error("store"));
+  const report = await tagWork([company({ mode: "shadow" })], store, () =>
+    Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null }), "jev-test-key", { log: () => {} });
+  assertEquals(report.failed, 1);
+  assertEquals(store.failed, [EXPENSE]);
+});
+
+Deno.test("three provider failures in a row end the run without sending the rest", async () => {
+  const store = memoryStore();
+  const ids = [EXPENSE, SECOND, THIRD, "dddddddd-dddd-4ddd-8ddd-dddddddddddd", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"];
+  let calls = 0;
+  const report = await tagWork([company({ mode: "shadow", expenses: ids.map((id) => expense({ id })) })], store, () => {
+    calls += 1;
+    return Promise.reject(new JevError("unavailable"));
+  }, "jev-test-key", { log: () => {} });
+  assertEquals(calls, 3);
+  assertEquals(report.failed, 3);
+  assertEquals(report.skipped, 2);
+  assertEquals(store.failed, ids.slice(0, 3));
+
+  let mixed = 0;
+  const bad = await tagWork([company({ mode: "shadow", expenses: ids.map((id) => expense({ id })) })], memoryStore(), () => {
+    mixed += 1;
+    return Promise.reject(new JevError(mixed % 2 === 0 ? "invalid_request" : "timeout"));
+  }, "jev-test-key", { log: () => {} });
+  assertEquals(mixed, 5);
+  assertEquals(bad.failed, 5);
 });

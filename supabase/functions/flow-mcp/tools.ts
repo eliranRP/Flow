@@ -28,6 +28,7 @@ export const READ_TOOL_NAMES = [
   "get_loan_schedule",
   "get_sync_status",
   "get_breakdown",
+  "get_jev_status",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -73,6 +74,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_loan_schedule: new Set(["loan_id", "from", "limit"]),
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
+  get_jev_status: new Set(),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -732,6 +734,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
+    toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, and lines_without_suggestion (open expense lines in review that Jev has not labelled yet). Jev only suggests a project and category; it never approves a line. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
   ];
 }
 
@@ -891,7 +894,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
     }, true),
-    toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. Undo is kind line_split with the transaction id.", {
+    toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       parts: {
@@ -1456,6 +1459,15 @@ export async function callTool(
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
     return ok({ ...(result.json as Review), basis });
+  }
+
+  if (name === "get_jev_status") {
+    const result = await rpc("mcp_jev_status", {});
+    const status = result.json;
+    if (result.status >= 400 || status === null || typeof status !== "object" || Array.isArray(status)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(status);
   }
 
   if (name === "get_breakdown") {

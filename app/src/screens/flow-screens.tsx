@@ -69,7 +69,7 @@ import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
 import { COMPANY_NAME_MAX, RenameCompanySheet, companyNameError } from "./rename-company";
 import { useJevQueue, useJevReview } from "./jev-review-card";
-import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
+import { bindJevConnectorScope, clearJevConnectorFlag, jevShown, withJev, type JevShown } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, jevSwitchOn, useJevIntegrationQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { SetupSampleReview } from "../setup/sample-review";
@@ -1599,7 +1599,11 @@ export function ReviewQueue({
   }
   const auto = card.auto_approved_today ?? 0;
   const view = withJev(card, jev);
-  const suggestion = reviewSuggestion(view, isReversal(kindRows ?? [], view.category_id, view.direction === "income" ? "income" : "expense"));
+  const suggestion = reviewSuggestion(
+    view,
+    isReversal(kindRows ?? [], view.category_id, view.direction === "income" ? "income" : "expense"),
+    jevShown(card, jev),
+  );
   const place = visitPlace(visit.current, openIds);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
@@ -1763,7 +1767,8 @@ function vatStatusLabel(status: string): string {
   return "לא ידוע";
 }
 
-function reviewSuggestion(row: ReviewRow, reversal = false) {
+/** `jev` marks the fields whose shown value is Jev's fill, so the card says הצעת Jev there. */
+function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShown) {
   const split = reviewIsSplit(row);
   const project = split ? reviewSplitTitle(row) : row.project_name || undefined;
   const category = row.category_name || undefined;
@@ -1775,6 +1780,8 @@ function reviewSuggestion(row: ReviewRow, reversal = false) {
     ...(category ? { category } : {}),
     ...(projectSuggested ? { projectSuggested: true } : {}),
     ...(categorySuggested ? { categorySuggested: true } : {}),
+    ...(projectSuggested && jev?.project === true ? { projectJev: true } : {}),
+    ...(categorySuggested && jev?.category === true ? { categoryJev: true } : {}),
     ...(reversal && category ? { categoryReversal: true } : {}),
   };
 }

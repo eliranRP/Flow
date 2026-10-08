@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { fireEvent, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TxnMeta } from "../txn-meta";
-import { ReviewCard } from "./review-card";
+import { ReviewCard, type ReviewSuggestion } from "./review-card";
 
 describe("ReviewCard", () => {
   it("shows no note for a missing project, mutes empty rows, hides VAT, and shows income project", () => {
@@ -122,5 +122,82 @@ describe("ReviewCard bank details (FLOW-304)", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
+describe("ReviewCard הצעת Jev", () => {
+  function jevCard(suggestion: ReviewSuggestion, buttons = true) {
+    return (
+      <ReviewCard
+        supplier="חומרי בניין השרון בע״מ"
+        sourceLine="הוצאה · 12/04/2026"
+        netAgorot={-2_200_000n}
+        suggestion={suggestion}
+        onProject={buttons ? () => undefined : undefined}
+        onCategory={buttons ? () => undefined : undefined}
+      />
+    );
+  }
+  const both: ReviewSuggestion = {
+    project: "וילה רעננה",
+    category: "חומרים",
+    projectSuggested: true,
+    categorySuggested: true,
+  };
+
+  it("shows הצעת Jev on the project only", () => {
+    render(jevCard({ ...both, projectJev: true }));
+    expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
+    expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
+    expect(screen.getAllByText("הצעה")).toHaveLength(1);
+  });
+
+  it("shows הצעת Jev on the category only", () => {
+    render(jevCard({ ...both, categoryJev: true }));
+    expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+  });
+
+  it("shows הצעת Jev on both rows, after the value and before the chevron, with the ✦ hidden", () => {
+    render(jevCard({ ...both, projectJev: true, categoryJev: true }));
+    const tags = document.querySelectorAll(".ui-review-ai .ui-suggest-tag-jev");
+    expect(tags).toHaveLength(2);
+    for (const tag of tags) {
+      expect(tag).toHaveTextContent("✦הצעת Jev");
+      expect(within(tag as HTMLElement).getByText("✦")).toHaveAttribute("aria-hidden", "true");
+      const title = tag.closest(".ui-row-title");
+      expect(title?.firstElementChild).toHaveClass("ui-row-title-text");
+      expect(title?.lastElementChild).toBe(tag);
+      const chevron = tag.closest("button")?.querySelector(".ui-row-chevron");
+      expect(chevron).not.toBeNull();
+      expect(title?.compareDocumentPosition(chevron as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    }
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+  });
+
+  it("does not show הצעת Jev on a value that is not a suggestion", () => {
+    render(jevCard({ project: "וילה רעננה", category: "חומרים", projectJev: true, categoryJev: true }));
+    expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-suggest-tag")).toBeNull();
+  });
+
+  it("does not show הצעת Jev on an empty row", () => {
+    render(jevCard({ projectSuggested: true, projectJev: true, category: "חומרים" }));
+    expect(screen.getByRole("button", { name: "פרויקט: לא נבחר" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעת Jev")).not.toBeInTheDocument();
+  });
+
+  it("reads the words on a static row", () => {
+    render(jevCard({ ...both, projectJev: true }, false));
+    const tag = document.querySelector(".ui-suggest-tag-jev");
+    expect(tag).not.toBeNull();
+    expect(within(tag?.closest(".ui-row") as HTMLElement).getByText("הצעת Jev")).toBeInTheDocument();
+  });
+
+  it("prefers הצעת Jev over החזר on a Jev category of the other kind", () => {
+    render(jevCard({ ...both, categoryJev: true, categoryReversal: true }));
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
   });
 });
