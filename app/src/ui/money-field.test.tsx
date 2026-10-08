@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { shekelsToAgorot } from "@flow/shared";
-import { MoneyField } from "./money-field";
+import { MoneyField, PercentField } from "./money-field";
 import { expectRtl, expectTarget } from "./test-support";
 
 function BudgetForm() {
@@ -23,6 +23,17 @@ function BudgetForm() {
 }
 
 describe("MoneyField", () => {
+  it("a message outside the field describes it, next to its own error (FLOW-325)", () => {
+    render(
+      <>
+        <MoneyField label="סכום" value="1200" onValueChange={() => undefined} describedBy="row-msg" />
+        <PercentField label="אחוז" value="30" onValueChange={() => undefined} id="pct" error="עד 100%" describedBy="row-msg" />
+      </>,
+    );
+    expect(screen.getByLabelText("סכום")).toHaveAttribute("aria-describedby", "row-msg");
+    expect(screen.getByLabelText("אחוז")).toHaveAttribute("aria-describedby", "pct-error row-msg");
+  });
+
   it("puts ₪ before an LTR amount", () => {
     expectRtl();
     render(<MoneyField label="סכום" value="1200" onValueChange={() => undefined} />);

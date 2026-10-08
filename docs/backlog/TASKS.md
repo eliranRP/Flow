@@ -76,7 +76,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
-| 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server); app screen plan-first |
+| 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | ready |
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
@@ -427,7 +427,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)
 - **Type:** BACKLOG NIT · **Status:** done (items 1 and 6 in #133, item 2 in #136, item 5 in #145; items 3 and 4 moved to FLOW-325) · **Depends on:** FLOW-311
 - [x] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part. (#133)
-- [x] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead. (#136: an open `split_mismatch` review, decision [0125](../decisions/0125-split-line-resync-review.md). The review card has no special text for it yet; a hint goes to the Mercury thread.)
+- [x] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead. (#136: an open `split_mismatch` review, decision [0125](../decisions/0125-split-line-resync-review.md). The review card says "הפיצול לא תואם את סכום השורה בבנק." with "עדכון הפיצול", which opens the parts editor (FLOW-325 app PR).)
 - [x] After FLOW-104: let a part take the other kind as a reversal, like a whole line. Moved to [FLOW-325](#flow-325).
 - [x] App screen to view and edit the parts (SMALL UI, plan with a mockup first). Moved to [FLOW-325](#flow-325).
 - [x] `split_line` inside the `assign_expenses` batch, with `undo_batch`. (#145: an `assign_expenses` row with `parts[]`)
@@ -581,14 +581,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-325"></a>
 ### FLOW-325 · Split a refund across projects and categories by percent or amount
-- **Type:** MCP · **Status:** server in-progress (claude/project-thread-ljwbc6); app screen plan-first · **Depends on:** FLOW-311, FLOW-104
+- **Type:** MCP · **Status:** server done (#135, #142); app screen first PR merged (#150, plan option A); follow-ups and #135 review items open · **Depends on:** FLOW-311, FLOW-104
 - **What:** The owner's ask (2026-10-08): select part of a refund (or any line) and split it between projects and categories by percent or fixed amounts, the rest staying where it was. Server: `save_line_split` and MCP `split_line` parts take `amount_minor`, `percent` (rounded together so the parts hit the line to the cent) or `rest: true` (the line's own category and project by default); a part of the other kind is a reversal (a refund back against expenses) and needs a project. Decision [0123](../decisions/0123-line-split-percent-rest-reversal.md). Takes over FLOW-312's reversal-part and app-screen items.
 - **App:** a screen on the transaction detail to view and edit the parts, by percent or amount, with the rest shown live. Plan and mockup in the design thread, owner approval on a card before building.
 - **Acceptance:** pgTAP for rounding, rest, reversal P&L effect and refusals; MCP tests; mockup approved; the screen's parts match `get_line_split`.
 - [x] Parts screen server asks: preview (`p_preview`), `percent` and `rest` on `get_line_split`, named refusals for a repeated pair and a line of zero.
 - [ ] (#135 review) `get_project.transactions[].parts_minor` sums parts unsigned; with reversal parts it should be signed by kind before the app screen shows it.
 - [ ] (#135 review) A reversal part in a kept-out category still needs a project; 0103 lets a kept-out whole line skip it.
-- [ ] (#135 review) A part with no project and one naming the line's own project are different pairs, so the same category and project can appear twice.
+- [ ] (#135 review) A part with no project and one naming the line's own project are different pairs, so the same category and project can appear twice. (The app screen guards it: it treats no project as the line's project.)
+- [x] App screen, first PR (PR #150): the "פיצול" section on the transaction detail with a read view of the parts, the full-screen editor (parts, % / ₪ with the server preview's cents, the live rest row, the sticky totals), refund reversals that need a project, save on leave with the hold line, clearing with a confirm, undo from the toast, and the detail's category and project rows saying the line is split.
+- [ ] App screen follow-ups (plan §10): swipe to delete a part, splitting from the review card, "N חלקים" on the transaction lists.
 
 <a id="flow-326"></a>
 ### FLOW-326 · Screen titles and row text on the start side
@@ -699,8 +701,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The overhead split weights by invoiced income even on the cash form of `get_project`.
+- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
 - [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
 
 <a id="flow-410"></a>
@@ -716,6 +718,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** From the 2026-10-07 tap-count review. Show a project's recent lines (the month list, capped) under its categories without the extra "תנועות אחרונות" tap; the band says the figure is since the project started; the "כל הקטגוריות" link that jumps to Settings goes. FLOW-402 keeps the full page with filters; FLOW-403 adds a period.
 - **MCP:** none (`get_project` returns the lines).
 - **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.
+
+<a id="flow-412"></a>
+### FLOW-412 · Category drill-down on the cash basis
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review.
 
 ## Onboarding, Settings and connectors
 

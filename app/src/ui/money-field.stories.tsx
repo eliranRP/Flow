@@ -36,3 +36,13 @@ export const LargeAmount320Dark: Story = {
   render: () => <Demo label="תקציב בשקלים, או ריק" value="9999999.99" />,
 };
 export const LongHebrew: Story = { args: { ...args, label: longHebrew }, render: () => <Demo label={longHebrew} value="9999999.99" /> };
+/** FLOW-325: a row's message outside the field describes it (aria-describedby). */
+export const DescribedByRowMessage: Story = {
+  args: { ...args, value: "2000", describedBy: "money-row-message" },
+  render: () => (
+    <div>
+      <MoneyField label="סכום, ביטוח" value="2000" onValueChange={() => undefined} describedBy="money-row-message" />
+      <p id="money-row-message" className="t-hint">החלקים עוברים את השורה ב־₪560. הקטינו חלק.</p>
+    </div>
+  ),
+};

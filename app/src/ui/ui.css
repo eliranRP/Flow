@@ -3645,6 +3645,228 @@ div.ui-check-row {
   background: var(--color-surface);
 }
 
+/* FLOW-325: the split-by-category editor (plan option A). Built on the ui-split-* frame. */
+.ui-lsplit .ui-split-cta {
+  gap: var(--space-2);
+}
+
+.ui-lsplit-head {
+  margin-top: var(--space-2);
+  padding-inline: var(--space-side);
+}
+
+.ui-lsplit-meta {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.ui-lsplit-banner {
+  margin: var(--space-4) var(--space-5) 0;
+}
+
+.ui-lsplit-card {
+  margin-top: var(--space-5);
+  padding-block: var(--space-1);
+  border: 1px solid var(--color-line);
+}
+
+.ui-lsplit-part {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-1) var(--space-3);
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.ui-lsplit-text {
+  display: flex;
+  /* Wide enough for a name, a החזר tag and ✕; below that the entry wraps to its own line. */
+  flex: 1 1 10rem;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.ui-lsplit-pick {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  min-inline-size: 0;
+  padding: var(--space-1) 0 0;
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-lsplit-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+}
+
+.ui-lsplit-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-lsplit-project {
+  max-inline-size: 100%;
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  overflow-wrap: anywhere;
+}
+
+.ui-lsplit-project-error {
+  color: var(--color-error);
+}
+
+.ui-lsplit-remove {
+  flex: none;
+  margin-block-start: calc(var(--space-2) * -1);
+  color: var(--color-text-muted);
+}
+
+.ui-lsplit-end {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  margin-inline-start: auto;
+}
+
+.ui-lsplit-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ui-lsplit-entry > .ui-field:first-child {
+  inline-size: 4.75rem;
+}
+
+.ui-lsplit-entry > .ui-field:last-child {
+  inline-size: 6rem;
+}
+
+.ui-lsplit-resolved {
+  min-block-size: 1lh;
+  color: var(--color-text-muted);
+}
+
+.ui-lsplit-msg {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--color-error);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+}
+
+.ui-lsplit-rest {
+  inline-size: calc(100% - var(--space-4));
+  margin: var(--space-1) var(--space-2);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-input);
+  background: var(--color-tint);
+  cursor: pointer;
+}
+
+.ui-lsplit-rest-msg {
+  margin: 0 var(--space-4) var(--space-2);
+}
+
+.ui-lsplit-rest:disabled {
+  cursor: default;
+}
+
+.ui-lsplit-empty {
+  margin: var(--space-2) var(--space-4) 0;
+}
+
+.ui-lsplit-add {
+  display: flex;
+  margin: 0;
+  padding: var(--space-1) var(--space-4) var(--space-2);
+}
+
+.ui-lsplit-clear {
+  display: flex;
+  margin: var(--space-4) var(--space-side) 0;
+}
+
+.ui-lsplit-clear-link {
+  color: var(--color-bad);
+}
+
+.ui-lsplit-totals {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-lsplit-total {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-lsplit-total-end {
+  align-items: flex-end;
+  text-align: end;
+}
+
+.ui-lsplit-total .ui-spinner {
+  margin-inline-end: var(--space-2);
+}
+
+.ui-lsplit-read .ui-row-meta {
+  text-align: end;
+}
+
+.ui-lsplit-read-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-lsplit-caution {
+  margin: var(--space-2) 0 0;
+  color: var(--color-warning);
+}
+
+.ui-review-mismatch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.ui-review-mismatch .t-label {
+  margin: 0;
+  color: var(--color-warning);
+}
+
 .ui-add-rows .ui-row-icon {
   color: var(--color-accent-text);
 }
