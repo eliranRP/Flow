@@ -18,6 +18,7 @@ import {
   searchRowTitle,
   searchTotals,
   useDebounced,
+  uniqueSearchRows,
   useSearchQuery,
   type SearchDirection,
   type SearchFilters,
@@ -101,7 +102,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const [initial] = useState(() => {
     const kept = location.key === FIRST_ENTRY ? undefined : remembered.get(location.key);
     if (kept) return kept;
-    const filters = readSearchFilters(new URLSearchParams(location.search));
+    const filters = readSearchFilters(new URLSearchParams(location.search), new Date(), { ids: local == null && preview === "off" ? "uuid" : "any" });
     return { filters, text: filters.q };
   });
   const [filters, setFilters] = useState<SearchFilters>(initial.filters);
@@ -121,9 +122,10 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     ? sample?.phase ?? { kind: "ready" }
     : screenPhase(preview, query);
   const localRows = useMemo(() => (local ? filterSearchRows(local.rows, active) : null), [local, active]);
-  const rows = localRows ?? (query.data?.pages ?? []).flatMap((page) => page.expenses);
+  const rows = localRows ?? uniqueSearchRows(query.data?.pages ?? []);
   const total = localRows ? Math.max(sample?.total ?? 0, localRows.length) : query.data?.pages[0]?.total ?? 0;
-  const complete = rows.length >= total;
+  // Live: done when the server has no next page (a repeated line, dropped above, still ends it).
+  const complete = localRows ? rows.length >= total : !query.hasNextPage;
   const refreshing = live && query.isPlaceholderData;
   const projects: SearchProject[] = local?.projects ?? dashboard.data?.projects ?? [];
   const categoryList: SearchCategory[] = local?.categories ?? categoryQuery.data ?? [];
@@ -195,6 +197,10 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
         }}
       />
     );
+  } else if (rows.length === 0 && refreshing) {
+    // The previous read found nothing and the next one is on its way: "לא מצאנו" would name
+    // text the server has not answered yet.
+    body = <ListSkeleton />;
   } else if (rows.length === 0 && filtered) {
     body = (
       <EmptyState
@@ -260,7 +266,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
         {phase.kind === "ready" && rows.length > 0 ? (
           <CountLine rows={rows} total={total} complete={complete} />
         ) : null}
-        {refreshing ? <span className="ui-spinner" aria-label="מחפש" /> : null}
+        {refreshing ? <span className="ui-spinner" role="img" aria-label="מחפש" /> : null}
       </p>
       <div className="ui-search-results">{body}</div>
       <div className="ui-search-dock" ref={dockRef}>

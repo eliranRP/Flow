@@ -44,22 +44,40 @@ export const SEARCH_DEBOUNCE_MS = 300;
 export const SEARCH_MAX_LENGTH = 100;
 
 const ID = /^[A-Za-z0-9-]{1,64}$/;
+/** The server takes a uuid or "none" and refuses anything else (0140), so a live read sends no other id. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function idParam(value: string | null): string | null {
+function idParam(value: string | null, ids: "uuid" | "any"): string | null {
   if (value == null) return null;
   if (value === "none") return "none";
-  return ID.test(value) ? value : null;
+  return (ids === "uuid" ? UUID : ID).test(value) ? value : null;
 }
 
-/** The filters a URL carries. Anything unknown or broken falls back to "no filter". */
-export function readSearchFilters(params: URLSearchParams, now = new Date()): SearchFilters {
+/** A calendar day the server's `::date` reads: 2026-02-31 passes the shape but is no day. */
+function realDay(value: string | null): boolean {
+  if (value == null) return true;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+/**
+ * The filters a URL carries. Anything unknown or broken falls back to "no filter", so a hand-edited
+ * link never sends the server a value it refuses. `ids: "any"` keeps the short ids of sample and
+ * preview lists; a live read takes uuids only.
+ */
+export function readSearchFilters(
+  params: URLSearchParams,
+  now = new Date(),
+  { ids = "uuid" }: { ids?: "uuid" | "any" } = {},
+): SearchFilters {
   const dir = params.get("dir");
+  const period = periodFromSearch(params, now) ?? allTime();
   return {
     q: (params.get("q") ?? "").slice(0, SEARCH_MAX_LENGTH),
     direction: dir === "income" || dir === "expense" ? dir : null,
-    project: idParam(params.get("project")),
-    category: idParam(params.get("category")),
-    period: periodFromSearch(params, now) ?? allTime(),
+    project: idParam(params.get("project"), ids),
+    category: idParam(params.get("category"), ids),
+    period: realDay(period.from) && realDay(period.to) ? period : allTime(),
     review: params.get("review") === "1",
   };
 }
@@ -103,6 +121,23 @@ export function searchArgs(filters: SearchFilters, offset: number) {
     ...(filters.category ? { p_category: filters.category } : {}),
     ...(filters.direction ? { p_direction: filters.direction } : {}),
   };
+}
+
+/**
+ * Each line once. Offset pages can repeat a line when a new one lands between two reads; a repeat
+ * would draw twice and break the row keys and the ˄ ˅ list.
+ */
+export function uniqueSearchRows(pages: readonly SearchPage[]): SearchRow[] {
+  const seen = new Set<string>();
+  const rows: SearchRow[] = [];
+  for (const page of pages) {
+    for (const row of page.expenses) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      rows.push(row);
+    }
+  }
+  return rows;
 }
 
 /** Pages until every matching line is loaded. */

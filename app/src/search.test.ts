@@ -10,6 +10,7 @@ import {
   nextSearchOffset,
   readSearchFilters,
   searchArgs,
+  uniqueSearchRows,
   searchCountWords,
   searchFiltersQuery,
   searchRowAmount,
@@ -73,6 +74,20 @@ describe("search filters in the URL", () => {
     expect(filters).toEqual(EMPTY_FILTERS);
   });
 
+  it("takes only a uuid or none for a live read, and short ids for sample lists", () => {
+    // The server refuses any other id (0140); a hand-edited link would fail every retry.
+    expect(readSearchFilters(new URLSearchParams("project=p1&category=abc"), NOW).project).toBeNull();
+    expect(readSearchFilters(new URLSearchParams("project=p1&category=abc"), NOW).category).toBeNull();
+    expect(readSearchFilters(new URLSearchParams("project=p1"), NOW, { ids: "any" }).project).toBe("p1");
+    expect(readSearchFilters(new URLSearchParams("project=none&category=none"), NOW)).toMatchObject({ project: "none", category: "none" });
+  });
+
+  it("drops a custom range with a day that does not exist", () => {
+    // The shape passes, but the server's ::date cast would fail.
+    expect(readSearchFilters(new URLSearchParams("period=custom&from=2026-02-31&to=2026-03-05"), NOW).period).toEqual(allTime());
+    expect(readSearchFilters(new URLSearchParams("period=custom&from=2026-02-01&to=2026-02-28"), NOW).period).toEqual(customRange("2026-02-01", "2026-02-28"));
+  });
+
   it("cuts a long text at the server's length", () => {
     const filters = readSearchFilters(new URLSearchParams({ q: "א".repeat(SEARCH_MAX_LENGTH + 20) }), NOW);
     expect(filters.q).toHaveLength(SEARCH_MAX_LENGTH);
@@ -127,6 +142,15 @@ describe("paging", () => {
     const first = page(SEARCH_PAGE, 120);
     const empty = page(0, 120);
     expect(nextSearchOffset(empty, [first, empty])).toBeUndefined();
+  });
+});
+
+describe("uniqueSearchRows", () => {
+  it("draws a line a later page repeats only once, in its first place", () => {
+    // A line that landed between two reads shifts the offset, so page 2 repeats page 1's last line.
+    const first: SearchPage = { total: 4, expenses: [row("a"), row("b")] };
+    const second: SearchPage = { total: 4, expenses: [row("b"), row("c")] };
+    expect(uniqueSearchRows([first, second]).map((item) => item.id)).toEqual(["a", "b", "c"]);
   });
 });
 

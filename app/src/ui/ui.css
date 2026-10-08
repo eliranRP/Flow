@@ -4771,7 +4771,8 @@ div.ui-check-row {
   flex-direction: column;
   min-block-size: 100dvh;
   min-inline-size: 0;
-  padding-block-end: var(--search-dock, 8.5rem);
+  /* The dock rides above the keyboard, so the last rows clear both. */
+  padding-block-end: calc(var(--search-dock, 8.5rem) + var(--kb, 0px));
 }
 
 .ui-search-count {

@@ -10,6 +10,17 @@ describe("matchRange (FLOW-323)", () => {
     expect(matchRange("חומרי בניין", "בניין")).toEqual({ start: 6, end: 11 });
   });
 
+  it("treats regex characters as text and keeps niqqud as typed", () => {
+    expect(matchRange("א.ב (בע״מ) [1]+", "(בע״מ)")).toEqual({ start: 4, end: 10 });
+    expect(matchRange("a.b", ".*")).toBeNull();
+    expect(matchRange("שָׁלוֹם", "שָׁלוֹם")).toEqual({ start: 0, end: 7 });
+  });
+
+  it("does not shift the tint when lower case changes a name's length", () => {
+    // "İ" lower-cases to two units; a tint by the lower-cased index would land one unit late.
+    expect(matchRange("İstanbul Tiles", "Tiles")).toEqual({ start: 9, end: 14 });
+  });
+
   it("is null for no text or no match", () => {
     expect(matchRange("חומרי בניין", "")).toBeNull();
     expect(matchRange("חומרי בניין", undefined)).toBeNull();

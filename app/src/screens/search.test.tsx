@@ -182,6 +182,23 @@ describe("Search screen (FLOW-323)", () => {
     expect(screen.getByRole("searchbox", { name: "חיפוש תנועות" })).toHaveValue("");
   });
 
+  it("does not say nothing matched for text the server has not answered yet", async () => {
+    page = { total: 0, expenses: [] };
+    wrap("/search?q=%D7%97%D7%95%D7%9E%D7%A8%D7%99%D7%A7");
+    expect(await screen.findByText("לא מצאנו ״חומריק״")).toBeInTheDocument();
+    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => (name === "search_transactions"
+      ? new Promise((resolve) => { answer = resolve; })
+      : Promise.resolve({ data: name === "get_dashboard" ? dashboard : [], error: null }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש תנועות" }), { target: { value: "חומרי" } });
+    await waitFor(() => {
+      expect(searchCalls().at(-1)?.args).toMatchObject({ p_query: "חומרי" });
+    });
+    expect(screen.queryByText(/^לא מצאנו/)).not.toBeInTheDocument();
+    answer({ data: { total: 1, expenses: [line("t1")] }, error: null });
+    expect(await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ })).toBeInTheDocument();
+  });
+
   it("says a company with no lines has none yet", async () => {
     page = { total: 0, expenses: [] };
     wrap("/search");
@@ -214,6 +231,25 @@ describe("Search screen (FLOW-323)", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "עוד תנועות" })).not.toBeInTheDocument();
     });
+  });
+
+  it("draws a line the next page repeats once, and still ends the paging", async () => {
+    page = { total: 51, expenses: Array.from({ length: 50 }, (_, i) => line(`p${String(i)}`)) };
+    wrap("/search");
+    const more = await screen.findByRole("button", { name: "עוד תנועות" });
+    // A new line landed between the reads, so the second page starts with the first page's last.
+    page = { total: 51, expenses: [line("p49")] };
+    fireEvent.click(more);
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "עוד תנועות" })).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByRole("link", { name: /^חומרי בניין לדוגמה/ })).toHaveLength(50);
+  });
+
+  it("sends no id the server would refuse from a hand-edited link", async () => {
+    wrap("/search?project=p1&category=%3Cx%3E");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
+    expect(searchCalls()[0]?.args).toEqual({ p_scope: "all", p_limit: 50, p_offset: 0 });
   });
 
   it("opens a line with the results as its prev and next list", async () => {

@@ -5,7 +5,11 @@
 export function matchRange(text: string, needle: string | undefined): { start: number; end: number } | null {
   const q = (needle ?? "").trim();
   if (q === "") return null;
-  const start = text.toLowerCase().indexOf(q.toLowerCase());
+  // Lower case can change a string's length (İ becomes two units), which would shift the tint;
+  // such a name is matched as typed instead.
+  const lower = text.toLowerCase();
+  const lowerQ = q.toLowerCase();
+  const start = lower.length === text.length && lowerQ.length === q.length ? lower.indexOf(lowerQ) : text.indexOf(q);
   if (start < 0) return null;
   return { start, end: start + q.length };
 }
