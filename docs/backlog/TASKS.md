@@ -764,9 +764,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-404"></a>
 ### FLOW-404 · Project as an investment
-- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP done in #201, [0143](../decisions/0143-project-investment.md): rehab is every project cost but loan parts and kept-out categories, with a switch per category; the investment card on the project page and the rehab switch in category settings wait for a UI lane, after a mockup) · **Depends on:** FLOW-105
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #201, [0143](../decisions/0143-project-investment.md): rehab is every project cost but loan parts and kept-out categories, with a switch per category; owner approved the mockup as drawn, 2026-10-08) · **Depends on:** FLOW-105
 - **What:** Per property or project: purchase price, after-repair value, and from Flow's actual costs, forced equity (ARV − purchase − rehab) and current equity (value − loan balance). MCP tools to set and read purchase price, ARV and value.
 - **Acceptance:** UX research, mockup and plan approved by the owner.
+- [x] Mockup approved as drawn (2026-10-08; the project's plans/flow-404-investment-mockup.html). The project page gets an "השקעה" card under the categories. Its head says מתחילת הפרויקט, and the screen's period and basis don't change it. It has three rows (מחיר קנייה, שווי אחרי שיפוץ, שווי היום with its date), each opening a bottom sheet with the number pad. Each sheet saves its own figure through `set_project_investment` (the שווי היום sheet also its date, which starts on today), on שמירה or when the sheet closes, and מחיקה clears the figure. Under the rows, הון מאולץ and הון נוכחי sit side by side with their formula. An equity that needs a missing figure names the figure; one that can't be worked out because of another currency says so; it never shows 0. Then come two rows: שיפוץ עד היום opens the rehab list by category, with the left-out categories under it, and יתרת הלוואות lists other-currency loans apart. A viewer sees no chevrons and no הוספה, and the overhead project has no card.
+- [x] The category ⋯ sheet gets a "נספרת בשיפוץ" switch showing `in_rehab`, with a one-line hint. A kept-out category's hint says why it is off by default. When the owner changed the default, the hint says so and "החזרה לברירת המחדל" sends null. A viewer sees the switch disabled, with its hint.
+- [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
