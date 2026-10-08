@@ -489,23 +489,29 @@ type ToolResult = {
   structuredContent: { ok: true; data: unknown } | { ok: false; error: { code: string; message: string } };
 };
 
-/** FLOW-330. list_unpaid rows in minor units, with open and marked totals per currency. */
+/**
+ * FLOW-330. list_unpaid rows in minor units, with open and marked totals per currency and
+ * direction: customer invoices (income) and supplier invoices (expense, negative) never mix.
+ */
 function unpaidReport(rows: unknown[]) {
-  const totals = new Map<string, { currency: string; open_gross_minor: bigint; marked_gross_minor: bigint }>();
+  const totals = new Map<string, { currency: string; direction: string; open_gross_minor: bigint; marked_gross_minor: bigint }>();
   const invoices = rows.map((raw) => {
     const row = (raw ?? {}) as Record<string, unknown>;
     const currency = typeof row.currency === "string" ? row.currency : "ILS";
+    const direction = row.direction === "expense" ? "expense" : "income";
     const gross = BigInt(String(row.open_gross_agorot ?? 0));
     const markedAt = typeof row.marked_paid_at === "string" ? row.marked_paid_at : null;
-    const total = totals.get(currency) ?? { currency, open_gross_minor: 0n, marked_gross_minor: 0n };
+    const key = `${currency}|${direction}`;
+    const total = totals.get(key) ?? { currency, direction, open_gross_minor: 0n, marked_gross_minor: 0n };
     if (markedAt == null) total.open_gross_minor += gross;
     else total.marked_gross_minor += gross;
-    totals.set(currency, total);
+    totals.set(key, total);
     return {
       id: row.id,
       description: row.description ?? null,
       doc_date: row.doc_date ?? null,
       currency,
+      direction,
       project_name: row.project_name ?? null,
       customer_name: row.customer_name ?? null,
       open_gross_minor: Number(gross),
@@ -516,9 +522,10 @@ function unpaidReport(rows: unknown[]) {
   return {
     invoices,
     totals: [...totals.values()]
-      .sort((x, y) => x.currency.localeCompare(y.currency))
+      .sort((x, y) => x.currency.localeCompare(y.currency) || x.direction.localeCompare(y.direction))
       .map((t) => ({
         currency: t.currency,
+        direction: t.direction,
         open_gross_minor: Number(t.open_gross_minor),
         marked_gross_minor: Number(t.marked_gross_minor),
       })),
@@ -1003,7 +1010,7 @@ function readTools() {
       months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
     }),
-    toolSpec("list_unpaid", "Open customer documents (SUMIT invoices with an amount still open after linked receipts and credit notes), oldest first. Each has id (the transaction id), description, doc_date, currency, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid). A marked one stays listed until a sync closes it. Totals: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones, per currency.", {}),
+    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
   ];
 }
 
@@ -1234,7 +1241,7 @@ function writeTools() {
         },
       },
     }, true),
-    toolSpec("set_invoice_paid", "Mark one open customer document from list_unpaid as paid (paid true) while SUMIT has no receipt for it yet, or clear the mark (paid false). A marked document leaves the unpaid total but stays listed with marked_paid_at until a sync closes it; marking again keeps the first time. A line list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_paid with the transaction id.", {
+    toolSpec("set_invoice_paid", "Mark one open invoice from list_unpaid as paid (paid true) while SUMIT has no receipt for it yet, or clear the mark (paid false). A marked document leaves the unpaid total but stays listed with marked_paid_at until a sync closes it; marking again keeps the first time. A line list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_paid with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       paid: { type: "boolean" },

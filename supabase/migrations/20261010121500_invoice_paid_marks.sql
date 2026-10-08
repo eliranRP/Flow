@@ -44,7 +44,8 @@ grant select on public.invoice_paid_marks to authenticated;
 grant select, insert, update, delete on public.invoice_paid_marks to service_role;
 
 -- list_unpaid: as in 20260928210000_owner_ledger.sql, read for the owner or a viewer
--- (20261004010000_company_viewers.sql), plus currency and marked_paid_at.
+-- (20261004010000_company_viewers.sql), plus currency, direction and marked_paid_at. A supplier
+-- invoice (direction expense) is listed too, with a negative open amount, as before.
 create or replace function public.list_unpaid()
 returns jsonb
 language sql
@@ -62,6 +63,7 @@ as $$
       inv.doc_date,
       inv.external_id,
       coalesce(inv.currency, 'ILS') as currency,
+      inv.direction,
       p.name as project_name,
       cu.name as customer_name,
       inv.amount_gross
@@ -98,6 +100,7 @@ as $$
     'description', d.description,
     'doc_date', d.doc_date,
     'currency', d.currency,
+    'direction', d.direction,
     'project_name', d.project_name,
     'customer_name', d.customer_name,
     'open_gross_agorot', d.open_gross::bigint,
@@ -125,6 +128,7 @@ as $$
 declare
   cid uuid;
   open_gross bigint;
+  ext text;
   marked timestamptz;
 begin
   -- The owner's own company comes first, so an owner who is also listed as a viewer is not refused.
@@ -142,7 +146,7 @@ begin
   end if;
 
   -- The document row is the lock, so two marks of one document queue.
-  perform 1
+  select t.amount_gross, t.external_id into open_gross, ext
   from public.transactions t
   where t.id = p_id and t.company_id = cid and t.removed_at is null
     and t.doc_kind = 'invoice' and t.external_id is not null
@@ -152,11 +156,26 @@ begin
   end if;
 
   if p_paid then
-    select (u->>'open_gross_agorot')::bigint into open_gross
-    from jsonb_array_elements(public.list_unpaid()) u
-    where (u->>'id')::uuid = p_id;
-    -- Not listed: closed already (nothing open) or listed for another company.
-    if open_gross is null then
+    -- The open amount as list_unpaid works it out: credit notes add, receipts subtract.
+    open_gross := open_gross
+      + coalesce((
+        select sum(cred.amount_gross)::bigint
+        from public.transactions cred
+        where cred.company_id = cid
+          and cred.removed_at is null
+          and cred.doc_kind = 'credit'
+          and cred.linked_external_id = ext
+      ), 0)
+      - coalesce((
+        select sum(rec.amount_gross)::bigint
+        from public.transactions rec
+        where rec.company_id = cid
+          and rec.removed_at is null
+          and rec.doc_kind = 'receipt'
+          and rec.linked_external_id = ext
+      ), 0);
+    -- Nothing open: list_unpaid does not list it.
+    if open_gross = 0 then
       raise exception 'invoice not found';
     end if;
     insert into public.invoice_paid_marks (transaction_id, company_id, marked_by)
@@ -178,7 +197,8 @@ revoke all on function public.set_invoice_paid(uuid, boolean) from public, anon;
 grant execute on function public.set_invoice_paid(uuid, boolean) to authenticated, service_role;
 
 -- private.mcp_writes: as in 20261010090000_loan_kinds_rates.sql, plus invoice_paid. Its prior
--- holds the mark's time before (null: not marked) and what was written (true or false).
+-- holds the mark's time and author before (null: not marked), what was written (true or false)
+-- and the mark's time after the write (written_at, null when cleared).
 alter table private.mcp_writes drop constraint mcp_writes_kind_check;
 alter table private.mcp_writes
   add constraint mcp_writes_kind_check check (
@@ -204,7 +224,8 @@ alter table private.mcp_writes add constraint mcp_writes_target check (
   or (kind = 'line_split' and transaction_id is not null and prior ? 'written')
   or (kind = 'line_pnl' and transaction_id is not null and prior ? 'written' and prior ? 'before')
   or (kind = 'loan_rate' and loan_id is not null and prior ? 'rate_id' and prior ? 'effective_date')
-  or (kind = 'invoice_paid' and transaction_id is not null and prior ? 'written' and prior ? 'before')
+  or (kind = 'invoice_paid' and transaction_id is not null and prior ? 'written' and prior ? 'before'
+    and prior ? 'written_at')
 );
 
 -- One document. p_paid true marks it paid, false clears the mark.
@@ -225,6 +246,7 @@ declare
   prior jsonb;
   cid uuid;
   before_marked timestamptz;
+  before_by uuid;
   written jsonb;
   response jsonb;
 begin
@@ -253,7 +275,13 @@ begin
 
   cid := private.current_company_id();
   begin
-    select m.marked_at into before_marked
+    -- Lock the document before reading the mark, as set_invoice_paid does, so a write that
+    -- waited for another one records the mark that write left.
+    perform 1
+    from public.transactions t
+    where t.id = p_transaction_id and t.company_id = cid and t.removed_at is null
+    for update of t;
+    select m.marked_at, m.marked_by into before_marked, before_by
     from public.invoice_paid_marks m
     where m.transaction_id = p_transaction_id and m.company_id = cid;
 
@@ -262,7 +290,12 @@ begin
     insert into private.mcp_writes (token_id, user_id, transaction_id, kind, prior, created_at)
     values (
       token, auth.uid(), p_transaction_id, 'invoice_paid',
-      jsonb_build_object('before', before_marked, 'written', p_paid),
+      jsonb_build_object(
+        'before', before_marked,
+        'before_by', before_by,
+        'written', p_paid,
+        'written_at', written->'marked_paid_at'
+      ),
       clock_timestamp()
     );
     response := jsonb_build_object(
@@ -518,14 +551,16 @@ begin
       where m.transaction_id = p_id and m.company_id = cid;
       if not cur_found then
         response := private.mcp_error('not_found', 'not found');
-      elsif (cur_marked is not null) is distinct from (rec.prior->>'written')::boolean then
+      -- The mark this write left, to the microsecond: a mark cleared and set again since is a
+      -- change too.
+      elsif cur_marked is distinct from (rec.prior->>'written_at')::timestamptz then
         response := private.mcp_error('conflict', 'conflict');
       else
         -- Put the mark back as it was, with its first time, or take it away.
         delete from public.invoice_paid_marks m where m.transaction_id = p_id and m.company_id = cid;
         if rec.prior->>'before' is not null then
           insert into public.invoice_paid_marks (transaction_id, company_id, marked_at, marked_by)
-          values (p_id, cid, (rec.prior->>'before')::timestamptz, auth.uid());
+          values (p_id, cid, (rec.prior->>'before')::timestamptz, (rec.prior->>'before_by')::uuid);
         end if;
         update private.mcp_writes
         set undone_at = clock_timestamp()

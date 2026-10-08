@@ -3623,11 +3623,12 @@ Deno.test("loan kind tools are described", () => {
   assertEquals((spec(write, "undo")?.inputSchema.properties.kind as { enum: string[] }).enum.includes("loan_rate"), true);
 });
 
-Deno.test("list_unpaid returns minor units and open and marked totals per currency", async () => {
+Deno.test("list_unpaid returns minor units and open and marked totals per currency and direction", async () => {
   const rows = [
-    { id: TXN, description: "Invoice 1", doc_date: "2026-06-01", currency: "ILS", project_name: "North", customer_name: "Client A", open_gross_agorot: 11800, open_net_agorot: 10000, marked_paid_at: null },
-    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00" },
-    { id: PROJECT_B, description: "Invoice 3", doc_date: "2026-06-03", currency: "USD", project_name: null, customer_name: null, open_gross_agorot: 2500, open_net_agorot: 2500, marked_paid_at: null },
+    { id: TXN, description: "Invoice 1", doc_date: "2026-06-01", currency: "ILS", direction: "income", project_name: "North", customer_name: "Client A", open_gross_agorot: 11800, open_net_agorot: 10000, marked_paid_at: null },
+    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00" },
+    { id: PROJECT_B, description: "Invoice 3", doc_date: "2026-06-03", currency: "USD", direction: "income", project_name: null, customer_name: null, open_gross_agorot: 2500, open_net_agorot: 2500, marked_paid_at: null },
+    { id: CATEGORY, description: "Supplier bill", doc_date: "2026-06-04", currency: "ILS", direction: "expense", project_name: null, customer_name: null, open_gross_agorot: -5000, open_net_agorot: -5000, marked_paid_at: null },
   ];
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: rows }));
   const out = await callTool("list_unpaid", {}, ["read"], rpc);
@@ -3636,12 +3637,13 @@ Deno.test("list_unpaid returns minor units and open and marked totals per curren
   if (!out.structuredContent.ok) throw new Error("expected ok");
   const data = out.structuredContent.data as { invoices: Record<string, unknown>[]; totals: unknown[] };
   assertEquals(data.invoices[1], {
-    id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", project_name: null,
+    id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null,
     customer_name: "Client B", open_gross_minor: 5900, open_net_minor: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00",
   });
   assertEquals(data.totals, [
-    { currency: "ILS", open_gross_minor: 11800, marked_gross_minor: 5900 },
-    { currency: "USD", open_gross_minor: 2500, marked_gross_minor: 0 },
+    { currency: "ILS", direction: "expense", open_gross_minor: -5000, marked_gross_minor: 0 },
+    { currency: "ILS", direction: "income", open_gross_minor: 11800, marked_gross_minor: 5900 },
+    { currency: "USD", direction: "income", open_gross_minor: 2500, marked_gross_minor: 0 },
   ]);
   assertEquals((await callTool("list_unpaid", { company_id: TXN }, ["read"], rpc)).isError, true);
   assertEquals((await callTool("list_unpaid", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);

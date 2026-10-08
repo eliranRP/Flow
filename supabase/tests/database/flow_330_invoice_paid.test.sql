@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(42);
+select plan(57);
 
 do $users$
 begin
@@ -61,7 +61,10 @@ from (values
   ('co',       'income',  'receipt', null,      20000, 'ipm:receipt',  'ext-r', 'ext-c', '2026-06-04', '2026-06-04', null),
   ('other_co', 'income',  'invoice', null,      40000, 'ipm:foreign',  'ext-f', null,    '2026-06-01', null,         null),
   ('co',       'expense', 'expense', 'project', -10000, 'ipm:paid_exp', null,   null,    '2026-06-05', '2026-06-05', 'fittings'),
-  ('co',       'expense', 'invoice', 'project', -5000,  'ipm:unpaid_inv', 'ext-s', null, '2026-06-06', null,        'fittings')
+  ('co',       'expense', 'invoice', 'project', -5000,  'ipm:unpaid_inv', 'ext-s', null, '2026-06-06', null,        'fittings'),
+  ('co',       'income',  'invoice', null,      25000, 'ipm:open_d',   'ext-d', null,    '2026-06-07', null,         null),
+  ('co',       'income',  'invoice', null,      15000, 'ipm:open_e',   'ext-e', null,    '2026-06-08', null,         null),
+  ('demo_co',  'income',  'invoice', null,      60000, 'ipm:demo',     'ext-g', null,    '2026-06-01', null,         null)
 ) as v(co, direction, doc_kind, pnl_role, amount, ikey, ext, linked, doc_date, cash_date, cat);
 insert into ipm (label, id) select replace(idempotency_key, 'ipm:', 'txn_'), id
 from public.transactions where idempotency_key like 'ipm:%';
@@ -110,7 +113,8 @@ grant execute on function pg_temp.unpaid(text) to authenticated, service_role;
 
 -- 1. The owner API.
 select tests.authenticate_as('ipm_owner');
-select is(jsonb_array_length(public.list_unpaid()), 3, 'list_unpaid lists the two open invoices and the unpaid supplier invoice');
+select is(jsonb_array_length(public.list_unpaid()), 5, 'list_unpaid lists the four open invoices and the unpaid supplier invoice');
+select is(pg_temp.unpaid('txn_unpaid_inv')->>'direction', 'expense', 'a supplier invoice is listed with direction expense');
 select is(pg_temp.unpaid('txn_open_a')->'marked_paid_at', 'null'::jsonb, 'an unmarked row has marked_paid_at null');
 select is(pg_temp.unpaid('txn_open_a')->>'currency', 'ILS', 'list_unpaid returns the currency');
 
@@ -119,7 +123,7 @@ select is(
   'set_invoice_paid marks an open invoice'
 );
 select isnt(pg_temp.unpaid('txn_open_a')->'marked_paid_at', 'null'::jsonb, 'the row stays listed with marked_paid_at');
-select is(jsonb_array_length(public.list_unpaid()), 3, 'a marked row stays in the list until the sync closes it');
+select is(jsonb_array_length(public.list_unpaid()), 5, 'a marked row stays in the list until the sync closes it');
 
 -- Move the first mark's time back, as the database owner.
 select tests.clear_authentication();
@@ -269,6 +273,90 @@ select is(
   public.mcp_set_invoice_paid('ipm-7', pg_temp.txn('txn_open_a'), true)->'error'->>'code', 'forbidden',
   'a read token is refused'
 );
+
+-- Review follow-ups. A mark the app set before an MCP mark survives undo of the MCP write,
+-- with its first time and author.
+select tests.authenticate_as('ipm_owner');
+select lives_ok(
+  format('select public.set_invoice_paid(%L::uuid, true)', pg_temp.txn('txn_open_d')),
+  'the owner marks invoice d in the app'
+);
+select tests.clear_authentication();
+reset role;
+update public.invoice_paid_marks set marked_at = '2026-06-11 09:00+00'
+where transaction_id = (select id from ipm where label = 'txn_open_d');
+select pg_temp.as_mcp('write');
+select is(
+  (public.mcp_set_invoice_paid('ipm-8', pg_temp.txn('txn_open_d'), true)->'data'->>'marked_paid_at')::timestamptz,
+  '2026-06-11 09:00+00'::timestamptz, 'mcp marking again keeps the app''s first time'
+);
+select is(
+  public.mcp_undo('ipm-u5', 'invoice_paid', pg_temp.txn('txn_open_d'))->>'ok', 'true',
+  'undo of a mark on a marked document'
+);
+select is(
+  (pg_temp.unpaid('txn_open_d')->>'marked_paid_at')::timestamptz, '2026-06-11 09:00+00'::timestamptz,
+  'the app''s mark stays, with its first time'
+);
+
+-- Undo of a clear restores the author too.
+select is(
+  public.mcp_set_invoice_paid('ipm-9', pg_temp.txn('txn_open_d'), false)->>'ok', 'true',
+  'mcp clears invoice d'
+);
+select is(
+  public.mcp_undo('ipm-u6', 'invoice_paid', pg_temp.txn('txn_open_d'))->>'ok', 'true',
+  'undo of the clear'
+);
+select is(
+  (select marked_by from public.invoice_paid_marks where transaction_id = pg_temp.txn('txn_open_d')),
+  tests.get_supabase_uid('ipm_owner'), 'the restored mark keeps its author'
+);
+
+-- A mark cleared and set again since the write is a change: undo is conflict.
+select is(
+  public.mcp_set_invoice_paid('ipm-10', pg_temp.txn('txn_open_e'), true)->>'ok', 'true',
+  'mcp marks invoice e'
+);
+select tests.authenticate_as('ipm_owner');
+select lives_ok(
+  format('select public.set_invoice_paid(%L::uuid, false)', pg_temp.txn('txn_open_e')),
+  'the owner clears invoice e'
+);
+select tests.clear_authentication();
+reset role;
+-- A later mark: move the time on so it differs from the first one.
+insert into public.invoice_paid_marks (transaction_id, company_id, marked_at, marked_by)
+values (
+  (select id from ipm where label = 'txn_open_e'), (select id from ipm where label = 'co'),
+  now() + interval '1 minute', tests.get_supabase_uid('ipm_owner')
+);
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('ipm-u7', 'invoice_paid', pg_temp.txn('txn_open_e'))->'error'->>'code', 'conflict',
+  'undo after a clear and a new mark is conflict'
+);
+select isnt(pg_temp.unpaid('txn_open_e')->'marked_paid_at', 'null'::jsonb, 'the owner''s new mark stays');
+
+-- A document removed since the write: undo finds nothing.
+select tests.clear_authentication();
+reset role;
+update public.transactions set removed_at = now()
+where id = (select id from ipm where label = 'txn_open_e');
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('ipm-u8', 'invoice_paid', pg_temp.txn('txn_open_e'))->'error'->>'code', 'not_found',
+  'undo on a removed document is not_found'
+);
+
+-- A viewer reads the list and the marks of the company it views.
+select tests.clear_authentication();
+reset role;
+insert into public.invoice_paid_marks (transaction_id, company_id)
+values ((select id from ipm where label = 'txn_demo'), (select id from ipm where label = 'demo_co'));
+select tests.authenticate_as('ipm_viewer');
+select isnt(pg_temp.unpaid('txn_demo')->'marked_paid_at', 'null'::jsonb, 'a viewer lists the marked invoice');
+select is((select count(*)::int from public.invoice_paid_marks), 1, 'a viewer reads the viewed company''s marks only');
 
 -- 3. FLOW-412: the category drill-down on the cash basis.
 select tests.authenticate_as('ipm_owner');
