@@ -319,6 +319,14 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     expect(screen.queryByText(JEV_FILLED)).toBeNull();
   });
 
+  it("puts the reason on the label's line instead of a second ✦ line", () => {
+    const why = jevReasonText({ reason: "same_as_last", partyFilings: 4, matchingFilings: 4 }, "expense");
+    const { container } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={why} jevFilled={{ onUndo: () => undefined }} />);
+    const lines = container.querySelectorAll(".ui-review-reason");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.querySelector(".ui-review-reason-text")?.textContent).toBe(`${JEV_FILLED} · כמו בפעם הקודמת`);
+  });
+
   it("marks בטל busy while the undo runs", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
     expect(screen.getByRole("button", { name: /בטל/ })).toHaveAttribute("aria-busy", "true");

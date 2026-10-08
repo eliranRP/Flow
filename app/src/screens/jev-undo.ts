@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, isTransientWriteError, useWrite, type WriteFailure } from "../use-write";
-import type { JevReviewState } from "./jev-review";
+import type { JevAutoFill, JevReviewState } from "./jev-review";
 
 export const JEV_UNDO_DONE = "המילוי של Jev בוטל.";
 export const JEV_UNDO_FAILED = "לא הצלחנו לבטל את המילוי.";
@@ -17,38 +17,46 @@ export function jevUndoFailure(error: Error): WriteFailure {
   return { message: JEV_UNDO_FAILED, retry: isTransientWriteError(error) };
 }
 
+type JevUndoTarget = { transactionId: string; fill: JevAutoFill | null };
+
 /**
  * בטל on "מולא ע״י Jev": calls `undo_jev_prefill`, then refetches the queue. The line stays in
- * לאישור with its values before. Until the Jev read refetches, the undone line is held here so
- * the card does not paint Jev's values again.
+ * לאישור with its values before. Until the Jev read refetches, the fill taken back is held here so
+ * the card does not paint Jev's values again. An older fill that still stands (another field) is
+ * not held: the refetch shows it, with its own בטל.
  */
 export function useJevUndo() {
-  const [undone, setUndone] = useState<ReadonlySet<string>>(() => new Set());
-  const write = useWrite<string>({
+  const [undone, setUndone] = useState<ReadonlyMap<string, JevAutoFill | null>>(() => new Map());
+  const write = useWrite<JevUndoTarget>({
     place: "bar",
     keys: ["review", "jev-review-queue", "dashboard", "project", "project-category", "project-waiting", "txn"],
     success: JEV_UNDO_DONE,
     failure: jevUndoFailure,
-    run: async (transactionId) => {
+    run: async ({ transactionId, fill }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("undo_jev_prefill", { p_transaction_id: transactionId }));
-      setUndone((current) => new Set(current).add(transactionId));
+      setUndone((current) => new Map(current).set(transactionId, fill));
     },
   });
   return {
     /** The card's Jev state with a line undone here marked undone. */
     stateFor(transactionId: string | null, state: JevReviewState): JevReviewState {
       if (transactionId == null || !undone.has(transactionId) || state.prefill == null) return state;
-      const auto = state.prefill.auto ?? { projectId: null, categoryId: null };
+      const held = undone.get(transactionId) ?? null;
+      const current = state.prefill.auto;
+      // The refetch shows another fill that still stands: that one is not the fill taken back.
+      if (held != null && current?.state === "filled"
+        && (current.projectId !== held.projectId || current.categoryId !== held.categoryId)) return state;
+      const auto = current ?? { projectId: null, categoryId: null };
       return { ...state, prefill: { ...state.prefill, auto: { ...auto, state: "undone" } } };
     },
     pendingFor(transactionId: string | null): boolean {
-      return write.isPending && transactionId != null && write.variables === transactionId;
+      return write.isPending && transactionId != null && write.variables.transactionId === transactionId;
     },
-    undo(transactionId: string) {
+    undo(transactionId: string, fill: JevAutoFill | null) {
       if (write.isPending) return;
-      write.mutate(transactionId);
+      write.mutate({ transactionId, fill });
     },
   };
 }

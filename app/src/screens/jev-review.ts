@@ -137,7 +137,10 @@ export function jevFilledOnCard(row: JevRow, state: JevReviewState): boolean {
     || (shown.category && auto.categoryId != null && row.category_id === auto.categoryId);
 }
 
-/** Newest `jev_prefills` row per line. Optional: a failed read gives no fills, never an error. */
+/**
+ * Newest `jev_prefills` row per line. A failed read throws, like the suggestions read, so the
+ * card falls back to the stored row: a line whose fill was undone never gets Jev's values again.
+ */
 export async function loadJevFills(ids: readonly string[], signal?: AbortSignal): Promise<Map<string, JevAutoFill>> {
   const fills = new Map<string, JevAutoFill>();
   const supabase = getSupabase();
@@ -146,13 +149,17 @@ export async function loadJevFills(ids: readonly string[], signal?: AbortSignal)
     const chunks: string[][] = [];
     for (let start = 0; start < ids.length; start += JEV_SUGGESTION_CHUNK) chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
     const reads = await Promise.all(chunks.map((chunk) => signalled(
-      supabase.from("jev_prefills").select("transaction_id,project_id,category_id,undone_at").in("transaction_id", chunk).order("created_at", { ascending: false }),
+      supabase.from("jev_prefills").select("transaction_id,project_id,category_id,undone_at").in("transaction_id", chunk).order("created_at", { ascending: false }).order("id", { ascending: false }),
       signal,
     )));
     for (const read of reads) {
-      if (read.error || !Array.isArray(read.data)) continue;
+      if (read.error) throw new Error(read.error.message);
+      if (!Array.isArray(read.data)) throw new Error("jev_prefills");
       for (const row of read.data as Array<{ transaction_id: string; project_id: string | null; category_id: string | null; undone_at: string | null }>) {
-        if (fills.has(row.transaction_id)) continue;
+        // undo_jev_prefill takes back the newest fill that still stands, so a standing fill wins
+        // over a newer undone one: the line still holds Jev's values and בטל can take them back.
+        const held = fills.get(row.transaction_id);
+        if (held != null && (held.state === "filled" || row.undone_at != null)) continue;
         fills.set(row.transaction_id, {
           state: row.undone_at == null ? "filled" : "undone",
           projectId: row.project_id,
@@ -161,7 +168,8 @@ export async function loadJevFills(ids: readonly string[], signal?: AbortSignal)
       }
     }
   } catch (error) {
-    if (signal?.aborted) throw error;
+    if (signal?.aborted || error instanceof Error) throw error;
+    throw new Error("jev_prefills");
   }
   return fills;
 }
@@ -646,7 +654,8 @@ export async function loadJevReasons(ids: readonly string[], signal?: AbortSigna
       signal,
     )));
     for (const read of reads) {
-      if (read.error || !Array.isArray(read.data)) continue;
+      if (read.error) throw new Error(read.error.message);
+      if (!Array.isArray(read.data)) throw new Error("jev_prefills");
       for (const raw of read.data) {
         const row = parseJevReason(raw);
         if (row == null) continue;

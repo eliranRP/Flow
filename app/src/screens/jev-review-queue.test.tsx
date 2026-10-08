@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { reviewHold, reviewPin } from "../review-pin";
 import { ToastProvider } from "../ui/toast";
+import { ViewerPreview } from "../use-is-viewer";
 import { ReviewQueue } from "./flow-screens";
 import { bindJevConnectorScope, jevConnectorStorageKey, jevQueueQueryKey, type JevConnectorScope } from "./jev-review";
 
@@ -243,6 +244,25 @@ describe("Jev review one tap", () => {
     expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
   });
 
+  it("shows an older fill that still stands after בטל takes back the newest (#231 r1)", async () => {
+    db.integration = { enabled: true, mode: "auto" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 }, category: { choice: "c1", confidence: 0.95 } } }];
+    // Newest first: a later run filled the category, an earlier one the project.
+    db.fills = [
+      { transaction_id: "t1", project_id: null, category_id: "c1", undone_at: null },
+      { transaction_id: "t1", project_id: "p1", category_id: null, undone_at: null },
+    ];
+    renderQueue([{ ...open, project_id: "p1", category_id: "c1", project_name: "וילה רעננה", category_name: "חומרים", project_suggested: true, category_suggested: true }]);
+    fireEvent.click(await screen.findByRole("button", { name: "בטל את המילוי של Jev" }, { timeout: 3000 }));
+    db.fills = [
+      { transaction_id: "t1", project_id: null, category_id: "c1", undone_at: "2026-10-08T10:00:00Z" },
+      { transaction_id: "t1", project_id: "p1", category_id: null, undone_at: null },
+    ];
+    expect(await screen.findByText("המילוי של Jev בוטל.")).toBeInTheDocument();
+    expect(await screen.findByText("מולא ע״י Jev")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בטל את המילוי של Jev" })).toBeInTheDocument();
+  });
+
   it("says why בטל was refused and keeps the label (FLOW-702)", async () => {
     db.integration = { enabled: true, mode: "auto" };
     db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c1", confidence: 0.95 } } }];
@@ -260,6 +280,29 @@ describe("Jev review one tap", () => {
     renderQueue();
     expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
+  });
+
+  it("shows a viewer the label without בטל (FLOW-702, #231 r1)", async () => {
+    db.integration = { enabled: true, mode: "auto" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c1", confidence: 0.95 } } }];
+    db.fills = [{ transaction_id: "t1", project_id: null, category_id: "c1", undone_at: null }];
+    const rows = [{ ...open, category_id: "c1", category_name: "חומרים", category_suggested: true }];
+    db.rows = rows;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ViewerPreview>
+              <ReviewQueue rows={rows} search="" />
+            </ViewerPreview>
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("מולא ע״י Jev", undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "בטל את המילוי של Jev" })).toBeNull();
+    expect(db.writes.some((call) => call.name === "undo_jev_prefill")).toBe(false);
   });
 
   it("names a new customer on an income line (FLOW-327 r1)", async () => {

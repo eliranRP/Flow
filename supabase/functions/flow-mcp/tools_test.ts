@@ -429,6 +429,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_company_currency",
     "rename_category",
     "set_category_group",
+    "set_jev_mode",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -492,6 +493,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_company_currency",
     "rename_category",
     "set_category_group",
+    "set_jev_mode",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -4125,6 +4127,36 @@ Deno.test("get_project_categories and set_category_group forward their input (FL
   const notFound = await callTool("get_project_categories", { id: CATEGORY }, ["read"], missing);
   assertEquals(notFound.isError, true);
   if (!notFound.structuredContent.ok) assertEquals(notFound.structuredContent.error.code, "not_found");
+});
+
+Deno.test("set_jev_mode forwards the switch, mode and threshold, undo takes jev_mode (#231 r1)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "jev_mode", mode: "auto" } } }));
+  const set = await callTool("set_jev_mode", { idempotency_key: "jm-1", enabled: true, mode: "auto", threshold: 0.85 }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_jev_mode", body: { p_idempotency_key: "jm-1", p_enabled: true, p_mode: "auto", p_threshold: 0.85 } });
+  await callTool("set_jev_mode", { idempotency_key: "jm-2", enabled: false }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_set_jev_mode", body: { p_idempotency_key: "jm-2", p_enabled: false, p_mode: null, p_threshold: null } });
+  const undo = await callTool("undo", { idempotency_key: "u-jm", kind: "jev_mode", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-jm", p_kind: "jev_mode", p_id: CATEGORY } });
+
+  const denied = await callTool("set_jev_mode", { idempotency_key: "k", enabled: true }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k" },
+    { idempotency_key: "k", enabled: "yes" },
+    { idempotency_key: "k", enabled: true, mode: "live" },
+    { idempotency_key: "k", enabled: true, threshold: 0.49 },
+    { idempotency_key: "k", enabled: true, threshold: 1.01 },
+    { idempotency_key: "k", enabled: true, company_id: CATEGORY },
+  ]) {
+    const result = await callTool("set_jev_mode", input, ["write"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(input));
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
 });
 
 Deno.test("set_company_currency forwards the code, undo takes company_currency (FLOW-504)", async () => {

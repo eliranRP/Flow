@@ -36,7 +36,7 @@ type StoredJev = {
 
 const TITLE = "תיוג חכם (Jev)";
 const SHADOW_HINT = "ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.";
-export const AUTO_HINT = "Jev ממלא פרויקט וקטגוריה כשהוא בטוח לפחות כמו הסף. כל שורה עדיין ממתינה לאישור, ואפשר לבטל מילוי בכרטיס.";
+export const AUTO_HINT = "Jev ממלא פרויקט וקטגוריה כשהביטחון מגיע לסף. השורה עדיין ממתינה לאישור, ואפשר לבטל בכרטיס.";
 
 /** FLOW-702 (decision 0145): the two modes a switched-on Jev runs in. */
 const MODE_OPTIONS: Array<{ value: "shadow" | "auto"; label: string }> = [
@@ -164,6 +164,8 @@ export function JevSettingsCard({
   useEffect(() => {
     if (!showOptions) setOpen(false);
   }, [showOptions]);
+  // A save does not disable the choices: a focused segment that turns disabled drops focus to the body.
+  // Taps while busy are ignored below, the same way the switch stays focusable with aria-busy.
   const auto = state.mode === "auto";
   const threshold = roundJevThreshold(state.threshold);
   const offered = JEV_THRESHOLDS.some((value) => value === threshold);
@@ -216,7 +218,7 @@ export function JevSettingsCard({
                 value={auto ? "auto" : "shadow"}
                 options={MODE_OPTIONS}
                 describedBy={modeHintId}
-                disabled={busy || readOnly}
+                disabled={readOnly}
                 onChange={(mode) => {
                   if (busy || readOnly || mode === (auto ? "auto" : "shadow")) return;
                   onMode?.(mode);
@@ -230,7 +232,7 @@ export function JevSettingsCard({
                     value={offered ? String(threshold) : ""}
                     options={JEV_THRESHOLDS.map((value) => ({ value: String(value), label: percent(value) }))}
                     describedBy={offered ? undefined : thresholdHintId}
-                    disabled={busy || readOnly}
+                    disabled={readOnly}
                     onChange={(value) => {
                       const next = Number(value);
                       if (busy || readOnly || next === threshold) return;
@@ -238,7 +240,10 @@ export function JevSettingsCard({
                     }}
                   />
                   {offered ? null : (
-                    <p className="t-hint ui-jev-options-hint" id={thresholdHintId}>{`הסף כרגע ${percent(threshold)}`}</p>
+                    <p className="t-hint ui-jev-options-hint" id={thresholdHintId}>
+                      {"הסף כרגע "}
+                      <bdi className="ui-num" dir="ltr">{percent(threshold)}</bdi>
+                    </p>
                   )}
                 </>
               ) : null}

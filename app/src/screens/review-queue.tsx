@@ -421,7 +421,7 @@ export function ReviewQueue({
     ...(holdWrites || leaving ? {} : {
       onUndo: () => {
         if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
-        jevUndo.undo(card.transaction_id);
+        jevUndo.undo(card.transaction_id, jev.prefill?.auto ?? null);
       },
     }),
   } : null;
