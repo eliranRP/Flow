@@ -24,4 +24,4 @@
 
 The review card shows a `split_mismatch` line like any other review for now; a hint for it is handed to the design thread. Approving or skipping the review leaves the split as it is, so the line keeps counting whole until new parts are sent. Like any skipped or approved review, a skipped `split_mismatch` row keeps `sync_review_queue` from queueing the same unchanged line for another reason, and an approved one keeps an income line out of the income review; split lines are already filed by the owner, so this rarely matters.
 
-Jev reads every open review on an expense line ([0124](0124-jev-after-sync.md)), so it may also label a `split_mismatch` line. A label only touches the line's own category and project, which a split line's P&L does not read, so it cannot hide the mismatch.
+Jev reads every open review on an expense line ([0124](0124-jev-after-sync.md)), so it may also label a `split_mismatch` line. Jev never resolves a review, and its auto mode writes nothing on a split line, which `save_line_split` marks `user_assigned`, so it cannot hide the mismatch. The cost is one Jev call per such line.
