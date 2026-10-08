@@ -20,7 +20,7 @@ type SegmentedControlProps<T extends string> = {
   /** The hint under the control. The group points at it. */
   describedBy?: string;
   disabled?: boolean;
-  /** The period bar sits on the violet band: a translucent track and white text (decision 0137). */
+  /** The period bar sits on the violet band: a translucent track and white text (decision 0140). */
   tone?: "page" | "band";
 };
 

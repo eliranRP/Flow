@@ -401,7 +401,7 @@ async function sync(page: Page) {
 
 async function showInvoicedAllTime(page: Page) {
   await page.goto("/");
-  // The period bar's הכול preset (decision 0137) is one tap.
+  // The period bar's הכול preset (decision 0140) is one tap.
   const all = page.locator(".ui-band").getByRole("radio", { name: "הכול" });
   await all.click();
   await expect(all).toHaveAttribute("aria-checked", "true");

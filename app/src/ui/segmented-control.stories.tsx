@@ -71,7 +71,7 @@ export const LongHebrew: Story = {
   render: () => <Demo value="expenses" long />,
 };
 
-/** The period bar's presets on the violet band (decision 0137). Under 360px 3 and 6 months shorten. */
+/** The period bar's presets on the violet band (decision 0140). Under 360px 3 and 6 months shorten. */
 function BandDemo() {
   const [current, setCurrent] = useState<"month" | "months3" | "months6" | "year" | "all">("months3");
   return (

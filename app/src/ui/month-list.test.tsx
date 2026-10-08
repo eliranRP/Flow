@@ -74,7 +74,7 @@ describe("MonthList", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent)).toEqual(["ספטמבר 2026", "אוגוסט 2026"]);
     const august = screen.getByRole("group", { name: "אוגוסט 2026" });
     const totals = august.querySelector(".ui-month-totals");
-    expect(totals?.textContent).toBe("הכנסות ₪8,000הוצאות −₪2,200הכנסות $1,500הוצאות −$400");
+    expect(totals?.textContent).toBe("הכנסות ₪8,000, הוצאות −₪2,200, הכנסות $1,500, הוצאות −$400, ");
     expect(within(august).getAllByTestId("row").map((node) => node.textContent)).toEqual(["c", "d", "e", "f"]);
     for (const figure of august.querySelectorAll("bdi")) expect(figure.getAttribute("dir")).toBe("ltr");
   });
@@ -82,18 +82,18 @@ describe("MonthList", () => {
   it("leaves out a side that is zero", () => {
     renderList([row("a", "2026-09-01", 50_000n, "expense"), row("b", "2026-08-01", 70_000n, "income")]);
     const september = screen.getByRole("group", { name: "ספטמבר 2026" });
-    expect(september.querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪500");
+    expect(september.querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪500, ");
     expect(document.body.textContent).not.toMatch(/[+−]₪0\b/);
   });
 
   it("leaves out a zero expense side too", () => {
     renderList([row("a", "2026-09-01", 50_000n, "income"), row("b", "2026-08-01", 70_000n, "expense")]);
-    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪500");
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪500, ");
   });
 
   it("totals stored-negative expenses by their size, with one minus", () => {
     renderList([row("a", "2026-09-02", -35_000n, "expense"), row("b", "2026-09-01", -15_000n, "expense"), row("c", "2026-08-01", 70_000n, "income")]);
-    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪500");
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪500, ");
   });
 
   it("draws no empty total line when a currency rounds to zero", () => {
@@ -112,6 +112,29 @@ describe("MonthList", () => {
     renderList(NEWEST_FIRST.slice(0, 2));
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getAllByTestId("row")).toHaveLength(2);
+  });
+
+  it("pauses between figures for a screen reader, with nothing extra on screen (FLOW-313)", () => {
+    renderList(NEWEST_FIRST);
+    const september = screen.getByRole("group", { name: "ספטמבר 2026" });
+    const pauses = september.querySelectorAll(".ui-month-totals bdi + .sr-only");
+    expect(Array.from(pauses, (node) => node.textContent)).toEqual([", ", ", "]);
+  });
+
+  it("keeps the rows mounted when a second month loads, so focus stays (FLOW-313)", () => {
+    const list = (rows: Row[]) => (
+      <MonthList rows={rows} keyOf={(r) => r.id} dateOf={dateOf} amountOf={amountOf} renderRow={(r) => <button type="button">{r.id}</button>} />
+    );
+    const { rerender } = render(list(NEWEST_FIRST.slice(0, 2)));
+    const first = screen.getByRole("button", { name: "a" });
+    first.focus();
+    rerender(list(NEWEST_FIRST));
+    expect(screen.getByRole("heading", { name: "ספטמבר 2026" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "a" })).toBe(first);
+    expect(first).toHaveFocus();
+    rerender(list(NEWEST_FIRST.slice(0, 2)));
+    expect(screen.getByRole("button", { name: "a" })).toBe(first);
+    expect(first).toHaveFocus();
   });
 
   it("uses the heading style for month heads and the income colour for the income total", () => {
@@ -179,7 +202,7 @@ describe("day heads (FLOW-305)", () => {
         renderRow={(r) => <p>{r.id}</p>}
       />,
     );
-    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪201.00");
-    expect(screen.getByRole("group", { name: "אוגוסט 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪1.00");
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪201.00, ");
+    expect(screen.getByRole("group", { name: "אוגוסט 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪1.00, ");
   });
 });

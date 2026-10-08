@@ -30,7 +30,7 @@ type PeriodBarProps = {
 };
 
 /**
- * One period control for Home and the project band (profit by period, option A, decision 0137):
+ * One period control for Home and the project band (profit by period, option A, decision 0140):
  * five presets on a segmented control, and under them a stepper. › on the start side goes to the
  * earlier window and ‹ to the later one, by the preset's own length; the later arrow is off at
  * the current window. Both chevrons are SVG and point outward, never a glyph RTL would mirror.
