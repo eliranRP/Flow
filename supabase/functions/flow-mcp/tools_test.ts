@@ -414,6 +414,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "detach_loan_payment",
     "delete_loan",
     "reorder_loans",
+    "set_project_investment",
+    "set_category_rehab",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -468,6 +470,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "detach_loan_payment",
     "delete_loan",
     "reorder_loans",
+    "set_project_investment",
+    "set_category_rehab",
     "undo",
     "undo_batch",
   ]);
@@ -3882,6 +3886,50 @@ Deno.test("delete_loan and reorder_loans forward their input, undo takes loan_de
     ["reorder_loans", { idempotency_key: "k", loan_ids: [] }],
     ["reorder_loans", { idempotency_key: "k", loan_ids: ["not-a-uuid"] }],
     ["reorder_loans", { idempotency_key: "k", loan_ids: TXN }],
+  ] as const) {
+    const result = await callTool(tool, input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+});
+
+Deno.test("set_project_investment and set_category_rehab forward their input, undo takes both kinds (FLOW-404)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_investment", id: TXN } } }));
+  const set = await callTool("set_project_investment", {
+    idempotency_key: "pi-1", project_id: TXN.toUpperCase(), arv_agorot: 150000000, purchase_agorot: null, value_date: "2026-09-30",
+  }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_project_investment",
+    body: { p_idempotency_key: "pi-1", p_project_id: TXN, p_patch: { purchase_agorot: null, arv_agorot: 150000000, value_date: "2026-09-30" } },
+  });
+  for (const rehab of [true, false, null]) {
+    const switched = await callTool("set_category_rehab", { idempotency_key: "cr-1", category_id: TXN, rehab }, ["write"], rpc);
+    assertEquals(switched.isError, false);
+    assertEquals(calls.at(-1), { name: "mcp_set_category_rehab", body: { p_idempotency_key: "cr-1", p_category_id: TXN, p_rehab: rehab } });
+  }
+  for (const kind of ["project_investment", "category_rehab"]) {
+    const undo = await callTool("undo", { idempotency_key: "u-" + kind, kind, id: TXN }, ["write"], rpc);
+    assertEquals(undo.isError, false);
+    assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-" + kind, p_kind: kind, p_id: TXN } });
+  }
+
+  const denied = await callTool("set_category_rehab", { idempotency_key: "k", category_id: TXN, rehab: true }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const [tool, input] of [
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_agorot: -1 }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_agorot: 12.5 }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_agorot: "100" }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, value_date: "2026-02-30" }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, budget_agorot: 1 }],
+    ["set_project_investment", { idempotency_key: "k", project_id: "not-a-uuid", arv_agorot: 1 }],
+    ["set_category_rehab", { idempotency_key: "k", category_id: TXN }],
+    ["set_category_rehab", { idempotency_key: "k", category_id: TXN, rehab: "yes" }],
+    ["set_category_rehab", { idempotency_key: "k", category_id: "not-a-uuid", rehab: true }],
   ] as const) {
     const result = await callTool(tool, input, ["write"], rpc);
     assertEquals(result.isError, true);
