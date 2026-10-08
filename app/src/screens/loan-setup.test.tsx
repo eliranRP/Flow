@@ -14,7 +14,7 @@ const db = vi.hoisted(() => ({
   inserts: [] as Array<Record<string, unknown>>,
   insertError: null as { message: string; code?: string } | null,
   hold: null as Promise<void> | null,
-  baseCurrency: "ILS" as unknown,
+  baseCurrency: null as string | null,
   currencyError: null as { message: string } | null,
   currencyHold: null as Promise<void> | null,
   offline: false,
