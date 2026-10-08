@@ -401,8 +401,8 @@ async function sync(page: Page) {
 
 async function showInvoicedAllTime(page: Page) {
   await page.goto("/");
-  const sheet = page.getByRole("dialog", { name: "תקופה" });
-  await page.getByRole("button", { name: "החודש" }).click();
-  await sheet.getByRole("radio", { name: "כל התקופה" }).click();
-  await expect(sheet).toBeHidden();
+  // The period bar's הכול preset (decision 0141) is one tap.
+  const all = page.locator(".ui-band").getByRole("radio", { name: "הכול" });
+  await all.click();
+  await expect(all).toHaveAttribute("aria-checked", "true");
 }

@@ -1,4 +1,4 @@
-import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from "@flow/shared";
+import type { CategoryRow, Dashboard, FiledTodayRow, ProfitMonths, ProjectDetail as ProjectDetailData, ReviewRow, UnpaidRow } from "@flow/shared";
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
@@ -29,6 +29,8 @@ import {
   UnpaidScreen,
 } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
+import { ProfitMonthsScreen } from "../screens/profit-months";
+import { presetPeriod } from "../period";
 import { Banner } from "./banner";
 import { israelToday } from "./date-math";
 import { OfflineIcon } from "./icons";
@@ -2902,3 +2904,172 @@ export const ReviewMetaCard: Story = {
     </StoryRoute>
   ),
 };
+
+// Profit by period (decision 0141, plan option A): Home on the period bar, the project with its own
+// period and the summary first, the "לפי חודש" page, and Unpaid with a mark that stays (FLOW-330).
+
+const periodDashboard: Dashboard = {
+  ...sampleDashboard,
+  review_count: 2,
+  projects: [
+    { id: "p-a", name: "וילה לדוגמה", status: "active", income_agorot: 36_600_000n, direct_agorot: 26_540_000n, shared_agorot: 0n, profit_before_shared_agorot: 10_060_000n, profit_agorot: 10_060_000n, by_currency: [] },
+    { id: "p-b", name: "שיפוץ משרדים לדוגמה עם שם ארוך שנחתך בסוף השורה", status: "active", income_agorot: 4_000_000n, direct_agorot: 4_965_000n, shared_agorot: 0n, profit_before_shared_agorot: -965_000n, profit_agorot: -965_000n, by_currency: [] },
+    { id: "p-c", name: "בניין מגורים לדוגמה", status: "active", income_agorot: 12_000_000n, direct_agorot: 8_810_000n, shared_agorot: 0n, profit_before_shared_agorot: 3_190_000n, profit_agorot: 3_190_000n, by_currency: [] },
+    { id: "p-d", name: "גג לדוגמה", status: "active", income_agorot: 0n, direct_agorot: 210_000n, shared_agorot: 0n, profit_before_shared_agorot: -210_000n, profit_agorot: -210_000n, by_currency: [] },
+    { id: "p-e", name: "מחסן לדוגמה", status: "active", income_agorot: 2_000_000n, direct_agorot: 1_400_000n, shared_agorot: 0n, profit_before_shared_agorot: 600_000n, profit_agorot: 600_000n, by_currency: [] },
+    { id: "p-f", name: "חנות לדוגמה", status: "active", income_agorot: 900_000n, direct_agorot: 600_000n, shared_agorot: 0n, profit_before_shared_agorot: 300_000n, profit_agorot: 300_000n, by_currency: [] },
+    { id: "p-g", name: "פרויקט בלי תנועות בתקופה", status: "active", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n, by_currency: [] },
+  ],
+};
+
+function PeriodHome() {
+  return (
+    <StoryRoute entry="/" tabs reviewCount={2}>
+      <HomeBooks
+        data={periodDashboard}
+        previewing={false}
+        search=""
+        unpaidGross={1_740_000n}
+        unpaidCount={2}
+        period={presetPeriod("months3")}
+        onPeriod={() => undefined}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  );
+}
+
+export const HomePeriod: Story = { name: "Home, period bar, 3 months", render: () => <PeriodHome /> };
+export const HomePeriodDark: Story = { ...HomePeriod, name: "Home, period bar, 3 months, dark", ...dark };
+export const HomePeriod320: Story = { ...HomePeriod, name: "Home, period bar, 3 months, 320", ...at320 };
+export const HomePeriodDark320: Story = { ...HomePeriod, name: "Home, period bar, 3 months, dark, 320", ...dark, ...at320 };
+
+const periodProject: NonNullable<ProjectDetailData> = {
+  id: "p-a",
+  name: "וילה לדוגמה",
+  status: "active",
+  state_label: "פעיל",
+  budget_agorot: 100_000_000n,
+  income_agorot: 36_600_000n,
+  direct_agorot: 26_420_000n,
+  shared_agorot: 0n,
+  profit_agorot: 10_180_000n,
+  categories: [
+    { id: "c1", name: "קבלני משנה", amount_agorot: 11_800_000n },
+    { id: "c2", name: "חומרים", amount_agorot: 8_240_000n },
+    { id: "c3", name: "עבודה", amount_agorot: 4_120_000n },
+  ],
+  pending_count: 0,
+  pending_agorot: 0n,
+  transactions: [
+    { id: "pt1", description: "חשמלאי לדוגמה", doc_date: "2026-10-05", amount_net: -632_000n, direction: "expense", category: "עבודה" },
+    { id: "pt2", description: "החזר ציוד לדוגמה", doc_date: "2026-10-02", amount_net: -150_000n, direction: "expense", category: "ציוד", kept_out: true },
+    { id: "pt3", description: "חומרי בניין לדוגמה", doc_date: "2026-09-18", amount_net: -1_200_000n, direction: "expense", category: "חומרים", parts_minor: 800_000n },
+    { id: "pt4", description: "תשלום לקוח לדוגמה", doc_date: "2026-08-20", amount_net: 18_600_000n, direction: "income", category: null },
+  ],
+};
+
+const periodMonths: NonNullable<ProfitMonths> = {
+  basis: "invoiced",
+  from: "2026-05-01",
+  to: "2026-10-08",
+  project_id: "p-a",
+  after_overhead: false,
+  months: [
+    { month: "2026-10", from: "2026-10-01", to: "2026-10-08", open: true, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 980_000n, profit_minor: -980_000n }] },
+    { month: "2026-09", from: "2026-09-01", to: "2026-09-30", open: false, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 1_420_000n, profit_minor: -1_420_000n }] },
+    { month: "2026-08", from: "2026-08-01", to: "2026-08-31", open: false, by_currency: [{ currency: "ILS", income_minor: 18_600_000n, expense_minor: 6_140_000n, profit_minor: 12_460_000n }] },
+    { month: "2026-07", from: "2026-07-01", to: "2026-07-31", open: false, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 5_830_000n, profit_minor: -5_830_000n }] },
+    { month: "2026-06", from: "2026-06-01", to: "2026-06-30", open: false, by_currency: [{ currency: "ILS", income_minor: 18_000_000n, expense_minor: 7_160_000n, profit_minor: 10_840_000n }] },
+    { month: "2026-05", from: "2026-05-01", to: "2026-05-31", open: false, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 4_890_000n, profit_minor: -4_890_000n }] },
+  ],
+  by_currency: [{ currency: "ILS", income_minor: 36_600_000n, expense_minor: 26_420_000n, profit_minor: 10_180_000n }],
+};
+
+export const ProjectPeriod: Story = {
+  name: "Project, own period, summary first",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sampleMonths={periodMonths} />
+    </StoryRoute>
+  ),
+};
+export const ProjectPeriodDark: Story = { ...ProjectPeriod, name: "Project, own period, dark", ...dark };
+export const ProjectPeriod320: Story = { ...ProjectPeriod, name: "Project, own period, 320", ...at320 };
+export const ProjectPeriodDark320: Story = { ...ProjectPeriod, name: "Project, own period, dark, 320", ...dark, ...at320 };
+/** A month from the "לפי חודש" list: one month, so the list row is not shown. */
+export const ProjectOneMonth: Story = {
+  name: "Project, one month opened from by month",
+  render: () => (
+    <StoryRoute entry="/projects/p-a?period=month&at=2026-09" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={{ ...periodProject, transactions: periodProject.transactions.filter((txn) => txn.doc_date.startsWith("2026-09")) }} />
+    </StoryRoute>
+  ),
+};
+/** הכול on a project reads מתחילת הפרויקט (FLOW-411), and the budget shows. */
+export const ProjectFromStart: Story = {
+  name: "Project, from the start",
+  render: () => (
+    <StoryRoute entry="/projects/p-a?period=all" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sampleMonths={periodMonths} />
+    </StoryRoute>
+  ),
+};
+
+function MonthsRoute({ data }: { data: NonNullable<ProfitMonths> }) {
+  return (
+    <StoryRoute entry="/projects/p-a/months?period=months6&at=2026-10" tabs>
+      <ExampleBar />
+      <ProfitMonthsScreen sample={{ projectName: "וילה לדוגמה", data }} />
+    </StoryRoute>
+  );
+}
+
+export const ProfitByMonth: Story = { name: "Project by month", render: () => <MonthsRoute data={periodMonths} /> };
+export const ProfitByMonthDark: Story = { ...ProfitByMonth, name: "Project by month, dark", ...dark };
+export const ProfitByMonth320: Story = { ...ProfitByMonth, name: "Project by month, 320", ...at320 };
+export const ProfitByMonthDark320: Story = { ...ProfitByMonth, name: "Project by month, dark, 320", ...dark, ...at320 };
+/** Overhead on: a month with project income shows its share; one without says לפני הוצאות כלליות. */
+export const ProfitByMonthOverhead: Story = {
+  name: "Project by month, after overhead, two currencies",
+  render: () => (
+    <MonthsRoute
+      data={{
+        ...periodMonths,
+        after_overhead: true,
+        months: periodMonths.months.slice(1, 4).map((month) => ({
+          ...month,
+          overhead_weighted: month.month === "2026-08",
+          overhead_share_agorot: month.month === "2026-08" ? 1_200_000n : null,
+          by_currency: month.month === "2026-08"
+            ? [...month.by_currency, { currency: "USD", income_minor: 0n, expense_minor: 45_000n, profit_minor: -45_000n }]
+            : [...month.by_currency, { currency: "USD", income_minor: 0n, expense_minor: 0n, profit_minor: 0n }],
+        })),
+      }}
+    />
+  ),
+};
+export const ProfitByMonth320Overhead: Story = { ...ProfitByMonthOverhead, name: "Project by month, after overhead, 320", ...at320 };
+export const ProfitByMonthEmpty: Story = {
+  name: "Project by month, empty",
+  render: () => <MonthsRoute data={{ ...periodMonths, months: [], by_currency: [] }} />,
+};
+
+const unpaidWithMark: UnpaidRow[] = [
+  { ...sampleUnpaid[0], marked_paid_at: "2026-10-06T09:00:00Z", currency: "ILS", direction: "income" } as UnpaidRow,
+  ...sampleUnpaid.slice(1).map((row) => ({ ...row, currency: "ILS", direction: "income" as const, marked_paid_at: null })),
+  { id: "u4", description: "ייעוץ", doc_date: "2026-09-20", project_name: null, customer_name: "לקוח בדולרים לדוגמה", open_gross_agorot: 250_000n, open_net_agorot: 250_000n, currency: "USD", direction: "income", marked_paid_at: null },
+];
+
+export const UnpaidMarked: Story = {
+  name: "Unpaid, a marked row waits for the sync",
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={unpaidWithMark} />
+    </StoryRoute>
+  ),
+};
+export const UnpaidMarkedDark: Story = { ...UnpaidMarked, name: "Unpaid, marked, dark", ...dark };
+export const UnpaidMarked320: Story = { ...UnpaidMarked, name: "Unpaid, marked, 320", ...at320 };
+export const UnpaidMarkedDark320: Story = { ...UnpaidMarked, name: "Unpaid, marked, dark, 320", ...dark, ...at320 };

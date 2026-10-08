@@ -1,4 +1,4 @@
-import { formatIls, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
+import { formatAmountText, formatIls, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
 import {
   companyRows,
   dashboardHasBooks,
@@ -6,14 +6,13 @@ import {
   primaryCurrency,
   profitInCurrency,
   projectAmountFigures,
-  projectMarginHint,
   roundedHeroProfit,
 } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useHeldOrder } from "../list-hold";
 import { useNavigate } from "react-router-dom";
-import { absAgorot } from "../agorot";
+import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
@@ -24,26 +23,14 @@ import { FlowLines, Hero } from "../ui/hero";
 import { ChartIcon, DocumentIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
-import { PeriodPicker, RangeSheet } from "../ui/period-picker";
+import { PeriodBar } from "../ui/period-bar";
+import { ProfitMark } from "../ui/profit-mark";
 import { HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { emptyHomeLabel } from "../home-label";
 import { breakdownPath } from "../breakdown";
-import {
-  allTime,
-  comparisonWords,
-  customRange,
-  heroExplanation,
-  heroProfitLabel,
-  lastMonth,
-  periodHint,
-  periodLabel,
-  samePeriod,
-  thisMonth,
-  yearToDate,
-  type PeriodChoice,
-} from "../period";
+import { comparisonWords, heroExplanation, heroProfitLabel, periodPhrase, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
@@ -98,7 +85,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     void unpaid.refetch();
   }
 
-  if (loading) return <HomeSkeleton preview={previewing} example={example} />;
+  if (loading) return <HomeSkeleton preview={previewing} example={example} period={books.period} onPeriod={books.setPeriod} />;
 
   if (failed) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
@@ -132,14 +119,16 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       data={dashboard.data}
       previewing={previewing}
       search={search}
-      unpaidGross={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n) : 0n}
-      unpaidCount={unpaidPhase.kind === "ready" ? (unpaid.data?.length ?? 0) : 0}
+      unpaidGross={unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? []) : 0n}
+      unpaidCount={unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0}
+      unpaidOther={unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : []}
       unpaidPhase={unpaidPhase.kind}
       onUnpaidRetry={() => {
         void unpaid.refetch();
       }}
       period={books.period}
       onPeriod={books.setPeriod}
+      refreshing={dashboard.isPlaceholderData}
       checklist={<SetupHomeSlot emptyHome={false} />}
     />
   );
@@ -155,6 +144,7 @@ export function HomeBooks({
   search,
   unpaidGross,
   unpaidCount,
+  unpaidOther = [],
   unpaidPhase = "ready",
   onUnpaidRetry,
   period,
@@ -169,6 +159,8 @@ export function HomeBooks({
   search: string;
   unpaidGross: bigint;
   unpaidCount: number;
+  /** FLOW-330. Open unpaid totals in other currencies, after the ILS one. */
+  unpaidOther?: { currency: string; minor: bigint }[];
   unpaidPhase?: "loading" | "error" | "empty" | "ready";
   onUnpaidRetry?: () => void;
   period: PeriodChoice;
@@ -181,16 +173,8 @@ export function HomeBooks({
   notice?: ReactNode;
   checklist?: ReactNode;
 }) {
-  const [sheet, setSheet] = useState(false);
-  const [range, setRange] = useState(false);
   const rankCurrency = primaryCurrency(data);
-  const ranked = [...data.projects]
-    .sort((a, b) => {
-      const left = profitInCurrency(a, rankCurrency);
-      const right = profitInCurrency(b, rankCurrency);
-      return left < right ? 1 : left > right ? -1 : 0;
-    })
-    .slice(0, 3);
+  const ranked = homeProjects(data.projects, rankCurrency);
   const leading = useHeldOrder(ranked, (project) => project.id);
   const currencyRows = companyRows(data);
   const heroFigures = currencyRows.map((row) => ({
@@ -206,14 +190,14 @@ export function HomeBooks({
       : data.prev_net_agorot;
   const percent = ilsOnly ? changePercent(heroFigures[0]?.agorot ?? 0n, previous) : null;
   const comparison = comparisonWords(period);
+  const phrase = periodPhrase(period);
   const attention = attentionRows({
     pending: data.review_count,
     unpaidCount: unpaidPhase === "ready" ? unpaidCount : 0,
     unpaidGross,
+    unpaidOther,
     search,
   });
-
-  const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
 
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
@@ -226,24 +210,7 @@ export function HomeBooks({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
-        trailing={
-          <PeriodPicker
-            pill={periodLabel(period)}
-            open={sheet}
-            onOpenChange={setSheet}
-            onCustom={() => {
-              setRange(true);
-            }}
-            options={choices.map((choice) => ({
-              label: periodLabel(choice),
-              hint: periodHint(choice),
-              selected: samePeriod(choice, period),
-              onSelect: () => {
-                onPeriod(choice);
-              },
-            }))}
-          />
-        }
+        trailing={<PeriodBar period={period} onChange={onPeriod} />}
       >
         <Hero
           label={heroProfitLabel(period, hero)}
@@ -263,7 +230,7 @@ export function HomeBooks({
         links={{
           income: breakdownPath("income", search),
           expense: breakdownPath("expense", search),
-          period: periodLabel(period),
+          period: phrase,
         }}
       />
       {ilsOnly && comparison && percent != null ? (
@@ -287,28 +254,52 @@ export function HomeBooks({
 
       <BannerRows rows={attention} />
 
-      <SectionHead title="פרויקטים מובילים" />
-      <ul className="ui-project-list">
-        {leading.map((project) => (
-          <li key={project.id}>
-            <ProjectLine project={project} search={search} />
-          </li>
-        ))}
-      </ul>
+      <SectionHead title="פרויקטים" />
+      {leading.length === 0 ? (
+        <p className="ui-page-pad t-hint">אין תנועות בפרויקטים בתקופה הזו.</p>
+      ) : (
+        <ul className="ui-project-list">
+          {leading.map((project) => (
+            <li key={project.id}>
+              <ProjectLine project={project} search={search} rankCurrency={rankCurrency} />
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="ui-page-pad">
         <TextLink to={`/projects${search}`} tone="quiet">
           לכל הפרויקטים
         </TextLink>
       </p>
-      <RangeSheet
-        open={range}
-        onOpenChange={setRange}
-        onApply={(from, to) => {
-          onPeriod(customRange(from, to));
-        }}
-      />
     </div>
   );
+}
+
+/** Home lists at most this many projects (profit by period, plan §2). */
+export const HOME_PROJECTS = 5;
+
+function hasLines(project: ProjectRow): boolean {
+  if (project.income_agorot !== 0n || project.direct_agorot !== 0n || project.shared_agorot !== 0n) return true;
+  return project.by_currency.some((row) => row.income_minor !== 0n || row.direct_minor !== 0n || row.shared_minor !== 0n);
+}
+
+/**
+ * The projects Home shows for its period: only those with lines in it, losses first (the
+ * biggest loss on top), then the most profitable, up to HOME_PROJECTS.
+ */
+export function homeProjects(projects: readonly ProjectRow[], currency: string): ProjectRow[] {
+  return projects
+    .filter(hasLines)
+    .map((project) => ({ project, profit: profitInCurrency(project, currency) }))
+    .sort((a, b) => {
+      const lossA = a.profit < 0n;
+      const lossB = b.profit < 0n;
+      if (lossA !== lossB) return lossA ? -1 : 1;
+      if (lossA) return a.profit < b.profit ? -1 : a.profit > b.profit ? 1 : 0;
+      return a.profit < b.profit ? 1 : a.profit > b.profit ? -1 : 0;
+    })
+    .slice(0, HOME_PROJECTS)
+    .map((entry) => entry.project);
 }
 
 /**
@@ -319,11 +310,13 @@ export function attentionRows({
   pending,
   unpaidCount,
   unpaidGross,
+  unpaidOther = [],
   search,
 }: {
   pending: number;
   unpaidCount: number;
   unpaidGross: bigint;
+  unpaidOther?: { currency: string; minor: bigint }[];
   search: string;
 }): BannerRow[] {
   const rows: BannerRow[] = [];
@@ -340,25 +333,35 @@ export function attentionRows({
       to: `/unpaid${search}`,
       icon: <DocumentIcon size={24} stroke={1.9} />,
       title: unpaidCount === 1 ? "חשבונית אחת לא שולמה" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות לא שולמו</>,
-      hint: <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · טרם נגבה</>,
+      hint: unpaidOther.length === 0 ? (
+        <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · טרם נגבה</>
+      ) : (
+        <>
+          {[
+            ...(unpaidGross !== 0n ? [formatIls(unpaidGross)] : []),
+            ...unpaidOther.map((total) => formatAmountText(total.minor, total.currency)),
+          ].map((text) => (
+            <span key={text}><bdi dir="ltr">{text}</bdi> · </span>
+          ))}
+          טרם נגבה
+        </>
+      ),
     });
   }
   return rows;
 }
 
-function ProjectLine({ project, search }: { project: ProjectRow; search: string }) {
+function ProjectLine({ project, search, rankCurrency }: { project: ProjectRow; search: string; rankCurrency: string }) {
   const amounts = projectAmountFigures(project);
   const single = amounts.length === 1 ? amounts[0] : undefined;
-  const margin = projectMarginHint(project);
+  // The mark follows the main currency; other currencies show their own figure under it (0096).
+  const marked = amounts.find((amount) => amount.currency === rankCurrency) ?? amounts[0];
+  const loss = (marked?.minor ?? project.profit_agorot) < 0n;
   return (
     <ListRow
       variant="project"
       title={project.name}
-      hint={margin == null ? undefined : (
-        <>
-          רווחיות <bdi dir="ltr">{margin}</bdi>
-        </>
-      )}
+      hint={<ProfitMark loss={loss} />}
       agorot={single?.minor ?? project.profit_agorot}
       currency={single?.currency}
       amounts={amounts.length > 1 ? amounts : undefined}
