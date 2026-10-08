@@ -128,8 +128,8 @@ export type PrefillWrite = {
   transactionId: string;
   projectId?: string;
   categoryId?: string;
-  categorySuggested?: boolean;
-  allocation: { projectId: string; amountNet: number } | null;
+  modelVersion: string;
+  confidence: number;
 };
 
 export type TagPlan = {
@@ -394,23 +394,21 @@ export function planTag(
   if (project !== undefined) parts.push(project?.confidence ?? 0);
   if (category !== undefined) parts.push(category?.confidence ?? 0);
   const confidence = parts.length === 0 ? 0 : Math.min(...parts);
-  // Auto does not pre-fill income: its suggestion shows on the card like shadow (decision 0134).
-  const gate = mode === "auto" && lineDirection(expense) === "expense" && parts.length > 0 && confidence >= threshold;
+  // Auto pre-fills expenses and income alike (decision 0145). SQL writes the allocation for an
+  // expense from the line's own amount, writes none for income, and holds back a line it flags.
+  const gate = mode === "auto" && parts.length > 0 && confidence >= threshold;
 
   const write: PrefillWrite = {
     companyId: expense.companyId,
     transactionId: expense.id,
-    allocation: null,
+    modelVersion: JEV_MODEL,
+    confidence,
   };
   if (gate && project && project.id !== JEV_NO_PROJECT && !projectBlocked(expense)) {
     write.projectId = project.id;
-    if (Number.isFinite(expense.amountNet)) {
-      write.allocation = { projectId: project.id, amountNet: expense.amountNet };
-    }
   }
   if (gate && category && !expense.userAssigned && !expense.categoryAssigned) {
     write.categoryId = category.id;
-    write.categorySuggested = true;
   }
   const hasWrite = write.projectId !== undefined || write.categoryId !== undefined;
   return { confidence, answers: askProject ? answers : withoutProject(answers), write: hasWrite ? write : null };
@@ -991,7 +989,8 @@ export function createTagStore(
 
     async prefill(write: PrefillWrite): Promise<boolean> {
       // One SQL transaction: the project, its allocation (amount from the line) and the
-      // category, only while the line is open and the owner has not set them (decision 0139).
+      // category, only while the line is open and the owner has not set them (decision 0139),
+      // never on a line SQL flags unless Jev scored the flag below 0.5, with an audit row (0145).
       const result = await rest(fetch, `${base}/rest/v1/rpc/jev_prefill`, serviceKey, {
         method: "POST",
         body: {
@@ -999,6 +998,8 @@ export function createTagStore(
           p_transaction: write.transactionId,
           p_project: write.projectId ?? null,
           p_category: write.categoryId ?? null,
+          p_model: write.modelVersion,
+          p_confidence: write.confidence,
         },
       });
       // An answer SQL did not give says nothing was written: never count it as pre-filled.

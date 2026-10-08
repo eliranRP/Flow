@@ -79,6 +79,7 @@ export const WRITE_TOOL_NAMES = [
   "detach_loan_payment",
   "delete_loan",
   "reorder_loans",
+  "undo_jev_prefill",
   "undo",
   "undo_batch",
 ] as const;
@@ -135,6 +136,7 @@ const ALLOWED: Record<string, Set<string>> = {
   detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
   delete_loan: new Set(["idempotency_key", "loan_id"]),
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
+  undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -498,6 +500,10 @@ const setInvoicePaidSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   paid: z.boolean(),
+}).strict();
+const undoJevPrefillSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
 }).strict();
 const detachLoanPaymentSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -1056,7 +1062,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, and lines_without_suggestion (open expense and income lines in review that Jev has not labelled yet). Jev only suggests a project and category; it never approves a line. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
+    toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, lines_without_suggestion (open expense and income lines in review that Jev has not labelled yet), prefilled_today (lines Jev auto filled this UTC day, not undone) and prefilled_open (lines still open in review that hold Jev's auto fill). In auto mode Jev fills a project and category at or above the threshold, but never on a line SQL flags unless Jev scored that flag below 0.5; it never approves a line, and undo_jev_prefill takes a fill back. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
     toolSpec("get_jev_accuracy", "How often Jev's suggestions matched what the owner filed, for lines resolved in a period (from and to are YYYY-MM-DD, by the UTC day the review was approved or changed; omit both for all time). lines counts resolved lines that had a Jev suggestion. all_matched counts lines where every compared field matched. project_compared/project_matched and category_compared/category_matched count each field; a shared, overhead or multi-project line is not compared on project, and a line split by category is not compared on category. at_threshold has lines and all_matched for suggestions at or above the company's threshold, which is what auto mode would pre-fill. bands splits by confidence: high from 0.9, medium from 0.7, low below.", {
       from: { type: "string" },
       to: { type: "string" },
@@ -1068,7 +1074,7 @@ function readTools() {
       project_id: { type: "string" },
     }),
     toolSpec("get_anomalies", "Flags on the open review lines (newest 500), found in SQL: duplicate (another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days, not an invoice and its own receipt; other_transaction_id, other_doc_date), amount_spike (at least 3 times the median of that supplier's or customer's last 12 lines in the year before, and at least 100.00 more; typical_amount_minor, ratio), new_party_large (the first line of a supplier or customer, at or above the company's 90th percentile posted line over the year up to the newest open line; company_p90_minor). Each item has transaction_id, kind and jev_score (0 to 1: how likely Jev thinks the flag is a real problem, scored in the same call that labelled the line; null when Jev did not score it). A flag is a reason to look, not an error; the owner decides.", {}),
-    toolSpec("get_jev_suggestions", "Jev's suggestions on the open review lines (newest 500 that have one): transaction_id, direction (expense or income), project_id and project_name, category_id and category_name (null when Jev did not answer), no_project (true when Jev answered no project: overhead, or not one project), confidence, reason, party_filings and matching_filings, and anomaly_score (Jev's score of an anomaly flag on that line, or null). reason comes from SQL: same_as_last (the suggestion equals how the owner filed this supplier or customer last time), usual_for_party (it equals at least 2 of the last 5 filed lines), new_party (nothing filed yet for that party), model_only (none of these). Jev only suggests; it never approves a line, and assign_expense or assign_expenses is still how a line is filed.", {}),
+    toolSpec("get_jev_suggestions", "Jev's suggestions on the open review lines (newest 500 that have one): transaction_id, direction (expense or income), project_id and project_name, category_id and category_name (null when Jev did not answer), no_project (true when Jev answered no project: overhead, or not one project), confidence, reason, party_filings and matching_filings, anomaly_score (Jev's score of an anomaly flag on that line, or null), and prefilled (true when Jev auto filled this line and it was not undone; undo_jev_prefill takes it back). reason comes from SQL: same_as_last (the suggestion equals how the owner filed this supplier or customer last time), usual_for_party (it equals at least 2 of the last 5 filed lines), new_party (nothing filed yet for that party), model_only (none of these). Jev only suggests; it never approves a line, and assign_expense or assign_expenses is still how a line is filed.", {}),
     toolSpec("get_missing_bills", "Recurring suppliers (an expense line in at least 3 of the last 6 complete months and in one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has supplier_id, supplier_name, currency, typical_amount_minor (median monthly net, negative for expenses), typical_day, expected_by, months_seen, last_doc_date, and the usual project_id and category_id.", {}),
     toolSpec("get_expected_months", "Expected income and expense per month from recurring suppliers and customers (median monthly net), for this month and the next ones. months is 1 to 12 (default 3). This month (open: true) counts only the recurring ones not seen yet this month. project_id limits it to parties whose usual project is that one. Output: today, project_id, months[] (month YYYY-MM, open, by_currency[] with currency, income_minor, expense_minor; expenses are negative) and recurring[] (direction, party_id, name, currency, typical_amount_minor, typical_day, months_seen, seen_this_month, project_id, category_id). A projection from past months, not booked lines.", {
       months: { type: "integer", minimum: 1, maximum: 12 },
@@ -1321,6 +1327,10 @@ function writeTools() {
     toolSpec("reorder_loans", "Save the order of the loans list: loan_ids names every loan of the company once (open and closed; list_loans gives them), first to last. A list that leaves one out, names one twice or names another company's loan is validation. list_loans returns loans in this order; a loan added since goes last. Undo is kind loan_order with the id this returns (the company id): it puts back the order before, and is a conflict when the order changed or a loan was added or deleted since.", {
       idempotency_key: { type: "string" },
       loan_ids: { type: "array", items: { type: "string" } },
+    }, true),
+    toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
@@ -1962,6 +1972,14 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_paid: parsed.data.paid,
+    };
+  } else if (name === "undo_jev_prefill") {
+    const parsed = undoJevPrefillSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_undo_jev_prefill";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
     };
   } else if (name === "detach_loan_payment") {
     const parsed = detachLoanPaymentSchema.safeParse(args);

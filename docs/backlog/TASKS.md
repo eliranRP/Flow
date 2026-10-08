@@ -971,6 +971,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; plan approved by the owner 2026-10-08, plan in the project files, plans/flow-702-jev-auto-mode.md; server side first) · **Depends on:** FLOW-703 (done, #177)
 - **What:** When the mode is `auto` and confidence is at or above the threshold, pre-fill the tag marked as AI and undoable in one tap; anomalies above a level always go to review; the toggle is the kill switch. Needs atomic allocation writes first. Show the threshold as a percent choice only in auto mode.
 - **Acceptance:** threshold edge tests; undo restores; audit trail.
+- [x] Anomaly gate: no fill on a flagged line unless Jev scored the flag below 0.5 (decision [0145](../decisions/0145-jev-auto-mode.md)).
+- [x] Income lines auto filled: project (no allocation) and income category.
+- [x] `jev_prefills` audit row per fill, `undo_jev_prefill` and MCP `undo_jev_prefill`; `get_jev_status` adds `prefilled_today` and `prefilled_open`, `get_jev_suggestions` adds `prefilled`.
+- [x] Threshold edge tests (at the threshold and 0.001 below, expense and income); off or shadow stops new fills.
+- [ ] App (UI lane): Settings mode choice הצעות בלבד / מילוי אוטומטי with threshold chips 80/85/90/95% in auto only; "✦ מולא ע״י Jev" with בטל (`undo_jev_prefill`) on a filled card; a held flagged line shows its flag and no fill.
 
 <a id="flow-703"></a>
 ### FLOW-703 · Jev corrections write-back
@@ -982,7 +987,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `approve_split_review(review, category)`: set the category and approve a split line in one call (#177).
 - [x] A `none` project answer, never pre-filled, and the overhead project labelled (#177).
 - [x] Finished projects offered on lines dated on or before their last line (#177).
-- [ ] #177 review nits (fold into FLOW-702's server PR): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
+- [x] #177 review nits (done in FLOW-702's server PR, decision 0145; a prefill does not set `pnl_role`): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
 - [ ] App (UI lane): the change sheet seeded with a Jev guess starts with remember off, with a test; the split approve calls `approve_split_review(p_id, p_category_id)` instead of two calls; show `no_project` on the card.
 
 <a id="flow-704"></a>

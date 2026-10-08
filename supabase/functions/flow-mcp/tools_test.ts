@@ -414,6 +414,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "detach_loan_payment",
     "delete_loan",
     "reorder_loans",
+    "undo_jev_prefill",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -468,6 +469,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "detach_loan_payment",
     "delete_loan",
     "reorder_loans",
+    "undo_jev_prefill",
     "undo",
     "undo_batch",
   ]);
@@ -3910,6 +3912,27 @@ Deno.test("detach_loan_payment validates input, refuses read tokens and passes t
   const refused = await callTool("detach_loan_payment", { idempotency_key: "k", transaction_id: TXN }, ["write"], rpc);
   assertEquals(refused.isError, true);
   if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "line has no loan split");
+});
+
+Deno.test("undo_jev_prefill forwards the line, refuses read tokens and passes conflicts through", async () => {
+  let reply: unknown = { ok: true, data: { transaction_id: TXN, project_id: null, category_id: null } };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: reply }));
+  const out = await callTool("undo_jev_prefill", { idempotency_key: "j-1", transaction_id: TXN.toUpperCase() }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], { name: "mcp_undo_jev_prefill", body: { p_idempotency_key: "j-1", p_transaction_id: TXN } });
+  const denied = await callTool("undo_jev_prefill", { idempotency_key: "k", transaction_id: TXN }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  for (const input of [{ idempotency_key: "k" }, { idempotency_key: "k", transaction_id: "x" }, { idempotency_key: "k", transaction_id: TXN, project_id: TXN }]) {
+    const result = await callTool("undo_jev_prefill", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1);
+  reply = { ok: false, error: { code: "conflict", message: "line changed since" } };
+  const changed = await callTool("undo_jev_prefill", { idempotency_key: "k", transaction_id: TXN }, ["write"], rpc);
+  assertEquals(changed.isError, true);
+  if (!changed.structuredContent.ok) assertEquals(changed.structuredContent.error.code, "conflict");
 });
 
 Deno.test("get_expense takes the loan split from get_transaction when it carries one", async () => {
