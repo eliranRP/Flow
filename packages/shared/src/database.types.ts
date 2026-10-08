@@ -823,6 +823,8 @@ isOneToOne: false
                            },
 "approve_split_review":
 { Args: { "p_id": string }; Returns: undefined
+                           } |
+{ Args: { "p_category_id": string,"p_id": string }; Returns: undefined
                            },
 "bump_mcp_rate":
 { Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
@@ -906,6 +908,12 @@ isOneToOne: false
                            },
 "jev_mark_failed":
 { Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
+                           },
+"jev_prefill":
+{ Args: { "p_category"?: string,"p_company": string,"p_project"?: string,"p_transaction": string }; Returns: Json
+                           },
+"jev_projects":
+{ Args: { "p_company": string }; Returns: Json
                            },
 "jev_release_lease":
 { Args: { "p_holder": string }; Returns: undefined
