@@ -1,0 +1,28 @@
+/* FLOW-332: the mark a swipe from the start edge shows while it pulls back. */
+.ui-edge-back {
+  position: fixed;
+  inset-block-start: 50%;
+  inset-inline-start: calc(var(--edge-back-shift, 0px) - 8px);
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-block-start: -20px;
+  border-radius: 999px;
+  background: var(--color-raised);
+  color: var(--color-text);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+  pointer-events: none;
+}
+
+.ui-edge-back-armed {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-edge-back {
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+}
