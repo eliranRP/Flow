@@ -128,11 +128,14 @@ async function syncCompany(
   if (last && Date.now() - last < minGap) return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
   // Both paths claim the connection like mercury-sync does. Settings reads the claim as
   // `syncing`, so the busy row survives a reload, and a second tap or a cron run is skipped.
+  // The stamp this run claims with: the release below clears only this stamp, so a run that
+  // outlives CLAIM_MS never clears a newer run's claim.
+  const claimStamp = new Date().toISOString();
   if (claim) {
     const cutoff = new Date(Date.now() - CLAIM_MS).toISOString();
     const claimed = await admin
       .from("connector_connections")
-      .update({ sync_claimed_at: new Date().toISOString() })
+      .update({ sync_claimed_at: claimStamp })
       .eq("company_id", companyId)
       .eq("provider", "sumit")
       .or(`sync_claimed_at.is.null,sync_claimed_at.lt.${cutoff}`)
@@ -150,7 +153,8 @@ async function syncCompany(
         .from("connector_connections")
         .update({ sync_claimed_at: null })
         .eq("company_id", companyId)
-        .eq("provider", "sumit");
+        .eq("provider", "sumit")
+        .eq("sync_claimed_at", claimStamp);
     }
   }
 }

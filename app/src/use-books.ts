@@ -262,6 +262,17 @@ export function useCategoriesQuery(active = true) {
   });
 }
 
+// syncing is the server claim of a running refresh: poll every 3s until it clears. A failing
+// read keeps the last data (still syncing), so back off by doubling up to a minute instead of
+// polling a failing endpoint every 3s.
+export function syncPollInterval(q: {
+  state: { data?: { syncing?: boolean } | undefined; fetchFailureCount: number };
+}): number | false {
+  if (q.state.data?.syncing !== true) return false;
+  const failures = q.state.fetchFailureCount;
+  return failures > 0 ? Math.min(3000 * 2 ** failures, 60_000) : 3000;
+}
+
 export function useSumitStatusQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
@@ -275,8 +286,7 @@ export function useSumitStatusQuery(active = true) {
       if (error) throw error;
       return sumitStatusSchema.parse(data);
     },
-    // syncing is the server claim of a running refresh. Poll until it clears.
-    refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    refetchInterval: syncPollInterval,
     // Another tab may have started a run: re-read the claim when this tab is shown again.
     refetchOnWindowFocus: true,
   });
@@ -317,8 +327,7 @@ export function useMercuryStatusQuery(active = true) {
       });
       return parsed;
     },
-    // syncing is the server claim of a running refresh. Poll until it clears.
-    refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    refetchInterval: syncPollInterval,
     // Another tab may have started a run: re-read the claim when this tab is shown again.
     refetchOnWindowFocus: true,
   });
