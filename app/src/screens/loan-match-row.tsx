@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { allocateLoanSplitWithFees, type LoanSplitPart, type TransactionLoanSplit } from "@flow/shared";
 import { parseShekelInput } from "@flow/shared";
@@ -9,9 +9,10 @@ import { useSheetHistory } from "../ui/back";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { minorToInput } from "./loan-form";
-import { LOAN_AMOUNT_CHANGED_HINT, LOAN_BUSY_HINT, showMoney, useLoanMatchRead } from "./loan-match";
+import { LOAN_AMOUNT_CHANGED_HINT, LOAN_BUSY_HINT, LOAN_ROW_CLASS_NAME, showMoney, useLoanMatchRead } from "./loan-match";
 import {
   LOAN_WRITE_KEYS,
+  isAlreadyUnmatched,
   loanClearFailureText,
   loanSaveFailureText,
   partsFromCleared,
@@ -24,6 +25,9 @@ import {
 } from "./loan-match-api";
 
 type Draft = Partial<Record<LoanSplitPart, string>>;
+
+/** The matched row's class. A new match moves focus to it (FLOW-114). */
+const LOAN_ROW_CLASS = LOAN_ROW_CLASS_NAME;
 
 function draftOf(parts: ReadonlyArray<{ part: LoanSplitPart; amountMinor: bigint }>): Draft {
   const draft: Draft = {};
@@ -73,6 +77,7 @@ export function LoanCategoryRow({
   direction,
   active,
   readOnly,
+  currency: lineCurrency,
   children,
 }: {
   transactionId: string;
@@ -81,12 +86,15 @@ export function LoanCategoryRow({
   direction: string;
   /** False on a sample card (unless a story provides a sample loan match). */
   active: boolean;
-  /** A viewer, or a role still loading: a static row and no sheet. */
+  /** A viewer, or a role still loading: the row opens the parts read-only, with no writes. */
   readOnly: boolean;
+  /** The line's currency, until the stored parts say the loan's. */
+  currency?: string | null;
   /** The ordinary category row. */
   children: ReactNode;
 }) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { api, sample } = useLoanMatchContext();
   const view = useLoanSplitView(serverSplit);
   const on = (active || sample != null) && direction !== "income";
@@ -99,6 +107,8 @@ export function LoanCategoryRow({
   const [shown, setShown] = useState<TransactionLoanSplit | null>(null);
   const [draft, setDraft] = useState<Draft>({});
   const touched = useRef(false);
+  // Each open runs the needs-review correction again, even on cached stored parts.
+  const [opens, setOpens] = useState(0);
   const stored = useQuery({
     queryKey: ["loan-split", "stored", transactionId],
     enabled: open && !readOnly,
@@ -111,7 +121,7 @@ export function LoanCategoryRow({
     if (read == null || touched.current || !read.parts.some((part) => part.needsReview)) return;
     const corrected = correctedDraft(read);
     if (corrected) setDraft(corrected);
-  }, [stored.data]);
+  }, [stored.data, stored.dataUpdatedAt, opens]);
   const save = useWrite<SavePart[]>({
     failure: (error) => loanSaveFailureText(error),
     success: "הפיצול נשמר",
@@ -128,26 +138,36 @@ export function LoanCategoryRow({
     keys: LOAN_WRITE_KEYS,
     run: async (cleared) => {
       if (readOnly) throw new Error("preview");
-      await api.save(transactionId, cleared.loanId, partsFromCleared(cleared));
+      await api.save(transactionId, cleared.loanId, partsFromCleared(cleared, clearedLine.current));
     },
   });
   const cleared = useRef<ClearedSplit | null>(null);
+  const clearedLine = useRef<bigint | null>(null);
+  // One undo per toast, however fast the taps (a retry toast handles a failure).
+  const undoSent = useRef(false);
   const unmatch = useWrite({
     failure: loanClearFailureText,
+    silent: isAlreadyUnmatched,
     keys: LOAN_WRITE_KEYS,
     onSuccess: () => {
       setSheet(false);
       const removed = cleared.current;
       if (removed == null) return;
       // Decision 0136: the line keeps its project and category and counts whole again.
+      undoSent.current = false;
       toast.show({
         message: "השיוך בוטל",
         action: "ביטול",
-        onAction: () => { if (!rematch.isPending) rematch.mutate(removed); },
+        onAction: () => {
+          if (undoSent.current) return;
+          undoSent.current = true;
+          rematch.mutate(removed);
+        },
       });
     },
     run: async () => {
       if (readOnly) throw new Error("preview");
+      clearedLine.current = stored.data?.lineMinor ?? null;
       cleared.current = await api.clear(transactionId);
     },
   });
@@ -165,14 +185,33 @@ export function LoanCategoryRow({
     icon: reviewWaits ? <AlertIcon /> : <BankIcon />,
     tone: reviewWaits ? ("warning" as const) : undefined,
   };
-  if (readOnly) return split == null ? <>{children}</> : <ListRow variant="static" {...rowProps} />;
   const editing = shown ?? sheetSplit;
+  if (readOnly) {
+    if (split == null) return <>{children}</>;
+    // Screen 11a: a viewer reads the parts, with no fields and no writes.
+    const viewCurrency = lineCurrency ?? "ILS";
+    const viewTotal = editing.parts.reduce((sum, part) => sum + part.amount_minor, 0n);
+    return (
+      <>
+        <ListRow variant="button" {...rowProps} chevron buttonRef={rowRef} label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`} onClick={() => { setShown(split); setSheet(true); }} />
+        <LoanPartsSheet
+          readOnly
+          open={open}
+          onOpenChange={(next) => { setSheet(next); }}
+          title={editing.loan_name ?? "הלוואה"}
+          fields={editing.parts.map((part) => ({ part: part.part, value: showMoney(part.amount_minor, viewCurrency) }))}
+          total={showMoney(viewTotal, viewCurrency)}
+          returnFocusRef={rowRef}
+        />
+      </>
+    );
+  }
   const storedData = stored.data;
   const currency = storedData?.loanCurrency ?? storedData?.currency ?? null;
   const fields: LoanPartField[] = editing.parts.map((part) => ({ part: part.part, value: draft[part.part] ?? "" }));
   const amounts = fields.map((field) => minorOf(field.value));
   const totalMinor = amounts.reduce<bigint>((sum, minor) => sum + (minor ?? 0n), 0n);
-  const shownCurrency = currency ?? "ILS";
+  const shownCurrency = currency ?? lineCurrency ?? "ILS";
   const lineMinor = storedData?.lineMinor ?? null;
   const currencyMismatch = storedData != null && storedData.loanCurrency != null && storedData.loanCurrency !== storedData.currency;
   const feesIndex = fields.findIndex((field) => field.part === "fees");
@@ -181,9 +220,9 @@ export function LoanCategoryRow({
     : amounts.some((minor) => minor == null)
     ? "חסר סכום."
     : feesIndex >= 0 && amounts[feesIndex] === 0n
-      ? "עמלות מעל 0."
+      ? "חסר סכום עמלות."
       : lineMinor != null && totalMinor !== lineMinor
-        ? `הסה״כ צריך להיות ${showMoney(lineMinor, shownCurrency)}.`
+        ? <>הסה״כ צריך להיות <bdi className="ui-num" dir="ltr">{showMoney(lineMinor, shownCurrency)}</bdi>.</>
         : currencyMismatch
           ? "המטבע של השורה לא מתאים להלוואה."
           : undefined;
@@ -195,6 +234,7 @@ export function LoanCategoryRow({
     if (split == null) return;
     touched.current = false;
     setShown(split);
+    setOpens((count) => count + 1);
     setDraft(draftOf(split.parts.map((part) => ({ part: part.part, amountMinor: part.amount_minor }))));
     setSheet(true);
   }
@@ -204,6 +244,7 @@ export function LoanCategoryRow({
         <ListRow
           variant="button"
           {...rowProps}
+          className={LOAN_ROW_CLASS}
           chevron
           buttonRef={rowRef}
           label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`}
@@ -231,6 +272,7 @@ export function LoanCategoryRow({
         unmatching={unmatch.isPending}
         canSave={canSave}
         returnFocusRef={rowRef}
+        onRetry={stored.isError ? () => { void stored.refetch(); } : undefined}
         onSave={() => {
           if (!canSave) return;
           const parts = fields.map((field, index): SavePart => {
@@ -244,7 +286,17 @@ export function LoanCategoryRow({
           });
           save.mutate(parts);
         }}
-        onUnmatch={() => { if (!unmatch.isPending && !save.isPending) unmatch.mutate(); }}
+        onUnmatch={() => {
+          if (unmatch.isPending || save.isPending) return;
+          unmatch.mutate(undefined, {
+            onError: (error) => {
+              if (!isAlreadyUnmatched(error)) return;
+              // Unmatched elsewhere meanwhile: close and show the card as it is now.
+              setSheet(false);
+              void Promise.all(LOAN_WRITE_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+            },
+          });
+        }}
       />
     </>
   );

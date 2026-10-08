@@ -45,6 +45,9 @@ export type LoanBalanceRow = {
  * a payment past the balance and a re-synced amount look the same here: the hint says
  * "may". Saving the split runs the balance check again.
  */
+/** The matched row's class (loan-match-row.tsx). Kept here so the two files don't import each other. */
+export const LOAN_ROW_CLASS_NAME = "ui-loan-row";
+
 export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. שמירת הפיצול תבדוק את היתרה מחדש.";
 /** The re-sync flagged the parts because the line's amount changed; the client can tell this one apart. */
 export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. בדקו את החלקים ושמרו.";
@@ -74,6 +77,7 @@ export function LoanMatchOffer({
   onSheetOpenChange,
   matchButtonRef,
   readOnly = false,
+  returnFocus = true,
   onMatch,
 }: {
   lineCurrency: string;
@@ -86,6 +90,8 @@ export function LoanMatchOffer({
   matchButtonRef?: RefObject<HTMLButtonElement | null>;
   /** A viewer cannot match: nothing shows. */
   readOnly?: boolean;
+  /** False once a match landed: focus goes to the new loan row, not back to this one. */
+  returnFocus?: boolean;
   onMatch: (loanId: string) => void;
 }) {
   const setSheet = onSheetOpenChange;
@@ -108,7 +114,7 @@ export function LoanMatchOffer({
           onClick={() => { if (!busy) setSheet(true); }}
         />
       </List>
-      <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={rowRef}>
+      <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={returnFocus ? rowRef : undefined}>
         {selectableLoans.length === 0 ? (
           <p className="t-hint">אין עדיין הלוואה.</p>
         ) : (
@@ -240,6 +246,22 @@ export function LoanReadError({ label, busy, onRetry }: { label: string; busy: b
   );
 }
 
+/**
+ * After a match the category row becomes the loan row (loan-match-row.tsx). The closing sheet can
+ * hold focus for a few frames, so retry until the row keeps it.
+ */
+function focusLoanRow() {
+  const started = performance.now();
+  const tryFocus = () => {
+    const row = document.querySelector<HTMLElement>(`button.${LOAN_ROW_CLASS_NAME}`);
+    if (row?.isConnected) row.focus({ preventScroll: true });
+    if ((row == null || document.activeElement !== row) && performance.now() - started < 1000) {
+      requestAnimationFrame(tryFocus);
+    }
+  };
+  requestAnimationFrame(tryFocus);
+}
+
 function failureText(error: Error): string {
   if ((error as { code?: string }).code === "42501") return "אין הרשאה לשייך הלוואה.";
   if (error.message === "date") return "התאריך לא על לוח הסילוקין.";
@@ -299,12 +321,17 @@ export function LoanTransactionSplit({
   const [sheetOpen, setSheetOpen] = useState(false);
   const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
   const matchRowRef = useRef<HTMLButtonElement>(null);
+  const [handedOff, setHandedOff] = useState(false);
   const query = useLoanMatchRead(transactionId, split, on && !writesHeld);
   const match = useWrite<string>({
     failure: failureText,
     success: "התשלום שויך להלוואה",
     keys: LOAN_WRITE_KEYS,
-    onSuccess: () => { setSheet(false); },
+    onSuccess: () => {
+      setHandedOff(true);
+      setSheet(false);
+      focusLoanRow();
+    },
     run: async (loanId) => {
       if (writesHeld) throw new Error("preview");
       const loaded = queryClient.getQueryData<LoadedMatch>(["loan-split", transactionId]);
@@ -355,7 +382,11 @@ export function LoanTransactionSplit({
       matchHint={matchHint}
       savingId={savingId}
       sheetOpen={sheetOpen}
-      onSheetOpenChange={setSheet}
+      onSheetOpenChange={(next) => {
+        if (next) setHandedOff(false);
+        setSheet(next);
+      }}
+      returnFocus={!handedOff}
       matchButtonRef={matchRowRef}
       onMatch={(loanId) => {
         if (match.isPending) return;

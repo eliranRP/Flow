@@ -11,6 +11,8 @@ const FIELDS: LoanPartField[] = [
 ];
 
 type DemoArgs = {
+  readOnly?: boolean;
+  retry?: boolean;
   fields?: LoanPartField[];
   total?: string;
   problem?: string;
@@ -21,7 +23,7 @@ type DemoArgs = {
   unmatching?: boolean;
 };
 
-function Demo({ fields = FIELDS, total = "₪6,200", problem, note, prefix, loading, saving, unmatching }: DemoArgs) {
+function Demo({ readOnly, retry, fields = FIELDS, total = "₪6,200", problem, note, prefix, loading, saving, unmatching }: DemoArgs) {
   const [open, setOpen] = useState(true);
   const [values, setValues] = useState(fields);
   return (
@@ -40,6 +42,8 @@ function Demo({ fields = FIELDS, total = "₪6,200", problem, note, prefix, load
       loading={loading}
       saving={saving}
       unmatching={unmatching}
+      readOnly={readOnly}
+      onRetry={retry ? () => undefined : undefined}
       canSave={problem == null}
       onSave={() => undefined}
       onUnmatch={() => undefined}
@@ -72,3 +76,19 @@ export const DollarsLarge320: Story = {
   args: { prefix: "$", total: "$9,999,999.99", fields: [{ part: "principal", value: "9999999.99" }, { part: "interest", value: "0" }, { part: "escrow", value: "0" }] },
   parameters: { viewport: { defaultViewport: "flow320" } },
 };
+/** The stored parts failed to load: the line says so and ניסיון חוזר reads them again. */
+export const ReadFailed: Story = { args: { problem: "לא הצלחנו לטעון את הפיצול.", retry: true } };
+export const ReadFailed320: Story = { args: { problem: "לא הצלחנו לטעון את הפיצול.", retry: true }, parameters: { viewport: { defaultViewport: "flow320" } } };
+/** A viewer reads the parts and the total; no fields, no actions (screen 11a). */
+export const Viewer: Story = {
+  args: {
+    readOnly: true,
+    fields: [
+      { part: "principal", value: "₪4,150" },
+      { part: "interest", value: "₪1,630" },
+      { part: "escrow", value: "₪380" },
+      { part: "fees", value: "₪40" },
+    ],
+  },
+};
+export const ViewerDark: Story = { ...Viewer, globals: { theme: "dark" } };

@@ -17,6 +17,8 @@ const db = vi.hoisted(() => ({
   rpcs: [] as Array<{ name: string; args: unknown }>,
   saveError: null as { message: string; code?: string } | null,
   clearError: null as { message: string; code?: string } | null,
+  splitsError: null as { message: string } | null,
+  amountOriginal: 620_000,
   splits: [] as Array<Record<string, unknown>>,
   loanSplit: null as Record<string, unknown> | null,
 }));
@@ -55,9 +57,11 @@ vi.mock("../lib/supabase", () => ({
     from: (table: string) => {
       db.reads.push(table);
       const one = (data: unknown) => ({ eq: () => ({ single: () => Promise.resolve({ data, error: null }) }) });
-      if (table === "transactions") return { select: () => one({ amount_original: 620_000, currency: "ILS", company_id: "co-1" }) };
+      if (table === "transactions") return { select: () => one({ amount_original: db.amountOriginal, currency: "ILS", company_id: "co-1" }) };
       if (table === "loans") return { select: () => one({ currency: "ILS" }) };
-      if (table === "loan_splits") return { select: () => ({ eq: () => Promise.resolve({ data: db.splits, error: null }) }) };
+      if (table === "loan_splits") {
+        return { select: () => ({ eq: () => Promise.resolve(db.splitsError ? { data: null, error: db.splitsError } : { data: db.splits, error: null }) }) };
+      }
       return { select: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) };
     },
     rpc: (name: string, args: unknown) => {
@@ -151,6 +155,8 @@ beforeEach(() => {
   db.rpcs = [];
   db.saveError = null;
   db.clearError = null;
+  db.splitsError = null;
+  db.amountOriginal = 620_000;
   db.splits = STORED;
   db.loanSplit = null;
 });
@@ -200,7 +206,9 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     renderRow();
     const dialog = await openSheet();
     fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4000" } });
-    expect(within(dialog).getByText("הסה״כ צריך להיות ₪6,200.")).toBeInTheDocument();
+    // The amount sits in its own LTR span (bdi).
+    expect(dialog.querySelector(".ui-loan-parts-problem")).toHaveTextContent("הסה״כ צריך להיות ₪6,200.");
+    expect(dialog.querySelector(".ui-loan-parts-problem bdi")).toHaveTextContent("₪6,200");
     expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeDisabled();
   });
 
@@ -245,21 +253,103 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
     await screen.findByText("השיוך בוטל");
     const keys = invalidate.mock.calls.map(([filters]) => (filters?.queryKey as string[] | undefined)?.[0]);
-    for (const key of ["dashboard", "home", "project", "project-category", "breakdown", "breakdown-lines", "profit-months", "txn", "loans", "loan-split", "line-split-loan"]) {
+    for (const key of ["dashboard", "review", "search", "project", "project-category", "breakdown", "breakdown-lines", "profit-months", "txn", "loans", "loan-split", "line-split-loan"]) {
       expect(keys).toContain(key);
     }
     expect(new Set(keys)).toEqual(new Set(LOAN_WRITE_KEYS));
   });
 
-  it("is a static row for a viewer: no sheet, no read, no write", async () => {
-    renderRow({ readOnly: true });
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    const row = screen.getByText("תשלום הלוואה · משכנתא לדוגמה");
-    fireEvent.click(row);
+  it("opens the parts read-only for a viewer: no fields, no actions, no read, no write", async () => {
+    renderRow({ readOnly: true, currency: "ILS" });
+    fireEvent.click(loanRow());
+    const dialog = await screen.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "ביטול השיוך" })).not.toBeInTheDocument();
+    expect(within(dialog).getByText("קרן")).toBeInTheDocument();
+    expect(within(dialog).getByText("₪4,150")).toBeInTheDocument();
+    expect(within(dialog).getByText("₪6,200")).toBeInTheDocument();
     await new Promise((r) => { setTimeout(r, 50); });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(db.reads).toEqual([]);
     expect(db.rpcs).toEqual([]);
+  });
+
+  it("offers ניסיון חוזר when the stored parts fail to load, and reads them again", async () => {
+    db.splitsError = { message: "offline" };
+    renderRow();
+    fireEvent.click(loanRow());
+    const dialog = await screen.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    expect(await within(dialog).findByText("לא הצלחנו לטעון את הפיצול.")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeDisabled();
+    db.splitsError = null;
+    fireEvent.click(within(dialog).getByRole("button", { name: "ניסיון חוזר" }));
+    await waitFor(() => { expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeEnabled(); });
+    expect(within(dialog).queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+  });
+
+  it("sends one undo however fast the toast is tapped", async () => {
+    renderRow();
+    const dialog = await openSheet();
+    fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
+    await screen.findByText("השיוך בוטל");
+    const undo = screen.getByRole("button", { name: "ביטול" });
+    fireEvent.click(undo);
+    fireEvent.click(undo);
+    await screen.findByText("השיוך חזר");
+    expect(calls("save_loan_split")).toHaveLength(1);
+  });
+
+  it("undoes the unmatch of a flagged split with the line's new split, as the sheet would", async () => {
+    // The line was re-synced to 6,200 while the parts still add up to 6,100.
+    db.splits = STORED.map((part) => ({ ...part, needs_review: true, ...(part.part === "principal" ? { amount_minor: 405_000 } : {}) }));
+    const flagged = STORED.map((part) => (part.part === "principal" ? { ...part, amount_minor: 405_000, needs_review: true } : { ...part, needs_review: true }));
+    db.rpcs = [];
+    renderRow({ split: { ...SPLIT, needs_review: true } });
+    const dialog = await openSheet();
+    // clear_loan_split returns the parts as they were.
+    const cleared = flagged;
+    const original = STORED.slice();
+    STORED.splice(0, STORED.length, ...cleared);
+    fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
+    await screen.findByText("השיוך בוטל");
+    STORED.splice(0, STORED.length, ...original);
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(calls("save_loan_split")).toHaveLength(1); });
+    const parts = (calls("save_loan_split")[0]?.args as { p_parts: Array<{ part: string; amount_minor: number }> }).p_parts;
+    expect(Object.fromEntries(parts.map((part) => [part.part, part.amount_minor]))).toEqual({
+      interest: 163_000,
+      escrow: 38_000,
+      principal: 415_000,
+      fees: 4_000,
+    });
+  });
+
+  it("closes quietly when the line was already unmatched elsewhere", async () => {
+    db.clearError = { message: "line has no loan split", code: "P0001" };
+    const { invalidate } = renderRow();
+    const dialog = await openSheet();
+    fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    expect(screen.queryByText("לא הצלחנו לבטל את השיוך.")).not.toBeInTheDocument();
+    expect(invalidate.mock.calls.some(([filters]) => (filters?.queryKey as string[] | undefined)?.[0] === "txn")).toBe(true);
+  });
+
+  it("offers a retry when another write changed the split meanwhile", async () => {
+    db.clearError = { message: "loan split changed", code: "40001" };
+    renderRow();
+    const dialog = await openSheet();
+    fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
+    expect(await screen.findByText("השיוך השתנה בינתיים.")).toBeInTheDocument();
+    // The toast's action (the open sheet hides the page from the accessibility tree).
+    expect(screen.getByText("ניסיון חוזר").closest("button")).not.toBeNull();
+  });
+
+  it("says the fees category does not fit", async () => {
+    db.saveError = { message: "category does not fit the loan part" };
+    renderRow();
+    const dialog = await openSheet();
+    fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("קטגוריית העמלות לא מתאימה.")).toBeInTheDocument();
   });
 
   it("marks a split that waits for review and opens it with the line's new split", async () => {
@@ -270,6 +360,17 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     // 6,200 less the 40 fees: interest 1,630 and escrow 380 as scheduled; principal takes the rest.
     await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
     expect(within(dialog).getByText("סכום השורה השתנה. בדקו את החלקים ושמרו.")).toBeInTheDocument();
+  });
+
+  it("corrects a flagged split again on every open", async () => {
+    db.splits = STORED.map((part) => ({ ...part, needs_review: true, ...(part.part === "principal" ? { amount_minor: 405_000 } : {}) }));
+    renderRow({ split: { ...SPLIT, needs_review: true } });
+    let dialog = await openSheet();
+    await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    dialog = await openSheet();
+    await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
   });
 });
 
@@ -325,10 +426,12 @@ describe("the transaction card with a matched payment", () => {
     expect(screen.queryByRole("dialog", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
   });
 
-  it("gives a viewer the static row and no sheet", async () => {
+  it("gives a viewer the row and a read-only sheet", async () => {
     db.holdWrites = true;
     showLive();
-    expect(await screen.findByText("תשלום הלוואה · משכנתא לדוגמה")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^תשלום הלוואה/ })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ }));
+    const dialog = await screen.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    expect(within(dialog).getByText("$4,150")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
   });
 });

@@ -447,6 +447,20 @@ describe("LoanTransactionSplit", () => {
     ]);
   });
 
+  it("moves focus to the loan row after a match (FLOW-114)", async () => {
+    renderSplit();
+    // The card's category row turns into the loan row once the match lands.
+    const row = document.createElement("button");
+    row.className = "ui-loan-row";
+    row.textContent = "loan row";
+    document.body.append(row);
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(row).toHaveFocus(); });
+    row.remove();
+  });
+
   it("hints the lone matching loan on the שיוך row", async () => {
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });

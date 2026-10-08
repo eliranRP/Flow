@@ -27,10 +27,10 @@
   overflow-wrap: anywhere;
 }
 
-/* Wide enough for 9,999,999.99 at 320px; the field's own message line stays off. */
+/* Wide enough for 9,999,999.99 and its ₪ or $ at 320px; the field's own message line stays off. */
 .ui-loan-parts-field {
   flex: 0 0 auto;
-  inline-size: 9.5rem;
+  inline-size: 11rem;
 }
 
 .ui-loan-parts-total {

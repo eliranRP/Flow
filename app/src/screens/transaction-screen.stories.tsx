@@ -621,10 +621,22 @@ export const TransactionLoanUnmatched: Story = {
   },
 };
 
-/** A viewer reads the row and cannot open the sheet. */
+/** A viewer reads the row. */
 export const TransactionLoanViewer: Story = {
   name: "Loan payment, viewer",
   render: () => <LoanMatchStory viewer />,
+};
+
+/** A viewer opens the parts read-only: no fields, no שמירה, no ביטול השיוך. */
+export const TransactionLoanViewerSheet: Story = {
+  name: "Loan payment, viewer reads the parts",
+  parameters: { viewport: { defaultViewport: "flow375-se" } },
+  render: () => <LoanMatchStory viewer />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
+    const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
+    await expect(within(dialog).queryByRole("button", { name: "שמירה" })).toBeNull();
+  },
 };
 
 /** A dollar loan on a dollar line: the sheet shows $. */

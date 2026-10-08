@@ -1,4 +1,4 @@
-import { useId, type RefObject } from "react";
+import { useId, type ReactNode, type RefObject } from "react";
 import { Button } from "./button";
 import { MoneyField } from "./money-field";
 import { Sheet } from "./sheet";
@@ -30,6 +30,7 @@ export type LoanPartField = { part: LoanPartKey; value: string };
 /**
  * FLOW-114 option B: the split sheet of a matched loan payment. One amount per part, the total,
  * one "שמירה", and a quiet "ביטול השיוך" under it. Values stay while a save runs or fails.
+ * Read-only (a viewer): the parts and the total as static rows, and no actions (screen 11a).
  */
 export function LoanPartsSheet({
   open,
@@ -47,29 +48,36 @@ export function LoanPartsSheet({
   canSave,
   onSave,
   onUnmatch,
+  onRetry,
+  readOnly = false,
   returnFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The loan's name. */
   title: string;
+  /** Raw digits per part; read-only, each value is the formatted amount. */
   fields: readonly LoanPartField[];
-  onFieldChange: (part: LoanPartKey, raw: string) => void;
+  onFieldChange?: (part: LoanPartKey, raw: string) => void;
   /** ₪ or $, the loan's currency. */
   prefix?: string;
   /** The parts added up, formatted, for the סה״כ row. */
   total: string;
   /** Why שמירה is off, one short line under the total (the parts don't add up to the line). */
-  problem?: string;
+  problem?: ReactNode;
   /** One line above the parts, such as why the split waits for review. */
   note?: string;
   /** The stored parts are still being read: the fields wait, שמירה stays off. */
   loading?: boolean;
   saving?: boolean;
   unmatching?: boolean;
-  canSave: boolean;
-  onSave: () => void;
-  onUnmatch: () => void;
+  canSave?: boolean;
+  onSave?: () => void;
+  onUnmatch?: () => void;
+  /** The stored parts failed to load: a "ניסיון חוזר" under the problem line reads them again. */
+  onRetry?: () => void;
+  /** A viewer: static amounts, no שמירה and no ביטול השיוך. */
+  readOnly?: boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const problemId = useId();
@@ -89,15 +97,15 @@ export function LoanPartsSheet({
       }}
       title={title}
       returnFocusRef={returnFocusRef}
-      action={(
+      action={readOnly ? undefined : (
         <div className="ui-loan-parts-actions">
           <Button
             type="button"
             full
             busy={saving}
-            disabled={!canSave || loading || unmatching}
+            disabled={canSave !== true || loading || unmatching}
             aria-describedby={problem ? problemId : undefined}
-            onClick={() => { if (canSave && !busy) onSave(); }}
+            onClick={() => { if (canSave === true && !busy) onSave?.(); }}
           >
             {saving ? "שומר…" : "שמירה"}
           </Button>
@@ -108,7 +116,7 @@ export function LoanPartsSheet({
             full
             busy={unmatching}
             disabled={saving || loading}
-            onClick={() => { if (!busy) onUnmatch(); }}
+            onClick={() => { if (!busy) onUnmatch?.(); }}
           >
             {unmatching ? "מבטל…" : "ביטול השיוך"}
           </Button>
@@ -120,6 +128,9 @@ export function LoanPartsSheet({
         {ordered.map((field, index) => (
           <div key={field.part} className="ui-loan-parts-row">
             <span className="t-label ui-loan-parts-label">{LOAN_PART_LABEL[field.part]}</span>
+            {readOnly ? (
+              <bdi className="ui-num t-amount" dir="ltr">{field.value}</bdi>
+            ) : (
             <div className="ui-loan-parts-field">
               <MoneyField
                 hideLabel
@@ -130,9 +141,10 @@ export function LoanPartsSheet({
                 disabled={loading || busy}
                 describedBy={problem ? problemId : undefined}
                 enterKeyHint={index === ordered.length - 1 ? "done" : "next"}
-                onValueChange={(raw) => { onFieldChange(field.part, raw); }}
+                onValueChange={(raw) => { onFieldChange?.(field.part, raw); }}
               />
             </div>
+            )}
           </div>
         ))}
         <div className="ui-loan-parts-total">
@@ -140,6 +152,9 @@ export function LoanPartsSheet({
           <bdi className="ui-num" dir="ltr">{total}</bdi>
         </div>
         {problem ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
+        {onRetry ? (
+          <Button type="button" variant="secondary" onClick={onRetry}>ניסיון חוזר</Button>
+        ) : null}
       </div>
     </Sheet>
   );

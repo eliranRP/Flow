@@ -1,20 +1,21 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { LoanKind, LoanRate, LoanSplitPart, LoanStatus, TransactionLoanSplit } from "@flow/shared";
+import { allocateLoanSplitWithFees, type LoanKind, type LoanRate, type LoanSplitPart, type LoanStatus, type TransactionLoanSplit } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
-import { assertNoError } from "../use-write";
+import { assertNoError, type WriteFailure } from "../use-write";
 
 /**
  * FLOW-114. Every query a loan match, a split edit or an unmatch changes: the split itself,
- * the loan balances, the card, and the P&L reads (Home, the project page and its category lines,
- * the breakdowns and the month-by-month profit).
+ * the loan balances, the card, the lists that show a line's category (review, search), and the
+ * P&L reads (Home, the project page and its category lines, the breakdowns and the months).
  */
 export const LOAN_WRITE_KEYS = [
   "loan-split",
   "line-split-loan",
   "loans",
   "txn",
+  "review",
+  "search",
   "dashboard",
-  "home",
   "project",
   "project-category",
   "breakdown",
@@ -209,14 +210,25 @@ export function loanSaveFailureText(error: Error, fallback = "לא הצלחנו 
   if (message.includes("loan closed") || message.includes("loan_closed")) return "ההלוואה נסגרה לפני תאריך התשלום.";
   if (message.includes("loan already attached")) return "התשלום כבר שויך להלוואה אחרת.";
   if (message.includes("fees category required")) return "חסרה קטגוריה לעמלות.";
+  if (message.includes("category does not fit the loan part") || message.includes("category not found")) return "קטגוריית העמלות לא מתאימה.";
   if (message.includes("a later payment is already attached")) return "כבר שויך תשלום מאוחר יותר.";
   if (message.includes("payment before the loan start")) return "התשלום לפני תחילת ההלוואה.";
   return fallback;
 }
 
-export function loanClearFailureText(error: Error): string {
+/** clear_loan_split's refusals (decision 0136). A line already unmatched is handled quietly by the caller. */
+export function loanClearFailureText(error: Error): WriteFailure {
   if (code(error) === "42501" || error.message.includes("forbidden")) return "אין הרשאה לבטל את השיוך.";
+  // Another write matched or unmatched the line while this one waited: worth a retry.
+  if (code(error) === "40001" || error.message.includes("loan split changed")) {
+    return { message: "השיוך השתנה בינתיים.", retry: true };
+  }
   return "לא הצלחנו לבטל את השיוך.";
+}
+
+/** The line was already unmatched elsewhere: nothing to tell, just refresh. */
+export function isAlreadyUnmatched(error: Error): boolean {
+  return error.message.includes("line has no loan split");
 }
 
 function parseCleared(data: unknown): ClearedSplit {
@@ -234,14 +246,32 @@ function parseCleared(data: unknown): ClearedSplit {
   };
 }
 
-/** Undo of an unmatch: the removed parts back through save_loan_split. Only fees keep a category. */
-export function partsFromCleared(cleared: ClearedSplit): SavePart[] {
-  return cleared.parts.map((part) => ({
+/**
+ * Undo of an unmatch: the removed parts back through save_loan_split. Only fees keep a category.
+ * A flagged split whose parts no longer add up to the line (a re-synced amount) is rebuilt from the
+ * same scheduled figures and fees, as the sheet's correction does; the server refuses parts that
+ * don't add up.
+ */
+export function partsFromCleared(cleared: ClearedSplit, lineMinor?: bigint | null): SavePart[] {
+  const keep = (part: ClearedSplit["parts"][number], amount: number): SavePart => ({
     part: part.part,
-    amount_minor: part.amount_minor,
+    amount_minor: amount,
     scheduled_minor: part.scheduled_minor,
     ...(part.part === "fees" && part.category_id ? { category_id: part.category_id } : {}),
-  }));
+  });
+  const sum = cleared.parts.reduce((total, part) => total + BigInt(part.amount_minor), 0n);
+  if (lineMinor == null || sum === lineMinor) return cleared.parts.map((part) => keep(part, part.amount_minor));
+  const scheduled = (name: LoanSplitPart) => BigInt(cleared.parts.find((part) => part.part === name)?.scheduled_minor ?? 0);
+  const feesMinor = BigInt(cleared.parts.find((part) => part.part === "fees")?.amount_minor ?? 0);
+  const next = allocateLoanSplitWithFees({
+    lineMinor,
+    feesMinor,
+    interestMinor: scheduled("interest"),
+    escrowMinor: scheduled("escrow"),
+    principalMinor: scheduled("principal"),
+  });
+  if (next == null) return cleared.parts.map((part) => keep(part, part.amount_minor));
+  return cleared.parts.map((part) => keep(part, Number(next.find((item) => item.part === part.part)?.amountMinor ?? 0n)));
 }
 
 async function readStoredSplit(transactionId: string): Promise<StoredSplit> {
