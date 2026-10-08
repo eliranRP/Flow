@@ -7,6 +7,9 @@
 --    one of the last 2. They feed missing-bill notices (a recurring supplier with no line this
 --    month after its usual day) and expected future months.
 -- Amounts are amount_net in the line's currency (minor units), grouped by currency.
+-- Amounts and history read posted lines only (a pending line is in no total, decision 0086);
+-- a pending line still counts as this month's bill and can be flagged. Income reads the
+-- invoiced basis (invoice, credit, invoice_receipt), so an invoice and its receipt count once.
 -- "Today" is Asia/Jerusalem. All reads are the caller's company (private.readable_company_id).
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -50,13 +53,14 @@ as $$
   lines as (
     select t.direction, coalesce(t.supplier_id, t.customer_id) as party_id, t.currency,
       t.doc_date, t.amount_net, t.project_id, t.category_id,
-      date_trunc('month', t.doc_date)::date as month
+      date_trunc('month', t.doc_date)::date as month, t.line_status = 'posted' as posted
     from public.transactions t, bounds b
     where t.company_id = p_company
       and t.removed_at is null
       and t.line_status <> 'void'
       and ((t.direction = 'expense' and t.supplier_id is not null)
-        or (t.direction = 'income' and t.customer_id is not null))
+        or (t.direction = 'income' and t.customer_id is not null
+          and t.doc_kind in ('invoice', 'credit', 'invoice_receipt')))
       and t.doc_date >= b.window_start
       and t.doc_date <= p_today
   ),
@@ -64,7 +68,7 @@ as $$
     select l.direction, l.party_id, l.currency, l.month,
       sum(l.amount_net) as amount, min(extract(day from l.doc_date))::integer as first_day
     from lines l, bounds b
-    where l.month < b.this_month
+    where l.month < b.this_month and l.posted
     group by l.direction, l.party_id, l.currency, l.month
   ),
   parties as (
@@ -72,13 +76,15 @@ as $$
       count(*)::integer as months_seen,
       bool_or(m.month >= (b.this_month - interval '2 months')::date) as recent,
       percentile_disc(0.5) within group (order by m.first_day)::integer as typical_day,
-      percentile_disc(0.5) within group (order by m.amount)::bigint as typical_amount_minor
+      -- The median by size, with the direction's sign, so an even count does not lean one way.
+      ((case when m.direction = 'expense' then -1 else 1 end)
+        * percentile_disc(0.5) within group (order by abs(m.amount)))::bigint as typical_amount_minor
     from monthly m, bounds b
     group by m.direction, m.party_id, m.currency
   )
   select p.direction, p.party_id, p.currency, p.months_seen, p.typical_day, p.typical_amount_minor,
     (select max(l.doc_date) from lines l
-     where l.direction = p.direction and l.party_id = p.party_id and l.currency = p.currency),
+     where l.posted and l.direction = p.direction and l.party_id = p.party_id and l.currency = p.currency),
     exists (
       select 1 from lines l, bounds b
       where l.direction = p.direction and l.party_id = p.party_id and l.currency = p.currency
@@ -106,21 +112,22 @@ set search_path = ''
 as $$
   with target as (
     select t.id, t.direction, coalesce(t.supplier_id, t.customer_id) as party_id, t.currency,
-      t.doc_date, t.amount_net, t.amount_gross
+      t.doc_date, t.amount_net, t.amount_gross, t.doc_kind, t.external_id, t.linked_external_id
     from public.transactions t
     where t.company_id = p_company
       and t.id = any (p_ids)
       and t.removed_at is null
       and t.line_status <> 'void'
   ),
-  -- The company's 90th percentile line, per direction and currency, over the year before the
-  -- newest target line. Read once, not per line.
-  p90 as (
+  -- The company's 90th percentile posted line, per direction and currency, over the year up to
+  -- the newest target line. Materialized, so it is read once and not per line.
+  p90 as materialized (
     select c.direction, c.currency,
       percentile_disc(0.9) within group (order by abs(c.amount_net)) as amount
     from public.transactions c
     where c.company_id = p_company
-      and c.removed_at is null and c.line_status <> 'void'
+      and c.removed_at is null and c.line_status = 'posted'
+      and (c.direction = 'expense' or c.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
       and c.doc_date >= (select max(doc_date) from target) - 365
       and c.doc_date <= (select max(doc_date) from target)
       and (c.direction, c.currency) in (select direction, currency from target)
@@ -142,9 +149,26 @@ as $$
         and coalesce(o.supplier_id, o.customer_id) = tg.party_id
         and o.currency = tg.currency
         and o.amount_gross = tg.amount_gross
+        and o.doc_kind = tg.doc_kind
         and o.removed_at is null
-        and o.line_status <> 'void'
+        and o.line_status = 'posted'
         and o.doc_date between tg.doc_date - 7 and tg.doc_date + 7
+        -- Not a document and the one it links to.
+        and coalesce(o.linked_external_id <> tg.external_id, true)
+        and coalesce(tg.linked_external_id <> o.external_id, true)
+        -- Not an invoice that a credit note cancels (cancelled and issued again).
+        and not exists (
+          select 1 from public.transactions cr
+          where cr.company_id = p_company and cr.doc_kind = 'credit' and cr.removed_at is null
+            and cr.linked_external_id is not null
+            and cr.linked_external_id in (o.external_id, tg.external_id)
+        )
+        -- Not two loans' payments to the same lender.
+        and not exists (
+          select 1 from public.loan_splits a
+          join public.loan_splits b on b.company_id = a.company_id and b.loan_id <> a.loan_id
+          where a.company_id = p_company and a.transaction_id = tg.id and b.transaction_id = o.id
+        )
       order by abs(o.doc_date - tg.doc_date), o.id
       limit 1
     ) d
@@ -155,21 +179,24 @@ as $$
       (select count(*) from public.transactions h
        where h.company_id = p_company and h.id <> tg.id and h.direction = tg.direction
          and coalesce(h.supplier_id, h.customer_id) = tg.party_id and h.currency = tg.currency
-         and h.removed_at is null and h.line_status <> 'void'
+         and h.removed_at is null and h.line_status = 'posted'
+         and (h.direction = 'expense' or h.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
          and h.doc_date < tg.doc_date) as earlier,
       (select percentile_disc(0.5) within group (order by abs(h.amount_net))
        from (
          select h.amount_net from public.transactions h
          where h.company_id = p_company and h.id <> tg.id and h.direction = tg.direction
            and coalesce(h.supplier_id, h.customer_id) = tg.party_id and h.currency = tg.currency
-           and h.removed_at is null and h.line_status <> 'void'
+           and h.removed_at is null and h.line_status = 'posted'
+           and (h.direction = 'expense' or h.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
            and h.doc_date < tg.doc_date and h.doc_date >= tg.doc_date - 365
          order by h.doc_date desc limit 12
        ) h) as typical,
       (select count(*) from public.transactions h
        where h.company_id = p_company and h.id <> tg.id and h.direction = tg.direction
          and coalesce(h.supplier_id, h.customer_id) = tg.party_id and h.currency = tg.currency
-         and h.removed_at is null and h.line_status <> 'void'
+         and h.removed_at is null and h.line_status = 'posted'
+         and (h.direction = 'expense' or h.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
          and h.doc_date < tg.doc_date and h.doc_date >= tg.doc_date - 365) as recent,
       (select p.amount from p90 p
        where p.direction = tg.direction and p.currency = tg.currency) as company_p90
@@ -182,7 +209,7 @@ as $$
         'ratio', round(abs(h.amount_net)::numeric / h.typical, 1)
       ) as detail
     from history h
-    where least(h.recent, 12) >= 3
+    where h.recent >= 3
       and h.typical > 0
       and abs(h.amount_net) >= 3 * h.typical
       and abs(h.amount_net) - h.typical >= 10000
@@ -205,6 +232,11 @@ as $$
     union all select * from new_party
   ) a;
 $$;
+
+-- The party lookups in line_anomalies (per line: earlier lines, the last 12, the year before).
+create index if not exists transactions_party_date_idx
+  on public.transactions (company_id, (coalesce(supplier_id, customer_id)), doc_date)
+  where removed_at is null;
 
 revoke all on function private.flow_today() from public, anon, authenticated;
 revoke all on function private.recurring_parties(uuid, date) from public, anon, authenticated;
@@ -301,7 +333,9 @@ begin
     join public.suppliers s on s.company_id = cid and s.id = r.party_id
     where r.direction = 'expense'
       and not r.seen_this_month
-      and extract(day from today)::integer > least(r.typical_day + 5, last_day)
+      -- A deadline past the month's end falls on its last day.
+      and (extract(day from today)::integer > r.typical_day + 5
+        or (r.typical_day + 5 >= last_day and extract(day from today)::integer = last_day))
   );
 end;
 $$;

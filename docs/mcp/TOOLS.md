@@ -325,11 +325,11 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_anomalies
 
-`mcp_review_anomalies`, no arguments ([0130](../decisions/0130-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another live line of the same supplier or customer, same gross amount and currency, within 7 days), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile over the year before). A flag is a reason to look; it changes nothing.
+`mcp_review_anomalies`, no arguments ([0130](../decisions/0130-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days; not an invoice and its receipt, a cancelled invoice, or two loans' payments), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile posted line over the year up to the newest open line). A flag is a reason to look; it changes nothing.
 
 ### get_missing_bills
 
-`missing_bills`, no arguments ([0130](../decisions/0130-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers (an expense line in at least 3 of the last 6 complete months and one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time). Each has `supplier_id`, `supplier_name`, `currency`, `typical_amount_minor` (median monthly net, negative), `typical_day`, `expected_by`, `months_seen`, `last_doc_date`, `project_id`, `category_id`.
+`missing_bills`, no arguments ([0130](../decisions/0130-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers (an expense line in at least 3 of the last 6 complete months and one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has `supplier_id`, `supplier_name`, `currency`, `typical_amount_minor` (median monthly net, negative), `typical_day`, `expected_by`, `months_seen`, `last_doc_date`, `project_id`, `category_id`.
 
 ### get_expected_months
 

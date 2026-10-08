@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(23);
+select plan(26);
 
 do $users$
 begin
@@ -33,12 +33,12 @@ where u.raw_user_meta_data ->> 'test_identifier' = 'jp_other';
 
 insert into public.suppliers (company_id, name)
 select (select id from jp_ref where label = 'co'), n
-from unnest(array['שכירות', 'חשמל', 'ספק משולם', 'ספק ישן', 'ספק קפיצה', 'ספק כפול', 'ספק חדש', 'ספק מילוי']) n;
+from unnest(array['שכירות', 'חשמל', 'ספק משולם', 'ספק ישן', 'ספק קפיצה', 'ספק כפול', 'ספק חדש', 'ספק מילוי', 'ספק סוף חודש']) n;
 insert into jp_ref (label, id)
 select case s.name
     when 'שכירות' then 's_rent' when 'חשמל' then 's_power' when 'ספק משולם' then 's_paid'
     when 'ספק ישן' then 's_old' when 'ספק קפיצה' then 's_spike' when 'ספק כפול' then 's_dup'
-    when 'ספק חדש' then 's_new' else 's_fill' end, s.id
+    when 'ספק חדש' then 's_new' when 'ספק סוף חודש' then 's_late' else 's_fill' end, s.id
 from public.suppliers s where s.company_id = (select id from jp_ref where label = 'co');
 insert into public.customers (company_id, name) select id, 'שוכר' from jp_ref where label = 'co';
 insert into jp_ref (label, id) select 'c_rent', id from public.customers where name = 'שוכר';
@@ -66,7 +66,10 @@ insert into jp_lines values
   ('dup_a', 's_dup', '2026-04-10', -5000), ('dup_b', 's_dup', '2026-04-12', -5000),
   ('new_04', 's_new', '2026-04-16', -600000),
   ('inc_01', 'c_rent', '2026-01-05', 800000), ('inc_02', 'c_rent', '2026-02-05', 800000),
-  ('inc_03', 'c_rent', '2026-03-05', 800000);
+  ('inc_03', 'c_rent', '2026-03-05', 800000),
+  ('late_10', 's_late', '2025-10-28', -7000), ('late_11', 's_late', '2025-11-28', -7000),
+  ('late_12', 's_late', '2025-12-28', -7000), ('late_01', 's_late', '2026-01-28', -7000),
+  ('late_02', 's_late', '2026-02-28', -7000), ('late_03', 's_late', '2026-03-28', -7000);
 insert into jp_lines
 select 'fill_' || n, 's_fill', ('2025-06-' || lpad(n::text, 2, '0'))::date, -1000 from generate_series(1, 20) n;
 
@@ -87,6 +90,24 @@ select (select id from jp_ref where label = 'co'),
 from jp_lines l;
 insert into jp_ref (label, id)
 select substr(idempotency_key, 10), id from public.transactions where idempotency_key like 'sumit:jp-%';
+-- A customer billed by invoice on the 1st and paid by a linked receipt on the 3rd: the pair
+-- counts once (invoiced basis) and is not a duplicate.
+insert into public.customers (company_id, name) select id, 'לקוח חשבונית' from jp_ref where label = 'co';
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, customer_id,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, description, external_id, linked_external_id
+)
+select (select id from jp_ref where label = 'co'), 'income', k.kind, 'project',
+  (select id from public.customers where name = 'לקוח חשבונית'),
+  354000, 300000, 54000, 'assumed',
+  (m + case k.kind when 'invoice' then 0 else 2 end)::date, (m + 2)::date, 'sumit',
+  'sumit:jp-' || k.kind || '_' || to_char(m, 'MM'), k.kind,
+  k.kind || '-' || to_char(m, 'MM'),
+  case k.kind when 'receipt' then 'invoice-' || to_char(m, 'MM') end
+from (select d::date as m from generate_series('2026-01-01'::date, '2026-03-01'::date, interval '1 month') d) g,
+  (values ('invoice'::public.doc_kind), ('receipt'::public.doc_kind)) k(kind);
+
 -- Company B has the same supplier names and nothing else.
 insert into public.suppliers (company_id, name) select id, 'שכירות' from jp_ref where label = 'co_b';
 
@@ -123,6 +144,11 @@ select 'anomalies', public.review_anomalies(array(
 insert into jp_out (label, result) select 'mcp', public.mcp_review_anomalies();
 insert into jp_out (label, result) select 'missing_20', public.missing_bills('2026-04-20');
 insert into jp_out (label, result) select 'missing_25', public.missing_bills('2026-04-25');
+insert into jp_out (label, result) select 'missing_29', public.missing_bills('2026-04-29');
+insert into jp_out (label, result) select 'missing_30', public.missing_bills('2026-04-30');
+insert into jp_out (label, result) select 'inv_anomalies', public.review_anomalies(array(
+  select id from public.transactions where idempotency_key in ('sumit:jp-invoice_02', 'sumit:jp-receipt_02')
+));
 insert into jp_out (label, result) select 'expected', public.expected_months(3, null, '2026-04-20');
 insert into jp_out (label, result) select 'expected_p1',
   public.expected_months(2, (select id from jp_ref where label = 'p1'), '2026-04-20');
@@ -187,6 +213,21 @@ select is(
   '["שכירות", "חשמל"]'::jsonb, 'on the 25th power is missing too; a supplier already billed this month and one gone quiet are not'
 );
 
+select is(
+  (select jsonb_agg(e ->> 'supplier_name' order by (e ->> 'typical_day')::integer)
+   from jp_out, jsonb_array_elements(result) e where label = 'missing_29'),
+  '["שכירות", "חשמל"]'::jsonb, 'a supplier due on the 28th is not missing before the month''s last day'
+);
+select is(
+  (select jsonb_agg(e ->> 'expected_by' order by (e ->> 'typical_day')::integer)
+   from jp_out, jsonb_array_elements(result) e where label = 'missing_30'),
+  '["2026-04-08", "2026-04-23", "2026-04-30"]'::jsonb, 'on the last day it is, due that day'
+);
+select is(
+  (select result from jp_out where label = 'inv_anomalies'), '[]'::jsonb,
+  'an invoice and its receipt are not duplicates'
+);
+
 -- Expected months.
 select is(
   (select jsonb_agg(m ->> 'month') from jp_out, jsonb_array_elements(result -> 'months') m where label = 'expected'),
@@ -195,13 +236,13 @@ select is(
 select is(
   (select m -> 'by_currency' from jp_out, jsonb_array_elements(result -> 'months') m
    where label = 'expected' and m ->> 'month' = '2026-04'),
-  '[{"currency": "ILS", "income_minor": 800000, "expense_minor": -520000}]'::jsonb,
-  'this month counts only what has not come in yet: rent, power and the tenant'
+  '[{"currency": "ILS", "income_minor": 1100000, "expense_minor": -527000}]'::jsonb,
+  'this month counts only what has not come in yet; an invoice and its receipt count once'
 );
 select is(
   (select m -> 'by_currency' from jp_out, jsonb_array_elements(result -> 'months') m
    where label = 'expected' and m ->> 'month' = '2026-05'),
-  '[{"currency": "ILS", "income_minor": 800000, "expense_minor": -560000}]'::jsonb,
+  '[{"currency": "ILS", "income_minor": 1100000, "expense_minor": -567000}]'::jsonb,
   'next month counts every recurring supplier and customer'
 );
 select is(
@@ -211,7 +252,7 @@ select is(
 );
 select is(
   (select jsonb_agg(e ->> 'name' order by e ->> 'name') from jp_out, jsonb_array_elements(result -> 'recurring') e where label = 'expected'),
-  '["חשמל", "ספק משולם", "ספק קפיצה", "שוכר", "שכירות"]'::jsonb,
+  '["חשמל", "לקוח חשבונית", "ספק משולם", "ספק סוף חודש", "ספק קפיצה", "שוכר", "שכירות"]'::jsonb,
   'recurring: 3 of the last 6 months and active in the last 2; a supplier gone quiet and one-off lines are not'
 );
 select is(

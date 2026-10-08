@@ -9,19 +9,19 @@ FLOW-701 items 3 and 4. The owner chose anomalies as a flag on the review card, 
 
 ## Decision
 
-Everything is computed when it is read, for the caller's company (`private.readable_company_id()`). Nothing is stored. Lines count when they are not removed and not void. A party is the supplier of an expense line or the customer of an income line. Amounts are `amount_net` in the line's currency (minor units, expenses negative), grouped by currency. "Today" is Asia/Jerusalem.
+Everything is computed when it is read, for the caller's company (`private.readable_company_id()`). Nothing is stored. Amounts, history and percentiles read posted lines that are not removed: a pending line is in no total ([0086](0086-mercury.md)), though it still counts as this month's bill. Income reads the invoiced basis (`invoice`, `credit`, `invoice_receipt`), so an invoice and its receipt count once. A party is the supplier of an expense line or the customer of an income line. Amounts are `amount_net` in the line's currency (minor units, expenses negative), grouped by currency. "Today" is Asia/Jerusalem.
 
 **Anomaly candidates** (`review_anomalies(ids[])` for the card, at most 500 ids; `mcp_review_anomalies()` for the open review lines, newest 500):
 
-- `duplicate`: another live line of the same party, direction, currency and gross amount within 7 days. It names the other line.
-- `amount_spike`: at least 3 times the median of the party's last 12 lines in the year before, and at least 100.00 more. It needs 3 such lines.
+- `duplicate`: another posted line of the same party, direction, document kind, currency and gross amount within 7 days. It names the other line. A document and the one it links to (an invoice and its receipt), an invoice that a credit note cancels, and payments of two different loans are not duplicates.
+- `amount_spike`: at least 3 times the median of the party's last 12 lines in the year before, and at least 10000 minor units more (100.00 in that currency). It needs 3 such lines.
 - `new_party_large`: the party's first line, at or above the company's 90th percentile line amount in that direction and currency over the year up to the newest line asked about (one figure per read, so a long list stays fast). It needs 20 such lines.
 
 A flag is a reason to look. It does not block approval and it does not change the line.
 
 **Recurring parties** (`private.recurring_parties`): a party with lines in at least 3 of the last 6 complete months and in one of the last 2. Its typical amount is the median monthly net. Its typical day is the median first day in the month. Its usual project and category are the most common ones in that window.
 
-**Missing bills** (`missing_bills()`): recurring suppliers with no expense line this month, once today is past their typical day plus 5 (or the month's last day). Each carries the expected-by date, the typical amount, and the usual project and category.
+**Missing bills** (`missing_bills()`): recurring suppliers with no expense line this month, once today is past their typical day plus 5. When that falls after the month's end, the bill is missing on the month's last day. Each carries the expected-by date, the typical amount, and the usual project and category.
 
 **Expected months** (`expected_months(months 1..12, project_id)`): this month and the next ones. This month counts only the recurring parties not seen yet. Later months count every recurring party. A project filter keeps the parties whose usual project it is (input for FLOW-403).
 
