@@ -22,7 +22,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0016](../decisions/0016-hebrew-only.md) | Hebrew only. Layout is right to left. Amounts are ₪, and the number itself is left to right. |
 | [0017](../decisions/0017-sms-sign-in.md) | Superseded. Do not build SMS sign-in. |
 | [0018](../decisions/0018-two-notifications.md) | Exactly two notifications, `Asia/Jerusalem`. Sunday 08:00 weekly summary (tap opens Home). 18:00 review nudge only when the queue is not empty (tap opens Review). No per-transaction ping. |
-| [0019](../decisions/0019-home-periods-and-comparison.md) | Home periods: this month, last month, year to date, each with a comparison arrow. The project screen defaults to project to date. |
+| [0019](../decisions/0019-home-periods-and-comparison.md) | Home periods: this month, last month, year to date, each with a comparison arrow. The project screen defaults to project to date. The period list is amended by [0141](../decisions/0141-period-bar.md). |
 | [0020](../decisions/0020-capture-from-the-phone.md) | Capture is multi-photo and files on the phone. Android may share in. iPhone cannot. |
 | [0021](../decisions/0021-shared-costs-and-overhead.md) | Shared project costs are split. True overhead stays overhead. The overhead share is a view, not a rewrite of transactions. |
 | [0022](../decisions/0022-after-overhead-starts-off.md) | The after-overhead switch starts **off**. Home, the project screen, and Settings share one preference. |
@@ -41,6 +41,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0041](../decisions/0041-amounts-before-vat.md) | P&L amounts are before VAT. VAT is stored beside the amount and kept out of profit. |
 | [0043](../decisions/0043-assumed-vat-on-expenses.md) | An expense with no VAT split assumes 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt (`net = gross`). A subtle hint may appear on the detail screen. Home has no warning banner. |
 | [0120](../decisions/0120-income-green-type-scale.md) | Money in is `income` green with no plus, only on a figure with no minus and never on the band. Option C, full Mercury: page titles 34, section and month heads `heading` 20, row titles 17/400, list amounts `amount` 17/400, row secondary lines `meta` 15/400, project name on the band 32. No row hairlines anywhere; month groups 32px apart. Transaction rows show small raised cents, ".00" included; other lists and summaries stay whole. |
+| [0141](../decisions/0141-period-bar.md) | Home and the project band carry one period bar: five presets and a stepper with outward SVG chevrons; its label opens the period sheet. Replaces the period pill there (FLOW-411). |
 
 Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md) and [0065](../decisions/0065-review-round5.md) point 40: SUMIT is the source, and there is no Hapoalim import).
 
@@ -194,15 +195,16 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Button | primary, secondary (tint), ghost, destructive. Default, pressed, disabled | One primary per screen. Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
 | + button | 48px circle. Default, pressed | Opens Add. Sits in the tab bar |
 | Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"` | With Back or a leading control, Back sits alone on the bar and the kicker, title and subtitle stack under it on the start side (mockups 07, 14). A compact title (the transaction) and `layout="inline"` stay on the bar. FLOW-326 |
-| Period pill | tinted, or white/dark on the band | Opens the period sheet |
+| Period pill | tinted, or white/dark on the band | Opens the period sheet. Home and the project band use the period bar instead |
+| Period bar (`PeriodBar`) | preset selected; custom range (no preset selected, first preset keeps the tab stop); later arrow `aria-disabled` | Home and the project band ([0141](../decisions/0141-period-bar.md), FLOW-411): five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) on a band-tone segmented control, then a stepper. The later arrow keeps its slot at the current window. The period label opens the period sheet |
 | Chips | suggested (tint + ✦), outlined choice, selected (violet + check), disabled, status | Hit area 44px even if drawn 36px |
 | Segmented tabs | track tint, selected `seg-on` | |
 | Switch and checkbox | off / on / disabled | Overhead switch starts off. [0022](../decisions/0022-after-overhead-starts-off.md) |
-| Text input | default, focused, filled, error, disabled | Label above. Error is red border plus a message |
+| Text input | default, focused, filled, error, disabled | Label above. Error is red border plus a message. A connect or setup form checks required fields on submit, before any request: the message sits on the field's reserved message line (`reserveMessage`, so the button does not move) in the "חסר X." form, focus goes to the first empty field, and fields are read-only while the submit is busy (FLOW-508) |
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed; one row, or two rows (review, unpaid) each pressed on its own | The one tinted block on Home. Two rows share it, separated by padding, no hairline (FLOW-321) |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
-| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. A row that opens the transaction carries the trailing chevron (FLOW-328). [0120](../decisions/0120-income-green-type-scale.md) |
+| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. A row that opens the transaction carries the trailing chevron (FLOW-328). A line kept out of the P&L reads "מחוץ לרווח" first in its hint (FLOW-411). [0120](../decisions/0120-income-green-type-scale.md) |
 | Statement row (`ListRow variant="statement"`) | default, pressed, focus; pending; with suggestion; income; name with no letter | FLOW-305 option A, the review list. 40px initials circle in `tint` with `accent-text` letters (one colour for every row; a name with no letter shows the source icon). Counterparty 17/400 `text`, one line; a Latin name is LTR and cuts at its end. Line 2 in `meta`: the `בהמתנה` status chip, then `✦` in `accent-text` and "project · category" (ellipsis). End column: the amount as in a transaction row, the method under it (16px icon + `meta` label, never cut). The link name reads counterparty, method, "הצעה: …", direction word + amount, "בהמתנה". Day heads (`היום`, `אתמול`, `יום ב׳ · 05/10`) are h3, 15/500 `text-secondary`, under the sticky month head, not sticky; month totals show cents when the rows do. |
 | Change pill | ▼ / ▲ plus % | On the band it sits in a solid pill |
 | Tab bar | בית, פרויקטים, +, לאישור (neutral badge), הגדרות | Active tab is violet icon and label |
@@ -251,7 +253,7 @@ Source: [implementation-guide.md](../../design/system/implementation-guide.md). 
 
 Notifications (`13`) is a lock-screen reference, not an app screen. Guide §3.
 
-The band holds only the summary. Home: one quiet period pill, one label, the hero number, and one explanation ("הכנסות פחות הוצאות, מ־…"). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
+The band holds only the summary. Home: one period bar ([0141](../decisions/0141-period-bar.md)), one label, the hero number, and one explanation ("הכנסות פחות הוצאות, מ־…"). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
 
 ### 3.2 Layout grid and viewport
 
@@ -273,7 +275,8 @@ The band holds only the summary. Home: one quiet period pill, one label, the her
 
 - `<html lang="he" dir="rtl">`.
 - Logical properties only. Start is the right. Do not reverse flex rows by hand.
-- The design chevron `back` already points right. Do not flip it again. Do not mirror +, ✓, ✕, search, calendar, or ▼/▲.
+- The design chevron `back` already points right. Do not flip it again.
+- Steppers and "earlier / later" arrows are SVG chevrons that point outward (the start-side one points right, the end-side one left), never ‹ › glyphs, which right-to-left text mirrors (FLOW-411). Do not mirror +, ✓, ✕, search, calendar, or ▼/▲.
 - Every amount, percent, date, time, phone, and company number is an isolated LTR span (`.num` or `<bdi dir="ltr">`).
 - LTR inputs (`dir="ltr"`, `inputmode`) stay visually right-aligned. That is the one allowed physical `text-align`. Guide §6.
 - A text, amount, or percent field focuses from a tap anywhere in the box. The input fills the box. ₪ and % sit outside the digits and ignore the pointer. The font is at least 16px. `autocomplete` is off, and the name is not a contact field. Amounts and percents use `inputmode=decimal`. A value up to `9,999,999.99` stays fully visible at 320px. [0069](../decisions/0069-back-and-one-tap-review.md).
@@ -287,13 +290,15 @@ Guide §6.4 and §11.3. Do not use `Intl.NumberFormat('he-IL', {style:'currency'
 | Money | `₪200,000`. ₪ before the digits, no space, thousands commas, whole shekels on summaries |
 | Agorot | Only on detail, the review card, and edit fields, and only when non-zero |
 | Negative loss | Unicode minus U+2212 before ₪, in `bad`: `−₪10,000` |
-| Row sign | `+` or `−`, amount stays `text`. A figure already labelled הוצאות (project band, category rows) carries no minus (FLOW-328) |
+| Row sign | `+` or `−`, amount stays `text`. A figure already labelled הוצאות (project band, category rows) carries no minus (FLOW-328). Home's יצא carries no minus for a cost; only a period where refunds beat costs reads with a minus (FLOW-334 H3) |
 | Percent | `27%`, whole numbers |
 | Change | `▼ 10%` or `▲ 8%` in a pill |
 | Date | `22/09` this year, `21/09/2026` full, range `01–30/09` |
 | Week | Sunday first. Gregorian. [0027](../decisions/0027-date-picker.md) |
 | Time | 24-hour `18:00` |
 | Relative | `היום`, `אתמול`, `לפני 3 ימים` |
+
+Figures read in a row get a spoken pause between them (hidden text, not a visible separator). A list that changes its grouping keeps its rows mounted where it can, so focus is not lost (FLOW-313).
 
 Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, נכנס, יצא, the comparison under those rows, the pending count, the unpaid total, and up to 3 projects. [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
 
@@ -309,6 +314,7 @@ Guide §11.1.
 - Splitting a line is always "פיצול" (verb לפצל, past פוצלו), never "חלוקה". Owner pick, 2026-10-08 (FLOW-328).
 - No exclamation marks, no emoji, no ALL-CAPS English.
 - Hebrew punctuation: ״ ׳, en dash with spaces, middle dot.
+- A status line that can wrap at 320 puts its time phrase on its own line. No wrapped line starts with a "·" separator (FLOW-508).
 - Errors say what happened and what to do, without blame.
 - English only in the wordmark "Flow" and the example-data tag.
 - Sample figures must show **נתוני דוגמה · Example data**. Real data must not. Guide §11.2.
@@ -327,7 +333,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Empty: [es-01-home-first-run-light.png](../../design/states/es-01-home-first-run-light.png), [es-01-home-first-run-dark.png](../../design/states/es-01-home-first-run-dark.png).
 - Loading: [ld-01-home-skeleton-light.png](../../design/states/ld-01-home-skeleton-light.png), [ld-01-home-skeleton-dark.png](../../design/states/ld-01-home-skeleton-dark.png). Refresh: [ld-07](../../design/states/ld-07-pull-to-refresh-light.png).
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.24.
-- Steps: period pill opens 16. The hero is the label, the number, and one line that says income minus expenses. נכנס and יצא sit below the band. The pending card has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
+- Steps: the period bar's label opens 16. The hero is the label, the number, and one line that says income minus expenses. נכנס and יצא sit below the band. The pending card has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
 - Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור בנק או SUMIT" and opens the connections page, and the line says the profit appears once a bank or SUMIT is connected (FLOW-328). No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
 - Error: skeleton while loading (`ld-01`). The loading band matches the calm hero. Offline is `ld-08`. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
@@ -453,7 +459,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Entry: the unpaid figure on Home.
 - Steps: list invoices that are not in the cash P&L until paid or marked paid. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 - Back: chevron.
-- Success: mark-as-paid sheet, then the row leaves. Empty state when none remain.
+- Success: one tap marks a row paid (FLOW-330). The row stays listed, reads "סומן כשולם · ממתין לסנכרון" with a muted title, and leaves every unpaid total. Empty state when none remain.
 
 ### 13 Notifications reference
 
@@ -500,8 +506,8 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 ### 16 Period sheet
 
 - Mockups: [16-period-sheet-light.png](../../design/screens/16-period-sheet-light.png), [16-period-sheet-dark.png](../../design/screens/16-period-sheet-dark.png).
-- Entry: the band pill on Home (and the project period control).
-- Steps: החודש, חודש קודם, מתחילת השנה apply on tap. "טווח מותאם" opens 15c. [0019](../decisions/0019-home-periods-and-comparison.md), [0028](../decisions/0028-period-sheet-with-custom-range.md).
+- Entry: the period bar's label on Home and on the project band ([0141](../decisions/0141-period-bar.md)), or a period pill elsewhere.
+- Steps: the five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) apply on tap. "טווח מותאם" opens 15c; with a custom range no preset is selected and the label shows the dates. [0019](../decisions/0019-home-periods-and-comparison.md), [0028](../decisions/0028-period-sheet-with-custom-range.md).
 - Cancel: ✕ or scrim keeps the current period.
 
 ### 17 Install prompt
@@ -576,7 +582,7 @@ Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-t
 **Do**
 
 - Keep the page white in light mode (`#FFFFFF`) and a clear violet-black in dark mode (`#15111E`). [0023](../decisions/0023-violet-coloured-top-band.md).
-- Use few numbers. Home's budget is the profit, one change, income, expenses, the pending summary, and at most three projects. Guide §1 P2.
+- Use few numbers. Home's budget is the profit, one change, income, expenses, the pending summary, and at most five projects (FLOW-411). A project row reads name, then "▲ ברווח" (`text-muted`) or "▼ הפסד" (`bad`), then the amount. Guide §1 P2.
 - Use Rubik at 400 / 500 / 600 / 700, with body at 500 and titles at 600. [0023](../decisions/0023-violet-coloured-top-band.md).
 - Use the violet band only on Home and the Project header. [0024](../decisions/0024-design-system-approved.md).
 - Leave the after-overhead switch off until the owner turns it on. [0022](../decisions/0022-after-overhead-starts-off.md).
