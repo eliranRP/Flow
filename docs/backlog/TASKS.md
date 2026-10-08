@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Review card gaps for UI lane 2: `customer_name` on list_review, `review_id` on get_transaction | Next `ready` non-UI task (FLOW-510 waits for its design call) |
+| Dev lane 1 | FLOW-504 server and MCP: a stored company currency (no exchange rates) | Plan cards: FLOW-801 backups, FLOW-407 export |
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Profit by period (option A, decision 0141) with FLOW-411 and the FLOW-330 screen, one PR (PR #199) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -842,7 +842,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-504"></a>
 ### FLOW-504 · Display currency toggle and USD-base companies
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP, dev lane 1; the owner chose "Company currency", no exchange rates, 2026-10-08; plan: the project's plans/flow-504-company-currency.md) · **Depends on:** —
 - **What:** A per-company `₪`/`$` display choice with mixed totals converted at display time ([0087](../decisions/0087-multi-currency.md)), and a decision on companies whose base currency is USD (there is no company currency column today).
 - **Acceptance:** owner decision; plan approved.
 
