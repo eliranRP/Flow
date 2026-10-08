@@ -65,12 +65,14 @@ as $$
 $$;
 grant execute on function pg_temp.typical(text) to authenticated, service_role;
 
--- A pending line. Three posted lines of 100.00 and one pending one of 5000.00 before a
--- line of 400.00: the pending line is not history, so 400.00 is a spike against 100.00.
+-- Pending lines. Three posted lines of 100.00 and four pending ones of 400.00 before a line
+-- of 400.00. Counted as history, the pending lines would make 400.00 the median and no
+-- spike; left out, 400.00 is a spike against 100.00.
 select pg_temp.line('p1', 's_pending', '2026-01-10', 10000);
 select pg_temp.line('p2', 's_pending', '2026-02-10', 10000);
 select pg_temp.line('p3', 's_pending', '2026-03-10', 10000);
-select pg_temp.line('p_pend', 's_pending', '2026-03-20', 500000, 'pending');
+select pg_temp.line('p_pend' || n, 's_pending', ('2026-03-' || (15 + n))::date, 40000, 'pending')
+from generate_series(1, 4) n;
 select pg_temp.line('p4', 's_pending', '2026-04-10', 40000);
 -- A pending copy of a posted line two days later.
 select pg_temp.line('p4_copy', 's_pending', '2026-04-12', 40000, 'pending');
@@ -125,7 +127,10 @@ select ok(pg_temp.kinds('p4_copy') like '%duplicate%', 'a pending line is checke
 select ok(pg_temp.kinds('p4') not like '%duplicate%', 'a posted line is not a duplicate of a pending copy');
 
 select ok(pg_temp.kinds('lb') not like '%duplicate%', 'two loans'' payments to one lender are not duplicates');
-select ok(pg_temp.kinds('la2') like '%duplicate%', 'two payments of the same loan days apart are');
+select is(
+  (select e->>'other_transaction_id' from jsonb_array_elements(public.review_anomalies(array[pg_temp.id('la2')])) e
+   where e->>'kind' = 'duplicate')::uuid,
+  pg_temp.id('la'), 'two payments of the same loan days apart are');
 
 select is(pg_temp.typical('e5'), 10000::bigint, 'an even history takes the lower middle as typical');
 select is(pg_temp.typical('o4'), 20000::bigint, 'an odd history takes the middle');
