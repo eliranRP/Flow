@@ -65,6 +65,7 @@ import { useSyncSettled } from "../use-sync-settled";
 import { invokeEdge } from "../edge";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
+import { mergeFailureText, pnlFailureText } from "../category-copy";
 import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
@@ -5050,7 +5051,7 @@ export function CategoriesScreen({
   const menuOpener = useRef<HTMLElement | null>(null);
   const pnlHintId = useId();
   const pnl = useWrite<PnlChange>({
-    failure: "לא הצלחנו לעדכן את הקטגוריה.",
+    failure: pnlFailureText,
     keys: ["categories", "dashboard", "project", "project-category"],
     onSuccess: (done) => {
       setMenu(null);
@@ -5094,7 +5095,7 @@ export function CategoriesScreen({
     },
   });
   const merge = useWrite({
-    failure: "לא הצלחנו למזג.",
+    failure: mergeFailureText,
     success: "הקטגוריות מוזגו",
     keys: ["categories", "dashboard"],
     onSuccess: () => { setMergeOpen(false); },

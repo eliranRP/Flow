@@ -11,6 +11,7 @@ import { CategoriesScreen } from "./flow-screens";
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   failPnl: false,
+  pnlRefusal: null as string | null,
   renamedLoan: false,
   holdPnl: null as Promise<void> | null,
 }));
@@ -33,6 +34,9 @@ vi.mock("../lib/supabase", () => ({
       }
       if (name === "set_category_excluded_from_pnl" && rpc.holdPnl) {
         return rpc.holdPnl.then(() => ({ data: null, error: null }));
+      }
+      if (name === "set_category_excluded_from_pnl" && rpc.pnlRefusal != null) {
+        return Promise.resolve({ data: null, error: { message: rpc.pnlRefusal, code: "23514" } });
       }
       if (name === "set_category_excluded_from_pnl" && rpc.failPnl) {
         return Promise.resolve({ data: null, error: { message: "category not found", code: "P0001" } });
@@ -62,6 +66,7 @@ function pnlCalls() {
 beforeEach(() => {
   rpc.calls.length = 0;
   rpc.failPnl = false;
+  rpc.pnlRefusal = null;
   rpc.renamedLoan = false;
   rpc.holdPnl = null;
 });
@@ -153,6 +158,15 @@ describe("categories kept out of the P&L", () => {
     expect(await screen.findByText("לא הצלחנו לעדכן את הקטגוריה.")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
     expect(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" })).toBeEnabled();
+  });
+
+  it("says why when a loan's use of the category refuses the change (FLOW-134)", async () => {
+    rpc.pnlRefusal = "loan category is fixed";
+    renderScreen(<CategoriesScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
+    const sheet = await screen.findByRole("dialog", { name: "חומרים" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    expect(await screen.findByText("הלוואה משתמשת בקטגוריה הזו, ולכן אי אפשר לשנות אם היא ברווח והפסד.")).toBeInTheDocument();
   });
 
   it("waits for the save when the sheet is dismissed mid-write", async () => {
