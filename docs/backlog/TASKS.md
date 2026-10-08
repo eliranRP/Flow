@@ -313,7 +313,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow.
 - [ ] Date formatting for years below 1000.
 - [ ] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view.
-- [x] Follow-up to the owner's call: relax the interest-category check so split interest can use another category (pairs with FLOW-106 d). (FLOW-106 part 2, decision 0127.)
+- [x] Follow-up to the owner's call: relax the interest-category check so split interest can use another category (pairs with FLOW-106 d). (FLOW-106 part 2, decision 0128.)
 
 <a id="flow-115"></a>
 ### FLOW-115 · Loan screens UI follow-ups

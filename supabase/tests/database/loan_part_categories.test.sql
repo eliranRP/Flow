@@ -1,4 +1,4 @@
--- FLOW-106 part 2: a loan names its own category for each part (decision 0127).
+-- FLOW-106 part 2: a loan names its own category for each part (decision 0128).
 -- update_loan sets them, attach uses them, undo restores them, and the rule holds for
 -- the app's own writes and for a category that flips in or out of the P&L.
 -- Fixed dates. @example.com only.

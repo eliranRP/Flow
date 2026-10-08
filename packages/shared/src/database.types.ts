@@ -842,6 +842,9 @@ isOneToOne: false
 "jev_reserve_calls":
 { Args: { "p_company": string,"p_run": string,"p_want": number }; Returns: number
                            },
+"jev_supplier_history":
+{ Args: { "p_company": string,"p_per"?: number,"p_suppliers": (string)[] }; Returns: Json
+                           },
 "jev_take_lease":
 { Args: { "p_holder": string,"p_seconds"?: number }; Returns: boolean
                            },

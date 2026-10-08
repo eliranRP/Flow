@@ -1,4 +1,4 @@
--- FLOW-106 part 2. A loan can name its own category for each part. Decision 0127.
+-- FLOW-106 part 2. A loan can name its own category for each part. Decision 0128.
 -- loans.interest_category_id, escrow_category_id and principal_category_id: null keeps the
 -- keyed default (categories.loan_part). Interest and escrow go to an expense category in
 -- the P&L, principal to an expense category kept out of it; a keyed loan category takes
@@ -33,11 +33,11 @@ alter table public.loans
     on delete set null (principal_category_id);
 
 comment on column public.loans.interest_category_id is
-  'Category for the interest part of this loan''s payments. Null uses the keyed default. Decision 0127.';
+  'Category for the interest part of this loan''s payments. Null uses the keyed default. Decision 0128.';
 comment on column public.loans.escrow_category_id is
-  'Category for the escrow part. Null uses the keyed default. Decision 0127.';
+  'Category for the escrow part. Null uses the keyed default. Decision 0128.';
 comment on column public.loans.principal_category_id is
-  'Category for the principal part, kept out of the P&L. Null uses the keyed default. Decision 0127.';
+  'Category for the principal part, kept out of the P&L. Null uses the keyed default. Decision 0128.';
 
 create index loans_interest_category_idx on public.loans (interest_category_id) where interest_category_id is not null;
 create index loans_escrow_category_idx on public.loans (escrow_category_id) where escrow_category_id is not null;
@@ -183,7 +183,7 @@ begin
   end if;
 
   -- Interest and escrow go to an expense category in the P&L, principal to one kept out;
-  -- a keyed loan category takes only its own part (0127). The categories are held so a
+  -- a keyed loan category takes only its own part (0128). The categories are held so a
   -- concurrent flip of their P&L side waits for this check (the flip updates the row).
   perform 1
   from public.categories c
@@ -305,7 +305,7 @@ as $$
         'a reversal part needs a project',
         'same category and project twice',
         'line amount is zero',
-        -- FLOW-106 parts 1 and 2 (decisions 0122 and 0127).
+        -- FLOW-106 parts 1 and 2 (decisions 0122 and 0128).
         'closed_on required',
         'loan is open',
         'payments after closed_on',
@@ -456,7 +456,7 @@ begin
           elsif principal_amt > balance then
             response := private.mcp_refused('loan balance exceeded');
           else
-            -- The loan's own category for a part wins; null keeps the keyed default (0127).
+            -- The loan's own category for a part wins; null keeps the keyed default (0128).
             cat_interest := loan.interest_category_id;
             cat_escrow := loan.escrow_category_id;
             cat_principal := loan.principal_category_id;

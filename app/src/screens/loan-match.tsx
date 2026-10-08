@@ -57,7 +57,7 @@ type LoanChoice = {
   balanceMinor: bigint;
   status?: LoanStatus;
   closedOn?: string | null;
-  /** The loan's own category per part (decision 0127). A missing one uses the keyed default. */
+  /** The loan's own category per part (decision 0128). A missing one uses the keyed default. */
   categoryIds?: Partial<Record<LoanSplitPart, string | null>>;
 };
 

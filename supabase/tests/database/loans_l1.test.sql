@@ -223,7 +223,7 @@ select throws_ok(
   $$,
   '23514',
   'loan_split_category',
-  'interest cannot use another part''s loan category (0127)'
+  'interest cannot use another part''s loan category (0128)'
 );
 
 select throws_ok(
@@ -307,7 +307,7 @@ select throws_ok(
   $$,
   '23514',
   'loan category is fixed',
-  'a category holding interest cannot be kept out (0127)'
+  'a category holding interest cannot be kept out (0128)'
 );
 
 insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl)
@@ -367,7 +367,7 @@ select throws_ok(
   $$,
   '23514',
   'loan category is fixed',
-  'a category holding principal stays kept out (0127)'
+  'a category holding principal stays kept out (0128)'
 );
 
 select throws_ok(

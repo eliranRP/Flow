@@ -1,5 +1,5 @@
 -- FLOW-106 part 2 (review): a loan part filed under a category and a flip of that
--- category's P&L side run one after the other (decision 0127), with two real sessions
+-- category's P&L side run one after the other (decision 0128), with two real sessions
 -- (dblink). The fixture is committed by session a and deleted at the end.
 -- Fixed dates. @example.com only.
 
