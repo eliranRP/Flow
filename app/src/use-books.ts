@@ -357,6 +357,7 @@ export function useProjectCategoryQuery(projectId: string, categoryId: string) {
         p_category: categoryId,
         p_offset: pageParam,
         p_limit: CATEGORY_PAGE,
+        p_basis: BOOKS_BASIS,
       });
       if (error) throw error;
       return projectCategorySchema.parse(data);
