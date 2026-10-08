@@ -57,9 +57,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
-| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | in-progress (#126) |
+| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
-| 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
+| 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | claimed (thread rfrknn, 2026-10-08, claude/project-thread-rfrknn) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -96,7 +96,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-123"></a>
 ### FLOW-123 · Loan balance checks follow-ups (#72 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** #72
+- **Type:** BACKLOG NIT · **Status:** claimed (thread rfrknn, 2026-10-08, claude/project-thread-rfrknn) · **Depends on:** #72
 - [ ] `private.loan_splits_check` does not lock the loan, so two app splits on the same loan at once can both pass the balance check (the MCP path locks it).
 - [ ] The balance check runs only when splits change. A line that becomes posted, a removed line that comes back, or an edit that lowers the principal below what was paid can still take `loan_balances` below zero.
 
@@ -360,7 +360,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-209"></a>
 ### FLOW-209 · get_project follow-ups (#90 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#126) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#126) · **Depends on:** —
 - [x] `transactions[]` rows carry no `line_status`, so a pending row looks the same as a posted one. Add it. (#126)
 - [x] `other_currencies` leaves out a shared line whose own `project_id` is this project (`l.project_id is distinct from p.id`), while `by_currency` and `shared_agorot` count it. Check whether any write path stores such rows, then align or document. (#126: no write path stores one, since the app and MCP splits clear `project_id`; aligned anyway.)
 
@@ -894,6 +894,8 @@ Recently finished tasks move here with their PR, so the history stays readable. 
 
 | Id | Title | PR |
 | --- | --- | --- |
+| FLOW-209 | get_project follow-ups (#90 review) | #126 |
+| FLOW-130 | Lock timeouts return retry in every MCP write (#123 review) | #124 |
 | FLOW-120 | Loan project follow-ups (#89 review) | #121 |
 | FLOW-104 | Reversals across directions | #76 |
 | FLOW-101 | Loan payments count by their split parts | #70 |
