@@ -9,9 +9,9 @@ FLOW-701 asks Jev to learn from confirmations. Part 2 ([0126](0126-jev-outcomes.
 
 ## Decision
 
-The `jev-tag` job adds `past_filings` to each request state: up to 5 lines the owner filed for the same supplier, newest first. Filed means the line's current review (its newest `review_queue` row) is `approved` or `changed`, and the line is a live expense. Each entry has the date, the description cut to 120 characters, `amount_net`, the project id and name, the category id and name, the P&L role, and whether the line is split (by category or across allocations). The ids are the same ids the questions offer. A project or category that is no longer offered has a name of null.
+The `jev-tag` job adds `past_filings` to each request state: up to 5 lines the owner filed for the same supplier, newest document date first. Filed means the line's current review (its newest `review_queue` row) is `approved` or `changed`, and the line is a live expense (a pending card line the owner approved counts). Each entry has the date, the description cut to 120 characters, `amount_net`, the project id and name, the category id and name, the P&L role, and whether the line is split (by category or across allocations). The ids are the same ids the questions offer. A project or category that is no longer offered has a name of null.
 
-The history comes from SQL: `public.jev_supplier_history(company, suppliers[], per)`, service role only, one call per company per run, for the suppliers of the lines in that run. A line with no supplier gets no history. A failed history read fails the listing like the other reads, so the run tags nothing rather than tagging without it.
+The history comes from SQL: `public.jev_supplier_history(company, suppliers[], per)`, service role only, one call per company per run, for the suppliers of the lines the run listed (before the daily cap drops any). A line with no supplier gets no history. A failed history read fails the listing like the other reads, so the run tags nothing rather than tagging without it.
 
 Jev still only suggests; it never approves a line ([0084](0084-jev-auto-prefill.md)).
 

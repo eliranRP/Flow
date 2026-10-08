@@ -121,7 +121,7 @@ Deno.test("questions use project and category ids, and 256 options omit that que
 
 Deno.test("state carries amounts for the model and the plan does not write them", () => {
   const row = expense();
-  const state = buildTagState(row);
+  const state = buildTagState(row, projects, categories);
   assert(typeof state === "object" && state !== null && !Array.isArray(state));
   assertEquals(state.amount_net, -10000);
   const plan = planTag(row, "auto", 0.9, projects, categories, answers());
@@ -543,7 +543,16 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   assertEquals(shadow.writes.length, 0);
   assertEquals(shadow.suggestions[0].modelVersion, "jev-1.13.0");
   assertEquals(shadow.suggestions[0].responseModel, "jev-1.13.0");
-  assertEquals(seen[0].state, buildTagState(expense()));
+  assertEquals(seen[0].state, buildTagState(expense(), projects, categories));
+
+  const withHistory = memoryStore();
+  seen.length = 0;
+  await tagWork([company({ mode: "shadow", expenses: [expense({ history: [filing()] })] })], withHistory, call, "jev-test-key");
+  const sent = seen[0].state;
+  assert(typeof sent === "object" && sent !== null && !Array.isArray(sent));
+  const past = sent.past_filings;
+  assert(Array.isArray(past) && past.length === 1);
+  assertEquals((past[0] as Record<string, unknown>).project_name, "שיפוץ");
 
   const auto = memoryStore();
   const autoReport = await tagWork([company()], auto, call, "jev-test-key");

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(12);
+select plan(15);
 
 do $users$
 begin
@@ -83,6 +83,24 @@ update public.review_queue q set status = case
   end
 from public.transactions t
 where t.id = q.transaction_id and t.idempotency_key like 'sumit:jsh-%';
+-- An income line of s1, filed, dated last: it is left out.
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, supplier_id,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, description
+)
+values ((select id from jsh_ref where label = 'company_a'), 'income', 'invoice', 'project',
+  (select id from jsh_ref where label = 's1'),
+  1180, 1000, 180, 'assumed', '2026-04-30', '2026-04-30', 'sumit', 'sumit:jsh-in', 'income line');
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select company_id, id, 'approved', 'test' from public.transactions where idempotency_key = 'sumit:jsh-in';
+-- t3 is split by category.
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, amount_minor)
+select t.company_id, t.id, 1, c.id, 3000
+from public.transactions t
+join public.categories c on c.company_id = t.company_id and c.kind = 'expense'
+where t.id = (select id from jsh_ref where label = 't3')
+order by c.name limit 1;
 -- t5 is removed; t4 is back in review with a newer open row.
 update public.transactions set removed_at = now() where id = (select id from jsh_ref where label = 't5');
 insert into public.review_queue (company_id, transaction_id, status, reason, created_at)
@@ -129,6 +147,18 @@ select is(
   's1: filed lines newest first; open, skipped, removed and reopened lines are left out'
 );
 select is(
+  (select jsonb_agg((e ->> 'split')::boolean order by ord)
+   from jsh_out, jsonb_array_elements(result) with ordinality x(e, ord)
+   where label = 'a' and e ->> 'supplier_id' = (select id::text from jsh_ref where label = 's1')),
+  '[false, true, false, false]'::jsonb,
+  'a line with split parts is marked split'
+);
+select is(
+  (select count(*)::integer from jsh_out, jsonb_array_elements(result) e
+   where label = 'a' and e ->> 'description' = 'income line'),
+  0, 'income lines are left out'
+);
+select is(
   (select count(*)::integer from jsh_out, jsonb_array_elements(result) e
    where label = 'a' and e ->> 'supplier_id' = (select id::text from jsh_ref where label = 's3')),
   0, 'another company''s supplier returns nothing'
@@ -165,6 +195,16 @@ select throws_ok(
 select throws_ok(
   format('select public.jev_supplier_history(%L, array[]::uuid[], 21)', (select id from jsh_ref where label = 'company_a')),
   'P0001', 'validation', 'p_per above 20 is refused'
+);
+do $noclaims$
+begin
+  perform set_config('request.jwt.claim.role', '', true);
+  perform set_config('request.jwt.claims', '{}', true);
+end
+$noclaims$;
+select throws_ok(
+  format('select public.jev_supplier_history(%L, array[]::uuid[])', (select id from jsh_ref where label = 'company_a')),
+  '42501', 'forbidden', 'a caller with execute but no service-role claim is refused'
 );
 select ok(
   not has_function_privilege('authenticated', 'public.jev_supplier_history(uuid, uuid[], integer)', 'execute')

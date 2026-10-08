@@ -218,8 +218,8 @@ export function buildTagQuestions(
  */
 export function buildTagState(
   expense: TagExpense,
-  projects: readonly TagProject[] = [],
-  categories: readonly TagCategory[] = [],
+  projects: readonly TagProject[],
+  categories: readonly TagCategory[],
 ): JevState {
   const state: Record<string, JsonValue> = {
     description: expense.description,
@@ -686,7 +686,7 @@ function filingFromRow(row: RestRow): [string, TagFiling] | [] {
   const categoryId = asString(row.category_id);
   return [supplierId, {
     docDate,
-    description: asString(row.description) ?? "",
+    description: (asString(row.description) ?? "").slice(0, 120),
     amountNet,
     projectId: projectId && isUuid(projectId) ? projectId : null,
     categoryId: categoryId && isUuid(categoryId) ? categoryId : null,
