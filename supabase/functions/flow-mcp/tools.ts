@@ -81,6 +81,8 @@ export const WRITE_TOOL_NAMES = [
   "reorder_loans",
   "set_project_investment",
   "set_category_rehab",
+  "delete_category",
+  "move_category_lines",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -140,6 +142,8 @@ const ALLOWED: Record<string, Set<string>> = {
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
   set_project_investment: new Set(["idempotency_key", "project_id", "currency", "purchase_minor", "arv_minor", "value_minor", "value_date"]),
   set_category_rehab: new Set(["idempotency_key", "category_id", "rehab"]),
+  delete_category: new Set(["idempotency_key", "category_id"]),
+  move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -227,7 +231,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -536,6 +540,15 @@ const setCategoryRehabSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
   rehab: z.boolean().nullable(),
+}).strict();
+const deleteCategorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+}).strict();
+const moveCategoryLinesSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  from_category_id: UUID_TEXT,
+  into_category_id: UUID_TEXT,
 }).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
@@ -935,8 +948,9 @@ export function filterReviews(rows: Review[], input: {
     if (input.direction && row.direction !== input.direction) return false;
     if (input.reason && row.reason !== input.reason) return false;
     if (input.supplier) {
-      const name = typeof row.supplier_name === "string" ? row.supplier_name : "";
-      if (!name.includes(input.supplier)) return false;
+      // An income line's party is its customer.
+      const names = [row.supplier_name, row.customer_name].filter((name): name is string => typeof name === "string");
+      if (!names.some((name) => name.includes(input.supplier!))) return false;
     }
     if (input.query) {
       const description = typeof row.description === "string" ? row.description : "";
@@ -1362,13 +1376,22 @@ function writeTools() {
       category_id: { type: "string" },
       rehab: { type: ["boolean", "null"] },
     }, true),
+    toolSpec("delete_category", "Delete a category, even one with lines. Its lines lose the category and go back to review (לאישור) with none; a line split by category loses its whole split; suppliers forget it as their remembered category. Refused for a loan part category (loan category is fixed) and while a loan or a loan payment part uses it (a loan uses this category). Returns name and lines (how many lines on the books went back to review). Undo is kind category_delete with the category id: it puts the category back with its lines, splits and remembered suppliers, and is a conflict once one of those lines has a category or a split again, or the name is taken again.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+    }, true),
+    toolSpec("move_category_lines", "Move every line of one category to another of the same kind, without hiding the source (merge_category hides it). Split parts, loan payment parts, loan part categories and remembered supplier categories move too. Refused when the target is the same category, hidden, of another kind, when a split line has parts in both, or when a loan part cannot take the target. Returns from, into and lines (lines on the books moved). Undo is kind category_move with the source category id: it moves exactly those back, and is a conflict once any of them was moved or re-tagged since.", {
+      idempotency_key: { type: "string" },
+      from_category_id: { type: "string" },
+      into_category_id: { type: "string" },
+    }, true),
     toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -2061,6 +2084,23 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
       p_rehab: parsed.data.rehab,
+    };
+  } else if (name === "delete_category") {
+    const parsed = deleteCategorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_delete_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "move_category_lines") {
+    const parsed = moveCategoryLinesSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_move_category_lines";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_from: parsed.data.from_category_id,
+      p_into: parsed.data.into_category_id,
     };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
