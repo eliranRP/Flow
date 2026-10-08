@@ -62,7 +62,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
-| 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | in-progress |
+| 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) |
 | 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | ready |
 | 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
@@ -417,10 +417,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-133"></a>
 ### FLOW-133 · Batch undo by write id; split undo keeps percent and rest (#145 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (bug-fix thread) · **Depends on:** FLOW-312 (#145)
+- **Type:** BACKLOG NIT · **Status:** done (#155) · **Depends on:** FLOW-312 (#145)
 - [x] `undo_batch` undoes a `line_split` (an `assign_expenses` `parts[]` row) or `line_pnl` (`set_lines_pnl`) row through `mcp_undo(kind, transaction_id)`, which picks the newest live write on that line, not the batch's own. A later `split_line` / `set_line_pnl` on the same line is undone instead and the row reads ok. Return the `private.mcp_writes` id from `mcp_split_line` and `mcp_set_line_pnl`, store it in `row_writes`, and make the batch row `conflict` when a newer live write of that kind exists on the line.
 - [x] `mcp_undo('line_split')` and `private.line_split_parts` drop `percent` and `is_rest` (added in `20261008140000`), so an undone split comes back without its percent and rest markers.
 - [x] An `assign_expenses` `parts[]` row returns no stored parts; consider returning the cents as `split_line` does.
+- [ ] From the #155 review: no dblink test for `undo_batch` and `undo` on the same line at once (the lock order), and none for a newer `split_line` on the line by another user or token.
 
 <a id="flow-312"></a>
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)

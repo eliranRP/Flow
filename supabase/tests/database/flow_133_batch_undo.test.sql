@@ -6,7 +6,7 @@ begin;
 
 set constraints all immediate;
 
-select plan(18);
+select plan(21);
 
 do $users$
 begin
@@ -156,6 +156,31 @@ reset role;
 select is(
   (select jsonb_agg(amount_minor order by ordinal) from public.line_splits where transaction_id = pg_temp.id('txn_a')),
   '[1000, 9000]'::jsonb, 'the unrelated split stays');
+
+-- 7. A batch stored before FLOW-133 has no write_id: its row still undoes the newest write
+-- of that kind on the line, as before.
+select pg_temp.as_mcp();
+create temp table fbu_old as
+select public.mcp_assign_expenses('fbu-o1', jsonb_build_array(
+  jsonb_build_object('transaction_id', pg_temp.id('txn_c'), 'parts', jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.id('repairs'), 'project_id', pg_temp.id('north'), 'amount_minor', 3000),
+    jsonb_build_object('category_id', pg_temp.id('supplies'), 'project_id', pg_temp.id('south'), 'amount_minor', 7000)))
+)) as r;
+reset role;
+update private.mcp_batches b
+set row_writes = (select jsonb_agg(e - 'write_id') from jsonb_array_elements(b.row_writes) e)
+where b.id = (select (r -> 'data' ->> 'batch_key')::uuid from fbu_old);
+select is(
+  (select count(*)::integer from private.mcp_batches b, jsonb_array_elements(b.row_writes) e
+   where b.id = (select (r -> 'data' ->> 'batch_key')::uuid from fbu_old) and e ? 'write_id'),
+  0, 'the stored batch row has no write_id, like one stored before FLOW-133');
+select pg_temp.as_mcp();
+select is(
+  public.mcp_undo_batch('fbu-ou1', (select r -> 'data' ->> 'batch_key' from fbu_old)) -> 'data' ->> 'ok_count',
+  '1', 'an old batch row still undoes through mcp_undo');
+reset role;
+select is((select count(*)::integer from public.line_splits where transaction_id = pg_temp.id('txn_c')), 0,
+  'the old batch row put back no split');
 
 select * from finish();
 rollback;

@@ -7,7 +7,7 @@
 --    newer live write of that kind exists on the line (not_found when its own is undone).
 --    Batches stored before this keep the old behaviour.
 -- 2. mcp_undo('line_split') restored the parts without percent and is_rest (added in
---    20261008110000). split_line now keeps them in prior.before through
+--    20261008140000). split_line now keeps them in prior.before through
 --    private.line_split_parts_full and undo writes them back. prior.written and the conflict
 --    check still use private.line_split_parts, so older writes undo as before.
 -- 3. An assign_expenses parts[] row returns its stored parts in cents, as split_line does.
@@ -684,17 +684,19 @@ begin
       if undo_kind in ('line_split', 'line_pnl') and row->>'write_id' is not null then
         -- mcp_undo(kind, line) undoes the newest live write of that kind on the line. A row
         -- stored with its write id (FLOW-133) undoes only that write: a newer live write of
-        -- the same kind on the line makes it a conflict. The line lock, taken first by
-        -- split_line and set_line_pnl too, keeps a new write from landing in between.
-        perform 1 from public.transactions t
-        where t.id = undo_id and t.company_id = private.current_company_id()
-        for update;
+        -- the same kind on the line makes it a conflict. Locks follow mcp_undo's order: the
+        -- write row first, then the line. The line lock, which split_line and set_line_pnl
+        -- take before they add a write, keeps a new write from landing in between.
         select * into own_write
         from private.mcp_writes w
         where w.id = (row->>'write_id')::uuid
           and w.user_id = auth.uid()
           and w.kind = undo_kind
-          and w.transaction_id = undo_id;
+          and w.transaction_id = undo_id
+        for update;
+        perform 1 from public.transactions t
+        where t.id = undo_id and t.company_id = private.current_company_id()
+        for update;
       end if;
       if undo_kind in ('line_split', 'line_pnl') and row->>'write_id' is not null
         and (own_write.id is null or own_write.undone_at is not null)
