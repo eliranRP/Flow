@@ -2176,6 +2176,24 @@ export const ChangeReversalSummary: Story = {
   render: () => <ChangeStory categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
 };
 
+/** FLOW-118: a kept-out income category filed through MCP stays marked החזר and sits in the reversal section. */
+const keptOutReversalCategories = [
+  ...reversalCategories,
+  { id: "i3", name: "העברות בין חשבונות", hidden: false, kind: "income", excluded_from_pnl: true },
+];
+
+export const ChangeReversalKeptOutSummary: Story = {
+  name: "Kept-out reversal on the summary, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
+};
+
+export const ChangeReversalKeptOutPicker: Story = {
+  name: "Kept-out reversal in the picker, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
+};
+
 export const ChangeSaveError: Story = {
   name: "Save error",
   parameters: { viewport: { defaultViewport: "flow390-short" } },

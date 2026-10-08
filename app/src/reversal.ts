@@ -27,12 +27,17 @@ function ownKind(category: KindedCategory, direction: Direction): boolean {
 
 /**
  * Categories of the other kind that a line of this direction can be filed under.
- * Hidden, loan and kept-out categories stay out.
+ * Hidden, loan and kept-out categories stay out, except the line's own category
+ * (filed through MCP), so it shows in this section with החזר like the review card.
  */
-export function reversalChoices(categories: readonly KindedCategory[], direction: Direction): Array<{ id: string; name: string }> {
+export function reversalChoices(
+  categories: readonly KindedCategory[],
+  direction: Direction,
+  currentId?: string | null,
+): Array<{ id: string; name: string }> {
   return categories
     .filter((category) => category.kind != null && !ownKind(category, direction))
-    .filter((category) => category.hidden !== true && category.loan_part == null && category.excluded_from_pnl !== true)
+    .filter((category) => category.id === currentId || (category.hidden !== true && category.loan_part == null && category.excluded_from_pnl !== true))
     .map((category) => ({ id: category.id, name: category.name }));
 }
 

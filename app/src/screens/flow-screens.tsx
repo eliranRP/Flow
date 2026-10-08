@@ -2012,7 +2012,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     projectId,
     row?.project_name,
   );
-  const reversalOptions = splitReview ? [] : reversalChoices(sample?.categories ?? categories.data ?? [], income ? "income" : "expense");
+  const reversalOptions = splitReview ? [] : reversalChoices(sample?.categories ?? categories.data ?? [], income ? "income" : "expense", sample?.categoryId ?? row?.category_id);
   const isReversalId = (id: string) => reversalOptions.some((option) => option.id === id);
   // The switch is hidden on a reversal, so it must not hold the sheet open.
   const rememberDirty = !income && !splitReview && !isReversalId(categoryId) && remember !== savedRemember;
@@ -2776,7 +2776,7 @@ export function TransactionScreen({
     txn.project_name,
   );
   const txnDirection = txn.direction === "income" ? "income" : "expense";
-  const changeReversals = sample || splitRow ? [] : reversalChoices(categories.data ?? [], txnDirection);
+  const changeReversals = sample || splitRow ? [] : reversalChoices(categories.data ?? [], txnDirection, txn.category_id);
   const changeCategories = withChoice(
     (sample
       ? (sampleCategories ?? [])
