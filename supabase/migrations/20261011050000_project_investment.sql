@@ -143,6 +143,7 @@ begin
       and l.status = 'open'::public.loan_status
       and l.currency <> 'ILS'
     group by l.currency
+    having sum(b.balance_minor) <> 0
   ) x;
 
   return jsonb_build_object(

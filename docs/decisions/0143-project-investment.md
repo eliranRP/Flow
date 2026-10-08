@@ -28,7 +28,7 @@ MCP needs to set and read the figures. The open question was what counts as reha
 - The overhead project's own lines count as overhead, so its rehab is 0.
 
 **Equity comes with `get_project`.**
-- `get_project` returns `investment`: the four figures, `rehab_agorot`, `loan_balance_agorot` (open shekel loans filed under the project), `loan_balance_other_currencies` (open loans in other currencies, listed apart, never added in), `forced_equity_agorot` and `current_equity_agorot`.
+- `get_project` returns `investment`: the four figures, `rehab_agorot`, `rehab_other_currencies` (costs in other currencies, listed apart), `loan_balance_agorot` (open shekel loans filed under the project), `loan_balance_other_currencies` (open loans in other currencies, listed apart, never added in), `forced_equity_agorot` and `current_equity_agorot`.
 - Each equity is null while a figure it needs is missing, so the screen can say what to fill in rather than show a wrong number. For the same reason forced equity is null while rehab has a cost in another currency, and current equity while an open loan is in another currency: Flow does not convert them.
 
 **MCP.**
