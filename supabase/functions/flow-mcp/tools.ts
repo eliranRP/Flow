@@ -137,7 +137,7 @@ const ALLOWED: Record<string, Set<string>> = {
   detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
   delete_loan: new Set(["idempotency_key", "loan_id"]),
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
-  set_project_investment: new Set(["idempotency_key", "project_id", "purchase_agorot", "arv_agorot", "value_agorot", "value_date"]),
+  set_project_investment: new Set(["idempotency_key", "project_id", "currency", "purchase_minor", "arv_minor", "value_minor", "value_date"]),
   set_category_rehab: new Set(["idempotency_key", "category_id", "rehab"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -516,13 +516,14 @@ const reorderLoansSchema = z.object({
   loan_ids: z.array(UUID_TEXT).min(1).max(200),
 }).strict();
 const INVESTMENT_AMOUNT = z.number().int().min(0).max(999_999_999_999_999);
-const INVESTMENT_KEYS = ["purchase_agorot", "arv_agorot", "value_agorot", "value_date"] as const;
+const INVESTMENT_KEYS = ["currency", "purchase_minor", "arv_minor", "value_minor", "value_date"] as const;
 const setProjectInvestmentSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   project_id: UUID_TEXT,
-  purchase_agorot: INVESTMENT_AMOUNT.nullable().optional(),
-  arv_agorot: INVESTMENT_AMOUNT.nullable().optional(),
-  value_agorot: INVESTMENT_AMOUNT.nullable().optional(),
+  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+  purchase_minor: INVESTMENT_AMOUNT.nullable().optional(),
+  arv_minor: INVESTMENT_AMOUNT.nullable().optional(),
+  value_minor: INVESTMENT_AMOUNT.nullable().optional(),
   value_date: z.string().refine((v) => isCalendarDate(v)).nullable().optional(),
 }).strict().refine((v) => INVESTMENT_KEYS.some((k) => v[k] !== undefined));
 const setCategoryRehabSchema = z.object({
@@ -1017,7 +1018,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project, signed against the line's own kind: a reversal part counts minus (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. investment has purchase_agorot, arv_agorot, value_agorot and value_date (set_project_investment; null until set), rehab_agorot (all time, cash basis, ILS: posted, paid costs filed or shared to the project whose category counts as rehab, see set_category_rehab; loan payment parts, fees included, stay out unless their category is switched on; not limited by from, to or basis), rehab_other_currencies (the same in other currencies, minor units), loan_balance_agorot (open ILS loans filed under the project), loan_balance_other_currencies (open loans in other currencies, in minor units, not added in), forced_equity_agorot (ARV - purchase - rehab) and current_equity_agorot (value - loan balance), each null while a figure it needs is missing; forced is also null when rehab_other_currencies has a cost, and current when loan_balance_other_currencies has a loan. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project, signed against the line's own kind: a reversal part counts minus (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. investment is in the project's investment currency (currency, default ILS; set_project_investment), in minor units of it: purchase_minor, arv_minor, value_minor and value_date (null until set), rehab_minor (all time, cash basis, in that currency: posted, paid costs filed or shared to the project whose category counts as rehab, see set_category_rehab; loan payment parts, fees included, stay out unless their category is switched on; not limited by from, to or basis), rehab_other_currencies (the same in other currencies), loan_balance_minor (open loans in that currency filed under the project), loan_balance_other_currencies (open loans in other currencies, not added in), forced_equity_minor (ARV - purchase - rehab) and current_equity_minor (value - loan balance), each null while a figure it needs is missing; forced is also null when rehab_other_currencies has a cost, and current when loan_balance_other_currencies has a loan. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
       from: { type: "string" },
@@ -1341,12 +1342,13 @@ function writeTools() {
       idempotency_key: { type: "string" },
       loan_ids: { type: "array", items: { type: "string" } },
     }, true),
-    toolSpec("set_project_investment", "Set a project's investment figures, in agorot (ILS): purchase_agorot (what it cost to buy), arv_agorot (the after-repair value), value_agorot (what it is worth today) and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole agorot, 0 or more. get_project returns them in investment with rehab and equity. Returns the figures after. Undo is kind project_investment with the project id: it puts back the figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
+    toolSpec("set_project_investment", "Set a project's investment figures: currency (ISO code like USD or ILS, default ILS: the currency of the figures, rehab and equity; it cannot be cleared), purchase_minor (what it cost to buy), arv_minor (the after-repair value), value_minor (what it is worth today), all in minor units of that currency (cents for USD), and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole minor units, 0 or more. Changing the currency does not convert the figures. get_project returns them in investment with rehab and equity. Returns the figures after. Undo is kind project_investment with the project id: it puts back the figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
-      purchase_agorot: { type: ["integer", "null"] },
-      arv_agorot: { type: ["integer", "null"] },
-      value_agorot: { type: ["integer", "null"] },
+      currency: { type: "string" },
+      purchase_minor: { type: ["integer", "null"] },
+      arv_minor: { type: ["integer", "null"] },
+      value_minor: { type: ["integer", "null"] },
       value_date: { type: ["string", "null"] },
     }, true),
     toolSpec("set_category_rehab", "Count a category as rehab on projects (rehab true), leave it out (false), or follow the default (null). By default every category counts but those kept out of the P&L and the loan parts (interest, escrow, principal, and a payment's fees part in any category unless that category is switched on). Switching on the principal category counts repayments, while the loan is already in current equity. rehab is get_project's investment.rehab_agorot. Returns rehab and in_rehab (what the category comes to). Undo is kind category_rehab with the category id: it puts back the setting before, and is a conflict when it changed since.", {
