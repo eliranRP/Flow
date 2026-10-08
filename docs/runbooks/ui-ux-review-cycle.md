@@ -15,7 +15,8 @@ A recurring review of the running app on real phone sizes. The owner asked for i
    - small targets
    - dead-end states
 5. Findings become tasks in [TASKS.md](../backlog/TASKS.md), each with a "Source: cycle N" note. Polish goes in as `SMALL UI`. A change to a feature or a flow goes in as `PLAN FIRST` and waits for the owner's approval on a card.
-6. The report is published as an artifact. UI building goes through the UI build thread ("Mercury-style UI and UX review"), at most 2 dev tasks in parallel.
+6. The report is published as an artifact. UI building goes through the two UI lanes ([design team](../design/DESIGN-TEAM.md)), at most 2 dev tasks in parallel.
+7. The design lead reads the [design log](../design/log/README.md) entries since the last cycle and copies each `Rule:` line into DESIGN-RULES in the cycle's backlog PR.
 
 ## Known fixture gaps
 

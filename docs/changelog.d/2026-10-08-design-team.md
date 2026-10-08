@@ -1,0 +1,1 @@
+A second UI lane, and how the design team works ([DESIGN-TEAM](design/DESIGN-TEAM.md)): roles (owner, design lead, two UI lanes, design reviewer), one source of truth per design question, a design log with one entry per UI PR in `docs/design/log/`, and claims that name functions in the shared hotspot files so both lanes can work at once.
