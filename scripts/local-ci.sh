@@ -80,6 +80,7 @@ static_part() {
   fi
   node scripts/check-migration-transaction.mjs
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
+  bash scripts/check-edge-functions.sh
   pnpm typecheck
 }
 unit_part() {
