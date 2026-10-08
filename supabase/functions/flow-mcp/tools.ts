@@ -1268,7 +1268,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       parts: LINE_PARTS_SPEC,
     }, true),
-    toolSpec("set_line_pnl", "Take one line out of the P&L (in_pnl false), count it although its category is kept out (in_pnl true), or follow its category again (in_pnl null). Covers every part of a split line. A loan line is refused. Returns the line's in_pnl. Undo is kind line_pnl with the transaction id.", {
+    toolSpec("set_line_pnl", "Take one line out of the P&L (in_pnl false), count it although its category is kept out (in_pnl true), or follow its category again (in_pnl null). Covers every part of a split line. A loan line is refused. in_pnl true is refused (a reversal part needs a project) while a split part of the other kind in a kept-out category has no project. Returns the line's in_pnl. Undo is kind line_pnl with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       in_pnl: { type: ["boolean", "null"] },
