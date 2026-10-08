@@ -56,6 +56,7 @@ import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-re
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
+import { pinReviewHead, pinReviewLine, reviewPin } from "../review-pin";
 import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
@@ -1394,9 +1395,15 @@ export function ReviewQueue({
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
-  const rows = useHeldOrder(incoming, (item) => item.id);
+  const held = useHeldOrder(incoming, (item) => item.id);
+  // The card on screen stays the head until it is handled, so a refetch that reorders the
+  // queue can't swap another line under אישור. A card opened from the list keeps its focus.
+  const rows = fromList ? held : pinReviewHead(held, reviewPin());
   const [hideAuto, setHideAuto] = useState(false);
-  const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
+  const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
+  useEffect(() => {
+    if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
+  }, [fromList, shown]);
   const jevQueue = useJevQueue(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
@@ -1411,6 +1418,7 @@ export function ReviewQueue({
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
   const approvedId = useRef<string | null>(null);
+  const approvedLine = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
   const approveGuard = useRef(false);
   const setupHandoffShown = useRef(false);
@@ -1478,6 +1486,7 @@ export function ReviewQueue({
     run: async () => {
       const target = shown;
       approvedId.current = target?.id ?? null;
+      approvedLine.current = target?.transaction_id ?? null;
       if (previewWrite) {
         await previewWrite.run();
         if (target) markHandled(target.id);
@@ -1526,12 +1535,15 @@ export function ReviewQueue({
     onSuccess: () => {
       const id = approvedId.current;
       if (!id) return;
+      // ביטול brings the undone card back to the front.
+      const line = approvedLine.current;
       if (previewWrite) {
         previewWrite.onDone(id);
         toast.show({
           message: "הפריט אושר",
           action: "ביטול",
           onAction: () => {
+            pinReviewLine(line);
             previewWrite.onUndo(id);
           },
         });
@@ -1553,6 +1565,7 @@ export function ReviewQueue({
         message: "הפריט אושר",
         action: "ביטול",
         onAction: () => {
+          pinReviewLine(line);
           void reopenReview(id, invalidate, toast);
         },
       });

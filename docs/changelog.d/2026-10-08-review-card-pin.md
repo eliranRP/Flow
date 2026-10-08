@@ -1,0 +1,1 @@
+FLOW-309 (prod QA): on לאישור, אישור can no longer approve a different line than the one you were working on. The card on screen stays the head card until you approve or skip it, even when the queue refetches in another order or you come back from the project or category picker. A card opened from the full list keeps its own focus.
