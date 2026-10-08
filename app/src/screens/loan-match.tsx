@@ -2,13 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   allocateLoanSplit,
+  allocateLoanSplitWithFees,
   buildLoanSchedule,
   loanTakesPaymentOn,
   scheduleRowForDate,
   type LoanSplitPart,
   type LoanStatus,
 } from "@flow/shared";
-import { BankIcon, AlertIcon, EyeOffIcon, HomeIcon, PercentIcon } from "../ui/icons";
+import { BankIcon, AlertIcon, EyeOffIcon, HomeIcon, PercentIcon, TagIcon } from "../ui/icons";
 import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
@@ -25,12 +26,14 @@ const PART_LABEL: Record<LoanSplitPart, string> = {
   interest: "ריבית",
   escrow: "מסים וביטוח",
   principal: "קרן",
+  fees: "עמלות",
 };
 
 const PART_ICON: Record<LoanSplitPart, () => ReactNode> = {
   interest: () => <PercentIcon />,
   escrow: () => <HomeIcon />,
   principal: () => <BankIcon />,
+  fees: () => <TagIcon />,
 };
 
 type SplitRow = {
@@ -146,7 +149,7 @@ export function LoanSplitPanel({
   const localRowRef = useRef<HTMLButtonElement>(null);
   const rowRef = matchButtonRef ?? localRowRef;
   if (parts == null && (!offerMatch || readOnly)) return null;
-  const ordered = parts == null ? [] : (["interest", "escrow", "principal"] as const).flatMap((part) => {
+  const ordered = parts == null ? [] : (["interest", "escrow", "principal", "fees"] as const).flatMap((part) => {
     const row = parts.find((item) => item.part === part);
     return row ? [row] : [];
   });
@@ -444,7 +447,7 @@ export function LoanTransactionSplit({
     run: async () => {
       if (writesHeld) throw new Error("preview");
       const loaded = queryClient.getQueryData<LoadedMatch>(["loan-split", transactionId]);
-      if (!loaded || loaded.splits.length !== 3) throw new Error("supabase");
+      if (!loaded || (loaded.splits.length !== 3 && loaded.splits.length !== 4)) throw new Error("supabase");
       await correctSplit(transactionId, loaded);
     },
   });
@@ -469,7 +472,8 @@ export function LoanTransactionSplit({
   }
   const loaded = query.data;
   if (!loaded) return null;
-  const parts = loaded.splits.length === 3 ? loaded.splits : null;
+  // Three parts, or four with fees (decision 0129; MCP attach_loan_payment writes those).
+  const parts = loaded.splits.length === 3 || loaded.splits.length === 4 ? loaded.splits : null;
   if (parts == null && !offerMatch) return null;
   const loan = loaded.loans.find((item) => item.id === parts?.[0]?.loanId);
   // A paid-off or closed loan is offered only for payments on or before the day it ended.
@@ -705,12 +709,16 @@ async function correctSplit(transactionId: string, loaded: LoadedMatch): Promise
     escrowMinor: 0n,
     principalMinor: 0n,
   };
+  let feesMinor = 0n;
   for (const part of loaded.splits) {
     if (part.part === "interest") scheduled.interestMinor = part.scheduledMinor;
     if (part.part === "escrow") scheduled.escrowMinor = part.scheduledMinor;
     if (part.part === "principal") scheduled.principalMinor = part.scheduledMinor;
+    if (part.part === "fees") feesMinor = part.amountMinor;
   }
-  const next = allocateLoanSplit({ lineMinor: loaded.lineMinor, ...scheduled });
+  // A fees part keeps its amount; the rest of the line splits as usual (decision 0129).
+  const next = allocateLoanSplitWithFees({ lineMinor: loaded.lineMinor, feesMinor, ...scheduled });
+  if (next == null) throw new Error("loan_split_sum");
   for (const part of next) {
     const row = loaded.splits.find((item) => item.part === part.part);
     if (!row) throw new Error("supabase");

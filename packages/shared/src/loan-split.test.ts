@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildLoanSchedule } from "./loan-schedule.ts";
-import { allocateLoanSplit, loanTakesPaymentOn, scheduleRowForDate } from "./loan-split.ts";
+import {
+  allocateLoanSplit,
+  allocateLoanSplitWithFees,
+  firstUnpaidRowIndex,
+  loanTakesPaymentOn,
+  scheduleRowForDate,
+  sumScheduleRows,
+} from "./loan-split.ts";
 
 describe("allocateLoanSplit", () => {
   it("keeps the schedule when the line matches", () => {
@@ -107,5 +114,98 @@ describe("loanTakesPaymentOn", () => {
 
   it("refuses a closed loan with no date", () => {
     expect(loanTakesPaymentOn({ status: "closed", closedOn: null }, "2026-01-01")).toBe(false);
+  });
+});
+
+describe("allocateLoanSplitWithFees", () => {
+  const scheduled = { interestMinor: 500n, escrowMinor: 200n, principalMinor: 300n };
+
+  it("takes the fees off the line first and adds them as a fourth part", () => {
+    const parts = allocateLoanSplitWithFees({ lineMinor: 1_250n, feesMinor: 250n, ...scheduled });
+    expect(parts).toEqual([
+      { part: "interest", amountMinor: 500n, scheduledMinor: 500n },
+      { part: "escrow", amountMinor: 200n, scheduledMinor: 200n },
+      { part: "principal", amountMinor: 300n, scheduledMinor: 300n },
+      { part: "fees", amountMinor: 250n, scheduledMinor: 250n },
+    ]);
+  });
+
+  it("splits what is left after the fees like allocateLoanSplit", () => {
+    const parts = allocateLoanSplitWithFees({ lineMinor: 900n, feesMinor: 400n, ...scheduled });
+    expect(parts?.map((part) => [part.part, part.amountMinor])).toEqual([
+      ["interest", 500n],
+      ["escrow", 0n],
+      ["principal", 0n],
+      ["fees", 400n],
+    ]);
+    expect(parts?.reduce((sum, part) => sum + part.amountMinor, 0n)).toBe(900n);
+  });
+
+  it("gives the three parts alone when the fees are zero", () => {
+    const parts = allocateLoanSplitWithFees({ lineMinor: 1_000n, feesMinor: 0n, ...scheduled });
+    expect(parts?.map((part) => part.part)).toEqual(["interest", "escrow", "principal"]);
+  });
+
+  it("takes a line equal to the fees, with nothing left for the other parts", () => {
+    const parts = allocateLoanSplitWithFees({ lineMinor: 250n, feesMinor: 250n, ...scheduled });
+    expect(parts?.map((part) => part.amountMinor)).toEqual([0n, 0n, 0n, 250n]);
+  });
+
+  it("refuses a line smaller than the fees", () => {
+    expect(allocateLoanSplitWithFees({ lineMinor: 249n, feesMinor: 250n, ...scheduled })).toBeNull();
+  });
+
+  it("rejects negative fees", () => {
+    expect(() => allocateLoanSplitWithFees({ lineMinor: 1_000n, feesMinor: -1n, ...scheduled })).toThrow("fees");
+  });
+});
+
+describe("sumScheduleRows and firstUnpaidRowIndex", () => {
+  // 1,000.00 at 0% over 3 months, 300.00 principal a month and 1.00 escrow: rows of 300, 300, 400.
+  const { rows } = buildLoanSchedule({
+    principalMinor: 100_000n,
+    annualRatePpm: 0,
+    termMonths: 3,
+    startDate: "2026-01-01",
+    paymentMinor: 30_100n,
+    escrowMinor: 100n,
+  });
+
+  it("adds consecutive rows from a start index", () => {
+    expect(sumScheduleRows(rows, 0, 2)).toEqual({ interestMinor: 0n, escrowMinor: 200n, principalMinor: 60_000n });
+    expect(sumScheduleRows(rows, 1, 2)).toEqual({ interestMinor: 0n, escrowMinor: 200n, principalMinor: 70_000n });
+    expect(sumScheduleRows(rows, 2, 1)).toEqual({ interestMinor: 0n, escrowMinor: 100n, principalMinor: 40_000n });
+  });
+
+  it("returns null when the rows run past the schedule or the count is not positive", () => {
+    expect(sumScheduleRows(rows, 2, 2)).toBeNull();
+    expect(sumScheduleRows(rows, 0, 0)).toBeNull();
+    expect(sumScheduleRows(rows, -1, 1)).toBeNull();
+  });
+
+  it("adds interest too", () => {
+    const withInterest = buildLoanSchedule({
+      principalMinor: 10_000_000n,
+      annualRatePpm: 60_000,
+      termMonths: 360,
+      startDate: "2026-01-01",
+      paymentMinor: 100_000n,
+      escrowMinor: 10_000n,
+    }).rows;
+    const sum = sumScheduleRows(withInterest, 0, 2);
+    expect(sum?.interestMinor).toBe((withInterest[0]?.interestMinor ?? 0n) + (withInterest[1]?.interestMinor ?? 0n));
+    expect(sum?.escrowMinor).toBe(20_000n);
+  });
+
+  it("finds the first row whose scheduled principal through it is more than what was paid", () => {
+    expect(firstUnpaidRowIndex(rows, 0n)).toBe(0);
+    expect(firstUnpaidRowIndex(rows, 29_999n)).toBe(0);
+    expect(firstUnpaidRowIndex(rows, 30_000n)).toBe(1);
+    expect(firstUnpaidRowIndex(rows, 60_000n)).toBe(2);
+    expect(firstUnpaidRowIndex(rows, 99_999n)).toBe(2);
+  });
+
+  it("returns -1 when every row is paid", () => {
+    expect(firstUnpaidRowIndex(rows, 100_000n)).toBe(-1);
   });
 });

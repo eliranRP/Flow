@@ -69,7 +69,7 @@ select is(
         'lines', jsonb_build_array(
           pg_temp.hint_line('hint-key', 'expense', 'loan_part:principal'),
           pg_temp.hint_line('hint-old-name', 'expense', 'תשלומי הלוואה'),
-          pg_temp.hint_line('hint-unknown-key', 'expense', 'loan_part:fees'),
+          pg_temp.hint_line('hint-unknown-key', 'expense', 'loan_part:penalty'),
           pg_temp.hint_line('hint-name', 'income', 'הכנסה אחרת'),
           pg_temp.hint_line('hint-key-income', 'income', 'loan_part:principal'),
           pg_temp.hint_line('hint-wildcard', 'expense', 'loanXpart:principal')

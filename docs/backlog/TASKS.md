@@ -44,7 +44,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (part 1 done #132, part 2 in review; plan approved by the owner 2026-10-08) |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-2 done #132 #151; part 3 in review) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -288,7 +288,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** in-progress (part 1 done #132; part 2 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
+- **Type:** PLAN FIRST · **Status:** in-progress (parts 1-2 done #132 #151; part 3 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
 - **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
   1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.
