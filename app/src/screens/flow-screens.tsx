@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProfitMonths, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { useCompanyCurrency } from "../company-currency";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from "react-router-dom";
@@ -647,6 +648,7 @@ export function ProjectDetailScreen({
   const detail = useProjectQuery(sample ? "" : projectId, period);
   const months = useProfitMonthsQuery(sample || !spansMonths(period) ? "" : projectId, period);
   const preview = useHomePreview();
+  const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const location = useLocation();
@@ -681,7 +683,7 @@ export function ProjectDetailScreen({
   if (!project) {
     return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
-  const currencyRows = projectRows(project);
+  const currencyRows = projectRows(project, companyCurrency);
   const singleCurrency = currencyRows.length === 1;
   const profitRows = currencyRows.map((row) => ({
     row,
@@ -751,7 +753,7 @@ export function ProjectDetailScreen({
           to={`/projects/${project.id}/months${periodQuery}`}
           icon={<CalendarIcon />}
           title="לפי חודש"
-          hint={profitMonthsSummary(sampleMonths ?? months.data ?? null)}
+          hint={profitMonthsSummary(sampleMonths ?? months.data ?? null, companyCurrency)}
         />
       ) : null}
       <div className="ui-page-pad ui-project-overhead">

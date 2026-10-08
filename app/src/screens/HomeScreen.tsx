@@ -1,3 +1,4 @@
+import { useCompanyCurrency } from "../company-currency";
 import { formatAmountText, formatIls, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
 import {
   companyRows,
@@ -176,7 +177,8 @@ export function HomeBooks({
   const rankCurrency = primaryCurrency(data);
   const ranked = homeProjects(data.projects, rankCurrency);
   const leading = useHeldOrder(ranked, (project) => project.id);
-  const currencyRows = companyRows(data);
+  const companyCurrency = useCompanyCurrency();
+  const currencyRows = companyRows(data, companyCurrency);
   const heroFigures = currencyRows.map((row) => ({
     agorot: roundedHeroProfit(row.income_minor, row.expense_minor),
     currency: row.currency,
