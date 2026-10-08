@@ -19,8 +19,11 @@
   color: var(--color-on-band);
 }
 
-/* FLOW-335: an action under a row sits on the start side, under the name (Unpaid's mark). Overrides .ui-row-stack in 09-sign-in-project.css. */
-.ui-row-stack {
+/*
+  FLOW-335: a ListRow's action under the row sits on the start side, under the name (Unpaid's mark).
+  Only ListRow's own stack: the skipped list on לאישור builds its own .ui-row-stack and keeps it.
+*/
+.ui-row-stack-action {
   align-items: flex-start;
 }
 
@@ -76,8 +79,9 @@
   transition: transform var(--dur-fast) var(--ease-standard);
 }
 
+/* pinch-zoom stays with the browser too, so the figure never blocks zooming the page. */
 .ui-pswipe-on {
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 .ui-pswipe-drag {

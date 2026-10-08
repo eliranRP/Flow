@@ -269,7 +269,7 @@ function titleText(props: Common): ReactNode {
 function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {
   if (!props.actionBelow || props.action == null) return row;
   return (
-    <div className="ui-row-stack">
+    <div className="ui-row-stack ui-row-stack-action">
       {row}
       <div className="ui-row-action">{props.action}</div>
     </div>

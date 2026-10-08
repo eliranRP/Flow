@@ -43,7 +43,7 @@ export const Steppable: Story = {
     const box = canvasElement.querySelector<HTMLElement>(".ui-pswipe");
     await expect(box).not.toBeNull();
     await expect(box).toHaveAttribute("data-period-swipe");
-    await expect(getComputedStyle(box as HTMLElement).touchAction).toBe("pan-y");
+    await expect(getComputedStyle(box as HTMLElement).touchAction).toBe("pan-y pinch-zoom");
     await expect(within(canvasElement).getByRole("heading", { name: "₪18,400" })).toBeVisible();
   },
 };
