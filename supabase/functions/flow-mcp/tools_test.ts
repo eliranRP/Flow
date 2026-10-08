@@ -592,6 +592,7 @@ Deno.test("split_line validates parts and refuses read tokens", async () => {
     { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], share: 50 }] },
     { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], project_id: "nope" }] },
     { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, amount_minor: i + 1 })) },
+    { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`, amount_minor: i + 1 })) },
     { idempotency_key: "k", transaction_id: "not-a-uuid", parts: two },
     { idempotency_key: "", transaction_id: TXN, parts: two },
     { idempotency_key: "k", transaction_id: TXN, parts: two, company_id: TXN },
@@ -1732,6 +1733,11 @@ Deno.test("assign_expenses forwards a parts[] row like split_line and validates 
     [{ category_id: CATEGORY, rest: true }, { category_id: PROJECT, rest: true }],
     [{ category_id: CATEGORY, amount_minor: 1 }, { category_id: CATEGORY, amount_minor: 2 }],
     [{ category_id: CATEGORY, amount_minor: 1, share: 1 }, { category_id: PROJECT, amount_minor: 2 }],
+    Array.from({ length: 51 }, (_, i) => ({
+      category_id: CATEGORY,
+      project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`,
+      amount_minor: i + 1,
+    })),
   ];
   for (const rows of bad) {
     const refused = await callTool("assign_expenses", {

@@ -44,6 +44,8 @@ select (select id from mbs where label = 'co'), 'expense', 'expense', 'project',
   -10000, -10000, 10000, 0, 'source', '2026-06-10', '2026-06-10', 'manual', 'mbs:' || k,
   (select id from mbs where label = 'north'), (select id from mbs where label = 'repairs'), 'mbs:' || k, false, true
 from unnest(array['a', 'b', 'c']) k;
+-- The insert trigger clears category_suggested on a line with a category; mark the guess after.
+update public.transactions set category_suggested = true where idempotency_key like 'mbs:%';
 insert into mbs (label, id) select replace(idempotency_key, 'mbs:', 'txn_'), id
 from public.transactions where idempotency_key like 'mbs:%';
 
@@ -134,7 +136,7 @@ select is((select count(*)::integer from public.line_splits where transaction_id
   'the split is gone');
 select is(
   (select jsonb_build_array(user_assigned, category_suggested) from public.transactions where id = pg_temp.id('txn_a')),
-  '[false, false]'::jsonb, 'and the line''s flags are back as split_line undo leaves them');
+  '[false, true]'::jsonb, 'and the line''s flags are back as they were');
 
 -- A batch that clears a split with parts [].
 select pg_temp.as_mcp();
