@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
-import { assertSumitUrl, deriveLine, documentUrls, mapCrmEntity, type SumitDoc } from "../_shared/ledger.ts";
+import { assertSumitUrl, deriveLine, documentUrls, invoicesMissingLinks, mapCrmEntity, type SumitDoc } from "../_shared/ledger.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 
 declare const Deno: {
@@ -186,7 +186,10 @@ async function runSync(
     apiKey = await openApiKey(envelope, kek, companyId, "sumit");
     const listed = await listDocuments(sumitCompanyId, apiKey);
     const documents = listed.docs;
-    const links = await listDocumentUrls(sumitCompanyId, apiKey);
+    const missing = invoicesMissingLinks(documents, await linkedInvoices(admin, companyId));
+    const links = missing.from == null
+      ? { urls: new Map<number, string>(), reads: 0 }
+      : await listDocumentUrls(sumitCompanyId, apiKey, missing.from);
     await writeLedger(admin, companyId, documents, links.urls);
     const stamped = await admin.rpc("stamp_sumit_sync", { p_company: companyId });
     if (stamped.error) throw new Error("could not stamp the sync");
@@ -324,11 +327,30 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
   throw new Error("sync_page_cap");
 }
 
+/** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */
+async function linkedInvoices(admin: SupabaseClient, companyId: string): Promise<Set<string>> {
+  const linked = await admin
+    .from("transactions")
+    .select("external_id")
+    .eq("company_id", companyId)
+    .eq("doc_kind", "invoice")
+    .is("removed_at", null)
+    .not("provider_meta->>document_url", "is", null);
+  if (linked.error) return new Set();
+  return new Set((linked.data ?? []).map((row) => String(row.external_id)));
+}
+
 /**
- * FLOW-335. The download link of each document, for the Unpaid list. A failure here only loses
- * the links: the sync goes on, and a document keeps the link it had.
+ * FLOW-335. The download links of the tax invoices (type 0) dated from `from`, for the Unpaid
+ * list. The sync calls it only while an open invoice has no link, since every call counts
+ * against the customer's SUMIT quota. A failure here only loses the links: the sync goes on,
+ * and a document keeps the link it had.
  */
-async function listDocumentUrls(companyId: number, apiKey: string): Promise<{ urls: Map<number, string>; reads: number }> {
+async function listDocumentUrls(
+  companyId: number,
+  apiKey: string,
+  from: string,
+): Promise<{ urls: Map<number, string>; reads: number }> {
   const credentials = { CompanyID: companyId, APIKey: apiKey };
   const urls = new Map<number, string>();
   let reads = 0;
@@ -337,6 +359,8 @@ async function listDocumentUrls(companyId: number, apiKey: string): Promise<{ ur
     for (let page = 0; page < PAGE_CAP; page += 1) {
       reads += 1;
       const payload = await sumitCall(LIST_DOCUMENTS, credentials, {
+        DocumentTypes: [0],
+        DateFrom: `${from}T00:00:00`,
         Paging: { StartIndex: start, PageSize: 1000 },
       });
       const data = payload.Data;
@@ -349,6 +373,7 @@ async function listDocumentUrls(companyId: number, apiKey: string): Promise<{ ur
       if (!hasNext || count === 0) return { urls, reads };
       start += count;
     }
+    console.error("sumit document links stopped at the page cap");
   } catch (error) {
     const message = error instanceof Error ? error.message : "list failed";
     console.error("sumit document links skipped", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]").slice(0, 200));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSumitUrl, documentUrls, mapCrmEntity, SUMIT_ALLOWLIST } from "../../../supabase/functions/_shared/ledger.ts";
+import { assertSumitUrl, documentUrls, invoicesMissingLinks, mapCrmEntity, SUMIT_ALLOWLIST, type SumitDoc } from "../../../supabase/functions/_shared/ledger.ts";
 
 function expense(vat: number | null, wo = -118, gross = -118): Record<string, unknown> {
   return {
@@ -59,5 +59,27 @@ describe("documentUrls", () => {
   it("returns an empty map for a missing or malformed page", () => {
     expect(documentUrls(null).size).toBe(0);
     expect(documentUrls({ Documents: "x" }).size).toBe(0);
+  });
+});
+
+describe("invoicesMissingLinks", () => {
+  function doc(sumit_id: number, kind: SumitDoc["kind"], gross: number, date: string, orig: number | null = null): SumitDoc {
+    return { key: String(sumit_id), sumit_id, kind, date, gross, wo: gross, vat: null, bud: null, bud_name: null, orig, cust: null, cust_name: null, number: null, desc: "" };
+  }
+
+  it("lists open invoices with no stored link and their earliest date", () => {
+    const docs = [
+      doc(1, "inv", 100, "2026-06-05"),
+      doc(2, "inv", 100, "2026-06-01"),
+      doc(3, "rec", 100, "2026-06-10", 2),
+      doc(4, "inv", 100, "2026-06-03"),
+      doc(5, "inv", 100, "2026-06-02"),
+      doc(6, "cred", -40, "2026-06-11", 5),
+    ];
+    expect(invoicesMissingLinks(docs, new Set(["4"]))).toEqual({ ids: [1, 5], from: "2026-06-02" });
+  });
+
+  it("needs no call when every open invoice has a link", () => {
+    expect(invoicesMissingLinks([doc(1, "inv", 100, "2026-06-05")], new Set(["1"]))).toEqual({ ids: [], from: null });
   });
 });
