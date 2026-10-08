@@ -2,6 +2,7 @@ import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
+import { FILLED } from "../ui/investment-card.stories-support";
 import { at320, dark, ExampleBar, exampleOnBand, periodMonths } from "../ui/screen-stories-support";
 
 const meta = {
@@ -207,6 +208,37 @@ export const ProjectFromStart: Story = {
   render: () => (
     <StoryRoute entry="/projects/p-a?period=all" tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sampleMonths={periodMonths} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-404. The השקעה card under the categories, with invented figures. */
+export const ProjectInvestment: Story = {
+  name: "Project with investment card",
+  render: () => (
+    <StoryRoute entry="/projects/a" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sampleInvestment={{ isOverhead: false, figures: FILLED, categories: [], loans: [] }}
+        sample={{
+          id: "a",
+          name: "וילה רעננה",
+          status: "active",
+          state_label: "פעיל",
+          budget_agorot: null,
+          income_agorot: 40_000_000n,
+          direct_agorot: 26_130_000n,
+          shared_agorot: 0n,
+          profit_agorot: 13_870_000n,
+          categories: [
+            { id: "c1", name: "חומרים", amount_agorot: 14_280_000n },
+            { id: "c2", name: "קבלן משנה", amount_agorot: 11_850_000n },
+          ],
+          pending_count: 0,
+          pending_agorot: 0n,
+          transactions: [],
+        }}
+      />
     </StoryRoute>
   ),
 };

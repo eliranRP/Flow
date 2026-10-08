@@ -17,7 +17,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
 | Dev lane 2 | FLOW-211: Flow MCP agent requests (amount filter on search, accrued interest on list_loans, company_id note) | More Flow MCP agent requests and Jev server items |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
-| UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
+| UI lane 2 | FLOW-404 השקעה card on the project page (#223) | FLOW-114 loan match on the transaction card (owner picked B, one row), FLOW-333 editor items, the detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-401 project categories UI (owner approved v5 "clean", 2026-10-08 21:44Z): groups fold, up mark, usual line, קבוצה in the category sheet | Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
@@ -98,7 +98,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | done (#165) |
-| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | in-progress (#175) |
+| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | done (#175) |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | done (#165; whole-unit amounts item open, conflicts with 0120) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
@@ -663,7 +663,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-327"></a>
 ### FLOW-327 · Review card: actions in the thumb zone, tidy spacing
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
+- **Type:** SMALL UI · **Status:** done (#175) · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
 - **What:** Approving one card at a time is the most repeated job, and אישור moves between y=449 and y=584 depending on the card, with about 250px empty below; on a 375x667 phone with the banner, שינוי and דלג sit under the tab bar. Pin אישור / שינוי / דלג in a bar just above the tab bar; the card scrolls above it. Also: a gap of `--space-3`–`--space-4` between the auto-filed banner and the card (they touch today); label and value columns aligned on the card with tighter rows (mockup 03); the counter reads "1 מתוך 3" without padding spaces; a disabled אישור says why ("בחרו פרויקט וקטגוריה").
 - [x] (cycle 2, deploy 9ea1e9a) The "✦ הצעת Jev" pill trails each value, so on a card where Jev filled both fields the two pills start at different points; with values in an aligned column (above) the pills line up too.
 - [x] (cycle 2) At 320 the pill takes about 90px and long project or category names are cut to a few words ("וילה רעננה – …"). Let the name keep priority: wrap the pill under the value, or shorten it to "✦" with the full label as its accessible name.
@@ -817,7 +817,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** UX research, mockup and plan approved by the owner.
 - [x] Mockup approved as drawn (2026-10-08; the project's plans/flow-404-investment-mockup.html). The project page gets an "השקעה" card under the categories. Its head says מתחילת הפרויקט, and the screen's period and basis don't change it. It has three rows (מחיר קנייה, שווי אחרי שיפוץ, שווי היום with its date), each opening a bottom sheet with the number pad. Each sheet saves its own figure through `set_project_investment` (the שווי היום sheet also its date, which starts on today), on שמירה or when the sheet closes, and מחיקה clears the figure. Under the rows, הון מאולץ and הון נוכחי sit side by side with their formula. An equity that needs a missing figure names the figure; one that can't be worked out because of another currency says so; it never shows 0. Then come two rows: שיפוץ עד היום opens the rehab list by category, with the left-out categories under it, and יתרת הלוואות lists other-currency loans apart. A viewer sees no chevrons and no הוספה, and the overhead project has no card.
 - [x] The category ⋯ sheet gets a "נספרת בשיפוץ" switch showing `in_rehab`, with a one-line hint. A kept-out category's hint says why it is off by default. When the owner changed the default, the hint says so and "החזרה לברירת המחדל" sends null. A viewer sees the switch disabled, with its hint.
-- [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch.
+- [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch (card and sheets in #223; switch is UI lane 3's).
+- [ ] Follow-up (server): `get_project().investment` returns `rehab_by_category` from the same CTE as `rehab_minor`, so the rehab list always adds up to the total. Today the app rebuilds it from the project's cash-basis categories and `list_categories().in_rehab`, and shows only the total when they differ: a loan fees part filed in an ordinary category (0130), suggested and in-review lines, shared lines with no category, and archived categories.
+- [ ] Open (UI): a counted category in the rehab list should open its lines. The category screen (`project-category-screen.tsx`) reads the period from the URL but always uses the books basis (invoiced), so `?period=all&basis=cash` would not match the rehab figure. Needs a `basis` query parameter on that screen, or the server list above.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management

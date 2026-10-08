@@ -213,6 +213,21 @@ export const mercuryStatusSchema = z.object({
   syncing: z.boolean().optional(),
 });
 
+/** FLOW-404 (decision 0143). In the project's investment currency; other currencies are listed apart. */
+export const projectInvestmentSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  purchase_minor: agorotOrNull,
+  arv_minor: agorotOrNull,
+  value_minor: agorotOrNull,
+  value_date: z.string().nullable(),
+  rehab_minor: agorotSchema,
+  rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: agorotSchema })).catch([]),
+  loan_balance_minor: agorotSchema,
+  loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: agorotSchema })).catch([]),
+  forced_equity_minor: agorotOrNull,
+  current_equity_minor: agorotOrNull,
+});
+
 export const projectDetailSchema = z
   .object({
     id: z.string(),
@@ -297,7 +312,13 @@ export const projectDetailSchema = z
       name: z.string(),
       currency: z.string(),
       balance_minor: agorotSchema,
+      /** FLOW-132. Omitted on older payloads. */
+      status: z.string().optional(),
     })).optional(),
+    /** The company's overhead project (0021). Omitted on older payloads. */
+    is_overhead: z.boolean().optional(),
+    /** FLOW-404. Purchase, ARV, value, rehab and equity (0143); not tied to the period or basis. Omitted on older payloads. */
+    investment: projectInvestmentSchema.nullable().optional(),
   })
   .nullable();
 
@@ -518,6 +539,7 @@ export type ProjectCategoryMonths = z.infer<typeof projectCategoryMonthsSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type MercuryStatus = z.infer<typeof mercuryStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
+export type ProjectInvestmentData = z.infer<typeof projectInvestmentSchema>;
 export type ProjectCategoryPage = z.infer<typeof projectCategorySchema>;
 export type ProfitMonths = z.infer<typeof profitMonthsSchema>;
 export type ProfitMonth = NonNullable<ProfitMonths>["months"][number];
