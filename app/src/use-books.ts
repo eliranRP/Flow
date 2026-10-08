@@ -107,6 +107,8 @@ export function useDashboardQuery(active = true) {
   return useQuery({
     queryKey: ["dashboard", preview, period],
     enabled: active && preview === "off",
+    // A new period keeps Home and its period bar (and the focus on its arrow); the figures follow the new read.
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<Dashboard> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

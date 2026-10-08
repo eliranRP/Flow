@@ -241,7 +241,7 @@ export const projectDetailSchema = z
         category: z.string().nullable(),
         /** Out of the P&L (its category, or the owner took the line out), so month sums leave it out. Omitted on older payloads. */
         kept_out: z.boolean().optional().catch(undefined),
-        /** A line split by category: this project's parts, unsigned. Null when the line has no split. */
+        /** A line split by category: this project's share, signed against the line's own kind (a reversal part counts minus, 0138). Null when the line has no split. */
         parts_minor: agorotOrNull.optional(),
       }),
     ),

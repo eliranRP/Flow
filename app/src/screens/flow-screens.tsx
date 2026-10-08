@@ -709,6 +709,12 @@ export function ProjectDetailScreen({
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
+        // A new period shows the last figures until its read lands; the spinner says they are not its yet.
+        status={!sample && detail.isPlaceholderData ? (
+          <div className="ui-ptr">
+            <span className="ui-spinner" role="status" aria-label="מרענן" />
+          </div>
+        ) : null}
         trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>

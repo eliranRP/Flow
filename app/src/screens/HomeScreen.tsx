@@ -128,6 +128,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       }}
       period={books.period}
       onPeriod={books.setPeriod}
+      refreshing={dashboard.isPlaceholderData}
       checklist={<SetupHomeSlot emptyHome={false} />}
     />
   );

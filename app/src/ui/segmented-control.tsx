@@ -37,7 +37,8 @@ export function SegmentedControl<T extends string>({
   tone = "page",
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
-  const index = Math.max(0, options.findIndex((option) => option.value === value));
+  const found = options.findIndex((option) => option.value === value);
+  const index = Math.max(0, found);
 
   function move(delta: number) {
     if (options.length === 0) return;
@@ -83,7 +84,8 @@ export function SegmentedControl<T extends string>({
             className="ui-seg-btn"
             role="radio"
             aria-checked={selected}
-            tabIndex={selected ? 0 : -1}
+            // With no option selected (a custom period), the first one keeps the group's tab stop.
+            tabIndex={selected || (found < 0 && optionIndex === 0) ? 0 : -1}
             aria-label={option.label}
             disabled={disabled}
             onClick={() => {
