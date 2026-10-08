@@ -1,10 +1,10 @@
--- FLOW-323 server part (decision 0139): search_transactions filters by date, project, category,
+-- FLOW-323 server part (decision 0140): search_transactions filters by date, project, category,
 -- direction and review state, matches the customer, and says how each row stands. Invented
 -- data only. Amounts are agorot.
 
 begin;
 
-select plan(32);
+select plan(35);
 
 do $users$
 begin
@@ -99,8 +99,8 @@ values
 delete from public.review_queue where company_id = pg_temp.id('co');
 insert into public.review_queue (company_id, transaction_id, status, reason)
 values
-  (pg_temp.id('co'), pg_temp.id('loose'), 'open', 'no_project'),
-  (pg_temp.id('co'), pg_temp.id('drill'), 'open', 'no_project');
+  (pg_temp.id('co'), pg_temp.id('loose'), 'open', 'missing_project'),
+  (pg_temp.id('co'), pg_temp.id('drill'), 'open', 'missing_project');
 
 create or replace function pg_temp.keys(p_result jsonb)
 returns text
@@ -158,6 +158,36 @@ select is(pg_temp.keys(public.search_transactions(p_category => pg_temp.id('inte
   'sfl:loan', 'a loan split part counts under its category');
 select is(pg_temp.keys(public.search_transactions(p_category => 'none')),
   'sfl:loose_100%', 'none: no category and no parts');
+
+-- A line split whose parts all name a project holds nothing on the line's own project, and a
+-- split line holds nothing under its own category. A loan payment with a part waiting for
+-- review counts whole under its own category.
+reset role;
+insert into sfl (label, id) values
+  ('moved', tests.fixture_line(pg_temp.id('co'), 'sfl:moved', 50000, 'expense',
+    pg_temp.id('alpha'), pg_temp.id('materials'), '2026-04-01'));
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+values
+  (pg_temp.id('co'), pg_temp.id('moved'), 1, pg_temp.id('tools'), pg_temp.id('beta'), 30000),
+  (pg_temp.id('co'), pg_temp.id('moved'), 2, pg_temp.id('interest'), pg_temp.id('beta'), 20000);
+select tests.authenticate_as('sfl_owner');
+select is((public.search_transactions(p_project => pg_temp.id('alpha')::text, p_to => '2026-04-30')->>'total')::int
+  + (public.search_transactions(p_category => pg_temp.id('materials')::text, p_to => '2026-04-30')->>'total')::int,
+  0, 'a line split away from its project and category is not listed under them');
+select is(pg_temp.keys(public.search_transactions(p_project => pg_temp.id('beta')::text, p_to => '2026-04-30')),
+  'sfl:moved', 'it is listed under the project its parts name');
+reset role;
+update public.transactions set category_id = pg_temp.id('tools') where id = pg_temp.id('loan');
+update public.loan_splits set needs_review = true where transaction_id = pg_temp.id('loan') and part = 'principal';
+select tests.authenticate_as('sfl_owner');
+select is(pg_temp.keys(public.search_transactions(p_category => pg_temp.id('tools')::text, p_from => '2026-06-16')),
+  'sfl:drill,sfl:loan', 'a loan payment with a part waiting for review is listed under its own category');
+reset role;
+update public.loan_splits set needs_review = false where transaction_id = pg_temp.id('loan');
+delete from public.line_splits where transaction_id = pg_temp.id('moved');
+update public.transactions set removed_at = now(), category_id = null where id in (pg_temp.id('moved'), pg_temp.id('loan'));
+update public.transactions set removed_at = null where id = pg_temp.id('loan');
+select tests.authenticate_as('sfl_owner');
 
 -- Combined.
 select is(pg_temp.keys(public.search_transactions(

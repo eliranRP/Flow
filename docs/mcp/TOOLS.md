@@ -128,7 +128,7 @@ Output also has `meta` ([FLOW-304](../backlog/TASKS.md#flow-304)), the line's ba
 
 `scope` is `pending` (default), `filed`, or `all`. `pending` filters `list_review`. `filed` and `all` call `public.search_transactions`. `id` on an expense is the transaction id. Each expense also has `meta` (see [get_expense](#get_expense)).
 
-Filters, all optional ([FLOW-323](../backlog/TASKS.md#flow-323), [0139](../decisions/0139-search-filters.md)):
+Filters, all optional ([FLOW-323](../backlog/TASKS.md#flow-323), [0140](../decisions/0140-search-filters.md)):
 - `from` and `to` (`YYYY-MM-DD`) bound the document date, both ends included.
 - `direction` is `income` or `expense`.
 - `project_id` matches the line's project, a share of a shared cost on it, or a split part on it. `none` lists lines on no project.

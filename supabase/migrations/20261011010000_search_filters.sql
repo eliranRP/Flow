@@ -2,7 +2,7 @@
 -- doc_date range, a project, a category and a direction, and the pending scope. The text also
 -- matches the customer, so income lines are found by payer. Each row says which currency it is
 -- in, whether it waits for review, whether it counts in the P&L and how it is split.
--- Decision 0139. The company is still private.readable_company_id(): a caller cannot pass
+-- Decision 0140. The company is still private.readable_company_id(): a caller cannot pass
 -- another company, and another company's project or category id matches nothing.
 -- Replaces the 4-argument function from 20260930160000_mcp_search.sql; the new arguments all
 -- have defaults, so a call with the old ones reads the same lines.
@@ -130,10 +130,18 @@ begin
           or coalesce(cu.name, '') ilike '%' || needle || '%'
         )
         -- A project: the line's own, a share of a shared cost, or a split part on it. A split
-        -- part with no project is on the line's project (0138), so the line's own covers it.
+        -- part with no project is on the line's project (0138); a line split whose parts all
+        -- name a project holds none of it on the line's own.
         and (
           want_project is null
-          or t.project_id = want_project
+          or (
+            t.project_id = want_project
+            and not exists (
+              select 1 from public.line_splits sp
+              where sp.transaction_id = t.id and sp.company_id = cid
+              having bool_and(sp.project_id is not null)
+            )
+          )
           or exists (
             select 1 from public.allocations a
             where a.transaction_id = t.id and a.company_id = cid and a.project_id = want_project
@@ -157,10 +165,23 @@ begin
             )
           )
         )
-        -- A category: the line's own, or a part of its line split or its loan split.
+        -- A category: the line's own, or a part of its line split or its loan split. A split
+        -- line counts by its parts, so its own category matches only through a part. A loan
+        -- payment with a part waiting for review counts whole under its own category (0136).
         and (
           want_category is null
-          or t.category_id = want_category
+          or (
+            t.category_id = want_category
+            and not exists (
+              select 1 from public.line_splits sp
+              where sp.transaction_id = t.id and sp.company_id = cid
+            )
+            and not exists (
+              select 1 from public.loan_splits ls
+              where ls.transaction_id = t.id and ls.company_id = cid
+              having not bool_or(ls.needs_review)
+            )
+          )
           or exists (
             select 1 from public.line_splits sp
             where sp.transaction_id = t.id and sp.company_id = cid and sp.category_id = want_category

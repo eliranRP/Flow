@@ -11,8 +11,8 @@ FLOW-323 asks for one list of every transaction with a search field and filters:
 
 **`search_transactions` takes the filters.** It gains five optional arguments: `p_from`, `p_to`, `p_project`, `p_category` and `p_direction`. `p_scope` also takes `pending`. Every argument has a default, so the old 4-argument call reads the same lines.
 - `p_from` and `p_to` bound `doc_date`, both ends included. `from` after `to` is `validation`.
-- `p_project` matches the line's own project, a share of a shared cost on it (`allocations`), or a line split part on it. A part with no project is on the line's project (0138), so the line's own project covers it. `none` lists lines with no project, no share and no part on a project.
-- `p_category` matches the line's own category, or a part of its line split or loan split. `none` lists lines with no category and no parts.
+- `p_project` matches a share of a shared cost on the project (`allocations`), or a line split part on it. It also matches the line's own project, unless every part of its line split names a project. A part with no project is on the line's project (0138). `none` lists lines with no project, no share and no part on a project.
+- `p_category` matches a part of the line's line split or loan split in the category. It also matches the line's own category, unless the line is split. A loan payment with a part waiting for review still counts whole under its own category (0136), so it matches that category too. `none` lists lines with no category and no parts.
 - `p_direction` is `income` or `expense`.
 - A project or category is an id or `none`; anything else is `validation`. Another company's id matches nothing, since every row is from the reader's company.
 - The text matches the description, the supplier and the customer, in any case. `%` and `_` in it are plain characters.

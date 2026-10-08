@@ -2213,7 +2213,9 @@ export async function callTool(
       };
       const filtered = Object.values(filters).some((value) => value != null);
       if (scopeName === "pending" && filtered) {
-        // With a filter, search_transactions picks the page (0139); the rows stay list_review's.
+        // With a filter, search_transactions picks the page (0140); the rows stay list_review's.
+        // A line with two open review rows shows once here, and a row resolved between the two
+        // reads drops out of the page while total still counts it.
         const found = await rpc("search_transactions", {
           p_query: query,
           p_scope: "pending",
