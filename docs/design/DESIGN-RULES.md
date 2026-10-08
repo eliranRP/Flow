@@ -207,7 +207,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Change pill | ▼ / ▲ plus % | On the band it sits in a solid pill |
 | Tab bar | בית, פרויקטים, +, לאישור (neutral badge), הגדרות | Active tab is violet icon and label |
 | Bottom sheet | scrim, grab handle, title, ✕ | ✕, scrim, swipe, and Android back save a valid pending change, then close. An incomplete change stays open and says why, with ביטול השינוי beside that sentence. A second dismiss discards it and closes. A dismiss during a save waits for the save, then closes. Push a history entry. [0075](../decisions/0075-save-on-tap-and-on-leave.md) |
-| Empty state | icon, title, one line, at most one button | No emoji. Positive wording when the work is done. The action, here and on an error state, is the standard 44px button, never the 36px pill (FLOW-328) |
+| Empty state | icon, title, one line, at most one button | No emoji. Positive wording when the work is done. The action, here and on an error state, is the standard 44px button in the secondary (tint) style, never the 36px pill (FLOW-328; style set by the design lead in cycle 4) |
 | Skeleton | bars shaped like the content, shimmer 1.4s | Known chrome stays real. `ld-01`…`ld-03` |
 | Busy button | same size, spinner + verb ("מאשר…") | Other actions on that screen go disabled. `ld-04` |
 | Processing | progress, step list, "המשך ברקע" | Invoice `ld-06`. Bank `ld-05` is not a build task ([0065](../decisions/0065-review-round5.md) point 40) |
