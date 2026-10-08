@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(33);
+select plan(37);
 
 do $users$
 begin
@@ -137,7 +137,7 @@ select (select id from ja_ref where label = 'co'), (select id from ja_ref where 
   )),
   0.95, 'jev-1.13.0', 'jev-1.13.0'
 from (values ('a1', 'p1', null::numeric), ('d1', 'p1', 0.49), ('d2', 'p1', 0.5), ('e1', 'p1', null),
-  ('e2', 'p1', null), ('i1', 'p1', null), ('a3', 'pf', null), ('a4', 'pf', null), ('n1', 'none', null)
+  ('e2', 'p1', -1), ('i1', 'p1', null), ('a3', 'pf', null), ('a4', 'pf', null), ('n1', 'none', null)
 ) s(line, project, score);
 set constraints all immediate;
 
@@ -171,6 +171,14 @@ begin
     (select id from ja_ref where label = 'co'), (select id from ja_ref where label = l),
     (select id from ja_ref where label = 'pf'), null, 'jev-1.13.0', 0.9)
   from unnest(array['a3', 'a4']) l;
+  -- The same answer again (a re-tag) writes nothing new; a score outside 0..1 is no score.
+  insert into ja_out (label, result)
+  select 'pre_' || l || '_again', public.jev_prefill(
+    (select id from ja_ref where label = 'co'), (select id from ja_ref where label = l),
+    (select id from ja_ref where label = 'p1'), (select id from ja_ref where label = 'cat1'),
+    'jev-1.13.0', 0.95
+  )
+  from unnest(array['d1', 'e2']) l;
   perform set_config('request.jwt.claim.role', '', true);
   perform set_config('request.jwt.claims', '{}', true);
 end
@@ -197,6 +205,19 @@ select is(
    where t.id = (select id from ja_ref where label = 'd2')),
   (select result from ja_out where label = 'held_before'),
   'and the held line is unchanged'
+);
+
+select is(
+  (select jsonb_build_array(o.result,
+     (select count(*) from public.jev_prefills jp where jp.transaction_id = (select id from ja_ref where label = 'd1'))::int)
+   from ja_out o where o.label = 'pre_d1_again'),
+  '[{"project": false, "category": false}, 1]'::jsonb,
+  'the same answer again writes nothing and adds no fill to undo'
+);
+select is(
+  (select result->>'skipped' from ja_out where label = 'pre_e2_again'),
+  'flagged',
+  'a flag score outside 0 to 1 counts as no score'
 );
 
 -- 2. Income.
@@ -335,6 +356,48 @@ select is(
   (select project_id from public.transactions where id = (select id from ja_ref where label = 'd1')),
   (select id from ja_ref where label = 'p1'),
   'the other company''s attempt changed nothing'
+);
+
+update public.transactions set category_assigned = true, category_suggested = false
+where id = (select id from ja_ref where label = 'd1');
+select tests.authenticate_as('ja_owner');
+select throws_ok(
+  format($$select public.undo_jev_prefill(%L)$$, (select id from ja_ref where label = 'd1')),
+  'line changed since',
+  'a category the owner confirmed since is not undone'
+);
+reset role;
+
+-- MCP undo_jev_prefill.
+select public.store_mcp_credential(tests.get_supabase_uid('ja_owner'), 'hash-ja-write001', array['read','write'],
+  now() + interval '90 days', 'pepper-1');
+insert into ja_ref (label, id) select 'tok', id from private.mcp_credentials where token_hash = 'hash-ja-write001';
+create or replace function pg_temp.ja_mcp()
+returns void
+language plpgsql
+as $$
+declare
+  uid uuid := tests.get_supabase_uid('ja_owner');
+begin
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claim.sub', uid::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config('request.jwt.claims', json_build_object(
+    'sub', uid, 'role', 'authenticated', 'aal', 'aal1', 'mcp_tid', (select id from ja_ref where label = 'tok'))::text, true);
+end;
+$$;
+grant execute on function pg_temp.ja_mcp() to authenticated, service_role;
+do $$ begin perform pg_temp.ja_mcp(); end $$;
+insert into ja_out (label, result)
+select 'mcp_' || l, public.mcp_undo_jev_prefill('ja-' || l, (select id from ja_ref where label = l))
+from unnest(array['a4', 'd1', 'd2', 'i1']) l;
+insert into ja_out (label, result)
+select 'mcp_a4_replay', public.mcp_undo_jev_prefill('ja-a4', (select id from ja_ref where label = 'a4'));
+reset role;
+select is(
+  (select jsonb_object_agg(label, coalesce(result->'error'->>'code', 'ok')) from ja_out where label like 'mcp_%'),
+  '{"mcp_a4": "conflict", "mcp_d1": "conflict", "mcp_d2": "not_found", "mcp_i1": "already_closed", "mcp_a4_replay": "conflict"}'::jsonb,
+  'MCP undo maps a changed line to conflict, no fill to not_found, a filed line to already_closed, and replays'
 );
 
 -- 5. The one-call split approval takes only a visible expense category.

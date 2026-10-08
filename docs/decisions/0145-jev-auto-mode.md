@@ -9,7 +9,7 @@ Auto mode already pre-filled expense lines at or above the company's threshold (
 
 ## Decision
 
-**Anomaly gate.** `jev_prefill` writes nothing on a line that `line_anomalies` flags, unless Jev scored that flag below 0.5 in its newest suggestion. A score of 0.5 or more, or no score, returns `skipped: "flagged"`. The suggestion stays on the card, unfilled.
+**Anomaly gate.** `jev_prefill` writes nothing on a line that `line_anomalies` flags, unless Jev scored that flag below 0.5 in its newest suggestion. A score of 0.5 or more, or no score (a value outside 0 to 1 counts as none), returns `skipped: "flagged"`. The suggestion stays on the card, unfilled.
 
 **Income.** Auto also fills income lines: the project (no allocation, no role) and an income category. A category must match the line's direction.
 
@@ -17,7 +17,7 @@ Auto mode already pre-filled expense lines at or above the company's threshold (
 
 **Audit trail.** Every fill that writes anything inserts one `jev_prefills` row in the same transaction: the line, the project and category written, the values before (project, category, its suggested flag, the allocations as JSON), the model and the confidence. Members read their company's rows.
 
-**One-tap undo.** `undo_jev_prefill(line)` (members, and MCP `undo_jev_prefill` with idempotency) puts back the values before while the line's newest review is open, the owner has not assigned it, and its project and category still hold Jev's values. It marks the audit row undone. The line stays in לאישור.
+**One-tap undo.** `undo_jev_prefill(line)` (members, and MCP `undo_jev_prefill` with idempotency) puts back the values before while the line's newest review is open, the owner has not assigned it, and its project and category still hold Jev's values. It refuses once the owner assigned the line or confirmed the filled field (`project_assigned`, `category_assigned`), or changed the expense's single allocation. It marks the audit row undone. The line stays in לאישור. A re-tag that gives the same answer an earlier fill (not undone) already wrote writes nothing, so one tap takes the fill back.
 
 **Status.** `get_jev_status` adds `prefilled_today` and `prefilled_open`; `jev_suggestions` and `get_jev_suggestions` add `prefilled`.
 

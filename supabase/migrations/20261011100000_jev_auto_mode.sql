@@ -103,6 +103,7 @@ begin
   if jsonb_array_length(private.line_anomalies(p_company, array[p_transaction])) > 0 then
     select case
         when jsonb_typeof(s.answers->'anomaly'->'noul') = 'number'
+          and (s.answers->'anomaly'->>'noul')::numeric between 0 and 1
         then (s.answers->'anomaly'->>'noul')::numeric
       end
     into score
@@ -124,9 +125,14 @@ begin
   where a.company_id = p_company and a.transaction_id = p_transaction;
 
   -- One project, never on a shared, overhead or split line; a finished project only on a line
-  -- dated on or before its last line.
+  -- dated on or before its last line. A value an earlier fill (not undone) already put on the
+  -- line is not written again, so a re-tag with the same answer adds no layer to undo.
   if p_project is not null
      and not line.project_assigned
+     and not (line.project_id is not distinct from p_project and exists (
+       select 1 from public.jev_prefills jp
+       where jp.company_id = p_company and jp.transaction_id = p_transaction
+         and jp.undone_at is null and jp.project_id = p_project))
      and coalesce(line.pnl_role::text, '') not in ('shared', 'overhead')
      and shares <= 1
      and exists (
@@ -154,6 +160,10 @@ begin
 
   if p_category is not null
      and not line.category_assigned
+     and not (line.category_id is not distinct from p_category and exists (
+       select 1 from public.jev_prefills jp
+       where jp.company_id = p_company and jp.transaction_id = p_transaction
+         and jp.undone_at is null and jp.category_id = p_category))
      and exists (
        select 1 from public.categories c
        where c.company_id = p_company and c.id = p_category
@@ -174,7 +184,9 @@ begin
     ) values (
       p_company, p_transaction, p_model, p_confidence,
       case when wrote_project then p_project end, case when wrote_category then p_category end,
-      line.project_id, line.category_id, coalesce(line.category_suggested, false),
+      case when wrote_project then line.project_id end,
+      case when wrote_category then line.category_id end,
+      coalesce(line.category_suggested, false),
       case when wrote_project then prior_shares else '[]'::jsonb end
     );
   end if;
@@ -223,9 +235,20 @@ begin
   if review is distinct from 'open' then
     raise exception 'review item not found';
   end if;
+  -- The owner's own choice wins: an assigned line or field, or values that are no longer Jev's
+  -- (an expense also keeps the one allocation Jev wrote), is not undone.
   if line.user_assigned
-     or (fill.project_id is not null and line.project_id is distinct from fill.project_id)
-     or (fill.category_id is not null and line.category_id is distinct from fill.category_id)
+     or (fill.project_id is not null and (line.project_assigned
+       or line.project_id is distinct from fill.project_id
+       or (line.direction = 'expense' and (
+         (select count(*) from public.allocations a
+          where a.company_id = cid and a.transaction_id = p_transaction_id) <> 1
+         or not exists (
+           select 1 from public.allocations a
+           where a.company_id = cid and a.transaction_id = p_transaction_id
+             and a.project_id = fill.project_id and a.share_bp = 10000)))))
+     or (fill.category_id is not null and (line.category_assigned
+       or line.category_id is distinct from fill.category_id))
   then
     raise exception 'line changed since';
   end if;
