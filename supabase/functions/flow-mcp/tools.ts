@@ -76,6 +76,7 @@ export const WRITE_TOOL_NAMES = [
   "set_line_pnl",
   "set_lines_pnl",
   "set_invoice_paid",
+  "detach_loan_payment",
   "undo",
   "undo_batch",
 ] as const;
@@ -129,6 +130,7 @@ const ALLOWED: Record<string, Set<string>> = {
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
   set_lines_pnl: new Set(["idempotency_key", "items"]),
   set_invoice_paid: new Set(["idempotency_key", "transaction_id", "paid"]),
+  detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -215,7 +217,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -492,6 +494,10 @@ const setInvoicePaidSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   paid: z.boolean(),
+}).strict();
+const detachLoanPaymentSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
 }).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
@@ -1287,9 +1293,13 @@ function writeTools() {
       transaction_id: { type: "string" },
       paid: { type: "boolean" },
     }, true),
+    toolSpec("detach_loan_payment", "Take one line off the loan it was attached to (attach_loan_payment, or matched in the app): its interest, escrow, principal and fees parts are removed, so the line counts whole under its own category again and the loan balance no longer counts its principal. The line keeps its project and category. A line with no loan split is refused (line has no loan split). Returns the loan_id and the parts taken off, in cents. Undo is kind loan_detach with the transaction id: it puts the same parts back, and is a conflict when the line was matched again or the parts no longer fit (the line or the loan changed).", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1928,6 +1938,14 @@ async function callWrite(
       p_transaction_id: parsed.data.transaction_id,
       p_paid: parsed.data.paid,
     };
+  } else if (name === "detach_loan_payment") {
+    const parsed = detachLoanPaymentSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_detach_loan_payment";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+    };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -2321,6 +2339,9 @@ export async function callTool(
     out = { ...row, line_split: lineSplit };
   }
   if (row.direction === "income") return ok({ ...out, loan_split: null });
+  // get_transaction carries the loan split since FLOW-114; read it on its own only from a
+  // database that does not yet.
+  if ("loan_split" in row) return ok({ ...out, loan_split: row.loan_split ?? null });
   const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
   return ok({ ...out, loan_split: loanSplit.json ?? null });
