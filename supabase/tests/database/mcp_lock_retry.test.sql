@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(7);
+select plan(9);
 
 select tests.create_supabase_user('ml_owner', 'ml-owner@example.com');
 
@@ -27,7 +27,8 @@ insert into ml (label, id)
 select 'write', id from private.mcp_credentials where token_hash = 'hash-ml-write';
 
 -- Every MCP write that stores its response catches a lock timeout with the deadlock handler,
--- so none of them sends it to `when others`.
+-- so none of them sends it to `when others`. Each `when ... then` clause that names a deadlock
+-- or a serialization failure also names lock_not_available, in any order.
 select is_empty(
   $$
     select p.proname::text
@@ -38,8 +39,13 @@ select is_empty(
       and p.prosrc like '%mcp_idempotency_store%'
       and p.prosrc like '%when others%'
       and (
-        p.prosrc like '%serialization_failure then%'
-        or p.prosrc not like '%lock_not_available%'
+        p.prosrc not like '%lock_not_available%'
+        or exists (
+          select 1
+          from regexp_matches(p.prosrc, 'when\s+(\w+(?:\s+or\s+\w+)*)\s+then', 'gi') m
+          where m[1] ~* '(deadlock_detected|serialization_failure)'
+            and m[1] !~* 'lock_not_available'
+        )
       )
   $$,
   'every MCP write with an idempotency key handles a lock timeout as retry'
@@ -145,6 +151,54 @@ select is(
   'a lock timeout in a create_categories row reads unavailable'
 );
 reset role;
+
+-- The test above times out inside mcp_create_category's own handler. Time out the row's
+-- idempotency store instead: that is outside the row's handler, so only the batch handler
+-- in mcp_create_categories turns it into unavailable.
+create function public.ml_fail_row_store()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.idempotency_key = current_setting('ml.fail_store', true) then
+    raise exception 'ml test lock timeout' using errcode = 'lock_not_available';
+  end if;
+  return new;
+end;
+$$;
+create trigger ml_fail_row_store
+  before insert on private.mcp_idempotency
+  for each row execute function public.ml_fail_row_store();
+
+create or replace function pg_temp.create_categories_store_fail(p_key text)
+returns jsonb
+language plpgsql
+as $$
+declare
+  result jsonb;
+begin
+  perform set_config('ml.fail_store', p_key || ':1', true);
+  perform pg_temp.as_writer('');
+  result := public.mcp_create_categories(
+    p_key, '[{"name": "Lock retry store", "kind": "expense"}]'::jsonb
+  );
+  perform set_config('ml.fail_store', '', true);
+  return result;
+end;
+$$;
+
+select is(
+  pg_temp.create_categories_store_fail('ml-batch-3')->'data'->'results'->0->>'code',
+  'unavailable',
+  'a lock timeout outside the row handler reads unavailable in the create_categories row'
+);
+reset role;
+select is(
+  (select count(*)::int from public.categories
+   where company_id = (select id from ml where label = 'co') and name = 'Lock retry store'),
+  0,
+  'the timed-out batch row added no category'
+);
 
 -- Positive control: the same batch with a new key and no lock timeout adds the row.
 select is(
