@@ -4,6 +4,11 @@ import { EMPTY, FILLED, MISSING, OTHER_CURRENCY, UNDER_WATER } from "./investmen
 
 const FIGURES = { filled: FILLED, missing: MISSING, empty: EMPTY, other: OTHER_CURRENCY, under: UNDER_WATER };
 
+/** Matches the screen: no loans in any currency means a static row. */
+function hasLoans(f: (typeof FIGURES)[keyof typeof FIGURES]): boolean {
+  return f.loanMinor !== 0n || f.loanOther.length > 0;
+}
+
 /** Story args stay plain (no bigint): the figures are picked by name. */
 function Card({
   figures = "filled",
@@ -21,7 +26,7 @@ function Card({
       readOnly={readOnly}
       onEdit={() => undefined}
       onRehab={() => undefined}
-      onLoans={() => undefined}
+      onLoans={hasLoans(FIGURES[figures]) ? () => undefined : undefined}
       onRetry={() => undefined}
     />
   );

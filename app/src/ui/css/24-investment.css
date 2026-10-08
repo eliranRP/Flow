@@ -145,6 +145,11 @@
   white-space: normal;
 }
 
+/* The sheet already pads its body, so the loans list sits on the same edge as the rehab rows. */
+.ui-invest-loans .ui-project-list {
+  padding-inline: 0;
+}
+
 /* The rehab sheet's links keep the 44px text-link target and sit on the start side. */
 .ui-invest-link {
   align-self: flex-start;
