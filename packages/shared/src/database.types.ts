@@ -836,6 +836,9 @@ isOneToOne: false
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
                            },
+"clear_loan_split":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
 "clear_loan_split_review":
 { Args: { "p_transaction_id": string }; Returns: undefined
                            },
@@ -988,6 +991,9 @@ isOneToOne: false
                            },
 "mcp_credential_status":
 { Args: { "p_user": string }; Returns: Json
+                           },
+"mcp_detach_loan_payment":
+{ Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
