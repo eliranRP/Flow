@@ -10,12 +10,14 @@ type BannerProps = {
   /** Replaces the chevron. The banner itself is not a link when this is set. */
   action?: ReactNode;
   icon?: ReactNode;
+  /** One line: the hint sits after the title instead of under it. For a note above a pinned bar. */
+  slim?: boolean;
 };
 
 /** The one tinted pending card. Hide it when there is nothing to show. */
-export function Banner({ title, hint, to, action, icon }: BannerProps) {
+export function Banner({ title, hint, to, action, icon, slim = false }: BannerProps) {
   const linked = to != null && action == null;
-  const className = cx("ui-banner", linked && "ui-hit");
+  const className = cx("ui-banner", slim && "ui-banner-slim", linked && "ui-hit");
   const body = (
     <>
       <span className="ui-banner-icon">{icon ?? <InboxIcon />}</span>
