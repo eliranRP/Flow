@@ -1143,7 +1143,7 @@ function writeTools() {
     toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job.", {
       idempotency_key: { type: "string" },
     }, true),
-    toolSpec("hide_category", "Hide a category. Undo restores the prior hidden flag.", {
+    toolSpec("hide_category", "Hide a category. Undo restores the prior hidden flag. Hiding it again while this user's earlier hide can still be undone keeps that one undo.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
     }, true),

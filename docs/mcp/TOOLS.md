@@ -222,7 +222,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 A project, category or loan name (`create_project`, `create_category`, `create_projects`, `create_categories`, `add_loan`, `update_loan`) with a control character, a line or paragraph separator, an invisible format character (zero-width, bidi marks and controls, BOM, soft hyphen, tag characters) or a blank filler is `validation`; ZWJ is allowed for emoji (FLOW-205).
 
-`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it. Otherwise undo is `conflict` and the row stays.
+`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it, including a review row, an open reassign undo or an open `split_line` undo that would restore it (FLOW-205). Otherwise undo is `conflict` and the row stays.
 
 ### create_project
 
@@ -262,7 +262,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "hide-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1" }
 ```
 
-Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the prior `hidden` flag.
+Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the prior `hidden` flag. Hiding a category again while this user's earlier hide can still be undone (a second hide, or a re-hide after the app showed it) hides it and keeps that one undo, which restores the flag from before the first hide. Undo of a hide the app already reversed succeeds and changes nothing (FLOW-205).
 
 ### set_category_pnl
 
