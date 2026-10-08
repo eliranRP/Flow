@@ -136,20 +136,33 @@ const assignExpenseSplitSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
+// Each part gives exactly one of amount_minor (cents), percent (of the whole line, up to 4
+// decimals) or rest: true (what the other parts leave). Only a rest part may omit
+// category_id: it then keeps the line's own category.
 const linePartSchema = z.object({
-  category_id: UUID_TEXT,
+  category_id: UUID_TEXT.optional(),
   project_id: UUID_TEXT.nullable().optional(),
-  amount_minor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
-}).strict();
-// Two to 50 parts, or none to clear the split. A category and project pair appears once.
-// The database checks that the parts sum to the line.
+  amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
+  percent: z.number().gt(0).max(100).refine((n) => Math.round(n * 10000) / 10000 === n).optional(),
+  rest: z.literal(true).optional(),
+}).strict().refine((part) =>
+  [part.amount_minor, part.percent, part.rest].filter((v) => v !== undefined).length === 1 &&
+  (part.rest === true || part.category_id !== undefined)
+);
+// Two to 50 parts, or none to clear the split. A category and project pair appears once, and
+// at most one part is the rest. The database rounds percents and checks the sum.
 const splitLineSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   parts: z.array(linePartSchema).max(50).refine((parts) => parts.length !== 1),
 }).strict().superRefine((body, ctx) => {
+  if (body.parts.filter((part) => part.rest).length > 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+    return;
+  }
   const seen = new Set<string>();
   for (const part of body.parts) {
+    if (part.category_id === undefined) continue;
     const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
     if (seen.has(pair)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom });
@@ -663,7 +676,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's all-time P&L, categories, and its 40 newest lines. It takes no dates, so it matches list_projects only when list_projects omits both dates. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's all-time P&L, categories, and its 40 newest lines. It takes no dates, so it matches list_projects only when list_projects omits both dates. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project (0 when none is here, null for an unsplit line). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
@@ -868,7 +881,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
     }, true),
-    toolSpec("split_line", "Split one bank line into parts, each with its own category, optional project, and exact amount in minor units (cents). Parts must sum to the line. A part without project_id keeps the line's project. parts [] clears the split. Undo is kind line_split with the transaction id.", {
+    toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       parts: {
@@ -879,8 +892,9 @@ function writeTools() {
             category_id: { type: "string" },
             project_id: { type: ["string", "null"] },
             amount_minor: { type: "integer" },
+            percent: { type: "number" },
+            rest: { type: "boolean", enum: [true] },
           },
-          required: ["category_id", "amount_minor"],
           additionalProperties: false,
         },
       },
@@ -1326,9 +1340,11 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_parts: parsed.data.parts.map((part) => ({
-        category_id: part.category_id,
+        ...(part.category_id === undefined ? {} : { category_id: part.category_id }),
         project_id: part.project_id ?? null,
-        amount_minor: part.amount_minor,
+        ...(part.amount_minor === undefined ? {} : { amount_minor: part.amount_minor }),
+        ...(part.percent === undefined ? {} : { percent: part.percent }),
+        ...(part.rest === undefined ? {} : { rest: true }),
       })),
     };
   } else if (name === "set_line_pnl") {
