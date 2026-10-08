@@ -3791,6 +3791,10 @@ div.ui-check-row {
   cursor: pointer;
 }
 
+.ui-lsplit-rest-msg {
+  margin: 0 var(--space-4) var(--space-2);
+}
+
 .ui-lsplit-rest:disabled {
   cursor: default;
 }

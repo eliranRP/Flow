@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
-import { isTransientWriteError } from "./use-write";
 import type { LocalIssue } from "./line-split";
+import type { WriteFailure } from "./use-write";
 
 /**
  * FLOW-325. Every message `save_line_split` raises (20261008150000_line_split_review.sql,
@@ -50,6 +50,12 @@ export const LINE_SPLIT_PLACE: Record<LineSplitRefusal, RefusalPlace> = {
 
 export const LINE_SPLIT_SAVE_FAILURE = "החלוקה לא נשמרה";
 export const LINE_SPLIT_CHANGED = "משהו השתנה בינתיים. טענו מחדש ונסו שוב.";
+/**
+ * The project split (`SplitScreen`) on a line that has a split by category: the detail row's
+ * reason hint, and the copy for the refusal "line has a split by category".
+ */
+export const LINE_HAS_CATEGORY_SPLIT = "לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.";
+export const LINE_HAS_CATEGORY_SPLIT_REASON = "line has a split by category";
 export const LINE_SPLIT_PARTS_CHANGED = "סכום השורה השתנה מאז הפיצול. השורה נספרת כולה עד שתעדכנו.";
 
 function money(minor: bigint, currency: string): string {
@@ -122,7 +128,12 @@ export function lineSplitRefusal(error: unknown): LineSplitRefusal | null {
   return named.find((reason) => message.includes(reason)) ?? null;
 }
 
-/** A dropped connection or a server error: the save can be tried again as is. */
-export function lineSplitTransient(error: unknown): boolean {
-  return error instanceof Error && lineSplitRefusal(error) == null && isTransientWriteError(error);
+/** FLOW-325: the two split kinds exclude each other; the server refuses a project split on a line split by category. */
+export function hasCategorySplit(error: unknown): boolean {
+  return error instanceof Error && error.message.includes(LINE_HAS_CATEGORY_SPLIT_REASON);
+}
+
+/** The project split's save failure: that refusal is final and says why, anything else is the usual copy. */
+export function projectSplitFailure(error: Error): WriteFailure {
+  return hasCategorySplit(error) ? { message: LINE_HAS_CATEGORY_SPLIT, retry: false } : "החלוקה לא נשמרה";
 }

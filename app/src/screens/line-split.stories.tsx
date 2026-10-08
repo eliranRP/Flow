@@ -101,6 +101,28 @@ export const BlockedByReviewDark: Story = reviewBlocked.dark;
 export const BlockedByReview320: Story = reviewBlocked.narrow;
 export const BlockedByReviewDark320: Story = reviewBlocked.darkNarrow;
 
+const nothingLeft = quadrant(() => (
+  <Editor parts={[{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "4800" }]} warned />
+));
+export const NothingLeft: Story = { ...nothingLeft.base, name: "Nothing is left for the rest" };
+export const NothingLeftDark: Story = nothingLeft.dark;
+export const NothingLeft320: Story = nothingLeft.narrow;
+export const NothingLeftDark320: Story = nothingLeft.darkNarrow;
+
+const noCategory = quadrant(() => (
+  <Editor line={{ ...SAMPLE_EXPENSE_LINE, categoryId: null, categoryName: null }} parts={expenseParts} warned />
+));
+export const NoLineCategory: Story = { ...noCategory.base, name: "Line with no category" };
+export const NoLineCategoryDark: Story = noCategory.dark;
+export const NoLineCategory320: Story = noCategory.narrow;
+export const NoLineCategoryDark320: Story = noCategory.darkNarrow;
+
+const loanBlocked = quadrant(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, loanSplit: true }} />);
+export const BlockedByLoan: Story = loanBlocked.base;
+export const BlockedByLoanDark: Story = loanBlocked.dark;
+export const BlockedByLoan320: Story = loanBlocked.narrow;
+export const BlockedByLoanDark320: Story = loanBlocked.darkNarrow;
+
 /** The saved split the read view and the reopened editor show: 30%, ₪500, and the rest. */
 const savedSplit: LineSplitRead = {
   transactionId: SAMPLE_EXPENSE_LINE.id,
@@ -119,6 +141,17 @@ export const Reopened: Story = { ...reopened.base, name: "Reopened saved split" 
 export const ReopenedDark: Story = reopened.dark;
 export const Reopened320: Story = reopened.narrow;
 export const ReopenedDark320: Story = reopened.darkNarrow;
+
+/** A bank re-sync moved the line from ₪4,800 to ₪5,000: the saved parts no longer sum to it. */
+const mismatchSplit: LineSplitRead = { ...savedSplit, lineMinor: 500_000n, partsMatch: false };
+
+const mismatch = quadrant(() => (
+  <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -500_000n }} split={mismatchSplit} />
+));
+export const PartsMismatch: Story = { ...mismatch.base, name: "Parts no longer match the line" };
+export const PartsMismatchDark: Story = mismatch.dark;
+export const PartsMismatch320: Story = mismatch.narrow;
+export const PartsMismatchDark320: Story = mismatch.darkNarrow;
 
 const detailLine: NonNullable<TransactionDetail> = {
   id: SAMPLE_EXPENSE_LINE.id,

@@ -116,6 +116,7 @@ import { ReversalTag } from "../ui/suggest-tag";
 import { splitDraftKey } from "../split-drafts";
 import type { LineSplitRead } from "../line-split";
 import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
+import { hasCategorySplit, LINE_HAS_CATEGORY_SPLIT, projectSplitFailure } from "../line-split-copy";
 
 function blockedPreview(preview: HomePreview, tell: (message: string) => void): boolean {
   if (preview === "off") return false;
@@ -3208,7 +3209,7 @@ export function SplitScreen({
     : method != null && (!valid || JSON.stringify(rowsRef.current) !== (baseline.current ?? "[]"));
   const popLeave = useRef(false);
   const save = useWrite({
-    failure: () => "החלוקה לא נשמרה",
+    failure: projectSplitFailure,
     success: "החלוקה נשמרה",
     keys: ["dashboard", "txn", "project"],
     onSuccess: () => {
@@ -3364,7 +3365,11 @@ export function SplitScreen({
           inflight.current = work;
           const saved = await work;
           if (saved === false) return;
-        } catch {
+        } catch (error) {
+          if (hasCategorySplit(error)) {
+            toast.show({ tone: "bad", message: LINE_HAS_CATEGORY_SPLIT });
+            return;
+          }
           toast.show({ tone: "bad", message: "החלוקה לא נשמרה", action: "ניסיון חוזר", onAction: () => { void leave(); } });
           return;
         } finally {

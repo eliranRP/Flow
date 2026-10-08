@@ -6,11 +6,11 @@ import { ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
 import { TextLink } from "./text-link";
+import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 
 /** FLOW-312 item 2 / decision 0125: a split line whose bank amount changed. */
 export const SPLIT_MISMATCH_LINE = "הפיצול לא תואם את סכום השורה בבנק.";
 export const SPLIT_MISMATCH_ACTION = "עדכון הפיצול";
-import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
   project?: string;

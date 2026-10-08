@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -14,7 +14,7 @@ import type { LineSplitRead, PartDraft, PayloadPart } from "../line-split";
 import { BooksProvider } from "../use-books";
 import { ViewerPreview } from "../use-is-viewer";
 import { ToastProvider } from "../ui/toast";
-import { TransactionScreen } from "./flow-screens";
+import { SplitScreen, TransactionScreen } from "./flow-screens";
 import { LineSplitScreen, type LineInfo, type LineSplitApi, type LineSplitSample } from "./line-split";
 
 function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {}) {
@@ -141,7 +141,9 @@ describe("split by category editor (FLOW-325)", () => {
       ],
     });
     expect(screen.getByText("עוברים את השורה")).toBeInTheDocument();
-    expect(screen.getByText("החלקים עוברים את השורה ב־₪560. הקטינו חלק.")).toBeInTheDocument();
+    // One sentence, under the part edited last and on the hold line.
+    expect(screen.getAllByText("החלקים עוברים את השורה ב־₪560. הקטינו חלק.")).toHaveLength(2);
+    expect(screen.queryByText(/גבוהים מהשורה/)).toBeNull();
     expect(restRow()).toHaveTextContent("לא נשאר");
   });
 
@@ -201,7 +203,93 @@ describe("split by category editor (FLOW-325)", () => {
         { category_id: "c-elec", project_id: "p-herz", amount_minor: 144_000 },
         { category_id: "c-build", project_id: null, amount_minor: 336_000 },
       ]);
+    }, { timeout: 3000 });
+  });
+
+  it("a split_mismatch line saves its parts again on ✕ with no edit, and offers no ביטול", async () => {
+    const mismatch: LineSplitRead = {
+      transactionId: SAMPLE_EXPENSE_LINE.id,
+      currency: "ILS",
+      lineMinor: 500_000n,
+      partsMatch: false,
+      parts: [
+        { category_id: "c-elec", category_name: "חשמל", project_id: "p-herz", project_name: "פרויקט הרצליה", amount_minor: 144_000n, percent: 30, rest: false },
+        { category_id: "c-build", category_name: "חומרי בניין", project_id: null, project_name: null, amount_minor: 336_000n, percent: null, rest: true },
+      ],
+    };
+    const line = { ...SAMPLE_EXPENSE_LINE, amountNet: -500_000n };
+    const { api, saved } = recordingApi(line);
+    showEditor({ line, split: mismatch, api });
+    await waitFor(() => { expect(restRow()).toHaveTextContent("₪3,500"); });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByText("החלוקה נשמרה")).toBeInTheDocument();
+    expect(saved).toEqual([[{ category_id: "c-elec", project_id: "p-herz", percent: 30 }, { rest: true }]]);
+    // The parts before did not sum to the line, so they cannot be put back.
+    expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
+  });
+
+  it("switching % to ₪ before any preview keeps the money: the line × percent", () => {
+    showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "30" }] });
+    // No preview has come back yet (it waits 250ms).
+    fireEvent.click(screen.getByRole("radio", { name: "₪" }));
+    expect(screen.getByLabelText("סכום, חשמל")).toHaveValue("1,440");
+  });
+
+  it("a part's message describes its field and its pick button", () => {
+    showEditor({
+      parts: [
+        { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "100" },
+        { key: "b", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "200" },
+      ],
     });
+    const field = screen.getAllByLabelText("סכום, חשמל")[0];
+    const id = field?.getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(id)).toHaveTextContent("הקטגוריה והפרויקט האלה כבר בחלק אחר.");
+    expect(screen.getAllByRole("button", { name: /^חשמל, פרויקט הרצליה, שינוי/ })[0]).toHaveAttribute("aria-describedby", id);
+  });
+
+  it("the rest row's message sits outside its button and describes it", () => {
+    showEditor({ line: { ...SAMPLE_EXPENSE_LINE, categoryId: null, categoryName: null }, parts: expenseParts });
+    const row = restRow();
+    const id = row.getAttribute("aria-describedby") ?? "";
+    const message = document.getElementById(id);
+    expect(message).toHaveAttribute("role", "status");
+    expect(row).not.toContainElement(message);
+    expect(message).toHaveTextContent("לשורה אין קטגוריה. בחרו קטגוריה לשאר.");
+  });
+
+  it("the picker gives focus back to the part that opened it", async () => {
+    showEditor({ parts: expenseParts });
+    const pick = screen.getByRole("button", { name: /^ביטוח, פרויקט רעננה, שינוי/ });
+    pick.focus();
+    fireEvent.click(pick);
+    const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.keyDown(sheet, { key: "Escape" });
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
+    await waitFor(() => { expect(pick).toHaveFocus(); });
+  });
+
+  it("הסרת הפיצול stays open on a line the server will not split, and clearing offers no ביטול", async () => {
+    const split: LineSplitRead = {
+      transactionId: SAMPLE_EXPENSE_LINE.id,
+      currency: "ILS",
+      lineMinor: 480_000n,
+      partsMatch: true,
+      parts: [
+        { category_id: "c-elec", category_name: "חשמל", project_id: "p-herz", project_name: "פרויקט הרצליה", amount_minor: 144_000n, percent: null, rest: false },
+        { category_id: "c-build", category_name: "חומרי בניין", project_id: null, project_name: null, amount_minor: 336_000n, percent: null, rest: true },
+      ],
+    };
+    const line = { ...SAMPLE_EXPENSE_LINE, loanSplit: true };
+    const { api, saved } = recordingApi(line);
+    showEditor({ line, split, api });
+    expect(screen.getByLabelText("סכום, חשמל")).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "הסרת הפיצול" }));
+    const confirm = await screen.findByRole("dialog", { name: "להסיר את הפיצול?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "הסרה" }));
+    expect(await screen.findByText("הפיצול הוסר")).toBeInTheDocument();
+    expect(saved).toEqual([[]]);
+    expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
   });
 
   it("an unchanged editor closes with no write", async () => {
@@ -294,6 +382,15 @@ describe("the פיצול section on the transaction detail (FLOW-325)", () => {
     expect(screen.getByText("אשרו את התנועה בתור לאישור, ואז פצלו.")).toBeInTheDocument();
   });
 
+  it("a line split by category keeps בין פרויקטים visible but off, with the reason", () => {
+    showDetail(detailLine, savedSplit);
+    const row = screen.getByRole("button", { name: "פיצול בין פרויקטים" });
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    const hint = screen.getByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.");
+    expect(row.getAttribute("aria-describedby")).toBe(hint.id);
+    expect(screen.queryByRole("link", { name: "פיצול בין פרויקטים" })).toBeNull();
+  });
+
   it("a split_mismatch review does not block the editor", () => {
     showDetail({ ...detailLine, review_status: "open", review_reason: "split_mismatch" }, null);
     expect(screen.getByRole("link", { name: "פיצול לפי קטגוריות" })).toBeInTheDocument();
@@ -303,5 +400,46 @@ describe("the פיצול section on the transaction detail (FLOW-325)", () => {
     showDetail({ ...detailLine, amount_net: 0n, amount_gross: 0n }, null);
     expect(screen.queryByRole("link", { name: "פיצול לפי קטגוריות" })).toBeNull();
     expect(screen.getByRole("link", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+  });
+});
+
+describe("the project split on a line split by category (FLOW-325)", () => {
+  it("says why instead of offering ניסיון חוזר", async () => {
+    const onSave = vi.fn(() => Promise.reject(new Error("line has a split by category")));
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/split"]}>
+              <Routes>
+                <Route
+                  path="/split"
+                  element={
+                    <SplitScreen
+                      sampleAmount={100_000n}
+                      sampleProjects={[
+                        { id: "p1", name: "פרויקט הרצליה", incomeAgorot: 1n },
+                        { id: "p2", name: "פרויקט רעננה", incomeAgorot: 1n },
+                      ]}
+                      backTo="/back"
+                      onSave={onSave}
+                    />
+                  }
+                />
+                <Route path="/back" element={<h1>חזרה</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+      await Promise.resolve();
+    });
+    expect(await screen.findByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.")).toBeInTheDocument();
+    expect(screen.queryByText("החלוקה לא נשמרה")).toBeNull();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
   });
 });

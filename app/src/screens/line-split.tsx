@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, type TransactionDetail } from "@flow/shared";
-import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { getSupabase } from "../lib/supabase";
@@ -14,6 +14,7 @@ import {
   draftFromRead,
   newPartKey,
   parseLineSplit,
+  percentMinorOf,
   parsePreview,
   percentOf,
   percentText,
@@ -28,6 +29,7 @@ import {
   type ServerPart,
 } from "../line-split";
 import {
+  LINE_HAS_CATEGORY_SPLIT,
   LINE_SPLIT_PARTS_CHANGED,
   LINE_SPLIT_PLACE,
   LINE_SPLIT_SAVE_FAILURE,
@@ -200,7 +202,6 @@ export function LineSplitSection({
   /** The editor route. Omitted where there is none (the reviewer preview). */
   categorySplitTo?: string;
 }) {
-  const hintId = useId();
   const parts = split?.parts ?? [];
   const currency = split?.currency ?? txn.currency ?? "ILS";
   const lineMinor = absAgorot(txn.amount_net);
@@ -252,7 +253,19 @@ export function LineSplitSection({
       ) : null}
       {readOnly ? null : (
         <List>
-          {onProjectSplit ? (
+          {parts.length > 0 ? (
+            // The two kinds exclude each other (plan §1): the row stays, off, with the reason.
+            <ListRow
+              variant="button"
+              ariaDisabled
+              icon={<SplitIcon />}
+              title="בין פרויקטים"
+              label="פיצול בין פרויקטים"
+              hint={LINE_HAS_CATEGORY_SPLIT}
+              wrapHint
+              describeHint
+            />
+          ) : onProjectSplit ? (
             <ListRow variant="button" icon={<SplitIcon />} title="בין פרויקטים" label="פיצול בין פרויקטים" chevron onClick={onProjectSplit} />
           ) : (
             <ListRow variant="item" href={projectSplitTo} icon={<SplitIcon />} title="בין פרויקטים" label="פיצול בין פרויקטים" chevron />
@@ -264,7 +277,7 @@ export function LineSplitSection({
               icon={<TagIcon />}
               title="לפי קטגוריות"
               label="פיצול לפי קטגוריות"
-              hint={<span id={hintId}>{blockedHint}</span>}
+              hint={blockedHint}
               wrapHint
               describeHint
             />
@@ -443,6 +456,8 @@ function LineSplitEditor({
     initialError ? { reason: initialError, key: null } : null,
   );
   const addRef = useRef<HTMLButtonElement>(null);
+  /** Where focus goes when the picker closes: the control that opened it. */
+  const pickerOpener = useRef<HTMLElement | null>(null);
   /** Set once the screen goes back itself, so its own pop is not held. */
   const leaving = useRef(false);
   const lineMinor = absAgorot(line.amountNet);
@@ -459,7 +474,10 @@ function LineSplitEditor({
   const payload = buildPayload(parts, rest);
   const payloadKey = payload ? JSON.stringify(payload) : null;
   const canPreview = payloadKey != null && formIssue == null && !restNoCategory && !blocked;
-  const dirty = !sameDraft({ parts, rest }, baseline);
+  const edited = !sameDraft({ parts, rest }, baseline);
+  // A split the bank re-sync left unmatched (split_mismatch) is saved again as it stands, so
+  // leaving with valid parts writes even with no edit (0125).
+  const dirty = edited || (split?.partsMatch === false && payload != null);
 
   const apiRef = useRef(api);
   apiRef.current = api;
@@ -483,9 +501,9 @@ function LineSplitEditor({
   // Keep what was typed for a reload or a pop (plan §7); an untouched editor keeps nothing.
   useEffect(() => {
     if (draftId === "") return;
-    if (dirty) writeLineDraft(draftId, { parts, rest });
+    if (edited) writeLineDraft(draftId, { parts, rest });
     else clearLineDraft(draftId);
-  }, [draftId, dirty, parts, rest]);
+  }, [draftId, edited, parts, rest]);
 
   const current = previewState != null && previewState.key === payloadKey ? previewState : null;
   const previewReason = current != null && "error" in current ? lineSplitRefusal(current.error) : null;
@@ -545,10 +563,15 @@ function LineSplitEditor({
     clearLineDraft(draftId);
     const previous = amountsPayload(split);
     await invalidate(LINE_SPLIT_KEYS);
+    // Parts that no longer sum to the line, or a line the server will not split (a clear on a
+    // loan split or an open review), cannot be sent back, so there is no ביטול for them.
+    const undoable = split?.partsMatch !== false && !blocked;
     toast.show({
       message: kind === "clear" ? "הפיצול הוסר" : "החלוקה נשמרה",
-      action: "ביטול",
-      onAction: () => { void undoTo(previous, kind === "clear" ? "הפיצול חזר" : "החלוקה הקודמת חזרה"); },
+      ...(undoable ? {
+        action: "ביטול",
+        onAction: () => { void undoTo(previous, kind === "clear" ? "הפיצול חזר" : "החלוקה הקודמת חזרה"); },
+      } : {}),
     });
     leaving.current = true;
     goBack(fallback);
@@ -608,8 +631,9 @@ function LineSplitEditor({
     .map((category) => ({ id: category.id, name: category.name }));
   const reversals: ChangeChoice[] = target?.kind === "rest" ? [] : reversalChoices(categories, line.direction, line.categoryId);
 
-  function openPicker(next: PickTarget, start: "category" | "project") {
+  function openPicker(next: PickTarget, start: "category" | "project", opener: HTMLElement | null) {
     if (busy || blocked) return;
+    pickerOpener.current = next.kind === "new" ? addRef.current : opener;
     setPickerStart(start);
     setTarget(next);
   }
@@ -642,7 +666,7 @@ function LineSplitEditor({
     if (reason != null && LINE_SPLIT_PLACE[reason] !== "banner") {
       return lineSplitCopy(reason, { currency, overMinor: check.overMinor, lineMinor });
     }
-    if (check.overMinor > 0n) return "החלקים גבוהים מהשורה. הקטינו חלק כדי לשמור.";
+    if (check.overMinor > 0n) return lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor });
     if (restNoCategory) return lineSplitCopy("line has no category for the rest");
     if (formIssue != null) return localIssueCopy(formIssue, { currency, overMinor: check.overMinor });
     return null;
@@ -658,6 +682,8 @@ function LineSplitEditor({
   const restProject = rest.projectId == null ? (line.projectName ?? "בלי פרויקט") : (projectName(rest.projectId) ?? "פרויקט");
   const restDuplicate = check.restDuplicate;
   const restReason = reason != null && LINE_SPLIT_PLACE[reason] === "rest" ? reason : restNoCategory ? "line has no category for the rest" : null;
+  const restMessage = restReason != null ? lineSplitCopy(restReason) : restDuplicate ? lineSplitCopy("same category and project twice") : null;
+  const restMessageId = "lsplit-rest-msg";
 
   return (
     <>
@@ -712,6 +738,7 @@ function LineSplitEditor({
               const cents = resolved?.parts[part.key];
               const fieldError = issue === "percent over" ? localIssueCopy("percent over") : undefined;
               const over = check.overMinor > 0n && (lastEdited === part.key || (lastEdited == null && index === parts.length - 1));
+              const messageId = `lsplit-msg-${part.key}`;
               const message = issue === "same category and project twice"
                 ? lineSplitCopy(issue)
                 : needsProject && warned ? lineSplitCopy("a reversal part needs a project")
@@ -724,10 +751,12 @@ function LineSplitEditor({
                       type="button"
                       className="ui-lsplit-pick ui-hit"
                       aria-label={`${name}${reversal ? ", החזר" : ""}, ${project}, שינוי`}
-                      onClick={() => { openPicker({ kind: "part", key: part.key }, needsProject ? "project" : "category"); }}
+                      aria-describedby={message ? messageId : undefined}
+                      onClick={(event) => { openPicker({ kind: "part", key: part.key }, needsProject ? "project" : "category", event.currentTarget); }}
                     >
                       <span className="ui-lsplit-title">
-                        <span className="ui-lsplit-name">{name}</span>
+                        {/* The full name is in the button's label. */}
+                        <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
                         {reversal ? <ReversalTag /> : null}
                       </span>
                       <span className={needsProject ? "ui-lsplit-project ui-lsplit-project-error" : "ui-lsplit-project"}>{project}</span>
@@ -750,9 +779,10 @@ function LineSplitEditor({
                         disabled={busy || blocked}
                         onChange={(unit) => {
                           if (unit === part.unit) return;
-                          // Keep the same money: the resolved cents become the amount, or the share the percent.
+                          // Keep the same money: the resolved cents become the amount (the percent of
+                          // the line, rounded, before a preview), or the share the percent.
                           const value = unit === "amount"
-                            ? (cents != null ? amountText(cents) : "")
+                            ? (cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "")
                             : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
                           update(part.key, { unit, value });
                         }}
@@ -766,6 +796,7 @@ function LineSplitEditor({
                           decimals={2}
                           disabled={busy || blocked}
                           error={fieldError}
+                          describedBy={message ? messageId : undefined}
                           enterKeyHint={index === parts.length - 1 ? "done" : "next"}
                           onValueChange={(value) => { update(part.key, { value }); }}
                         />
@@ -777,6 +808,7 @@ function LineSplitEditor({
                           prefix={currency === "USD" ? "$" : "₪"}
                           value={part.value}
                           disabled={busy || blocked}
+                          describedBy={message ? messageId : undefined}
                           enterKeyHint={index === parts.length - 1 ? "done" : "next"}
                           onValueChange={(value) => { update(part.key, { value }); }}
                         />
@@ -788,7 +820,7 @@ function LineSplitEditor({
                         : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
                     </span>
                   </div>
-                  {message ? <p className="ui-lsplit-msg" role="status">{message}</p> : null}
+                  {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
                 </div>
               );
             })}
@@ -796,11 +828,12 @@ function LineSplitEditor({
               type="button"
               className="ui-lsplit-part ui-lsplit-rest ui-hit"
               aria-label={`השאר, ${restCategory ?? "בלי קטגוריה"}, ${restProject}, שינוי`}
-              onClick={() => { openPicker({ kind: "rest" }, "category"); }}
+              aria-describedby={restMessage != null ? restMessageId : undefined}
+              onClick={(event) => { openPicker({ kind: "rest" }, "category", event.currentTarget); }}
             >
               <span className="ui-lsplit-text">
                 <span className="ui-lsplit-pick">
-                  <span className="ui-lsplit-title"><span className="ui-lsplit-name">{`השאר · ${restCategory ?? "בחירת קטגוריה"}`}</span></span>
+                  <span className="ui-lsplit-title"><span className="ui-lsplit-name" data-clip-ok="">{`השאר · ${restCategory ?? "בחירת קטגוריה"}`}</span></span>
                   <span className="ui-lsplit-project">{`${restProject} · נשאר בשורה`}</span>
                 </span>
               </span>
@@ -819,10 +852,9 @@ function LineSplitEditor({
                   </>
                 )}
               </span>
-              {restReason != null || restDuplicate ? (
-                <span className="ui-lsplit-msg" role="status">{restReason != null ? lineSplitCopy(restReason) : lineSplitCopy("same category and project twice")}</span>
-              ) : null}
             </button>
+            {/* Outside the button, whose label would hide it; tied back by aria-describedby. */}
+            {restMessage != null ? <p id={restMessageId} className="ui-lsplit-msg ui-lsplit-rest-msg" role="status">{restMessage}</p> : null}
             {parts.length === 0 ? <p className="t-hint ui-lsplit-empty">הוסיפו חלק כדי לפצל. מה שלא חולק נשאר בשורה.</p> : null}
             <p className="ui-lsplit-add">
               <TextLink
@@ -830,18 +862,19 @@ function LineSplitEditor({
                 chevron={false}
                 icon={<PlusIcon size={18} />}
                 disabled={busy || blocked || parts.length >= LINE_SPLIT_MAX_PARTS}
-                onClick={() => { openPicker({ kind: "new" }, "category"); }}
+                onClick={() => { openPicker({ kind: "new" }, "category", null); }}
               >
                 הוספת חלק
               </TextLink>
             </p>
           </div>
-          {split != null && split.parts.length > 0 ? (
-            <p className="ui-lsplit-clear">
-              <TextLink chevron={false} className="ui-lsplit-clear-link" disabled={busy} onClick={() => { setConfirmClear(true); }}>הסרת הפיצול</TextLink>
-            </p>
-          ) : null}
         </fieldset>
+        {/* Outside the fieldset: the server clears a line it would not split (a loan split, an open review). */}
+        {split != null && split.parts.length > 0 ? (
+          <p className="ui-lsplit-clear">
+            <TextLink chevron={false} className="ui-lsplit-clear-link" disabled={busy} onClick={() => { setConfirmClear(true); }}>הסרת הפיצול</TextLink>
+          </p>
+        ) : null}
         <div className="ui-split-cta ui-lsplit-foot" aria-busy={busy || undefined}>
           <div className="ui-lsplit-totals">
             <span className="ui-lsplit-total">
@@ -886,7 +919,7 @@ function LineSplitEditor({
         noProjectLabel={pickerReversal ? undefined : partProjectLabel(null, line.projectName)}
         projectNote={pickerReversal ? lineSplitCopy("a reversal part needs a project") : undefined}
         hideSplitLink
-        returnFocusRef={addRef}
+        returnFocusRef={pickerOpener}
         onSplit={() => { setTarget(null); }}
         onCreateProject={async (name) => {
           const created = await createProject(name, draftId === "");

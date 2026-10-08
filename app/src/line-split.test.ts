@@ -7,13 +7,17 @@ import {
   buildPayload,
   checkParts,
   draftFromRead,
+  newPartKey,
   parseLineSplit,
   parsePreview,
   percentOf,
+  percentMinorOf,
+  readLineDraft,
   resolvePreview,
   shareOfLine,
   type LineContext,
   type PartDraft,
+  writeLineDraft,
 } from "./line-split";
 
 const ctx: LineContext = {
@@ -131,5 +135,41 @@ describe("the sample preview used by stories and tests matches decision 0123", (
     const halves = [50, 50].map((percent, index) => ({ category_id: `c${String(index)}`, project_id: null, percent }));
     expect(samplePreview(10_001n, "c9", halves).map((row) => row.amount_minor)).toEqual([5001n, 5000n]);
     expect(() => samplePreview(10_001n, "c9", [{ category_id: "c1", project_id: null, amount_minor: 10_001 }, { rest: true }])).toThrow("nothing is left for the rest");
+  });
+});
+
+describe("line split review fixes (FLOW-325)", () => {
+  it("a part added after a reload never repeats a key the restored draft holds", () => {
+    // A draft saved before the reload, when keys were handed out from 1 again.
+    writeLineDraft("t-reload", {
+      parts: [part("part-1", {}), part("part-2", { categoryId: "c-ins" })],
+      rest: { categoryId: null, projectId: null },
+    });
+    const restored = readLineDraft("t-reload");
+    expect(restored?.parts.map((row) => row.key)).toEqual(["part-1", "part-2"]);
+    const keys = [...(restored?.parts ?? []).map((row) => row.key), newPartKey(), newPartKey()];
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("a saved percent with more than two decimals reopens in ₪ with its saved cents", () => {
+    const read = parseLineSplit({
+      transaction_id: "t1",
+      line_minor: 480000,
+      parts: [
+        { category_id: "c-elec", project_id: "p-herz", amount_minor: 160000, percent: "33.3333", rest: false },
+        { category_id: "c-ins", project_id: null, amount_minor: 120000, percent: 25, rest: false },
+        { category_id: "c-build", project_id: null, amount_minor: 200000, percent: null, rest: true },
+      ],
+    });
+    const draft = draftFromRead(read, "c-build");
+    expect(draft.parts.map((row) => [row.unit, row.value])).toEqual([["amount", "1600"], ["percent", "25"]]);
+    // Re-sent as the cents the server stored, not a percent rounded to 33.33.
+    expect(buildPayload(draft.parts, draft.rest)?.[0]).toEqual({ category_id: "c-elec", project_id: "p-herz", amount_minor: 160_000 });
+  });
+
+  it("a percent's cents before any preview: the line × percent, rounded", () => {
+    expect(percentMinorOf(30, 480_000n)).toBe(144_000n);
+    expect(percentMinorOf(33.33, 10_001n)).toBe(3333n);
+    expect(percentMinorOf(100, 10_001n)).toBe(10_001n);
   });
 });

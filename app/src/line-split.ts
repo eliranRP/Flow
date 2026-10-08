@@ -244,15 +244,32 @@ export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: Li
 }
 
 let keySeed = 0;
-/** A stable key for a new part row. */
+/**
+ * A stable key for a new part row. Random, so a draft restored from sessionStorage after a
+ * reload (whose rows already hold keys) never meets a repeat.
+ */
 export function newPartKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return `part-${crypto.randomUUID()}`;
   keySeed += 1;
-  return `part-${String(keySeed)}`;
+  return `part-${String(Date.now())}-${String(keySeed)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** A percent the field can hold as is: at most two decimals (the server keeps four). */
+function twoDecimals(value: number): boolean {
+  return Math.round(value * 100) / 100 === value;
+}
+
+/** The cents a percent takes of the line, rounded half up: the fallback when there is no preview. */
+export function percentMinorOf(percent: number, lineMinor: bigint): bigint {
+  const hundredths = BigInt(Math.round(percent * 100));
+  if (hundredths === 10_000n) return lineMinor;
+  return (lineMinor * hundredths * 2n + 10_000n) / 20_000n;
 }
 
 /**
  * Turns a saved split back into editor rows (plan §3). A part saved by percent reopens in %,
- * an amount in ₪. The part marked rest becomes the rest row; a split restored by undo has no
+ * an amount in ₪. A percent with more than two decimals (the server keeps four) reopens in ₪
+ * with its saved cents, so an untouched part is never re-sent rounded. The part marked rest becomes the rest row; a split restored by undo has no
  * marker, so the part on the line's own category with no project becomes the rest.
  */
 export function draftFromRead(
@@ -269,12 +286,13 @@ export function draftFromRead(
     : { categoryId: null, projectId: null };
   const parts = read.parts.flatMap((part, index): PartDraft[] => {
     if (index === restIndex) return [];
+    const byPercent = part.percent != null && twoDecimals(part.percent);
     return [{
       key: `saved-${String(index)}`,
       categoryId: part.category_id,
       projectId: part.project_id,
-      unit: part.percent != null ? "percent" : "amount",
-      value: part.percent != null ? percentText(part.percent) : amountText(part.amount_minor),
+      unit: byPercent ? "percent" : "amount",
+      value: byPercent && part.percent != null ? percentText(part.percent) : amountText(part.amount_minor),
     }];
   });
   return { parts, rest };
