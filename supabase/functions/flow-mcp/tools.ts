@@ -218,26 +218,37 @@ const undoSchema = z.object({
   kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"]),
   id: UUID_TEXT,
 }).strict();
-// Same rule as private.company_name_problem: 2 to 100 code points after trim()
-// (SQL private.trim_name strips the same whitespace) and no control character.
-function companyNameIsValid(name: string): boolean {
-  const points = Array.from(name);
-  if (points.length < 2 || points.length > 100) return false;
-  return points.every((point) => {
-    const code = point.codePointAt(0) ?? 0;
-    return code >= 0x20 && (code < 0x7f || code > 0x9f);
-  });
-}
-const renameCompanySchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().refine(companyNameIsValid),
-}).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
 // bidi marks and controls incl. U+061C, BOM, soft hyphen, tag characters) and blank
 // fillers make two names look the same. ZWJ (U+200D) stays for emoji sequences.
+// SQL private.name_has_hidden_char spells out the same set (migration 20261010160000).
 const HIDDEN_CHARS = /[\p{Cc}\p{Zl}\p{Zp}\u034f\u115f\u1160\u3164\uffa0]|(?!\u200d)\p{Cf}/u;
+// No-break and other wide spaces inside a name become a plain space (SQL private.plain_spaces).
+const WIDE_SPACES = /[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/gu;
+/** The validation message for a refused name, so a client knows to strip a pasted mark. */
+const HIDDEN_NAME = "name has an invisible or control character";
+function plainSpaces(name: string): string {
+  return name.replace(WIDE_SPACES, " ");
+}
+// Same rule as private.company_name_problem: 2 to 100 code points after trim()
+// (SQL private.trim_name strips the same whitespace) and no hidden character.
+function companyNameIsValid(name: string): boolean {
+  const points = Array.from(name);
+  return points.length >= 2 && points.length <= 100;
+}
+const renameCompanySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME })
+    .refine(companyNameIsValid),
+}).strict();
 function visibleName(min: number, max: number) {
-  return z.string().trim().min(min).max(max).refine((name) => !HIDDEN_CHARS.test(name));
+  return z.string().trim().min(min).max(max).transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME });
+}
+/** `validation`, naming the hidden-character rule when that is what failed. */
+function invalid(error: z.ZodError): ToolResult {
+  return fail("validation", error.issues.some((issue) => issue.message === HIDDEN_NAME) ? HIDDEN_NAME : "validation");
 }
 const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -1398,7 +1409,7 @@ async function syncBank(
 
 async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = addLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalid(parsed.error);
   const kind = parsed.data.kind ?? "amortizing";
   const principalMinor = minorFromMajor(parsed.data.principal);
   if (typeof principalMinor !== "bigint") return principalMinor;
@@ -1488,7 +1499,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
 
 async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = updateLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalid(parsed.error);
   const patch: Record<string, unknown> = {};
   if (parsed.data.name != null) patch.name = parsed.data.name;
   if (parsed.data.principal != null) {
@@ -1797,7 +1808,7 @@ async function callWrite(
     };
   } else if (name === "create_project") {
     const parsed = createProjectSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_project";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1806,7 +1817,7 @@ async function callWrite(
     };
   } else if (name === "create_category") {
     const parsed = createCategorySchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_category";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1815,7 +1826,7 @@ async function callWrite(
     };
   } else if (name === "create_projects") {
     const parsed = createProjectsSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_projects";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1823,7 +1834,7 @@ async function callWrite(
     };
   } else if (name === "create_categories") {
     const parsed = createCategoriesSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_categories";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1856,7 +1867,7 @@ async function callWrite(
     };
   } else if (name === "rename_company") {
     const parsed = renameCompanySchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_rename_company";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
