@@ -92,6 +92,8 @@ jobs:
           deno-version: v2.9.7
       - name: Deno tests for flow-mcp
         run: deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
+      - name: Type-check every edge function with its own config
+        run: bash scripts/check-edge-functions.sh
       - run: pnpm typecheck
       # `pnpm test:unit`, including the @flow/app suite. '!flow' keeps the root package's own `test`
       # script (test:unit and test:connectors) from running again here.

@@ -98,6 +98,6 @@ describe("one line out of the P&L", () => {
     show({ ...base, pnl_fixed: true });
     const sheet = openMore();
     expect(within(sheet).queryByRole("button", { name: "מחוץ לרווח והפסד" })).toBeNull();
-    expect(within(sheet).getByText("תשלום הלוואה · נספר לפי החלוקה")).toBeTruthy();
+    expect(within(sheet).getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
   });
 });

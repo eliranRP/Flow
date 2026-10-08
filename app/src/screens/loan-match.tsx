@@ -90,9 +90,9 @@ export type LoanBalanceRow = {
  * a payment past the balance and a re-synced amount look the same here: the hint says
  * "may". Clearing runs the balance check again.
  */
-export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. עדכון החלוקה יבדוק את היתרה מחדש.";
+export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. עדכון הפיצול יבדוק את היתרה מחדש.";
 /** The re-sync flagged the parts because the line's amount changed; the client can tell this one apart. */
-export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. עדכון החלוקה יחלק אותו מחדש.";
+export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. עדכון הפיצול יפצל אותו מחדש.";
 
 function absMinor(value: bigint): bigint {
   return value < 0n ? -value : value;
@@ -171,7 +171,7 @@ export function LoanSplitPanel({
       {ordered.length > 0 ? (
         <>
           <div className="ui-section-head">
-            <h2 ref={splitSectionRef} tabIndex={-1} className="ui-focus-title t-title-3">חלוקת התשלום</h2>
+            <h2 ref={splitSectionRef} tabIndex={-1} className="ui-focus-title t-title-3">פיצול התשלום</h2>
           </div>
           {showCounted ? (
             <p className="ui-page-pad t-hint">
@@ -216,13 +216,13 @@ export function LoanSplitPanel({
       )}
       {needsReview ? (
         <div className="ui-stack ui-page-pad">
-          <p className="t-hint ui-loan-caution">החלוקה ממתינה לבדיקה.</p>
+          <p className="t-hint ui-loan-caution">הפיצול ממתין לבדיקה.</p>
           {currencyMismatch ? (
             <p className="t-hint">המטבע של השורה לא מתאים להלוואה.</p>
           ) : readOnly ? null : (
             <>
               <p className="t-hint" id={hintId}>{amountChanged ? LOAN_AMOUNT_CHANGED_HINT : LOAN_BUSY_HINT}</p>
-              <Button type="button" variant="secondary" busy={busy} onClick={onCorrect} aria-describedby={hintId}>עדכון החלוקה</Button>
+              <Button type="button" variant="secondary" busy={busy} onClick={onCorrect} aria-describedby={hintId}>עדכון הפיצול</Button>
             </>
           )}
         </div>
@@ -367,19 +367,19 @@ function failureText(error: Error): string {
   if (code === "23505") return "התשלום כבר שויך להלוואה.";
   if (error.message === "loan_split_over_balance") return "התשלום גבוה מיתרת ההלוואה.";
   if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
-  if (error.message.includes("loan_split_sum")) return "החלוקה לא מסתכמת לשורה.";
+  if (error.message.includes("loan_split_sum")) return "הפיצול לא מסתכם לשורה.";
   if (error.message === "date") return "התאריך לא על לוח הסילוקין.";
   return "לא הצלחנו לשייך את ההלוואה.";
 }
 
 function correctFailureText(error: Error): string {
   const code = (error as { code?: string }).code;
-  if (code === "42501") return "אין הרשאה לעדכן את החלוקה.";
+  if (code === "42501") return "אין הרשאה לעדכן את הפיצול.";
   if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
-  if (error.message.includes("loan_split_sum")) return "החלוקה לא מסתכמת לשורה.";
+  if (error.message.includes("loan_split_sum")) return "הפיצול לא מסתכם לשורה.";
   // The balance check clear_loan_split_review runs again (FLOW-131).
   if (error.message.includes("loan_split_balance")) return "התשלום גבוה מיתרת ההלוואה.";
-  return "לא הצלחנו לעדכן את החלוקה.";
+  return "לא הצלחנו לעדכן את הפיצול.";
 }
 
 export function LoanTransactionSplit({
@@ -446,7 +446,7 @@ export function LoanTransactionSplit({
   });
   const correct = useWrite({
     failure: correctFailureText,
-    success: "החלוקה עודכנה",
+    success: "הפיצול עודכן",
     keys: ["loan-split", "loans", "txn"],
     onSuccess: () => {
       void query.refetch().then(() => {

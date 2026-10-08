@@ -1,9 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page, type Request, type Response } from "@playwright/test";
-
-// List screens only. Detail RPCs stay on the owner and are not called.
-const readRpcs = new Set(["get_dashboard", "get_line_meta", "list_categories", "list_review", "list_unpaid", "sumit_status"]);
+import { isReadRequest, rpcName } from "./smoke-allow";
 
 const email = process.env.SMOKE_EMAIL ?? "";
 const password = process.env.SMOKE_PASSWORD ?? "";
@@ -40,38 +38,8 @@ function storageKey(url: string): string {
   return `sb-${ref}-auth-token`;
 }
 
-function rpcName(url: string): string | null {
-  return /\/rest\/v1\/rpc\/([a-z0-9_]+)/.exec(url)?.[1] ?? null;
-}
-
-function requestPath(url: string): string {
-  try {
-    return new URL(url).pathname;
-  } catch {
-    return "";
-  }
-}
-
-/** Token refresh and the user read only. Other `/auth/v1/` paths, including signup and admin, are writes. */
-function isAuthAllowed(request: Request): boolean {
-  const path = requestPath(request.url());
-  const user = path.endsWith("/auth/v1/user");
-  const token = path.endsWith("/auth/v1/token");
-  if (!user && !token) return false;
-  const method = request.method();
-  if (method === "OPTIONS" || method === "HEAD") return true;
-  if (user) return method === "GET";
-  return method === "POST";
-}
-
 function isRead(request: Request): boolean {
-  const url = request.url();
-  if (requestPath(url).includes("/auth/v1/")) return isAuthAllowed(request);
-  const method = request.method();
-  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return true;
-  if (method === "POST" && /\/functions\/v1\/flow-mcp\/status(?:\?|$)/.test(url)) return true;
-  const rpc = rpcName(url);
-  return method === "POST" && rpc != null && readRpcs.has(rpc);
+  return isReadRequest(request.method(), request.url(), hosted.url);
 }
 
 function isSumit(url: string): boolean {
@@ -224,7 +192,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   }
   await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);
-  if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור SUMIT" })).toHaveCount(0);
+  if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
 
   const projectResponses = await openList(page, "/projects", ["get_dashboard"], watched.inflight);

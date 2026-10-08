@@ -819,6 +819,24 @@ Deno.test("names with control or invisible characters are refused before the RPC
   assertEquals(calls.length, 2);
 });
 
+Deno.test("a refused name says why, rename_company takes the same rule, and wide spaces become plain (FLOW-205)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const messageOf = (result: { structuredContent: unknown }) =>
+    (result.structuredContent as { error?: { message?: string } }).error?.message;
+  const project = await callTool("create_project", { idempotency_key: "k", name: "Site\u200fBeta" }, ["write"], rpc);
+  assertEquals(messageOf(project), "name has an invisible or control character");
+  const batch = await callTool("create_categories", { idempotency_key: "k", items: [{ name: "Cat\u200bOne", kind: "expense" }] }, ["write"], rpc);
+  assertEquals(messageOf(batch), "name has an invisible or control character");
+  const company = await callTool("rename_company", { idempotency_key: "k", name: "Example\u200fCo" }, ["write"], rpc);
+  assertEquals(messageOf(company), "name has an invisible or control character");
+  const short = await callTool("create_project", { idempotency_key: "k", name: "A" }, ["write"], rpc);
+  assertEquals(messageOf(short), "validation");
+  assertEquals(calls.length, 0);
+  await callTool("create_project", { idempotency_key: "k3", name: "Site\u00a0Beta\u2009Two" }, ["write"], rpc);
+  await callTool("rename_company", { idempotency_key: "k4", name: "Example\u202fCo" }, ["write"], rpc);
+  assertEquals(calls.map((call) => call.body.p_name), ["Site Beta Two", "Example Co"]);
+});
+
 Deno.test("assign_expense and set_expense_category describe reversals", () => {
   const byName = new Map(toolsFor(["write"]).map((tool) => [tool.name, tool.description]));
   for (const name of ["assign_expense", "set_expense_category"]) {

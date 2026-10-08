@@ -220,7 +220,7 @@ describe("viewer gates", () => {
         "/transactions/t1/split",
       );
       expect(screen.getByRole("heading", { name: "תנועה" })).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "חלוקה בין פרויקטים" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
     }],
     ["V21", "onboarding leaves the screen", () => {
       viewer(
