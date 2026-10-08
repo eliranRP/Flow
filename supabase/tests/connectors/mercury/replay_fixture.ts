@@ -8,13 +8,18 @@ import type { CanonicalLine, NormalizeContext } from "../../../functions/_shared
 
 export const postedLines = [...page1.transactions, ...page2.transactions];
 
-export function fixtureContext(extra: Partial<NormalizeContext> = {}): NormalizeContext {
+const fixtureAccountIds = () => [
+  ...accountsFile.accounts.map((account) => account.id),
+  ...creditFile.accounts.map((account) => account.id),
+  ...treasuryFile.accounts.map((account) => account.id),
+];
+
+export function fixtureContext(
+  extra: Partial<NormalizeContext> = {},
+  ownAccountIds: string[] = fixtureAccountIds(),
+): NormalizeContext {
   return {
-    ownAccountIds: [
-      ...accountsFile.accounts.map((account) => account.id),
-      ...creditFile.accounts.map((account) => account.id),
-      ...treasuryFile.accounts.map((account) => account.id),
-    ],
+    ownAccountIds,
     ownCounterpartyIds: [],
     vatRateBp: 1800,
     exemptSupplierNames: [],
@@ -45,14 +50,19 @@ function project(line: CanonicalLine) {
 }
 
 export function postedSnapshot() {
+  return snapshotOf(postedLines, fixtureAccountIds());
+}
+
+/** The snapshot of any posted rows; generate_fixtures.ts builds canonical-snapshot.json with it. */
+export function snapshotOf(rows: readonly Record<string, unknown>[], ownAccountIds: string[]) {
   const imported: CanonicalLine[] = [];
   const skipped: Record<string, number> = {};
   const skippedRows: { external_id: string; reason: string }[] = [];
-  for (const row of postedLines) {
-    const result = normalizeMercury(row, fixtureContext());
+  for (const row of rows) {
+    const result = normalizeMercury(row, fixtureContext({}, ownAccountIds));
     if (!result.ok) {
       skipped[result.skip] = (skipped[result.skip] ?? 0) + 1;
-      skippedRows.push({ external_id: row.id, reason: result.skip });
+      skippedRows.push({ external_id: String(row.id), reason: result.skip });
       continue;
     }
     imported.push(result.line);

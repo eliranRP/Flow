@@ -1,11 +1,11 @@
 {
   "accounts": [
     {
-      "id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09",
+      "id": "5d399c67-05ca-4b7a-85b1-c2981ed6206b",
       "status": "active",
-      "createdAt": "2025-12-29T12:03:25.722675Z",
-      "availableBalance": -165,
-      "currentBalance": -165
+      "createdAt": "2026-01-04T11:54:22.430717Z",
+      "availableBalance": -340,
+      "currentBalance": -340
     }
   ]
 }

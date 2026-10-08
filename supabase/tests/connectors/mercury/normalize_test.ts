@@ -146,7 +146,7 @@ Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and
   assertEquals(refunds[0].direction, "expense");
   assertEquals(refunds[0].amount_negated, false);
   assertEquals(refunds[0].vat, { amount: 0, status: "source" });
-  assertEquals(refunds[0].amount_original, 925);
+  assertEquals(refunds[0].amount_original, 600);
   assertEquals(refunds[0].counterparty.name, "Online Retailer");
 
   assertEquals(imported.some((line) => line.counterparty.name === "RentPortal" && line.direction === "income"), true);
@@ -155,7 +155,7 @@ Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and
   assertEquals(imported.some((line) => line.counterparty.name === "Treasury"), false);
 
   const differing = imported.filter((line) => line.doc_date !== line.cash_date);
-  assertEquals(differing.length, 22);
+  assertEquals(differing.length, 20);
   for (const line of imported) {
     assertEquals(parseCanonicalLine(line), line);
     assertEquals(line.currency, "USD");
@@ -170,7 +170,7 @@ Deno.test("Jerusalem doc_date and cash_date can differ on a posted line", () => 
     if (row.status !== "sent" || !row.postedAt) continue;
     if (jerusalemDate(row.createdAt) !== jerusalemDate(row.postedAt)) differ += 1;
   }
-  assertEquals(differ, 24);
+  assertEquals(differ, 22);
 });
 
 Deno.test("the canonical snapshot has no token and no forbidden field", () => {
@@ -187,12 +187,12 @@ Deno.test("a card refund, a loan prefix, and cashback keep their hints", () => {
   const { imported } = replay(postedLines);
   const loan = imported.find((line) => line.counterparty.name === "Lakeview Loan Servicing");
   assertEquals(loan?.category_hint, "loan_part:principal");
-  assertEquals(dollarsToCents(-2600), -260000);
-  assertEquals(loan?.amount_original, 260000);
+  assertEquals(dollarsToCents(-2000), -200000);
+  assertEquals(loan?.amount_original, 200000);
   const servease = imported.filter((line) => line.counterparty.name === "Servease");
   assertEquals(servease.length, 2);
   assertEquals(servease.every((line) => line.category_hint === "loan_part:principal"), true);
-  const cashback = imported.find((line) => line.counterparty.name === "Mercury IO Cashback" && line.amount_original === 275);
+  const cashback = imported.find((line) => line.counterparty.name === "Mercury IO Cashback" && line.amount_original === 3175);
   assertEquals(cashback?.category_hint, "הכנסה אחרת");
   assertEquals(cashback?.amount_negated, false);
 });
@@ -783,7 +783,7 @@ Deno.test("synthetic pending posts onto the same id and keeps the assignment", (
   assertEquals(pending.line.external_id, sent.line.external_id);
   assertEquals(sent.line.line_status, "posted");
   assertEquals(sent.line.doc_date === sent.line.cash_date, false);
-  assertEquals(pending.line.amount_original, 5750);
+  assertEquals(pending.line.amount_original, 3200);
   const assignment = new Map([[pending.line.external_id, "user-category"]]);
   assertEquals(settlementPlan(pending.line.external_id, sent.line.external_id), { action: "update" });
   assertEquals(assignment.get(sent.line.external_id), "user-category");
