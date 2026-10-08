@@ -3,20 +3,16 @@
 
 begin;
 
-select plan(18);
+select plan(16);
 
 do $users$
 begin
   perform tests.create_supabase_user('bsf_owner', 'bsf-owner@example.com');
-  perform tests.create_supabase_user('bsf_other', 'bsf-other@example.com');
-  perform tests.create_supabase_user('bsf_viewer', 'bsf-viewer@example.com');
 end
 $users$;
 
 create temp table bsf (label text primary key, id uuid);
 grant all on bsf to authenticated, service_role;
-create temp table bsf_body (label text primary key, body jsonb);
-grant all on bsf_body to authenticated, service_role;
 
 create or replace function pg_temp.as_mcp(p_label text, p_user text default 'bsf_owner')
 returns void
@@ -51,13 +47,7 @@ grant execute on function pg_temp.as_mcp(text, text) to authenticated, service_r
 
 select tests.authenticate_as('bsf_owner');
 select lives_ok($$select public.create_company('Fixture Co', true)$$, 'owner creates a company');
-select lives_ok($$select public.upsert_project(null, 'Old Site', null, 'active')$$, 'owner opens Old Site');
 insert into bsf (label, id) select 'company', id from public.companies;
-insert into bsf (label, id) select 'old_site', id from public.projects where name = 'Old Site';
-
-select tests.authenticate_as('bsf_other');
-select lives_ok($$select public.create_company('Other Co', true)$$, 'other creates a company');
-insert into bsf (label, id) select 'other_company', id from public.companies where name = 'Other Co';
 
 reset role;
 
@@ -69,25 +59,6 @@ select lives_ok(
   'store write token'
 );
 insert into bsf (label, id) select 'write', id from private.mcp_credentials where token_hash = 'hash-bsf-write01';
-
-insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select tests.get_supabase_uid('bsf_owner'), c.id, 'hash-bsf-read001', 'pepper-1', array['read'], now() + interval '90 days'
-from bsf c where c.label = 'company';
-insert into bsf (label, id) select 'read', id from private.mcp_credentials where token_hash = 'hash-bsf-read001';
-
-insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select tests.get_supabase_uid('bsf_other'), c.id, 'hash-bsf-otherw1', 'pepper-1', array['read','write'], now() + interval '90 days'
-from bsf c where c.label = 'other_company';
-insert into bsf (label, id) select 'other_write', id from private.mcp_credentials where token_hash = 'hash-bsf-otherw1';
-
-update public.companies set is_demo = true where id = (select id from bsf where label = 'company');
-insert into public.company_viewers (user_id, company_id)
-select tests.get_supabase_uid('bsf_viewer'), c.id from bsf c where c.label = 'company';
-insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select tests.get_supabase_uid('bsf_viewer'), c.id, 'hash-bsf-viewer1', 'pepper-1', array['read','write'], now() + interval '90 days'
-from bsf c where c.label = 'company';
-insert into bsf (label, id) select 'viewer_write', id from private.mcp_credentials where token_hash = 'hash-bsf-viewer1';
-
 
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
 

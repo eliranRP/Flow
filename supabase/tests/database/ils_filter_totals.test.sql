@@ -1,6 +1,8 @@
 -- FLOW-409 item 2. The shekel totals of get_home and get_project count only ILS lines: on both
 -- bases, in a date range, for shared costs, and in the overhead weights. Dollar lines stay in
 -- their own currency buckets. Invented data only. Amounts are agorot (cents for USD).
+-- Every line is a paid invoice-receipt, so both bases count the same lines; the test is about
+-- the currency filter, not the basis rules.
 
 begin;
 
