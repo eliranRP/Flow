@@ -18,6 +18,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
+| UI lane 3 | FLOW-405 screen: the Settings → Categories ⋯ sheet (move all lines, delete with undo, the FLOW-404 "נספרת בשיפוץ" switch), after the FLOW-807 split | Settings and other areas outside the review and transaction screens |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
@@ -808,7 +809,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** in-progress (#207: server and MCP, dev lane 1; the owner chose "Server now", 2026-10-08; decision [0144](../decisions/0144-category-delete-and-move.md); the Settings → Categories screen goes to a UI lane) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** claimed (UI lane 3, 2026-10-08, claude/project-thread-3i7sqp: the Settings → Categories screen; mockup plans/flow-405-category-mockup.html waits on the owner's card) · server and MCP done (#207, dev lane 1; the owner chose "Server now", 2026-10-08; decision [0144](../decisions/0144-category-delete-and-move.md); the Settings → Categories screen goes to a UI lane) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 
