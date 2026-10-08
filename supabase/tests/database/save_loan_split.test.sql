@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(27);
+select plan(30);
 
 do $users$
 begin
@@ -123,6 +123,31 @@ end;
 $$;
 grant execute on function pg_temp.mcp_attach(text, text, text) to authenticated, service_role;
 
+create or replace function pg_temp.mcp_update(p_key text, p_loan text, p_patch jsonb)
+returns jsonb
+language plpgsql
+set search_path = ''
+as $$
+declare
+  uid uuid;
+  result jsonb;
+begin
+  uid := tests.get_supabase_uid('sls_owner');
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claim.sub', uid::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('sub', uid, 'role', 'authenticated', 'aal', 'aal1', 'mcp_tid', pg_temp.id('write'))::text,
+    true
+  );
+  result := public.mcp_update_loan(p_key, pg_temp.id(p_loan), p_patch);
+  reset role;
+  return result;
+end;
+$$;
+grant execute on function pg_temp.mcp_update(text, text, jsonb) to authenticated, service_role;
+
 select tests.authenticate_as('sls_owner');
 
 -- 1. Preview, attach, and replace in one call.
@@ -189,6 +214,22 @@ reset role;
 select is(
   pg_temp.mcp_attach('sls-mcp-1', 'txn_d_mcp', 'demand')->'error'->>'message',
   'a later payment is already attached', 'MCP refuses the same order under the loan lock');
+-- A line whose parts all wait for review is no payment yet: confirming it is a new payment.
+update public.loan_splits set needs_review = true where transaction_id = pg_temp.id('txn_d1');
+select tests.authenticate_as('sls_owner');
+select throws_ok(
+  format('select public.save_loan_split(%L, %L, %L)', pg_temp.id('txn_d1'), pg_temp.id('demand'), pg_temp.parts(100, 9900)),
+  'a later payment is already attached', 'confirming a flagged payment dated before a later one is refused');
+reset role;
+update public.loan_splits set needs_review = false where transaction_id = pg_temp.id('txn_d1');
+-- A pending line's own principal is not in the balance, so it is not added back.
+update public.transactions set line_status = 'pending' where id = pg_temp.id('txn_d2');
+select tests.authenticate_as('sls_owner');
+select is(
+  public.save_loan_split(pg_temp.id('txn_d2'), pg_temp.id('demand'), pg_temp.parts(0, 10000), true)->'balance_after_minor',
+  to_jsonb(100000 - 9900 - 10000), 'a pending line''s principal is not added back');
+reset role;
+update public.transactions set line_status = 'posted' where id = pg_temp.id('txn_d2');
 
 -- 4. A viewer reads the payments and cannot write.
 select tests.authenticate_as('sls_viewer');
@@ -210,6 +251,11 @@ select lives_ok(
 select throws_ok(
   format($$update public.loans set start_date = '2026-07-01' where id = %L$$, pg_temp.id('amort')),
   '23514', 'rate before the loan start', 'moving the start after a rate row is refused');
+reset role;
+select is(
+  pg_temp.mcp_update('sls-upd-1', 'amort', '{"start_date": "2026-07-01"}'::jsonb)->'error'->>'message',
+  'rate before the loan start', 'MCP names the refusal');
+select tests.authenticate_as('sls_owner');
 select lives_ok(
   format($$update public.loans set start_date = '2026-05-01' where id = %L$$, pg_temp.id('amort')),
   'moving the start up to the rate row is allowed');

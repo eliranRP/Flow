@@ -20,7 +20,8 @@
 -- 3. mcp_loan_payments reads the readable company, so a demo viewer sees the payments.
 -- 4. FLOW-136 item 1: private.loan_line_closed_check reads the loan's status without a lock
 --    first and returns when the loan is open, so a line on an open loan is never flagged
---    because another write held the loan.
+--    because another write held the loan. private.loans_close_check takes the loan's lines
+--    first, so a close and a line's date change cannot pass each other.
 -- 5. FLOW-136 item 3: a loan_rates row dated before its loan's start is refused in the
 --    database (rate before the loan start), and so is moving a loan's start after a rate row.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
@@ -111,8 +112,12 @@ begin
     if txn.doc_date < loan.start_date then
       raise exception 'payment before the loan start';
     end if;
-    -- Interest runs from the last payment, so a new payment comes after every other one.
-    if attached is null and exists (
+    -- Interest runs from the last payment, so a new payment comes after every other one. A
+    -- line whose parts all wait for review counts as no payment, so confirming it is new too.
+    if not exists (
+      select 1 from public.loan_splits s
+      where s.transaction_id = p_transaction_id and not s.needs_review
+    ) and exists (
       select 1
       from public.loan_splits s
       join public.transactions t on t.id = s.transaction_id and t.company_id = s.company_id
@@ -174,17 +179,21 @@ begin
   end if;
 
   -- The balance before this line: its own principal, when it is already attached, is added
-  -- back. A part waiting for review lowers no balance, so it is not added back.
+  -- back. A part waiting for review, or on a line not posted, lowers no balance
+  -- (public.loan_balances), so it is not added back.
   select coalesce(sum(s.amount_minor), 0) into own_principal
   from public.loan_splits s
+  join public.transactions t on t.id = s.transaction_id and t.company_id = s.company_id
   where s.transaction_id = p_transaction_id
     and s.part = 'principal'::public.loan_split_part
-    and not s.needs_review;
+    and not s.needs_review
+    and t.line_status = 'posted'::public.line_status;
   select b.balance_minor into balance
   from public.loan_balances b
   where b.company_id = cid and b.loan_id = p_loan_id;
   balance := coalesce(balance, 0) + own_principal;
-  if principal_amt > balance then
+  -- As in mcp_attach_loan_payment: a paid-off balance takes no payment, not even one of 0.
+  if balance <= 0 or principal_amt > balance then
     raise exception 'loan balance exceeded';
   end if;
 
@@ -375,6 +384,23 @@ begin
 end
 $attach$;
 
+-- mcp_update_loan: the start_date trigger below refuses with 'rate before the loan start';
+-- pass that through instead of 'invalid loan terms'. Patched in place.
+do $update$
+declare
+  def text;
+  anchor constant text := $old$elsif sqlerrm = 'loan_category_not_allowed' then$old$;
+begin
+  def := pg_get_functiondef('public.mcp_update_loan(text,uuid,jsonb)'::regprocedure);
+  if position(anchor in def) = 0 or position('rate before the loan start' in def) > 0 then
+    raise exception 'mcp_update_loan is not the expected definition';
+  end if;
+  execute replace(def, anchor, $new$elsif sqlerrm = 'rate before the loan start' then
+        response := private.mcp_refused('rate before the loan start');
+      $new$ || anchor);
+end
+$update$;
+
 -- As in 20261010090000_loan_kinds_rates.sql; only the company changes, to the readable one.
 create or replace function public.mcp_loan_payments(p_loan_id uuid)
 returns jsonb
@@ -439,8 +465,9 @@ begin
   end if;
 
   -- FLOW-136: an open loan takes any date, so its line is never flagged, even while another
-  -- write holds the loan. Closing a loan refuses a payment after closed_on, so a loan closed
-  -- after this read cannot leave this line behind.
+  -- write holds the loan. Closing a loan holds its lines (loans_close_check below), so a close
+  -- either waits for this date change and sees it, or commits first and this line's update
+  -- waits for it and then reads the loan as closed.
   select l.status into cur_status from public.loans l where l.id = loan;
   if cur_status = 'open'::public.loan_status then
     return null;
@@ -462,6 +489,50 @@ begin
        and needs_review is distinct from true;
   end if;
   return null;
+end;
+$$;
+
+-- loans_close_check as before, plus a share lock on every line of the loan first:
+-- the check below reads committed dates only, and loan_line_closed_check no longer flags a line
+-- whose loan reads open. Taking the lines waits for a line update in flight (and makes a later
+-- one wait for this close), so a payment moved past closed_on cannot slip in.
+create or replace function private.loans_close_check()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.status <> 'open'::public.loan_status
+     and (
+       old.status is distinct from new.status
+       or old.closed_on is distinct from new.closed_on
+     )
+  then
+    perform 1
+    from public.transactions t
+    where t.company_id = new.company_id
+      and t.id in (
+        select s.transaction_id from public.loan_splits s
+        where s.company_id = new.company_id and s.loan_id = new.id
+      )
+    order by t.id
+    for share;
+    if exists (
+      select 1
+      from public.loan_splits s
+      join public.transactions t
+        on t.company_id = s.company_id
+       and t.id = s.transaction_id
+      where s.company_id = new.company_id
+        and s.loan_id = new.id
+        and t.removed_at is null
+        and t.doc_date > new.closed_on
+    ) then
+      raise exception 'loan_payments_after_close' using errcode = '23514';
+    end if;
+  end if;
+  return new;
 end;
 $$;
 
