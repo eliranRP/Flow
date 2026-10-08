@@ -143,20 +143,20 @@ select is(
   (select jsonb_agg(e ->> 'description' order by ord)
    from jsh_out, jsonb_array_elements(result) with ordinality x(e, ord)
    where label = 'a' and e ->> 'supplier_id' = (select id::text from jsh_ref where label = 's1')),
-  '["line 6", "line 3", "line 2", "line 1"]'::jsonb,
-  's1: filed lines newest first; open, skipped, removed and reopened lines are left out'
+  '["income line", "line 6", "line 3", "line 2", "line 1"]'::jsonb,
+  's1: filed lines newest first per direction, income before expense in the enum order (decision 0134); open, skipped, removed and reopened lines are left out'
 );
 select is(
   (select jsonb_agg((e ->> 'split')::boolean order by ord)
    from jsh_out, jsonb_array_elements(result) with ordinality x(e, ord)
    where label = 'a' and e ->> 'supplier_id' = (select id::text from jsh_ref where label = 's1')),
-  '[false, true, false, false]'::jsonb,
+  '[false, false, true, false, false]'::jsonb,
   'a line with split parts is marked split'
 );
 select is(
   (select count(*)::integer from jsh_out, jsonb_array_elements(result) e
-   where label = 'a' and e ->> 'description' = 'income line'),
-  0, 'income lines are left out'
+   where label = 'a' and e ->> 'description' = 'income line' and e ->> 'direction' = 'income'),
+  1, 'an income line comes back marked income; the job keeps the line''s own direction'
 );
 select is(
   (select count(*)::integer from jsh_out, jsonb_array_elements(result) e
@@ -171,14 +171,14 @@ select is(
 select is(
   (select e - 'supplier_id' - 'description' from jsh_out, jsonb_array_elements(result) e
    where label = 'a' and e ->> 'description' = 'line 6'),
-  jsonb_build_object('doc_date', '2026-04-06', 'amount_net', -6000, 'project_id', null,
+  jsonb_build_object('direction', 'expense', 'doc_date', '2026-04-06', 'amount_net', -6000, 'project_id', null,
     'category_id', (select category_id from public.transactions where id = (select id from jsh_ref where label = 't6')),
     'pnl_role', 'project', 'split', false),
-  'each filing carries its date, amount, project, category, role and split flag'
+  'each filing carries its direction, date, amount, project, category, role and split flag'
 );
 select is(
   (select jsonb_array_length(result) from jsh_out where label = 'per2'),
-  2, 'p_per caps lines per supplier'
+  3, 'p_per caps lines per supplier and direction (2 expense, 1 income)'
 );
 select is((select result from jsh_out where label = 'none'), '[]'::jsonb, 'no suppliers, no lines');
 

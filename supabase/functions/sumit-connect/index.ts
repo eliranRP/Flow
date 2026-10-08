@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
     if (company.error || !company.data) return json({ error: "no company" }, 400);
+    const companyRowId = company.data.id;
 
     const kekVersion = Deno.env.get("SUMIT_KEK_VERSION") || "1";
     const saved = await connectValidated({
@@ -43,9 +44,9 @@ Deno.serve(async (req) => {
       apiKey,
       fetch,
       write: async () => {
-        const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "2");
+        const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, companyRowId, "2");
         return admin.rpc("replace_sumit_connection", {
-          p_company: company.data.id,
+          p_company: companyRowId,
           p_sumit_company_id: companyId,
           p_key_ciphertext: sealed.keyCiphertext,
           p_key_nonce: sealed.keyNonce,

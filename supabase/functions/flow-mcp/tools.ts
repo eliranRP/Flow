@@ -45,6 +45,7 @@ export const READ_TOOL_NAMES = [
   "get_jev_accuracy",
   "get_profit_months",
   "get_anomalies",
+  "get_jev_suggestions",
   "get_missing_bills",
   "get_expected_months",
   "list_unpaid",
@@ -99,6 +100,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_jev_accuracy: new Set(["from", "to"]),
   get_profit_months: new Set(["from", "to", "basis", "project_id"]),
   get_anomalies: new Set(),
+  get_jev_suggestions: new Set(),
   get_missing_bills: new Set(),
   get_expected_months: new Set(["months", "project_id"]),
   list_unpaid: new Set(),
@@ -216,26 +218,37 @@ const undoSchema = z.object({
   kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"]),
   id: UUID_TEXT,
 }).strict();
-// Same rule as private.company_name_problem: 2 to 100 code points after trim()
-// (SQL private.trim_name strips the same whitespace) and no control character.
-function companyNameIsValid(name: string): boolean {
-  const points = Array.from(name);
-  if (points.length < 2 || points.length > 100) return false;
-  return points.every((point) => {
-    const code = point.codePointAt(0) ?? 0;
-    return code >= 0x20 && (code < 0x7f || code > 0x9f);
-  });
-}
-const renameCompanySchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().refine(companyNameIsValid),
-}).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
 // bidi marks and controls incl. U+061C, BOM, soft hyphen, tag characters) and blank
 // fillers make two names look the same. ZWJ (U+200D) stays for emoji sequences.
+// SQL private.name_has_hidden_char spells out the same set (migration 20261010160000).
 const HIDDEN_CHARS = /[\p{Cc}\p{Zl}\p{Zp}\u034f\u115f\u1160\u3164\uffa0]|(?!\u200d)\p{Cf}/u;
+// No-break and other wide spaces inside a name become a plain space (SQL private.plain_spaces).
+const WIDE_SPACES = /[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/gu;
+/** The validation message for a refused name, so a client knows to strip a pasted mark. */
+const HIDDEN_NAME = "name has an invisible or control character";
+function plainSpaces(name: string): string {
+  return name.replace(WIDE_SPACES, " ");
+}
+// Same rule as private.company_name_problem: 2 to 100 code points after trim()
+// (SQL private.trim_name strips the same whitespace) and no hidden character.
+function companyNameIsValid(name: string): boolean {
+  const points = Array.from(name);
+  return points.length >= 2 && points.length <= 100;
+}
+const renameCompanySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME })
+    .refine(companyNameIsValid),
+}).strict();
 function visibleName(min: number, max: number) {
-  return z.string().trim().min(min).max(max).refine((name) => !HIDDEN_CHARS.test(name));
+  return z.string().trim().min(min).max(max).transform(plainSpaces)
+    .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME });
+}
+/** `validation`, naming the hidden-character rule when that is what failed. */
+function invalid(error: z.ZodError): ToolResult {
+  return fail("validation", error.issues.some((issue) => issue.message === HIDDEN_NAME) ? HIDDEN_NAME : "validation");
 }
 const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -1020,7 +1033,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, and lines_without_suggestion (open expense lines in review that Jev has not labelled yet). Jev only suggests a project and category; it never approves a line. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
+    toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, and lines_without_suggestion (open expense and income lines in review that Jev has not labelled yet). Jev only suggests a project and category; it never approves a line. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
     toolSpec("get_jev_accuracy", "How often Jev's suggestions matched what the owner filed, for lines resolved in a period (from and to are YYYY-MM-DD, by the UTC day the review was approved or changed; omit both for all time). lines counts resolved lines that had a Jev suggestion. all_matched counts lines where every compared field matched. project_compared/project_matched and category_compared/category_matched count each field; a shared, overhead or multi-project line is not compared on project, and a line split by category is not compared on category. at_threshold has lines and all_matched for suggestions at or above the company's threshold, which is what auto mode would pre-fill. bands splits by confidence: high from 0.9, medium from 0.7, low below.", {
       from: { type: "string" },
       to: { type: "string" },
@@ -1031,7 +1044,8 @@ function readTools() {
       basis: { type: "string", enum: ["cash", "invoiced"] },
       project_id: { type: "string" },
     }),
-    toolSpec("get_anomalies", "Flags on the open review lines (newest 500), found in SQL: duplicate (another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days, not an invoice and its own receipt; other_transaction_id, other_doc_date), amount_spike (at least 3 times the median of that supplier's or customer's last 12 lines in the year before, and at least 100.00 more; typical_amount_minor, ratio), new_party_large (the first line of a supplier or customer, at or above the company's 90th percentile posted line over the year up to the newest open line; company_p90_minor). Each item has transaction_id and kind. A flag is a reason to look, not an error; the owner decides.", {}),
+    toolSpec("get_anomalies", "Flags on the open review lines (newest 500), found in SQL: duplicate (another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days, not an invoice and its own receipt; other_transaction_id, other_doc_date), amount_spike (at least 3 times the median of that supplier's or customer's last 12 lines in the year before, and at least 100.00 more; typical_amount_minor, ratio), new_party_large (the first line of a supplier or customer, at or above the company's 90th percentile posted line over the year up to the newest open line; company_p90_minor). Each item has transaction_id, kind and jev_score (0 to 1: how likely Jev thinks the flag is a real problem, scored in the same call that labelled the line; null when Jev did not score it). A flag is a reason to look, not an error; the owner decides.", {}),
+    toolSpec("get_jev_suggestions", "Jev's suggestions on the open review lines (newest 500 that have one): transaction_id, direction (expense or income), project_id and project_name, category_id and category_name (null when Jev did not answer), confidence, reason, party_filings and matching_filings, and anomaly_score (Jev's score of an anomaly flag on that line, or null). reason comes from SQL: same_as_last (the suggestion equals how the owner filed this supplier or customer last time), usual_for_party (it equals at least 2 of the last 5 filed lines), new_party (nothing filed yet for that party), model_only (none of these). Jev only suggests; it never approves a line, and assign_expense or assign_expenses is still how a line is filed.", {}),
     toolSpec("get_missing_bills", "Recurring suppliers (an expense line in at least 3 of the last 6 complete months and in one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has supplier_id, supplier_name, currency, typical_amount_minor (median monthly net, negative for expenses), typical_day, expected_by, months_seen, last_doc_date, and the usual project_id and category_id.", {}),
     toolSpec("get_expected_months", "Expected income and expense per month from recurring suppliers and customers (median monthly net), for this month and the next ones. months is 1 to 12 (default 3). This month (open: true) counts only the recurring ones not seen yet this month. project_id limits it to parties whose usual project is that one. Output: today, project_id, months[] (month YYYY-MM, open, by_currency[] with currency, income_minor, expense_minor; expenses are negative) and recurring[] (direction, party_id, name, currency, typical_amount_minor, typical_day, months_seen, seen_this_month, project_id, category_id). A projection from past months, not booked lines.", {
       months: { type: "integer", minimum: 1, maximum: 12 },
@@ -1395,7 +1409,7 @@ async function syncBank(
 
 async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = addLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalid(parsed.error);
   const kind = parsed.data.kind ?? "amortizing";
   const principalMinor = minorFromMajor(parsed.data.principal);
   if (typeof principalMinor !== "bigint") return principalMinor;
@@ -1485,7 +1499,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
 
 async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = updateLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalid(parsed.error);
   const patch: Record<string, unknown> = {};
   if (parsed.data.name != null) patch.name = parsed.data.name;
   if (parsed.data.principal != null) {
@@ -1794,7 +1808,7 @@ async function callWrite(
     };
   } else if (name === "create_project") {
     const parsed = createProjectSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_project";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1803,7 +1817,7 @@ async function callWrite(
     };
   } else if (name === "create_category") {
     const parsed = createCategorySchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_category";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1812,7 +1826,7 @@ async function callWrite(
     };
   } else if (name === "create_projects") {
     const parsed = createProjectsSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_projects";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1820,7 +1834,7 @@ async function callWrite(
     };
   } else if (name === "create_categories") {
     const parsed = createCategoriesSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_create_categories";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -1853,7 +1867,7 @@ async function callWrite(
     };
   } else if (name === "rename_company") {
     const parsed = renameCompanySchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalid(parsed.error);
     rpcName = "mcp_rename_company";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -2050,11 +2064,16 @@ export async function callTool(
     return ok(report);
   }
 
-  if (name === "get_anomalies" || name === "get_missing_bills") {
-    const result = await rpc(name === "get_anomalies" ? "mcp_review_anomalies" : "missing_bills", {});
+  if (name === "get_anomalies" || name === "get_missing_bills" || name === "get_jev_suggestions") {
+    const fn = name === "get_anomalies"
+      ? "mcp_review_anomalies"
+      : name === "get_jev_suggestions"
+      ? "mcp_jev_suggestions"
+      : "missing_bills";
+    const result = await rpc(fn, {});
     const data = result.json;
     if (result.status >= 400 || data === null || typeof data !== "object") return fail("refused", READ_REFUSED);
-    if (name === "get_anomalies") {
+    if (name !== "get_missing_bills") {
       if (Array.isArray(data)) return fail("refused", READ_REFUSED);
       return ok(data);
     }
