@@ -18,12 +18,30 @@ So QA has its own login that owns its own company, **Flow QA**. It is a normal o
 - Run SQL that touches a row of any other company, or that has no company filter.
 - Write with the NRO Momentum MCP key, or change NRO Momentum's own Mercury connection.
 
-## Provision once (owner)
+## How it is set up
 
-1. Supabase dashboard, Authentication, Users, Add user. Use an email and password, and tick auto-confirm. Do not attach it to a company.
-2. Store the email and password in the owner's private accounts list, in a row named `Flow QA (Supabase)`. Do not commit them or paste them into a chat or a pull request.
-3. QA signs in and finishes onboarding with the company name `Flow QA`. That calls `create_company`, which makes this user its owner.
-4. In Settings, QA mints a Flow MCP key for Flow QA. That key stays in the QA session only.
+- Login `ops+qa@nromomentum.com`. It has no password. QA signs in with a one-time magic link.
+- It owns one company, `Flow QA`, with `is_demo` false.
+- The project's cloud environment holds a network secret, `SUPABASE_SERVICE_ROLE`. The proxy adds it only to calls under `/auth/v1/admin/`, so a QA session can make sign-in links and nothing else with it. The key never appears in the session.
+- The "Production QA (sandbox)" thread runs the hourly deploy check as a routine at minute 14. It is the only thread that writes in Flow QA.
+
+## Sign in
+
+The app uses PKCE, so a magic link opened in a test browser does not sign it in. QA builds the session itself:
+
+1. `POST /auth/v1/admin/generate_link` with `{"type":"magiclink","email":"ops+qa@nromomentum.com"}`. Keep `hashed_token` from the answer.
+2. `POST /auth/v1/verify` with `{"type":"magiclink","token_hash":"<hashed_token>"}` and the publishable key as `apikey`. The answer is a session.
+3. Before the app loads, put that session in local storage under `sb-sxqpnetmtufkzowutduq-auth-token` (Playwright `addInitScript`).
+
+Mint Flow MCP keys for Flow QA in Settings, in the signed-in app. A direct call to `flow-mcp/mint` is refused with `origin`. Keep the key in the QA session only.
+
+## Set it up again (owner)
+
+Only needed if the login or the secret is lost.
+
+1. Supabase dashboard, Authentication, Users, Add user, with the email above and auto-confirm. Do not attach it to a company.
+2. Add the service role key as the network secret `SUPABASE_SERVICE_ROLE` in the project's cloud environment, scoped to `/auth/v1/admin/`. Only sessions started after that see it.
+3. QA signs in as above and finishes onboarding with the company name `Flow QA`. That calls `create_company`, which makes this user its owner.
 
 ## Check
 
@@ -31,7 +49,7 @@ So QA has its own login that owns its own company, **Flow QA**. It is a normal o
 select c.name, c.is_demo
 from public.companies c
 join auth.users u on u.id = c.owner_id
-where u.email = '<qa email>';
+where u.email = 'ops+qa@nromomentum.com';
 ```
 
 One row, `Flow QA`, `is_demo` false. Any other result means stop.
