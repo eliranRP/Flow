@@ -102,7 +102,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | ready (owner chose 2026-10-08) |
-| 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (polish); owner picks open on H1, H2, H3 |
+| 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (polish, H1); owner picks open on H2, H3 |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -716,9 +716,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-334"></a>
 ### FLOW-334 · Stacked header follow-ups and phone polish (cycle 4)
-- **Type:** SMALL UI · **Status:** ready for the polish items; owner picks open on H1, H2, H3 · **Depends on:** FLOW-326 and FLOW-328 (#165) · **Overlaps:** FLOW-332 (swipe back), FLOW-327 (review queue header items live there) · **Source:** mobile UI/UX review cycle 4 (2026-10-08, deploy 6b3a05e)
+- **Type:** SMALL UI · **Status:** ready for the polish items and H1; owner picks open on H2, H3 · **Owner (2026-10-08):** H1 sticky bar · **Depends on:** FLOW-326 and FLOW-328 (#165) · **Overlaps:** FLOW-332 (swipe back), FLOW-327 (review queue header items live there) · **Source:** mobile UI/UX review cycle 4 (2026-10-08, deploy 6b3a05e)
 - **What:** Follow-ups after the stacked `ScreenHeader` and the consistency pass, shot at 375x667, 393x852 (light and dark) and 412x915.
-- [ ] H1 (owner pick) Long pushed lists lose Back: `header.ui-page` is static, so on שויכו היום (2.8–4.3 screens), the breakdown lines, the category lines and the review list Back scrolls off with no way out but scrolling up. Proposed: a compact sticky bar (Back + small title, 44px) appears once the large title scrolls off, like iOS large titles. Other option: a floating Back pill at the bottom start corner after scrolling.
+- [ ] H1 (owner chose the sticky bar, 2026-10-08) Long pushed lists lose Back: `header.ui-page` is static, so on שויכו היום (2.8–4.3 screens), the breakdown lines, the category lines and the review list Back scrolls off with no way out but scrolling up. Build: a compact sticky bar (Back + small title, 44px) appears once the large title scrolls off, like iOS large titles. A new header pattern, so the PR adds a design log rule.
 - [ ] H2 (owner pick) Back is a lone 44x44 icon at the top start corner (y≈16–60), about 520px above the thumb, and the kicker under it ("הגדרות") repeats where it goes. Proposed: a labelled Back ("‹ הגדרות", "‹ שיפוץ הרצל 12", cut at about 16 characters) that replaces the kicker; about 3x the target and 22px back on every settings sub-screen. Other option: keep the icon and widen its hit area to the start half of the bar. Changes the mockups 07/14 header rule.
 - [ ] H3 (owner pick) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Proposed: no minus on Home's יצא, kept only when refunds beat costs.
 - [ ] Split hints still say "מתחלק שווה" (`flow-screens.tsx:3057`, `:3571`); use "מתפצל שווה" and update the tests.
