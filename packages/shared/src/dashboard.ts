@@ -343,6 +343,8 @@ export const transactionDetailSchema = z
     /** FLOW-121: a guessed category. A guessed kept-out category still counts in the P&L. */
     category_suggested: z.boolean().optional(),
     in_pnl: z.boolean().optional(),
+    /** Decision 0135: whether the line's parts count (all in, all out, or mixed), split lines included. */
+    pnl_state: z.enum(["in", "out", "mixed"]).nullable().optional(),
     /** A loan line: its parts decide what counts, so the override is refused. */
     pnl_fixed: z.boolean().optional(),
   })

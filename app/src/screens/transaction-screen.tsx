@@ -1,5 +1,5 @@
 import { formatAmountText, formatMoney, type TransactionDetail } from "@flow/shared";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
 import { absAgorot } from "../agorot";
@@ -18,6 +18,7 @@ import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui
 import { IconButton } from "../ui/icon-button";
 import { CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
+import { Toggle } from "../ui/toggle";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
 import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
@@ -28,7 +29,7 @@ import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
 import type { LineSplitRead } from "../line-split";
 import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
-import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, vatStatusLabel, withChoice } from "./screen-shared";
+import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, vatStatusLabel, withChoice } from "./screen-shared";
 
 function splitProjectLabel(
   txn: { allocations?: Array<{ project_name?: string | null }> },
@@ -61,28 +62,52 @@ type LinePnlChange = {
   undo: boolean;
 };
 
-type LinePnl = { override: boolean | null; categoryOut: boolean; out: boolean; forcedIn: boolean; next: boolean | null };
+type LinePnl = {
+  override: boolean | null;
+  categoryOut: boolean;
+  out: boolean;
+  /** Some parts count and some are kept out (FLOW-124: a line split by category). */
+  mixed: boolean;
+  /** The line is kept out by its split's categories, not its own. */
+  partsOut: boolean;
+  forcedIn: boolean;
+  next: boolean | null;
+};
 
 /**
  * FLOW-108, decision 0112. Going back to the category's own state always clears the override.
  * FLOW-121, decision 0114: a guessed kept-out category counts until it is confirmed.
+ * FLOW-124, decision 0135: the server's pnl_state reads the line's parts, so a line split by
+ * category is in, out or mixed by its parts. A sample card that changed its override locally
+ * passes no state. A loan line keeps its own mark, so its mixed state is not shown.
  */
 export function linePnlState(
   txn: { category_excluded_from_pnl?: boolean; category_suggested?: boolean; pnl_fixed?: boolean; in_pnl?: boolean },
   override: boolean | null,
+  state?: "in" | "out" | "mixed" | null,
 ): LinePnl {
   // A loan line ignores the override, so the server's in_pnl is the category's say. Only a loan
   // category stays out as a guess; a loan-split line under a guessed other category counts.
   const categoryOut = txn.pnl_fixed === true && txn.in_pnl != null
     ? !txn.in_pnl
     : txn.category_excluded_from_pnl === true && txn.category_suggested !== true;
-  const out = override === false || (override == null && categoryOut);
+  const lineOut = override === false || (override == null && categoryOut);
+  const server = txn.pnl_fixed === true ? null : (state ?? null);
+  const out = server == null ? lineOut : server === "out";
+  const mixed = server === "mixed";
+  const partsOut = out && !lineOut;
   const forcedIn = override === true && categoryOut;
-  const next = out ? (categoryOut ? true : null) : (categoryOut ? null : false);
-  return { override, categoryOut, out, forcedIn, next };
+  // Back in: true, unless the line's own false is all that keeps it out. Out: false, unless
+  // clearing a forced-in override is enough.
+  const next = out
+    ? (override === false && !categoryOut && !partsOut ? null : true)
+    : (forcedIn ? null : false);
+  return { override, categoryOut, out, mixed, partsOut, forcedIn, next };
 }
 
 function linePnlHint(pnl: LinePnl, categoryName: string): string {
+  if (pnl.mixed) return "חלק מהשורה מחוץ לרווח והפסד, לפי הקטגוריות בפיצול.";
+  if (pnl.partsOut) return "הקטגוריות בפיצול מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.";
   if (pnl.out && pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
   if (pnl.out) return `הקטגוריה ${categoryName} מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.`;
   if (pnl.forcedIn) return `כמו שאר הקטגוריה ${categoryName}.`;
@@ -156,12 +181,10 @@ export function TransactionScreen({
   useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
   // FLOW-108. A sample card keeps its override locally; a live card reads it back from the server.
   const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
-  const pnlHintId = useId();
   const pnlLine = useWrite<LinePnlChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
-      setMenu(false);
       toast.show({
         message: `${done.party} · ${done.out ? KEPT_OUT : "ברווח והפסד"}`,
         ...(done.undo ? {} : {
@@ -386,15 +409,28 @@ export function TransactionScreen({
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
-  const pnl = linePnlState(txn, sample != null && sampleOverride !== undefined ? sampleOverride : (txn.in_pnl_override ?? null));
+  const sampleChanged = sample != null && sampleOverride !== undefined;
+  const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged ? null : txn.pnl_state);
   const pnlPill = pnl.out ? (
     <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
+  ) : pnl.mixed ? (
+    <StatusPill icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusPill>
   ) : pnl.forcedIn ? <StatusPill>ברווח והפסד</StatusPill> : null;
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
   const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
   // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
   const lineSplitHint = lineSplitRowHint(lineSplit);
-  const menuButton = holdWrites ? <ReservedMenuSlot /> : <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>;
+  // FLOW-329: ⋯ holds only delete, so it shows only on a manual line. ˄ ˅ keep their place without it.
+  const canDelete = txn.source === "manual" && !holdWrites;
+  const menuButton = canDelete
+    ? <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>
+    : <ReservedMenuSlot />;
+  const pnlHint = (
+    <>
+      {linePnlHint(pnl, txn.category_name ?? "")}
+      {pnlSplit && !pnl.mixed && !pnl.partsOut ? " כל הפרויקטים בשורה." : null}
+    </>
+  );
   return (
     <div>
       <ScreenHeader
@@ -452,6 +488,30 @@ export function TransactionScreen({
             setChangeStart("category");
             setChangeSheet(true);
           }} />
+        )}
+        {txn.pnl_fixed === true ? (
+          <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="תשלום הלוואה · נספר לפי הפיצול" />
+        ) : (
+          // FLOW-329: one tap takes the line out of the P&L or brings it back, under the category it overrides.
+          <Toggle
+            label="ברווח והפסד"
+            hint={pnlHint}
+            icon={<KeptOutIcon />}
+            checked={!pnl.out}
+            disabled={holdWrites}
+            busy={pnlLine.isPending}
+            onChange={() => {
+              if (holdWrites || pnlLine.isPending || (sample == null && blocked())) return;
+              pnlLine.mutate({
+                id: txn.id,
+                party,
+                override: pnl.next,
+                previous: pnl.override,
+                out: !pnl.out,
+                undo: false,
+              });
+            }}
+          />
         )}
       </List>
       <LoanTransactionSplit
@@ -522,56 +582,9 @@ export function TransactionScreen({
           setExtraProjects((list) => [...list, project]);
         }, invalidate)}
       />
-      <Sheet
-        open={menu}
-        onOpenChange={(open) => {
-          // 0075: a dismiss during the P&L write waits for it; success closes the sheet, failure keeps it.
-          if (open) return true;
-          if (pnlLine.isPending) return false;
-          setMenu(false);
-          return true;
-        }}
-        title="עוד"
-        returnFocusRef={moreRef}
-      >
+      <Sheet open={menu && canDelete} onOpenChange={setMenu} title="עוד" returnFocusRef={moreRef}>
         <div className="ui-stack">
-          {txn.pnl_fixed === true ? (
-            <p className="ui-cat-fixed">
-              <LockIcon size={18} />
-              תשלום הלוואה · נספר לפי הפיצול
-            </p>
-          ) : (
-            <>
-              <Button
-                variant="secondary"
-                icon={<KeptOutIcon />}
-                busy={pnlLine.isPending}
-                aria-describedby={pnlHintId}
-                onClick={() => {
-                  if (pnlLine.isPending || (sample == null && blocked())) return;
-                  pnlLine.mutate({
-                    id: txn.id,
-                    party,
-                    override: pnl.next,
-                    previous: pnl.override,
-                    out: !pnl.out,
-                    undo: false,
-                  });
-                }}
-              >
-                {pnlLine.isPending ? "מעדכן…" : pnl.out ? "החזרה לרווח והפסד" : KEPT_OUT}
-              </Button>
-              <p id={pnlHintId} className="t-hint ui-cat-pnl-hint">
-                {linePnlHint(pnl, txn.category_name ?? "")}
-                {pnlSplit ? " כל הפרויקטים בשורה." : null}
-              </p>
-            </>
-          )}
-          {txn.source === "manual" ? (
-            <Button variant="danger" icon={<TrashIcon />} disabled={pnlLine.isPending} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
-          ) : (
-            <p className="t-hint">תנועה מ־SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
-          )}
+          <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
         </div>
       </Sheet>
       <ConfirmSheet

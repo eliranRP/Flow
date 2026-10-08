@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import type { TransactionDetail } from "@flow/shared";
 import { userEvent, within } from "@storybook/test";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
@@ -113,6 +114,57 @@ export const TransactionOutOfPnl: Story = {
         }}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
       />
+    </StoryRoute>
+  ),
+};
+
+function pnlSample(extra: Partial<NonNullable<TransactionDetail>>): NonNullable<TransactionDetail> {
+  return {
+    id: "t1",
+    description: "חומרי בניין",
+    direction: "expense",
+    doc_date: "2026-09-21",
+    amount_gross: -240_000n,
+    amount_net: -240_000n,
+    vat_amount: 0n,
+    vat_status: "unknown",
+    doc_kind: "expense",
+    source: "sumit",
+    project_id: "holon",
+    project_name: "בניין מגורים חולון",
+    category_id: "c1",
+    category_name: "חומרים",
+    supplier_name: "ספק לדוגמה",
+    customer_name: null,
+    review_status: "approved",
+    paid: false,
+    open_gross_agorot: null,
+    in_pnl_override: null,
+    category_excluded_from_pnl: false,
+    in_pnl: true,
+    pnl_fixed: false,
+    ...extra,
+  };
+}
+
+/** FLOW-124: a line split by category with one part kept out reads "חלקית ברווח" from pnl_state. */
+export const TransactionPnlMixed: Story = {
+  name: "P&L partly kept out (split by category)",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ pnl_state: "mixed" })} sampleCategories={[{ id: "c1", name: "חומרים" }]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-329: a loan line's P&L row is locked; its parts decide what counts. */
+export const TransactionPnlLoanLine: Story = {
+  name: "P&L locked (loan payment)",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen sample={pnlSample({ category_name: "תשלומי הלוואה", pnl_fixed: true, pnl_state: "mixed" })} sampleCategories={[{ id: "c1", name: "תשלומי הלוואה" }]} />
     </StoryRoute>
   ),
 };

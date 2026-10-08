@@ -46,9 +46,8 @@ function show(sample: NonNullable<TransactionDetail>) {
   );
 }
 
-function openMore() {
-  fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-  return screen.getByRole("dialog");
+function pnlSwitch() {
+  return screen.getByRole("switch", { name: "ברווח והפסד" });
 }
 
 describe("linePnlState", () => {
@@ -70,14 +69,15 @@ describe("linePnlState", () => {
 });
 
 describe("one line out of the P&L", () => {
-  it("takes the line out from the more sheet, shows the pill, and undoes from the toast", async () => {
+  it("takes the line out with the switch row, shows the pill, and undoes from the toast", async () => {
     show(base);
     expect(screen.queryByText("מחוץ לרווח")).toBeNull();
-    const sheet = openMore();
-    expect(within(sheet).getByText("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.")).toBeTruthy();
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    expect(pnlSwitch()).toBeChecked();
+    expect(screen.getByText("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.")).toBeTruthy();
+    fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · מחוץ לרווח והפסד")).toBeTruthy();
     expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
+    expect(pnlSwitch()).not.toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
     await waitFor(() => { expect(screen.queryByText("מחוץ לרווח")).toBeNull(); });
@@ -86,18 +86,57 @@ describe("one line out of the P&L", () => {
   it("brings one line of a kept-out category back in and marks it", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });
     expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
-    const sheet = openMore();
-    expect(within(sheet).getByText("הקטגוריה חומרים מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
-    fireEvent.click(within(sheet).getByRole("button", { name: "החזרה לרווח והפסד" }));
+    expect(screen.getByText("הקטגוריה חומרים מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
+    fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
     expect(screen.queryByText("מחוץ לרווח")).toBeNull();
-    expect(screen.getByText("ברווח והפסד")).toBeTruthy();
+    expect(within(document.querySelector(".ui-status-row") as HTMLElement).getByText("ברווח והפסד")).toBeTruthy();
   });
 
   it("locks a loan line", () => {
-    show({ ...base, pnl_fixed: true });
-    const sheet = openMore();
-    expect(within(sheet).queryByRole("button", { name: "מחוץ לרווח והפסד" })).toBeNull();
-    expect(within(sheet).getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
+    show({ ...base, pnl_fixed: true, pnl_state: "mixed" });
+    expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
+    expect(screen.getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
+    expect(screen.queryByText("חלקית ברווח")).toBeNull();
+  });
+
+  it("shows ⋯ only on a manual line, with delete alone (FLOW-329)", () => {
+    show(base);
+    expect(screen.queryByRole("button", { name: "עוד" })).toBeNull();
+  });
+
+  it("opens delete from ⋯ on a manual line", () => {
+    show({ ...base, source: "manual" });
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    const sheet = screen.getByRole("dialog", { name: "עוד" });
+    expect(within(sheet).getAllByRole("button").map((button) => button.textContent)).toContain("מחיקה");
+    expect(within(sheet).queryByText(/רווח והפסד/)).toBeNull();
+  });
+
+  it("drives a split line's pill and hint from pnl_state (FLOW-124)", () => {
+    // The line's own category counts, but some of its parts are kept out.
+    show({ ...base, pnl_state: "mixed" });
+    expect(screen.getByText("חלקית ברווח")).toBeTruthy();
+    expect(screen.getByText("חלק מהשורה מחוץ לרווח והפסד, לפי הקטגוריות בפיצול.")).toBeTruthy();
+    expect(pnlSwitch()).toBeChecked();
+  });
+
+  it("marks a split line whose parts are all kept out, and brings it back in with true", async () => {
+    show({ ...base, pnl_state: "out" });
+    expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
+    expect(screen.getByText("הקטגוריות בפיצול מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
+    expect(pnlSwitch()).not.toBeChecked();
+    fireEvent.click(pnlSwitch());
+    expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
+  });
+});
+
+describe("linePnlState with the server's state", () => {
+  it("reads the parts, and a loan line ignores mixed", () => {
+    expect(linePnlState({ category_excluded_from_pnl: false }, null, "mixed")).toMatchObject({ out: false, mixed: true, next: false });
+    expect(linePnlState({ category_excluded_from_pnl: false }, null, "out")).toMatchObject({ out: true, partsOut: true, next: true });
+    expect(linePnlState({ category_excluded_from_pnl: false }, false, "out")).toMatchObject({ out: true, partsOut: false, next: null });
+    expect(linePnlState({ category_excluded_from_pnl: true }, true, "in")).toMatchObject({ out: false, forcedIn: true, next: null });
+    expect(linePnlState({ pnl_fixed: true, in_pnl: true }, null, "mixed")).toMatchObject({ out: false, mixed: false });
   });
 });
