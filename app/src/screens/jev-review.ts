@@ -479,18 +479,31 @@ export async function fetchJevConnector(signal?: AbortSignal): Promise<boolean> 
   }, false);
 }
 
+/**
+ * Ids per tag_suggestions read. Each id is about 40 characters of the `in` filter, so a queue of
+ * hundreds in one URL passes the gateway's limit and the read is refused (400).
+ */
+export const JEV_SUGGESTION_CHUNK = 100;
+
 export async function loadJevSuggestions(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
   const supabase = getSupabase();
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
   if (!supabase || typeof supabase.from !== "function" || ids.length === 0) return { connectorOn: true, byId: {} };
-  const suggestions = await signalled(
-    supabase.from("tag_suggestions").select("id,transaction_id,answers").in("transaction_id", ids).order("created_at", { ascending: false }),
+  const chunks: string[][] = [];
+  for (let start = 0; start < ids.length; start += JEV_SUGGESTION_CHUNK) {
+    chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
+  }
+  const reads = await Promise.all(chunks.map((chunk) => signalled(
+    supabase.from("tag_suggestions").select("id,transaction_id,answers").in("transaction_id", chunk).order("created_at", { ascending: false }),
     signal,
-  );
-  if (suggestions.error) throw new Error(suggestions.error.message);
+  )));
   const newest = new Map<string, { id: string; transaction_id: string; answers: unknown }>();
-  for (const row of suggestions.data) {
-    if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
+  for (const suggestions of reads) {
+    if (suggestions.error) throw new Error(suggestions.error.message);
+    // A transaction's rows all come back in its own chunk, newest first.
+    for (const row of suggestions.data) {
+      if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
+    }
   }
   const [projects, categories] = await Promise.all([
     signalled(supabase.from("projects").select("id,name,status"), signal),
