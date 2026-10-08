@@ -942,8 +942,9 @@ export function filterReviews(rows: Review[], input: {
     if (input.direction && row.direction !== input.direction) return false;
     if (input.reason && row.reason !== input.reason) return false;
     if (input.supplier) {
-      const name = typeof row.supplier_name === "string" ? row.supplier_name : "";
-      if (!name.includes(input.supplier)) return false;
+      // An income line's party is its customer.
+      const names = [row.supplier_name, row.customer_name].filter((name): name is string => typeof name === "string");
+      if (!names.some((name) => name.includes(input.supplier!))) return false;
     }
     if (input.query) {
       const description = typeof row.description === "string" ? row.description : "";

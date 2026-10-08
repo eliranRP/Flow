@@ -4013,3 +4013,22 @@ Deno.test("delete_category and move_category_lines forward their input, undo tak
   }
   assertEquals(calls.length, before);
 });
+
+Deno.test("list_review supplier filter finds an income line by its customer", async () => {
+  const rows = [
+    { id: "q1", transaction_id: "t1", direction: "income", supplier_name: null, customer_name: "דירות הים", doc_date: "2026-09-10" },
+    { id: "q2", transaction_id: "t2", direction: "expense", supplier_name: "חומרי הים", customer_name: null, doc_date: "2026-09-11" },
+    { id: "q3", transaction_id: "t3", direction: "expense", supplier_name: "שיש", customer_name: null, doc_date: "2026-09-12" },
+  ];
+  const { rpc } = rpcOf((name) => {
+    if (name === "list_review") return { status: 200, json: rows };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    return { status: 500, json: null };
+  });
+  const page = await callTool("list_review", { supplier: "הים" }, ["read"], rpc);
+  assertEquals(page.isError, false);
+  if (page.structuredContent.ok) {
+    const data = page.structuredContent.data as { total: number; reviews: { id: string }[] };
+    assertEquals(data.reviews.map((row) => row.id), ["q1", "q2"]);
+  }
+});
