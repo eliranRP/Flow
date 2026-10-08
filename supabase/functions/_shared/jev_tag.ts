@@ -38,7 +38,18 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export type TagMode = "shadow" | "auto";
 
-export type TagProject = { id: string; name: string };
+export type TagProject = {
+  id: string;
+  name: string;
+  /** A finished project: offered only on lines dated on or before its last line (decision 0136). */
+  finished?: boolean;
+  lastDocDate?: string | null;
+  /** The company's overhead project (decision 0101). */
+  overhead?: boolean;
+};
+
+/** The project answer for "no project": overhead, or not one project (decision 0136). Never pre-filled. */
+export const JEV_NO_PROJECT = "none";
 export type TagCategory = { id: string; name: string };
 
 export type TagExpense = {
@@ -83,6 +94,10 @@ export type TagFiling = {
   split: boolean;
   /** Expense when absent. */
   direction?: TagDirection;
+  /** What Jev suggested on that line, and whether the owner changed it (decision 0136). */
+  jevProjectId?: string | null;
+  jevCategoryId?: string | null;
+  jevCorrected?: boolean;
 };
 
 /** Filed lines per supplier that go into a request. */
@@ -150,7 +165,8 @@ export type CompanyUsage = {
 export type TagStore = {
   listWork(limit: number, companyId?: string | null): Promise<TagCompanyWork[]>;
   saveSuggestion(row: SuggestionRow): Promise<void>;
-  prefill(write: PrefillWrite): Promise<void>;
+  /** False when SQL wrote nothing because the line closed or the owner set the field. */
+  prefill(write: PrefillWrite): Promise<boolean | void>;
   deleteSuggestion(transactionId: string, modelVersion: string): Promise<void>;
   /** A line Jev failed on. The job does not send it again until its retry time. */
   markFailed(companyId: string, transactionId: string, modelVersion: string): Promise<void>;
@@ -209,8 +225,16 @@ export function buildTagQuestions(
 ): Record<string, JevQuestion> {
   const questions: Record<string, JevQuestion> = {};
   const line = direction === "income" ? "income line" : "expense";
-  const projectCriteria = choiceCriteria(projects);
+  const projectCriteria = choiceCriteria(projects.map((project) => ({
+    id: project.id,
+    name: project.overhead
+      ? `${project.name} (company overhead)`
+      : project.finished
+      ? `${project.name} (finished)`
+      : project.name,
+  })));
   if (projectCriteria) {
+    projectCriteria[JEV_NO_PROJECT] = "No project: overhead, or not tied to one project.";
     questions.project = {
       type: "choice",
       instructions: `Choose the project id for this ${line}.`,
@@ -248,10 +272,17 @@ function lineDirection(expense: TagExpense): TagDirection {
 export function lineQuestions(expense: TagExpense, company: TagCompanyWork): Record<string, JevQuestion> {
   const direction = lineDirection(expense);
   return buildTagQuestions(
-    skipsProjectQuestion(expense) ? [] : company.projects,
+    skipsProjectQuestion(expense) ? [] : lineProjects(expense, company),
     lineCategories(expense, company),
     direction,
     (expense.flags ?? []).length > 0,
+  );
+}
+
+/** Active projects, and finished ones whose last line is not older than this line. */
+export function lineProjects(expense: TagExpense, company: Pick<TagCompanyWork, "projects">): TagProject[] {
+  return company.projects.filter((project) =>
+    !project.finished || (project.lastDocDate != null && expense.docDate <= project.lastDocDate)
   );
 }
 
@@ -287,17 +318,26 @@ export function buildTagState(
   if (history.length > 0) {
     const projectNames = new Map(projects.map((row) => [row.id, row.name]));
     const categoryNames = new Map(categories.map((row) => [row.id, row.name]));
-    state.past_filings = history.slice(0, JEV_HISTORY_PER_SUPPLIER).map((filing) => ({
-      doc_date: filing.docDate,
-      description: filing.description,
-      amount_net: filing.amountNet,
-      project_id: filing.projectId,
-      project_name: filing.projectId ? projectNames.get(filing.projectId) ?? null : null,
-      category_id: filing.categoryId,
-      category_name: filing.categoryId ? categoryNames.get(filing.categoryId) ?? null : null,
-      pnl_role: filing.pnlRole,
-      split: filing.split,
-    }));
+    state.past_filings = history.slice(0, JEV_HISTORY_PER_SUPPLIER).map((filing) => {
+      const entry: Record<string, JsonValue> = {
+        doc_date: filing.docDate,
+        description: filing.description,
+        amount_net: filing.amountNet,
+        project_id: filing.projectId,
+        project_name: filing.projectId ? projectNames.get(filing.projectId) ?? null : null,
+        category_id: filing.categoryId,
+        category_name: filing.categoryId ? categoryNames.get(filing.categoryId) ?? null : null,
+        pnl_role: filing.pnlRole,
+        split: filing.split,
+      };
+      // Jev's own earlier guess on this line, and whether the owner corrected it (decision 0136).
+      if (filing.jevProjectId || filing.jevCategoryId) {
+        entry.jev_suggested_project_id = filing.jevProjectId ?? null;
+        entry.jev_suggested_category_id = filing.jevCategoryId ?? null;
+        entry.owner_corrected_jev = filing.jevCorrected === true;
+      }
+      return entry;
+    });
   }
   return state;
 }
@@ -344,7 +384,7 @@ export function planTag(
   const askProject = !skipsProjectQuestion(expense);
   const questions = buildTagQuestions(askProject ? projects : [], categories, lineDirection(expense));
   const parts: number[] = [];
-  const projectAllowed = new Set(projects.map((row) => row.id));
+  const projectAllowed = new Set([...projects.map((row) => row.id), JEV_NO_PROJECT]);
   const categoryAllowed = new Set(categories.map((row) => row.id));
   const project = "project" in questions ? readChoice(answers.project, projectAllowed) : undefined;
   const category = "category" in questions ? readChoice(answers.category, categoryAllowed) : undefined;
@@ -359,7 +399,7 @@ export function planTag(
     transactionId: expense.id,
     allocation: null,
   };
-  if (gate && project && !projectBlocked(expense)) {
+  if (gate && project && project.id !== JEV_NO_PROJECT && !projectBlocked(expense)) {
     write.projectId = project.id;
     if (Number.isFinite(expense.amountNet)) {
       write.allocation = { projectId: project.id, amountNet: expense.amountNet };
@@ -536,7 +576,7 @@ export async function tagWork(
         expense,
         company.mode,
         company.threshold,
-        company.projects,
+        lineProjects(expense, company),
         lineCategories(expense, company),
         result.answers,
       );
@@ -565,10 +605,11 @@ export async function tagWork(
         continue;
       }
       try {
-        await store.prefill(plan.write);
+        const wrote = await store.prefill(plan.write);
         report.tagged += 1;
         usage.tagged += 1;
-        report.prefilled += 1;
+        // False: the line closed or the owner set it meanwhile. The suggestion stays on the card.
+        if (wrote !== false) report.prefilled += 1;
       } catch {
         try {
           await store.deleteSuggestion(expense.id, JEV_MODEL);
@@ -600,10 +641,6 @@ export function integrationsPath(companyId?: string | null): string {
   const base = "/rest/v1/company_integrations?provider=eq.jev&select=company_id,enabled,mode,threshold";
   if (companyId && isUuid(companyId)) return `${base}&company_id=eq.${companyId}`;
   return base;
-}
-
-export function projectsPath(companyId: string): string {
-  return `/rest/v1/projects?company_id=eq.${companyId}&status=eq.active&select=id,name`;
 }
 
 export function categoriesPath(companyId: string, kind: TagDirection = "expense"): string {
@@ -737,6 +774,28 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
   }];
 }
 
+function uuidOrNull(value: unknown): string | null {
+  const text = asString(value);
+  return text && isUuid(text) ? text : null;
+}
+
+/** jev_projects: active projects, and finished ones that have a last line date. */
+function projectFromRow(row: RestRow): TagProject[] {
+  const id = asString(row.id);
+  const name = asString(row.name);
+  if (!id || !name) return [];
+  const finished = row.status === "finished";
+  const lastDocDate = asString(row.last_doc_date);
+  if (finished && !lastDocDate) return [];
+  const project: TagProject = { id, name };
+  if (finished) {
+    project.finished = true;
+    project.lastDocDate = lastDocDate;
+  }
+  if (row.overhead === true) project.overhead = true;
+  return [project];
+}
+
 function filingFromRow(row: RestRow): [string, TagFiling] | [] {
   const supplierId = asString(row.supplier_id);
   const docDate = asString(row.doc_date);
@@ -744,7 +803,7 @@ function filingFromRow(row: RestRow): [string, TagFiling] | [] {
   if (!supplierId || !docDate || !Number.isFinite(amountNet)) return [];
   const projectId = asString(row.project_id);
   const categoryId = asString(row.category_id);
-  return [supplierId, {
+  const filing: TagFiling = {
     docDate,
     description: (asString(row.description) ?? "").slice(0, 120),
     amountNet,
@@ -753,7 +812,15 @@ function filingFromRow(row: RestRow): [string, TagFiling] | [] {
     pnlRole: asString(row.pnl_role),
     split: asBool(row.split),
     direction: row.direction === "income" ? "income" : "expense",
-  }];
+  };
+  const jevProjectId = uuidOrNull(row.jev_project_id);
+  const jevCategoryId = uuidOrNull(row.jev_category_id);
+  if (jevProjectId || jevCategoryId) {
+    filing.jevProjectId = jevProjectId;
+    filing.jevCategoryId = jevCategoryId;
+    filing.jevCorrected = asBool(row.jev_corrected);
+  }
+  return [supplierId, filing];
 }
 
 /** One SQL call per company: the newest filed lines of each supplier in the run (decision 0127). */
@@ -871,11 +938,10 @@ export function createTagStore(
         const quota = quotas[index] ?? 0;
         if (quota < 1) continue;
         const company = enabled[index];
-        const projects = rows(await get(projectsPath(company.companyId))).flatMap((row) => {
-          const id = asString(row.id);
-          const name = asString(row.name);
-          return id && name ? [{ id, name }] : [];
-        });
+        const projects = rows(await rest(fetch, `${base}/rest/v1/rpc/jev_projects`, serviceKey, {
+          method: "POST",
+          body: { p_company: company.companyId },
+        })).flatMap(projectFromRow);
         const categories = rows(await get(categoriesPath(company.companyId))).flatMap((row) => {
           const id = asString(row.id);
           const name = asString(row.name);
@@ -920,39 +986,20 @@ export function createTagStore(
       });
     },
 
-    async prefill(write: PrefillWrite): Promise<void> {
-      const body: JsonObject = {};
-      if (write.projectId) body.project_id = write.projectId;
-      if (write.categoryId) {
-        body.category_id = write.categoryId;
-        body.category_suggested = true;
-      }
-      if (Object.keys(body).length > 0) {
-        await rest(
-          fetch,
-          `${base}/rest/v1/transactions?id=eq.${write.transactionId}&company_id=eq.${write.companyId}`,
-          serviceKey,
-          { method: "PATCH", body },
-        );
-      }
-      if (write.allocation) {
-        await rest(
-          fetch,
-          `${base}/rest/v1/allocations?transaction_id=eq.${write.transactionId}&company_id=eq.${write.companyId}`,
-          serviceKey,
-          { method: "DELETE" },
-        );
-        await rest(fetch, `${base}/rest/v1/allocations`, serviceKey, {
-          method: "POST",
-          body: {
-            company_id: write.companyId,
-            transaction_id: write.transactionId,
-            project_id: write.allocation.projectId,
-            share_bp: 10000,
-            amount_net: write.allocation.amountNet,
-          },
-        });
-      }
+    async prefill(write: PrefillWrite): Promise<boolean> {
+      // One SQL transaction: the project, its allocation (amount from the line) and the
+      // category, only while the line is open and the owner has not set them (decision 0136).
+      const result = await rest(fetch, `${base}/rest/v1/rpc/jev_prefill`, serviceKey, {
+        method: "POST",
+        body: {
+          p_company: write.companyId,
+          p_transaction: write.transactionId,
+          p_project: write.projectId ?? null,
+          p_category: write.categoryId ?? null,
+        },
+      });
+      if (!isObject(result)) return true;
+      return result.project === true || result.category === true;
     },
 
     async deleteSuggestion(transactionId: string, modelVersion: string): Promise<void> {

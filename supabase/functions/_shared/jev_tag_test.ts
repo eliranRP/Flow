@@ -2,6 +2,7 @@ import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
 import { JEV_MODEL, JEV_TIMEOUT_MS, JevError, callJev, type JevCall, type JevTimer } from "./jev.ts";
 import {
   JEV_HISTORY_PER_SUPPLIER,
+  JEV_NO_PROJECT,
   JEV_TAG_ATTEMPTS,
   JEV_TAG_BUDGET_MS,
   JEV_TAG_DEFAULT_LIMIT,
@@ -22,8 +23,9 @@ import {
   createTagStore,
   handleJevTag,
   integrationsPath,
+  lineProjects,
+  lineQuestions,
   planTag,
-  projectsPath,
   serviceRoleKey,
   tagJevCall,
   tagWork,
@@ -223,6 +225,7 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
     const url = String(input);
     urls.push(url);
     bodies.push(init?.body ? JSON.parse(String(init.body)) : null);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/company_integrations")) {
       return Promise.resolve(Response.json([
         { company_id: COMPANY, enabled: true, mode: "auto", threshold: "0.90" },
@@ -231,7 +234,6 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
         { company_id: "77777777-7777-4777-8777-777777777777", enabled: false, mode: "shadow", threshold: 0.9 },
       ]));
     }
-    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
     if (url.includes("/review_queue")) {
       return Promise.resolve(Response.json([
@@ -281,7 +283,8 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
   assert(urls.every((url) => !url.includes("66666666-6666-4666-8666-666666666666")));
   assert(urls.every((url) => !url.includes("77777777-7777-4777-8777-777777777777")));
   assert(urls.some((url) => url.includes(integrationsPath())));
-  assert(urls.some((url) => url.includes(projectsPath(COMPANY))));
+  assert(urls.some((url) => url.endsWith("/rest/v1/rpc/jev_projects")));
+  assert(urls.every((url) => !url.includes("/rest/v1/projects")));
   assert(urls.some((url) => url.includes(categoriesPath(COMPANY))));
   assert(urls.every((url) => !url.includes("/review_queue?")));
   assert(urls.every((url) => !url.includes("/tag_suggestions?")));
@@ -361,11 +364,11 @@ Deno.test("the store loads each supplier's filed lines in one SQL call per compa
   const calls: Array<{ url: string; body: unknown }> = [];
   const fetch: typeof globalThis.fetch = (input, init) => {
     const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
     calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : null });
     if (url.includes("/company_integrations")) {
       return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
     }
-    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
     if (url.includes("/rpc/jev_supplier_history")) {
       return Promise.resolve(Response.json([
@@ -404,10 +407,10 @@ Deno.test("the store loads each supplier's filed lines in one SQL call per compa
 Deno.test("a failed history read fails the listing like any other store read", async () => {
   const fetch: typeof globalThis.fetch = (input) => {
     const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/company_integrations")) {
       return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
     }
-    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
     if (url.includes("/rpc/jev_supplier_history")) return Promise.resolve(new Response(null, { status: 500 }));
     if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow({ supplier_id: SUPPLIER })]));
@@ -417,15 +420,16 @@ Deno.test("a failed history read fails the listing like any other store read", a
   await assertRejects(() => store.listWork(20), Error, "store");
 });
 
-Deno.test("prefill writes the suggestion flags and the allocation, and not the review", async () => {
+Deno.test("prefill is one SQL call with the ids only, and reports a line that closed meanwhile", async () => {
   const calls: { url: string; method: string; body: unknown }[] = [];
+  let reply: unknown = { project: true, category: true };
   const fetch: typeof globalThis.fetch = (input, init) => {
     calls.push({
       url: String(input),
       method: init?.method ?? "GET",
       body: init?.body ? JSON.parse(String(init.body)) : null,
     });
-    return Promise.resolve(new Response(null, { status: 204 }));
+    return Promise.resolve(Response.json(reply));
   };
   const store = createTagStore(fetch, "http://db.test", "service-role-test");
   const write: PrefillWrite = {
@@ -436,20 +440,20 @@ Deno.test("prefill writes the suggestion flags and the allocation, and not the r
     categorySuggested: true,
     allocation: { projectId: PROJECT, amountNet: -10000 },
   };
-  await store.prefill(write);
-  const patch = calls.find((call) => call.method === "PATCH");
-  assert(patch);
-  assertEquals(patch.body, { project_id: PROJECT, category_id: CATEGORY, category_suggested: true });
-  assert(patch.url.includes("/transactions"));
-  assertEquals(calls.some((call) => call.url.includes("/review_queue")), false);
-  const allocation = calls.find((call) => call.method === "POST" && call.url.endsWith("/allocations"));
-  assertEquals(allocation?.body, {
-    company_id: COMPANY,
-    transaction_id: EXPENSE,
-    project_id: PROJECT,
-    share_bp: 10000,
-    amount_net: -10000,
+  assertEquals(await store.prefill(write), true);
+  assertEquals(calls.length, 1);
+  assert(calls[0].url.endsWith("/rest/v1/rpc/jev_prefill"));
+  assertEquals(calls[0].method, "POST");
+  // No amount from the job: SQL reads the allocation amount from the line (decision 0136).
+  assertEquals(calls[0].body, {
+    p_company: COMPANY,
+    p_transaction: EXPENSE,
+    p_project: PROJECT,
+    p_category: CATEGORY,
   });
+  reply = { project: false, category: false, skipped: "closed" };
+  assertEquals(await store.prefill({ ...write, projectId: undefined, allocation: null }), false);
+  assertEquals((calls[1].body as Record<string, unknown>).p_project, null);
 });
 
 Deno.test("a returned model other than the pin is stored on the suggestion", async () => {
@@ -724,13 +728,13 @@ Deno.test("a second run inside the interval is rate limited and does not call Je
   }), {
     fetch: withJobs((input) => {
       const url = String(input);
+      if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
       calls.push(url);
       if (url.includes("/company_integrations")) {
         return Promise.resolve(Response.json([
           { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
         ]));
       }
-      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
       return Promise.resolve(new Response(null, { status: 204 }));
@@ -885,6 +889,7 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
   }), {
     fetch: withJobs((input) => {
       const url = String(input);
+      if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
       enabledUrls.push(url);
       if (url.includes("/company_integrations")) {
         return Promise.resolve(Response.json([
@@ -892,7 +897,6 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
           { company_id: "66666666-6666-4666-8666-666666666666", enabled: true, mode: "shadow", threshold: 0.9 },
         ]));
       }
-      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions") && url.includes(`company_id=eq.${COMPANY}`)) {
         return Promise.resolve(Response.json([txnRow()]));
@@ -922,13 +926,13 @@ Deno.test("the handler clamps a passed cap, filters one company, and skips Vault
   }), {
     fetch: withJobs((input) => {
       const url = String(input);
+      if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
       hardCapUrls.push(url);
       if (url.includes("/company_integrations")) {
         return Promise.resolve(Response.json([
           { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
         ]));
       }
-      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) return Promise.resolve(Response.json([]));
       return Promise.resolve(Response.json([]));
@@ -1112,6 +1116,7 @@ Deno.test("a 450-line backlog does not starve the other company", async () => {
   }), {
     fetch: withJobs((input, init) => {
       const url = String(input);
+      if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
       if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
       if (url.includes("/company_integrations")) {
         return Promise.resolve(Response.json([
@@ -1119,7 +1124,6 @@ Deno.test("a 450-line backlog does not starve the other company", async () => {
           { company_id: COMPANY_B, enabled: true, mode: "shadow", threshold: 0.9 },
         ]));
       }
-      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) {
         transactionUrls.push(url);
@@ -1166,6 +1170,7 @@ Deno.test("an approved line is not sent to TypeSafe", async () => {
   }), {
     fetch: withJobs((input, init) => {
       const url = String(input);
+      if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
       urls.push(url);
       if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
       if (url.includes("/company_integrations")) {
@@ -1173,7 +1178,6 @@ Deno.test("an approved line is not sent to TypeSafe", async () => {
           { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
         ]));
       }
-      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) {
         return Promise.resolve(Response.json([
@@ -1399,6 +1403,7 @@ function jobRun(options: { lease?: boolean; grant?: (want: number) => number; fa
   }), {
     fetch: (input, init) => {
       const url = String(input);
+      if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
       const rpc = /\/rpc\/(\w+)$/.exec(url)?.[1];
       if (rpc) {
         log.rpc.push(rpc);
@@ -1412,7 +1417,6 @@ function jobRun(options: { lease?: boolean; grant?: (want: number) => number; fa
       if (url.includes("/company_integrations")) {
         return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
       }
-      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
       if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
       if (url.includes("/transactions")) {
         return Promise.resolve(Response.json([txnRow(), txnRow({ id: SECOND }), txnRow({ id: THIRD })]));
@@ -1627,12 +1631,12 @@ Deno.test("the store reads income lines with the customer, income categories, an
   const income = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
   const fetch: typeof globalThis.fetch = (input, init) => {
     const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
     urls.push(url);
     if (init?.body) bodies.set(url, JSON.parse(String(init.body)));
     if (url.includes("/company_integrations")) {
       return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
     }
-    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/categories") && url.includes("kind=eq.income")) {
       return Promise.resolve(Response.json(incomeCategories));
     }
@@ -1688,11 +1692,11 @@ Deno.test("expense-only runs do not read income categories, and a failed flag re
   const urls: string[] = [];
   const fetch: typeof globalThis.fetch = (input) => {
     const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
     urls.push(url);
     if (url.includes("/company_integrations")) {
       return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
     }
-    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
     if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
     if (url.includes("/rpc/jev_line_flags")) return Promise.resolve(new Response(null, { status: 500 }));
     if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
@@ -1703,4 +1707,158 @@ Deno.test("expense-only runs do not read income categories, and a failed flag re
   assertEquals(work[0].expenses[0].flags, undefined);
   assertEquals(work[0].incomeCategories, []);
   assert(urls.every((url) => !url.includes("kind=eq.income")));
+});
+
+// FLOW-703, decision 0136.
+
+const FINISHED = "66666666-6666-4666-8666-66666666666f";
+const OVERHEAD = "77777777-7777-4777-8777-77777777777e";
+
+function noProjectAnswers(confidence = 0.95) {
+  return {
+    ...answers(),
+    project: { type: "choice", choice: JEV_NO_PROJECT, confidence, probabilities: null },
+  };
+}
+
+Deno.test("the project question offers no project, and marks the overhead and finished projects", () => {
+  const questions = buildTagQuestions([
+    { id: PROJECT, name: "שיפוץ" },
+    { id: OVERHEAD, name: "כללי", overhead: true },
+    { id: FINISHED, name: "בניין ישן", finished: true, lastDocDate: "2026-03-31" },
+  ], categories);
+  assert(questions.project.type === "choice");
+  assertEquals(questions.project.criteria[PROJECT], "שיפוץ");
+  assertEquals(questions.project.criteria[OVERHEAD], "כללי (company overhead)");
+  assertEquals(questions.project.criteria[FINISHED], "בניין ישן (finished)");
+  assert(typeof questions.project.criteria[JEV_NO_PROJECT] === "string");
+  // No project question at all: no lone none option either.
+  assertEquals("project" in buildTagQuestions([], categories), false);
+});
+
+Deno.test("a finished project is offered only on lines dated on or before its last line", () => {
+  const work = company({
+    projects: [
+      ...projects,
+      { id: FINISHED, name: "בניין ישן", finished: true, lastDocDate: "2026-03-31" },
+    ],
+  });
+  const older = expense({ docDate: "2026-03-31" });
+  const newer = expense({ docDate: "2026-04-01" });
+  assertEquals(lineProjects(older, work).map((row) => row.id), [PROJECT, OTHER, FINISHED]);
+  assertEquals(lineProjects(newer, work).map((row) => row.id), [PROJECT, OTHER]);
+  const olderQuestions = lineQuestions(older, work);
+  const newerQuestions = lineQuestions(newer, work);
+  assert(olderQuestions.project.type === "choice" && newerQuestions.project.type === "choice");
+  assert(FINISHED in olderQuestions.project.criteria);
+  assertEquals(FINISHED in newerQuestions.project.criteria, false);
+});
+
+Deno.test("auto never pre-fills a no-project answer, and still fills the category", () => {
+  const plan = planTag(expense(), "auto", 0.9, projects, categories, noProjectAnswers());
+  assertEquals(plan.confidence, 0.95);
+  assertEquals((plan.answers.project as { choice: string }).choice, JEV_NO_PROJECT);
+  assert(plan.write);
+  assertEquals(plan.write.projectId, undefined);
+  assertEquals(plan.write.allocation, null);
+  assertEquals(plan.write.categoryId, CATEGORY);
+});
+
+Deno.test("a past filing carries Jev's earlier guess and whether the owner corrected it", () => {
+  const filings: TagFiling[] = [
+    {
+      docDate: "2026-03-01",
+      description: "מלט",
+      amountNet: -9000,
+      projectId: PROJECT,
+      categoryId: CATEGORY,
+      pnlRole: "project",
+      split: false,
+      jevProjectId: OTHER,
+      jevCategoryId: CATEGORY,
+      jevCorrected: true,
+    },
+    {
+      docDate: "2026-02-01",
+      description: "חול",
+      amountNet: -500,
+      projectId: PROJECT,
+      categoryId: CATEGORY,
+      pnlRole: "project",
+      split: false,
+    },
+  ];
+  const state = buildTagState(expense({ history: filings }), projects, categories);
+  assert(typeof state === "object" && state !== null && !Array.isArray(state));
+  const past = state.past_filings as Record<string, unknown>[];
+  assertEquals(past[0].jev_suggested_project_id, OTHER);
+  assertEquals(past[0].jev_suggested_category_id, CATEGORY);
+  assertEquals(past[0].owner_corrected_jev, true);
+  // A line Jev never suggested on says nothing about Jev.
+  assertEquals("owner_corrected_jev" in past[1], false);
+});
+
+Deno.test("the store reads Jev's guess from the history, and finished projects with a last line", async () => {
+  const fetch: typeof globalThis.fetch = (input) => {
+    const url = String(input);
+    if (url.includes("/rpc/jev_projects")) {
+      return Promise.resolve(Response.json([
+        { id: PROJECT, name: "שיפוץ", status: "active", last_doc_date: null, overhead: false },
+        { id: OVERHEAD, name: "כללי", status: "active", last_doc_date: null, overhead: true },
+        { id: FINISHED, name: "בניין ישן", status: "finished", last_doc_date: "2026-03-31", overhead: false },
+        { id: OTHER, name: "ריק", status: "finished", last_doc_date: null, overhead: false },
+      ]));
+    }
+    if (url.includes("/rpc/jev_supplier_history")) {
+      return Promise.resolve(Response.json([{
+        supplier_id: "88888888-8888-4888-8888-888888888888",
+        direction: "expense",
+        doc_date: "2026-03-01",
+        description: "מלט",
+        amount_net: -9000,
+        project_id: PROJECT,
+        category_id: CATEGORY,
+        pnl_role: "project",
+        split: false,
+        jev_project_id: OTHER,
+        jev_category_id: null,
+        jev_corrected: true,
+      }]));
+    }
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/transactions")) {
+      return Promise.resolve(Response.json([txnRow({ supplier_id: "88888888-8888-4888-8888-888888888888" })]));
+    }
+    return Promise.resolve(Response.json([]));
+  };
+  const work = await createTagStore(fetch, "http://db.test", "service-role-test").listWork(20);
+  assertEquals(work[0].projects, [
+    { id: PROJECT, name: "שיפוץ" },
+    { id: OVERHEAD, name: "כללי", overhead: true },
+    { id: FINISHED, name: "בניין ישן", finished: true, lastDocDate: "2026-03-31" },
+  ]);
+  const history = work[0].expenses[0].history ?? [];
+  assertEquals(history[0].jevProjectId, OTHER);
+  assertEquals(history[0].jevCategoryId, null);
+  assertEquals(history[0].jevCorrected, true);
+});
+
+Deno.test("a prefill SQL skipped because the line closed is tagged, not counted as pre-filled", async () => {
+  const store = memoryStore();
+  store.prefill = (write: PrefillWrite) => {
+    store.writes.push(write);
+    return Promise.resolve(false);
+  };
+  const report = await tagWork([company()], store, () => Promise.resolve({
+    model: JEV_MODEL,
+    answers: answers(),
+    usage: null,
+  }), "jev-test-key");
+  assertEquals(store.writes.length, 1);
+  assertEquals(report.tagged, 1);
+  assertEquals(report.prefilled, 0);
+  assertEquals(store.suggestions.length, 1);
 });

@@ -173,8 +173,9 @@ select is(
    where label = 'a' and e ->> 'description' = 'line 6'),
   jsonb_build_object('direction', 'expense', 'doc_date', '2026-04-06', 'amount_net', -6000, 'project_id', null,
     'category_id', (select category_id from public.transactions where id = (select id from jsh_ref where label = 't6')),
-    'pnl_role', 'project', 'split', false),
-  'each filing carries its direction, date, amount, project, category, role and split flag'
+    'pnl_role', 'project', 'split', false,
+    'jev_project_id', null, 'jev_category_id', null, 'jev_corrected', false),
+  'each filing carries its direction, date, amount, project, category, role, split flag and Jev''s guess'
 );
 select is(
   (select jsonb_array_length(result) from jsh_out where label = 'per2'),
