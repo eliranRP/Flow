@@ -1,4 +1,4 @@
-import { formatAmountText, type ProfitMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type ExpectedMonths, type ProfitMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -44,6 +44,7 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories, withParam } from "./project-categories";
+import { ProjectExpectedMonths } from "./project-expected-months";
 
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
@@ -129,6 +130,7 @@ export function ProjectDetailScreen({
   categoryTo,
   sampleInvestment,
   sampleCategories,
+  sampleExpected,
 }: {
   sample?: NonNullable<ProjectDetail>;
   /** FLOW-404. The השקעה card of a sample project; without it a sample project shows no card. */
@@ -140,6 +142,8 @@ export function ProjectDetailScreen({
   categoryTo?: string;
   /** FLOW-401. A sample project's category groups and month marks (stories). */
   sampleCategories?: { groups: Record<string, string>; months: ProjectCategoryMonthRow[] };
+  /** FLOW-403. The "צפוי" months of a sample project (dev routes and Storybook). */
+  sampleExpected?: ExpectedMonths;
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
@@ -286,6 +290,8 @@ export function ProjectDetailScreen({
         sampleGroups={sampleCategories?.groups}
         sampleMonths={sampleCategories?.months}
       />
+      {/* FLOW-403: expected months under the categories (plan option A3); its own block, one line here. */}
+      <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
       {/* FLOW-335: the switch sits under the categories, so the band's first row is in reach sooner. */}
       <div className="ui-page-pad ui-project-overhead">
         <Toggle

@@ -21,7 +21,7 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
-import { ChartIcon, DocumentIcon } from "../ui/icons";
+import { CalendarIcon, ChartIcon, DocumentIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodBar } from "../ui/period-bar";
@@ -39,6 +39,7 @@ import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
+import { missingBillsTitle, useMissingBillsQuery } from "../forecast";
 
 function changePercent(current: bigint, previous: bigint | null): number | null {
   if (previous == null || previous === 0n) return null;
@@ -58,6 +59,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const books = useBooks();
   const dashboard = useDashboardQuery();
   const unpaid = useUnpaidQuery();
+  // FLOW-403: late recurring bills, a count on the pending card. A failed read just hides the row.
+  const missing = useMissingBillsQuery();
   const companyCurrency = useCompanyCurrency();
 
   const phase = screenPhase(preview, dashboard);
@@ -128,6 +131,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       unpaidCount={unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0}
       unpaidOther={unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : []}
       unpaidPhase={unpaidPhase.kind}
+      missingCount={missing.data?.length ?? 0}
       onUnpaidRetry={() => {
         void unpaid.refetch();
       }}
@@ -151,6 +155,8 @@ export function HomeBooks({
   unpaidCount,
   unpaidOther = [],
   unpaidPhase = "ready",
+  missingCount = 0,
+  missingTo,
   onUnpaidRetry,
   period,
   onPeriod,
@@ -170,6 +176,10 @@ export function HomeBooks({
   /** FLOW-330. Open unpaid totals in other currencies, after the ILS one. */
   unpaidOther?: { currency: string; minor: bigint }[];
   unpaidPhase?: "loading" | "error" | "empty" | "ready";
+  /** FLOW-403. Recurring bills that are late this month; the row shows only above 0. */
+  missingCount?: number;
+  /** Dev fixtures send the late-bills row here. Production opens `/missing-bills`. */
+  missingTo?: string;
   onUnpaidRetry?: () => void;
   period: PeriodChoice;
   onPeriod: (choice: PeriodChoice) => void;
@@ -212,6 +222,8 @@ export function HomeBooks({
     unpaidCount: unpaidPhase === "ready" ? unpaidCount : 0,
     unpaidGross,
     unpaidOther,
+    missingCount,
+    missingTo,
     search,
   });
 
@@ -326,19 +338,24 @@ export function homeProjects(projects: readonly ProjectRow[], currency: string):
 
 /**
  * FLOW-321. The Home pending card: one row to Review and one to Unpaid with its
- * total, each only when it has something. A count of 1 reads singular.
+ * total, each only when it has something. A count of 1 reads singular. FLOW-403 adds a
+ * third row, the late recurring bills, as a count only.
  */
 export function attentionRows({
   pending,
   unpaidCount,
   unpaidGross,
   unpaidOther = [],
+  missingCount = 0,
+  missingTo = "/missing-bills",
   search,
 }: {
   pending: number;
   unpaidCount: number;
   unpaidGross: bigint;
   unpaidOther?: { currency: string; minor: bigint }[];
+  missingCount?: number;
+  missingTo?: string;
   search: string;
 }): BannerRow[] {
   const rows: BannerRow[] = [];
@@ -368,6 +385,15 @@ export function attentionRows({
           טרם נגבה
         </>
       ),
+    });
+  }
+  // FLOW-403 (plan option A1): a count, no hint and no total, only when a bill is late.
+  if (missingCount > 0) {
+    rows.push({
+      id: "missing",
+      to: `${missingTo}${search}`,
+      icon: <CalendarIcon size={24} stroke={1.9} />,
+      title: missingCount === 1 ? missingBillsTitle(1) : <><bdi dir="ltr">{String(missingCount)}</bdi> חשבונות לא הגיעו</>,
     });
   }
   return rows;
