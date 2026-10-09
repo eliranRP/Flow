@@ -1,4 +1,4 @@
--- FLOW-309, option A (decision 0169). A connector invoice and its receipt are one review card:
+-- FLOW-309, option A (decision 0165). A connector invoice and its receipt are one review card:
 -- the receipt waits with its invoice, follows its filing, and undo takes both back. Invented data
 -- only. Amounts are agorot.
 

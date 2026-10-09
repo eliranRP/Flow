@@ -688,7 +688,7 @@ begin
     raise exception 'sync_review_queue is not the expected definition';
   end if;
   def := replace(def, posted_anchor, $n$    and t.line_status = 'posted'
-    -- FLOW-309: a receipt waits with its invoice (decision 0169).
+    -- FLOW-309: a receipt waits with its invoice (decision 0165).
     and not (t.doc_kind = 'receipt' and t.linked_external_id is not null and private.receipt_waits(t.id))
     and (
       -- FLOW-121$n$);
@@ -712,7 +712,7 @@ begin
     raise exception 'filed_today_rows is not the expected definition';
   end if;
   execute replace(def, anchor, anchor || $n$
-      -- FLOW-309: a receipt that waits with its invoice (decision 0169).
+      -- FLOW-309: a receipt that waits with its invoice (decision 0165).
       and not (
         filed.doc_kind = 'receipt' and filed.linked_external_id is not null
         and private.receipt_waits(filed.id)
