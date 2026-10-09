@@ -26,6 +26,7 @@ import { TextLink } from "../ui/text-link";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 import { ProjectLoanList } from "./loan-match";
+import { categoryHref } from "./project-category-screen";
 import {
   REHAB_TOTAL_ONLY,
   rehabBreakdown,
@@ -71,7 +72,17 @@ function OtherLines({ list, note }: { list: readonly MinorInCurrency[]; note: st
   );
 }
 
+/** The rehab figure is every cost since the project started, on the cash basis. */
+function rehabLinesSearch(search: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  for (const key of ["period", "at", "from", "to"]) params.delete(key);
+  params.set("period", "all");
+  params.set("basis", "cash");
+  return `?${params.toString()}`;
+}
+
 export function RehabSheet({
+  projectId,
   open,
   onOpenChange,
   figures,
@@ -82,6 +93,8 @@ export function RehabSheet({
   onRetry,
   returnFocusRef,
 }: {
+  /** FLOW-404: a counted category opens its lines, all time on the cash basis, as the list reads them. */
+  projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   figures: InvestmentFigures;
@@ -123,16 +136,22 @@ export function RehabSheet({
             <p className="t-hint">אין עדיין עלויות שנספרות בשיפוץ.</p>
           ) : (
             <List className="ui-invest-list">
-              {breakdown.counted.map((line) => (
-                <ListRow
-                  key={line.key}
-                  variant="project"
-                  title={line.name}
-                  agorot={line.minor}
-                  currency={figures.currency}
-                  loss={false}
-                />
-              ))}
+              {breakdown.counted.map((line) => {
+                const href = line.id == null ? undefined : categoryHref(projectId, line.id, figures.currency, rehabLinesSearch(search));
+                return (
+                  <ListRow
+                    key={line.key}
+                    variant="project"
+                    title={line.name}
+                    agorot={line.minor}
+                    currency={figures.currency}
+                    loss={false}
+                    href={href}
+                    chevron={href != null}
+                    chevronSpace={href == null}
+                  />
+                );
+              })}
             </List>
           )}
           {breakdown.left.length > 0 ? (
@@ -592,6 +611,7 @@ export function ProjectInvestmentSection({
             onSave={onSave}
           />
           <RehabSheet
+            projectId={projectId}
             open={rehabOpen}
             onOpenChange={setRehabSheet}
             figures={figures}

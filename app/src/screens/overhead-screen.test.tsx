@@ -72,6 +72,10 @@ describe("project category breakdown", () => {
     });
     expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/a\/categories\/h\?period=/));
     expect(screen.getByRole("link", { name: /1 ממתינה לאישור/ })).toHaveAttribute("href", "/review?project=a");
+    // FLOW-334: the waiting row reads as Home's review row, not a category.
+    const waiting = screen.getByRole("link", { name: /1 ממתינה לאישור/ });
+    expect(waiting).toHaveClass("ui-row-pending");
+    expect(waiting.querySelector(".ui-row-icon svg")).not.toBeNull();
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
     expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
   });
@@ -178,7 +182,7 @@ describe("project overhead hero", () => {
     expect(screen.queryByText("−₪100,000")).not.toBeInTheDocument();
     expect(screen.getByText("₪60,000")).toBeInTheDocument();
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
-    expect(screen.getByText("דלוק · החלק בכלליות הוא ₪40,000")).toBeInTheDocument();
+    expect(screen.getByText("החלק בכלליות: ₪40,000")).toBeInTheDocument();
   });
 
   it("clicking the switch saves and shows the profit after the income share", async () => {
@@ -209,7 +213,7 @@ describe("project overhead hero", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const toggle = await screen.findByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
+    const toggle = await screen.findByRole("switch", { name: "רווח אחרי כלליות" });
     expect(toggle).not.toBeChecked();
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();
     fireEvent.click(toggle);
@@ -219,7 +223,7 @@ describe("project overhead hero", () => {
     expect(calls).toEqual([{ p_on: true, p_project_id: "a" }]);
     // The project screen asks for the same books basis as Home (decision 0060).
     expect(projectArgs).toContainEqual(expect.objectContaining({ p_id: "a", p_basis: "invoiced" }));
-    expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeChecked();
   });
 
   it("rolls the switch back when the save fails", async () => {
@@ -241,12 +245,38 @@ describe("project overhead hero", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const toggle = await screen.findByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
+    const toggle = await screen.findByRole("switch", { name: "רווח אחרי כלליות" });
     fireEvent.click(toggle);
     await waitFor(() => {
-      expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).not.toBeChecked();
+      expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeChecked();
     });
     expect(document.querySelector(".t-display")?.textContent).toBe("₪100,000");
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();
+  });
+});
+
+describe("the project's status row (FLOW-334)", () => {
+  it("finishes the project from a row at the bottom, with a neutral confirm", async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
+    rpc.impl = (name, args) => {
+      calls.push({ name, args });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderProject({ ...projectBase });
+    expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "סיום הפרויקט" }));
+    const confirm = await screen.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+    const button = within(confirm).getByRole("button", { name: "סיום הפרויקט" });
+    expect(button.querySelector("svg")).toBeNull();
+    expect(button.className).not.toMatch(/danger/);
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(calls.find((call) => call.name === "upsert_project")?.args).toMatchObject({ p_id: "a", p_status: "finished" });
+    });
+  });
+
+  it("offers החזרה לפעיל on a finished project", () => {
+    renderProject({ ...projectBase, status: "finished" });
+    expect(screen.getByRole("button", { name: "החזרה לפעיל" })).toBeInTheDocument();
   });
 });

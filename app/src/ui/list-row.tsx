@@ -29,6 +29,8 @@ type Common = {
   actionBelow?: boolean;
   icon?: ReactNode;
   chevron?: boolean;
+  /** FLOW-408: a row with no chevron keeps its space, so its amount lines up with linked rows above and below. */
+  chevronSpace?: boolean;
   grip?: boolean;
   /** Hidden categories use a muted name. */
   muted?: boolean;
@@ -212,6 +214,10 @@ export function ListRow(props: ListRowProps) {
         <span className="ui-row-chevron" aria-hidden="true">
           <ChevronIcon />
         </span>
+      ) : props.chevronSpace === true ? (
+        <span className="ui-row-chevron ui-row-chevron-space" aria-hidden="true">
+          <ChevronIcon />
+        </span>
       ) : null}
       {props.external === true && props.href != null ? <span className="sr-only">{NEW_TAB}</span> : null}
     </>
@@ -283,6 +289,7 @@ export function ListRow(props: ListRowProps) {
         ? "ui-row"
         : "ui-row ui-hit",
     toneClass,
+    props.className,
   );
   const row = props.href && props.external === true ? (
     <a

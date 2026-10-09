@@ -21,13 +21,11 @@ import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
-import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
-import { IconButton } from "../ui/icon-button";
-import { CalendarIcon, DocumentIcon, MoreIcon } from "../ui/icons";
+import { CalendarIcon, DocumentIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { rowSource } from "../ui/line-marks";
@@ -36,19 +34,16 @@ import { FocusTitle } from "../ui/focus-title";
 import { BudgetBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { Sheet } from "../ui/sheet";
 import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
-import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
+import { KEPT_OUT_SHORT, useBlockedPreview } from "./screen-shared";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories, withParam } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
 
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
-  const holdWrites = useHoldWrites();
-  const [menu, setMenu] = useState(false);
   return (
     <div className="flex min-h-full flex-1 flex-col" aria-busy="true">
       <p className="sr-only" role="status">טוען…</p>
@@ -58,11 +53,6 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={holdWrites ? <ReservedMenuSlot /> : (
-          <IconButton label="עוד" onBand onClick={() => { setMenu(true); }}>
-            <MoreIcon />
-          </IconButton>
-        )}
       >
         <BandHero>
           <div className="ui-project-skel">
@@ -87,11 +77,6 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
       </div>
       <SectionHead title="הוצאות לפי קטגוריה" />
       <ListSkeleton />
-      {holdWrites ? null : (
-        <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-          <p className="t-hint">הפרויקט עדיין נטען.</p>
-        </Sheet>
-      )}
     </div>
   );
 }
@@ -223,7 +208,6 @@ export function ProjectDetailScreen({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
-        trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero className="ui-band-hero-project">
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
@@ -295,7 +279,7 @@ export function ProjectDetailScreen({
       {/* FLOW-335: the switch sits under the categories, so the band's first row is in reach sooner. */}
       <div className="ui-page-pad ui-project-overhead">
         <Toggle
-          label="אחרי חלק בהוצאות כלליות"
+          label="רווח אחרי כלליות"
           hint={overheadHint(overheadOn, {
             available: project.overhead_weighted === true,
             shareAgorot: project.base_currency != null && project.base_currency !== "ILS"
@@ -347,6 +331,10 @@ export function ProjectDetailScreen({
             />
           )}
         />
+      )}
+      {/* FLOW-334: the project's only action is a row at the bottom, not an unlabelled ⋯ in the band. */}
+      {holdWrites ? null : (
+        <ProjectStatusRow projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />
       )}
     </div>
   );
@@ -411,7 +399,7 @@ function LegacyEmptyProject() {
   );
 }
 
-function ProjectMenu({
+function ProjectStatusRow({
   projectId,
   name,
   budget,
@@ -423,8 +411,9 @@ function ProjectMenu({
   finished: boolean;
 }) {
   const blocked = useBlockedPreview();
-  const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
+  const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
   const save = useWrite({
     failure: "לא הצלחנו לעדכן את הפרויקט.",
     success: finished ? "הפרויקט חזר לפעיל" : "הפרויקט סומן כהסתיים",
@@ -443,35 +432,19 @@ function ProjectMenu({
   });
   return (
     <>
-      <IconButton
-        label="עוד"
-        onBand
-        onClick={() => {
-          setMenu(true);
-        }}
-      >
-        <MoreIcon />
-      </IconButton>
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setMenu(false);
-            setConfirm(true);
-          }}
-        >
-          {finished ? "החזרה לפעיל" : "סיום הפרויקט"}
-        </Button>
-      </Sheet>
+      <List className="ui-project-status">
+        <ListRow variant="button" title={action} buttonRef={opener} onClick={() => { setConfirm(true); }} />
+      </List>
+      {/* Either way can be undone, so the confirm is neutral: no red and no bin (FLOW-341 rule). */}
       <ConfirmSheet
         open={confirm}
         onOpenChange={setConfirm}
         title={finished ? "להחזיר את הפרויקט לפעיל?" : "לסיים את הפרויקט?"}
         item={name}
         consequence="פרויקט לא נמחק. אפשר להחזיר אותו אחר כך."
-        confirmLabel="אישור"
-        destructive={!finished}
+        confirmLabel={action}
         busy={save.isPending}
+        returnFocusRef={opener}
         onConfirm={() => {
           if (blocked()) return;
           save.mutate();

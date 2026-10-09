@@ -59,7 +59,9 @@ export function ProjectCategoryScreen({
   const location = useLocation();
   // The project's period travels in the URL, so the lines match the category row that opened them.
   const period = periodFromSearch(new URLSearchParams(location.search));
-  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
+  // FLOW-404: the rehab list opens a category on the cash basis (`?basis=cash`), so its lines add up to the row.
+  const basis = params.get("basis") === "cash" ? "cash" : "invoiced";
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period, basis);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const months = useProjectCategoryMonthsQuery(sample ? "" : projectId, period);
   const [sampleOpen, setSampleOpen] = useState(false);

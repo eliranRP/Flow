@@ -1,0 +1,27 @@
+/* FLOW-334: a waiting row in "הוצאות לפי קטגוריה" is tinted like Home's review banner, not a category. */
+.ui-row.ui-row-pending {
+  /* The tint spreads past the row as a shadow, so the amount stays in the column the categories use. */
+  margin-block: var(--space-3);
+  border-radius: var(--radius-note);
+  background: var(--color-tint);
+  box-shadow: 0 0 0 var(--space-3) var(--color-tint);
+}
+
+.ui-row.ui-row-pending .ui-row-icon {
+  color: var(--color-accent-text);
+}
+
+.ui-row.ui-row-pending:active {
+  background: var(--color-tint-pressed);
+  box-shadow: 0 0 0 var(--space-3) var(--color-tint-pressed);
+}
+
+/* FLOW-408: the reserved chevron slot on a row that opens nothing. */
+.ui-row-chevron-space {
+  visibility: hidden;
+}
+
+/* FLOW-334: סיום הפרויקט closes the page, apart from the lines above it. */
+.ui-project-status {
+  margin-top: var(--space-6);
+}

@@ -103,7 +103,7 @@ describe("FLOW-335 project band", () => {
     expect(row).toHaveClass("ui-row");
     expect(row.closest(".ui-banner")).toBeNull();
     const category = screen.getByText("חומרים", { selector: ".ui-row-title, .ui-row-title *" });
-    const toggle = screen.getByRole("switch", { name: /אחרי חלק בהוצאות כלליות/ });
+    const toggle = screen.getByRole("switch", { name: /רווח אחרי כלליות/ });
     expect(category.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

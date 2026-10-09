@@ -794,7 +794,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Home at 375x667: the first "פרויקטים מובילים" row shows only 22px above the tab bar; tighten the נכנס / יצא rows from a 76px to about a 52px pitch. Cycle 5: since the period bar (#199) no project row shows above the fold at all (the "פרויקטים" head sits at y≈640), so this also needs FLOW-335's band trims.
 - [x] (UI lane 3, 2026-10-09: `ScreenHeader` `below` slot; the subtitle and hint no longer repeat the period) Breakdown: the period chip moved to the top-left corner (Back took the start side), the hardest reach and a different corner than Home; put it under the title on the start side.
 - [x] (UI lane 3, 2026-10-09: the count waits for the last page; no lines, no figures) Project category lines: add the total and count to the subtitle ("שיפוץ הרצל 12 · ₪4 · תנועה אחת").
-- [ ] Project detail: the "ממתינה לאישור" row inside "הוצאות לפי קטגוריה" looks like a category; give it the review icon and tint like Home's review row. Move "סיום פרויקט" from the unlabelled ⋯ (its only action) to a row at the bottom.
+- [x] (UI lane 3, 2026-10-09: the waiting row carries the inbox icon and Home's tint; the ⋯ goes and "סיום הפרויקט" / "החזרה לפעיל" is the last row, with a neutral confirm; the overhead switch reads "רווח אחרי כלליות" with no off hint) Project detail: the "ממתינה לאישור" row inside "הוצאות לפי קטגוריה" looks like a category; give it the review icon and tint like Home's review row. Move "סיום פרויקט" from the unlabelled ⋯ (its only action) to a row at the bottom.
 - [ ] (design lead, 2026-10-09, FLOW-334 leftovers review) Transaction rows show ".00" on whole amounts ("−₪85,000.00", `SignedAmount` in `ui/list-row.tsx`), which group rows and the breakdown don't; drop the decimals for whole shekels on every transaction list. Shared row, so the lane that owns the transaction row takes it.
 - [ ] שויכו היום: group rows under project headers with a count and total, keeping only the category in each row's hint.
 - [ ] Empty and error actions: Home empty uses the tint button (177x44) and the Review error the filled primary (140x44); both use the tint style per DESIGN-RULES §2.8.
@@ -924,7 +924,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The category ⋯ sheet gets a "נספרת בשיפוץ" switch showing `in_rehab`, with a one-line hint. A kept-out category's hint says why it is off by default. When the owner changed the default, the hint says so and "החזרה לברירת המחדל" sends null. A viewer sees the switch disabled, with its hint.
 - [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch (card and sheets in #223; switch is UI lane 3's).
 - [x] Follow-up (server): `get_project().investment` returns `rehab_by_category` from the same CTE as `rehab_minor`, so the rehab list always adds up to the total. Today the app rebuilds it from the project's cash-basis categories and `list_categories().in_rehab`, and shows only the total when they differ: a loan fees part filed in an ordinary category (0130), suggested and in-review lines, shared lines with no category, and archived categories. (Done in #308, migration 20261013030000: rows of `{category_id, name, hidden, amount_minor}` in the project currency, largest first, with `category_id` null for lines with no category; they sum to `rehab_minor`. The app can switch to it.)
-- [ ] Open (UI): a counted category in the rehab list should open its lines. The category screen (`project-category-screen.tsx`) reads the period from the URL but always uses the books basis (invoiced), so `?period=all&basis=cash` would not match the rehab figure. Needs a `basis` query parameter on that screen, or the server list above.
+- [x] (UI lane 3, 2026-10-09: rows open `?period=all&basis=cash`; the category screen reads `basis` from the URL) Open (UI): a counted category in the rehab list should open its lines. The category screen (`project-category-screen.tsx`) reads the period from the URL but always uses the books basis (invoiced), so `?period=all&basis=cash` would not match the rehab figure. Needs a `basis` query parameter on that screen, or the server list above.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
@@ -951,8 +951,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-408"></a>
 ### FLOW-408 · Currency alignment in project lists
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
-- [ ] In mixed-currency projects, the non-tappable USD category rows sit 32px further out than the tappable ILS rows. Reserve the chevron space so the amount column lines up.
+- **Type:** SMALL UI · **Status:** done (#318) · **Depends on:** —
+- [x] (UI lane 3, 2026-10-09: `ListRow` `chevronSpace` keeps a hidden chevron on rows that don't open) In mixed-currency projects, the non-tappable USD category rows sit 32px further out than the tappable ILS rows. Reserve the chevron space so the amount column lines up.
 - [x] (Backlog bug fixes, 2026-10-09: `list-row.tsx` uses the currency now; project detail and project category passed it; filed today and project waiting dropped it, fixed, the latter with migration `20261013040000`) Verify on main: project rows accept a currency in `list-row.tsx` but never use it, and some list rows (project detail, filed today, project waiting, project category) may drop the currency. Fix any that still do.
 
 <a id="flow-409"></a>

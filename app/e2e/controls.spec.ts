@@ -313,24 +313,21 @@ test("projects search, expand, open, and the new-project sheet", async ({ page }
   await expect(page.getByRole("dialog", { name: "פרויקט" })).toHaveCount(0);
 });
 
-test("a project opens its menu, categories, and a transaction", async ({ page }) => {
-  await page.goto("/projects/herzl?preview=loading");
-  await page.getByRole("button", { name: "עוד" }).click();
-  await expect(page.getByRole("dialog", { name: "עוד" })).toBeVisible();
-  await expect(page.getByText("הפרויקט עדיין נטען.")).toBeVisible();
-
+test("a project finishes from its bottom row, opens categories and a transaction", async ({ page }) => {
   await page.goto("/e2e/project-detail?preview=1");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/projects/);
   await page.goto("/e2e/project-detail?preview=1");
-  await page.getByRole("button", { name: "עוד" }).click();
+  // FLOW-334: no ⋯ in the band; the project's action is a row at the bottom.
+  await expect(page.getByRole("button", { name: "עוד" })).toHaveCount(0);
   await page.getByRole("button", { name: "סיום הפרויקט" }).click();
-  await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toBeVisible();
-  await page.getByRole("button", { name: "אישור" }).click();
+  const finish = page.getByRole("dialog", { name: "לסיים את הפרויקט?" });
+  await expect(finish).toBeVisible();
+  await finish.getByRole("button", { name: "סיום הפרויקט" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toHaveCount(0);
-  const overhead = page.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
+  const overhead = page.getByRole("switch", { name: "רווח אחרי כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   // FLOW-411: the lines show on open, with no extra tap and no jump to Settings.

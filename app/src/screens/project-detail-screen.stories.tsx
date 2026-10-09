@@ -80,6 +80,9 @@ export const ProjectDetail: Story = {
   ),
 };
 
+export const ProjectDetailDark: Story = { ...ProjectDetail, name: "Project detail, dark", ...dark };
+export const ProjectDetail320: Story = { ...ProjectDetail, name: "Project detail, 320", ...at320 };
+
 export const ProjectDetailLoading: Story = {
   render: () => (
     <StoryRoute entry="/projects/a?preview=loading" tabs>

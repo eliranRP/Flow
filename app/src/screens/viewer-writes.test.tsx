@@ -361,7 +361,7 @@ describe("viewer gates", () => {
       expect(screen.getByRole("link", { name: /חומרים/ })).toHaveAttribute("href", "/search?dir=expense&category=c1");
       expect(screen.queryByRole("button", { name: "עוד, חומרים" })).not.toBeInTheDocument();
     }],
-    ["V31", "the project menu stays off", () => {
+    ["V31", "the project's סיום הפרויקט row stays off", () => {
       viewer(
         <Routes>
           <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={project} />} />
@@ -370,7 +370,7 @@ describe("viewer gates", () => {
       );
       expect(screen.getByRole("heading", { name: "שיפוץ" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
-      expect(document.querySelector(".ui-menu-slot")).toBeInstanceOf(HTMLElement);
+      expect(screen.queryByRole("button", { name: "סיום הפרויקט" })).not.toBeInTheDocument();
     }],
     ["V32", "the project overhead switch is disabled", () => {
       viewer(
@@ -379,10 +379,10 @@ describe("viewer gates", () => {
         </Routes>,
         "/projects/p1",
       );
-      expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeDisabled();
+      expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeDisabled();
       expect(screen.queryByText(VIEWER_NOTE)).not.toBeInTheDocument();
     }],
-    ["V33", "the project skeleton keeps an empty menu slot", () => {
+    ["V33", "the project skeleton has no menu", () => {
       const pending = vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
         rpc: () => new Promise(() => undefined),
       } as never);
@@ -395,31 +395,12 @@ describe("viewer gates", () => {
         );
         expect(screen.getAllByText("טוען…").length).toBeGreaterThan(0);
         expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
-        expect(document.querySelector(".ui-menu-slot")).toBeInstanceOf(HTMLElement);
       } finally {
         pending.mockRestore();
       }
     }],
   ] as const)("%s %s", (_id, _title, run) => {
     run();
-  });
-
-  it("shows עוד on the project skeleton once the role is owner", () => {
-    const pending = vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
-      rpc: () => new Promise(() => undefined),
-    } as never);
-    try {
-      renderScreen(
-        <Routes>
-          <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
-        </Routes>,
-        "/projects/p1",
-      );
-      expect(screen.getByRole("button", { name: "עוד" })).toBeInTheDocument();
-      expect(document.querySelector(".ui-menu-slot")).toBeNull();
-    } finally {
-      pending.mockRestore();
-    }
   });
 
   it("keeps the pointer on an owner category row", () => {
