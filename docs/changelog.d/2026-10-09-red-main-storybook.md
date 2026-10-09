@@ -1,0 +1,1 @@
+Main is green again: a keyboard-focused list row draws only its tint again, not the 2px ring (#298's `[data-focus-ring]:focus` made the `.ui-hit` ring rule outrank the row's `outline: none`), and the Loans list stories keep bigint balances out of Storybook args, which the manager could not serialise.
