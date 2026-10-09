@@ -23,7 +23,7 @@ import {
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import type { ConnectorSession } from "../_shared/connectors/types.ts";
-import { resolveOwnerCompany } from "../_shared/owner.ts";
+import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
 import { runWithClaim } from "../_shared/cron_claim.ts";
 
 declare const Deno: {
@@ -100,10 +100,7 @@ Deno.serve(async (req) => {
         const user = await userClient.auth.getUser();
         return user.error ? null : user.data.user?.id ?? null;
       },
-      ownedBy: async (userId) => {
-        const company = await admin.from("companies").select("id").eq("owner_id", userId).maybeSingle();
-        return company.error ? null : company.data?.id ?? null;
-      },
+      ownedBy: (userId) => ownedCompany(admin, userId, companyHint(req)),
       readableCompanies: async () => {
         const rows = await userClient.from("companies").select("id, owner_id");
         return rows.error ? null : (rows.data ?? []) as Array<{ id: string; owner_id: string }>;

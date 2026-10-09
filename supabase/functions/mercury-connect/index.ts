@@ -6,6 +6,7 @@ import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import { parseImportFrom, saveImportFrom } from "../_shared/import-from.ts";
+import { companyHint, ownedCompany } from "../_shared/owner.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -42,8 +43,8 @@ Deno.serve(async (req) => {
     if (importFrom === false) return json({ error: "import date is invalid" }, 400);
 
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
-    const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
-    if (company.error || !company.data) return json({ error: "no company" }, 400);
+    const companyId = await ownedCompany(admin, user.data.user.id, companyHint(req));
+    if (!companyId) return json({ error: "no company" }, 400);
 
     const session = mercuryAdapter.open(apiKey);
     const validated = await mercuryAdapter.validate(session);
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     const previous = await admin
       .from("connector_connections")
       .select("account_labels")
-      .eq("company_id", company.data.id)
+      .eq("company_id", companyId)
       .eq("provider", "mercury")
       .maybeSingle();
     if (previous.error) return json({ error: "could not store the connection" }, 500);
@@ -68,15 +69,15 @@ Deno.serve(async (req) => {
       const cleared = await admin
         .from("connector_connections")
         .update({ sync_cursor: null })
-        .eq("company_id", company.data.id)
+        .eq("company_id", companyId)
         .eq("provider", "mercury");
       if (cleared.error) return json({ error: "could not store the connection" }, 500);
     }
 
     const kekVersion = Deno.env.get("MERCURY_KEK_VERSION") || "1";
-    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "3", "mercury");
+    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, companyId, "3", "mercury");
     const saved = await admin.rpc("replace_connector_connection", {
-      p_company: company.data.id,
+      p_company: companyId,
       p_provider: "mercury",
       p_key_ciphertext: sealed.keyCiphertext,
       p_key_nonce: sealed.keyNonce,
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
     const labeled = await admin
       .from("connector_connections")
       .update({ account_labels: validated.accounts })
-      .eq("company_id", company.data.id)
+      .eq("company_id", companyId)
       .eq("provider", "mercury");
     if (labeled.error) return json({ error: "could not store the connection" }, 500);
     // Before the first sync tick reads it. The connection stands even if only the date fails.

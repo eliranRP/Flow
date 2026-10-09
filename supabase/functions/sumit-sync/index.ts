@@ -15,6 +15,7 @@ import {
   pageShapeDrift,
   type SumitDoc,
 } from "../_shared/ledger.ts";
+import { companyHint, ownedCompany } from "../_shared/owner.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 
 declare const Deno: {
@@ -91,10 +92,10 @@ Deno.serve(async (req) => {
     });
     const user = await userClient.auth.getUser();
     if (user.error || !user.data.user) return json({ error: "unauthorized" }, 401);
-    const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
-    if (company.error || !company.data) return json({ error: "no company" }, 400);
+    const companyId = await ownedCompany(admin, user.data.user.id, companyHint(req));
+    if (!companyId) return json({ error: "no company" }, 400);
     const body = (await req.json().catch(() => ({}))) as { force?: boolean };
-    const result = await syncCompany(admin, company.data.id, decodeKek(kekSecret), body.force === true, true);
+    const result = await syncCompany(admin, companyId, decodeKek(kekSecret), body.force === true, true);
     return json(result);
   } catch (error) {
     if (error instanceof SyncHold) {
