@@ -97,15 +97,15 @@ describe("project recent list months", () => {
   });
 
   it("leads a split line's row with this project's part, and names the whole line quietly (owner, 2026-10-09)", () => {
-    wrap(<ProjectDetailScreen sample={project([
+    wrap(<ProjectDetailScreen section="transactions" sample={project([
       { ...txn("a", "2026-09-14", -317_000n, "expense"), parts_minor: 25_000n },
       txn("c", "2026-09-10", -100_000n, "expense"),
     ])} />);
     const split = screen.getByRole("link", { name: /^Line a/ });
-    expect(split.querySelector(".ui-num")?.textContent).toBe("−₪250.00");
+    expect(split.querySelector(".ui-num")?.textContent).toBe("−₪250");
     expect(split).toHaveTextContent("מתוך ₪3,170");
     const plain = screen.getByRole("link", { name: /^Line c/ });
-    expect(plain.querySelector(".ui-num")?.textContent).toBe("−₪1,000.00");
+    expect(plain.querySelector(".ui-num")?.textContent).toBe("−₪1,000");
     expect(plain).not.toHaveTextContent("מתוך");
   });
 
