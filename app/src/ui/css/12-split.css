@@ -50,8 +50,9 @@
   text-align: start;
 }
 
+/* The rows' 16px padding lines their text up with the title; in dark the surface edge sits 8px in (FLOW-334). */
 .ui-split-card {
-  margin: var(--space-3) var(--space-side) 0;
+  margin: var(--space-3) calc(var(--space-side) - var(--space-4)) 0;
   overflow: hidden;
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -291,7 +292,7 @@ div.ui-check-row {
   box-sizing: border-box;
   max-inline-size: var(--content-max);
   margin-inline: auto;
-  padding: var(--space-4) var(--space-5) calc(var(--safe-bottom) + var(--space-4));
+  padding: var(--space-4) var(--space-side) calc(var(--safe-bottom) + var(--space-4));
   border-top: 1px solid var(--color-line);
   background: var(--color-surface);
 }

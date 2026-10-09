@@ -1,10 +1,10 @@
 import { formatMoney, type ReviewRow } from "@flow/shared";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
-import { useCategoriesQuery, useInvalidateBooks, useLineMetaQuery } from "../use-books";
+import { useCategoriesQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
 import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-review";
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { filedTodayBannerTitle } from "../filed-today-copy";
@@ -14,7 +14,7 @@ import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-mete
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { useJevQueue, useReviewFlags } from "./jev-review-card";
-import { jevFilledOnCard, jevShown, withJev } from "./jev-review";
+import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-review";
 import { useJevUndo } from "./jev-undo";
 import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
@@ -72,10 +72,13 @@ export function ReviewQueue({
   onShared,
   listPlace,
   setupHandoff,
+  sampleJev,
 }: {
   rows: ReviewRow[];
   search: string;
   sample?: boolean;
+  /** FLOW-333 C13: Jev's answers for a sample queue (a story or a preview); the live read never runs there. */
+  sampleJev?: JevQueueData;
   setupHandoff?: { fromCard: boolean };
   /** Injected by the dev and reviewer previews. The hosted queue does not set it. */
   previewWrite?: ReviewPreviewWrite;
@@ -141,11 +144,20 @@ export function ReviewQueue({
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
   const metaLive = !sample && previewWrite == null;
-  const lineMeta = useLineMetaQuery(shownId, metaLive);
-  // Warm the next card's bank details so its meta line paints with the card.
-  useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
+  // FLOW-315: one read for the bank details of the cards ahead (and the one on screen) fills each
+  // card's cache, so every next card's meta line paints with it. The card's own read runs only if
+  // that read failed. The details stay supplementary: the card never waits for them.
+  const metaIds = useMemo(() => {
+    const head = rows.slice(0, META_AHEAD).map((item) => item.transaction_id);
+    return shownId == null || head.includes(shownId) ? head : [...head, shownId];
+  }, [rows, shownId]);
+  const metaPage = useLineMetaPageQuery(metaIds, metaLive);
+  const lineMeta = useLineMetaQuery(shownId, metaLive && metaPage.isError);
   const jevUndo = useJevUndo();
-  const jev = jevUndo.stateFor(shownId, jevQueue.stateFor(shownId));
+  const seededJev = sample && sampleJev != null && shownId != null
+    ? { connectorOn: sampleJev.connectorOn, prefill: sampleJev.byId[shownId] ?? null }
+    : null;
+  const jev = jevUndo.stateFor(shownId, seededJev ?? jevQueue.stateFor(shownId));
   const flagsFor = useReviewFlags(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
@@ -620,6 +632,8 @@ function docKindLabel(kind: string | undefined): string {
 
 /** How long after ביטול's reopen lands the queue waits for the line before it drops the hold. */
 const REVIEW_HOLD_SETTLE_MS = 1000;
+/** FLOW-315: how many cards ahead the bank details read covers. */
+const META_AHEAD = 50;
 
 async function reopenReview(
   id: string,

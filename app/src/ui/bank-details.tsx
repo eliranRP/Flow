@@ -1,6 +1,6 @@
 import { useId, useLayoutEffect, useState } from "react";
 import { methodLabel, sameParty, splitAccountLast4, type MethodIconKind, type TxnMeta } from "../txn-meta";
-import { BankIcon, BuildingIcon, CardIcon, DocumentIcon, InfoIcon, NoteIcon, TransferIcon } from "./icons";
+import { BankIcon, BuildingIcon, CardIcon, ChevronDownIcon, DocumentIcon, InfoIcon, NoteIcon, TransferIcon } from "./icons";
 import { List, ListRow } from "./list-row";
 
 /** The payment-method icon. Decorative: the label next to it carries the meaning. */
@@ -94,7 +94,10 @@ export function BankDetails({
   );
 }
 
-/** The memo wraps up to 4 lines. Past 4 lines the row is a button that shows the rest. */
+/**
+ * The memo wraps up to 4 lines. Past 4 lines the row is a button that shows the rest, with a ▾ cue
+ * like the review card's memo (FLOW-315); the cue turns over while the memo is open.
+ */
 function MemoRow({ memo }: { memo: string }) {
   const [box, setBox] = useState<HTMLSpanElement | null>(null);
   const [clamped, setClamped] = useState(false);
@@ -127,6 +130,11 @@ function MemoRow({ memo }: { memo: string }) {
       eyebrow="הערה"
       icon={<NoteIcon />}
       title={title}
+      meta={(
+        <span className="ui-bank-memo-cue" data-open={open ? "" : undefined} aria-hidden="true">
+          <ChevronDownIcon size={16} />
+        </span>
+      )}
       expanded={open}
       onClick={() => {
         setOpen((value) => !value);

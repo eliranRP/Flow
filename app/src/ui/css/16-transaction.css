@@ -95,6 +95,16 @@
   line-clamp: none;
 }
 
+/* FLOW-315: the ▾ cue on a memo longer than 4 lines, as on the review card's memo. */
+.ui-bank-memo-cue {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+}
+
+.ui-bank-memo-cue[data-open] {
+  transform: rotate(180deg);
+}
+
 .ui-bank-text {
   display: block;
   color: var(--color-text-secondary);

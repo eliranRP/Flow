@@ -2,7 +2,7 @@ import type { ReviewRow } from "@flow/shared";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { type SkippedReviewRow } from "./review-skipped";
-import { reviewFlagsQueryKey, type ReviewFlagsData } from "./jev-review";
+import { reviewFlagsQueryKey, type JevQueueData, type ReviewFlagsData } from "./jev-review";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { ReviewAllList, ReviewEmpty as ReviewEmptyState, ReviewQueue } from "./flow-screens";
@@ -85,6 +85,57 @@ function ReviewQueueFlagStory() {
 }
 export const ReviewQueueFlag375se: Story = { ...se, render: () => <ReviewQueueFlagStory /> };
 export const ReviewQueueFlag375seDark: Story = { ...se, ...darkTheme, render: () => <ReviewQueueFlagStory /> };
+
+/**
+ * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + בטל),
+ * a quiet flag ends the card, and the slim filed-today banner is on. The card must end above the pinned bar.
+ * Invented data.
+ */
+const jevRow: ReviewRow = { ...sampleReview, project_suggested: true, category_suggested: true };
+const jevFilled: JevQueueData = {
+  connectorOn: true,
+  byId: {
+    [jevRow.transaction_id]: {
+      suggestionId: "s-fit",
+      transactionId: jevRow.transaction_id,
+      project: { id: jevRow.project_id ?? "a", name: jevRow.project_name ?? "וילה רעננה" },
+      category: { id: jevRow.category_id ?? "c1", name: jevRow.category_name ?? "חומרים" },
+      why: { reason: "usual_for_party", partyFilings: 5, matchingFilings: 4 },
+      auto: { state: "filled", projectId: jevRow.project_id, categoryId: jevRow.category_id },
+    },
+  },
+};
+/** The same answer before the auto job filled it: the reason line instead of the filled line. */
+const jevSuggested: JevQueueData = {
+  connectorOn: true,
+  byId: Object.fromEntries(Object.entries(jevFilled.byId).map(([id, prefill]) => [id, prefill == null ? null : { ...prefill, auto: undefined }])),
+};
+const quietSpike: ReviewFlagsData = {
+  [jevRow.transaction_id]: [{
+    transaction_id: jevRow.transaction_id, kind: "amount_spike", jev_score: 0.4, other_doc_date: null, typical_amount_minor: 250_000, ratio: 3.4,
+  }],
+};
+const loudDuplicate: ReviewFlagsData = {
+  [jevRow.transaction_id]: [{
+    transaction_id: jevRow.transaction_id, kind: "duplicate", jev_score: 0.9, other_doc_date: "2026-09-20", typical_amount_minor: null, ratio: null,
+  }],
+};
+function ReviewJevFitStory({ jev = jevFilled, flags = quietSpike }: { jev?: JevQueueData; flags?: ReviewFlagsData }) {
+  return (
+    <StoryRoute entry="/review" tabs reviewCount={4}>
+      <SeedFlags ids={[jevRow.transaction_id]} flags={flags} />
+      <ReviewQueue rows={[jevRow]} search="" sample sampleJev={jev} />
+    </StoryRoute>
+  );
+}
+export const ReviewJevFit375: Story = { ...se, render: () => <ReviewJevFitStory /> };
+export const ReviewJevFit375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewJevFitStory /> };
+export const ReviewJevFit320: Story = { ...narrowView, render: () => <ReviewJevFitStory /> };
+export const ReviewJevFit320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewJevFitStory /> };
+export const ReviewJevFit390: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, render: () => <ReviewJevFitStory /> };
+export const ReviewJevFit390Dark: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, ...darkTheme, render: () => <ReviewJevFitStory /> };
+export const ReviewJevReason375: Story = { ...se, render: () => <ReviewJevFitStory jev={jevSuggested} /> };
+export const ReviewJevFitLoud375: Story = { ...se, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 
 /** FLOW-327 / 0137: after דלג, the undo toast sits just above the bar. */
 const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש הגליל", amount_net: -345_000n }];

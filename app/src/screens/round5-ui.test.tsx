@@ -207,6 +207,8 @@ describe("transaction status chips", () => {
     renderTxn(expense);
     expect(screen.getByText(/^מע״מ /)).toHaveTextContent("מע״מ −₪1,800 · מע״מ משוער 18%");
     expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
+    // FLOW-322: no document row or hint promises what the detail does not show (an invoice number, the bank line).
+    expect(screen.queryByText(/מספר חשבונית|שורת הבנק/)).not.toBeInTheDocument();
   });
 
   it("hides the VAT line when a shekel line has no VAT", () => {
@@ -479,7 +481,7 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getAllByText("₪1,000 מתחלק שווה בין 3 פרויקטים").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("₪1,000 מתפצל שווה בין 3 פרויקטים").length).toBeGreaterThan(0);
     expect(screen.queryByText(/לכל אחד מ־3/)).not.toBeInTheDocument();
   });
 
