@@ -45,6 +45,8 @@
 /settings/ /settings 301
 /settings/categories /app-shell 200
 /settings/categories/ /settings/categories 301
+/settings/categories/:parentId /app-shell 200
+/settings/categories/:parentId/ /settings/categories/:parentId 301
 /settings/connections /app-shell 200
 /settings/connections/ /settings/connections 301
 /settings/notifications /app-shell 200

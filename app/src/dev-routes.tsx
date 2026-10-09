@@ -388,8 +388,13 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
 export function DevCategories() {
   return (
     <CategoriesScreen
+      listPath="/e2e/categories"
       sample={[
         { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false, count: 2 },
+        // FLOW-406: a parent with two sub-categories (mockups cat-b, cat-b-2).
+        { id: "c5", name: "תחזוקה", kind: "expense", hidden: false, is_default: false, count: 0, rollup_lines: 3, children_count: 2 },
+        { id: "c6", name: "חשמל", kind: "expense", hidden: false, is_default: false, count: 2, parent_id: "c5" },
+        { id: "c7", name: "ניקיון", kind: "expense", hidden: false, is_default: false, count: 1, parent_id: "c5" },
         // A second visible expense category, so חומרים has somewhere to move (FLOW-347).
         { id: "c4", name: "קבלנים", kind: "expense", hidden: false, is_default: false, count: 1 },
         { id: "c2", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },

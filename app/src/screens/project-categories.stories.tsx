@@ -78,6 +78,26 @@ export const GroupOpen: Story = {
 export const GroupOpen320: Story = { ...GroupOpen, name: "Group open, 320", ...at320 };
 export const GroupOpenDark: Story = { ...GroupOpen, name: "Group open, dark", ...dark };
 
+/** FLOW-406: a parent folds its sub-categories, and its own lines sit last as "בלי תת-קטגוריה". */
+const parentRow = (id: string, name: string, parent_id: string | null = null) => ({ id, name, kind: "expense" as const, hidden: false, is_default: false, parent_id });
+export const ParentOpen: Story = {
+  name: "Parent open, its own lines last",
+  render: () => (
+    <StoryRoute entry="/projects/a" tabs>
+      <SectionHead title="הוצאות לפי קטגוריה" />
+      <ProjectCategories
+        project={{ ...project, categories: [...project.categories, { id: "c8", name: "תחזוקה", amount_agorot: 30_000n }] }}
+        search=""
+        sampleCategories={[parentRow("c1", "חומרים"), parentRow("c8", "תחזוקה"), parentRow("c5", "חשמל", "c8"), parentRow("c6", "גז", "c8")]}
+        sampleMonths={[]}
+      />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /תחזוקה/ }));
+  },
+};
+
 /** Longer periods: no marks and no "—" rows, only the groups. */
 export const Quarter: Story = { name: "3 months: no marks", render: () => <List withMonth={false} /> };
 

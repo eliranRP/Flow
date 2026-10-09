@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen } from "./categories-screen";
+import { parentChoices } from "./category-group";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -21,7 +22,8 @@ vi.mock("../lib/supabase", () => ({
         return Promise.resolve({
           data: [
             { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, lines: 42, split_lines: 3, loan_used: false, rehab: rpc.rehabOff ? false : null, in_rehab: !rpc.rehabOff },
-            { id: "c2", name: "קבלנים", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 31, split_lines: 0, loan_used: false, group_name: "חשבונות" },
+            { id: "c2", name: "קבלנים", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 31, split_lines: 0, loan_used: false, group_name: "חשבונות", parent_id: "c7" },
+            { id: "c7", name: "חשבונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 0, split_lines: 0, loan_used: false },
             { id: "c3", name: "ביטוח נכס", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 18, split_lines: 0, loan_used: true },
             { id: "c4", name: "אחר", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 0, split_lines: 0, loan_used: false },
             { id: "c6", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal", lines: 2 },
@@ -34,8 +36,9 @@ vi.mock("../lib/supabase", () => ({
         rpc.rehabOff = (args as { p_rehab: boolean | null }).p_rehab === false;
         return Promise.resolve({ data: null, error: null });
       }
-      if (name === "set_category_group" && (args as { p_group_name: string }).p_group_name === "נפילה") {
-        return Promise.resolve({ data: null, error: { message: "category not found", code: "P0001" } });
+      if (name === "create_category") {
+        if ((args as { p_name: string }).p_name === "נפילה") return Promise.resolve({ data: null, error: { message: "category already exists", code: "23505" } });
+        return Promise.resolve({ data: "new-1", error: null });
       }
       if (name === "rename_category" && (args as { p_name: string }).p_name === "קבלנים") {
         return Promise.resolve({ data: null, error: { message: "category already exists", code: "23505" } });
@@ -67,8 +70,8 @@ function calls(name: string) {
   return rpc.calls.filter((call) => call.name === name).map((call) => call.args);
 }
 
-async function openSheet(name: string) {
-  renderScreen(<CategoriesScreen />);
+async function openSheet(name: string, parentId?: string) {
+  renderScreen(<CategoriesScreen parentId={parentId} />);
   fireEvent.click(await screen.findByRole("button", { name: `עוד, ${name}` }));
   return screen.findByRole("dialog", { name });
 }
@@ -81,74 +84,104 @@ beforeEach(() => {
 
 describe("category sheet: group (FLOW-401)", () => {
   it("shows the group row after שינוי שם with the current group", async () => {
-    const sheet = await openSheet("קבלנים");
+    const sheet = await openSheet("קבלנים", "c7");
     const names = within(sheet).getAllByRole("button").map((button) => button.getAttribute("aria-label") ?? button.textContent);
     const rename = names.findIndex((name) => name.includes("שינוי שם"));
-    const group = names.findIndex((name) => name.startsWith("קבוצה"));
+    const group = names.findIndex((name) => name.startsWith("קטגוריית אב"));
     expect(group).toBe(rename + 1);
     expect(within(sheet).getByText("חשבונות")).toBeInTheDocument();
   });
 
-  it("has no group row on an income category", async () => {
+  it("gives an income category the row too, and a loan category none (FLOW-406)", async () => {
     renderScreen(<CategoriesScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: "עוד, תשלומי הלוואה" }));
+    const loan = await screen.findByRole("dialog", { name: "תשלומי הלוואה" });
+    expect(within(loan).queryByRole("button", { name: /^קטגוריית אב/ })).toBeNull();
+    fireEvent.click(within(loan).getByRole("button", { name: "סגירה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסות" }));
     fireEvent.click(await screen.findByRole("button", { name: "עוד, תקבול" }));
     const sheet = await screen.findByRole("dialog", { name: "תקבול" });
-    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).toBeNull();
+    expect(within(sheet).getByRole("button", { name: /^קטגוריית אב/ })).toBeInTheDocument();
+  });
+
+  it("offers the visible top-level categories of the same kind as parents (FLOW-406)", () => {
+    const rows = [
+      { id: "a", name: "חומרים", kind: "expense", hidden: false },
+      { id: "b", name: "תחזוקה", kind: "expense", hidden: false },
+      { id: "c", name: "חשמל", kind: "expense", hidden: false, parent_id: "b", group_name: "תחזוקה" },
+      { id: "d", name: "ישנה", kind: "expense", hidden: true },
+      { id: "e", name: "תשלומי הלוואה", kind: "expense", hidden: false, loan_part: "principal" },
+      { id: "f", name: "שכירות", kind: "income", hidden: false },
+    ];
+    // The hidden one, the loan category, the sub-category and the other kind are never offered.
+    expect(parentChoices(rows[0] ?? null, rows)).toEqual([{ id: "b", name: "תחזוקה" }]);
+    expect(parentChoices(rows[2] ?? null, rows)).toEqual([{ id: "a", name: "חומרים" }, { id: "b", name: "תחזוקה" }]);
   });
 
   it("applies a group on one tap, then ביטול puts the earlier one back", async () => {
     const sheet = await openSheet("חומרים");
-    fireEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    const picker = await screen.findByRole("dialog", { name: "קבוצה" });
-    expect(within(picker).getByRole("radio", { name: "בלי קבוצה" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await screen.findByRole("dialog", { name: "בחירת קטגוריית אב" });
+    expect(within(picker).getByRole("radio", { name: "בלי קטגוריית אב" })).toHaveAttribute("aria-checked", "true");
     fireEvent.click(within(picker).getByRole("radio", { name: "חשבונות" }));
-    await waitFor(() => { expect(calls("set_category_group")).toEqual([{ p_category_id: "c1", p_group_name: "חשבונות" }]); });
-    expect(await screen.findByText("הקבוצה נשמרה")).toBeInTheDocument();
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "קבוצה" })).toBeNull(); });
+    await waitFor(() => { expect(calls("set_category_parent")).toEqual([{ p_category_id: "c1", p_parent_id: "c7" }]); });
+    expect(await screen.findByText("קטגוריית האב נשמרה")).toBeInTheDocument();
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "בחירת קטגוריית אב" })).toBeNull(); });
     fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
-    await waitFor(() => { expect(calls("set_category_group")).toHaveLength(2); });
-    expect(calls("set_category_group")[1]).toEqual({ p_category_id: "c1", p_group_name: "" });
+    await waitFor(() => { expect(calls("set_category_parent")).toHaveLength(2); });
+    expect(calls("set_category_parent")[1]).toEqual({ p_category_id: "c1", p_parent_id: null });
   });
 
-  it("clears a group with בלי קבוצה", async () => {
-    const sheet = await openSheet("קבלנים");
-    fireEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    const picker = await screen.findByRole("dialog", { name: "קבוצה" });
-    fireEvent.click(within(picker).getByRole("radio", { name: "בלי קבוצה" }));
-    await waitFor(() => { expect(calls("set_category_group")).toEqual([{ p_category_id: "c2", p_group_name: "" }]); });
+  it("clears a group with בלי קטגוריית אב", async () => {
+    const sheet = await openSheet("קבלנים", "c7");
+    fireEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await screen.findByRole("dialog", { name: "בחירת קטגוריית אב" });
+    fireEvent.click(within(picker).getByRole("radio", { name: "בלי קטגוריית אב" }));
+    await waitFor(() => { expect(calls("set_category_parent")).toEqual([{ p_category_id: "c2", p_parent_id: null }]); });
   });
 
   it("closes without a write on the current group", async () => {
-    const sheet = await openSheet("קבלנים");
-    fireEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    const picker = await screen.findByRole("dialog", { name: "קבוצה" });
+    const sheet = await openSheet("קבלנים", "c7");
+    fireEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await screen.findByRole("dialog", { name: "בחירת קטגוריית אב" });
     fireEvent.click(within(picker).getByRole("radio", { name: "חשבונות" }));
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "קבוצה" })).toBeNull(); });
-    expect(calls("set_category_group")).toHaveLength(0);
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "בחירת קטגוריית אב" })).toBeNull(); });
+    expect(calls("set_category_parent")).toHaveLength(0);
   });
 
   it("makes a new group from one field, and refuses an empty name", async () => {
     const sheet = await openSheet("חומרים");
-    fireEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    const picker = await screen.findByRole("dialog", { name: "קבוצה" });
-    fireEvent.click(within(picker).getByRole("button", { name: "קבוצה חדשה" }));
-    const field = await within(picker).findByLabelText("שם הקבוצה");
+    fireEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await screen.findByRole("dialog", { name: "בחירת קטגוריית אב" });
+    fireEvent.click(within(picker).getByRole("button", { name: "קטגוריית אב חדשה" }));
+    const field = await within(picker).findByLabelText("שם הקטגוריה");
     fireEvent.click(within(picker).getByRole("button", { name: "שמירה" }));
-    expect(await within(picker).findByText("צריך שם לקבוצה")).toBeInTheDocument();
+    expect(await within(picker).findByText("צריך שם לקטגוריה")).toBeInTheDocument();
     fireEvent.change(field, { target: { value: "  חומרי   גמר " } });
     fireEvent.click(within(picker).getByRole("button", { name: "שמירה" }));
-    await waitFor(() => { expect(calls("set_category_group")).toEqual([{ p_category_id: "c1", p_group_name: "חומרי גמר" }]); });
+    await waitFor(() => { expect(calls("set_category_parent")).toEqual([{ p_category_id: "c1", p_parent_id: "new-1" }]); });
+    expect(calls("create_category")).toEqual([{ p_name: "חומרי גמר", p_kind: "expense" }]);
   });
 
   it("keeps the picker open and says why when the write fails", async () => {
     const sheet = await openSheet("חומרים");
-    fireEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    const picker = await screen.findByRole("dialog", { name: "קבוצה" });
-    fireEvent.click(within(picker).getByRole("button", { name: "קבוצה חדשה" }));
-    fireEvent.change(await within(picker).findByLabelText("שם הקבוצה"), { target: { value: "נפילה" } });
+    fireEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await screen.findByRole("dialog", { name: "בחירת קטגוריית אב" });
+    fireEvent.click(within(picker).getByRole("button", { name: "קטגוריית אב חדשה" }));
+    fireEvent.change(await within(picker).findByLabelText("שם הקטגוריה"), { target: { value: "נפילה" } });
     fireEvent.click(within(picker).getByRole("button", { name: "שמירה" }));
-    expect(await screen.findByText("הקטגוריה לא נמצאה.", {}, { timeout: 3000 })).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "קבוצה" })).toBeInTheDocument();
+    expect(await screen.findByText("יש כבר קטגוריה בשם הזה.", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "בחירת קטגוריית אב" })).toBeInTheDocument();
+  });
+
+  it("moves under a parent typed by an offered name without making a second one (FLOW-406)", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await screen.findByRole("dialog", { name: "בחירת קטגוריית אב" });
+    fireEvent.click(within(picker).getByRole("button", { name: "קטגוריית אב חדשה" }));
+    fireEvent.change(await within(picker).findByLabelText("שם הקטגוריה"), { target: { value: "חשבונות" } });
+    fireEvent.click(within(picker).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(calls("set_category_parent")).toEqual([{ p_category_id: "c1", p_parent_id: "c7" }]); });
+    expect(calls("create_category")).toHaveLength(0);
   });
 });
