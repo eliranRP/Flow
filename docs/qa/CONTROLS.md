@@ -304,6 +304,9 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Categories | מיזוג לקטגוריה אחרת | Opens the target picker "מיזוג אל", then the confirm, then `merge_category`. | never | the confirm button | toast "הקטגוריות מוזגו" | toast "לא הצלחנו למזג." | pass |
 | Categories | קטגוריה חדשה | Opens the name sheet. שמירה calls `create_category`. | never | שמירה is busy | toast "הקטגוריה נשמרה" | toast "לא הצלחנו ליצור את הקטגוריה." or "יש כבר קטגוריה בשם הזה." | pass |
 | Categories | מוסתרות | Expands the hidden rows. | never | no | the hidden list | none | pass |
+| Categories | a parent row (FLOW-406) | A category with sub-categories says "N תת-קטגוריות" with a chevron, and opens its page `/settings/categories/:id`. Sub-categories are not in the top list; one whose parent is hidden is. | never | no | the parent's page | none | unit |
+| Categories | a parent's page (FLOW-406) | The parent's name, its lines with its sub-categories' under the title, and its sub-categories with the same ⋯ sheet. No הוצאות / הכנסות switch. Back returns to קטגוריות; a parent that is gone goes back there too. | never | no | the sub-category rows | none | unit |
+| Categories | הוספת תת-קטגוריה (FLOW-406) | On a parent's page: opens "תת-קטגוריה חדשה". שמירה calls `create_category` with `p_parent_id`. | never | שמירה is busy | toast "הקטגוריה נשמרה" | as קטגוריה חדשה. מחיקה or מיזוג of a parent with sub-categories: "יש לקטגוריה תת-קטגוריות. העבירו אותן קודם." | unit |
 | Notifications | Back | Returns to settings. | never | no | route `/settings` | none | pass |
 | Install | ✕ and לא עכשיו and הבנתי | Dismiss, back to settings. | never | no | route `/settings` | none | pass |
 | Install | התקנה | Runs the browser install prompt. Android prompt only. | never | no | the browser sheet | none | pass |

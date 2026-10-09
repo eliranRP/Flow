@@ -33,6 +33,10 @@ export function groupNameError(name: string): string | undefined {
 export function groupFailureText(error: Error): string {
   if ((error as Error & { code?: string }).code === "42501") return "רק בעלי העסק יכולים לשנות קבוצה.";
   if (error.message.includes("category not found")) return "הקטגוריה לא נמצאה.";
+  // FLOW-406: a group is a parent category now, one level deep.
+  if (error.message.includes("category_parent_nested")) return "לקטגוריה הזו יש תת-קטגוריות, אז היא לא נכנסת לקבוצה.";
+  if (error.message.includes("category_parent_loan_part")) return "קטגוריה של הלוואה לא נכנסת לקבוצה.";
+  if (error.message.includes("category_parent_kind")) return "הקבוצה היא קטגוריה מסוג אחר.";
   if (error.message.includes("validation") || (error as Error & { code?: string }).code === "23514") return "שם הקבוצה לא תקין.";
   return "הקבוצה לא נשמרה.";
 }

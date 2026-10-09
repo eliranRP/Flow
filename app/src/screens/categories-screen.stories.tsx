@@ -30,6 +30,39 @@ export const CategoriesList: Story = {
   ),
 };
 
+/** FLOW-406 (mockup cat-b): a parent says how many sub-categories it has and opens them. */
+const parentCategories: Array<CategoryRow & { count?: number }> = [
+  { id: "p1", name: "חומרים", kind: "expense", hidden: false, is_default: true, count: 42 },
+  { id: "p2", name: "תחזוקה", kind: "expense", hidden: false, is_default: false, count: 0, rollup_lines: 48, children_count: 3 },
+  { id: "p3", name: "חשמל", kind: "expense", hidden: false, is_default: false, count: 21, parent_id: "p2" },
+  { id: "p4", name: "אינסטלציה", kind: "expense", hidden: false, is_default: false, count: 18, parent_id: "p2" },
+  { id: "p5", name: "ניקיון", kind: "expense", hidden: false, is_default: false, count: 9, parent_id: "p2" },
+  { id: "p6", name: "ארנונה", kind: "expense", hidden: false, is_default: true, count: 12 },
+  { id: "p7", name: "ביטוח", kind: "expense", hidden: false, is_default: true, count: 6 },
+  { id: "p8", name: "עמלות בנק", kind: "expense", hidden: false, is_default: true, count: 14 },
+  { id: "p9", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
+  { id: "p10", name: "שכירות", kind: "income", hidden: false, is_default: true, count: 30 },
+];
+
+export const CategoriesWithParent: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={parentCategories} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-406 (mockup cat-b-2): a parent's page lists its sub-categories, with its lines summed under the title. */
+export const CategoryParentPage: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories/p2" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={parentCategories} parentId="p2" />
+    </StoryRoute>
+  ),
+};
+
 /** FLOW-507: a viewer's rows have no ⋯ and keep the owner's row height. */
 export const CategoriesViewer: Story = {
   render: () => (

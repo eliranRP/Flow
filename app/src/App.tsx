@@ -148,6 +148,7 @@ function AppRoutes() {
                 <Route path="/e2e/loans" element={<DevLoans />} />
                 <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
                 <Route path="/e2e/categories" element={<DevCategories />} />
+                <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
               </Route>
               <Route path="/e2e/txn" element={<DevTransaction />} />
               <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
@@ -200,6 +201,7 @@ function AppRoutes() {
               <Route path="notifications" element={<Navigate to="/settings/notifications" replace />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="settings/categories" element={<CategoriesScreen />} />
+              <Route path="settings/categories/:parentId" element={<CategoriesScreen />} />
               <Route path="settings/connections" element={<ConnectionsScreen />} />
               <Route path="settings/loans" element={<LoansScreen />} />
               <Route path="settings/notifications" element={<NotificationsScreen />} />
