@@ -4,7 +4,7 @@ Operational notes for `mercury-sync` and its drain. The design is in [connector-
 
 ## Drain URL
 
-The connector drain posts Mercury refresh requests to Vault `flow_mercury_sync_url` when it is set, and otherwise to `flow_sync_url` with `/sumit-sync` swapped for `/mercury-sync` (FLOW-509, migration `20261013050000_mercury_sync_atomic.sql`). Setting it is optional. The SQL is in the Vault block of [sumit-connect.md](sumit-connect.md); after storing it, run `select private.schedule_connector_jobs();` as `service_role`. `scripts/check-sumit-cron.sh` then still reports "SUMIT cron jobs match".
+The connector drain posts Mercury refresh requests to Vault `flow_mercury_sync_url` when it is set, and otherwise to `flow_sync_url` with `/sumit-sync` swapped for `/mercury-sync` (FLOW-509, migration `20261013050000_mercury_sync_atomic.sql`). Setting it is optional. The SQL is in the Vault block of [sumit-connect.md](sumit-connect.md); the drain reads the Vault row on every run, so no reschedule is needed. `scripts/check-sumit-cron.sh` then still reports "SUMIT cron jobs match".
 
 ## Rolling back `mercury-sync` alone
 

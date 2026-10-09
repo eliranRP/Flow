@@ -55,9 +55,9 @@ select ok(
 );
 
 select ok(
-  position('decrypted_secret' in pg_get_function_result('public.jev_key_status()'::regprocedure)) = 0
-    and pg_get_function_result('public.jev_key_status()'::regprocedure) = 'text',
-  'it returns a word, not the secret'
+  (select p.prosecdef and p.proconfig @> array['search_path=""'] and pg_get_function_result(p.oid) = 'text'
+     from pg_proc p where p.oid = 'public.jev_key_status()'::regprocedure),
+  'security definer with an empty search_path, returning a word'
 );
 
 select * from finish();
