@@ -319,6 +319,18 @@ function writeTools() {
       effective_date: { type: "string" },
       annual_rate_percent: { type: ["number", "string", "null"] },
     }, true),
+    toolSpec("set_loan_index", "Link a loan's rate to an index (FLOW-137): rate_index il_prime (the Bank of Israel prime rate) and margin_percent, the loan's margin over it (-100 to 100, up to 4 decimals; 0.75 for prime + 0.75%). Both null unlink the loan. Linking writes no rate by itself: set_index_rate does, from a date. Returns loan_id, rate_index, rate_margin_ppm, previous (the link before) and undo_kind; undo is kind loan_index with the loan id, a conflict once the link changed again. list_loans shows rate_index and rate_margin_ppm.", {
+      idempotency_key: { type: "string" },
+      loan_id: { type: "string" },
+      rate_index: { type: ["string", "null"], enum: ["il_prime", null] },
+      margin_percent: { type: ["number", "string", "null"] },
+    }, true),
+    toolSpec("set_index_rate", "Record a new index rate from effective_date (YYYY-MM-DD) on, for example when the Bank of Israel moves prime: every loan linked to rate_index (set_loan_index) gets a rate row on that date at annual_rate_percent (0 to 100, up to 4 decimals) plus its margin, kept between 0% and 100%, as set_loan_rate would write it (a row already on that date is replaced). A loan that starts after the date, or was paid off or closed before it, is skipped and listed in skipped. Refused when no loan is linked (no loan linked to this index) or every linked loan is skipped (no linked loan is open on this date). Returns id (the write), loans (loan_id, name, rate_id, annual_rate_ppm, previous_rate_ppm), skipped and undo_kind; undo is kind index_rate with that id and puts every row back as it was, all or nothing: a conflict when any of them changed since.", {
+      idempotency_key: { type: "string" },
+      rate_index: { type: "string", enum: ["il_prime"] },
+      effective_date: { type: "string" },
+      annual_rate_percent: { type: ["number", "string"] },
+    }, true),
     toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id, unless its category is kept out of the P&L and the line is not put back in it. A part without project_id and one naming the line's project, with the same category, are the same pair (refused). Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
@@ -410,7 +422,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode", "loan_index", "index_rate"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {

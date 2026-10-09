@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
-| Dev lane 2 | FLOW-211: Flow MCP agent requests (amount filter on search, accrued interest on list_loans, company_id note) | More Flow MCP agent requests and Jev server items |
+| Dev lane 2 | FLOW-137: prime-linked loan rates (Flow MCP agent request) | More Flow MCP agent requests |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-404 השקעה card on the project page (#223) | FLOW-114 loan match on the transaction card (owner picked B, one row), FLOW-333 editor items, the detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-124 item 1 + FLOW-125, PR #253: ⊘ and the bank icon on list rows, loan part count, Latin titles (FLOW-401 merged #244) | Settings, project screens, and other areas outside the review and transaction screens |
@@ -63,7 +63,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | done (MCP side: #132 #151 #157 #162; screen fields with the UI lane) |
-| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | done (parts 1-4: #137, #143, #149, #160) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | done (#101) |
@@ -475,6 +475,15 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_undo('line_split')` and `private.line_split_parts` drop `percent` and `is_rest` (added in `20261008140000`), so an undone split comes back without its percent and rest markers.
 - [x] An `assign_expenses` `parts[]` row returns no stored parts; consider returning the cents as `split_line` does.
 - [ ] From the #155 review: no dblink test for `undo_batch` and `undo` on the same line at once (the lock order), and none for a newer `split_line` on the line by another user or token.
+
+<a id="flow-137"></a>
+### FLOW-137 · Prime-linked loan rates (Flow MCP agent request)
+- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) · **Depends on:** —
+- **What:** Some demand loans are Israeli prime plus a margin, and each Bank of Israel change meant a `set_loan_rate` call per loan. A loan can carry an index (`il_prime`) and a margin; one `set_index_rate` call writes the dated rate (index plus margin) on every loan linked to that index, with one undo.
+- **Acceptance:** pgTAP for the link, the fan-out, a loan that starts after the date, and the undo (including a conflict when a rate changed since); MCP tests; `list_loans` shows the index and margin.
+- [x] `loans.rate_index` and `loans.rate_margin_ppm`; MCP `set_loan_index` (undo `loan_index`).
+- [x] MCP `set_index_rate` writes a `loan_rates` row per linked loan (undo `index_rate`, all or nothing).
+- [x] `list_loans` adds `rate_index` and `rate_margin_ppm`.
 
 <a id="flow-312"></a>
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)
@@ -1021,7 +1030,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-701"></a>
 ### FLOW-701 · Jev phase 1
-- **Type:** PLAN FIRST · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; parts 1-4 merged in #137, #143, #149, #160) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (parts 1-4 merged in #137, #143, #149, #160; approve-all dropped by the owner) · **Depends on:** —
 - **What:** The proposed first phase: (1) make Jev run after syncs and learn from confirmations, and produce the shadow accuracy report on approved lines; (2) faster review (reasons, "approve all sure ones", income suggestions); (3) anomalies v1 in one list (SQL detects, Jev scores only candidates); (4) recurring patterns in SQL that feed missing bills and expected months. Also a review of other features where Jev can help. The numbers always come from SQL; Jev never approves ([0084](../decisions/0084-jev-auto-prefill.md)). A daily call cap per company in SQL and a usage log, since the provider has no spend cap.
 - **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions are reviewed one by one like every line, with no approve-all in the app (FLOW-324 dropped; MCP keeps `assign_expenses`); anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
 - **Acceptance:** owner answers the plan's open questions, then one PR per item.
