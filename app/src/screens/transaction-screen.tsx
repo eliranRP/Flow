@@ -1,5 +1,5 @@
 import { formatAmountText, formatMoney, type TransactionDetail } from "@flow/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
 import { LoanCategoryRow } from "./loan-match-row";
@@ -10,7 +10,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
-import { TxnNavButtons, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
+import { TxnStepNav, txnParty, usePrefetchNeighbours, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
 import { CardSwipe } from "../ui/card-swipe";
@@ -48,7 +48,7 @@ function splitProjectLabel(
 
 /** What a screen reader hears after prev or next: the kind, the party and the amount, with no bare minus. */
 function txnAnnouncement(txn: NonNullable<TransactionDetail>): string {
-  const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const party = txnParty(txn);
   const kind = txn.direction === "income" ? "הכנסה" : "הוצאה";
   const amount = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
   return `${kind}, ${party}, ${amount}`;
@@ -186,6 +186,8 @@ export function TransactionScreen({
   const txn = sample ?? detail.data;
   const parent = transactionParent(txn?.project_id, search);
   usePrefetchNeighbours(nav, txn != null);
+  const peekNext = useNeighbourParty(nav?.next ?? null);
+  const peekPrev = useNeighbourParty(nav?.prev ?? null);
   useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
   // FLOW-108. A sample card keeps its override locally; a live card reads it back from the server.
   const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
@@ -340,21 +342,22 @@ export function TransactionScreen({
       undoId.current = typeof saved.data === "string" ? saved.data : null;
     },
   });
-  // While a card loads or fails, ⋯ keeps its slot so ˄ ˅ stay under the finger,
-  // and the long title sits under the bar so it fits at 320.
-  const navEnd = nav ? (
-    <div className="ui-txn-end">
-      <TxnNavButtons nav={nav} />
-      <ReservedMenuSlot />
+  // FLOW-345: the step row stays while a card loads, fails or is gone, so the walk can go on past it.
+  // Every layout goes through this frame, so the row keeps its place in the tree and is not remounted
+  // (its focus move run again) when the card finishes loading.
+  const frame = (body: ReactNode) => (
+    <div className={nav ? "ui-txn-stepped" : undefined}>
+      {body}
+      {nav ? <TxnStepNav nav={nav} ready={txn != null} /> : null}
     </div>
-  ) : undefined;
+  );
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
-    return <ScreenState title="פרטי תנועה" backTo={parent} stacked={nav != null} action={navEnd} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
+    return frame(
+      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />,
+    );
   }
   if (!txn) {
-    return nav
-      ? <ScreenHeader layout="stacked" title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} trailing={navEnd} />
-      : <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
+    return frame(<ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />);
   }
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
@@ -402,7 +405,7 @@ export function TransactionScreen({
     }
     return undefined;
   }
-  const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const party = txnParty(txn);
   const changeProjects = withChoice(
     [
       ...(sample
@@ -443,7 +446,7 @@ export function TransactionScreen({
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
   // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
   const lineSplitHint = lineSplitRowHint(lineSplit);
-  // FLOW-329: ⋯ holds only delete, so it shows only on a manual line. ˄ ˅ keep their place without it.
+  // FLOW-329: ⋯ holds only delete, so it shows only on a manual line; its slot stays so the title keeps its place.
   const canDelete = txn.source === "manual" && !holdWrites;
   const menuButton = canDelete
     ? <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>
@@ -486,20 +489,15 @@ export function TransactionScreen({
       }}
     />
   );
-  return (
-    <div>
+  return frame(
+    <>
       <ScreenHeader
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={nav ? (
-          <div className="ui-txn-end">
-            <TxnNavButtons nav={nav} />
-            {menuButton}
-          </div>
-        ) : menuButton}
+        trailing={menuButton}
       />
-      <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} onStep={(step) => { nav?.move(step, "swipe"); }}>
+      <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-page-pad">
           <p className="t-title-3 ui-party">{party}</p>
           <p className="t-display">
@@ -640,6 +638,6 @@ export function TransactionScreen({
           remove.mutate();
         }}
       />
-    </div>
+    </>,
   );
 }
