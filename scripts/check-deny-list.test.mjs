@@ -82,8 +82,11 @@ function runCli(/** @type {Record<string, string>} */ files, /** @type {Record<s
     mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     writeFileSync(path.join(dir, file), text);
   }
-  spawnSync("git", ["init", "-q"], { cwd: dir });
-  spawnSync("git", ["add", "-A"], { cwd: dir });
+  // A pre-push hook exports GIT_DIR (and in a worktree it is absolute), so git would act on the
+  // pushing repo, not this temp one. Drop the GIT_* variables for the setup commands.
+  const gitEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
+  spawnSync("git", ["init", "-q"], { cwd: dir, env: gitEnv });
+  spawnSync("git", ["add", "-A"], { cwd: dir, env: gitEnv });
   const result = spawnSync(process.execPath, [script], { cwd: dir, encoding: "utf8", env: { PATH: process.env.PATH ?? "", ...env } });
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
 }
@@ -123,8 +126,11 @@ test("the check is required only in CI on eliranRP/Flow, not on forks", () => {
 test("the CLI exits 3 when a tracked file cannot be read", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "deny-list-cli-"));
   writeFileSync(path.join(dir, "gone.md"), "x\n");
-  spawnSync("git", ["init", "-q"], { cwd: dir });
-  spawnSync("git", ["add", "-A"], { cwd: dir });
+  // A pre-push hook exports GIT_DIR (and in a worktree it is absolute), so git would act on the
+  // pushing repo, not this temp one. Drop the GIT_* variables for the setup commands.
+  const gitEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
+  spawnSync("git", ["init", "-q"], { cwd: dir, env: gitEnv });
+  spawnSync("git", ["add", "-A"], { cwd: dir, env: gitEnv });
   spawnSync("rm", [path.join(dir, "gone.md")]);
   const result = spawnSync(process.execPath, [script], {
     cwd: dir,

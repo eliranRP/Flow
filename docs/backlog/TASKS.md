@@ -16,13 +16,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 option A part 1 (owner's pick 2026-10-09): code split so Home loads only its own code, on `claude/project-thread-qenhll` (`App.tsx`, `screen-loaders.ts`, `use-books.ts`, `setup/route.tsx`, `vite.config.ts`) | FLOW-804 A part 2: size budget, 2-second Home test, phone flow tests |
 | Dev lane 2 | FLOW-406 plan recorded as decision 0164 (docs only), PR #352; FLOW-502 server PR 2 merged #343 | FLOW-406 server 1: sub-categories (`parent_id`, roll-ups, MCP) |
-| UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
+| UI lane 1 | FLOW-340 option C (owner's pick 2026-10-09), PR #338 on `claude/project-thread-0wt3o6`: the short project page (profit on the band, one row per section, each its own screen); merges after the owner's yes on shots (FLOW-342 + FLOW-344 merged #314) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-505 follow-up: "ייבוא מ" sent with the connect call to both connect functions; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-339 VAT on the transaction amount's line | The FLOW-506 shared demo card |
+| Backlog bug fixes | FLOW-506 shared demo card and tab bar | Next small ready item from the lane manager |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -112,15 +112,17 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) |
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
-| 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
+| 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | in progress (option C, UI lane 1) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
-| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | in progress (owner picked A; #314) |
+| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | done (#314) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
-| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
+| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | done (#314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | done (UI lane 2, #336: option D, owner 2026-10-09) |
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (UI lane 4, #345: Search chips, loans at 320, pinned שמירה) |
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (UI lane 4, #345) |
+| 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
+| 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -858,9 +860,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-340"></a>
 ### FLOW-340 · A lighter השקעה card on the project page
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-404 (#223) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** in progress (option C, UI lane 1) · **Depends on:** FLOW-404 (#223) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The project page now holds 7 figures; the השקעה card adds two "X = Y" captions under the equities (one wraps to two lines), a bordered card with an inner hairline grid, and the page runs 1.8 screens at 393. That goes against the light-screens rule (§2.1, §5). Options: (A) drop the captions and inner hairlines and keep the card; (B) a one-row "השקעה · הון נוכחי ₪850,000 ›" that opens the full card in a sheet.
 - **Acceptance:** owner's choice on a card with 390px PNGs of each option; a design log entry.
+- **Plan (option C, the owner's pick 2026-10-09: a short project page; UI lane 1):**
+  - The band keeps the name, the period bar and the profit figure only; the income and expense figures move to rows.
+  - Below the band, one list of one-line rows, each with its figure and a chevron: הכנסות (opens Search for the project's income in the period), הוצאות (`/projects/:id/expenses`: the budget bar, the categories and the expected months), השקעה (`/projects/:id/investment`: the full card; the row shows "הון נוכחי ₪X" and is left out for the overhead project or with no figures), הלוואות (open loans only; one loan opens its page, several open `/projects/:id/loans`), תנועות (`/projects/:id/transactions`: the project's lines, a split line showing the project's part), לפי חודש (`/projects/:id/months`).
+  - The overhead switch moves into the ⋯ menu, with "נתוני השקעה" there when the השקעה row is hidden.
+  - Each section is its own screen with Back to the project; the period travels in the URL. `_redirects` gets the four routes.
+  - The page fits one screen at 390x844 with two loans and investment data.
+  - Merges only after the owner sees real-app shots at 390 and 320 (light and one dark).
 
 <a id="flow-341"></a>
 ### FLOW-341 · A shorter ⋯ sheet in Settings → Categories
@@ -870,7 +879,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-342"></a>
 ### FLOW-342 · Two magnifiers on the Projects tab
-- **Type:** PLAN FIRST · **Status:** in progress (owner picked A on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** done (#314; owner picked A on 2026-10-09) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The Projects tab shows two identical magnifiers about 100px apart: the header icon opens transaction search and the field below filters projects. Options: (A) the field alone, and a project-name miss offers "חיפוש בתנועות"; (B) keep both and label the header icon.
 - **Acceptance:** owner's choice on a card; a design log entry.
 
@@ -885,7 +894,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-344"></a>
 ### FLOW-344 · Loan setup preview while the form is incomplete
-- **Type:** PLAN FIRST · **Status:** in progress (owner picked B, hide, on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **Type:** PLAN FIRST · **Status:** done (#314; owner picked B, hide, on 2026-10-09) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
 - **What:** With the amount cleared, the preview keeps the last result (₪599.55 a month) and only turns muted, so it still reads as this loan's payment. Options: (A) "—" in place of the figure until the form is valid; (B) hide the preview until then.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
@@ -920,6 +929,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** done (UI lane 4, #345; design lead, 2026-10-09: a consistency fix, no owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
 - **What:** Every "תקופה" sheet uses Home's list, words and order through one shared sheet: חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם, with Home's hints. Search's sheet today says כל התקופה first and "2026" for the year; any other period picker (the breakdown's) follows too. Mockup: the project's mockups/plan-first/flow-349/a.png (today: current.png).
 - **Acceptance:** one shared component and story; Search, breakdown and Home use it; a design log entry.
+
+<a id="flow-350"></a>
+### FLOW-350 · Phone polish after the October 9 midday builds (cycle 9)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 9 phone review of deploy 2c3bb3c, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-9/shots/`.
+- [ ] SUMIT connect sheet at 320 and 375x667: after מתאריך the body scrolls and only 9px of חיבור stay in view. With מההתחלה, חיבור sits 15px under the segmented control, against about 37px under each field, so it jumps 60px when the option changes. Pin חיבור in the sheet's foot, as the loan setup sheet does (FLOW-347), and give the segmented control the fields' reserved line. Mercury's sheet still fits.
+- [ ] Date sheet ("ייבוא מתאריך" and the loan setup date sheet): the month arrows are ‹ › text glyphs that RTL mirrors, so both point at the month name. Use outward SVG chevrons (§3.4). The picked day is a square box where mockup 15b has a filled circle; at 320 a rounded sliver shows beside it. This also holds the 15b date details that a done FLOW-115 item left open.
+- [ ] Review reminder card on an iPhone tab: "למסך הבית" in the card's note is plain text, with הבנתי as the only action. Link it to the install steps, as Settings → התראות does.
+- [ ] Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
 ## Projects and reports
 
@@ -1011,6 +1030,18 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** in-progress (#163) · **Depends on:** —
 - [x] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review. (#163: `p_basis`, default invoiced; the app passes its basis.)
 
+<a id="flow-413"></a>
+### FLOW-413 · Monthly cash-flow view (תזרים חודשי)
+- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); dev lane 2 writes the data plan with FLOW-103, then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
+- **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out, and made it the main monthly view on Home. Today the profit view leaves the loan out, so rent alone looks positive.
+  - Money out: the full monthly loan payment (principal, interest and escrow), holding costs and utilities, purchase and renovation money.
+  - Money in: loan money received is left out by default, with a switch to count it.
+  - The user can take chosen categories (a "מה בתזרים" sheet) or single transactions (a "בתזרים" switch on the transaction page) out of the view.
+  - Profit stays a correct second view.
+- **Owner's pick:** "Cash first" (frames b and b-2). Home shows the month's cash with no switch: the figure, then נכנס and יצא rows that drill down, then a quiet "רווח החודש" row that opens today's profit view, then the earlier months.
+- **Mockups:** `mockups/plan-first/flow-413/` in the project files: b, b-2 (picked), exclude, tx; a and a-2 were the switch option.
+- **Acceptance:** a data plan with FLOW-103 (a cash read per month, an exclusion list per company, a per-line flag), then the UI; the owner sees real-app shots before the UI merges.
+
 ## Onboarding, Settings and connectors
 
 <a id="flow-501"></a>
@@ -1055,7 +1086,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Demos use hand-built copies of the review card and tab bar; extract a shared presentational piece (the demo TabBar also writes the shared add-trigger ref and needs a router).
+- [x] Demos use hand-built copies of the review card and tab bar; extract a shared presentational piece (the demo TabBar also writes the shared add-trigger ref and needs a router). (Backlog bug fixes, 2026-10-09: the demos draw ReviewCard and the router-free TabBarPicture.)
 - [x] (Backlog bug fixes, 2026-10-09: `demoVat` takes the standard rate on the before-VAT amount, and the formatter prints it; the demos still read ₪1,530 and ₪421) Demo VAT amounts are hard-coded strings; derive them from the formatter.
 - [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; `data-setup-visible` exists only for tests.
 - [x] (Backlog bug fixes, 2026-10-09: `Skeleton` takes `still` and `AppIcon` takes `size="tile"`; two dead rules (`.ui-review`, `.ui-setup-pressed`) are gone; nothing on screen changes) Demo CSS reaches into component internals.

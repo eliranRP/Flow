@@ -97,14 +97,14 @@ describe("FLOW-335 project band", () => {
     expect(screen.queryByText("פעיל")).not.toBeInTheDocument();
   });
 
-  it("puts the overhead switch under the categories, and לפי חודש is a plain row with a chevron", () => {
+  it("keeps the overhead switch in the ⋯ menu, and לפי חודש is a plain row with a chevron (FLOW-340 C)", () => {
     render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1?period=month&at=2026-09"));
     const row = screen.getByRole("link", { name: /לפי חודש/ });
     expect(row).toHaveClass("ui-row");
     expect(row.closest(".ui-banner")).toBeNull();
-    const category = screen.getByText("חומרים", { selector: ".ui-row-title, .ui-row-title *" });
-    const toggle = screen.getByRole("switch", { name: /אחרי חלק בהוצאות כלליות/ });
-    expect(category.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: /אחרי חלק בהוצאות כלליות/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    expect(screen.getByRole("switch", { name: /אחרי חלק בהוצאות כלליות/ })).toBeInTheDocument();
   });
 });
 

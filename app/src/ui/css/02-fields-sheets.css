@@ -192,6 +192,12 @@
   color: var(--color-text-muted);
 }
 
+/* A line kept out of profit fades whole, so it reads as set aside (owner's pick C, 2026-10-09).
+   The children fade, not the row, so the focus ring and the pressed tint keep full strength. */
+.ui-row-set-aside > * {
+  opacity: 0.5;
+}
+
 .ui-nowrap {
   white-space: nowrap;
 }

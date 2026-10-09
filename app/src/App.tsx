@@ -229,6 +229,11 @@ function AppRoutes() {
                 <Route path="projects" element={<ProjectsScreen />} />
                 <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
                 <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
+                {/* FLOW-340 C: the screens the project page's rows open. */}
+                <Route path="projects/:projectId/expenses" element={<ProjectDetailScreen section="expenses" />} />
+                <Route path="projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
+                <Route path="projects/:projectId/loans" element={<ProjectDetailScreen section="loans" />} />
+                <Route path="projects/:projectId/transactions" element={<ProjectDetailScreen section="transactions" />} />
                 <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
                 {/* FLOW-334: on the dev server ?preview=1 shows sample figures here; a build keeps the screen. */}
                 <Route path="flow/:direction" element={import.meta.env.DEV ? <DevBreakdownGate /> : <BreakdownScreen />} />
