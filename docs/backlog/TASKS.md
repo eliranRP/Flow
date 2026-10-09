@@ -20,7 +20,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | FLOW-106 screens: the loan match sheet says what one tap writes (schedule row, catch-up installments, demand loans), then the split editor (FLOW-339 merged #362) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-325 §10 option A (the פיצול לפי קטגוריות link in שינוי: `ui/change-picker.tsx`, `ui/change-sheet.tsx`, `screens/change-form.tsx`, `approve-review.ts`) + FLOW-347 שויכו היום heads (`ui/month-list.tsx`, `css/11-month-lists.css` `.ui-group-*`) | Next UI task for the review and transaction screens |
 | UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story (the VAT line and period words follow once #367 and #362 land), PR on `claude/project-thread-rg28jx` | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
+| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-507/506 write-gate tests: inner gates after a role change, Settings switches, setup first step hold (Mercury follow-ups merged #365) | FLOW-506 setup business step and install rows unify, after #358 |
@@ -954,7 +954,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-351"></a>
 ### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
-- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 in #372; items 1 and 2 follow once #367 and #362 land) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 in #372; items 1 and 2 follow in a second PR once #367 lands) · **Depends on:** —
 - **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
 - [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
 - [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
