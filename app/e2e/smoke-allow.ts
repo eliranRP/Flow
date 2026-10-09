@@ -1,20 +1,33 @@
 // The live smoke's write guard: which requests may go through. Everything else is aborted.
 
-// List screens only, plus the reads those screens make on load: the company currency on
-// Settings, the Jev reasons and flags for the open review lines, the late bills on Home and the
-// expected months on a project (FLOW-403; all `stable`). Detail RPCs stay on the owner and are
-// not called.
+// Every read RPC the app calls: the functions the migrations define as `stable` (a promise not to
+// change the database). scripts/smoke-allow-rpcs.test.mjs fails when the app calls a stable RPC that is
+// missing here, or when a volatile one is listed, so a new screen read cannot turn the smoke red.
 export const readRpcs = new Set([
   "expected_months",
+  "get_breakdown",
+  "get_breakdown_lines",
   "get_dashboard",
+  "get_home",
   "get_line_meta",
+  "get_line_split",
+  "get_loan_split",
+  "get_profit_months",
+  "get_project",
+  "get_transaction",
   "jev_suggestions",
+  "list_auto_assigned_today",
   "list_categories",
+  "list_project_category",
   "list_review",
+  "list_skipped_review",
   "list_unpaid",
   "mcp_company_loan_currency",
   "missing_bills",
+  "project_category_months",
+  "project_waiting",
   "review_anomalies",
+  "search_transactions",
   "sumit_status",
 ]);
 
@@ -33,7 +46,7 @@ function parsed(url: string): URL | null {
 /**
  * True when the request reads only. GET, HEAD and OPTIONS go anywhere. On the Supabase host
  * (`supabaseUrl`'s origin, so a look-alike path on another host is not trusted) these POSTs
- * also read: the token refresh, the flow-mcp status call and the list RPCs above. The auth
+ * also read: the token refresh, the flow-mcp status call and the read RPCs above. The auth
  * user read is GET only, and every other `/auth/v1/` path, signup and admin included, is a write.
  */
 export function isReadRequest(method: string, url: string, supabaseUrl: string): boolean {
