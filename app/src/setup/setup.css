@@ -142,3 +142,9 @@
 .ui-setup-card-advanced {
   color: var(--color-text-secondary);
 }
+
+/* FLOW-502: the evening reminder card on step 5 spans the body like the steps above it. */
+.ui-setup-body .ui-prompt-card {
+  max-inline-size: none;
+  margin: var(--space-2) 0 0;
+}
