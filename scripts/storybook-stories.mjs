@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // The story files a set of changed files reaches, for the pre-push every-story check.
-// Usage: git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs
-// Prints "<tier> <story file>" per line, the file as Storybook's index names it (./src/x.stories.tsx),
-// or "all" when a change reaches every story (the Storybook config, the lockfile, the smoke itself).
+// Usage: git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --index <index.json> [--budget N]
+// Prints the story files to open, one per line as Storybook's index names them (./src/x.stories.tsx),
+// or "all" when a change reaches every story (the Storybook config, the lockfile, the smoke itself),
+// and a last line "partial" when the budget left some reached stories to main.
 // Tier 1: a changed story file. Tier 2: a story that imports a changed file. Tier 3: a story whose
-// imports reach one further down. The check takes whole tiers while they fit its story budget.
+// imports reach one further down. Whole tiers are taken, nearest first, while their stories fit the
+// budget (default 250); the first tier is always taken.
 // CSS picks no story: the every-story check looks for console and network errors, which CSS
 // can't cause; the layout specs run whenever the app changes.
 import fs from "node:fs";
@@ -53,14 +55,51 @@ export function selectStories(changed, { root }) {
   return out.sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]));
 }
 
+/**
+ * @param {Array<[number, string]>} tiered from selectStories
+ * @param {Map<string, number>} counts stories per file, from Storybook's index
+ * @param {number} budget
+ * @returns {{ files: string[], partial: boolean }}
+ */
+export function pickStories(tiered, counts, budget) {
+  const files = [];
+  let count = 0;
+  for (const tier of [...new Set(tiered.map(([t]) => t))]) {
+    const inTier = tiered.filter(([t]) => t === tier).map(([, file]) => file);
+    const size = inTier.reduce((sum, file) => sum + (counts.get(file) ?? 0), 0);
+    if (files.length > 0 && count + size > budget) return { files, partial: true };
+    files.push(...inTier);
+    count += size;
+  }
+  return { files, partial: false };
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const arg = (name) => {
+    const at = process.argv.indexOf(name);
+    return at > 0 ? process.argv[at + 1] : undefined;
+  };
+  const indexPath = arg("--index");
+  if (!indexPath) throw new Error("usage: storybook-stories.mjs --index <index.json> [--budget N]");
   const changed = fs
     .readFileSync(0, "utf8")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
   const stories = selectStories(changed, { root });
-  if (stories === "all") console.log("all");
-  else for (const [tier, story] of stories) console.log(`${String(tier)} ${story}`);
+  if (stories === "all") {
+    console.log("all");
+  } else {
+    const counts = new Map();
+    for (const entry of Object.values(JSON.parse(fs.readFileSync(indexPath, "utf8")).entries)) {
+      if (entry.type === "story") counts.set(entry.importPath, (counts.get(entry.importPath) ?? 0) + 1);
+    }
+    // A story file the index doesn't name means the paths drifted: fail rather than open nothing.
+    const missing = stories.filter(([, file]) => !counts.has(file)).map(([, file]) => file);
+    if (missing.length > 0) throw new Error(`not in Storybook's index: ${missing.join(", ")}`);
+    const { files, partial } = pickStories(stories, counts, Number(arg("--budget") ?? "250"));
+    for (const file of files) console.log(file);
+    if (partial) console.log("partial");
+  }
 }

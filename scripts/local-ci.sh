@@ -327,43 +327,47 @@ storybook_smoke() {
     echo "local-ci: Storybook smoke skipped: these app inputs already passed."
     return 0
   fi
-  local base="" commit tree changed scope
+  local base="" commit tree changed scope logs_dir
+  logs_dir="$(mktemp -d)"
   if (( skips )); then
     while read -r commit tree; do
       if has_mark "tree-smoke-$tree"; then base="$commit"; break; fi
     done < <(ancestors)
   fi
   [[ -n "$base" ]] || base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
-  scope="$(mktemp)"
   if [[ -n "$base" ]]; then
     changed="$(git diff --name-only "$base" HEAD)"
-    if ! grep -qE '^(app|packages|design)/|^(package\.json|pnpm-lock\.yaml)$' <<<"$changed"; then
+    if ! grep -qE '^(app|packages|design|supabase/functions/_shared)/|^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json)$|^scripts/(storybook-stories|e2e-specs|check-prod-bundle|hosted-env)\.mjs$' <<<"$changed"; then
       echo "local-ci: Storybook smoke skipped: no app change since ${base:0:7}."
-      rm -f "$scope"
+      rm -rf "$logs_dir"
       return 0
     fi
-    node scripts/storybook-stories.mjs <<<"$changed" >"$scope"
   else
-    echo all >"$scope"
-  fi
-  if grep -qx all "$scope"; then
-    echo "local-ci: the every-story check opens every story."
-  else
-    echo "local-ci: the every-story check opens the stories in $(wc -l <"$scope") files the changes since ${base:0:7} reach (up to ${FLOW_STORY_BUDGET:-250} stories; main opens the rest)."
+    changed="pnpm-lock.yaml"
   fi
   # Cloud containers ship a Chromium; use it when Playwright's own can't be downloaded.
   if ! pnpm --filter @flow/app exec playwright install chromium && [[ -x /opt/pw-browsers/chromium ]]; then
     echo "local-ci: using /opt/pw-browsers/chromium." >&2
     export FLOW_CHROMIUM_PATH=/opt/pw-browsers/chromium
   fi
-  local build_log
-  build_log="$(mktemp)"
-  pnpm build-storybook >"$build_log" 2>&1 || { cat "$build_log"; return 1; }
-  rm -f "$build_log"
+  scope="$logs_dir/storybook-scope.txt"
+  pnpm build-storybook >"$logs_dir/build-storybook.log" 2>&1 || { cat "$logs_dir/build-storybook.log"; return 1; }
+  node scripts/storybook-stories.mjs --index app/storybook-static/index.json --budget "${FLOW_STORY_BUDGET:-250}" \
+    <<<"$changed" >"$scope"
+  if grep -qx all "$scope"; then
+    echo "local-ci: the every-story check opens every story."
+  else
+    echo "local-ci: the every-story check opens the stories of $(grep -cvx partial "$scope" || true) files the changes since ${base:0:7} reach."
+  fi
   FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --workers="${FLOW_STORY_WORKERS:-4}"
-  rm -f "$scope"
   mark_green "smoke-$app_key"
-  mark_green "tree-smoke-$head_tree"
+  # Only a run that opened every story the change reaches moves the next run's base here.
+  if grep -qx partial "$scope"; then
+    echo "local-ci: more stories than the budget; main opens the rest."
+  else
+    mark_green "tree-smoke-$head_tree"
+  fi
+  rm -rf "$logs_dir"
 }
 
 if (( ! full )); then

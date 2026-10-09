@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { selectStories } from "./storybook-stories.mjs";
+import { pickStories, selectStories } from "./storybook-stories.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const select = (...changed) => selectStories(changed, { root });
@@ -25,4 +25,14 @@ test("CSS and files outside the app pick no story; the Storybook config and lock
   assert.equal(select(".storybook/x", "app/.storybook/preview.tsx"), "all");
   assert.equal(select("pnpm-lock.yaml"), "all");
   assert.equal(select("app/e2e/storybook-static.spec.ts"), "all");
+});
+
+test("whole tiers fit the budget, nearest first; the first tier always goes", () => {
+  const tiered = [[1, "a"], [2, "b"], [2, "c"], [3, "d"]];
+  const counts = new Map([["a", 300], ["b", 10], ["c", 10], ["d", 5]]);
+  assert.deepEqual(pickStories(tiered, counts, 250), { files: ["a"], partial: true });
+  counts.set("a", 10);
+  assert.deepEqual(pickStories(tiered, counts, 30), { files: ["a", "b", "c"], partial: true });
+  assert.deepEqual(pickStories(tiered, counts, 35), { files: ["a", "b", "c", "d"], partial: false });
+  assert.deepEqual(pickStories([], counts, 35), { files: [], partial: false });
 });

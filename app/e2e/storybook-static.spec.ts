@@ -90,34 +90,16 @@ function recordProblems(page: Page, problems: string[]) {
 }
 
 /**
- * The pre-push gate checks only the stories a change reaches: FLOW_STORY_SCOPE names a file of
- * "<tier> <story file>" lines from scripts/storybook-stories.mjs ("all" or unset checks every
- * story). Whole tiers are taken, nearest first, while the stories fit FLOW_STORY_BUDGET; the first
- * tier is always taken. main checks every story before each deploy.
+ * The pre-push gate opens only the stories a change reaches: FLOW_STORY_SCOPE names a file of story
+ * files from scripts/storybook-stories.mjs ("all", or unset, opens every story). main opens every
+ * story before each deploy.
  */
 function scopedStories(all: StoryEntry[]): StoryEntry[] {
   const scopeFile = process.env.FLOW_STORY_SCOPE;
   if (!scopeFile) return all;
-  const lines = readFileSync(scopeFile, "utf8").split("\n").map((line) => line.trim()).filter(Boolean);
-  if (lines.includes("all")) return all;
-  const budget = Number(process.env.FLOW_STORY_BUDGET ?? "250");
-  const tiers = new Map<number, Set<string>>();
-  for (const line of lines) {
-    const [tier, file] = line.split(" ");
-    const files = tiers.get(Number(tier)) ?? new Set<string>();
-    files.add(file ?? "");
-    tiers.set(Number(tier), files);
-  }
-  const picked = new Set<string>();
-  let count = 0;
-  for (const tier of [...tiers.keys()].sort((a, b) => a - b)) {
-    const files = tiers.get(tier) ?? new Set<string>();
-    const size = all.filter((entry) => entry.importPath !== undefined && files.has(entry.importPath)).length;
-    if (picked.size > 0 && count + size > budget) break;
-    for (const file of files) picked.add(file);
-    count += size;
-  }
-  return all.filter((entry) => entry.importPath !== undefined && picked.has(entry.importPath));
+  const files = new Set(readFileSync(scopeFile, "utf8").split("\n").map((line) => line.trim()).filter(Boolean));
+  if (files.has("all")) return all;
+  return all.filter((entry) => entry.importPath !== undefined && files.has(entry.importPath));
 }
 
 /**
