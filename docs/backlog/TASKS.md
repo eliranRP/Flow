@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 plan recorded as decision 0164 (docs only), PR #352; FLOW-502 server PR 2 merged #343 | FLOW-406 server 1: sub-categories (`parent_id`, roll-ups, MCP) |
-| UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
+| UI lane 1 | FLOW-340 option C (owner's pick 2026-10-09), PR #338 on `claude/project-thread-0wt3o6`: the short project page (profit on the band, one row per section, each its own screen); merges after the owner's yes on shots (FLOW-342 + FLOW-344 merged #314) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
@@ -112,11 +112,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) |
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
-| 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
+| 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | in progress (option C, UI lane 1) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
-| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | in progress (owner picked A; #314) |
+| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | done (#314) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
-| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
+| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | done (#314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | done (UI lane 2, #336: option D, owner 2026-10-09) |
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (UI lane 4, #345: Search chips, loans at 320, pinned שמירה; UI lane 3, #359: the Categories move row) |
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | done (owner picked A; UI lane 3, #359) |
@@ -861,9 +861,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-340"></a>
 ### FLOW-340 · A lighter השקעה card on the project page
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-404 (#223) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** in progress (option C, UI lane 1) · **Depends on:** FLOW-404 (#223) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The project page now holds 7 figures; the השקעה card adds two "X = Y" captions under the equities (one wraps to two lines), a bordered card with an inner hairline grid, and the page runs 1.8 screens at 393. That goes against the light-screens rule (§2.1, §5). Options: (A) drop the captions and inner hairlines and keep the card; (B) a one-row "השקעה · הון נוכחי ₪850,000 ›" that opens the full card in a sheet.
 - **Acceptance:** owner's choice on a card with 390px PNGs of each option; a design log entry.
+- **Plan (option C, the owner's pick 2026-10-09: a short project page; UI lane 1):**
+  - The band keeps the name, the period bar and the profit figure only; the income and expense figures move to rows.
+  - Below the band, one list of one-line rows, each with its figure and a chevron: הכנסות (opens Search for the project's income in the period), הוצאות (`/projects/:id/expenses`: the budget bar, the categories and the expected months), השקעה (`/projects/:id/investment`: the full card; the row shows "הון נוכחי ₪X" and is left out for the overhead project or with no figures), הלוואות (open loans only; one loan opens its page, several open `/projects/:id/loans`), תנועות (`/projects/:id/transactions`: the project's lines, a split line showing the project's part), לפי חודש (`/projects/:id/months`).
+  - The overhead switch moves into the ⋯ menu, with "נתוני השקעה" there when the השקעה row is hidden.
+  - Each section is its own screen with Back to the project; the period travels in the URL. `_redirects` gets the four routes.
+  - The page fits one screen at 390x844 with two loans and investment data.
+  - Merges only after the owner sees real-app shots at 390 and 320 (light and one dark).
 
 <a id="flow-341"></a>
 ### FLOW-341 · A shorter ⋯ sheet in Settings → Categories
@@ -873,7 +880,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-342"></a>
 ### FLOW-342 · Two magnifiers on the Projects tab
-- **Type:** PLAN FIRST · **Status:** in progress (owner picked A on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** done (#314; owner picked A on 2026-10-09) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The Projects tab shows two identical magnifiers about 100px apart: the header icon opens transaction search and the field below filters projects. Options: (A) the field alone, and a project-name miss offers "חיפוש בתנועות"; (B) keep both and label the header icon.
 - **Acceptance:** owner's choice on a card; a design log entry.
 
@@ -888,7 +895,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-344"></a>
 ### FLOW-344 · Loan setup preview while the form is incomplete
-- **Type:** PLAN FIRST · **Status:** in progress (owner picked B, hide, on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **Type:** PLAN FIRST · **Status:** done (#314; owner picked B, hide, on 2026-10-09) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
 - **What:** With the amount cleared, the preview keeps the last result (₪599.55 a month) and only turns muted, so it still reads as this loan's payment. Options: (A) "—" in place of the figure until the form is valid; (B) hide the preview until then.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
