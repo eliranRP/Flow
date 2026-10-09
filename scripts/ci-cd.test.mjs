@@ -658,3 +658,17 @@ test("the gate seeds the edge runtime's npm cache and waits for a local Supabase
   const retry = local.indexOf("if ! up; then");
   assert.ok(retry > 0 && local.indexOf("{{.State.Health.Status}}", retry) > retry && local.indexOf("up || rc=$?", retry) > retry);
 });
+
+test("the gate treats design images as docs and asks storybook-stories.mjs whether the build changed", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const pattern = local.match(/^docs_files='([^']+)'$/m)?.[1];
+  assert.ok(pattern, "docs_files is one quoted ERE");
+  const docsOnly = (files) => files.every((file) => new RegExp(pattern).test(file));
+  assert.equal(docsOnly(["design/screens/14-settings-light.png", "design/logo/icon/a.svg", "docs/x.md", "README.md"]), true);
+  assert.equal(docsOnly(["design/screens/a.png", "design/system/implementation-tokens.css"]), false);
+  assert.equal(docsOnly(["design/screens/a.png", "app/src/a.tsx"]), false);
+  assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then kind=docs'));
+  assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then\n  mode="docs"'));
+  assert.ok(local.includes('"$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes'));
+  assert.ok(local.includes('${base:+--base "$base"} <<<"$changed" >"$scope"'));
+});

@@ -18,7 +18,7 @@
     "test:jev": "deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared",
     "test:e2e": "pnpm --filter @flow/app test:e2e",
     "test:e2e:live": "pnpm --filter @flow/app test:e2e:live",
-    "check:bundle": "node scripts/check-prod-bundle.mjs && node scripts/check-jev-bundle.mjs",
+    "check:bundle": "node scripts/check-prod-bundle.mjs && node scripts/check-jev-bundle.mjs && node scripts/check-bundle-budget.mjs",
     "check:reviewer-bundle": "node scripts/check-prod-bundle.mjs --reviewer && node scripts/check-jev-bundle.mjs",
     "check:jev-bundle": "node scripts/check-jev-bundle.mjs",
     "storybook": "pnpm --filter @flow/app storybook",

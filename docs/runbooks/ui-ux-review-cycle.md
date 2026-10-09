@@ -23,6 +23,7 @@ A recurring review of the running app on real phone sizes. The owner asked for i
 - The `/e2e/*` fixtures of screens that have the tab bar draw it, on their own tab (FLOW-334).
 - `/flow/expense?preview=1` and `/flow/income?preview=1` (and the lines they open) show invented figures on the dev server. There is no `/flow/out`: an unknown side lands on Home.
 - `/reviewer/transaction/1` opens the first sample row.
+- Capture with service workers blocked (`serviceWorkers: "block"` in the Playwright context). Otherwise the app's service worker can serve the Storybook manager in place of a story, and the shot is blank (cycle 13).
 
 ## Known fixture gaps
 
