@@ -18,8 +18,12 @@ A recurring review of the running app on real phone sizes. The owner asked for i
 6. The report is published as an artifact. UI building goes through the two UI lanes ([design team](../design/DESIGN-TEAM.md)), at most 2 dev tasks in parallel.
 7. The design lead reads the [design log](../design/log/README.md) entries since the last cycle and copies each `Rule:` line into DESIGN-RULES in the cycle's backlog PR.
 
+## Fixtures
+
+- The `/e2e/*` fixtures of screens that have the tab bar draw it, on their own tab (FLOW-334).
+- `/flow/expense?preview=1` and `/flow/income?preview=1` (and the lines they open) show invented figures on the dev server. There is no `/flow/out`: an unknown side lands on Home.
+- `/reviewer/transaction/1` opens the first sample row.
+
 ## Known fixture gaps
 
-- `/e2e/*` pages have no tab bar.
 - `/e2e/expense` and `/e2e/project` are not real screens.
-- `/flow/out?preview=1` lands on the empty Home.

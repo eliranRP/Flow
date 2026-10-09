@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
-import { LoanMatchOffer } from "./loan-match";
+import { LoanMatchOffer, LoanMatchSkeleton, loanMatchHint } from "./loan-match";
 
 /**
  * FLOW-114 option B. An unmatched loan payment offers "שיוך להלוואה" under the category row;
@@ -46,7 +46,7 @@ function Offer({ loanCount = 1, open: startOpen = false, ...props }: OfferArgs) 
         lineCurrency="USD"
         loans={LOANS.slice(0, loanCount)}
         busy={false}
-        matchHint={loanCount === 1 ? LOANS[0].name : undefined}
+        matchHint={loanMatchHint(LOANS.slice(0, loanCount), props.lineCurrency ?? "USD")}
         sheetOpen={open}
         onSheetOpenChange={setOpen}
         onMatch={() => undefined}
@@ -70,6 +70,14 @@ const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 export const MatchRow: Story = {};
 export const MatchRowDark: Story = { ...dark390 };
 export const MatchRow320: Story = { ...light320 };
+/** FLOW-115: two loans in the line's currency; the hint counts them, so the row keeps its height. */
+export const MatchRowTwoLoans: Story = { args: { loanCount: 2 } };
+/** FLOW-115: no loan in the line's currency; the hint says so in the sheet's words. */
+export const MatchRowNoLoanInCurrency: Story = { args: { lineCurrency: "ILS" } };
+/** FLOW-115: a long loan name stays on one line, so the row keeps its height. */
+export const MatchRowLongName: Story = { args: { matchHint: "משכנתא ארוכה מאוד מבנק לדוגמה על הנכס ברחוב הארוך ביותר בעיר, 320" }, ...light320 };
+/** FLOW-115: the row while the loans load. Same height as the rows above. */
+export const MatchRowLoading: StoryObj = { render: () => <LoanMatchSkeleton /> };
 /** Two loans: the picker lists both; the paid-off one is off with its reason. */
 export const Picker: Story = { args: { loanCount: 2, open: true } };
 /** FLOW-115: the only loans are in another currency, so the sheet names the line's currency. */
