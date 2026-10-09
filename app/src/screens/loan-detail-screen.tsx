@@ -182,11 +182,18 @@ function LoanDetailLoading({ back }: { back: string }) {
     <div aria-busy="true">
       <ScreenHeader barOnly kicker="הלוואות" backTo={back} />
       <p className="sr-only" role="status">טוען…</p>
-      <div className="ui-page-pad ui-loan-head">
-        <Skeleton width="md" />
+      {/* FLOW-115: the name, the balance and the status hold their loaded lines, so nothing moves when the read lands. */}
+      <div className="ui-page-pad" aria-hidden="true">
+        <p className="t-title-1 ui-loan-skel-title ui-loan-skel-line"><Skeleton width="md" /></p>
+        <div className="ui-loan-head">
+          <p className="t-display ui-loan-skel-line"><Skeleton width="lg" /></p>
+          <div className="ui-status-row">
+            <span className="ui-status ui-skeleton-bar ui-loan-skel-pill"><span className="ui-chip-label">{"\u00a0"}</span></span>
+          </div>
+        </div>
       </div>
       <SectionHead title="פרטים" />
-      <List>
+      <List className="ui-loan-skel-rows">
         {["a", "b", "c", "d", "e", "f"].map((key) => <ListRow key={key} variant="skeleton" />)}
       </List>
     </div>
