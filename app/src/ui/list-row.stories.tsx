@@ -183,7 +183,7 @@ function MercuryRows() {
   );
 }
 
-/** A line kept out of profit fades whole, next to one that counts (owner's pick C, 2026-10-09). */
+/** A line kept out of profit fades but keeps its hint readable, next to one that counts (owner's pick C, FLOW-352). */
 function SetAsideRows() {
   return (
     <List>
@@ -203,6 +203,9 @@ export const SetAsideDark: Story = {
   globals: { theme: "dark" },
   render: () => <SetAsideRows />,
 };
+/** FLOW-352: the hint keeps its full muted grey (AA); the icon, name and amount fade. */
+export const SetAside320: Story = { ...SetAside, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const SetAsideDark320: Story = { ...SetAsideDark, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const MercuryLight: Story = {
   args: { variant: "transaction", title: "לקוח לדוגמה" },
