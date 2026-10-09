@@ -1,6 +1,6 @@
 <a id="flow-413"></a>
 # FLOW-413 · Monthly cash-flow view (תזרים חודשי)
-- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); dev lane 2 writes the data plan with FLOW-103, then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](FLOW-103.md), planned together with it
+- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); data plan written (dev lane 2, the project's plans/flow-413-cash-flow-plan.md); server PR 1 in-progress (dev lane 3, #370, decision [0168](../../decisions/0168-cash-flow-view.md): the cash flags, the basis, `cash_months`, `cash_month_lines`, the setters), then server PR 2 (MCP), then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](FLOW-103.md), planned together with it
 - **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out, and made it the main monthly view on Home. Today the profit view leaves the loan out, so rent alone looks positive.
   - Money out: the full monthly loan payment (principal, interest and escrow), holding costs and utilities, purchase and renovation money.
   - Money in: loan money received is left out by default, with a switch to count it.
