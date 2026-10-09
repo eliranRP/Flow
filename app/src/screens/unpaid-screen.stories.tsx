@@ -28,7 +28,7 @@ const sampleUnpaid: UnpaidRow[] = [
     description: "חומרים",
     doc_date: "2026-09-14",
     project_name: "בניין מגורים חולון",
-    customer_name: "חומרי בניין השרון",
+    customer_name: "חומרי בניין לדוגמה",
     open_gross_agorot: 940_000n,
     open_net_agorot: 796_610n,
   },

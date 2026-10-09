@@ -173,6 +173,12 @@ export const categoryRowSchema = z.object({
   in_rehab: z.boolean().optional(),
   /** The group a screen folds this category into (set_category_group); null when none. */
   group_name: z.string().nullable().optional(),
+  /** FLOW-406: the parent category; null for a top-level one. Omitted on older payloads. */
+  parent_id: z.string().nullable().optional(),
+  /** FLOW-406: how many sub-categories sit under it (hidden ones too). */
+  children_count: z.number().int().optional(),
+  /** FLOW-406: its own lines plus its sub-categories' lines. */
+  rollup_lines: z.number().int().optional(),
 });
 
 /** One expense category and currency of a project, month by month (project_category_months). */

@@ -1,6 +1,6 @@
 import { formatAmountText, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
-import { projectRows, type ProjectCurrencyRow } from "../by-currency";
+import { profitSign, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
@@ -276,7 +276,9 @@ export function ProjectDetailScreen({
     })()
     : null;
   // A loss is named in the label: red on the violet band does not read (DESIGN-RULES 3.5).
-  const bandLoss = singleCurrency && (profitRows[0]?.profit ?? 0n) < 0n;
+  // FLOW-339: with a profit in one currency and a loss in another, the label names both.
+  const bandSign = profitSign(profitRows.map(({ profit }) => profit));
+  const bandWord = bandSign === "mixed" ? "רווח והפסד" : bandSign === "loss" ? "הפסד" : "רווח";
   const stateLine = projectStateLine(project);
   const loans = openLoans(project);
   const onlyLoan = loans.length === 1 ? loans[0] : undefined;
@@ -343,7 +345,7 @@ export function ProjectDetailScreen({
           {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0150). */}
           <PeriodSwipe period={period} onChange={setPeriod}>
             <p className="ui-band-label t-label ui-project-period-label">
-              {bandLoss ? "הפסד" : "רווח"} {periodWords}
+              {bandWord} {periodWords}
               {marginShown == null ? null : (
                 <>
                   {" · רווחיות "}

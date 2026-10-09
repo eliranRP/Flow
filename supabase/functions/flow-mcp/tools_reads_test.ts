@@ -536,7 +536,8 @@ Deno.test("get_profit_months rejects bad arguments before any read", async () =>
   ]) {
     const result = await callTool("get_profit_months", args, ["read"], rpc);
     assertEquals(result.isError, true);
-    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
+    // An extra or identity key is named (FLOW-414); the rest stay a bare validation.
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 0);
   assertEquals((await callTool("get_profit_months", { from: "2006-02-01", to: "2026-01-31" }, ["read"], rpc)).isError, false);
@@ -600,9 +601,7 @@ Deno.test("get_project rejects a bad id, a bad basis, and an extra argument befo
   for (const pending of cases) {
     const result = await pending;
     assertEquals(result.isError, true);
-    if (!result.structuredContent.ok) {
-      assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
-    }
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 0);
 });
@@ -1062,4 +1061,61 @@ Deno.test("list_review supplier filter finds an income line by its customer", as
     const data = page.structuredContent.data as { total: number; reviews: { id: string }[] };
     assertEquals(data.reviews.map((row) => row.id), ["q1", "q2"]);
   }
+});
+
+Deno.test("list_review echoes an invoice's paired receipts (FLOW-309)", async () => {
+  // The receipt joins its invoice's item: no card of its own, and paid / paid_on for "✓ שולם".
+  const invoice = {
+    id: "r1",
+    transaction_id: INCOME_TXN,
+    direction: "income",
+    doc_kind: "invoice",
+    description: "Example customer",
+    receipts: [{ transaction_id: TXN, doc_date: "2026-10-12", amount_gross: 1180000, currency: "ILS" }],
+    paid: true,
+    paid_on: "2026-10-12",
+  };
+  const { rpc } = rpcOf((name) => {
+    if (name === "list_review") return { status: 200, json: [invoice] };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    return { status: 500, json: null };
+  });
+  const listed = await callTool("list_review", {}, ["read"], rpc);
+  assertEquals(listed.isError, false);
+  if (!listed.structuredContent.ok) throw new Error("list_review failed");
+  const rows = (listed.structuredContent.data as { reviews: Array<Record<string, unknown>> }).reviews;
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0]?.receipts, invoice.receipts);
+  assertEquals(rows[0]?.paid, true);
+  assertEquals(rows[0]?.paid_on, "2026-10-12");
+});
+
+Deno.test("set_category_parent and create_category with a parent forward their input (FLOW-406)", async () => {
+  const PARENT = "33333333-3333-4333-8333-333333333333";
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "category_parent", id: CATEGORY } } }));
+  const set = await callTool("set_category_parent", { idempotency_key: "cp-1", category_id: CATEGORY, parent_id: PARENT.toUpperCase() }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_category_parent", body: { p_idempotency_key: "cp-1", p_category_id: CATEGORY, p_parent_id: PARENT } });
+  await callTool("set_category_parent", { idempotency_key: "cp-2", category_id: CATEGORY, parent_id: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_parent_id, null);
+  await callTool("create_category", { idempotency_key: "cc-1", name: "Sewer", kind: "expense", parent_id: PARENT }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_parent_id, PARENT);
+  await callTool("create_category", { idempotency_key: "cc-2", name: "Sewer", kind: "expense" }, ["write"], rpc);
+  assertEquals("p_parent_id" in (calls.at(-1)?.body ?? {}), false);
+  const undo = await callTool("undo", { idempotency_key: "u-cp", kind: "category_parent", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1)?.body.p_kind, "category_parent");
+
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k", category_id: CATEGORY },
+    { idempotency_key: "k", category_id: "not-a-uuid", parent_id: null },
+    { idempotency_key: "k", category_id: CATEGORY, parent_id: "nope" },
+    { idempotency_key: "k", category_id: CATEGORY, parent_id: null, extra: 1 },
+  ]) {
+    const result = await callTool("set_category_parent", input, ["write"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(input));
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
 });

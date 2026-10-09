@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useHomePreview } from "../preview";
+import { useHomePreview, usePreviewSearch } from "../preview";
 import {
   answerPushPrompt,
   PUSH_PREFS_KEY,
@@ -11,11 +11,27 @@ import {
   type PushSupport,
 } from "../push";
 import { PromptCard } from "../ui/prompt-card";
+import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { focusReviewEmptyAction } from "./review-focus";
 
 export const PUSH_QUESTION = "תזכורת בערב כשיש תנועות לאישור?";
 export const IOS_HOME_NOTE = "כדי לקבל תזכורות באייפון, מוסיפים את Flow למסך הבית ופותחים משם.";
+const IOS_HOME_LINK = "למסך הבית";
+const [IOS_HOME_BEFORE, IOS_HOME_AFTER] = IOS_HOME_NOTE.split(IOS_HOME_LINK) as [string, string];
+
+/** IOS_HOME_NOTE with "למסך הבית" linked to the install steps (Settings → התראות and the review card). */
+export function IosHomeNote() {
+  const search = usePreviewSearch();
+  return (
+    <>
+      {IOS_HOME_BEFORE}
+      <TextLink to={`/install${search}`} className="ui-text-link-inline" chevron={false}>{IOS_HOME_LINK}</TextLink>
+      {IOS_HOME_AFTER}
+    </>
+  );
+}
+
 export const PUSH_ON = "נשלח תזכורת בערב כשיש תנועות לאישור.";
 export const PUSH_BLOCKED = "ההתראות חסומות בדפדפן. אפשר לאשר אותן בהגדרות הדפדפן.";
 export const PUSH_FAILED = "לא הצלחנו להפעיל תזכורות.";
@@ -105,7 +121,7 @@ export function ReviewPushPrompt({ sample, support }: { sample?: NotificationPre
     <PromptCard
       question={PUSH_QUESTION}
       busy={busy}
-      note={note ? IOS_HOME_NOTE : undefined}
+      note={note ? <IosHomeNote /> : undefined}
       dismissRef={dismissRef}
       onYes={() => { void yes(); }}
       onNo={() => {

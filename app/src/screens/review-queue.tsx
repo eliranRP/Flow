@@ -5,13 +5,13 @@ import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
 import { useCategoriesQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
-import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-review";
+import { approveFailure, approveShown } from "../approve-review";
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
 import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
-import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
+import { assertNoError, useWrite } from "../use-write";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { useJevQueue, useReviewFlags } from "./jev-review-card";
 import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-review";
@@ -186,12 +186,7 @@ export function ReviewQueue({
   }
   const leaving = motion === "out";
   const approve = useWrite({
-    failure: (error) => {
-      if (previewWrite) return changeSaveFailure(error);
-      if (error instanceof ApproveNotice) return { message: error.message, tone: "info", retry: false };
-      if (isApproveRetry(error) || isTransientWriteError(error)) return { message: "לא הצלחנו לאשר.", retry: true };
-      return { message: "לא הצלחנו לאשר.", retry: false };
-    },
+    failure: (error) => (previewWrite ? changeSaveFailure(error) : approveFailure(error)),
     place: "bar",
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
     retryFocus: () => {
@@ -219,26 +214,13 @@ export function ReviewQueue({
         return;
       }
       if (!filled.project_id) throw new Error("missing");
-      const result = await supabase.rpc("approve_review_item", {
-        p_id: filled.id,
-        p_project_id: filled.project_id,
-        p_category_id: filled.category_id,
-        p_remember: false,
-        p_check_shown: true,
-        ...(target.project_id == null ? {} : { p_shown_project_id: target.project_id }),
-        ...(target.category_id == null ? {} : { p_shown_category_id: target.category_id }),
-      });
-      assertNoError(result);
-      const outcome = readApproveOutcome(result.data);
-      if (outcome === "stale" || outcome === "already_closed") {
-        await invalidate([...LEDGER_FOCUS_KEYS]);
-        throw new ApproveNotice(outcome);
-      }
-      if (outcome === "not_found") {
-        await invalidate([...LEDGER_FOCUS_KEYS]);
-        throw new Error("not_found");
-      }
-      if (outcome !== "ok") throw new Error("refused");
+      await approveShown(supabase, {
+        id: filled.id,
+        projectId: filled.project_id,
+        categoryId: filled.category_id,
+        shownProjectId: target.project_id,
+        shownCategoryId: target.category_id,
+      }, () => invalidate([...LEDGER_FOCUS_KEYS]));
       markHandled(target.id);
     },
     onSuccess: () => {

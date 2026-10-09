@@ -23,7 +23,7 @@ import {
   shiftMonth,
   yearSpan,
 } from "./date-math";
-import { CalendarIcon, ChevronDownIcon, ChevronIcon } from "./icons";
+import { CalendarIcon, ChevronDownIcon, ChevronIcon, OutwardChevron } from "./icons";
 import { IconButton } from "./icon-button";
 import { MonthGrid } from "./month-grid";
 import { RadioRow } from "./radio-row";
@@ -300,7 +300,7 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
             setCursor((current) => shiftMonth(current, -1));
           }}
         >
-          ›
+          <OutwardChevron side="start" />
         </IconButton>
         <p className="t-label">{monthTitle(cursor.year, cursor.month)}</p>
         <IconButton
@@ -310,7 +310,7 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
             setCursor((current) => shiftMonth(current, 1));
           }}
         >
-          ‹
+          <OutwardChevron side="end" />
         </IconButton>
       </div>
       <MonthGrid label="טווח מותאם" year={cursor.year} month={cursor.month} today={today} range={{ from, to }} onPick={pick} />

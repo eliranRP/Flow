@@ -9,7 +9,7 @@ import { statementMethodOf } from "./statement";
 const rows: SkippedRowView[] = [
   {
     id: "r1",
-    title: "חומרי בניין השרון בע״מ",
+    title: "חומרי בניין לדוגמה בע״מ",
     fallback: "invoice",
     method: statementMethodOf("sumit", "invoice"),
     suggestion: "וילה רעננה · חומרים",

@@ -129,6 +129,24 @@ describe("ProjectDetailScreen currency", () => {
     expect(usdRow?.querySelector(".ui-num")?.textContent).toBe("$35");
   });
 
+  it("names the loss on the band whatever the currencies (FLOW-339)", () => {
+    const rows = (ils: bigint, usd: bigint) => ({
+      ...usdProject(),
+      by_currency: [
+        { currency: "ILS", income_minor: 100_000n, direct_minor: 100_000n - ils, shared_minor: 0n, profit_minor: ils },
+        { currency: "USD", income_minor: 400_000n, direct_minor: 400_000n - usd, shared_minor: 0n, profit_minor: usd },
+      ],
+    });
+    const mixed = renderProject(rows(80_000n, -50_000n));
+    expect(document.querySelector(".ui-project-period-label")?.textContent).toMatch(/^רווח והפסד /);
+    mixed.unmount();
+    const losses = renderProject(rows(-80_000n, -50_000n));
+    expect(document.querySelector(".ui-project-period-label")?.textContent).toMatch(/^הפסד /);
+    losses.unmount();
+    renderProject(rows(80_000n, 50_000n));
+    expect(document.querySelector(".ui-project-period-label")?.textContent).toMatch(/^רווח (?!והפסד)/);
+  });
+
   it("keeps ILS rendering for older payloads", () => {
     renderProject({
       ...usdProject(),
@@ -163,7 +181,7 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.getByText("$2,000")).toBeInTheDocument();
     expect(screen.getByText("₪800")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByText("החלק בהוצאות הכלליות: $750")).toBeInTheDocument();
+    expect(screen.getByText("החלק בהוצאות כלליות $750")).toBeInTheDocument();
   });
 
   it("leaves the USD row alone when the share is off or unknown (0147)", () => {

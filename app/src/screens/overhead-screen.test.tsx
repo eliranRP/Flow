@@ -185,7 +185,7 @@ describe("project overhead hero", () => {
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
     // FLOW-340 C: the switch lives in the ⋯ menu.
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByText("החלק בהוצאות הכלליות: ₪40,000")).toBeInTheDocument();
+    expect(screen.getByText("החלק בהוצאות כלליות ₪40,000")).toBeInTheDocument();
   });
 
   it("clicking the switch saves and shows the profit after the income share", async () => {

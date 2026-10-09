@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-08
 **Status:** Accepted (owner approved the FLOW-106 plan, 2026-10-08)
-**Amended in part by:** [0130](0130-loan-fees-installments.md) (the fees part: any expense category, exempt from the P&L-flip check)
+**Amended in part by:** [0130](0130-loan-fees-installments.md) (the fees part: any expense category, exempt from the P&L-flip check); [0166](0166-loan-interest-kept-out.md) (interest and escrow may be kept out of the P&L)
 
 ## Context
 

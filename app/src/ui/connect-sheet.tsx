@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject, SubmitEvent } from "react";
+import { useId, type ReactNode, type RefObject, type SubmitEvent } from "react";
 import { Button } from "./button";
 import { List, ListRow } from "./list-row";
 import { LogoutIcon } from "./icons";
@@ -37,13 +37,23 @@ export function ConnectSheet({
   onDisconnect?: () => void;
   disconnectRef?: RefObject<HTMLButtonElement | null>;
 }) {
+  const formId = useId();
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef}>
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      returnFocusRef={returnFocusRef}
+      // FLOW-350: the main action is pinned in the sheet's foot, so a longer form (SUMIT with
+      // מתאריך at 320) never pushes it below the fold, and it doesn't move when the form grows.
+      action={noCompanyBody == null ? <Button type="submit" form={formId} full busy={busy} disabled={disabled}>{submitLabel}</Button> : undefined}
+    >
       {noCompanyBody ?? (
         <div className="ui-stack">
           {hint != null ? <p className="t-hint">{hint}</p> : null}
           {authReconnect ? authReconnectLead ?? <p>המזהה או המפתח לא התקבלו</p> : null}
           <form
+            id={formId}
             className="ui-stack"
             onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
               event.preventDefault();
@@ -51,7 +61,6 @@ export function ConnectSheet({
             }}
           >
             {fields}
-            <Button type="submit" busy={busy} disabled={disabled}>{submitLabel}</Button>
           </form>
           {authReconnect && onDisconnect ? (
             <List>

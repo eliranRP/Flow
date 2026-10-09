@@ -21,7 +21,7 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await page.getByRole("link", { name: "לרשימה" }).click();
   await expect(page).toHaveURL(/\/review\/filed\?preview=1&sample=1$/);
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
-  await page.getByRole("link", { name: /מנופי המרכז/ }).click();
+  await page.getByRole("link", { name: /מנופים לדוגמה/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t-filed\?preview=1$/);
   await expect(page.getByRole("heading", { name: "הוצאה" })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
@@ -173,7 +173,7 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   const forward = range.getByRole("button", { name: "חודש הבא" });
   await expect(forward).toBeDisabled();
   expect(await cursorOf(forward)).toBe("not-allowed");
-  await range.locator("button.ui-icon-btn", { hasText: "›" }).click();
+  await range.locator('button.ui-icon-btn[aria-label="חודש קודם"]').click();
   await expect(forward).toBeEnabled();
   const day = range.getByRole("group", { name: "טווח מותאם" }).getByRole("button").first();
   await day.click();

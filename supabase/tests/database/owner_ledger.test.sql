@@ -112,8 +112,8 @@ select tests.authenticate_as('ledger_a');
 
 select is(
   (select count(*)::int from public.review_queue where status = 'open'),
-  3,
-  'the unallocated expense and both income lines without a project are queued'
+  2,
+  'the unallocated expense and the invoice are queued; its receipt waits with it (FLOW-309)'
 );
 
 select lives_ok(

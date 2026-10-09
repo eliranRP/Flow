@@ -31,9 +31,10 @@ function names(ids: readonly { name: string }[]): string[] {
 
 describe("partCategoryOptions follows private.loan_part_category_ok", () => {
   it.each([
-    // Interest: an expense counted in the P&L, not keyed to another part, not the keyed default itself.
-    ["interest", ["ריבית הלוואות גישור", "עמלות בנק", "הוצאות משרד"]],
-    ["escrow", ["ריבית הלוואות גישור", "עמלות בנק", "הוצאות משרד"]],
+    // Interest and escrow: any expense, counted or kept out (0166), not keyed to another part,
+    // not the keyed default itself.
+    ["interest", ["ריבית הלוואות גישור", "עמלות בנק", "עלויות סגירה", "הוצאות משרד", "קרן הלוואות שותפים"]],
+    ["escrow", ["ריבית הלוואות גישור", "עמלות בנק", "עלויות סגירה", "הוצאות משרד", "קרן הלוואות שותפים"]],
     // Principal: kept out of the P&L.
     ["principal", ["עלויות סגירה", "קרן הלוואות שותפים"]],
     // Fees: any expense with no part, or the keyed interest category.
