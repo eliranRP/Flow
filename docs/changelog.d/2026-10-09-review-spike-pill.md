@@ -1,0 +1,1 @@
+The review card shows an amount spike as a "↑ N%" warning pill beside the amount with "בדרך כלל ₪X" under it, in place of the "פי X מהרגיל" line at the bottom of the card (decision 0131, FLOW-327; owner's option A, 2026-10-09).

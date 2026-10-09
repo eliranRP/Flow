@@ -7,6 +7,7 @@ import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
+import { searchHref } from "../search";
 import { useBooks, useDashboardQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
 import { useSheetHistory } from "../ui/back";
@@ -17,7 +18,6 @@ import { List, ListRow } from "../ui/list-row";
 import { MoneyField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { SearchEntry } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
@@ -68,14 +68,9 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
       <ScreenState
         title="פרויקטים"
         subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
-        // FLOW-323: the search icon sits in the bar's end corner, as on Home; the title stacks under.
         // FLOW-331: פרויקט חדש moved to the + tab's quick actions; the empty state keeps its button.
+        // FLOW-342 (A): no header magnifier; the filter below is the page's one search, and a miss offers the transactions.
         stacked
-        trailing={(
-          <span className="ui-head-actions">
-            <SearchEntry to={`/search${search}`} />
-          </span>
-        )}
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
         loading={
@@ -143,12 +138,16 @@ function ProjectsBody({
         <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם או סטטוס" />
       </div>
       {visible.length === 0 ? (
-        <EmptyState
-          icon={<SearchIcon />}
-          title={`לא מצאנו ״${needle}״`}
-          body="החיפוש הוא לפי שם או סטטוס. גם פרויקטים שהסתיימו נכללים."
-          action={<Button variant="pill" onClick={() => { setQuery(""); }}>ניקוי החיפוש</Button>}
-        />
+        // FLOW-342 (A): a name that is no project is likely a supplier or a line, so the miss is one row into search.
+        <List>
+          <ListRow
+            variant="item"
+            title={`חיפוש בתנועות: ${needle}`}
+            icon={<SearchIcon />}
+            chevron
+            href={searchHref(needle, search)}
+          />
+        </List>
       ) : (
         <List>
           {visible.map((project) => {

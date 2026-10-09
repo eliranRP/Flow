@@ -294,7 +294,9 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
 test("projects search, expand, open, and the new-project sheet", async ({ page }) => {
   await page.goto("/e2e/projects?preview=1");
   await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("אין כזה");
-  await page.getByRole("button", { name: "ניקוי החיפוש" }).click();
+  // FLOW-342: a miss offers the transaction search; the field's ✕ clears it.
+  await expect(page.getByRole("link", { name: /^חיפוש בתנועות: אין כזה/ })).toBeVisible();
+  await page.getByRole("button", { name: "ניקוי", exact: true }).click();
   await expect(page.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveValue("");
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toHaveCount(0);
   await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("ישן");
