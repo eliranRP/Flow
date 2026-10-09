@@ -210,6 +210,66 @@ export function ScrollMemory() {
 
 let pushingLayer = false;
 
+/** Steps of each sheet pop sent to the browser whose popstate has not arrived yet (FLOW-310). */
+const pendingPops: number[] = [];
+let pendingPopListener = false;
+/** A close that came while a pop was on its way waits for it: a second history.go can be dropped. */
+let waitingPop: { steps: number; navigate: NavigateFunction } | null = null;
+
+function notePendingPop(steps: number): void {
+  pendingPops.push(steps);
+  if (pendingPopListener) return;
+  pendingPopListener = true;
+  // history.go(-n) fires one popstate when it lands.
+  window.addEventListener("popstate", () => {
+    pendingPops.shift();
+    if (pendingPops.length > 0 || waitingPop == null) return;
+    const next = waitingPop;
+    waitingPop = null;
+    sendSheetPop(next.navigate, next.steps);
+  });
+}
+
+/** The router's browser entry. MemoryRouter (tests) writes none, and its pops fire no popstate. */
+function onBrowserEntry(): boolean {
+  const entry: unknown = window.history.state;
+  return isRecord(entry) && typeof entry.key === "string" && typeof entry.idx === "number";
+}
+
+/** Pop `steps` sheet entries now, or after the pop already on its way lands. */
+function sendSheetPop(navigate: NavigateFunction, steps: number): void {
+  if (!onBrowserEntry()) {
+    void navigate(-steps);
+    return;
+  }
+  if (pendingPops.length > 0) {
+    waitingPop = { steps: (waitingPop?.steps ?? 0) + steps, navigate };
+    return;
+  }
+  notePendingPop(steps);
+  void navigate(-steps);
+}
+
+/** Tests start with no pop in flight. */
+export function resetPendingSheetPops(): void {
+  pendingPops.length = 0;
+  waitingPop = null;
+}
+
+/**
+ * The sheet stack as it stands now. The browser entry changes at once on a push, while the
+ * router's location follows in a transition, so a close right after an open reads the entry
+ * (FLOW-310). Layers whose pop is still on its way are already gone. MemoryRouter (tests)
+ * writes no browser entry, so its location state is the stack.
+ */
+export function liveSheetStack(locationState: unknown): string[] {
+  const browser = onBrowserEntry();
+  const stack = sheetStack(browser ? window.history.state : locationState);
+  if (!browser) return stack;
+  const popping = pendingPops.reduce((sum, steps) => sum + steps, 0) + (waitingPop?.steps ?? 0);
+  return stack.slice(0, Math.max(0, stack.length - popping));
+}
+
 /** Tests start from a sheet push that is not still marked in flight. */
 export function resetSheetHistoryLock(): void {
   pushingLayer = false;
@@ -323,7 +383,7 @@ export function useSheetHistory(
       return true;
     }
     const current = locationRef.current;
-    const stack = sheetStack(current.state);
+    const stack = liveSheetStack(current.state);
     const index = stack.indexOf(name);
     if (index === -1) {
       onOpenChange(false);
@@ -339,7 +399,7 @@ export function useSheetHistory(
       // The entry is gone. A push effect that still sees open must not write it back.
       popOnce.current = true;
       pushed.current = false;
-      void navigate(-steps);
+      sendSheetPop(navigate, steps);
       return true;
     }
     // MemoryRouter has no browser index, so closing cannot pop. Drop the layers
@@ -412,5 +472,7 @@ export function popSheetLayers(navigate: NavigateFunction, count: number): void 
   if (count <= 0) return;
   const idx = historyIndex();
   const steps = idx == null ? count : Math.min(count, idx);
-  if (steps > 0) void navigate(-steps);
+  if (steps <= 0) return;
+  if (idx != null) sendSheetPop(navigate, steps);
+  else void navigate(-steps);
 }

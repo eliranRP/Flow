@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-310 logic items: sheet history (✕ at mount, Escape on a stacked confirm, reload) and keyboard (layout-viewport fallback, Vaul keyboard state on multi-step resizes); tests over visuals | The next non-UI item |
+| Dev lane 1 | FLOW-310 logic items: sheet history (✕ at open, a close while a pop is on its way, reload covered) and keyboard (layout-viewport fallback, stale Vaul lift) | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
@@ -613,11 +613,11 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload.
+- [x] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload. (Dev lane 1, 2026-10-09: a close reads the stack from the browser entry, which a push changes at once, not from the router location that follows in a transition; a close while a sheet pop is still on its way waits for it instead of sending a second `history.go` from a stale stack. The reload case was already handled by `DropRestoredSheet`, now covered on real browser entries; a reloaded sheet is dropped, not restored, by design, unless the screen opens it from `?sheet=`. Tests in `sheet-history-browser.test.tsx`.)
 - [ ] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes.
 - [ ] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row.
 - [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
-- [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung.
+- [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung. (Dev lane 1, 2026-10-09: the first two done in `keyboard-inset.ts`: the keyboard is measured against the tallest layout height at this width, and once it closes a drawer lift Vaul left behind is dropped. Left: `--sheet-gap` at 320 (a visual change for the design lead) and the real-device QA.)
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.

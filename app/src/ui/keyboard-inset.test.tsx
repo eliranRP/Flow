@@ -159,6 +159,57 @@ describe("useKeyboardInset", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
+  it("detects the keyboard when the layout viewport shrinks with it", () => {
+    mountWithViewport();
+    // A browser that ignores interactive-widget resizes the layout viewport too.
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 500 });
+    viewport.height = 500;
+    act(() => { viewport.emit("resize"); });
+    expect(document.documentElement.dataset.kb).toBe("open");
+    expect(document.documentElement.style.getPropertyValue("--kb")).toBe("0px");
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+    viewport.height = 800;
+    act(() => { viewport.emit("resize"); });
+    expect(document.documentElement.dataset.kb).toBeUndefined();
+  });
+
+  it("takes a new full height after a rotation", () => {
+    mountWithViewport();
+    const width = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: width + 200 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
+    viewport.height = 400;
+    try {
+      act(() => { viewport.emit("resize"); });
+      expect(document.documentElement.dataset.kb).toBeUndefined();
+    } finally {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+    }
+  });
+
+  it("drops a drawer lift Vaul left behind once the keyboard has closed in steps", () => {
+    mountWithViewport(
+      <>
+        <KeyboardHarness />
+        <div data-vaul-drawer="" data-testid="drawer" />
+      </>,
+    );
+    const drawer = document.querySelector<HTMLElement>("[data-testid=drawer]");
+    for (const height of [700, 550, 500]) {
+      viewport.height = height;
+      act(() => { viewport.emit("resize"); });
+    }
+    expect(document.documentElement.dataset.kb).toBe("open");
+    if (drawer) drawer.style.bottom = "300px";
+    viewport.height = 640;
+    act(() => { viewport.emit("resize"); });
+    expect(drawer?.style.bottom).toBe("300px");
+    viewport.height = 800;
+    act(() => { viewport.emit("resize"); });
+    expect(document.documentElement.dataset.kb).toBeUndefined();
+    expect(drawer?.style.bottom).toBe("0px");
+  });
+
   it("removes its listeners and resets the root on unmount", () => {
     const view = mountWithViewport();
     viewport.height = 500;
