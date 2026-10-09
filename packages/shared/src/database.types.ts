@@ -950,6 +950,9 @@ isOneToOne: false
 "jev_finish_usage":
 { Args: { "p_calls": number,"p_company": string,"p_failed"?: number,"p_input_tokens"?: number,"p_output_tokens"?: number,"p_run": string,"p_tagged"?: number }; Returns: undefined
                            },
+"jev_key_status":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "jev_line_flags":
 { Args: { "p_company": string,"p_ids": (string)[] }; Returns: Json
                            },
