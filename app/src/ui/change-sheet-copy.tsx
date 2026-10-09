@@ -33,4 +33,6 @@ export type ChangeChoice = {
   hidden?: boolean;
   /** A project's group (FLOW-406): the picker lists each group under its name, then שאר הפרויקטים. */
   group?: string;
+  /** The group's id, so two groups with one name stay two sections. */
+  groupId?: string;
 };

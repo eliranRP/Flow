@@ -60,4 +60,16 @@ describe("project groups (FLOW-406)", () => {
     expect(sections?.[0]?.options.map((option) => option.id)).toEqual(["u1", "u2"]);
     expect(groupSections([{ id: "a", name: "א" }])).toBeNull();
   });
+
+  it("keeps the suggestion above the sections and two same-named groups apart", () => {
+    const sections = groupSections(
+      [
+        { id: "s", name: "מוצע" },
+        { id: "u1", name: "דירה 1", group: "בניין", groupId: "g1" },
+        { id: "u2", name: "דירה 2", group: "בניין", groupId: "g2" },
+      ],
+      "s",
+    );
+    expect(sections?.map((section) => section.options.map((option) => option.id))).toEqual([["u1"], ["u2"]]);
+  });
 });

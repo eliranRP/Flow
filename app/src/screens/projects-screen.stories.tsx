@@ -1,9 +1,10 @@
 import type { Dashboard } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "@storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
-import { projectsGrouped } from "./project-groups-sample";
+import { projectsGroupDone, projectsGrouped } from "./project-groups-sample";
 
 function listedProject(id: string, name: string, status: "active" | "finished" = "active"): Dashboard["projects"][number] {
   return {
@@ -185,4 +186,21 @@ export const ProjectsGroupedSearch: Story = {
       <ProjectsScreen sample={projectsGrouped} initialQuery="דירה 2" />
     </StoryRoute>
   ),
+};
+
+/** A group whose projects have all finished folds under עוד N שהסתיימו, and comes back when opened. */
+export const ProjectsGroupDone: Story = {
+  name: "Projects, a finished group folds",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsGroupDone} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByText("מרכז מסחרי לדוגמה")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: /עוד 3 שהסתיימו/ }));
+    await expect(canvas.getByText("מרכז מסחרי לדוגמה")).toBeInTheDocument();
+  },
 };

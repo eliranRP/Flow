@@ -66,6 +66,11 @@ export function projectChoices(data: Pick<Dashboard, "projects" | "groups"> | un
   const names = new Map((data.groups ?? []).map((group) => [group.id, group.name] as const));
   return data.projects.map((project) => {
     const group = project.group_id == null ? undefined : names.get(project.group_id);
-    return { id: project.id, name: project.name, status: project.status, ...(group != null ? { group } : {}) };
+    return {
+      id: project.id,
+      name: project.name,
+      status: project.status,
+      ...(group != null && project.group_id != null ? { group, groupId: project.group_id } : {}),
+    };
   });
 }

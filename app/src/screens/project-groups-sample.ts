@@ -44,3 +44,28 @@ export const projectsGrouped: Dashboard = {
     },
   ],
 };
+
+/** A group whose projects have all finished folds with the finished projects until opened. */
+export const projectsGroupDone: Dashboard = {
+  ...projectsGrouped,
+  projects: [
+    ...projectsGrouped.projects,
+    groupedProject("o1", "חנות 1", "finished", "g2"),
+    groupedProject("o2", "חנות 2", "finished", "g2"),
+  ],
+  groups: [
+    ...(projectsGrouped.groups ?? []),
+    {
+      id: "g2",
+      name: "מרכז מסחרי לדוגמה",
+      sort_order: 1,
+      project_count: 2,
+      income_agorot: 20_000_000n,
+      direct_agorot: 16_000_000n,
+      shared_agorot: 0n,
+      profit_before_shared_agorot: 4_000_000n,
+      profit_agorot: 4_000_000n,
+      by_currency: [],
+    },
+  ],
+};

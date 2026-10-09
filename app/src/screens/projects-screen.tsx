@@ -4,7 +4,7 @@ import { useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
 import { getSupabase } from "../lib/supabase";
-import { groupAsProjectRow, groupHref, projectCountLabel, splitByGroup } from "../project-groups";
+import { groupAsProjectRow, groupHref, projectCountLabel, splitByGroup, type ProjectGroupEntry } from "../project-groups";
 import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
@@ -128,24 +128,39 @@ function ProjectsBody({
   const needle = query.trim();
   // FLOW-406 (proj-b): a group is one row that opens its projects; a search reaches every project by name.
   const split = splitByGroup({ projects, groups });
-  const listedGroups = needle === "" ? split.groups : split.groups.filter((entry) => entry.group.name.includes(needle));
   const pool = needle === "" ? split.loose : projects;
   const finished = pool.filter((project) => project.status === "finished");
   const active = pool.filter((project) => project.status !== "finished");
+  // A group whose projects have all finished folds with the finished projects.
+  const groupDone = (entry: ProjectGroupEntry) => entry.projects.every((project) => project.status === "finished");
+  const activeGroups = needle === "" ? split.groups.filter((entry) => !groupDone(entry)) : split.groups.filter((entry) => entry.group.name.includes(needle));
+  const finishedGroups = needle === "" ? split.groups.filter(groupDone) : [];
   /** Every active project by default; a query searches finished ones too (after the active ones), so none is out of reach. */
-  const shown = expanded || needle !== "" ? [...active, ...finished] : active;
-  const visible = shown.filter((project) =>
+  const open = expanded || needle !== "";
+  const matches = (project: ProjectRow) =>
     needle === ""
     || project.name.includes(needle)
     || (project.state_label ?? "").includes(needle)
     // The finished row shows הסתיים, so that word finds it too.
-    || (project.status === "finished" && "הסתיים".includes(needle)));
+    || (project.status === "finished" && "הסתיים".includes(needle));
+  const activeShown = active.filter(matches);
+  const finishedShown = open ? finished.filter(matches) : [];
+  const groupsShown = open ? [...activeGroups, ...finishedGroups] : activeGroups;
+  const folded = finished.length + finishedGroups.length;
+  const aligned = groupsShown.length > 0;
+  const groupRow = ({ group, projects: members }: ProjectGroupEntry) => (
+    <ProjectGroupRow key={`group-${group.id}`} group={group} count={members.length} search={search} />
+  );
+  const projectRow = (project: ProjectRow) => (
+    <ProjectRowItem key={project.id} project={project} search={search} alignWithChevron={aligned} />
+  );
+  const nothing = activeShown.length === 0 && finishedShown.length === 0 && groupsShown.length === 0;
   return (
     <>
       <div className="ui-page-pad ui-stack">
         <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם או סטטוס" />
       </div>
-      {visible.length === 0 && listedGroups.length === 0 ? (
+      {nothing && needle !== "" ? (
         // FLOW-342 (A): a name that is no project is likely a supplier or a line, so the miss is one row into search.
         <List>
           <ListRow
@@ -156,22 +171,20 @@ function ProjectsBody({
             href={searchHref(needle, search)}
           />
         </List>
-      ) : (
+      ) : nothing ? null : (
         <List>
-          {listedGroups.map(({ group, projects: members }) => (
-            <ProjectGroupRow key={`group-${group.id}`} group={group} count={members.length} search={search} />
-          ))}
-          {visible.map((project) => (
-            <ProjectRowItem key={project.id} project={project} search={search} alignWithChevron={listedGroups.length > 0} />
-          ))}
+          {activeGroups.map(groupRow)}
+          {activeShown.map(projectRow)}
+          {open ? finishedGroups.map(groupRow) : null}
+          {finishedShown.map(projectRow)}
         </List>
       )}
-      {!expanded && needle === "" && finished.length > 0 ? (
+      {!expanded && needle === "" && folded > 0 ? (
         <p className="ui-page-pad">
           <TextLink tone="quiet" onClick={() => { setExpanded(true); }}>
-            {finished.length === 1
+            {folded === 1
               ? "עוד פרויקט אחד שהסתיים"
-              : <>עוד <bdi dir="ltr">{String(finished.length)}</bdi> שהסתיימו</>}
+              : <>עוד <bdi dir="ltr">{String(folded)}</bdi> שהסתיימו</>}
           </TextLink>
         </p>
       ) : null}

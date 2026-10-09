@@ -26,7 +26,8 @@ export function ProjectGroupScreen({ sample, groupId: groupIdProp }: { sample?: 
   const data = sample ?? dashboard.data;
   const back = `/projects${search}`;
   const entry = data ? findGroup(data, groupId) : null;
-  if (phase.kind === "ready" && data != null && entry == null) {
+  // Ready (or the empty preview) with no such group: a stale link says so instead of a blank page.
+  if ((phase.kind === "ready" || phase.kind === "empty") && entry == null) {
     return <ScreenHeader title="קבוצה" kicker="פרויקטים" subtitle="הקבוצה לא נמצאה." backTo={back} />;
   }
   const projects = entry == null
@@ -39,15 +40,19 @@ export function ProjectGroupScreen({ sample, groupId: groupIdProp }: { sample?: 
       subtitle={entry ? `${projectCountLabel(entry.projects.length)} · רווח ${periodLabel(books.period)}` : undefined}
       backTo={back}
       stacked
-      phase={phase.kind === "empty" ? { kind: "ready" } : phase}
+      phase={phase}
       onRetry={() => { void dashboard.refetch(); }}
       loading={<ListSkeleton />}
     >
-      <List>
-        {projects.map((project) => (
-          <ProjectRowItem key={project.id} project={project} search={search} />
-        ))}
-      </List>
+      {projects.length === 0 ? (
+        <p className="t-hint ui-page-pad">אין פרויקטים בקבוצה.</p>
+      ) : (
+        <List>
+          {projects.map((project) => (
+            <ProjectRowItem key={project.id} project={project} search={search} />
+          ))}
+        </List>
+      )}
     </ScreenState>
   );
 }
