@@ -178,10 +178,7 @@ function MonthSection<T>({
           {showTotals && !net ? (
             <p className="ui-month-totals t-label">
               {count != null ? <span className="ui-group-count">{count}</span> : null}
-              {/* A one-line group's total is its row's amount: the head says the count only. */}
-              {count != null && group.rows.length === 1
-                ? null
-                : shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0 && count == null} />)}
+              {shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0 && count == null} />)}
             </p>
           ) : null}
         </div>

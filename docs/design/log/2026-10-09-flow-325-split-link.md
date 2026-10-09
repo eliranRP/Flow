@@ -5,3 +5,10 @@
 - Changed: The change sheet's project list has a third link, "פיצול לפי קטגוריות" with the tag icon, under "פיצול בין פרויקטים" (owner chose option A, 2026-10-09). Pressing it approves the line with the project and category shown on the sheet, then opens the split-by-category editor in place of the sheet. The server refuses a split while the line's review is open, so the order is approve, then split. While the approve runs the link is busy and the list waits; a failed approve keeps the sheet open with the queue's "לא הצלחנו לאשר." toast. The link is not shown to a viewer, on a shared cost, on a split_mismatch card, or while the line still misses its project or category.
 - Rule: A link that writes before it navigates shows busy in place, ignores presses until the write settles, and stays put when the write fails.
 - Source: FLOW-325 plan §10, mockup `mockups/flow-325-s10/section10-a.png`.
+
+## FLOW-347: one shape for every שויכו היום head
+
+- Kind: polish
+- Changed: The by-project heads on שויכו היום took three shapes: a one-line group showed "תנועה אחת" with no total, and a short name such as "בלי פרויקט" kept its count and total on the name line. Now every head is the name, then under it the count in muted meta and the totals, start-aligned, whatever the name's length or the group's size. A one-line group shows its total too, so every head reads the same way down the list.
+- Rule: A repeated head keeps one shape down a list; a short name or a single line does not change where the figures sit.
+- Source: mobile UI/UX review cycle 8, shot `sb-routes--filed-today-by-project--full.png`.
