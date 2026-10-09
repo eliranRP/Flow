@@ -95,7 +95,7 @@ describe("expected months", () => {
     ]);
   });
 
-  it("lists the open month's parties not seen yet, and every party for later months, expenses first by size", () => {
+  it("lists the open month's parties not seen yet, and every expense party for later months by size, never income", () => {
     const [october, november] = expectedMonthViews(SAMPLE_EXPECTED);
     expect(october?.parties.map((party) => party.name)).toEqual(["אור חשמל", "שי ניקיון"]);
     expect(november?.parties.map((party) => [party.name, party.direction, party.minor])).toEqual([
@@ -103,7 +103,6 @@ describe("expected months", () => {
       ["בטוח בית", "expense", 126_000n],
       ["גז הצפון", "expense", 50_000n],
       ["שי ניקיון", "expense", 48_000n],
-      ["שוכר לדוגמה", "income", 1_200_000n],
     ]);
   });
 

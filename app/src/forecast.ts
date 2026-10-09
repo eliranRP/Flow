@@ -96,17 +96,16 @@ function partyView(party: ExpectedParty): ExpectedPartyView {
   };
 }
 
-/** Expenses first, then income; the bigger amount first; then by name. */
+/** The bigger amount first, then by name. */
 function partyOrder(a: ExpectedPartyView, b: ExpectedPartyView): number {
-  if (a.direction !== b.direction) return a.direction === "expense" ? -1 : 1;
   if (a.minor !== b.minor) return a.minor > b.minor ? -1 : 1;
   return a.name.localeCompare(b.name, "he");
 }
 
 /**
  * The month rows of the project's "צפוי" section. Each row carries the expected expense only
- * (one number per row); income shows in the month's sheet. `fallbackCurrency` names the zero of
- * a month with nothing in it.
+ * (one number per row), and its sheet lists only the expense parties, so they add up to the figure
+ * tapped (DESIGN-RULES §3.7). `fallbackCurrency` names the zero of a month with nothing in it.
  */
 export function expectedMonthViews(data: ExpectedMonths, fallbackCurrency = "ILS"): ExpectedMonthView[] {
   return data.months.map((month) => {
@@ -116,6 +115,7 @@ export function expectedMonthViews(data: ExpectedMonths, fallbackCurrency = "ILS
     const parties = data.recurring
       .filter((party) => !month.open || !party.seen_this_month)
       .map(partyView)
+      .filter((party) => party.direction === "expense")
       .sort(partyOrder);
     return {
       month: month.month,

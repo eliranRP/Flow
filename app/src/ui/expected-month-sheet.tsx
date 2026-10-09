@@ -3,7 +3,7 @@ import type { ExpectedMonthRow, ExpectedPartyRow } from "./expected-months";
 import type { RefObject } from "react";
 import { Sheet } from "./sheet";
 
-/** The parties behind one expected month: name and amount, income in green. Read only. */
+/** The parties behind one expected month: name and amount, expenses only. Read only. */
 export function ExpectedMonthParties({ parties }: { parties: readonly ExpectedPartyRow[] }) {
   return (
     <ul className="ui-expected-parties">
@@ -14,7 +14,7 @@ export function ExpectedMonthParties({ parties }: { parties: readonly ExpectedPa
               <span className="ui-row-title">{party.name === "" ? "ללא שם" : party.name}</span>
             </span>
           </span>
-          <ApproxAmount minor={party.minor} currency={party.currency} income={party.direction === "income"} />
+          <ApproxAmount minor={party.minor} currency={party.currency} />
         </li>
       ))}
     </ul>
