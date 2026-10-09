@@ -125,7 +125,7 @@ const open: ReviewRow = {
   reason: null,
   project_id: null,
   category_id: null,
-  supplier_name: "חומרי בניין השרון בע״מ",
+  supplier_name: "חומרי בניין לדוגמה בע״מ",
   project_name: null,
   category_name: null,
   project_suggested: false,
@@ -978,25 +978,25 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
   it("keeps the card on screen when a refetch reorders the queue", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(queue([open, other], client));
-    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     view.rerender(queue([other, open], client));
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
   });
 
   it("returns to the same card after the picker, whatever order the queue comes back in", async () => {
     const first = render(queue([open, other], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
-    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     first.unmount();
     render(queue([other, open], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
-    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
   });
 
   it("skips the card on screen and ביטול reopens it", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(queue([open, other], client));
-    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     view.rerender(queue([other, open], client));
     fireEvent.click(screen.getByRole("button", { name: "דלג" }));
     await waitFor(() => {
@@ -1012,7 +1012,7 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
     // It comes back behind the card on screen in queue order, but ביטול puts it in front.
     view.rerender(queue([other, open], client));
-    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
     });
@@ -1037,7 +1037,7 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       const view = render(queue([open, other], client));
       await tick(50);
-      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "דלג" }));
       await tick(0);
       expect(db.writes.some((call) => call.name === "resolve_review")).toBe(true);
@@ -1058,14 +1058,14 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
       // The refetch brings the undone line back behind it in queue order.
       view.rerender(queue([other, open], client));
       await tick(300);
-      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
       expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
       expect(reviewHold()).toBeNull();
       expect(reviewPin()).toBe("t1");
       // The pin guarantee holds again: a reorder can't swap the card under אישור.
       view.rerender(queue([other, open], client));
       await tick(300);
-      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     });
 
     it("drops the hold when the reopened line doesn't come back, and pins the card on screen", async () => {
@@ -1096,7 +1096,7 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
   it("moves on once the card leaves the queue", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(queue([open, other], client));
-    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     view.rerender(queue([other], client));
     expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();
   });

@@ -32,16 +32,20 @@ export function ImportFromField({
   const mode: ImportMode = value == null ? "start" : "date";
   return (
     <>
-      <SegmentedControl<ImportMode>
-        label="ייבוא מ"
-        value={mode}
-        busy={disabled}
-        options={[
-          { value: "start", label: "מההתחלה" },
-          { value: "date", label: "מתאריך" },
-        ]}
-        onChange={(next) => { onChange(next === "start" ? null : lastDate); }}
-      />
+      {/* FLOW-350: the control keeps the fields' reserved message line, so the rhythm stays even. */}
+      <div className="ui-field">
+        <SegmentedControl<ImportMode>
+          label="ייבוא מ"
+          value={mode}
+          busy={disabled}
+          options={[
+            { value: "start", label: "מההתחלה" },
+            { value: "date", label: "מתאריך" },
+          ]}
+          onChange={(next) => { onChange(next === "start" ? null : lastDate); }}
+        />
+        <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
+      </div>
       {value == null ? null : (
         <div className="ui-field">
           <button

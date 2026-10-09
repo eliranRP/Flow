@@ -70,7 +70,7 @@ describe("supplier names", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <Remember supplier="השרון" />
+          <Remember supplier="חשמל לדוגמה" />
         </MemoryRouter>
       </QueryClientProvider>,
     );

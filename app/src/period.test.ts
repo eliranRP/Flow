@@ -94,6 +94,7 @@ describe("period labels", () => {
     expect(heroProfitLabel(thisMonth(now), 1n, now)).toBe("רווח נקי החודש");
     expect(heroProfitLabel(thisMonth(now), 0n, now)).toBe("רווח נקי החודש");
     expect(heroProfitLabel(monthPeriod("2026-09", now), -1n, now)).toBe("הפסד בספטמבר 2026");
+    expect(heroProfitLabel(thisMonth(now), "mixed", now)).toBe("רווח והפסד החודש");
     expect(heroProfitLabel(presetPeriod("months3", now), 1n, now)).toBe("רווח נקי ב־3 חודשים");
     expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח נקי ב־2026");
     expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח נקי בכל התקופה");

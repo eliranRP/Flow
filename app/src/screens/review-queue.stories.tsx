@@ -153,7 +153,7 @@ export const ReviewJevFitLoud320: Story = { ...narrowView, render: () => <Review
 export const ReviewJevFitLoud390: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 
 /** FLOW-327 / 0137: after דלג, the undo toast sits just above the bar. */
-const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש הגליל", amount_net: -345_000n }];
+const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
 function ReviewQueueSkipStory() {
   const [rows, setRows] = useState(skipRows);
   return (
@@ -186,7 +186,7 @@ export const ReviewQueueSkipToast: Story = {
  * plural filed-today banner. The card ends above the pinned bar, and the bar sits on the tab bar.
  */
 const shortPhone = { parameters: { viewport: { defaultViewport: "flow320-short" } } };
-const fitRow: ReviewRow = { ...jevRow, supplier_name: "חומרי בניין ואינסטלציה השרון בע״מ" };
+const fitRow: ReviewRow = { ...jevRow, supplier_name: "חומרי בניין ואינסטלציה לדוגמה בע״מ" };
 function ReviewFitStory() {
   return (
     <StoryRoute entry="/review" tabs reviewCount={4}>
@@ -236,9 +236,9 @@ export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, lo
 /** FLOW-309: the skipped cards at the end of הצגת הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [
   {
-    id: "k1", transaction_id: "tk1", description: "ברזל הצפון", doc_date: "2026-09-28", doc_kind: "invoice",
+    id: "k1", transaction_id: "tk1", description: "ברזל ומתכת לדוגמה", doc_date: "2026-09-28", doc_kind: "invoice",
     amount_net: -250_000n, currency: "ILS", direction: "expense", line_status: "posted", source: "sumit",
-    project_name: "וילה רעננה", category_name: "חומרים", supplier_name: "ברזל הצפון בע״מ", skipped_at: "2026-09-30T08:00:00Z",
+    project_name: "וילה רעננה", category_name: "חומרים", supplier_name: "ברזל ומתכת לדוגמה בע״מ", skipped_at: "2026-09-30T08:00:00Z",
   },
   {
     id: "k2", transaction_id: "tk2", description: "Northwind Traders", doc_date: "2026-09-26", doc_kind: null,
@@ -254,7 +254,7 @@ function ReviewAllSkippedStory({ rows, skipped }: { rows: ReviewRow[]; skipped: 
     </StoryRoute>
   );
 }
-const pendingRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש הגליל", amount_net: -345_000n }];
+const pendingRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
 export const ReviewAllSkipped: Story = { render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
 export const ReviewAllSkippedDark: Story = { ...darkTheme, render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
 export const ReviewAllSkipped320: Story = { ...narrowView, render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };

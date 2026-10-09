@@ -360,7 +360,7 @@ describe("ListRow statement (FLOW-305)", () => {
       <MemoryRouter>
         <ListRow
           variant="statement"
-          title="חשמל השרון בע״מ"
+          title="חשמל לדוגמה בע״מ"
           fallback="invoice"
           agorot={-120_050n}
           sign="out"
@@ -377,7 +377,7 @@ describe("ListRow statement (FLOW-305)", () => {
     expectTarget(link);
     expect(link).toHaveClass("ui-row", "ui-hit");
     const avatar = link.querySelector(".ui-avatar");
-    expect(avatar?.textContent).toBe("חה");
+    expect(avatar?.textContent).toBe("חל");
     expect(avatar).toHaveAttribute("dir", "rtl");
     expect(avatar).toHaveAttribute("aria-hidden", "true");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "rtl");
@@ -386,7 +386,7 @@ describe("ListRow statement (FLOW-305)", () => {
     // No suggestion and not pending: no second line, no method unless one is passed.
     expect(link.querySelector(".ui-statement-line")).toBeNull();
     expect(link.querySelector(".ui-statement-method")).toBeNull();
-    expect(link).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הוצאה −₪1,200.50");
+    expect(link).toHaveAttribute("aria-label", "חשמל לדוגמה בע״מ, הוצאה −₪1,200.50");
   });
 
   it("puts the pending chip before the suggestion and hides the ✦ mark", () => {
@@ -395,7 +395,7 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(line?.firstElementChild).toHaveClass("ui-status");
     expect(line?.querySelector(".ui-statement-suggest")).toHaveAttribute("data-clip-ok");
     expect(line?.querySelector(".ui-statement-spark")).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
+    expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל לדוגמה בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
   });
 
   it("draws the details as whole parts, each carrying its separator, so one that does not fit drops whole (FLOW-339 C6-6)", () => {

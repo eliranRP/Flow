@@ -380,8 +380,8 @@ function ReviewerSave() {
 const unsplitProjects = [
   { id: "p-alon", name: reviewerProjectName, bp: 1667 },
   { id: "p-raanana", name: reviewerOtherProjectName, bp: 1667 },
-  { id: "p-north", name: "מגרש הצפון", bp: 1667 },
-  { id: "p-south", name: "מחסן הדרום", bp: 1667 },
+  { id: "p-north", name: "מגרש לדוגמה", bp: 1667 },
+  { id: "p-south", name: "מחסן לדוגמה", bp: 1667 },
   { id: "p-east", name: "גג המזרח", bp: 1666 },
   { id: "p-west", name: "חניון המערב", bp: 1666 },
 ] as const;
@@ -497,8 +497,8 @@ function ReviewerSplitExpense() {
   const projects = [
     { id: "p-alon", name: reviewerProjectName },
     { id: "p-raanana", name: reviewerOtherProjectName },
-    { id: "p-north", name: "מגרש הצפון" },
-    { id: "p-south", name: "מחסן הדרום" },
+    { id: "p-north", name: "מגרש לדוגמה" },
+    { id: "p-south", name: "מחסן לדוגמה" },
     { id: "p-east", name: "גג המזרח" },
     { id: "p-west", name: "חניון המערב" },
   ];

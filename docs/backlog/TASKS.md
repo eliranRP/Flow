@@ -17,13 +17,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | Dev lane 3 | FLOW-413 + FLOW-103 server PR 1 (plan in the project's plans/flow-413-cash-flow-plan.md): `categories.in_cash`, `transactions.in_cash_override`, `companies.cash_basis`, `cash_months`, `cash_month_lines`, the setters, seed and backfill; FLOW-309 server merged #350 | FLOW-413 server PR 2: the MCP cash tools and the FLOW-103 defaults |
-| UI lane 1 | FLOW-340 option C (owner's pick 2026-10-09), PR #338 on `claude/project-thread-0wt3o6`: the short project page (profit on the band, one row per section, each its own screen); merges after the owner's yes on shots (FLOW-342 + FLOW-344 merged #314) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
+| UI lane 1 | FLOW-339: the band label with a profit in one currency and a loss in another, and the project overhead switch's label (FLOW-340 C merged #338) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-325 §10 option A (the פיצול לפי קטגוריות link in שינוי: `ui/change-picker.tsx`, `ui/change-sheet.tsx`, `screens/change-form.tsx`, `approve-review.ts`) + FLOW-347 שויכו היום heads (`ui/month-list.tsx`, `css/11-month-lists.css` `.ui-group-*`) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Mercury sync follow-ups: void first line count, relabel suggestion (FLOW-414 merged #361) | Next small ready item from the lane manager |
+| Backlog bug fixes | FLOW-507/506 write-gate tests: inner gates after a role change, Settings switches, setup first step hold (Mercury follow-ups merged #365) | FLOW-506 setup business step and install rows unify, after #358 |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -113,7 +113,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) |
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
-| 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | in progress (option C, UI lane 1) |
+| 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | done (#338) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | done (#314) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
@@ -123,7 +123,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | done (owner picked A; UI lane 3, #359) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (UI lane 4, #345) |
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
-| 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
+| 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
 
@@ -855,7 +855,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-339 · Phone polish after the October 8 builds (cycle 6)
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-333 C13 (review card fit at 375x667), FLOW-334 · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** Polish found at 375x667, 393x852 (light and dark) and 412x915 after the October 8 builds.
-- [ ] (low) Band label with mixed-sign currencies: since FLOW-338 (#290) a loss on the band is white, and with two currencies where one is a loss the label still says רווח (project page `bandLoss` needs a single currency; Home's `heroLabelProfit` picks the non-negative figure). Name the loss in the label or per line.
+- [x] (UI lane 1, 2026-10-09: with a profit in one currency and a loss in another, Home's and the project band's label reads "רווח והפסד"; losses in every currency read "הפסד" on the project band too) (low) Band label with mixed-sign currencies: since FLOW-338 (#290) a loss on the band is white, and with two currencies where one is a loss the label still says רווח (project page `bandLoss` needs a single currency; Home's `heroLabelProfit` picks the non-negative figure). Name the loss in the label or per line.
 - [x] (UI lane 4, #292: does not reproduce. The `::after` grows down and sideways only (`inset-block: 0 calc(100% - var(--touch-min))`, since #231), so it starts at the line's top, which is the category row's bottom; at 375 and 393 a point 1–13px above בטל hits the row. The capture script assumed a centered 44px box. The ReviewCard "Jev filled" stories now check this in their play.) (med) Review card, Jev filled line: the בטל link's `::after` hit area (y≈267–311 at 375) covers the bottom 13px of the category row, so a tap meant for the row can undo Jev's fill. Give the filled line its own 44px row or `--space-3` above it, budgeted with FLOW-333 C13.
 - [x] (UI lane 3, 2026-10-09) (med) Breakdown: the header under "יצא" and every category row carry a minus. A figure labelled as a cost carries none (FLOW-328, FLOW-334 H3); keep it only when refunds beat costs, as Home does. Both levels use one header order.
 - [x] (UI lane 4, #299: the subtitle says only "N תנועות", the month heads keep their totals; line 2 shows whole parts as many as fit, never a one-letter cut, and "ממתינה לאישור" shortens instead of dropping. At 320 most rows then show only the date; moving the date under the amount is on the owner's card) (med) Search: the subtitle carries three figures and month heads up to two unlabelled totals, about 11 figures a screen. Keep only the count in the subtitle. A row hint that does not fit shows the project or the category whole, not a one-letter cut (the meta rule in DESIGN-RULES §3.7).
@@ -865,13 +865,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Transaction rows show ".00" on whole amounts, but DESIGN-RULES §3.5 says agorot show only when non-zero. Decision 0120 option C (the owner's) keeps ".00" on transaction rows, like Mercury, so this needs the owner's call before any change.
 - [x] (Backlog bug fixes, 2026-10-09: the amount's line reads "לפני מע״מ · מע״מ ₪1,530 · 21/09/2026"; a guessed rate says "מע״מ משוער"; the floating line and `vatStatusLabel` are gone) Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
 - [x] (UI lane 3, 2026-10-09: ✕ is centred on the title row in every sheet) Add sheet (+ tab): it has both ✕ and a "ביטול" link, and ✕ sits about 8px below the title baseline. Drop ביטול (it belongs on confirm sheets) and align ✕ with the title.
-- [ ] Project page, overhead switch: the hint "כבוי · מציג רווח לפני כלליות" repeats the switch state. Label "אחרי כלליות" with no hint, as Settings does.
+- [x] (UI lane 1, 2026-10-09: the switch reads "רווח אחרי הוצאות כלליות" (money-terms glossary, #367); off has no hint, on shows only the share, "החלק בהוצאות כלליות ₪x") Project page, overhead switch: the hint "כבוי · מציג רווח לפני כלליות" repeats the switch state. Label "אחרי כלליות" with no hint, as Settings does.
 - [x] (UI lane 2, #333: owner chose A 2026-10-09) (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
 - **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
 
 <a id="flow-340"></a>
 ### FLOW-340 · A lighter השקעה card on the project page
-- **Type:** PLAN FIRST · **Status:** in progress (option C, UI lane 1) · **Depends on:** FLOW-404 (#223) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** done (option C, #338) · **Depends on:** FLOW-404 (#223) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The project page now holds 7 figures; the השקעה card adds two "X = Y" captions under the equities (one wraps to two lines), a bordered card with an inner hairline grid, and the page runs 1.8 screens at 393. That goes against the light-screens rule (§2.1, §5). Options: (A) drop the captions and inner hairlines and keep the card; (B) a one-row "השקעה · הון נוכחי ₪850,000 ›" that opens the full card in a sheet.
 - **Acceptance:** owner's choice on a card with 390px PNGs of each option; a design log entry.
 - **Plan (option C, the owner's pick 2026-10-09: a short project page; UI lane 1):**
@@ -943,12 +943,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-350"></a>
 ### FLOW-350 · Phone polish after the October 9 midday builds (cycle 9)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (UI lane 4, #358) · **Depends on:** —
 - **Source:** cycle 9 phone review of deploy 2c3bb3c, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-9/shots/`.
-- [ ] SUMIT connect sheet at 320 and 375x667: after מתאריך the body scrolls and only 9px of חיבור stay in view. With מההתחלה, חיבור sits 15px under the segmented control, against about 37px under each field, so it jumps 60px when the option changes. Pin חיבור in the sheet's foot, as the loan setup sheet does (FLOW-347), and give the segmented control the fields' reserved line. Mercury's sheet still fits.
-- [ ] Date sheet ("ייבוא מתאריך" and the loan setup date sheet): the month arrows are ‹ › text glyphs that RTL mirrors, so both point at the month name. Use outward SVG chevrons (§3.4). The picked day is a square box where mockup 15b has a filled circle; at 320 a rounded sliver shows beside it. This also holds the 15b date details that a done FLOW-115 item left open.
-- [ ] Review reminder card on an iPhone tab: "למסך הבית" in the card's note is plain text, with הבנתי as the only action. Link it to the install steps, as Settings → התראות does.
-- [ ] Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
+- [x] (UI lane 4, #358: חיבור pinned in the sheet foot for both connect sheets; "ייבוא מ" keeps the fields' reserved line) SUMIT connect sheet at 320 and 375x667: after מתאריך the body scrolls and only 9px of חיבור stay in view. With מההתחלה, חיבור sits 15px under the segmented control, against about 37px under each field, so it jumps 60px when the option changes. Pin חיבור in the sheet's foot, as the loan setup sheet does (FLOW-347), and give the segmented control the fields' reserved line. Mercury's sheet still fits.
+- [x] (UI lane 4, #358: outward SVG chevrons, shared with the range sheet; the picked day and today are circles) Date sheet ("ייבוא מתאריך" and the loan setup date sheet): the month arrows are ‹ › text glyphs that RTL mirrors, so both point at the month name. Use outward SVG chevrons (§3.4). The picked day is a square box where mockup 15b has a filled circle; at 320 a rounded sliver shows beside it. This also holds the 15b date details that a done FLOW-115 item left open.
+- [x] (UI lane 4, #358: one shared IosHomeNote for the card and Settings) Review reminder card on an iPhone tab: "למסך הבית" in the card's note is plain text, with הבנתי as the only action. Link it to the install steps, as Settings → התראות does.
+- [x] (UI lane 4, #358: swapped in stories, tests, the dev fixtures and e2e) Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
 <a id="flow-351"></a>
@@ -1082,7 +1082,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Option A approved by the owner (#324): one quiet card on the review empty state, Settings → התראות with three switches (תנועה חדשה, off by default; תזכורת ערב; סיכום שבועי, ראשון בבוקר).
 - [x] Server part 1 (#335): `push_subscriptions` and per-user `notification_prefs`; `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs`, `answer_push_prompt`; the `push-send` function (Web Push with VAPID, no library) and the `flow-push-evening` cron at 20:00 Israel time for owners with open review lines. Runbook [push.md](../runbooks/push.md).
 - [x] Owner step (2026-10-09): the VAPID key pair is made and kept; `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` are function secrets and `VITE_VAPID_PUBLIC_KEY` is in `app/.env.production`. Never make a new pair: it drops every saved device.
-- [ ] App (UI lane 4, PR #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`.
+- [x] App (UI lane 4, #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`.
+- [x] App follow-up (Production QA, 2026-10-09; UI lane 4, #358): the "הוספה למסך הבית" screen showed Safari's steps in every iPhone browser. Chrome (CriOS) now shows its share button in the address bar, Firefox (FxiOS) its ☰ menu, any other iPhone browser its share button; Safari and iPad keep •••. Read from the user agent (`iosBrowser`).
 - [x] Server part 2 (PR #343): תנועה חדשה within 5 minutes of a sync bringing bank or SUMIT lines (`flow-push-new`), and סיכום שבועי on Sunday at 08:00 Israel time (`flow-push-weekly`), with counts only and no amounts (the owner's pick, 2026-10-09).
 - [ ] Setup step 5 offers it once it ships.
 
@@ -1118,7 +1119,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
 - [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
-- [ ] Tests for the Settings write block; a hold-writes check on the first step's submit.
+- [x] (Backlog bug fixes, 2026-10-09: the business step's submit returns while writes are held, and `viewer-role-flip.test.tsx` covers it for viewer and unknown with an owner control; the Settings switches lock when the role turns viewer, in the same file, beside `viewer-writes.test.tsx`.) Tests for the Settings write block; a hold-writes check on the first step's submit.
 - [ ] Spec drift: demo timing, the SUMIT sheet sizes at 320, hiding vs focusing שוב during a replay; step 3 scrolls a little longer than designed.
 - [x] (Backlog bug fixes, 2026-10-09: removed, with their 320 overrides) Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`).
 - [ ] The banner's tone-bad icon; note inset vs frame.
@@ -1132,7 +1133,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [x] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: keep it.)
-- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
+- [x] (Backlog bug fixes, 2026-10-09: `viewer-role-flip.test.tsx` opens each sheet or form as the owner, turns the role to viewer or unknown, then submits: the new project form, SUMIT and Mercury connect, SUMIT refresh, ניתוק and its question, the category menu (מחוץ לרווח והפסד, נספרת בשיפוץ) and new category, and the + sheet, which leaves for Home. Each case has an owner control that writes, and removing any of these checks fails its case. The category screen had no check inside its sheets; its writes now check the role again. Jev and the overhead switch lock on the change, so a tap reaches no handler.) Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
 <a id="flow-508"></a>
