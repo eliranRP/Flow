@@ -9,7 +9,7 @@ The SUMIT sync reads documents from the CRM `listentities` call, through `Accoun
 
 ## Decision
 
-The sync counts the rows it maps and, for each row it cannot map, the field that broke. A row of a kind the sync does not read (a quote, an order) is skipped by design and is not counted. A row with no definition enum is counted, because a renamed enum field would otherwise make every row look like another kind. A page with a body and no row list is drift too.
+The sync counts the rows it maps and, for each row it cannot map, the field that broke. A row of a kind the sync does not read (a quote, an order) is skipped by design and is not counted. A row with no definition enum is counted, because a renamed enum field would otherwise make every row look like another kind. A page without its `Data` field, or whose `Data` has none of the row-list keys, is drift too; a null `Data` or an empty list is an empty company. The kinds skipped by design are logged by definition number, so a kind SUMIT renumbers shows up in the log (it cannot be told from a quote by the row alone).
 
 When more than 1 in 20 of the counted rows broke, the sync stops before it writes. The fallback is the last good ledger: nothing is voided or changed. The connection records `sync_schema_drift` through `note_sync_failure`, Settings reads it from `sumit_status`, and the next try waits 15 minutes, as for `sync_failed`. The function log names the broken fields and their counts, never values. Below that share the broken rows are dropped as before and logged the same way.
 

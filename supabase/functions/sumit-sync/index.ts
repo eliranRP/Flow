@@ -310,6 +310,8 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
   if (folder == null) throw new Error("SUMIT documents folder was not found");
   const docs: SumitDoc[] = [];
   const tally: CrmTally = { mapped: 0, broken: {} };
+  // Kinds the sync does not read, by definition number: a renumbered kind shows up here.
+  const skippedKinds = new Map<string, number>();
   let start = 0;
   for (let page = 0; page < PAGE_CAP; page += 1) {
     reads += 1;
@@ -321,8 +323,8 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
     });
     const data = payload.Data;
     // FLOW-510: a page with a body but no row list means SUMIT changed its shape.
-    if (pageShapeDrift(data)) {
-      console.error("sumit-sync page without a row list", JSON.stringify(Object.keys(data as object).slice(0, 10)));
+    if (pageShapeDrift(payload)) {
+      console.error("sumit-sync page without a row list", JSON.stringify(Object.keys(payload).slice(0, 10)));
       throw new Error("sync_schema_drift");
     }
     const entities = extractEntities(data);
@@ -337,18 +339,32 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
       }
       const field = crmEntityDrift(record);
       if (field != null) tally.broken[field] = (tally.broken[field] ?? 0) + 1;
+      else skippedKinds.set(definitionOf(record), (skippedKinds.get(definitionOf(record)) ?? 0) + 1);
     }
     const hasNext = Boolean(
       data && typeof data === "object" && "HasNextPage" in data && (data as { HasNextPage?: boolean }).HasNextPage,
     );
     if (!hasNext || entities.length === 0) {
+      logSkippedKinds(skippedKinds);
       checkDrift(tally);
       return { docs, reads };
     }
     start += entities.length;
   }
+  logSkippedKinds(skippedKinds);
   checkDrift(tally);
   throw new Error("sync_page_cap");
+}
+
+function definitionOf(record: Record<string, unknown>): string {
+  const value = record.Accounting_DefinitionEnum;
+  const first = Array.isArray(value) ? value[0] : value;
+  return typeof first === "number" ? String(first) : "other";
+}
+
+/** FLOW-510. Counts of the kinds the sync skipped by design, so a renumbered kind is visible. */
+function logSkippedKinds(kinds: Map<string, number>): void {
+  if (kinds.size > 0) console.log("sumit-sync kinds not read", JSON.stringify(Object.fromEntries(kinds)));
 }
 
 /**
@@ -362,10 +378,16 @@ function checkDrift(tally: CrmTally): void {
   if (isSchemaDrift(tally)) throw new Error("sync_schema_drift");
 }
 
-function pageShapeDrift(data: unknown): boolean {
+/**
+ * FLOW-510. A page whose Data field is gone, or whose Data object has none of the row-list keys
+ * the sync reads. A null Data or a null or empty row list is an empty company, not drift.
+ */
+function pageShapeDrift(payload: Record<string, unknown>): boolean {
+  if (!("Data" in payload)) return true;
+  const data = payload.Data;
   if (data == null || Array.isArray(data) || typeof data !== "object") return false;
   const record = data as Record<string, unknown>;
-  return !["Entities", "Data", "List"].some((key) => Array.isArray(record[key]));
+  return !["Entities", "Data", "List"].some((key) => key in record);
 }
 
 /** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */

@@ -1,8 +1,9 @@
 -- FLOW-510: the SUMIT sync's schema-drift check. When more than 1 in 20 of the CRM rows the sync
 -- should read cannot be mapped (a field SUMIT renamed or retyped), or a page comes back without
--- a row list, sumit-sync stops before it writes, so the full sweep cannot void documents SUMIT
--- still has. note_sync_failure records sync_schema_drift (Settings reads it from sumit_status)
--- and holds the next try 15 minutes, as for sync_failed and sync_page_cap.
+-- its data or row list, sumit-sync stops before it writes, so the full sweep does not void the
+-- documents those rows stand for. Below that share broken rows are dropped as before.
+-- note_sync_failure records sync_schema_drift (Settings reads it from sumit_status) and holds the
+-- next try 15 minutes, as for sync_failed and sync_page_cap.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
