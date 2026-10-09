@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(51);
+select plan(66);
 
 do $users$
 begin
@@ -76,6 +76,41 @@ insert into cfm (label, id) values
     pg_temp.cat('אחר', 'expense'), '2026-06-11')),
   ('usd', tests.fixture_line(pg_temp.id('co'), 'cfm:usd', 10000, 'expense', pg_temp.id('harbor'),
     pg_temp.cat('אחר', 'expense'), '2026-05-30', p_currency => 'USD', p_source => 'mercury'));
+
+-- April: a guessed transfer, a transfer the owner keeps in, an invoice and its receipt, a
+-- refund with VAT and a VAT-only document.
+insert into cfm (label, id) values
+  ('guess', tests.fixture_line(pg_temp.id('co'), 'cfm:guess', 20000, 'expense', null,
+    pg_temp.cat('העברות', 'expense'), '2026-04-02', p_pnl_role => null, p_suggested => true)),
+  ('kept', tests.fixture_line(pg_temp.id('co'), 'cfm:kept', 7000, 'expense', null,
+    pg_temp.cat('העברות', 'expense'), '2026-04-03', p_pnl_role => null)),
+  ('inv', tests.fixture_line(pg_temp.id('co'), 'cfm:inv', 100000, 'income', pg_temp.id('harbor'),
+    pg_temp.cat('תקבול מלקוח', 'income'), '2026-04-04', p_pnl_role => null, p_doc_kind => 'invoice')),
+  ('rcpt', tests.fixture_line(pg_temp.id('co'), 'cfm:rcpt', 100000, 'income', pg_temp.id('harbor'),
+    pg_temp.cat('תקבול מלקוח', 'income'), '2026-04-06', p_pnl_role => null, p_doc_kind => 'receipt')),
+  ('refund', tests.fixture_line(pg_temp.id('co'), 'cfm:refund', 10000, 'expense', pg_temp.id('harbor'),
+    pg_temp.cat('אחר', 'expense'), '2026-04-07')),
+  ('vat_only', tests.fixture_line(pg_temp.id('co'), 'cfm:vat-only', 1, 'expense', pg_temp.id('harbor'),
+    pg_temp.cat('אחר', 'expense'), '2026-04-08'));
+update public.transactions set cash_date = null where id = pg_temp.id('inv');
+update public.transactions
+set amount_net = 10000, vat_amount = 1800, amount_gross = 11800
+where id = pg_temp.id('refund');
+update public.transactions
+set amount_net = 0, vat_amount = -1800, amount_gross = -1800
+where id = pg_temp.id('vat_only');
+
+-- One cell of April, from cash_months(3, 2026-06-15).
+create or replace function pg_temp.april(p_field text)
+returns bigint
+language sql
+as $$
+  select (r ->> p_field)::bigint
+  from jsonb_array_elements(public.cash_months(3, '2026-06-15') -> 'months') m
+  cross join lateral jsonb_array_elements(m -> 'by_currency') r
+  where m ->> 'month' = '2026-04-01' and r ->> 'currency' = 'ILS';
+$$;
+grant execute on function pg_temp.april(text) to authenticated, service_role;
 
 -- The open invoice is unpaid; the Mercury card line posted in June; two lines carry 18% VAT.
 update public.transactions set cash_date = null where id = pg_temp.id('open_invoice');
@@ -285,11 +320,55 @@ select is(
 select throws_ok($$select public.set_cash_basis('weekly')$$, 'validation', 'an unknown basis is refused');
 select lives_ok($$select public.set_cash_basis('paid')$$, 'back to the payment date');
 
--- 42-43. Validation.
+-- 42-53. More cases, in April.
+select lives_ok(
+  $$select public.set_transaction_cash(pg_temp.id('kept'), true)$$,
+  'the owner keeps one transfer in cash'
+);
+select is(
+  (select jsonb_object_agg(r ->> 'transaction_id', r -> 'amount_minor')
+   from jsonb_array_elements(public.cash_month_lines('2026-04-01', 'out') -> 'rows') r),
+  jsonb_build_object(
+    pg_temp.id('guess'), 20000, pg_temp.id('kept'), 7000,
+    pg_temp.id('refund'), -11800, pg_temp.id('vat_only'), 1800
+  ),
+  'a guessed transfer counts as in the P&L, the line switch beats its category, a refund lowers יצא gross, a VAT-only document is its VAT'
+);
+select is(pg_temp.april('out_minor'), 17000::bigint, 'and they add up in the month');
+select is(pg_temp.april('in_minor'), 100000::bigint, 'on the paid basis the receipt counts and its invoice does not');
+select lives_ok($$select public.set_cash_basis('invoice')$$, 'invoice basis');
+select is(pg_temp.april('in_minor'), 100000::bigint, 'on the invoice basis the invoice counts and its receipt does not');
+select lives_ok($$select public.set_cash_basis('paid')$$, 'paid basis');
+select is(
+  (pg_temp.month_row('2026-05-01', 'USD') ->> 'profit_minor')::bigint,
+  ((public.company_pnl(pg_temp.id('co'), '2026-05-01', '2026-05-31', 'invoiced') -> 'by_currency')
+     -> 1 ->> 'net_profit_minor')::bigint,
+  'profit_minor matches company_pnl in a second currency'
+);
+select lives_ok(
+  $$select public.rename_category(pg_temp.cat('חומרים', 'expense'), 'Credit card payments')$$,
+  'a category in cash is renamed to a non-cash name'
+);
+select ok(
+  (select in_cash from public.categories where name = 'Credit card payments' and company_id = pg_temp.id('co')),
+  'a rename keeps the cash flag'
+);
+select lives_ok(
+  $$select public.set_category_cash(pg_temp.id('xfer_out'), true),
+           public.delete_category(pg_temp.id('xfer_out')),
+           public.restore_category(pg_temp.id('xfer_out'))$$,
+  'a category put in cash is deleted and restored'
+);
+select ok(
+  (select in_cash from public.categories where id = pg_temp.id('xfer_out')),
+  'undo of a delete puts back the owner''s cash setting'
+);
+
+-- 54-55. Validation.
 select throws_ok($$select public.cash_months(0)$$, 'validation', 'months must be 1 to 24');
 select throws_ok($$select public.cash_month_lines('2026-06-01', 'up')$$, 'validation', 'the side must be in, out or excluded');
 
--- 44-46. A viewer of a demo company reads it and cannot switch anything.
+-- 56-60. A viewer of a demo company reads it and cannot switch anything.
 select tests.authenticate_as('cfm_demo');
 select public.create_company('Example Demo LLC', true);
 reset role;
@@ -300,6 +379,11 @@ values (tests.get_supabase_uid('cfm_viewer'), pg_temp.id('demo'));
 
 select tests.authenticate_as('cfm_viewer');
 select is(public.cash_months(1, '2026-06-15') ->> 'basis', 'paid', 'a viewer reads the cash view');
+select is(public.cash_month_lines('2026-06-01', 'in') -> 'rows', '[]'::jsonb, 'and its lists');
+select throws_ok(
+  $$select public.set_transaction_cash(pg_temp.id('rent'), false)$$, '42501', 'forbidden',
+  'a viewer cannot switch a line'
+);
 select throws_ok($$select public.set_cash_basis('invoice')$$, '42501', 'forbidden', 'a viewer cannot change the basis');
 select throws_ok(
   $$select public.set_category_cash(
@@ -309,7 +393,7 @@ select throws_ok(
   '42501', 'forbidden', 'a viewer cannot switch a category'
 );
 
--- 47-50. Another company sees and changes nothing of this one.
+-- 61-65. Another company sees and changes nothing of this one.
 select tests.authenticate_as('cfm_other');
 select lives_ok($$select public.create_company('Other Example LLC', false)$$, 'another company');
 select is(
@@ -327,10 +411,25 @@ select throws_ok(
   'transaction not found',
   'nor can it switch this company''s line'
 );
+select throws_ok(
+  $$select public.set_category_cash(pg_temp.cat('אחר', 'expense'), false)$$,
+  'category not found',
+  'or its category'
+);
 
--- 51. Signed out, nothing.
+-- 66. Signed out, nothing.
 select tests.clear_authentication();
-select throws_ok($$select public.cash_months()$$, '42501', null, 'anon cannot read the cash view');
+select is(
+  (select count(*)::integer from (values
+    (has_function_privilege('anon', 'public.cash_months(integer, date)', 'execute')),
+    (has_function_privilege('anon', 'public.cash_month_lines(date, text, text, integer, integer)', 'execute')),
+    (has_function_privilege('anon', 'public.set_category_cash(uuid, boolean)', 'execute')),
+    (has_function_privilege('anon', 'public.set_transaction_cash(uuid, boolean)', 'execute')),
+    (has_function_privilege('anon', 'public.set_cash_basis(text)', 'execute'))
+  ) v(allowed) where allowed),
+  0,
+  'anon cannot call any of the cash functions'
+);
 
 select * from finish();
 rollback;

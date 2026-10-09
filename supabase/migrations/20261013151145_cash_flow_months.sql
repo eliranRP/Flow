@@ -12,6 +12,8 @@
 
 begin;
 
+set local lock_timeout = '5s';
+
 alter table public.categories
   add column in_cash boolean not null default true;
 
@@ -91,8 +93,10 @@ as $$
   );
 $$;
 
--- A new category, or one renamed into a non-cash name, starts out of cash. A loan part's
--- category stays in: the whole loan payment is money out.
+-- A new category with a non-cash name starts out of cash. A loan part's category stays in:
+-- the whole loan payment is money out. A rename keeps the flag, as every rename path keeps
+-- the P&L flag. A category restored from a snapshot taken before this column existed comes
+-- back in cash (category_restore then puts back a snapshot's own setting).
 create or replace function private.categories_default_cash()
 returns trigger
 language plpgsql
@@ -100,17 +104,8 @@ security definer
 set search_path = ''
 as $$
 begin
-  if new.loan_part is not null then
-    return new;
-  end if;
-  if tg_op = 'INSERT' then
-    if private.non_cash_category(new.kind, new.name) then
-      new.in_cash := false;
-    end if;
-  elsif (new.name is distinct from old.name or new.kind is distinct from old.kind)
-    and private.non_cash_category(new.kind, new.name)
-    and not private.non_cash_category(old.kind, old.name)
-  then
+  new.in_cash := coalesce(new.in_cash, true);
+  if new.loan_part is null and private.non_cash_category(new.kind, new.name) then
     new.in_cash := false;
   end if;
   return new;
@@ -118,7 +113,7 @@ end;
 $$;
 
 create trigger categories_default_cash
-  before insert or update of name, kind on public.categories
+  before insert on public.categories
   for each row execute function private.categories_default_cash();
 
 -- Every company gets an income category for money received from a loan, out of the P&L and
@@ -175,10 +170,6 @@ where c.loan_part is null
   and c.in_cash
   and private.non_cash_category(c.kind, c.name);
 
-create index transactions_cash_date_idx
-  on public.transactions (company_id, cash_date)
-  where removed_at is null and line_status = 'posted';
-
 -- The cash view's parts: private.pnl_lines' parts (loan split, line split, or the whole line,
 -- each counted once), with
 -- - month_date: the payment date on 'paid' (a line with none is cash on its document date,
@@ -205,7 +196,26 @@ language sql
 stable
 set search_path = ''
 as $$
-  with lines as (
+  with dated as (
+    select
+      l.*,
+      case
+        when p_basis = 'invoice' then l.doc_date
+        when l.cash_date is not null then l.cash_date
+        when l.doc_kind in ('invoice', 'credit') then null
+        else l.doc_date
+      end as month_date
+    from private.pnl_lines l
+    where l.company_id = p_company
+      and (
+        l.kind = 'expense'
+        or l.direction = 'expense'
+        or (p_basis = 'paid' and l.doc_kind in ('receipt', 'invoice_receipt'))
+        or (p_basis = 'invoice' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+      )
+  ),
+  -- The month depends on the line alone, so a line's parts are all in the range or all out.
+  lines as (
     select
       l.transaction_id,
       l.part,
@@ -217,12 +227,8 @@ as $$
       l.amount_net,
       l.line_amount_net,
       t.amount_gross as line_gross,
-      case
-        when p_basis = 'invoice' then l.doc_date
-        when l.cash_date is not null then l.cash_date
-        when l.doc_kind in ('invoice', 'credit') then null
-        else l.doc_date
-      end as month_date,
+      l.month_date,
+      count(*) over (partition by l.transaction_id) as parts,
       coalesce(
         t.in_cash_override,
         not private.line_category_out(
@@ -236,16 +242,10 @@ as $$
         order by l.part nulls last, l.category_id, l.project_id, l.amount_net
         rows between unbounded preceding and current row
       ) as cum_net
-    from private.pnl_lines l
+    from dated l
     join public.transactions t on t.id = l.transaction_id
     left join public.categories c on c.id = l.category_id
-    where l.company_id = p_company
-      and (
-        l.kind = 'expense'
-        or l.direction = 'expense'
-        or (p_basis = 'paid' and l.doc_kind in ('receipt', 'invoice_receipt'))
-        or (p_basis = 'invoice' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
-      )
+    where l.month_date between p_from and p_to
   )
   select
     x.transaction_id,
@@ -257,13 +257,14 @@ as $$
     x.pnl_role,
     x.month_date,
     case
-      when x.line_amount_net = 0 or x.line_gross = x.line_amount_net then x.amount_net
+      -- A VAT-only document (net 0) is its gross.
+      when x.line_amount_net = 0 then case when x.parts = 1 then x.line_gross else x.amount_net end
+      when x.line_gross = x.line_amount_net then x.amount_net
       else private.div_half_even(x.cum_net * x.line_gross, x.line_amount_net)
         - private.div_half_even((x.cum_net - x.amount_net) * x.line_gross, x.line_amount_net)
     end::bigint,
     x.in_cash
-  from lines x
-  where x.month_date between p_from and p_to;
+  from lines x;
 $$;
 
 revoke all on function private.cash_parts(uuid, text, date, date) from public, anon, authenticated;
@@ -379,8 +380,8 @@ end;
 $$;
 
 -- The lines behind one month's נכנס ('in'), יצא ('out') or what the view leaves out
--- ('excluded'), newest first, in get_breakdown_lines' row shape. Parts of one line on the same
--- side show as one row. amount_minor is positive money in on 'in', positive money out on 'out',
+-- ('excluded'), newest first, in get_breakdown_lines' row shape. A line split's parts on the
+-- same side show as one row; a loan payment shows a row per part (principal, interest, escrow). amount_minor is positive money in on 'in', positive money out on 'out',
 -- and on 'excluded' positive on the row's side ('in' or 'out').
 create or replace function public.cash_month_lines(
   p_month date,
@@ -488,7 +489,8 @@ end;
 $$;
 
 -- A line's place in the cash view: its override, else in, out or mixed over its parts'
--- categories (a line split by category can be both).
+-- categories (a line split by category can be both). It is the line's switch, not a promise
+-- the line shows this month: an income invoice is never cash on the paid basis.
 create or replace function private.line_cash_state(p_transaction_id uuid)
 returns text
 language sql
@@ -652,7 +654,7 @@ grant execute on function public.set_transaction_cash(uuid, boolean) to authenti
 grant execute on function public.set_cash_basis(text) to authenticated, service_role;
 
 -- The reads the switches need: list_categories returns in_cash, get_transaction the line's
--- override and cash_state.
+-- override and cash_state; category_restore puts back in_cash.
 create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer
 language sql
@@ -681,6 +683,16 @@ $a$;
   end if;
   execute replace(def, anchor, anchor || $n$    'in_cash_override', t.in_cash_override,
     'cash_state', private.line_cash_state(t.id),
+$n$);
+
+  -- Undo of a delete puts back the owner's cash setting with the P&L one.
+  def := pg_get_functiondef('private.category_restore(uuid, uuid)'::regprocedure);
+  anchor := $a$  set excluded_from_pnl = (d.snapshot->'category'->>'excluded_from_pnl')::boolean
+$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'category_restore is not the expected definition';
+  end if;
+  execute replace(def, anchor, anchor || $n$    , in_cash = coalesce((d.snapshot->'category'->>'in_cash')::boolean, in_cash)
 $n$);
 end
 $patch$;

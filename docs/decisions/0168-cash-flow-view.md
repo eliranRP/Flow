@@ -10,21 +10,21 @@ The owner asked for a monthly view of all money in and out (FLOW-413), and made 
 ## Decision
 
 1. **Which lines.** Every posted line that is not removed or void, by the same parts as `private.pnl_lines`: a complete loan split's parts, a complete line split's parts, else the whole line. Each part counts once.
-2. **Gross.** The cash view counts `amount_gross`, what moved in the bank. A line split's parts share the VAT in proportion, rounded on running totals so the parts add up to the line's gross. The P&L stays net.
+2. **Gross.** The cash view counts `amount_gross`, what moved in the bank. A line split's parts share the VAT in proportion, rounded on running totals so the parts add up to the line's gross. A VAT-only document (net 0) counts its VAT. The P&L stays net.
 3. **The month.** `companies.cash_basis`:
    - `paid` (the default): the payment date (`cash_date`). An open invoice or credit note with no payment date is not cash yet; any other line with no payment date counts on its document date.
    - `invoice`: the document date, open invoices included.
    - Income lines follow the P&L's document rule on each basis (receipts on `paid`, invoices and credit notes on `invoice`, invoice-receipts on both), so an invoice and its receipt never both count.
 4. **In or out of the view.** Separate from the P&L flags:
    - `transactions.in_cash_override`: null follows the category, false takes the whole line out, true keeps it in. It works on loan payments too; the P&L's loan lock is not the cash flag's.
-   - `categories.in_cash`, default true. A guessed category does not take a whole line out, as in the P&L.
-   - Out by default, by name (`private.non_cash_category`, applied on insert and on a rename): both העברות categories, internal transfers in and out, credit card bill payments (the card's charges are already lines), and money received from a loan.
+   - `categories.in_cash`, default true. A guessed category does not take a whole line out, as in the P&L: a bank transfer still guessed as העברות counts until the owner confirms it. Its two sides move נכנס and יצא alike, so the month's net holds, while a wrong guess never hides a real expense.
+   - Out by default, by name (`private.non_cash_category`, applied when a category is created; a rename keeps the flag, as every rename path keeps the P&L flag, and undo of a delete puts back the owner's setting): both העברות categories, internal transfers in and out, credit card bill payments (the card's charges are already lines), and money received from a loan.
    - Every company gets an income category, כסף שהתקבל מהלוואות, out of the P&L and out of cash. Existing companies get it unless they already have one by that name or "loan proceeds".
    - A loan payment's principal, interest and escrow are all money out: their categories stay in cash.
 5. **Reads.**
    - `cash_months(p_months 1-24, p_today)`: the company's basis and base currency, and the months newest first, the current month included. Each month has one row per currency, the base currency first and always present: `in_minor` (נכנס), `out_minor` (יצא), `net_minor`, `profit_minor` (company_pnl's invoiced net profit for the month, for the "רווח החודש" row), and `excluded_count`, `excluded_in_minor`, `excluded_out_minor` for what the view leaves out.
-   - `cash_month_lines(p_month, p_side 'in'|'out'|'excluded', p_currency, p_limit, p_offset)`: the lines behind a figure, newest first, in `get_breakdown_lines`' row shape plus `side` and `cash_month_date`. Parts of one line on one side are one row.
-   - `list_categories` returns `in_cash`; `get_transaction` returns `in_cash_override` and `cash_state` (in, out, or mixed for a line split across categories in and out).
+   - `cash_month_lines(p_month, p_side 'in'|'out'|'excluded', p_currency, p_limit, p_offset)`: the lines behind a figure, newest first, in `get_breakdown_lines`' row shape plus `side` and `cash_month_date`. A line split's parts on one side are one row; a loan payment has a row per part.
+   - `list_categories` returns `in_cash`; `get_transaction` returns `in_cash_override` and `cash_state` (in, out, or mixed for a line split across categories in and out). `cash_state` describes the line's switch; it does not say the line shows in a given month (an income invoice is never cash on the paid basis).
    - Both reads take the signed-in company (owner, or a viewer of a demo company), like `get_breakdown`.
 6. **Writes**, owner only, each returning the prior value for ביטול: `set_category_cash(p_category_id, p_in_cash)`, `set_transaction_cash(p_id, p_in_cash | null)`, `set_cash_basis(p_basis)`.
 7. **Nothing is converted.** Each currency is its own row, as in the P&L (0146).
