@@ -138,8 +138,17 @@
   inline-size: auto;
 }
 
-/* FLOW-333 C7: each ₪ / % button is a full touch target. */
+/* FLOW-333 C7: each ₪ / % button is a full touch target. FLOW-346: the switch is as tall as the
+   amount field beside it, so the two read as one row. */
+.ui-lsplit-entry .ui-seg-input {
+  box-sizing: border-box;
+  block-size: var(--control-height);
+  min-block-size: var(--touch-min);
+}
+
 .ui-lsplit-entry .ui-seg-btn {
+  block-size: 100%;
+  min-block-size: 0;
   min-inline-size: var(--touch-min);
 }
 

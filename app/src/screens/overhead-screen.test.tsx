@@ -34,14 +34,14 @@ const serverProject = {
   transactions: [],
 };
 
-function renderProject(sample: NonNullable<ProjectDetail>) {
+function renderProject(sample: NonNullable<ProjectDetail>, section: "overview" | "expenses" = "expenses") {
   const client = new QueryClient();
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={["/projects/a"]}>
           <Routes>
-            <Route path="/projects/:projectId" element={<ProjectDetailScreen section="expenses" sample={sample} />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailScreen section={section} sample={sample} />} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>
@@ -72,6 +72,10 @@ describe("project category breakdown", () => {
     });
     expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/a\/categories\/h\?period=/));
     expect(screen.getByRole("link", { name: /1 ממתינה לאישור/ })).toHaveAttribute("href", "/review?project=a");
+    // FLOW-334: the waiting row reads as Home's review row, not a category.
+    const waiting = screen.getByRole("link", { name: /1 ממתינה לאישור/ });
+    expect(waiting).toHaveClass("ui-row-pending");
+    expect(waiting.querySelector(".ui-row-icon svg")).not.toBeNull();
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
     expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
   });
@@ -257,5 +261,48 @@ describe("project overhead hero", () => {
     });
     expect(document.querySelector(".t-display")?.textContent).toBe("₪100,000");
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();
+  });
+});
+
+describe("the project's finish row (FLOW-334)", () => {
+  it("finishes the project from a row in the ⋯ menu, with a neutral confirm", async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
+    rpc.impl = (name, args) => {
+      calls.push({ name, args });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderProject({ ...projectBase }, "overview");
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    const row = await screen.findByRole("button", { name: "סיום הפרויקט" });
+    expect(row).toHaveClass("ui-row");
+    fireEvent.click(row);
+    // The menu closes as the confirm opens.
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "עוד" })).not.toBeInTheDocument(); });
+    const confirm = await screen.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+    const button = within(confirm).getByRole("button", { name: "סיום הפרויקט" });
+    expect(button.querySelector("svg")).toBeNull();
+    expect(button.className).not.toMatch(/danger/);
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(calls.find((call) => call.name === "upsert_project")?.args).toMatchObject({ p_id: "a", p_status: "finished" });
+    });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לסיים את הפרויקט?" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "עוד" })).toHaveFocus(); });
+  });
+
+  it("returns focus to עוד when the confirm is cancelled", async () => {
+    renderProject({ ...projectBase }, "overview");
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(await screen.findByRole("button", { name: "סיום הפרויקט" }));
+    const confirm = await screen.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לסיים את הפרויקט?" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "עוד" })).toHaveFocus(); });
+  });
+
+  it("offers החזרה לפעיל on a finished project", async () => {
+    renderProject({ ...projectBase, status: "finished" }, "overview");
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    expect(await screen.findByRole("button", { name: "החזרה לפעיל" })).toBeInTheDocument();
   });
 });

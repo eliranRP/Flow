@@ -84,3 +84,40 @@ export const Picker: Story = { args: { loanCount: 2, open: true } };
 export const PickerOtherCurrency: Story = { args: { lineCurrency: "ILS", open: true } };
 export const PickerOtherCurrency320Dark: Story = { args: { lineCurrency: "ILS", open: true }, globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const PickerSaving: Story = { args: { loanCount: 2, open: true, savingId: "loan-1" } };
+
+/**
+ * FLOW-106 §3.4: each loan says what one tap writes. A schedule row, a catch-up of several rows, a
+ * demand loan's accrued interest, and a loan closed before the line's date (off, with the day).
+ */
+const KIND_LOANS = [
+  { ...LOANS[0], id: "k-1", name: "משכנתא לדוגמה" },
+  { ...LOANS[0], id: "k-2", name: "הלוואת שיפוץ לדוגמה" },
+  { ...LOANS[0], id: "k-3", name: "הלוואה לפי דרישה", kind: "demand" as const, termMonths: null, paymentMinor: null },
+  { ...LOANS[0], id: "k-4", name: "הלוואה שנסגרה", status: "closed" as const, closedOn: "2025-11-30" },
+];
+const KIND_OFFERS = [
+  { loanId: "k-1", description: "לפי הלוח · $599.55", parts: [] },
+  { loanId: "k-2", description: "3 תשלומים לפי הלוח · $1,798.65", parts: [] },
+  { loanId: "k-3", description: "ריבית צבורה $328.77 · השאר לקרן", parts: [] },
+  { loanId: "k-4", disabledReason: "נסגרה ב־30/11/2025", parts: null },
+];
+
+function KindsPicker() {
+  const [open, setOpen] = useState(true);
+  return (
+    <LoanMatchOffer
+      lineCurrency="USD"
+      loans={KIND_LOANS}
+      offers={KIND_OFFERS}
+      busy={false}
+      matchHint="4 הלוואות"
+      sheetOpen={open}
+      onSheetOpenChange={setOpen}
+      onMatch={() => undefined}
+    />
+  );
+}
+
+export const PickerKinds: StoryObj = { render: () => <KindsPicker /> };
+export const PickerKindsDark: StoryObj = { render: () => <KindsPicker />, ...dark390 };
+export const PickerKinds320: StoryObj = { render: () => <KindsPicker />, ...light320 };

@@ -6,7 +6,7 @@ import { longHebrew } from "../ui/story-support";
 import { SetupCard } from "./card";
 import { JEV_HINT } from "./copy";
 import { SetupStep } from "./shell";
-import { StepBusiness, StepSumit } from "./steps";
+import { StepBusiness, StepInstall, StepSumit } from "./steps";
 import { StoryRoute } from "../ui/story-route";
 
 const meta = {
@@ -85,5 +85,25 @@ export const ConnectStep: Story = { ...connectStep, name: "Connect step, SUMIT o
 export const ConnectStep320: Story = {
   ...connectStep,
   name: "Connect step, SUMIT or Mercury, 320",
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
+};
+
+/** FLOW-506: step 5 draws the install screen's numbered steps. */
+const installStep = (mode: "iphone" | "android-steps") => ({
+  args: SmartTag.args,
+  parameters: { flowRouter: false },
+  render: () => (
+    <StoryRoute entry="/setup/5">
+      <StepInstall initialMode={mode} onBack={() => undefined} onSkip={() => undefined} onFinish={() => undefined} />
+    </StoryRoute>
+  ),
+});
+
+export const InstallStepIphone: Story = { ...installStep("iphone"), name: "Install step, iPhone" };
+export const InstallStepAndroid: Story = { ...installStep("android-steps"), name: "Install step, Android steps" };
+export const InstallStepIphoneDark: Story = { ...installStep("iphone"), name: "Install step, iPhone, dark", globals: { theme: "dark" } };
+export const InstallStepIphone320: Story = {
+  ...installStep("iphone"),
+  name: "Install step, iPhone, 320",
   parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };

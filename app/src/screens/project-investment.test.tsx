@@ -1,13 +1,14 @@
 import { projectDetailSchema } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvestmentCard, INVESTMENT_ERROR } from "../ui/investment-card";
 import { FILLED } from "../ui/investment-card.stories-support";
 import { shiftDays, israelToday } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
+import { categoryBack } from "./project-category-screen";
 import { ProjectDetailScreen } from "./project-detail-screen";
 import {
   EMPTY_HOLD,
@@ -354,6 +355,36 @@ describe("the rehab sheet", () => {
     expect(screen.getByText("לא נספר ברווח")).toBeInTheDocument();
     expect(screen.getByText("חלק מתשלום הלוואה")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "מה נספר בשיפוץ? בהגדרות הקטגוריות" })).toHaveAttribute("href", "/settings/categories");
+  });
+
+  it("opens a counted category's lines all time on the cash basis (FLOW-404)", async () => {
+    serveRehab();
+    renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    const materials = await screen.findByRole("link", { name: /חומרים/ });
+    expect(materials).toHaveAttribute("href", "/projects/p1/categories/c-mat?period=all&basis=cash");
+    // A line with no category opens nothing, and keeps the chevron's space so the amounts line up.
+    const none = screen.getByText("בלי קטגוריה").closest(".ui-row");
+    expect(none?.tagName).not.toBe("A");
+    expect(none?.querySelector(".ui-row-chevron-space")).not.toBeNull();
+  });
+
+  it("brings Back from the lines to the investment screen on its period", async () => {
+    serveRehab();
+    function BackProbe() {
+      const location = useLocation();
+      return <p data-testid="back">{categoryBack("p1", "", location.state)}</p>;
+    }
+    wrap(
+      <Routes>
+        <Route path="/projects/:projectId/investment" element={<ProjectInvestmentSection project={parsed()} />} />
+        <Route path="/projects/:projectId/categories/:categoryId" element={<BackProbe />} />
+      </Routes>,
+      "/projects/p1/investment?period=month&at=2026-09",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /חומרים/ }));
+    expect(await screen.findByTestId("back")).toHaveTextContent("/projects/p1/investment?period=month&at=2026-09");
   });
 
   it("says loading while it reads", async () => {

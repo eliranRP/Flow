@@ -1,6 +1,7 @@
 import { parseDecimalHalfEven } from "@flow/shared";
 import { useCallback, useEffect, useId, useRef, useState, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
+import { useLocation } from "react-router-dom";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { BigNumber } from "../ui/big-number";
 import { useSheetHistory } from "../ui/back";
@@ -26,6 +27,7 @@ import { TextLink } from "../ui/text-link";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 import { ProjectLoanList } from "./loan-match";
+import { categoryHref } from "./project-category-screen";
 import {
   REHAB_TOTAL_ONLY,
   rehabBreakdown,
@@ -71,7 +73,19 @@ function OtherLines({ list, note }: { list: readonly MinorInCurrency[]; note: st
   );
 }
 
+/** The rehab figure is every cost since the project started, on the cash basis. */
+function rehabLinesSearch(search: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set("period", "all");
+  params.set("basis", "cash");
+  return `?${params.toString()}`;
+}
+
+/** What the category screen's Back reads when the rehab sheet opened it (FLOW-404). */
+export type CategoryBackState = { back: string };
+
 export function RehabSheet({
+  projectId,
   open,
   onOpenChange,
   figures,
@@ -82,6 +96,8 @@ export function RehabSheet({
   onRetry,
   returnFocusRef,
 }: {
+  /** FLOW-404: a counted category opens its lines, all time on the cash basis, as the list reads them. */
+  projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   figures: InvestmentFigures;
@@ -93,6 +109,9 @@ export function RehabSheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const search = usePreviewSearch();
+  // Back from the lines returns here (the investment screen, on its own period), not to the overview.
+  const location = useLocation();
+  const backState: CategoryBackState = { back: `${location.pathname}${location.search}` };
   const breakdown = categories == null ? null : rehabBreakdown(costs, categories, figures.currency, figures.rehabMinor);
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef}>
@@ -123,16 +142,23 @@ export function RehabSheet({
             <p className="t-hint">אין עדיין עלויות שנספרות בשיפוץ.</p>
           ) : (
             <List className="ui-invest-list">
-              {breakdown.counted.map((line) => (
-                <ListRow
-                  key={line.key}
-                  variant="project"
-                  title={line.name}
-                  agorot={line.minor}
-                  currency={figures.currency}
-                  loss={false}
-                />
-              ))}
+              {breakdown.counted.map((line) => {
+                const href = line.id == null ? undefined : categoryHref(projectId, line.id, figures.currency, rehabLinesSearch(search));
+                return (
+                  <ListRow
+                    key={line.key}
+                    variant="project"
+                    title={line.name}
+                    agorot={line.minor}
+                    currency={figures.currency}
+                    loss={false}
+                    href={href}
+                    state={href == null ? undefined : backState}
+                    chevron={href != null}
+                    chevronSpace={href == null}
+                  />
+                );
+              })}
             </List>
           )}
           {breakdown.left.length > 0 ? (
@@ -148,6 +174,7 @@ export function RehabSheet({
                     agorot={line.minor}
                     currency={figures.currency}
                     loss={false}
+                    chevronSpace
                   />
                 ))}
               </List>
@@ -592,6 +619,7 @@ export function ProjectInvestmentSection({
             onSave={onSave}
           />
           <RehabSheet
+            projectId={projectId}
             open={rehabOpen}
             onOpenChange={setRehabSheet}
             figures={figures}

@@ -39,7 +39,7 @@ describe("InstallScreen", () => {
     renderInstall("iphone");
     expect(screen.getByRole("list").children).toHaveLength(3);
     expect(screen.getByText("•••")).toBeInTheDocument();
-    expect(screen.getByText("שיתוף ואז הוספה למסך הבית")).toBeInTheDocument();
+    expect(screen.getByText("בוחרים שיתוף ואז ״הוספה למסך הבית״")).toBeInTheDocument();
     expect(screen.getByText("מקישים הוספה")).toBeInTheDocument();
     expect(screen.queryByText("ההתקנה באייפון עובדת רק מספארי.")).not.toBeInTheDocument();
     expect(screen.queryByText("פותחים את הקישור הזה בספארי")).not.toBeInTheDocument();
@@ -47,7 +47,7 @@ describe("InstallScreen", () => {
 
   it("uses the same iOS 26 rows on iPad", () => {
     renderInstall("ipad");
-    expect(screen.getByText("שיתוף ואז הוספה למסך הבית")).toBeInTheDocument();
+    expect(screen.getByText("בוחרים שיתוף ואז ״הוספה למסך הבית״")).toBeInTheDocument();
     expect(screen.queryByText("כפתור השיתוף נמצא למעלה")).not.toBeInTheDocument();
   });
 

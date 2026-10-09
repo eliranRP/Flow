@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { formatDayMonth } from "./ui/date-math";
 
 /**
  * FLOW-327 / FLOW-701. The words on the review card for Jev's reason (decision 0134) and the
@@ -163,3 +164,39 @@ export function reviewFlagView(
 
 /** The words a screen reader hears before the flag. */
 export const REVIEW_FLAG_PREFIX = "לבדיקה:";
+
+/** FLOW-309 (decision 0165, option A): the muted line under the amount of an invoice its receipt paid. */
+export const REVIEW_PAID = "שולם";
+/** A receipt that does not cover the invoice yet (a part payment). */
+export const REVIEW_PART_PAID = "שולם חלקית";
+export const REVIEW_RECEIPT = "קבלה";
+
+/** `check` shows the ✓ icon (paid in full only); readers hear `spoken` instead of `line`. */
+export type ReviewPaidView = { check: boolean; line: CopyPart[]; spoken: string };
+
+/**
+ * "✓ שולם · קבלה dd/mm" when the receipts cover the invoice, "שולם חלקית · קבלה dd/mm" when they
+ * don't yet, and null with no receipts (any other line, or a payload from before the pairing server).
+ * The date is `paid_on`, else the latest receipt's.
+ */
+export function reviewPaidView(
+  row: {
+    receipts?: readonly { doc_date: string }[] | null;
+    paid?: boolean | null;
+    paid_on?: string | null;
+  },
+  now = new Date(),
+): ReviewPaidView | null {
+  const receipts = row.receipts ?? [];
+  if (receipts.length === 0) return null;
+  const latest = receipts.reduce((last, receipt) => (receipt.doc_date > last ? receipt.doc_date : last), "");
+  const iso = row.paid_on ?? latest;
+  if (iso === "") return null;
+  const day = formatDayMonth(iso, now);
+  const word = row.paid === true ? REVIEW_PAID : REVIEW_PART_PAID;
+  return {
+    check: row.paid === true,
+    line: [`${word} · ${REVIEW_RECEIPT} `, { num: day }],
+    spoken: `${word}, ${REVIEW_RECEIPT} מ־${day}`,
+  };
+}

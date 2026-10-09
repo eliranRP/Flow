@@ -1,3 +1,4 @@
+import { amountText } from "./line-split";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
@@ -441,12 +442,16 @@ function ReviewerUnsplit() {
           sampleAmount={unsplitNet}
           sampleProjects={projects}
           sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
+          // Opens like the saved six-way split: the first project keeps the rest, the others are exact parts.
+          sampleRestProject={unsplitProjects[0].id}
+          sampleParts={unsplitProjects.slice(1).map((project) => ({ projectId: project.id, value: amountText(unsplitShare(project.bp)) }))}
           backTo="/reviewer"
-          onOneProject={(id) => {
+          onSave={(rows) => {
             pendingSave.current = true;
-            setCollapsed(id);
+            // One project takes the whole line; parts across projects keep it shared.
+            setCollapsed(rows.length === 1 ? (rows[0]?.project_id ?? null) : null);
             setShowSplit(false);
-            return Promise.resolve("left" as const);
+            return "left";
           }}
         />
       ) : (
@@ -557,6 +562,7 @@ function ReviewerSplit() {
       sampleAmount={leasing ? unsplitNet : reviewerSharedAgorot}
       sampleProjects={leasing ? unsplitProjects.map((project) => ({ id: project.id, name: project.name })) : reviewerSplitProjects}
       sampleMeta={leasing ? "ליסינג הדרך בע״מ · 01/07/2026" : "עגורני החוף בע״מ · 29/09/2026"}
+      sampleRestProject={null}
       backTo={`/reviewer/review?save=${mode}`}
       onSave={async () => {
         try {
@@ -565,7 +571,8 @@ function ReviewerSplit() {
           // useWrite already toasted. Returning false keeps that toast and the screen.
           return false;
         }
-        return undefined;
+        // The sample write already moved to the queue.
+        return "left";
       }}
     />
   );
