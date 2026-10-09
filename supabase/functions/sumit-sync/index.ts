@@ -8,7 +8,6 @@ import {
   type CrmTally,
   definitionOf,
   deriveLine,
-  docsFromImportStart,
   documentUrls,
   invoicesMissingLinks,
   isSchemaDrift,
@@ -199,13 +198,12 @@ async function runSync(
   try {
     apiKey = await openApiKey(envelope, kek, companyId, "sumit");
     const listed = await listDocuments(sumitCompanyId, apiKey);
-    const documents = docsFromImportStart(listed.docs, await importStart(admin, companyId));
+    const documents = listed.docs;
     const missing = invoicesMissingLinks(documents, await linkedInvoices(admin, companyId));
     const links = missing.from == null
       ? { urls: new Map<number, string>(), reads: 0 }
       : await listDocumentUrls(sumitCompanyId, apiKey, missing.from);
-    // A credit's original can sit before the import start, so the lookup keeps every document.
-    await writeLedger(admin, companyId, documents, links.urls, listed.docs);
+    await writeLedger(admin, companyId, documents, links.urls);
     const stamped = await admin.rpc("stamp_sumit_sync", { p_company: companyId });
     if (stamped.error) throw new Error("could not stamp the sync");
     return { ok: true, documents: documents.length, sumit_reads: listed.reads + links.reads };
@@ -226,18 +224,6 @@ async function runSync(
     }
     throw new Error(code);
   }
-}
-
-/** FLOW-505: the owner's import start for SUMIT (`import_from`), or null for every document. */
-async function importStart(admin: SupabaseClient<Database>, companyId: string): Promise<string | null> {
-  const read = await admin
-    .from("connector_connections")
-    .select("import_from")
-    .eq("company_id", companyId)
-    .eq("provider", "sumit")
-    .maybeSingle();
-  if (read.error) throw new Error("sync_failed");
-  return read.data?.import_from ?? null;
 }
 
 /**
@@ -467,7 +453,6 @@ async function writeLedger(
   companyId: string,
   docs: SumitDoc[],
   urls: Map<number, string>,
-  listed: readonly SumitDoc[],
 ): Promise<void> {
   const company = await admin.from("companies").select("vat_rate_bp").eq("id", companyId).single();
   if (company.error || !company.data) throw new Error("could not read the company");
@@ -479,7 +464,7 @@ async function writeLedger(
     exempt.set(String(row.name), row.vat_exempt === true);
   }
 
-  const byId = new Map(listed.map((doc) => [doc.sumit_id, doc]));
+  const byId = new Map(docs.map((doc) => [doc.sumit_id, doc]));
   const payload = docs.map((doc) => {
     const line = deriveLine(
       doc,

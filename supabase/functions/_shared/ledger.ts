@@ -104,15 +104,6 @@ function linkedRateBp(
   return bp;
 }
 
-/**
- * FLOW-505: the documents a sync writes, given the connector's import start (`import_from`).
- * A document dated before it is not written; rows already stored stay. Null keeps every document.
- */
-export function docsFromImportStart(docs: readonly SumitDoc[], importFrom: string | null): SumitDoc[] {
-  if (importFrom == null) return [...docs];
-  return docs.filter((doc) => doc.date >= importFrom);
-}
-
 export function deriveLine(
   doc: SumitDoc,
   projectKey: string | null,

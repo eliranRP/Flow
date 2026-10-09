@@ -1,11 +1,14 @@
 -- FLOW-505: the import range for SUMIT and Mercury, database side (the owner picked option B).
 -- 1. sumit_status() returns import_from, so the SUMIT sheet can show the current choice. Mercury
 --    already returns it through connector_connection_status.
--- 2. set_import_from() clears Mercury's sync cursor when the range widens (an earlier date, or
+-- 2. upsert_connector_lines() does not write a line dated before the connector's import start,
+--    for both providers; the rows already stored stay. SUMIT sends every document, so the sweep
+--    still sees them. A run whose lines are all before the start is not an empty sweep.
+-- 3. set_import_from() clears Mercury's sync cursor when the range widens (an earlier date, or
 --    back to "from the start"), so the next sync reads from the new start. Narrowing keeps the
 --    cursor; the sync skips rows dated before the start and keeps the rows already stored.
 --    SUMIT reads every document on each run, so it needs no reset.
--- Both functions are patched in place, so their grants stay.
+-- All three functions are patched in place, so their grants stay.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
@@ -33,6 +36,33 @@ begin
         'import_from', c.import_from,$n$);
   def := replace(def, disconnected, disconnected || $n$
       'import_from', null,$n$);
+  execute def;
+end
+$patch$;
+
+do $patch$
+declare
+  def text;
+  declared text := $a$  seen_ids text[] := array[]::text[];$a$;
+  missing_id text := $a$      raise exception 'line is missing an external id';
+    end if;$a$;
+  empty_sweep text := $a$    if coalesce(array_length(seen_ids, 1), 0) = 0 then$a$;
+begin
+  def := pg_get_functiondef('public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text)'::regprocedure);
+  if pg_temp.anchor_count(def, declared) <> 1
+     or pg_temp.anchor_count(def, missing_id) <> 1
+     or pg_temp.anchor_count(def, empty_sweep) <> 1 then
+    raise exception 'upsert_connector_lines is not the expected definition';
+  end if;
+  def := replace(def, declared, declared || $n$
+  before_start integer := 0;$n$);
+  def := replace(def, missing_id, missing_id || $n$
+    -- FLOW-505: a line dated before the import start is not written; stored rows stay.
+    if import_from is not null and (line->>'doc_date')::date < import_from then
+      before_start := before_start + 1;
+      continue;
+    end if;$n$);
+  def := replace(def, empty_sweep, $n$    if coalesce(array_length(seen_ids, 1), 0) = 0 and before_start = 0 then$n$);
   execute def;
 end
 $patch$;
