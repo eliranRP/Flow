@@ -81,10 +81,10 @@ select is(
     join public.transactions t on t.id = q.transaction_id
     where t.idempotency_key = 'inc:sumit'
       and q.status = 'open'
-      and q.reason = 'missing_project'
+      and q.reason = 'missing_category'
   ),
   1,
-  'sumit income without a project is queued'
+  'sumit income with a guessed category and no project is queued as missing_category (FLOW-309)'
 );
 
 update public.transactions

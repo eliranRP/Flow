@@ -68,7 +68,7 @@ export type LoadedMatch = {
   categoryIds: Partial<Record<LoanSplitPart, string>>;
 };
 
-/** One part as save_loan_split takes it. Only fees may name a category (decision 0130). */
+/** One part as save_loan_split takes it. Any part may name its category (decisions 0128, 0130). */
 export type SavePart = {
   part: LoanSplitPart;
   amount_minor: number;
@@ -76,7 +76,7 @@ export type SavePart = {
   category_id?: string;
 };
 
-/** The stored parts the split sheet needs to save: scheduled figures and the fees category. */
+/** The stored parts the split sheet needs to save: scheduled figures and each part's category. */
 export type StoredSplit = {
   lineMinor: bigint;
   currency: string;
@@ -210,7 +210,7 @@ export function loanSaveFailureText(error: Error, fallback = "לא הצלחנו 
   if (message.includes("loan closed") || message.includes("loan_closed")) return "ההלוואה נסגרה לפני תאריך התשלום.";
   if (message.includes("loan already attached")) return "התשלום כבר שויך להלוואה אחרת.";
   if (message.includes("fees category required")) return "חסרה קטגוריה לעמלות.";
-  if (message.includes("category does not fit the loan part") || message.includes("category not found")) return "קטגוריית העמלות לא מתאימה.";
+  if (message.includes("category does not fit the loan part") || message.includes("category not found")) return "הקטגוריה לא מתאימה לחלק הזה.";
   if (message.includes("a later payment is already attached")) return "כבר שויך תשלום מאוחר יותר.";
   if (message.includes("payment before the loan start")) return "התשלום לפני תחילת ההלוואה.";
   return fallback;
@@ -247,7 +247,7 @@ function parseCleared(data: unknown): ClearedSplit {
 }
 
 /**
- * Undo of an unmatch: the removed parts back through save_loan_split. Only fees keep a category.
+ * Undo of an unmatch: the removed parts back through save_loan_split, each with its category.
  * A flagged split whose parts no longer add up to the line (a re-synced amount) is rebuilt from the
  * same scheduled figures and fees, as the sheet's correction does; the server refuses parts that
  * don't add up.
@@ -257,7 +257,7 @@ export function partsFromCleared(cleared: ClearedSplit, lineMinor?: bigint | nul
     part: part.part,
     amount_minor: amount,
     scheduled_minor: part.scheduled_minor,
-    ...(part.part === "fees" && part.category_id ? { category_id: part.category_id } : {}),
+    ...(part.category_id ? { category_id: part.category_id } : {}),
   });
   const sum = cleared.parts.reduce((total, part) => total + BigInt(part.amount_minor), 0n);
   if (lineMinor == null || sum === lineMinor) return cleared.parts.map((part) => keep(part, part.amount_minor));

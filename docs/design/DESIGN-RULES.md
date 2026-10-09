@@ -206,7 +206,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Chips | suggested (tint + ✦), outlined choice, selected (violet + check), disabled, status | Hit area 44px even if drawn 36px |
 | Segmented tabs | track tint, selected `seg-on` | |
 | Switch and checkbox | off / on / disabled | Overhead switch starts off. [0022](../decisions/0022-after-overhead-starts-off.md) |
-| Text input | default, focused, filled, error, disabled | Label above. Error is red border plus a message. A connect or setup form checks required fields on submit, before any request: the message sits on the field's reserved message line (`reserveMessage`, so the button does not move) in the "חסר X." form, focus goes to the first empty field, and fields are read-only while the submit is busy (FLOW-508) |
+| Text input | default, focused, filled, error, disabled | Label above. Error is red border plus a message. A connect or setup form checks required fields on submit, before any request: the message sits on the field's reserved message line (`reserveMessage`, so the button does not move) saying what to type ("כתבו X.", §3.7 FLOW-115), focus goes to the first empty field, and fields are read-only while the submit is busy (FLOW-508) |
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed; one row, or two rows (review, unpaid) each pressed on its own | The one tinted block on Home. Two rows share it, separated by padding, no hairline (FLOW-321) |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
@@ -327,7 +327,7 @@ Guide §11.1.
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycle 6 (2026-10-09). The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 and 7 (2026-10-09). The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -337,6 +337,8 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycle 6 (2026-
 - A linked transaction row carries the trailing chevron. A row that opens something keeps one trailing control: when ⋯ holds the end slot, the title and count are the link and ⋯ is its own 44px button (FLOW-326, FLOW-334).
 - An app-wide gesture borrows the screen's own control for its action, never a second route of its own (FLOW-332). A swipe on a band figure follows the direction of the arrows it duplicates (FLOW-335).
 - Search is entered from a 44×44 thin outline magnifier (SVG, stroke 1.6, no fill) at the end corner of a header or band, named "חיפוש תנועות". On the search screen the field and its chips sit in a dock above the keyboard and results fill the space above. Matched text gets the `.ui-match` tint, never colour alone (FLOW-323).
+- A stacked page's own control (the period pill) sits under the title on the start side, in `ScreenHeader`'s `below` slot, not in the top end corner. The subtitle and count line then don't repeat it (FLOW-334).
+- A sideways swipe repeats a control already on screen and never replaces it. One set of rules: touch only, 24px edge zones (the 24th px included) left to swipe-back, nothing inside a field, a sheet or a sideways list, decide after 10px and give vertical moves to the page, follow the finger and commit past 30% or a flick, stay put toward an end, swap on release with reduced motion, and no swipe while pinch-zoomed. In RTL a finger moving right goes forward (FLOW-314).
 
 **Pinned bars, notes and toasts**
 
@@ -344,6 +346,8 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycle 6 (2026-
 - A note above a pinned bar is one line (the `slim` banner): title, link, close. When they don't fit, the link wraps under the title (review slim banner).
 - A pinned bar takes as few rows as its content needs. A currency's figures are one unit: 8px inside a pair, 24px between currencies, and a pair that doesn't fit wraps whole, start-aligned (FLOW-313).
 - An entry field that can hold a long amount gets the row's full width. When the list it grows pushes the add action down, the action moves into the sticky bar. A warning shows in one place only (FLOW-333).
+- A sheet closes with ✕ (and scrim, Escape, swipe). A text ביטול belongs only on a confirm sheet (FLOW-339).
+- A text link's 44px hit area may grow into empty space or below it, never up or across into another control's box (FLOW-339).
 
 **Rows, figures and empty values**
 
@@ -353,6 +357,11 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycle 6 (2026-
 - An amount in another currency than the project's is listed apart ("ועוד $120,000 בדולר") and never added in. The company currency's row comes first in every per-currency list (FLOW-404, FLOW-504).
 - A figure that needs a missing input names it ("חסר שווי אחרי שיפוץ", in the link colour for the owner, muted for a viewer). When the parts don't add up to the total, show the total and say the breakdown is not available rather than rows that disagree (FLOW-404).
 - A list titled as a cost (שיפוץ) carries no minus, and its rows add up to the total above them (FLOW-404).
+- An expected or typical figure (from patterns, not the books) reads "כ־" plus whole units through `ApproxAmount`, never a minus, and is never added to a band, a total or the profit. A forecast row carries one figure, with the breakdown in a sheet one tap away. A Home row warning that something is missing is a count with no total (FLOW-403).
+- A row that opens in place says so with a ▾ cue at its end, and the same control looks the same on the card and the detail (FLOW-315).
+- A row whose name is its identity wraps (up to 2 lines) before it truncates. A class that styles a figure is never reused as a layout wrapper (FLOW-339 loans).
+- Text is placed against text by layout, never by counting characters (FLOW-310).
+- A borderless card lines its content up with the title through its row padding, not the card margin. A bordered card keeps the side gutter (FLOW-334 split).
 
 **Sheets and settings**
 
@@ -363,16 +372,19 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycle 6 (2026-
 - A reversible per-item setting is a labelled switch row, not an overflow menu item. It shows a hint only in the state that needs one and is locked with one reason when something else decides it. ⋯ appears only when it holds something (FLOW-329).
 - A setting with two to four short fixed values inside a card is a `SegmentedControl` that applies on tap. A setting with a few fixed choices that converts nothing is a sheet of radio rows that apply on tap with an undo toast. A dependent setting is hidden, not disabled, while it means nothing (FLOW-702, FLOW-504).
 - A busy control (a save in flight) uses the disabled look until it settles, keeping focus and its selection. A disabled text link is grey with a not-allowed cursor and no press fill (FLOW-331, FLOW-327).
+- A form's save stays enabled. A tap on it with empty fields shows, under each one, what to type ("כתבו את שם המלווה."), and moves focus to the first empty field. A 0 is "too small", not missing (FLOW-115).
 
 **Review card and Jev**
 
 - The label column has one width (`--review-label-w`). Every pill ends at the chevron column with at least `--space-2` before the value. Under 25rem of card width the הצעת Jev pill shows only ✦, with its words as the accessible name (FLOW-327).
 - When the card needs a choice, the main button names the next pick. An anomaly flag is loud at a Jev score of 0.7 or more and quiet below it, at most one per card, as the last block (FLOW-327).
+- On a short phone (up to 720px tall) the document tile is square and rows sit 8px under their hairline, so a card with one Jev line and a quiet flag fits above the pinned bar (FLOW-333 C13).
 - A value an automatic job filled says who filled it and how to undo it, in one line with no reason. Turning the job off keeps that line and its undo, with no new suggestion (FLOW-331, FLOW-702).
 
 **Band**
 
 - The band's preset track is at most 10% white with white labels. Pressed darkens, never lightens. A label that opens a sheet ends in a 16px ▼. Home's hero explanation is "הכנסות פחות הוצאות" with no dates (FLOW-335).
+- A figure on the band stays white, a minus included. A loss is named in the label ("הפסד ..."), never by red on violet (FLOW-338).
 
 ---
 

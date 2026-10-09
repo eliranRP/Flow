@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { resetScrollToWarning } from "./ui/back";
-import { readTxnList, TxnAnnouncer, TxnNavButtons, txnListState, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "./txn-nav";
+import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnNavButtons, txnListState, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "./txn-nav";
 
 function Card() {
   const { transactionId = "" } = useParams();
@@ -134,6 +134,18 @@ describe("prev and next on the card", () => {
     // A button move clears it, so the next card does not slide in.
     fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     expect(screen.getByTestId("enter")).toHaveTextContent("none");
+  });
+
+  it("drops the slide-in from the browser entry once played, so Back or a reload shows the card in place (FLOW-314)", () => {
+    const list2 = { txnList: { ids: ["a", "b"], from: "/list" } };
+    window.history.replaceState({ usr: { ...list2, txnVia: "swipe", txnEnter: "next" }, key: "k1", idx: 2 }, "");
+    dropTxnEnter();
+    expect(window.history.state).toEqual({ usr: { ...list2, txnVia: "swipe" }, key: "k1", idx: 2 });
+    // An entry with no slide-in, or no router state, is left as it is.
+    window.history.replaceState({ flowLayer: "sheet" }, "");
+    dropTxnEnter();
+    expect(window.history.state).toEqual({ flowLayer: "sheet" });
+    window.history.replaceState(null, "");
   });
 
   it("replaces the card's entry and keeps the query, so Back pops straight to the list", () => {
