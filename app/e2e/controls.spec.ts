@@ -336,7 +336,7 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toHaveCount(0);
   // FLOW-340 C: the overhead switch lives in the ⋯ menu.
   await page.getByRole("button", { name: "עוד" }).click();
-  const overhead = page.getByRole("dialog", { name: "עוד" }).getByRole("switch", { name: "רווח אחרי כלליות" });
+  const overhead = page.getByRole("dialog", { name: "עוד" }).getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   // FLOW-411: the lines show on open, with no extra tap and no jump to Settings (FLOW-340 C: on the expenses screen).

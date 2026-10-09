@@ -285,7 +285,7 @@ export function ProjectDetailScreen({
   const investmentShown = investmentFigure(investmentData) != null;
   const overhead = (
     <Toggle
-      label="רווח אחרי כלליות"
+      label="רווח אחרי הוצאות כלליות"
       hint={overheadHint(overheadOn, {
         available: project.overhead_weighted === true,
         shareAgorot: project.base_currency != null && project.base_currency !== "ILS"

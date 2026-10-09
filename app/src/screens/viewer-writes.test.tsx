@@ -379,7 +379,7 @@ describe("viewer gates", () => {
         </Routes>,
         "/projects/p1",
       );
-      expect(screen.queryByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
       expect(screen.queryByText(VIEWER_NOTE)).not.toBeInTheDocument();
     }],

@@ -11,7 +11,7 @@ export function overheadHint(
 ): string | undefined {
   if (!on) return undefined;
   if (!detail.available) return "אין הכנסות בפרויקטים לחלוקה";
-  return `החלק בכלליות: ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
+  return `החלק בהוצאות הכלליות: ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
 }
 
 export function shownProfit(

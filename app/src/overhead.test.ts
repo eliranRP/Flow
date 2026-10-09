@@ -10,8 +10,8 @@ describe("overhead view", () => {
   it("shows profit after the income share, and says so", () => {
     expect(shownProfit(true, true, 10_000_000n, 6_000_000n)).toBe(6_000_000n);
     expect(shownProfit(true, false, 10_000_000n, 6_000_000n)).toBe(10_000_000n);
-    expect(overheadHint(true, { available: true, shareAgorot: 4_000_000n })).toBe("החלק בכלליות: ₪40,000");
+    expect(overheadHint(true, { available: true, shareAgorot: 4_000_000n })).toBe("החלק בהוצאות הכלליות: ₪40,000");
     expect(overheadHint(true, { available: false })).toBe("אין הכנסות בפרויקטים לחלוקה");
-    expect(overheadHint(true, { available: true, shareAgorot: 250_000n, currency: "USD" })).toBe("החלק בכלליות: $2,500");
+    expect(overheadHint(true, { available: true, shareAgorot: 250_000n, currency: "USD" })).toBe("החלק בהוצאות הכלליות: $2,500");
   });
 });
