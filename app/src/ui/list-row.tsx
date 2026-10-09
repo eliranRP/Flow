@@ -139,6 +139,9 @@ export function ListRow(props: ListRowProps) {
     autoLtr && !props.tag && "ui-row-title-ltr",
   );
   const titleDir = props.ltrTitle || (autoLtr && !props.tag) ? "ltr" : undefined;
+  // FLOW-322: a linked row with an action (the categories ⋯) keeps the action beside the link, not inside it.
+  const sideAction = (props.variant === "item" || props.variant === "project" || props.variant === "transaction")
+    && props.href != null && props.action != null && props.actionBelow !== true;
   // A transaction row's hint stays on one line and ends in an ellipsis, so a line never ends on a "·".
   const oneLineHint = props.variant === "transaction" && !props.wrapHint;
   const titleBody = (
@@ -188,7 +191,7 @@ export function ListRow(props: ListRowProps) {
       {props.variant === "project" ? props.mark : null}
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
-      {props.actionBelow ? null : props.action}
+      {props.actionBelow || sideAction ? null : props.action}
       {showChevron ? (
         <span className="ui-row-chevron" aria-hidden="true">
           <ChevronIcon />
@@ -279,6 +282,14 @@ export function ListRow(props: ListRowProps) {
       {body}
     </div>
   );
+  if (sideAction) {
+    return (
+      <div className="ui-row-side">
+        {row}
+        {props.action}
+      </div>
+    );
+  }
   return withAction(props, row);
 }
 

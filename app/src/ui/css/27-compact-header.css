@@ -1,0 +1,115 @@
+/* FLOW-334 H2 (decision 0156): a labelled Back, "‹ הגדרות", in place of the kicker. The arrow sits
+   where the icon Back's arrow sits; the label is cut at about 16 characters. */
+.ui-back-labelled {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  min-block-size: var(--touch-min);
+  margin-inline-start: calc((var(--touch-min) - 24px) / -2);
+  padding-block: 0;
+  padding-inline: calc((var(--touch-min) - 24px) / 2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-back-labelled:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-back-labelled:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-back-labelled:disabled {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.ui-back-labelled svg {
+  flex: none;
+}
+
+.ui-back-text {
+  overflow: hidden;
+  max-inline-size: 16ch;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* FLOW-334 H1: the compact bar pinned to the top once the large title scrolls off. */
+.ui-compact-mark {
+  display: block;
+  block-size: 0;
+}
+
+.ui-compact-bar {
+  position: fixed;
+  z-index: 20;
+  inset-block-start: 0;
+  inset-inline: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding-block-start: var(--safe-top);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg);
+  animation: ui-compact-in 120ms ease-out;
+}
+
+.ui-compact-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  block-size: var(--touch-min);
+  padding-inline: calc(var(--space-side) - (var(--touch-min) - 24px) / 2) var(--space-side);
+}
+
+.ui-compact-title {
+  overflow: hidden;
+  min-inline-size: 0;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-compact-bar] {
+  --month-sticky-top: calc(var(--safe-top) + var(--touch-min) + 1px);
+}
+
+@keyframes ui-compact-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-compact-bar {
+    animation: none;
+  }
+}
+
+/* FLOW-322: a linked row with its own action (the categories ⋯): the link and the action side by side. */
+.ui-row-side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.ui-row-side > .ui-row {
+  flex: 1 1 auto;
+}
+
+.ui-row-side > :last-child {
+  flex: none;
+}

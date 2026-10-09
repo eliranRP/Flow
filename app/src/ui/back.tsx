@@ -95,12 +95,15 @@ export function useGoBack(): (fallback: string) => void {
 export function BackButton({
   fallback,
   label = "חזרה",
+  text,
   onBand = false,
   disabled = false,
   children,
 }: {
   fallback: string;
   label?: string;
+  /** FLOW-334 H2: the screen Back returns to, shown beside the arrow ("‹ הגדרות"). */
+  text?: string;
   onBand?: boolean;
   disabled?: boolean;
   children?: ReactNode;
@@ -108,6 +111,23 @@ export function BackButton({
   const goBack = useGoBack();
   // FLOW-332: the start-edge swipe does what this button does.
   useEdgeBack(disabled ? null : () => { goBack(fallback); });
+  if (text != null && text !== "") {
+    return (
+      <button
+        type="button"
+        className="ui-back-labelled"
+        aria-label={`חזרה ל${text}`}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          goBack(fallback);
+        }}
+      >
+        <BackIcon />
+        <span className="ui-back-text" data-clip-ok="">{text}</span>
+      </button>
+    );
+  }
   return (
     <IconButton
       label={label}

@@ -147,20 +147,25 @@ export const Empty: Story = { render: breakdownStory(undefined, "/flow/expense?p
 export const Loading: Story = { render: breakdownStory(undefined, "/flow/expense?preview=loading", "category") };
 export const ErrorState: Story = { render: breakdownStory(undefined, "/flow/expense?preview=error", "category") };
 
-function linesStory() {
+function linesStory(pages: Array<NonNullable<BreakdownLinesPage>> = [linesPage]) {
   return (
     <StoryRoute entry="/flow/expense/category/ILS/c1">
       <Routes>
         <Route
           path="/flow/:direction/:groupBy/:currency/:groupKey"
-          element={<BreakdownLinesScreen sample={{ breakdown: linesBreakdown, pages: [linesPage] }} />}
+          element={<BreakdownLinesScreen sample={{ breakdown: linesBreakdown, pages }} />}
         />
       </Routes>
     </StoryRoute>
   );
 }
 
-const lines = quadrant(linesStory);
+const lines = quadrant(() => linesStory());
 export const GroupLines: Story = lines.base;
 export const GroupLinesDark: Story = lines.dark;
 export const GroupLines320: Story = lines.narrow;
+
+/** FLOW-322: the lines pick their own period; an empty one offers another instead of a dead end. */
+const emptyLines = quadrant(() => linesStory([{ ...linesPage, rows: [] }]));
+export const GroupLinesEmpty: Story = emptyLines.base;
+export const GroupLinesEmpty320: Story = emptyLines.narrow;

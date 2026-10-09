@@ -541,7 +541,7 @@ export function NotificationsScreen() {
   const search = usePreviewSearch();
   return (
     <div>
-      <ScreenHeader title="התראות" backTo={`/settings${search}`} />
+      <ScreenHeader title="התראות" kicker="הגדרות" backTo={`/settings${search}`} />
       {/* FLOW-328: the shared empty state, Hebrew only. */}
       <EmptyState icon={<BellIcon />} title="אין עדיין התראות" body="בשלב הזה ההודעות לא נשלחות." />
     </div>

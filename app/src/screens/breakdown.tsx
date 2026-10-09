@@ -190,7 +190,7 @@ function BreakdownBody({
                 variant="item"
                 tone="muted"
                 icon={<ReviewIcon />}
-                title={`${String(review)} ממתינים לאישור`}
+                title={review === 1 ? "תנועה אחת ממתינה לאישור" : `${String(review)} ממתינים לאישור`}
                 hint="כבר כלולים בסכום"
                 chevron
                 href={`/review${search}`}
@@ -264,6 +264,7 @@ function LinesBody({
 }) {
   const preview = useHomePreview();
   const { period } = useBooks();
+  const [sheet, setSheet] = useState(false);
   const summary = useBreakdownQuery(direction, groupBy, sample == null);
   const lines = useBreakdownLinesQuery(direction, groupBy, groupKey, currency, excluded, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
@@ -280,9 +281,11 @@ function LinesBody({
       ? groupTitle(direction, groupBy, groupKey, group?.name)
       : directionLabel(direction);
   const back = `/flow/${direction}${search}`;
+  // FLOW-322: the lines pick their own period, so an empty month is not a dead end.
+  const periodControl = <PeriodControl sheet={sheet} setSheet={setSheet} />;
 
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState stacked title={title} backTo={back} phase={phase} onRetry={() => { void lines.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} trailing={periodControl} phase={phase} onRetry={() => { void lines.refetch(); }} />;
   }
 
   const subtitleParts: string[] = [directionLabel(direction), periodLabel(period)];
@@ -291,10 +294,24 @@ function LinesBody({
 
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} />
+      <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} trailing={periodControl} />
       {sum ? <Totals direction={direction} totals={[sum]} /> : null}
       {rows.length === 0 ? (
-        <EmptyState icon={<DocumentIcon />} title="אין תנועות כאן בתקופה הזו" body="אפשר לחזור ולבחור תקופה אחרת." />
+        <EmptyState
+          icon={<DocumentIcon />}
+          title="אין תנועות כאן בתקופה הזו"
+          body="אפשר לבחור תקופה אחרת."
+          action={
+            <Button
+              variant="pill"
+              onClick={() => {
+                setSheet(true);
+              }}
+            >
+              בחירת תקופה
+            </Button>
+          }
+        />
       ) : (
         <List>
           {rows.map((row) => {
