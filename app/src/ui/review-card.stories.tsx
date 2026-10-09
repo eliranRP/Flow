@@ -32,7 +32,7 @@ type CardArgs = {
   missingBoth?: boolean;
   /** FLOW-703: Jev answered "no project". */
   projectNoneJev?: boolean;
-  /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no בטל. */
+  /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no ביטול. */
   filled?: "undo" | "label" | "busy" | "off";
 };
 
@@ -296,9 +296,9 @@ export const FlagLoudDark: Story = { ...dark, name: "Flag: loud, dark", args: Fl
 export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: FlagDuplicateQuiet.args };
 export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };
 
-// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with בטל at the end, one line, no reason.
+// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with ביטול at the end, one line, no reason.
 /**
- * FLOW-339 C6-3: בטל's 44px hit area grows down and sideways from the filled line, never up into the
+ * FLOW-339 C6-3: ביטול's 44px hit area grows down and sideways from the filled line, never up into the
  * category row, so a tap at the row's bottom edge opens the row and never undoes the fill.
  */
 export const JevFilled: Story = {

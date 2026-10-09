@@ -98,7 +98,7 @@ export const ReviewQueueFlag320: Story = { ...narrowView, render: () => <ReviewQ
 export const ReviewQueueFlag320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewQueueFlagStory banner /> };
 
 /**
- * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + בטל),
+ * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + ביטול),
  * a quiet amount spike ("↑ 240%" after the amount, "בדרך כלל ₪2,500" under it; option A, 2026-10-09), and
  * the slim filed-today banner is on. The card must end above the pinned bar. Invented data.
  */
@@ -233,7 +233,7 @@ const unpin: NonNullable<Story["loaders"]> = [() => {
 export const ReviewCounter10At320: Story = { ...narrowView, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
-/** FLOW-309: the skipped cards at the end of הצג הכול. Invented data. */
+/** FLOW-309: the skipped cards at the end of הצגת הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [
   {
     id: "k1", transaction_id: "tk1", description: "ברזל הצפון", doc_date: "2026-09-28", doc_kind: "invoice",

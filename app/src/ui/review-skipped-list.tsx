@@ -3,7 +3,7 @@ import { List, ListRow } from "./list-row";
 import type { StatementMethod } from "./statement";
 import { TextLink } from "./text-link";
 
-/** FLOW-309: the דולגו section at the end of הצג הכול. */
+/** FLOW-309: the דולגו section at the end of הצגת הכול. */
 export const SKIPPED_TITLE = "דולגו";
 export const SKIPPED_REOPEN = "החזרה לתור";
 export const SKIPPED_LOAD_ERROR = "לא הצלחנו לטעון את הפריטים שדולגו.";
@@ -18,7 +18,7 @@ export function skippedCountText(count: number): { num: string | null; words: st
 }
 
 /**
- * FLOW-309, owner pick 2026-10-08: under הכל מאושר, a link to the skipped cards in הצג הכול.
+ * FLOW-309, owner pick 2026-10-08: under הכל מאושר, a link to the skipped cards in הצגת הכול.
  * No skipped cards renders nothing.
  */
 export function ReviewSkippedLink({ count, to }: { count: number; to: string }) {

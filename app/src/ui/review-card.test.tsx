@@ -335,18 +335,18 @@ describe("ReviewCard הצעת Jev", () => {
 describe("ReviewCard Jev fill label (FLOW-702)", () => {
   const jev: ReviewSuggestion = { project: "וילה רעננה", category: "חומרים", projectSuggested: true, categorySuggested: true, projectJev: true, categoryJev: true };
 
-  it("says מולא ע״י Jev with בטל, which calls back", () => {
+  it("says מולא ע״י Jev with ביטול, which calls back", () => {
     const onUndo = vi.fn();
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo }} onProject={() => undefined} onCategory={() => undefined} />);
     expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} את המילוי של Jev` }));
+    fireEvent.click(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} המילוי של Jev` }));
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
 
   it("shows the label alone for a viewer, and nothing without a הצעת Jev pill or while pending", () => {
     const { rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} />);
     expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /בטל/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /ביטול/ })).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ ...jev, projectJev: false, categoryJev: false }} jevFilled={{}} />);
     expect(screen.queryByText(JEV_FILLED)).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} pending />);
@@ -365,15 +365,15 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     const plain = { ...jev, projectJev: false, categoryJev: false };
     const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} jevFilled={{ onUndo: () => undefined, alone: true }} />);
     expect(container.querySelector(".ui-review-filled .ui-review-reason-text")?.textContent).toBe(JEV_FILLED);
-    expect(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} את המילוי של Jev` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} המילוי של Jev` })).toBeInTheDocument();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} jevFilled={{ onUndo: () => undefined }} />);
     expect(container.querySelector(".ui-review-filled")).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} pending jevFilled={{ onUndo: () => undefined, alone: true }} />);
     expect(container.querySelector(".ui-review-filled")).toBeNull();
   });
 
-  it("marks בטל busy while the undo runs", () => {
+  it("marks ביטול busy while the undo runs", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
-    expect(screen.getByRole("button", { name: /בטל/ })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: /ביטול/ })).toHaveAttribute("aria-busy", "true");
   });
 });

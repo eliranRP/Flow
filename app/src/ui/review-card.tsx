@@ -21,9 +21,9 @@ export const REVIEW_MISMATCH_ID = "review-mismatch";
 /** FLOW-327: both fields are missing. The bar's first button points at it. */
 export const REVIEW_MISSING_BOTH = "בחרו פרויקט וקטגוריה";
 export const REVIEW_MISSING_ID = "review-missing";
-/** FLOW-702: the auto job wrote Jev's values on this line; בטל takes the fill back (decision 0145). */
+/** FLOW-702: the auto job wrote Jev's values on this line; ביטול takes the fill back (decision 0145). */
 export const JEV_FILLED = "מולא ע״י Jev";
-export const JEV_FILLED_UNDO = "בטל";
+export const JEV_FILLED_UNDO = "ביטול";
 
 /** Draws copy parts, each number in its own bdi. */
 export function CopyLine({ parts }: { parts: readonly CopyPart[] }) {
@@ -90,7 +90,7 @@ type ReviewCardProps = {
   missingBoth?: boolean;
   /**
    * FLOW-702: Jev's auto fill stands on this line. The card says "✦ מולא ע״י Jev" under the rows, one
-   * line with no reason (the owner's pick, so it never wraps), and בטל when `onUndo` is set (a viewer gets
+   * line with no reason (the owner's pick, so it never wraps), and ביטול when `onUndo` is set (a viewer gets
    * the label only). Shown only with a הצעת Jev pill, or with `alone` (FLOW-706: Jev is off, so the
    * card shows the stored values without the pill, and the fill stays undoable).
    */
@@ -260,7 +260,7 @@ export function ReviewCard({
                 size="hint"
                 chevron={false}
                 busy={filled.busy === true}
-                label={`${JEV_FILLED_UNDO} את המילוי של Jev`}
+                label={`${JEV_FILLED_UNDO} המילוי של Jev`}
                 onClick={filled.onUndo}
               >
                 {JEV_FILLED_UNDO}
