@@ -1,0 +1,1 @@
+The review card shows "✓ שולם · קבלה dd/mm" under the amount of a connector invoice its receipt paid, or "שולם חלקית" on a part payment, from the `receipts`, `paid` and `paid_on` fields of decision 0165 (FLOW-309 option A). Long supplier names wrap up to three lines on the review card and long customer names wrap up to two lines on the unpaid list.

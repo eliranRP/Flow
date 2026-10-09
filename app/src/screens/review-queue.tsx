@@ -27,7 +27,7 @@ import { changeSaveFailure } from "../ui/change-sheet";
 import { ProgressBar } from "../ui/progress-bar";
 import { REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_KEEP } from "../ui/review-card";
 import { ActionBar, ActionBarRow } from "../ui/action-bar";
-import { jevReasonText, reviewFlagView } from "../review-copy";
+import { jevReasonText, reviewFlagView, reviewPaidView } from "../review-copy";
 import { ScreenHeader } from "../ui/screen-header";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
@@ -522,6 +522,7 @@ export function ReviewQueue({
           netAgorot={card.amount_net}
           currency={card.currency}
           vatLine={reviewVatLine(card.vat_agorot, card.currency)}
+          paid={reviewPaidView(card)}
           suggestion={shownSuggestion}
           pending={jevLoading}
           reason={card.reason}

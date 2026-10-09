@@ -164,3 +164,44 @@ describe("reviewRowSchema (FLOW-305)", () => {
     expect(parsed.source).toBeUndefined();
   });
 });
+
+describe("reviewRowSchema receipts (FLOW-309)", () => {
+  const row = {
+    id: "r",
+    transaction_id: "t",
+    description: "לקוח לדוגמה",
+    doc_date: "2026-10-05",
+    amount_net: 1200000,
+    direction: "income",
+    reason: "missing_project",
+    project_id: null,
+    category_id: null,
+    supplier_name: null,
+  };
+
+  it("reads the paired receipts with bigint agorot", () => {
+    const parsed = reviewRowSchema.parse({
+      ...row,
+      receipts: [{ transaction_id: "rc", doc_date: "2026-10-12", amount_gross: "1416000", currency: "ILS" }],
+      paid: true,
+      paid_on: "2026-10-12",
+    });
+    expect(parsed.receipts?.[0]?.amount_gross).toBe(1416000n);
+    expect(parsed.paid).toBe(true);
+    expect(parsed.paid_on).toBe("2026-10-12");
+  });
+
+  it("parses a payload from before the pairing server", () => {
+    const parsed = reviewRowSchema.parse(row);
+    expect(parsed.receipts).toBeUndefined();
+    expect(parsed.paid).toBeUndefined();
+    expect(parsed.paid_on).toBeUndefined();
+  });
+
+  it("drops a malformed receipt list instead of failing the whole queue", () => {
+    const parsed = reviewRowSchema.parse({ ...row, receipts: [{ doc_date: 5 }], paid: "yes", paid_on: null });
+    expect(parsed.receipts).toBeUndefined();
+    expect(parsed.paid).toBeUndefined();
+    expect(parsed.paid_on).toBeNull();
+  });
+});

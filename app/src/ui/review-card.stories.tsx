@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ReviewCard } from "./review-card";
-import { jevReasonText, reviewFlagView, type JevReasonKind, type ReviewFlag } from "../review-copy";
+import { jevReasonText, reviewFlagView, reviewPaidView, type JevReasonKind, type ReviewFlag } from "../review-copy";
 import { expect, userEvent, within } from "@storybook/test";
 import type { TxnMeta } from "../txn-meta";
 import { padded, storyMeta } from "./story-support";
@@ -34,11 +34,18 @@ type CardArgs = {
   projectNoneJev?: boolean;
   /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no ביטול. */
   filled?: "undo" | "label" | "busy" | "off";
+  /** FLOW-309 (0165): the invoice's paired receipts (dates), whether they cover it, and the latest date. */
+  receipts?: string[];
+  paid?: boolean;
+  paidOn?: string | null;
+  /** The field rows open their pickers (chevrons), as on the review screen. */
+  editable?: boolean;
 };
 
 function CardView({
   supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev,
   splitParts, why, partyFilings = 5, matchingFilings = 3, flags, direction, missingBoth, projectNoneJev, filled,
+  receipts, paid, paidOn, editable,
 }: CardArgs) {
   const shared = reason === "unallocated_shared";
   const suggestion = project || category || projectNoneJev
@@ -64,14 +71,19 @@ function CardView({
       reason={reason}
       meta={meta}
       currency={currency}
-      onProject={projectJev || categoryJev || filled != null ? () => undefined : undefined}
-      onCategory={projectJev || categoryJev || filled != null ? () => undefined : undefined}
+      onProject={editable || projectJev || categoryJev || filled != null ? () => undefined : undefined}
+      onCategory={editable || projectJev || categoryJev || filled != null ? () => undefined : undefined}
       splitParts={splitParts}
       jevWhy={jevWhy}
       flag={reviewFlagView(flags, { direction, currency })}
       direction={direction}
       missingBoth={missingBoth}
       jevFilled={filled == null ? null : filled === "label" ? {} : { busy: filled === "busy", alone: filled === "off", onUndo: () => undefined }}
+      paid={reviewPaidView({
+        receipts: receipts?.map((doc_date) => ({ doc_date })),
+        paid,
+        paid_on: paidOn,
+      })}
     />
   );
 }
@@ -336,3 +348,55 @@ export const JevFilledFlag320: Story = { ...narrow, name: "Jev filled: with quie
 export const JevFilledOff: Story = { name: "Jev filled: Jev off", args: { ...jevCard, filled: "off" } };
 export const JevFilledOff320: Story = { ...narrow, name: "Jev filled: Jev off, 320", args: JevFilledOff.args };
 export const JevFilledOffDark: Story = { ...dark, name: "Jev filled: Jev off, dark", args: JevFilledOff.args };
+
+/**
+ * FLOW-309 option A (decision 0165): a connector invoice and its receipt are one card. Invented data;
+ * every story sees 2026-10-15, so the dates are this year's dd/mm.
+ */
+const pairCard = {
+  supplier: "לקוח לדוגמה",
+  sourceLine: "הכנסה · 05/10/2026",
+  netAgorot: "1200000",
+  vatLine: "לפני מע״מ · מע״מ ₪2,160",
+  direction: "income" as const,
+  project: "וילה לדוגמה",
+  category: "עבודה",
+  editable: true,
+};
+const darkNarrow = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
+
+export const PairPaid: Story = { name: "Pair: paid", args: { ...pairCard, receipts: ["2026-10-12"], paid: true, paidOn: "2026-10-12" } };
+export const PairPaid320: Story = { ...narrow, name: "Pair: paid, 320", args: PairPaid.args };
+export const PairPaidDark320: Story = { ...darkNarrow, name: "Pair: paid, dark, 320", args: PairPaid.args };
+
+/** A part payment: the receipts don't cover the invoice yet. No ✓, the latest receipt's date. */
+export const PairPartPaid: Story = {
+  name: "Pair: part paid",
+  args: { ...pairCard, receipts: ["2026-10-06", "2026-10-12"], paid: false, paidOn: "2026-10-12" },
+};
+export const PairPartPaid320: Story = { ...narrow, name: "Pair: part paid, 320", args: PairPartPaid.args };
+export const PairPartPaidDark320: Story = { ...darkNarrow, name: "Pair: part paid, dark, 320", args: PairPartPaid.args };
+
+/** An invoice with no receipt yet: no line. */
+export const PairUnpaid: Story = { name: "Pair: unpaid invoice", args: { ...pairCard, receipts: [], paid: false, paidOn: null } };
+export const PairUnpaid320: Story = { ...narrow, name: "Pair: unpaid invoice, 320", args: PairUnpaid.args };
+export const PairUnpaidDark320: Story = { ...darkNarrow, name: "Pair: unpaid invoice, dark, 320", args: PairUnpaid.args };
+
+/** A receipt whose invoice isn't in Flow is a card like any other, with no line. */
+export const PairReceiptOnly: Story = {
+  name: "Pair: receipt only",
+  args: { ...pairCard, sourceLine: "הכנסה · 12/10/2026", vatLine: "", receipts: [], paid: false, paidOn: null },
+};
+export const PairReceiptOnly320: Story = { ...narrow, name: "Pair: receipt only, 320", args: PairReceiptOnly.args };
+export const PairReceiptOnlyDark320: Story = { ...darkNarrow, name: "Pair: receipt only, dark, 320", args: PairReceiptOnly.args };
+
+/** Stress: a supplier name that takes three lines at 320 wraps whole, with no ellipsis. */
+export const SupplierThreeLines320: Story = {
+  ...narrow,
+  name: "Stress: supplier on three lines, 320",
+  args: {
+    ...jevCard,
+    editable: true,
+    supplier: "חברת ההובלות והשינוע לדוגמה בע״מ סניף צפון",
+  },
+};

@@ -3,7 +3,7 @@ import { fireEvent, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TxnMeta } from "../txn-meta";
 import { lineSplitPartsLabel } from "../line-split-copy";
-import { jevReasonText, reviewFlagView } from "../review-copy";
+import { jevReasonText, reviewFlagView, reviewPaidView } from "../review-copy";
 import { JEV_FILLED, JEV_FILLED_UNDO, JEV_NO_PROJECT, REVIEW_MISMATCH_ID, REVIEW_MISSING_BOTH, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_LINE, type ReviewSuggestion } from "./review-card";
 
 describe("ReviewCard split_mismatch (FLOW-333 C2, C8)", () => {
@@ -381,5 +381,54 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
   it("marks ביטול busy while the undo runs", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
     expect(screen.getByRole("button", { name: /ביטול/ })).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("ReviewCard paid line (FLOW-309, decision 0165)", () => {
+  const now = new Date("2026-10-15T09:00:00+03:00");
+  const receipt = (doc_date: string) => ({ transaction_id: `r-${doc_date}`, doc_date, amount_gross: 1_416_000n, currency: "ILS" });
+  function card(paid: ReturnType<typeof reviewPaidView>, vatLine?: string) {
+    return render(<ReviewCard supplier="לקוח לדוגמה" sourceLine="חשבונית מס · 05/10/2026" netAgorot={1_200_000n} direction="income" vatLine={vatLine} paid={paid} />);
+  }
+
+  it("says ✓ שולם · קבלה dd/mm under the VAT line, and readers hear it as words", () => {
+    const view = reviewPaidView({ receipts: [receipt("2026-10-12")], paid: true, paid_on: "2026-10-12" }, now);
+    const { container } = card(view, "לפני מע״מ · מע״מ ₪2,160");
+    const line = container.querySelector(".ui-review-paid");
+    expect(line).not.toBeNull();
+    expect(line?.previousElementSibling?.textContent).toBe("לפני מע״מ · מע״מ ₪2,160");
+    expect(line?.querySelector(".ui-review-paid-icon svg")).not.toBeNull();
+    expect(line?.querySelector(".ui-review-paid-icon")).toHaveAttribute("aria-hidden", "true");
+    const shown = line?.querySelector(".ui-review-paid-text");
+    expect(shown).toHaveAttribute("aria-hidden", "true");
+    expect(shown?.textContent).toBe("שולם · קבלה 12/10");
+    expect(shown?.querySelector("bdi.ui-num")?.textContent).toBe("12/10");
+    expect(line?.querySelector(".sr-only")?.textContent).toBe("שולם, קבלה מ־12/10");
+  });
+
+  it("sits right under the amount when there is no VAT line", () => {
+    const { container } = card(reviewPaidView({ receipts: [receipt("2026-10-12")], paid: true, paid_on: "2026-10-12" }, now));
+    expect(container.querySelector(".ui-review-paid")?.previousElementSibling).toHaveClass("t-display");
+  });
+
+  it("says שולם חלקית with the latest receipt and no ✓ on a part payment", () => {
+    const view = reviewPaidView({ receipts: [receipt("2026-10-02"), receipt("2026-10-09")], paid: false, paid_on: "2026-10-09" }, now);
+    const { container } = card(view);
+    const line = container.querySelector(".ui-review-paid");
+    expect(line?.querySelector("svg")).toBeNull();
+    expect(line?.querySelector(".ui-review-paid-text")?.textContent).toBe("שולם חלקית · קבלה 09/10");
+    expect(line?.querySelector(".sr-only")?.textContent).toBe("שולם חלקית, קבלה מ־09/10");
+  });
+
+  it("draws nothing with no receipts, or on a payload from before the pairing server", () => {
+    expect(reviewPaidView({ receipts: [], paid: false, paid_on: null }, now)).toBeNull();
+    expect(reviewPaidView({}, now)).toBeNull();
+    const { container } = card(null);
+    expect(container.querySelector(".ui-review-paid")).toBeNull();
+  });
+
+  it("takes the latest receipt's date when paid_on is missing, and keeps the year of another year", () => {
+    expect(reviewPaidView({ receipts: [receipt("2026-10-03"), receipt("2026-10-07")], paid: true }, now)?.spoken).toBe("שולם, קבלה מ־07/10");
+    expect(reviewPaidView({ receipts: [receipt("2025-12-30")], paid: true, paid_on: "2025-12-30" }, now)?.line).toEqual(["שולם · קבלה ", { num: "30/12/2025" }]);
   });
 });
