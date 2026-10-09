@@ -227,8 +227,16 @@
   margin-inline-start: auto;
 }
 
+/* A page under Back takes a 28px title, one step under a tab root's 34px, and Back's chevron lines
+   up with the title's start edge instead of sitting 18px in (owner, 2026-10-09). The 44px target
+   keeps its size; only its inner padding and the glyph's own inset hang past the side gutter. */
 .ui-page-stacked .t-title-1 {
   margin: 0;
+  font-size: 1.75rem;
+}
+
+.ui-page-stacked .ui-page-title-row > .ui-icon-btn:first-child {
+  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
 }
 
 .ui-banner .ui-row-title,

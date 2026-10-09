@@ -114,7 +114,7 @@ export function GroupList<T>({
 }) {
   const baseId = useId();
   return (
-    <List>
+    <List className="ui-group-list">
       {groups.map((group, index) => (
         <MonthSection
           key={group.key}

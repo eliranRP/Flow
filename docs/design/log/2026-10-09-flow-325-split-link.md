@@ -12,3 +12,10 @@
 - Changed: The by-project heads on שויכו היום took three shapes: a one-line group showed "תנועה אחת" with no total, and a short name such as "בלי פרויקט" kept its count and total on the name line. Now every head is the name, then under it the count in muted meta and the totals, start-aligned, whatever the name's length or the group's size. A one-line group shows its total too, so every head reads the same way down the list.
 - Rule: A repeated head keeps one shape down a list; a short name or a single line does not change where the figures sit.
 - Source: mobile UI/UX review cycle 8, shot `sb-routes--filed-today-by-project--full.png`.
+
+## Page titles under Back (owner, 2026-10-09)
+
+- Kind: polish
+- Changed: On the screenshots the owner said the header sizes and Back looked off. Every page under Back now takes a 28px title, one step under a tab root's 34px, so a page's sections no longer compete with its title. Back's chevron hangs past the 44px target's padding so its point lines up with the title's start edge; before, it sat 18px in. On שויכו היום the first project head stands 24px under the title, up from 8px.
+- Rule: Back's glyph and the title share one start edge; a page under Back titles at 28px.
+- Source: owner's phone screenshot of the built שויכו היום page, 2026-10-09.
