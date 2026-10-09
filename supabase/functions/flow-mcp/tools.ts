@@ -210,6 +210,15 @@ export async function callTool(
     return ok({ missing: data });
   }
 
+  if (name === "list_team") {
+    const result = await rpc("list_team", {});
+    const team = result.json;
+    if (result.status >= 400 || team === null || typeof team !== "object" || Array.isArray(team)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(team);
+  }
+
   if (name === "list_unpaid") {
     const result = await rpc("list_unpaid", {});
     const rows = result.json;

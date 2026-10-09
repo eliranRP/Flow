@@ -82,7 +82,7 @@ declare
 begin
   cid := private.current_company_id();
   if cid is null then
-    if exists (select 1 from public.company_viewers w where w.user_id = (select auth.uid())) then
+    if private.is_read_only() then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';
@@ -138,7 +138,7 @@ declare
 begin
   cid := private.current_company_id();
   if cid is null then
-    if exists (select 1 from public.company_viewers w where w.user_id = (select auth.uid())) then
+    if private.is_read_only() then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';
@@ -175,7 +175,7 @@ declare
 begin
   cid := private.current_company_id();
   if cid is null then
-    if exists (select 1 from public.company_viewers w where w.user_id = (select auth.uid())) then
+    if private.is_read_only() then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';

@@ -43,6 +43,31 @@ Deno.test("mint takes p_user from getUser and ignores a body user id", async () 
   assertEquals(store.authorization, "Bearer secret-key", "dictionary key");
 });
 
+Deno.test("mint passes the app's x-flow-company header as the company hint, and only an id (FLOW-601)", async () => {
+  const company = "5EB3B1CA-B8B9-4322-9227-07D8E360AC82";
+  const mint = async (header?: string) => {
+    const calls: Call[] = [];
+    const headers: Record<string, string> = {
+      origin: "https://flow-app-dx5.pages.dev",
+      authorization: "Bearer app-jwt",
+      "content-type": "application/json",
+    };
+    if (header !== undefined) headers["x-flow-company"] = header;
+    const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp/mint", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ scope: "read" }),
+    }), deps(calls, { store_mcp_credential: "11111111-1111-4000-8000-000000000001" }));
+    assertEquals(response.status, 200, "mint status");
+    const store = calls.find((call) => call.url.endsWith("/store_mcp_credential"));
+    if (store?.body == null) throw new Error("store called");
+    return store.body;
+  };
+  assertEquals((await mint(company)).p_hint, company.toLowerCase(), "hint forwarded");
+  assertEquals("p_hint" in await mint("not-an-id"), false, "a header that is not an id is dropped");
+  assertEquals("p_hint" in await mint(), false, "no header, no hint");
+});
+
 Deno.test("a foreign origin cannot mint", async () => {
   const calls: Call[] = [];
   const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp/mint", {
@@ -106,6 +131,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_missing_bills",
     "get_expected_months",
     "list_unpaid",
+    "list_team",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -119,6 +145,9 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "set_category_pnl",
     "set_overhead_project",
     "rename_company",
+    "invite_member",
+    "set_member_role",
+    "remove_member",
     "add_loan",
     "update_loan",
     "attach_loan_payment",

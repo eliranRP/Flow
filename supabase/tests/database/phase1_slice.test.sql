@@ -28,10 +28,10 @@ insert into slice_ref (label, id)
 select 'a', id from public.companies;
 
 select throws_ok(
-  $$select public.create_company('עסק שני', true)$$,
+  $$select public.create_company('אלפא שיפוצים', true)$$,
   'P0001',
   'company already exists',
-  'a second company for the same owner is rejected'
+  'a second company with the same name for the same owner is rejected (FLOW-601)'
 );
 
 select lives_ok(

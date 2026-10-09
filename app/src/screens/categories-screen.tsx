@@ -1,6 +1,6 @@
 import { type CategoryRow } from "@flow/shared";
 import { useRef, useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -39,16 +39,40 @@ function loanCategoryLine(category: CategoryRow): string | null {
 
 type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
 
+type ListedCategory = CategoryRow & { count?: number };
+
+/** A category's line count: a sample's `count`, else list_categories' `lines` (FLOW-406, mockup cat-b). */
+function lineCount(category: ListedCategory): number | undefined {
+  return category.count ?? category.lines;
+}
+
+function countLine(count: number): string {
+  return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
+}
+
+/**
+ * FLOW-406 (decision 0164, mockup cat-b): the top of the list holds the categories with no parent.
+ * A sub-category of a hidden parent is listed there too, as the server keeps it visible.
+ */
+export function topLevelCategories(rows: readonly ListedCategory[]): ListedCategory[] {
+  const hiddenParents = new Set(rows.filter((row) => row.hidden).map((row) => row.id));
+  const ids = new Set(rows.map((row) => row.id));
+  return rows.filter((row) => row.parent_id == null || hiddenParents.has(row.parent_id) || !ids.has(row.parent_id));
+}
+
 function CategoryLine({
   category,
   muted = false,
   plain = false,
   href,
+  subCount,
   onMenu,
 }: {
-  category: CategoryRow & { count?: number };
-  /** FLOW-322: the category's lines, in search. */
+  category: ListedCategory;
+  /** FLOW-322: the category's lines, in search. A parent's opens its sub-categories (FLOW-406). */
   href?: string;
+  /** FLOW-406: a parent says how many sub-categories it has, with a chevron. */
+  subCount?: number;
   muted?: boolean;
   /** A viewer row keeps the height and drops the pointer. */
   plain?: boolean;
@@ -61,7 +85,10 @@ function CategoryLine({
       href={href}
       title={category.name}
       muted={muted}
-      meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
+      chevron={subCount != null}
+      meta={subCount != null
+        ? subCount === 0 ? "תת-קטגוריות מוסתרות" : subCount === 1 ? "תת-קטגוריה אחת" : `${String(subCount)} תת-קטגוריות`
+        : lineCount(category) == null ? undefined : countLine(lineCount(category) ?? 0)}
       tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
       action={onMenu == null ? undefined : (
         <IconButton
@@ -78,14 +105,22 @@ function CategoryLine({
 export function CategoriesScreen({
   sample,
   hiddenOpen = false,
+  parentId: parentProp,
+  listPath = "/settings/categories",
 }: {
-  sample?: Array<CategoryRow & { count?: number }>;
+  sample?: ListedCategory[];
   /** Stories open the hidden list without a click. */
   hiddenOpen?: boolean;
+  /** FLOW-406: the parent whose sub-categories this page lists (mockup cat-b-2). The route gives it. */
+  parentId?: string;
+  /** Where the list lives; the e2e fixture route has its own. */
+  listPath?: string;
 } = {}) {
+  const routeParams = useParams();
+  const parentId = parentProp ?? routeParams.parentId;
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const blocked = useBlockedPreview();
   const holdWrites = useHoldWrites();
   // FLOW-507: the role can turn viewer while a sheet is open, so each write checks it again.
@@ -93,8 +128,27 @@ export function CategoriesScreen({
   const categories = useCategoriesQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null && preview === "off");
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
-  const rows: Array<CategoryRow & { count?: number }> = sample ?? categories.data ?? [];
-  const [kind, setKind] = useState<"expense" | "income">("expense");
+  const rows: ListedCategory[] = sample ?? categories.data ?? [];
+  // FLOW-406: only a top-level, non-loan category has a page of sub-categories.
+  const parentRow = parentId == null ? undefined : rows.find((row) => row.id === parentId);
+  const parent = parentRow != null && parentRow.parent_id == null && parentRow.loan_part == null ? parentRow : null;
+  // The kind lives in the URL, so Back from an income parent lands on הכנסות again.
+  const kindPick = params.get("kind") === "income" ? "income" : "expense";
+  const setKind = (next: "expense" | "income") => {
+    setParams((current) => {
+      const out = new URLSearchParams(current);
+      if (next === "income") out.set("kind", "income");
+      else out.delete("kind");
+      return out;
+    }, { replace: true });
+  };
+  const kind = parent?.kind ?? kindPick;
+  const listHref = (listKind: "expense" | "income") => {
+    const query = new URLSearchParams(search);
+    if (listKind === "income") query.set("kind", "income");
+    const text = query.toString();
+    return `${listPath}${text === "" ? "" : `?${text}`}`;
+  };
   const [showHidden, setShowHidden] = useState(hiddenOpen);
   const [menu, setMenu] = useState<(CategoryRow & { count?: number }) | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -140,7 +194,9 @@ export function CategoriesScreen({
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("create_category", { p_name: categoryName, p_kind: kind }));
+      assertNoError(await supabase.rpc("create_category", parent == null
+        ? { p_name: categoryName, p_kind: kind }
+        : { p_name: categoryName, p_kind: kind, p_parent_id: parent.id }));
     },
   });
   const hide = useWrite({
@@ -167,10 +223,21 @@ export function CategoriesScreen({
   });
   const fromName = rows.find((category) => category.id === mergeFrom)?.name ?? "";
   const intoName = rows.find((category) => category.id === mergeInto)?.name ?? "";
-  const shown = rows.filter((category) => category.kind === kind && !category.hidden);
-  const hiddenRows = rows.filter((category) => category.kind === kind && category.hidden);
+  // FLOW-406: the top level, or one parent's sub-categories.
+  const scope = parent == null ? topLevelCategories(rows) : rows.filter((row) => row.parent_id === parent.id);
+  // A parent counts its visible sub-categories; one with only hidden ones still opens.
+  const subCounts = new Map<string, number>();
+  for (const row of rows) {
+    if (row.parent_id != null) subCounts.set(row.parent_id, (subCounts.get(row.parent_id) ?? 0) + (row.hidden ? 0 : 1));
+  }
+  const subCountOf = (category: ListedCategory) => (parent == null ? subCounts.get(category.id) : undefined);
+  const rowHref = (category: ListedCategory) => (subCountOf(category) != null
+    ? `${listPath}/${encodeURIComponent(category.id)}${search}`
+    : linesHref(category));
+  const shown = scope.filter((category) => category.kind === kind && !category.hidden);
+  const hiddenRows = scope.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
-  const anyKeptOut = rows.some((category) => category.kind === kind && category.excluded_from_pnl === true);
+  const anyKeptOut = scope.some((category) => category.kind === kind && category.excluded_from_pnl === true);
   // Follow the refetched row, so the rehab switch shows the saved value while the sheet stays open.
   const menuRow = menu ? rows.find((row) => row.id === menu.id) ?? menu : null;
   const menuLoanLine = menuRow ? loanCategoryLine(menuRow) : null;
@@ -179,12 +246,20 @@ export function CategoriesScreen({
   if (previewNoCompany || liveNoCompany) {
     return <Navigate to={`/settings${search}`} replace />;
   }
+  // A parent that is gone (deleted, or no longer a parent after a reload) goes back to the list.
+  if (parentId != null && phase.kind === "ready" && parent == null) {
+    return <Navigate to={`${listPath}${search}`} replace />;
+  }
+  const title = parent?.name ?? "קטגוריות";
+  const kicker = parent == null ? "הגדרות" : "קטגוריות";
+  const backTo = parent == null ? `/settings${search}` : listHref(parent.kind);
+  const lines = parent?.rollup_lines ?? (parent == null ? undefined : lineCount(parent));
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
       <ScreenState
-        title="קטגוריות"
-        kicker="הגדרות"
-        backTo={`/settings${search}`}
+        title={parentId == null ? "קטגוריות" : "קטגוריה"}
+        kicker={parentId == null ? "הגדרות" : "קטגוריות"}
+        backTo={parentId == null ? `/settings${search}` : `${listPath}${search}`}
         phase={phase}
         onRetry={() => { void categories.refetch(); }}
       />
@@ -192,7 +267,8 @@ export function CategoriesScreen({
   }
   return (
     <div>
-      <ScreenHeader title="קטגוריות" kicker="הגדרות" backTo={`/settings${search}`} />
+      <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={lines == null ? undefined : countLine(lines)} />
+      {parent != null ? null : (
       <div className="ui-page-pad ui-cat-seg">
         <SegmentedControl
           label="סוג"
@@ -209,7 +285,8 @@ export function CategoriesScreen({
           ]}
         />
       </div>
-      {shown.length === 0 && hiddenRows.length === 0 ? (
+      )}
+      {shown.length === 0 && hiddenRows.length === 0 && parent == null ? (
         <EmptyState icon={<TagIcon />} title="אין עדיין קטגוריות" body="קטגוריות נוצרות מהמסמכים של SUMIT או כשמוסיפים אחת" />
       ) : shown.length > 0 ? (
       <List className="ui-cat-list">
@@ -218,7 +295,8 @@ export function CategoriesScreen({
             key={category.id}
             category={category}
             plain={holdWrites}
-            href={linesHref(category)}
+            href={rowHref(category)}
+            subCount={subCountOf(category)}
             onMenu={holdWrites ? undefined : (opener) => {
               menuOpener.current = opener;
               setMenu(category);
@@ -238,7 +316,7 @@ export function CategoriesScreen({
             setCreateOpen(true);
           }}
         >
-          קטגוריה חדשה
+          {parent == null ? "קטגוריה חדשה" : "הוספת תת-קטגוריה"}
         </TextLink>
         )}
         {hiddenRows.length > 0 ? (
@@ -309,7 +387,7 @@ export function CategoriesScreen({
       <Sheet
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="קטגוריה חדשה"
+        title={parent == null ? "קטגוריה חדשה" : "תת-קטגוריה חדשה"}
         returnFocusRef={createOpener}
         action={
           <Button

@@ -19,8 +19,8 @@ select tests.authenticate_as('mcp_other');
 select lives_ok($$select public.create_company('אחר', true)$$, 'other owner creates a company');
 
 select ok(
-  not has_function_privilege('anon', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text)', 'execute')
-  and not has_function_privilege('authenticated', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text)', 'execute')
+  not has_function_privilege('anon', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid)', 'execute')
   and not has_function_privilege('anon', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and not has_function_privilege('authenticated', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and not has_function_privilege('anon', 'public.mcp_credential_status(uuid)', 'execute')
@@ -37,7 +37,7 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('service_role', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text)', 'execute')
+  has_function_privilege('service_role', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid)', 'execute')
   and has_function_privilege('service_role', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and has_function_privilege('service_role', 'public.mcp_credential_status(uuid)', 'execute'),
   'service_role can store, revoke, and read status'
