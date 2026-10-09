@@ -1155,3 +1155,33 @@ Deno.test("get_breakdown level parent and search_expenses category_exact (FLOW-4
   }
   assertEquals(calls.length, before);
 });
+
+Deno.test("get_expense on a split line moves the old shares to allocations_superseded", async () => {
+  const id = "11111111-1111-4000-8000-000000000002";
+  const share = { project_id: "p1", share: 100 };
+  const part = { category_id: "c1", amount_minor: 500 };
+  const { rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id, direction: "income", allocations: [share] } };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    if (name === "get_line_split") return { status: 200, json: { transaction_id: id, parts: [part] } };
+    return { status: 500, json: null };
+  });
+  const split = await callTool("get_expense", { transaction_id: id }, ["read"], rpc);
+  if (!split.structuredContent.ok) throw new Error("get_expense failed");
+  const body = split.structuredContent.data as Record<string, unknown>;
+  assertEquals(body.allocations, []);
+  assertEquals(body.allocations_superseded, [share]);
+  assertEquals(body.line_split, { parts: [part] });
+
+  const { rpc: whole } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id, direction: "income", allocations: [share] } };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    if (name === "get_line_split") return { status: 200, json: null };
+    return { status: 500, json: null };
+  });
+  const read = await callTool("get_expense", { transaction_id: id }, ["read"], whole);
+  if (!read.structuredContent.ok) throw new Error("get_expense failed");
+  const unsplit = read.structuredContent.data as Record<string, unknown>;
+  assertEquals(unsplit.allocations, [share]);
+  assertEquals("allocations_superseded" in unsplit, false);
+});

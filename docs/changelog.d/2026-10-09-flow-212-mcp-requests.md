@@ -1,0 +1,1 @@
+- FLOW-212: `get_expense` on a split line shows the old shares as `allocations_superseded`, and a database test pins that a refund under an expense category lowers that cost in the breakdown, the project and the months.

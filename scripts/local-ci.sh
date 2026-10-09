@@ -14,7 +14,7 @@
 #       (scripts/pgtap-specs.mjs).
 #   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
 #     merge of main that leaves the patch unchanged; lint and the file-size check only when the
-#     branch changes only docs/ or Markdown (a claim commit). Each run appends a line to
+#     branch changes only docs/, Markdown or design images (a claim commit). Each run appends a line to
 #     gate-times.log beside the shared cache: time, branch, mode, diff kind, seconds, result, and
 #     each phase's seconds (node scripts/gate-times.mjs sums it up).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
@@ -151,12 +151,15 @@ if [[ -z "$pr_fork" ]] && (( ! full )); then
 fi
 pr_files=""
 [[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
-# The diff kind gate-times.log groups by: migration, server (other supabase/), ui (app, packages,
-# design), docs (docs/ or Markdown only), else scripts.
+# Docs, Markdown and the design images (rendered screens, logo files): nothing the app, its
+# tests or Storybook reads. The app reads only design/system's CSS from design/.
+docs_files='^docs/|\.md$|^design/.*\.(png|jpe?g|webp|gif|svg)$'
+# The diff kind gate-times.log groups by: migration, server (other supabase/), docs (docs_files
+# only), ui (app, packages, design), else scripts.
 if grep -q '^supabase/migrations/' <<<"$pr_files"; then kind=migration
 elif grep -q '^supabase/' <<<"$pr_files"; then kind=server
+elif [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then kind=docs
 elif grep -qE '^(app|packages|design)/' <<<"$pr_files"; then kind=ui
-elif [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then kind=docs
 else kind=scripts
 fi
 # The branch's own patch against main. A run that passes marks it with the main commit it forked
@@ -206,8 +209,8 @@ fi
 base_area() {
   (( ! base_only )) || [[ " $base_areas " == *" $1 "* ]]
 }
-# Only docs or Markdown against main: lint and the file-size check, nothing else.
-if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
+# Only docs_files against main: lint and the file-size check, nothing else.
+if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then
   mode="docs"
   phase "docs only: lint and the file-size check"
   pnpm lint
@@ -229,15 +232,15 @@ branch_changes() {
 }
 
 # Where this branch left main, when every app input the branch changes is an app, e2e, shared or
-# _shared .ts/.tsx source, a migration (a test globs them) or app CSS (no test imports it): the vitest
-# module graph finds the tests and stories those reach. Anything else (setup, config, the design
-# package, scripts, lockfile, a deleted or renamed file) runs all (scripts/storybook-stories.mjs,
-# relatedRun).
+# _shared .ts/.tsx source, a migration (a test globs them), app CSS (no test imports it), or a
+# manifest, tsconfig or lockfile whose change the tests don't read: the vitest module graph finds the
+# tests and stories those reach. Anything else (setup, config, the design package, scripts, a
+# dependency, a deleted or renamed file) runs all (scripts/storybook-stories.mjs, relatedRun).
 changed_base() {
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
   [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
-    | node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1
+    | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
   echo "$pr_fork"
 }
 
@@ -536,8 +539,9 @@ storybook_smoke() {
   if [[ -n "$base" ]]; then
     changed="$(branch_changes "$base")"
     # The vitest Storybook project above already ran the stories the change reaches. The build and
-    # its layout, clip and secret specs run when a story spec or the Storybook setup changes.
-    if ! grep -qE '^app/e2e/storybook-|^app/\.storybook/|^app/playwright\.storybook\.config\.ts$|^scripts/storybook-stories\.mjs$|^(app/)?package\.json$|^pnpm-lock\.yaml$' <<<"$changed"; then
+    # its layout, clip and secret specs run when a story spec or the Storybook setup changes; a
+    # manifest, tsconfig or lockfile counts only when the part the build reads changed.
+    if [[ "$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes ]]; then
       echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
@@ -553,7 +557,7 @@ storybook_smoke() {
   scope="$logs_dir/storybook-scope.txt"
   pnpm build-storybook >"$logs_dir/build-storybook.log" 2>&1 || { cat "$logs_dir/build-storybook.log"; return 1; }
   node scripts/storybook-stories.mjs --index app/storybook-static/index.json --budget "${FLOW_STORY_BUDGET:-250}" \
-    <<<"$changed" >"$scope"
+    ${base:+--base "$base"} <<<"$changed" >"$scope"
   if grep -qx all "$scope"; then
     echo "local-ci: the every-story check opens every story."
   else

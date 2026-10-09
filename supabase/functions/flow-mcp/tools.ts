@@ -614,7 +614,12 @@ export async function callTool(
   let out: Record<string, unknown> = row;
   if (Array.isArray(parts) && parts.length > 0 && typeof row === "object" && !Array.isArray(row)) {
     const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
-    out = { ...row, line_split: lineSplit };
+    // FLOW-212: the parts are what count, so the percent shares kept from before the split move
+    // to allocations_superseded and allocations reads empty, as on a line with no shares.
+    const { allocations: before, ...rest } = row;
+    out = Array.isArray(before) && before.length > 0
+      ? { ...rest, allocations: [], allocations_superseded: before, line_split: lineSplit }
+      : { ...row, line_split: lineSplit };
   }
   if (row.direction === "income") return ok({ ...out, loan_split: null });
   // get_transaction carries the loan split since FLOW-114; read it on its own only from a
