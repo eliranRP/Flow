@@ -160,13 +160,14 @@
   color: var(--color-good);
 }
 
+/* The line under an option reads as a row hint, lighter than the option's name (FLOW-352). */
 .ui-radio-desc {
   display: block;
   margin-top: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-  line-height: var(--type-label-line);
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
   white-space: normal;
 }
 

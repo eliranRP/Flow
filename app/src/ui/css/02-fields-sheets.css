@@ -205,10 +205,33 @@
   color: var(--color-text-muted);
 }
 
-/* A line kept out of profit fades whole, so it reads as set aside (owner's pick C, 2026-10-09).
-   The children fade, not the row, so the focus ring and the pressed tint keep full strength. */
-.ui-row-set-aside > * {
-  opacity: 0.5;
+/* A line kept out of profit fades, so it reads as set aside (owner's pick C, 2026-10-09).
+   The parts fade, not the row, so the focus ring and the pressed tint keep full strength. The icon,
+   name and amount fade to 0.6; the hint ("לא נספר ברווח") keeps its full muted grey, so it still
+   meets AA contrast (FLOW-352). */
+.ui-row-set-aside > :not(.ui-row-main),
+.ui-row-set-aside > .ui-row-main > :not(.ui-row-text),
+.ui-row-set-aside .ui-row-text > :not(.ui-row-hint) {
+  opacity: 0.6;
+}
+
+/* The kept-out words lead the hint and are the reason the row is faded, so they are never cut
+   (FLOW-352): the row's text column is at least as wide as those words, and the name takes the
+   ellipsis instead. The name's own width no longer counts toward that minimum. */
+.ui-row-set-aside :is(.ui-row-main, .ui-row-text) {
+  min-inline-size: min-content;
+}
+
+.ui-row-set-aside .ui-row-title {
+  contain: inline-size;
+}
+
+.ui-row-set-aside .ui-hint-parts {
+  min-inline-size: min-content;
+}
+
+.ui-row-set-aside .ui-hint-parts > .ui-hint-part:first-child {
+  flex-shrink: 0;
 }
 
 .ui-nowrap {
