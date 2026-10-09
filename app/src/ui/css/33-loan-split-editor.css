@@ -1,0 +1,78 @@
+/* FLOW-106: the stepper (ui/stepper.tsx) and the loan split editor (screens/loan-split-editor.tsx). */
+.ui-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--control-height);
+}
+
+.ui-stepper-copy {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-stepper-hint {
+  color: var(--color-text-secondary);
+}
+
+.ui-stepper-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ui-stepper-btn {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ui-stepper-btn:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.ui-stepper-value {
+  min-inline-size: 2ch;
+  text-align: center;
+  font-size: var(--type-title-3-size);
+  font-weight: var(--type-title-3-weight);
+}
+
+.ui-stepper[data-disabled="true"] .ui-stepper-value {
+  color: var(--color-text-muted);
+}
+
+.ui-lsedit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-lsedit-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ui-lsedit-meta {
+  color: var(--color-text-secondary);
+}
+
+/* One figure leads: the part amounts in regular weight, סה״כ keeps its semibold (design lead). */
+.ui-lsedit-parts .ui-loan-parts-row > .ui-num {
+  font-weight: var(--type-amount-weight);
+}
+
+/* "חלוקה אחרת" under the match sheet's loans. */
+.ui-loan-other {
+  margin-block-start: var(--space-2);
+}

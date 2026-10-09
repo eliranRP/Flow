@@ -17,10 +17,10 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
-| UI lane 1 | FLOW-106 screens: the loan match sheet says what one tap writes (schedule row, catch-up installments, demand loans), then the split editor (FLOW-339 merged #362) | The kind field on the new-loan form; company "לפי חודש" |
+| UI lane 1 | FLOW-106 screens: the split editor "חלוקת התשלום" (match sheet merged #374) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-309 pairing on the review card (option A: "✓ שולם · קבלה dd/mm" under the amount, on #350's `receipts`/`paid`/`paid_on`) + long supplier names (overflow-wrap on the review supplier line, the project picker, unpaid hints, the add-sheet hint) | Next UI task for the review and transaction screens |
 | UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-310 help backdrop double tap test, FLOW-309 review refresh and toast fade tests | Next small ready item from the lane manager |
@@ -125,7 +125,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
-| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
+| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
@@ -361,7 +361,8 @@ Everything else follows by area, roughly in priority order inside each area.
   - [x] The loan page `/settings/loans/:id`: balance and status, סוג, ריבית and שינויי ריבית, פרויקט (moved from the list), מצב with the close date from the last payment, קטגוריות לחלקים.
   - [x] The list: open loans, then paid-off and closed under a collapsed "נסגרו (N)"; a row opens the loan page; the new-loan toast has פתיחה.
   - [x] (UI lane 1, 2026-10-09) The match sheet says what one tap writes on each loan: "לפי הלוח · $x", "N תשלומים לפי הלוח · $x" when the line equals 2 to 12 unpaid rows to the cent (that tap writes them together), and demand loans with "ריבית צבורה $x · השאר לקרן". A loan that cannot take the line shows off with its reason (closed or paid off before the line's date, before a demand loan's start, a later demand payment attached, above the balance). The match already saves through `save_loan_split`.
-  - [ ] The split editor "חלוקת התשלום" (fees, N installments, exact parts), opened from "חלוקה אחרת" under the match sheet and from "עריכת החלוקה" on a matched line.
+  - [x] (UI lane 1, 2026-10-09) The split editor "חלוקת התשלום", opened from "חלוקה אחרת" under the match sheet: by the schedule over 1 to 12 installments with fees off the top (demand loans: the accrued interest), or the lender's exact parts; fees name their category and can keep it on the loan.
+  - [ ] Open the same editor from "עריכת החלוקה" on a matched line.
   - [ ] The kind field on the new-loan form (the kind is set on the loan page for now).
   - [ ] The locked line in Categories for a category a loan uses (categories-screen is in #259).
 
@@ -958,13 +959,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-351"></a>
 ### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 in #372; items 1 and 2 follow in a second PR once #367 lands) · **Depends on:** —
 - **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
 - [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
 - [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
-- [ ] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
-- [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
-- [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
+- [x] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
+- [x] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
+- [x] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
 <a id="flow-352"></a>
@@ -973,7 +974,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Source:** cycle 11 phone review of deploy 23d1fd5, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-11/shots/`.
 - [ ] Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
 - [ ] Picker sheets: `.ui-radio-desc` uses the label style (weight 500, secondary grey), so the line under an option reads as heavy as the option name. Use the row hint style: weight 400, `--color-text-muted` (css/12-split.css:163-171). Shots of 3-4 pickers before and after.
-- [ ] Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
+- [x] (UI lane 1, with the FLOW-106 split editor PR) Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
 - [ ] Kept-out rows fade at 50% opacity, which drops the "מחוץ לרווח" line to about 2.1:1 and the name to 3.4:1 in light mode. Fade the icon, name and amount to about 0.6 and keep the hint at full muted grey (about 5.8:1) (css/02-fields-sheets.css:197-199). Design lead's call within the owner's pick C; the rows still read as faded.
 - **Acceptance:** shots at 320 and 390, light and dark; design lead sign-off.
 

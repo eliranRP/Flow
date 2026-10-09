@@ -420,6 +420,7 @@ test("change sheet picks a project and a category without a summary save", async
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
 });
 
+// FLOW-351: the Open story draws the shared sheet, whose whole-period row is הכול.
 test("the whole-period option stays inside the sheet and nothing uses a native title", async ({ page }) => {
   const viewports = [
     { width: 320, height: 693 },
@@ -428,11 +429,11 @@ test("the whole-period option stays inside the sheet and nothing uses a native t
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto("/iframe.html?id=components-periodpicker--open&viewMode=story", { waitUntil: "domcontentloaded" });
-    const option = page.getByRole("radio", { name: "כל התקופה" });
+    const option = page.getByRole("radio", { name: "הכול" });
     await expect(option).toBeVisible();
     await expect(async () => {
       const box = await option.boundingBox();
-      expect(box, `כל התקופה at ${String(viewport.width)}`).not.toBeNull();
+      expect(box, `הכול at ${String(viewport.width)}`).not.toBeNull();
       if (!box) return;
       expect(box.y, `option top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
       expect(box.y + box.height, `option bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
