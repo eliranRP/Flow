@@ -501,7 +501,8 @@ export function LineSplitEditor({
                     </div>
                     <span className="ui-lsplit-resolved t-label" aria-live="polite">
                       {part.unit === "percent"
-                        ? (cents != null ? <Amount minor={cents} currency={currency} /> : percent != null && pending ? "…" : null)
+                        // The server's cents once previewed; until then, or while the split can't be previewed, the local share.
+                        ? (cents != null ? <Amount minor={cents} currency={currency} /> : percent != null ? <Amount minor={percentMinorOf(percent, lineMinor)} currency={currency} /> : null)
                         : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
                     </span>
                   </div>

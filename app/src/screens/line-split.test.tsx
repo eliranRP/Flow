@@ -148,6 +148,8 @@ describe("split by category editor (FLOW-325)", () => {
     expect(screen.queryByRole("button", { name: "ביטול השינוי" })).toBeNull();
     expect(screen.queryByText(/גבוהים מהשורה/)).toBeNull();
     expect(restRow()).toHaveTextContent("לא נשאר");
+    // The 70% part keeps its ₪ figure while the split can't be previewed.
+    expect(screen.getByText("₪3,360")).toBeInTheDocument();
     // After the first ✕ it moves to the hold line, still once.
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toBeInTheDocument();
