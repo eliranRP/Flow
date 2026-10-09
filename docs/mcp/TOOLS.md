@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -56,6 +56,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `rename_category` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_name"` | `id` | the category id `rename_category` used |
 | `get_project_categories` | `id` | `list_projects` `projects[].id` |
+| `set_category_parent` | `category_id`, `parent_id` | `list_categories` `categories[].id` |
+| `undo` `kind: "category_parent"` | `id` | the category id `set_category_parent` used |
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
 | `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
@@ -131,7 +133,7 @@ Rows come base currency first, then by currency, then by this month's cost, high
 
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`), `lines` (lines on the books in it, whole or by a split part, not removed or void: what `delete_category` sends back to review), `split_lines` (how many of those have a split part in it; delete removes their whole split), `group_name` (the group a screen folds it into, see `set_category_group`; null when none) and `loan_used` (a loan or a loan payment part uses it, so `delete_category` refuses). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`), `lines` (lines on the books in it, whole or by a split part, not removed or void: what `delete_category` sends back to review), `split_lines` (how many of those have a split part in it; delete removes their whole split), `parent_id` (its parent category, see `set_category_parent`; null for a top-level one), `children_count` (how many sub-categories sit under it, hidden ones too), `rollup_lines` (`lines` plus its sub-categories' lines), `group_name` (the parent's name, kept for older clients; null when none) and `loan_used` (a loan or a loan payment part uses it, so `delete_category` refuses). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
 
 ### list_review
 
@@ -293,7 +295,7 @@ A project, category or loan name (`create_project`, `create_category`, `create_p
 { "idempotency_key": "cat-new-1", "name": "Tools", "kind": "expense" }
 ```
 
-There is no cost-type argument on categories. Output `data`: `{ "id", "undo_kind": "category" }`.
+There is no cost-type argument on categories. An optional `parent_id` creates it as a sub-category (FLOW-406); the rules of `set_category_parent` apply, and a broken rule is `refused`. Output `data`: `{ "id", "undo_kind": "category" }`, plus `parent_id` when one was given. A `create_categories` row takes the same `parent_id`; a row that breaks a rule fails alone.
 
 ### create_projects and create_categories
 
@@ -375,7 +377,18 @@ Sets the company's base currency (owner only), three capital letters. Nothing is
 
 Renames a category (owner only). `name` is trimmed, 2 to 120 letters, and not another category's of the same kind; an income and an expense category may share a name. The id stays, so its lines, split parts, loans, remembered suppliers and flags stay. Loan categories can be renamed; match them by `loan_part`. Output `data`: `category_id`, `name`, `prior` (the old name), `undo_kind: "category_name"` and `id`. Refused: `category already exists`, `category name is too short`, `category name is too long`, `category not found`. Undo, with the category id, puts the old name back; it is `conflict` once the category was renamed again or while another category of the kind has the old name. A renamed `העברות` or `הכנסה אחרת` no longer gets the Mercury import's hint, which matches by name ([0148](../decisions/0148-category-rename.md)).
 
+### set_category_parent
+
+```json
+{ "idempotency_key": "parent-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "parent_id": "c0ffee00-1111-4000-8000-0000000000a2" }
+```
+
+Puts a category under a parent category of the same company (owner only), or takes it out with `parent_id: null` (FLOW-406, [0164](../decisions/0164-sub-categories-and-groups.md)). There is one level only. Refused: `category_parent_nested` (the parent is itself a sub-category, or the category already has sub-categories), `category_parent_kind` (an income category under an expense one, or the reverse) and `category_parent_loan_part` (a loan category is never a parent or a sub-category). `category not found` and `parent not found` are `not_found`. The category's `group_name` follows the parent's name. A parent with sub-categories can't be deleted or merged away (`category_has_children`). Output `data`: `category_id`, `parent_id`, `prior` (the parent before, or null), `undo_kind: "category_parent"` and `id`. Undo, with the category id, puts the parent before back; it is `conflict` once the parent was changed again or the old parent can no longer take it.
+
 ### set_category_group
+
+Older form of `set_category_parent`, kept for older clients: a group name now names a parent category of that name and kind, made when there is none.
+
 
 ```json
 { "idempotency_key": "group-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "group_name": "חשבונות" }

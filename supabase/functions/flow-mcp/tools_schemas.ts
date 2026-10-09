@@ -65,6 +65,7 @@ export const WRITE_TOOL_NAMES = [
   "set_company_currency",
   "rename_category",
   "set_category_group",
+  "set_category_parent",
   "set_jev_mode",
   "undo_jev_prefill",
   "undo",
@@ -96,7 +97,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   create_project: new Set(["idempotency_key", "name", "status"]),
-  create_category: new Set(["idempotency_key", "name", "kind"]),
+  create_category: new Set(["idempotency_key", "name", "kind", "parent_id"]),
   create_projects: new Set(["idempotency_key", "items"]),
   create_categories: new Set(["idempotency_key", "items"]),
   sync_bank: new Set(["idempotency_key"]),
@@ -128,6 +129,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_company_currency: new Set(["idempotency_key", "currency"]),
   rename_category: new Set(["idempotency_key", "category_id", "name"]),
   set_category_group: new Set(["idempotency_key", "category_id", "group_name"]),
+  set_category_parent: new Set(["idempotency_key", "category_id", "parent_id"]),
   set_jev_mode: new Set(["idempotency_key", "enabled", "mode", "threshold"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
@@ -214,7 +216,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode", "loan_index", "index_rate"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -420,6 +422,7 @@ export const createCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: visibleName(2, 120),
   kind: z.enum(["expense", "income"]),
+  parent_id: UUID_TEXT.nullable().optional(),
 }).strict();
 // A setup batch: up to 100 rows, a name at most once (per kind for categories).
 const PROJECT_ROW = z.object({
@@ -429,6 +432,7 @@ const PROJECT_ROW = z.object({
 const CATEGORY_ROW = z.object({
   name: visibleName(2, 120),
   kind: z.enum(["expense", "income"]),
+  parent_id: UUID_TEXT.nullable().optional(),
 }).strict();
 function uniqueRows<T>(keyOf: (row: T) => string) {
   return (body: { items: T[] }, ctx: z.RefinementCtx) => {
@@ -600,6 +604,11 @@ export const setCategoryGroupSchema = z.object({
   category_id: UUID_TEXT,
   group_name: z.string().trim().max(40).transform(plainSpaces)
     .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME }).nullable(),
+}).strict();
+export const setCategoryParentSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+  parent_id: UUID_TEXT.nullable(),
 }).strict();
 export const setCompanyCurrencySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
