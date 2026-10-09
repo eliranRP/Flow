@@ -578,12 +578,6 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** Rows grouped by day headers (today, yesterday, date), a round initials avatar, the counterparty in bold with the payment method under it, the amount at the end with small cents, income in green, a pending chip, dense rows without card borders.
 - **Acceptance:** mockup approved; design review.
 
-<a id="flow-306"></a>
-### FLOW-306 · Invoice photo capture
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
-- **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
-- **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
-
 <a id="flow-307"></a>
 ### FLOW-307 · Large amounts on the transaction detail at 320px
 - **Type:** SMALL UI · **Status:** done (#111; design reviewer's option A, stepped fit for display amounts) · **Depends on:** —
@@ -1329,6 +1323,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** MCP · **Status:** blocked on the owner's approval · **Depends on:** FLOW-101 (done, #70)
 - **What:** Data work for the MCP/data agent, no code: re-check company totals after FLOW-101; hide default loan categories a company doesn't use (the interest category is the target for split interest, so check after PR B); move deposit and closing returns filed as refunds into a kept-out category if the owner approves.
 - **Acceptance:** the data agent reports before and after totals to the coordinator.
+
+## Future features
+
+Features the owner wants later, not now. They are `on-hold`: nobody claims or plans them until the owner says go.
+
+<a id="flow-306"></a>
+### FLOW-306 · Invoice photo capture
+- **Type:** PLAN FIRST · **Status:** on-hold (owner, 2026-10-09: a future feature, not now) · **Depends on:** —
+- **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
+- **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
 
 ## Done
 
