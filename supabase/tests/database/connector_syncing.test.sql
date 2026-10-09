@@ -1,5 +1,5 @@
 -- Refresh busy state from the server. syncing is true while sync_claimed_at is
--- within 15 minutes, false when it is stale or null, and false after
+-- within 10 minutes, false when it is stale or null, and false after
 -- note_connector_failure. sumit_status() exposes it too.
 
 begin;
@@ -107,7 +107,7 @@ select set_config('request.jwt.claim.sub', '', true);
 select set_config('request.jwt.claims', '', true);
 
 update public.connector_connections
-set sync_claimed_at = pg_catalog.now() - interval '16 minutes'
+set sync_claimed_at = pg_catalog.now() - interval '11 minutes'
 where company_id = (select id from syn where label = 'a')
   and provider = 'sumit';
 
@@ -116,7 +116,7 @@ select tests.authenticate_as('sync_owner');
 select is(
   (select syncing from public.connector_connection_status where provider = 'sumit'),
   false,
-  'a claim older than 15 minutes is stale, not syncing'
+  'a claim older than 10 minutes is stale, not syncing'
 );
 
 select is(

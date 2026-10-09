@@ -147,7 +147,7 @@ select is(
 );
 
 update public.connector_connections
-set sync_claimed_at = pg_catalog.now() - interval '16 minutes',
+set sync_claimed_at = pg_catalog.now() - interval '11 minutes',
     last_error = 'auth'
 where company_id = (select id from ops where label = 'a')
   and provider = 'sumit';

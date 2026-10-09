@@ -1,4 +1,9 @@
-/** Per user and company. v1 is localStorage: no per-user jsonb column exists, and the migration slot is held. */
+import { loadSetupState, uploadSetupState } from "./server-store";
+
+/**
+ * Per user and company. localStorage is the copy the screens read synchronously; with a company,
+ * setup_states on the server keeps the same object across devices (FLOW-506, server-store.ts).
+ */
 
 export type SetupStore = {
   run_started_at: string | null;
@@ -77,13 +82,33 @@ export function readSetupStore(userId: string | null, companyId: string | null):
   }
 }
 
-export function writeSetupStore(userId: string | null, companyId: string | null, store: SetupStore): void {
-  if (!userId || typeof localStorage === "undefined") return;
+function writeLocal(userId: string, companyId: string | null, store: SetupStore): void {
+  if (typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(setupStorageKey(userId, companyId), JSON.stringify(store));
   } catch {
     // A private-mode write is a no-op. The run still moves in this tab.
   }
+}
+
+export function writeSetupStore(userId: string | null, companyId: string | null, store: SetupStore): void {
+  if (!userId) return;
+  writeLocal(userId, companyId, store);
+  if (companyId) uploadSetupState(userId, companyId, store);
+}
+
+function isEmptySetupStore(store: SetupStore): boolean {
+  return JSON.stringify(store) === JSON.stringify(emptySetupStore());
+}
+
+/** FLOW-506. Settles the local copy from the server row once per page load. */
+export function loadSetupStore(userId: string, companyId: string): Promise<true> {
+  return loadSetupState(userId, companyId, {
+    read: () => readSetupStore(userId, companyId),
+    write: (store) => { writeLocal(userId, companyId, store); },
+    parse: parseSetupStore,
+    isEmpty: isEmptySetupStore,
+  });
 }
 
 const sessionEnteredKey = (userId: string) => `flow.setup.session-entered.${userId}`;

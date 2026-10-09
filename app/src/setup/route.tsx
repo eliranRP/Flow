@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode, usePreviewSearch } from "../preview";
@@ -20,6 +20,7 @@ import {
   type SetupStepId,
 } from "./model";
 import { StepBusiness, StepInstall, StepJev, StepLists, StepReview, StepSumit } from "./steps";
+import { resetSetupServerForTests } from "./server-store";
 import { useSetupStore } from "./store";
 import {
   companyCreatedThisRun,
@@ -32,12 +33,14 @@ import { useSetupViewer } from "./viewer";
 
 /** First route on load. Survives Shell remounts after full-screen routes. */
 let landingPath: string | null = null;
-let resumeConsidered = false;
+/** The user whose one resume this page load already considered. A sign-in as another user gets its own. */
+let resumeConsideredFor: string | null = null;
 
 /** Tests reset landing capture between cases. */
 export function resetSetupResumeForTests(): void {
   landingPath = null;
-  resumeConsidered = false;
+  resumeConsideredFor = null;
+  resetSetupServerForTests();
 }
 
 const AUTH_ENTRY = new Set(["/sign-in", "/auth/callback"]);
@@ -48,7 +51,9 @@ export function noteSetupLanding(pathname: string): void {
 }
 
 export function SetupLanding(): null {
-  noteSetupLanding(useLocation().pathname);
+  const { pathname } = useLocation();
+  // A layout effect, not render: a render React throws away must not record the landing.
+  useLayoutEffect(() => { noteSetupLanding(pathname); }, [pathname]);
   return null;
 }
 
@@ -60,26 +65,27 @@ function useFromCard(): boolean {
 export function SetupResume() {
   const preview = usePreviewMode();
   const { pathname } = useLocation();
-  noteSetupLanding(pathname);
+  useLayoutEffect(() => { noteSetupLanding(pathname); }, [pathname]);
   const home = pathname === "/";
-  const resumeAtLandingHome = landingPath === "/" && pathname === "/" && !resumeConsidered;
   const { status, session } = useAuth();
   const userId = session?.user.id ?? null;
   const viewer = useSetupViewer();
   // Home is the only launch surface. A cold /review must not call get_dashboard or leave the card.
   const facts = useSetupFacts(home && !preview && status === "authed" && viewer.ready && !viewer.viewer);
-  const { store } = useSetupStore(userId, facts.companyId);
+  const { store, ready: storeReady } = useSetupStore(userId, facts.companyId);
   const navigate = useNavigate();
   const acted = useRef("");
   useEffect(() => {
-    if (!resumeAtLandingHome || preview || status !== "authed" || !userId || !viewer.ready || viewer.viewer || !facts.ready) return;
+    // Read here, after the layout effects recorded the landing.
+    const resumeAtLandingHome = landingPath === "/" && pathname === "/" && resumeConsideredFor !== userId;
+    if (!resumeAtLandingHome || preview || status !== "authed" || !userId || !viewer.ready || viewer.viewer || !facts.ready || !storeReady) return;
     const signature = `${facts.companyId ?? ""}:${store.run_started_at ?? ""}:${store.run_resumed_at ?? ""}:${store.card_dismissed_at ?? ""}`;
     if (acted.current === signature) return;
     const at = new Date().toISOString();
     const entered = sessionEntered(userId);
     const decision = decideEntry(store, facts, entered, at);
     if (decision.kind === "wait") return;
-    resumeConsidered = true;
+    resumeConsideredFor = userId;
     acted.current = signature;
     if (decision.kind === "stay") {
       const stamp = resumeStamp(store, facts, entered, at);
@@ -89,7 +95,7 @@ export function SetupResume() {
     if (decision.markSession) markSessionEntered(userId);
     if (decision.patch) writeSetupStore(userId, facts.companyId, withPatch(store, decision.patch));
     void navigate(decision.to);
-  }, [resumeAtLandingHome, preview, status, userId, viewer.ready, viewer.viewer, facts, store, navigate]);
+  }, [pathname, preview, status, userId, viewer.ready, viewer.viewer, facts, store, storeReady, navigate]);
   return null;
 }
 

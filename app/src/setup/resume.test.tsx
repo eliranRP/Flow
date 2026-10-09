@@ -47,7 +47,7 @@ const dashboard = {
 };
 
 const calls = vi.hoisted(() => ({ rpc: [] as string[], from: [] as string[] }));
-const gate = vi.hoisted(() => ({ ownerId: "user-1" }));
+const gate = vi.hoisted(() => ({ ownerId: "user-1", setupRow: null as { state: unknown } | null }));
 
 function chain(data: unknown) {
   const result = { data, error: null };
@@ -85,6 +85,17 @@ const supabase = {
     calls.from.push(table);
     if (table === "companies") return chain({ owner_id: gate.ownerId });
     if (table === "review_queue") return chain([]);
+    if (table === "setup_states") {
+      // Answers after the other reads, so a resume that does not wait for it would already have moved.
+      const row = gate.setupRow;
+      const slow = {
+        select: () => slow,
+        eq: () => slow,
+        upsert: () => Promise.resolve({ data: null, error: null }),
+        maybeSingle: () => new Promise((resolve) => setTimeout(() => { resolve({ data: row, error: null }); }, 150)),
+      };
+      return slow;
+    }
     return chain(null);
   },
 };
@@ -129,6 +140,7 @@ describe("setup resume", () => {
     calls.rpc.length = 0;
     calls.from.length = 0;
     gate.ownerId = userId;
+    gate.setupRow = null;
     resetSetupResumeForTests();
     localStorage.clear();
     sessionStorage.clear();
@@ -221,6 +233,22 @@ describe("setup resume", () => {
     });
     await expect(
       waitFor(() => { expect(third.router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
+  });
+
+  it("a new phone reads the server flags before it decides, and does not restart the run", async () => {
+    gate.setupRow = {
+      state: { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z", run_resumed_at: "2026-10-05T00:00:00.000Z" },
+    };
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(calls.from).toContain("setup_states");
+    });
+    await waitFor(() => {
+      expect(readSetupStore(userId, "company-1").run_resumed_at).toBe("2026-10-05T00:00:00.000Z");
+    });
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
     ).rejects.toThrow();
   });
 

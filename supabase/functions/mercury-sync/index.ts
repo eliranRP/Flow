@@ -24,7 +24,7 @@ declare const Deno: {
 };
 
 const te = new TextEncoder();
-const CLAIM_MS = 15 * 60 * 1000;
+const CLAIM_MS = 10 * 60 * 1000;
 const FORCE_GAP_MS = 60 * 1000;
 const QUIET_GAP_MS = 6 * 60 * 60 * 1000;
 

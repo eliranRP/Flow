@@ -978,8 +978,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; demo CSS reaches into component internals; `data-setup-visible` exists only for tests.
 - [ ] One list row puts the minus after the amount; it should come before the currency sign.
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
-- [ ] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)).
-- [ ] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; tests for API-key clear and the Settings write block; a hold-writes check on the first step's submit.
+- [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0162](../decisions/0162-setup-state-on-the-server.md).)
+- [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
+- [ ] Tests for the Settings write block; a hold-writes check on the first step's submit.
 - [ ] Spec drift: demo timing, the SUMIT sheet sizes at 320, hiding vs focusing שוב during a replay; step 3 scrolls a little longer than designed.
 - [ ] Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`); the banner's tone-bad icon; note inset vs frame.
 - [ ] Release check on a real iOS device for the Hebrew Safari labels.
@@ -992,7 +993,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop.
-- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle).
+- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
 <a id="flow-508"></a>
@@ -1005,7 +1006,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Refresh completion is announced only by the toast; add a status text update. (The sheet's "מחובר · עודכן …" line updates from `last_sync_at` after the refetch; the toast is `role="status"`.)
 - [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
 - [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
-- [ ] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`).
+- [x] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`). (10 minutes: an edge function stops at 400 seconds at most, so no live run outlives it. `CLAIM_MS`, the status view, `sumit_status` and both claim overloads, `20261012230100_sync_claim_window.sql`.)
 - [x] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320. (The sync time now has its own line in the SUMIT and Mercury sheets, so no line starts with "·"; checked at 320. The retry time shows under רענון עכשיו while held; the last use and the sync time share the today / yesterday / D.M rules.)
 - [x] Onboarding header back control goes to sign-in and drops `preview=1`; the onboarding round trip leaves no-op Back steps. (Back goes to `return` with preview kept, and a save replaces the entry. Also: Mercury's "פרטי העסק" link came back to the SUMIT sheet; it now returns to Mercury's.)
 
