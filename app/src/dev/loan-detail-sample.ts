@@ -21,9 +21,9 @@ export const SAMPLE_LOAN_CATEGORIES: LoanCategory[] = [
 ];
 
 export const SAMPLE_LOAN_PROJECTS: LoanProjectChoice[] = [
-  { id: "proj-a", name: "שיפוץ הרצל 12", status: "active", code: "P-12" },
+  { id: "proj-a", name: "שיפוץ דוגמה 12", status: "active", code: "P-12" },
   { id: "proj-b", name: "בית דוגמה 9", status: "active", code: "P-9" },
-  { id: "proj-c", name: "דירה ביאליק 8", status: "finished", code: "P-3" },
+  { id: "proj-c", name: "דירה דוגמה 8", status: "finished", code: "P-3" },
 ];
 
 const NO_CATEGORIES = { interest: null, escrow: null, principal: null, fees: null };

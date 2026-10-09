@@ -39,21 +39,21 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
   it("moves the loan to another project, then ביטול puts it back", async () => {
     const store = sampleLoanStore();
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ }));
-    expect(screen.getByRole("radio", { name: /^שיפוץ הרצל 12/ })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
+    expect(screen.getByRole("radio", { name: /^שיפוץ דוגמה 12/ })).toHaveAttribute("aria-checked", "true");
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(toast("ההלוואה שויכה לפרויקט")).toBeDefined(); });
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
     expect(screen.getByRole("button", { name: /^פרויקט בית דוגמה 9/ })).toBeInTheDocument();
     const undo = within(toast("ההלוואה שויכה לפרויקט") as HTMLElement).getByRole("button", { name: "ביטול", hidden: true });
     fireEvent.click(undo);
-    await waitFor(() => { expect(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ })).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ })).toBeInTheDocument(); });
   });
 
   it("clears the project with ללא פרויקט", async () => {
     const store = sampleLoanStore();
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: "ללא פרויקט" }));
     await waitFor(() => { expect(toast("ההלוואה הוסרה מהפרויקט")).toBeDefined(); });
     expect(store.read("loan-mortgage")).toMatchObject({ phase: "ready", bundle: { loan: { projectId: null } } });
@@ -63,8 +63,8 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     const store = sampleLoanStore();
     const update = vi.spyOn(store, "update");
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ }));
-    fireEvent.click(screen.getByRole("radio", { name: /^שיפוץ הרצל 12/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^שיפוץ דוגמה 12/ }));
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
     expect(update).not.toHaveBeenCalled();
   });
@@ -72,18 +72,18 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
   it("keeps the sheet and names a permission refusal", async () => {
     const store = sampleLoanStore({ refuse: { update: "forbidden" } });
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(toast("אין הרשאה לעדכן הלוואה.")).toBeDefined(); });
     expect(screen.getByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /^שיפוץ הרצל 12/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: /^שיפוץ דוגמה 12/ })).toHaveAttribute("aria-checked", "true");
   });
 
   it("says the project is gone when its foreign key fails (23503)", async () => {
     const store = sampleLoanStore();
     vi.spyOn(store, "update").mockRejectedValueOnce(Object.assign(new Error("fk"), { code: "23503" }));
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(toast("הפרויקט לא נמצא.")).toBeDefined(); });
     expect(screen.getByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     const real = store.update;
     vi.spyOn(store, "update").mockImplementation(async (id, patch) => { await hold; await real(id, patch); });
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ הרצל 12/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(screen.getByRole("radio", { name: "ללא פרויקט" })).toHaveAttribute("aria-disabled", "true"); });
     fireEvent.keyDown(document, { key: "Escape" });
