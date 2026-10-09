@@ -24,6 +24,13 @@ export const NOT_IN_YET = "עוד לא הגיע";
 /** FLOW-406 (decision 0164): a parent's own lines, last inside its fold. */
 export const OWN_LINES = "בלי תת-קטגוריה";
 
+/** FLOW-406: inside a fold, the sub-categories, then the parent's own lines, then the bills not in yet. */
+export function foldOrder(items: readonly CategoryItem[], own: ReadonlySet<string>): CategoryItem[] {
+  const isOwn = (item: CategoryItem) => item.line.id != null && own.has(item.line.id);
+  const present = items.filter((item) => !item.missing);
+  return [...present.filter((item) => !isOwn(item)), ...present.filter(isOwn), ...items.filter((item) => item.missing)];
+}
+
 /**
  * Confirmed categories, then the amount still waiting, so the lines match the project's expenses.
  * FLOW-401 v5: name and amount only. Grouped categories fold into one row that opens in place,
@@ -162,10 +169,7 @@ export function ProjectCategories({
               });
             }}
           >
-            {[
-              ...entry.items.filter((item) => item.line.id == null || !own.has(item.line.id)),
-              ...entry.items.filter((item) => item.line.id != null && own.has(item.line.id)),
-            ].map((item) => categoryRow(item, true))}
+            {foldOrder(entry.items, own).map((item) => categoryRow(item, true))}
           </CategoryGroupRow>
         );
       }))}

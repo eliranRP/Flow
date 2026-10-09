@@ -64,7 +64,8 @@ describe("FLOW-406 sub-categories in Settings → Categories", () => {
     renderAt("/settings/categories", <CategoriesScreen sample={sample} />);
     expect(screen.queryByText("חשמל")).not.toBeInTheDocument();
     const parent = screen.getByRole("link", { name: /תחזוקה/ });
-    expect(parent).toHaveTextContent("3 תת-קטגוריות");
+    // The hidden sub-category is not counted.
+    expect(parent).toHaveTextContent("2 תת-קטגוריות");
     fireEvent.click(parent);
     expect(await screen.findByRole("heading", { name: "תחזוקה" })).toBeInTheDocument();
     expect(screen.getByText("48 תנועות")).toBeInTheDocument();
@@ -88,9 +89,30 @@ describe("FLOW-406 sub-categories in Settings → Categories", () => {
     });
   });
 
-  it("goes back to the list when the parent is gone", async () => {
+  it("goes back to the list when the parent is gone, or the id is a sub-category's", async () => {
     renderAt("/settings/categories/nope");
     expect(await screen.findByRole("heading", { name: "קטגוריות" })).toBeInTheDocument();
+  });
+
+  it("sends a sub-category's id back to the list", async () => {
+    renderAt("/settings/categories/c3");
+    expect(await screen.findByRole("heading", { name: "קטגוריות" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "חשמל" })).not.toBeInTheDocument();
+  });
+
+  it("keeps הכנסות in the URL, so Back from an income parent lands there", () => {
+    const income = [
+      { id: "i1", name: "שכירות", kind: "income" as const, hidden: false, is_default: false },
+      { id: "i2", name: "דירה 1", kind: "income" as const, hidden: false, is_default: false, parent_id: "i1" },
+    ];
+    renderAt("/settings/categories", <CategoriesScreen sample={income} />);
+    fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
+    expect(screen.getByRole("link", { name: /שכירות/ })).toHaveAttribute("href", "/settings/categories/i1");
+    fireEvent.click(screen.getByRole("link", { name: /שכירות/ }));
+    expect(screen.getByRole("heading", { name: "שכירות" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /חזרה|קטגוריות/ }));
+    expect(screen.getByRole("radio", { name: "הכנסות" })).toBeChecked();
+    expect(screen.getByRole("link", { name: /שכירות/ })).toBeInTheDocument();
   });
 
   it("says why a parent cannot be deleted, merged or put in a group", () => {

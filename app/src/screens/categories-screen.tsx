@@ -87,7 +87,7 @@ function CategoryLine({
       muted={muted}
       chevron={subCount != null}
       meta={subCount != null
-        ? subCount === 1 ? "תת-קטגוריה אחת" : `${String(subCount)} תת-קטגוריות`
+        ? subCount === 0 ? "תת-קטגוריות מוסתרות" : subCount === 1 ? "תת-קטגוריה אחת" : `${String(subCount)} תת-קטגוריות`
         : lineCount(category) == null ? undefined : countLine(lineCount(category) ?? 0)}
       tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
       action={onMenu == null ? undefined : (
@@ -120,7 +120,7 @@ export function CategoriesScreen({
   const parentId = parentProp ?? routeParams.parentId;
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const blocked = useBlockedPreview();
   const holdWrites = useHoldWrites();
   // FLOW-507: the role can turn viewer while a sheet is open, so each write checks it again.
@@ -129,9 +129,26 @@ export function CategoriesScreen({
   const dashboard = useDashboardQuery(sample == null && preview === "off");
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
   const rows: ListedCategory[] = sample ?? categories.data ?? [];
-  const parent = parentId == null ? null : rows.find((row) => row.id === parentId) ?? null;
-  const [kindPick, setKind] = useState<"expense" | "income">("expense");
+  // FLOW-406: only a top-level, non-loan category has a page of sub-categories.
+  const parentRow = parentId == null ? undefined : rows.find((row) => row.id === parentId);
+  const parent = parentRow != null && parentRow.parent_id == null && parentRow.loan_part == null ? parentRow : null;
+  // The kind lives in the URL, so Back from an income parent lands on הכנסות again.
+  const kindPick = params.get("kind") === "income" ? "income" : "expense";
+  const setKind = (next: "expense" | "income") => {
+    setParams((current) => {
+      const out = new URLSearchParams(current);
+      if (next === "income") out.set("kind", "income");
+      else out.delete("kind");
+      return out;
+    }, { replace: true });
+  };
   const kind = parent?.kind ?? kindPick;
+  const listHref = (listKind: "expense" | "income") => {
+    const query = new URLSearchParams(search);
+    if (listKind === "income") query.set("kind", "income");
+    const text = query.toString();
+    return `${listPath}${text === "" ? "" : `?${text}`}`;
+  };
   const [showHidden, setShowHidden] = useState(hiddenOpen);
   const [menu, setMenu] = useState<(CategoryRow & { count?: number }) | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -208,9 +225,10 @@ export function CategoriesScreen({
   const intoName = rows.find((category) => category.id === mergeInto)?.name ?? "";
   // FLOW-406: the top level, or one parent's sub-categories.
   const scope = parent == null ? topLevelCategories(rows) : rows.filter((row) => row.parent_id === parent.id);
+  // A parent counts its visible sub-categories; one with only hidden ones still opens.
   const subCounts = new Map<string, number>();
   for (const row of rows) {
-    if (row.parent_id != null) subCounts.set(row.parent_id, (subCounts.get(row.parent_id) ?? 0) + 1);
+    if (row.parent_id != null) subCounts.set(row.parent_id, (subCounts.get(row.parent_id) ?? 0) + (row.hidden ? 0 : 1));
   }
   const subCountOf = (category: ListedCategory) => (parent == null ? subCounts.get(category.id) : undefined);
   const rowHref = (category: ListedCategory) => (subCountOf(category) != null
@@ -234,7 +252,7 @@ export function CategoriesScreen({
   }
   const title = parent?.name ?? "קטגוריות";
   const kicker = parent == null ? "הגדרות" : "קטגוריות";
-  const backTo = parent == null ? `/settings${search}` : `${listPath}${search}`;
+  const backTo = parent == null ? `/settings${search}` : listHref(parent.kind);
   const lines = parent?.rollup_lines ?? (parent == null ? undefined : lineCount(parent));
   if (phase.kind === "loading" || phase.kind === "error") {
     return (

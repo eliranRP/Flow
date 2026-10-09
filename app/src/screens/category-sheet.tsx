@@ -257,8 +257,8 @@ export function CategoryMenuSheet({
         returnFocusRef={returnFocusRef}
       />
       <CategoryGroupSheet
-        category={groupTarget == null ? null : { ...groupTarget, group_name: parentName(groupTarget, rows) }}
-        groups={parentChoices(groupTarget, rows)}
+        category={groupTarget}
+        choices={parentChoices(groupTarget, rows)}
         onClose={() => { setGroupTarget(null); }}
         blocked={blocked}
         returnFocusRef={returnFocusRef}
