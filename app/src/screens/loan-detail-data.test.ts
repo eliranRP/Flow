@@ -21,7 +21,7 @@ import {
   type LoanDetailDbRow,
 } from "./loan-detail-data";
 import { applyPatch, inversePatch, patchColumns } from "./loan-detail-store";
-import { groupLoans, loanListHint, loanListHintParts, sortLoans, type LoanListRow } from "./loan-list";
+import { groupLoans, loanListHint, loanListHintParts, showsLoanBalance, sortLoans, type LoanListRow } from "./loan-list";
 
 // FLOW-106 B / FLOW-110: the loan page's mappers and rules, without a screen.
 
@@ -269,6 +269,10 @@ describe("the list", () => {
     expect(loanListHint(rows[2] as LoanListRow)).toBe("נסגרה · 30/11/2025");
     expect(loanListHint(rows[3] as LoanListRow)).toBe("נפרעה");
     expect(loanListHint({ ...(rows[0] as LoanListRow), kind: "amortizing", projectName: null })).toBeUndefined();
+  });
+
+  it("hides the balance of a paid-off loan only (FLOW-138)", () => {
+    expect(rows.map((row) => showsLoanBalance(row))).toEqual([true, true, true, false]);
   });
 
   it("leads with ממתין לבדיקה, so a narrow row drops the kind and keeps the warning in words (FLOW-347)", () => {

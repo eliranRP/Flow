@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "@storybook/test";
 import { sampleLoanStore } from "../dev/loan-detail-sample";
 import { LoanGroupedList, type LoanListRow } from "./loan-list";
 
@@ -31,6 +32,17 @@ export const GroupedDark: Story = { ...dark };
 export const ClosedOpen: Story = { args: { closedOpen: true } };
 export const ClosedOpenDark: Story = { args: { closedOpen: true }, ...dark };
 export const ClosedOpen320: Story = { args: { closedOpen: true }, ...at320 };
+/** FLOW-138: a paid-off loan shows only נפרעה and its date, no balance. */
+export const ClosedOpenDark320: Story = {
+  args: { closedOpen: true },
+  ...dark,
+  ...at320,
+  play: async ({ canvasElement }) => {
+    const paid = within(canvasElement).getByRole("button", { name: /נפרעה/ });
+    await expect(paid.getAttribute("aria-label")).not.toMatch(/\$/);
+    await expect(paid.querySelector(".ui-loan-amount")).toBeNull();
+  },
+};
 /** Every loan closed: the group says הלוואות שנסגרו under the empty state. */
 export const OnlyClosed: Story = { args: { rowSet: "onlyClosed" } };
 export const OnlyClosedDark320: Story = { args: { rowSet: "onlyClosed" }, ...dark, ...at320 };
