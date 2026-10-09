@@ -153,8 +153,8 @@ select ok(
 );
 
 select ok(
-  not has_function_privilege('anon', 'public.search_transactions(text, text, integer, integer, date, date, text, text, text, bigint, bigint)', 'execute')
-  and has_function_privilege('authenticated', 'public.search_transactions(text, text, integer, integer, date, date, text, text, text, bigint, bigint)', 'execute'),
+  not has_function_privilege('anon', 'public.search_transactions(text, text, integer, integer, date, date, text, text, text, bigint, bigint, boolean)', 'execute')
+  and has_function_privilege('authenticated', 'public.search_transactions(text, text, integer, integer, date, date, text, text, text, bigint, bigint, boolean)', 'execute'),
   'authenticated can search and anon cannot'
 );
 

@@ -219,6 +219,10 @@ export async function callTool(
     if (direction !== "income" && direction !== "expense") return fail("validation", "validation");
     const groupBy = args.group_by == null ? "category" : args.group_by;
     if (groupBy !== "category" && groupBy !== "project" && groupBy !== "payer") return fail("validation", "validation");
+    // FLOW-406: level parent folds sub-categories into their parent; only by category.
+    const level = args.level == null ? "category" : args.level;
+    if (level !== "category" && level !== "parent") return fail("validation", "validation");
+    if (level === "parent" && groupBy !== "category") return fail("validation", "validation");
     const basis = args.basis == null ? "cash" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
@@ -227,7 +231,7 @@ export async function callTool(
     if (typeof to !== "string" && to != null) return to;
     // get_totals counts nothing for a period with one date; refuse it so totals stay equal.
     if ((from == null) !== (to == null)) return fail("validation", "validation");
-    const range = { p_direction: direction, p_from: from, p_to: to, p_group_by: groupBy, p_basis: basis };
+    const range = { p_direction: direction, p_from: from, p_to: to, p_group_by: level === "parent" ? "parent" : groupBy, p_basis: basis };
     const excluded = args.excluded == null ? false : args.excluded;
     if (typeof excluded !== "boolean") return fail("validation", "validation");
     // The kept-out list has no group; a group with excluded would be silently ignored.
@@ -297,6 +301,10 @@ export async function callTool(
       const category = textOf(args.category_id);
       if (typeof category !== "string" && category != null) return category;
       if (category != null && category !== "none" && !UUID.test(category)) return fail("validation", "validation");
+      // FLOW-406: a parent category matches its sub-categories' lines; category_exact matches its own only.
+      const categoryExact = args.category_exact == null ? false : args.category_exact;
+      if (typeof categoryExact !== "boolean") return fail("validation", "validation");
+      if (categoryExact && (category == null || category === "none")) return fail("validation", "validation");
       // An amount is the bank figure without its sign, in the line's own currency (FLOW-211):
       // amount finds one figure, amount_min and amount_max a range, both ends included.
       if (args.amount != null && (args.amount_min != null || args.amount_max != null)) {
@@ -313,6 +321,7 @@ export async function callTool(
         p_project: project?.toLowerCase() ?? null,
         p_category: category?.toLowerCase() ?? null,
         p_direction: direction,
+        ...(categoryExact ? { p_category_exact: true } : {}),
         // Sent only when set, so a call without an amount reads as before the amount filter.
         ...(amountMin == null ? {} : { p_amount_min: Number(amountMin) }),
         ...(amountMax == null ? {} : { p_amount_max: Number(amountMax) }),
