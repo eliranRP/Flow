@@ -12,6 +12,8 @@ export type SetupFacts = {
   ready: boolean;
   companyId: string | null;
   sumitConnected: boolean;
+  /** Mercury counts for step 1 too (FLOW-503): either connector brings the money in. */
+  mercuryConnected: boolean;
   /** A Jev row exists, on or off. A missing row is not saved. */
   jevSaved: boolean;
   hasResolvedReview: boolean;
@@ -23,6 +25,7 @@ export function emptyFacts(ready = false): SetupFacts {
     ready,
     companyId: null,
     sumitConnected: false,
+    mercuryConnected: false,
     jevSaved: false,
     hasResolvedReview: false,
     standalone: false,
@@ -47,7 +50,7 @@ export function isSkipped(store: SetupStore, step: CountedStep): boolean {
 }
 
 export function isDone(step: CountedStep, store: SetupStore, facts: SetupFacts): boolean {
-  if (step === 1) return facts.sumitConnected;
+  if (step === 1) return facts.sumitConnected || facts.mercuryConnected;
   if (step === 2) return facts.jevSaved;
   if (step === 3) return store.confirmed_lists_at != null;
   if (step === 4) return facts.hasResolvedReview || store.sample_review_at != null;

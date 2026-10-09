@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { flushSync } from "react-dom";
+import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
@@ -12,6 +13,7 @@ import { useSheetHistory } from "../ui/back";
 import { ANDROID_INSTALL_STEPS, IOS_INSTALL_STEPS } from "../ui/install-copy";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
+import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
@@ -167,6 +169,26 @@ export function StepSumit({
     },
   });
   const failed = connect.isError;
+  // Mercury (FLOW-503) is the second way in, on the same shared connect sheet as Settings.
+  const [mercuryOpen, setMercuryOpen] = useState(false);
+  const [mercuryKey, setMercuryKey] = useState("");
+  // A closed sheet never keeps the key.
+  const setMercuryOpenClearing = useCallback((next: boolean) => {
+    if (!next) setMercuryKey("");
+    setMercuryOpen(next);
+  }, []);
+  const setMercurySheet = useSheetHistory("mercury-connect", mercuryOpen, setMercuryOpenClearing);
+  const mercuryTriggerRef = useRef<HTMLButtonElement>(null);
+  const [mercuryImport, setMercuryImport] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
+  const mercury = useMercuryConnect({
+    apiKey: mercuryKey,
+    setApiKey: setMercuryKey,
+    importFrom: mercuryImport.touched ? mercuryImport.value : undefined,
+    onSuccess: () => {
+      setMercurySheet(false);
+      onConnected();
+    },
+  });
   return (
     <SetupStep
       step={1}
@@ -178,6 +200,11 @@ export function StepSumit({
       primary={
         <Button type="button" full buttonRef={triggerRef} onClick={() => { setConnectSheet(true); }}>
           {failed ? "ניסיון חוזר" : "חיבור SUMIT"}
+        </Button>
+      }
+      secondary={
+        <Button type="button" variant="secondary" full buttonRef={mercuryTriggerRef} onClick={() => { setMercurySheet(true); }}>
+          חיבור Mercury
         </Button>
       }
     >
@@ -197,6 +224,21 @@ export function StepSumit({
         busy={connect.isPending}
         onSubmit={() => {
           connect.mutate();
+        }}
+      />
+      <MercuryConnectSheet
+        open={mercuryOpen}
+        onOpenChange={setMercurySheet}
+        title="חיבור Mercury"
+        returnFocusRef={mercuryTriggerRef}
+        apiKey={mercuryKey}
+        setApiKey={setMercuryKey}
+        importFrom={mercuryImport.value}
+        setImportFrom={(value) => { setMercuryImport({ touched: true, value }); }}
+        submitLabel="חיבור"
+        busy={mercury.isPending}
+        onSubmit={() => {
+          mercury.mutate();
         }}
       />
     </SetupStep>

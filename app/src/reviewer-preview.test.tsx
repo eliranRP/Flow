@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReviewRow } from "@flow/shared";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ReviewQueue, type ReviewPreviewWrite } from "./screens/flow-screens";
 import { reviewerQueue } from "./reviewer-sample";
@@ -22,6 +22,11 @@ function previewWrite(mode: "ok" | "fail" | "offline"): ReviewPreviewWrite {
   };
 }
 
+function Where() {
+  const location = useLocation();
+  return <p data-testid="where">{`${location.pathname}${location.search}`}</p>;
+}
+
 function renderQueue(row: ReviewRow, mode: "ok" | "fail" | "offline") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
@@ -34,6 +39,7 @@ function renderQueue(row: ReviewRow, mode: "ok" | "fail" | "offline") {
               element={<ReviewQueue rows={[row]} search="" sample previewWrite={previewWrite(mode)} />}
             />
             <Route path="/transactions/:transactionId/split" element={<p>חלוקה לדוגמה</p>} />
+            <Route path="*" element={<Where />} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>
@@ -73,6 +79,18 @@ describe("reviewer sample saves", () => {
     renderQueue(bolts, "ok");
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 })).toBeEnabled();
+  });
+
+  it("opens the category picker from בחירת קטגוריה (FLOW-309)", async () => {
+    const bolts = reviewerQueue[1];
+    if (!bolts) throw new Error("missing sample row");
+    renderQueue(bolts, "ok");
+    fireEvent.click(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 }));
+    const where = new URL((await screen.findByTestId("where")).textContent, "https://flow.test");
+    expect(where.pathname).toMatch(/\/change$/);
+    expect(where.searchParams.get("item")).toBe(bolts.id);
+    expect(where.searchParams.get("pick")).toBe("category");
+    expect(where.searchParams.get("from")).toBe("line");
   });
 
   it("opens the sample split for a shared cost", async () => {

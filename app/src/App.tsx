@@ -29,6 +29,7 @@ import {
   ChangeForm,
   ConnectionsScreen,
   LoansScreen,
+  NotificationsScreen,
   OnboardingScreen,
   FiledTodayScreen,
   ProjectCategoryScreen,
@@ -195,12 +196,13 @@ function AppRoutes() {
               <Route path="review/filed" element={<FiledTodayScreen />} />
               <Route path="unpaid" element={<UnpaidScreen />} />
               <Route path="missing-bills" element={<MissingBillsScreen />} />
-              {/* FLOW-322: the placeholder notifications page is gone; an old link lands on Settings. */}
-              <Route path="notifications" element={<Navigate to="/settings" replace />} />
+              {/* FLOW-322 removed the placeholder; FLOW-502's real page is under Settings, so an old link lands there. */}
+              <Route path="notifications" element={<Navigate to="/settings/notifications" replace />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="settings/categories" element={<CategoriesScreen />} />
               <Route path="settings/connections" element={<ConnectionsScreen />} />
               <Route path="settings/loans" element={<LoansScreen />} />
+              <Route path="settings/notifications" element={<NotificationsScreen />} />
               {/* FLOW-106 B / FLOW-110: one loan's page. */}
               <Route path="settings/loans/:loanId" element={<LoanDetailScreen />} />
             </Route>

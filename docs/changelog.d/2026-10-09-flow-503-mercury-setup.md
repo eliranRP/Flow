@@ -1,0 +1,1 @@
+Setup step 1 now offers Mercury next to SUMIT. The step is called "חיבור ספרים ובנק", "חיבור SUMIT" stays the main button, and "חיבור Mercury" under it opens the same Mercury connect sheet as Settings, with "ייבוא מ". Connecting either one finishes the step.

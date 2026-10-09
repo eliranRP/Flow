@@ -327,18 +327,20 @@ Guide §11.1.
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 and 7 (2026-10-09). The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7 and 8 (2026-10-09). The id in brackets names the log entry.
 
 **Headers and navigation**
 
 - A stacked page with Back pins a compact bar once its large title scrolls off. The bar is 44px under the safe area and shows Back and the title in `title-3` on one line with an ellipsis, over a `line` hairline on the page background, with a 120ms fade (none with reduced motion). Month heads pin under it. There is no bar on inline headers, tab roots, or screens with their own leading control. [0156](../decisions/0156-labelled-back-and-compact-bar.md) (FLOW-334 H1).
 - With Back and a kicker, the kicker becomes Back's label ("‹ הגדרות"), in `label` and `accent-text`, cut at about 16 characters. It shows only when Back really goes there (FLOW-334 H2).
-- A review queue's header uses `layout="inline"` even with Back, so the card and its pinned bar stay off the tab bar at 375×667. הצג הכול sits on the start side of the counter row, and a card opened from the list leaves it out (FLOW-327).
+- A review queue's header uses `layout="inline"` even with Back, so the card and its pinned bar stay off the tab bar at 375×667. הצגת הכול sits on the start side of the counter row, and a card opened from the list leaves it out (FLOW-327).
 - A linked transaction row carries the trailing chevron. A row that opens something keeps one trailing control: when ⋯ holds the end slot, the title and count are the link and ⋯ is its own 44px button (FLOW-326, FLOW-334).
 - An app-wide gesture borrows the screen's own control for its action, never a second route of its own (FLOW-332). A swipe on a band figure follows the direction of the arrows it duplicates (FLOW-335).
 - Search is entered from a 44×44 thin outline magnifier (SVG, stroke 1.6, no fill) at the end corner of a header or band, named "חיפוש תנועות". On the search screen the field and its chips sit in a dock above the keyboard and results fill the space above. Matched text gets the `.ui-match` tint, never colour alone (FLOW-323).
 - A stacked page's own control (the period pill) sits under the title on the start side, in `ScreenHeader`'s `below` slot, not in the top end corner. The subtitle and count line then don't repeat it (FLOW-334).
 - A sideways swipe repeats a control already on screen and never replaces it. One set of rules: touch only, 24px edge zones (the 24th px included) left to swipe-back, nothing inside a field, a sheet or a sideways list, decide after 10px and give vertical moves to the page, follow the finger and commit past 30% or a flick, stay put toward an end, swap on release with reduced motion, and no swipe while pinch-zoomed. In RTL a finger moving right goes forward (FLOW-314).
+- One search entry per screen. A filter that misses offers the wider search as a row with the typed text ("חיפוש בתנועות: …"), not an empty state (FLOW-342).
+- A sheet closed with Escape returns focus to its opener with the focus ring showing; closed by touch, focus returns with no ring (FLOW-310).
 
 **Pinned bars, notes and toasts**
 
@@ -348,6 +350,8 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 and 7
 - An entry field that can hold a long amount gets the row's full width. When the list it grows pushes the add action down, the action moves into the sticky bar. A warning shows in one place only (FLOW-333).
 - A sheet closes with ✕ (and scrim, Escape, swipe). A text ביטול belongs only on a confirm sheet (FLOW-339).
 - A text link's 44px hit area may grow into empty space or below it, never up or across into another control's box (FLOW-339).
+- A toast after a sync says what changed ("3 תנועות חדשות"), not only that it ended (FLOW-509).
+- A warning shows in one place only. When that place is the tap target, the footer adds only the way out (FLOW-343).
 
 **Rows, figures and empty values**
 
@@ -362,6 +366,13 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 and 7
 - A row whose name is its identity wraps (up to 2 lines) before it truncates. A class that styles a figure is never reused as a layout wrapper (FLOW-339 loans).
 - Text is placed against text by layout, never by counting characters (FLOW-310).
 - A borderless card lines its content up with the title through its row padding, not the card margin. A bordered card keeps the side gutter (FLOW-334 split).
+- A hint part shows whole or not at all. Only a first part too long on its own, or a state to act on, ends in "…" (FLOW-339 Search).
+- A whitelisted ellipsis is for stress copy, not real labels. A real label that ends in "…" at 320–390 gets a new layout (size to content, a short form, or a second line) (FLOW-310).
+- A list that is found, not browsed (Search), shows who and how much on one line, with detail one tap away. A month figure says what it is ("נטו") (FLOW-339 C).
+- A list grouped by something other than the month (שויכו היום by project) uses the month head's shape: name, line count in muted `meta`, totals; rows drop what the head says (FLOW-334).
+- An amount is always shown in its own currency (FLOW-408). A hint says what really decides the number (FLOW-329). A project's split line shows the project's part, with the whole amount in the hint (FLOW-344).
+- An empty state says why it is empty; a missing number is never shown as zero (loans). A skeleton is the height of what replaces it (FLOW-115).
+- A counter whose digits change in place ("N מתוך M") uses tabular digits and reserves the total's digits (FLOW-309).
 
 **Sheets and settings**
 
@@ -373,12 +384,19 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 and 7
 - A setting with two to four short fixed values inside a card is a `SegmentedControl` that applies on tap. A setting with a few fixed choices that converts nothing is a sheet of radio rows that apply on tap with an undo toast. A dependent setting is hidden, not disabled, while it means nothing (FLOW-702, FLOW-504).
 - A busy control (a save in flight) uses the disabled look until it settles, keeping focus and its selection. A disabled text link is grey with a not-allowed cursor and no press fill (FLOW-331, FLOW-327).
 - A form's save stays enabled. A tap on it with empty fields shows, under each one, what to type ("כתבו את שם המלווה."), and moves focus to the first empty field. A 0 is "too small", not missing (FLOW-115).
+- A record with several independent settings (a loan) gets its own page of eyebrow rows; each row opens one small sheet that saves on its own, with ביטול in the toast. A sheet shows its own refusal inside; other failures toast. A date that can't precede an event disables the earlier days and says why under the sheet title. Finished items stay on their list, muted, under a collapsed "label (N)" link (FLOW-106).
+- A menu row is a short label with no sentence; the consequence lives on the sheet that does the write. Two actions that differ by one side effect are one row, with the side effect as a switch on the next sheet. The bin icon is for real deletes only: a merge stays red without it, and an undoable action (hide) gets a neutral button (FLOW-341).
+- A computed preview shows only for valid input and never keeps a stale result, dimmed or not (FLOW-344).
+- Every empty and error state action is the 44px tint button, never a filled primary, a retry included (FLOW-334).
+- A read-only view shows state, not progress through a task it can't do, and never a warning that asks for a write (FLOW-507).
 
 **Review card and Jev**
 
 - The label column has one width (`--review-label-w`). Every pill ends at the chevron column with at least `--space-2` before the value. Under 25rem of card width the הצעת Jev pill shows only ✦, with its words as the accessible name (FLOW-327).
-- When the card needs a choice, the main button names the next pick. An anomaly flag is loud at a Jev score of 0.7 or more and quiet below it, at most one per card, as the last block (FLOW-327).
+- When the card needs a choice, the main button names the next pick. An anomaly flag is loud at a Jev score of 0.7 or more and quiet below it, at most one per card, as the last block. An amount spike is not a flag row: it is a "↑ N%" warning pill beside the amount, with "בדרך כלל ₪X" on one muted line under it; a loud spike's pill reads "לבדיקה:" first for screen readers. At 320 the pill wraps under the amount, which is never cut (FLOW-327).
 - On a short phone (up to 720px tall) the document tile is square and rows sit 8px under their hairline, so a card with one Jev line and a quiet flag fits above the pinned bar (FLOW-333 C13).
+- When a queue card leaves with focus in its action bar, focus goes to the next card's first button, or to the empty state's action; a tap that didn't focus the bar moves nothing. The queue's blocks stay on the 8px step, trimmed only on short phones (FLOW-309).
+- Jev's fill is named with ✦ and the word Jev wherever the value shows; only "✦" when there is no room, never הצעה. With Jev on and no key, its Settings row says "אין מפתח" (FLOW-704).
 - A value an automatic job filled says who filled it and how to undo it, in one line with no reason. Turning the job off keeps that line and its undo, with no new suggestion (FLOW-331, FLOW-702).
 
 **Band**

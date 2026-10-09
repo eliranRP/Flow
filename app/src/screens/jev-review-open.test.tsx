@@ -454,6 +454,73 @@ describe("cold review scope", () => {
     expect(readJevConnectorFlag(scope)).toBe(true);
   });
 
+  it("waits on the live read after a company miss when this user remembered an on (FLOW-704)", async () => {
+    let releaseIntegration: () => void = () => undefined;
+    db.holdIntegration = new Promise<void>((resolve) => {
+      releaseIntegration = resolve;
+    });
+    db.omitCompany = true;
+    db.review = [stored];
+    db.integration = { enabled: false, mode: "off" };
+    localStorage.setItem(jevConnectorStorageKey(scope), "1");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(jevScopeFollowsLive()).toBe(true);
+    });
+    // No company, so no remembered flag of its own: the card waits on this session's live read.
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    await act(async () => {
+      releaseIntegration();
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    });
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+  });
+
+  it("does not show the last user's Jev fill after a user switch without sign-out (FLOW-704)", async () => {
+    db.restoreSession = true;
+    db.review = [{ ...stored, project_suggested: true, category_suggested: true }];
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{
+      id: "s1",
+      transaction_id: "t1",
+      answers: {
+        project: { choice: "p1", confidence: 0.91 },
+        category: { choice: "c1", confidence: 0.88 },
+      },
+    }];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(readJevConnectorFlag(scope)).toBe(true);
+    const other = { userId: "user-2", companyId: "company-2" };
+    const next = { ...session, user: { ...session.user, id: other.userId } };
+    db.session = next;
+    db.companyId = other.companyId;
+    db.integration = { enabled: false, mode: "off" };
+    act(() => {
+      for (const handler of db.handlers) handler("SIGNED_IN", next);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(boundJevConnectorScope()).toEqual(other);
+      expect(client.getQueryData(jevConnectorQueryKey(other))).toBe(false);
+    });
+    expect(client.getQueryData(jevConnectorQueryKey(scope))).toBeUndefined();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור, הצעה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    localStorage.removeItem(jevConnectorStorageKey(other));
+  });
+
   it("does not list review while getSession has not answered", async () => {
     db.holdSession = new Promise<void>(() => undefined);
     db.integration = { enabled: false, mode: "off" };

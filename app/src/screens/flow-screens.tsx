@@ -17,4 +17,5 @@ export { linePnlState, TransactionScreen } from "./transaction-screen";
 export { SplitScreen } from "./split-screen";
 export { type ConnectorTally, type ConnectionsHint, connectionsHint, loansCountHint, SettingsScreen, LoansScreen } from "./settings-screen";
 export { ConnectionsScreen } from "./connections-screen";
+export { NotificationsScreen } from "./notifications-screen";
 export { CategoriesScreen } from "./categories-screen";

@@ -101,6 +101,8 @@ export default defineConfig(({ mode }) => {
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png"],
       workbox: {
         navigateFallback: "/index.html",
+        // FLOW-502: the push and notification-click handlers live beside the generated worker.
+        importScripts: ["push-sw.js"],
       },
       manifest: {
         name: "Flow",
