@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 Search option C (the owner's pick 2026-10-09): one-line rows, no ".00", "נטו" month heads (FLOW-704 app side merged #315) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
+| Backlog bug fixes | FLOW-334 the sheet head is the title's height (the ✕ lends 8px) | FLOW-503 Mercury in the setup flow, then FLOW-506 demo code items |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -786,7 +786,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
 - [x] (#286) Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
 - [ ] (from #310 review) `.ui-btn-retry` (filled) is still used by `loan-detail-screen.tsx` and `loan-setup.tsx`; switch both to the tint retry and delete the class. At 320 the first שויכו היום group head sits about 8px under the title; give it a little more air. The heads show cents inline while rows show them small.
-- [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
+- [x] (Backlog bug fixes, 2026-10-09: the ✕ in every sheet head lends 8px above and below, so the head is 33.7px, the title's height, not 48px; on the change sheet the amount line now sits 4px under the title's box, not 11px) Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
 - [x] (#286) Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
 - [x] (#286) Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
 - [x] (UI lane 3, 2026-10-09: `margin-top: var(--space-5)` on the form) Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
