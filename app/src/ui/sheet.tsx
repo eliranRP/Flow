@@ -101,6 +101,7 @@ export function Sheet({
   onBeforeClose,
   onRequestClose,
   returnFocusRef,
+  onCloseKind,
   closeOnBackdrop = true,
 }: {
   open: boolean;
@@ -128,6 +129,8 @@ export function Sheet({
   onRequestClose?: RefObject<(() => void) | null>;
   /** ✕ and Escape put focus back on the control that opened the sheet. */
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** Called just before an accepted close: true when Escape closed it. RouteSheet returns focus itself. */
+  onCloseKind?: (byKey: boolean) => void;
   /** A backdrop tap closes the sheet. Step 2 of the one-time code turns this off. */
   closeOnBackdrop?: boolean;
 }) {
@@ -141,6 +144,8 @@ export function Sheet({
   const wasOpen = useRef(false);
   /** The sheet closed from the keyboard (Escape), so the returned focus shows its ring. */
   const keyClose = useRef(false);
+  /** Escape was pressed in this task. Vaul's close from that Escape follows in the same task. */
+  const escapeNow = useRef(false);
   const opened = useRef(false);
   const closeNotified = useRef(true);
   const onClosedRef = useRef(onClosed);
@@ -260,16 +265,22 @@ export function Sheet({
       if (frame !== 0) window.cancelAnimationFrame(frame);
     };
   }, [open, returnFocusRef]);
-  async function requestClose() {
+  async function requestClose(byKey = false) {
     if (closing.current || deciding.current) return;
     deciding.current = true;
     try {
       const verdict = await onBeforeClose?.();
       if (verdict === false) return;
       closing.current = true;
+      // Only a close that goes ahead decides the ring; a refused Escape must not mark a later ✕.
+      keyClose.current = byKey;
+      onCloseKind?.(byKey);
       const accepted = (onOpenChange as (open: boolean) => boolean | undefined)(false);
-      // A refused close leaves the sheet open. The flag must not stick.
-      if (accepted === false) closing.current = false;
+      // A refused close leaves the sheet open. The flags must not stick.
+      if (accepted === false) {
+        closing.current = false;
+        keyClose.current = false;
+      }
     } finally {
       deciding.current = false;
     }
@@ -299,7 +310,7 @@ export function Sheet({
       dismissible={closeOnBackdrop}
       modal={modal}
       onOpenChange={(next) => {
-        if (!next) void requestClose();
+        if (!next) void requestClose(escapeNow.current);
         else onOpenChange(true);
       }}
       onAnimationEnd={(stillOpen) => {
@@ -335,7 +346,6 @@ export function Sheet({
             keepOpenForToast(event);
           }}
           onEscapeKeyDown={(event) => {
-            keyClose.current = true;
             if (onEscape) {
               event.preventDefault();
               onEscape();
@@ -344,8 +354,14 @@ export function Sheet({
             // Vaul drops every close, including Escape, when dismissible is off.
             if (!closeOnBackdrop) {
               event.preventDefault();
-              void requestClose();
+              void requestClose(true);
+              return;
             }
+            // Vaul closes through onOpenChange(false) in this same task.
+            escapeNow.current = true;
+            queueMicrotask(() => {
+              escapeNow.current = false;
+            });
           }}
         >
           <SheetSurface

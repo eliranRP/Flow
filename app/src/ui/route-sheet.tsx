@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useGoBack } from "./back";
-import { Sheet } from "./sheet";
+import { Sheet, showRingUntilBlur } from "./sheet";
 
 /**
  * The sheet is a real route (`/add`, `/review/change`). Opening it pushes
@@ -39,6 +39,7 @@ export function RouteSheet({
   const goBack = useGoBack();
   const leaving = useRef(false);
   const [open, setOpen] = useState(true);
+  const byKey = useRef(false);
 
   useEffect(() => {
     const ref = returnFocusRef;
@@ -51,7 +52,10 @@ export function RouteSheet({
           return;
         }
         const el = ref.current;
-        if (el?.isConnected) el.focus();
+        if (!el?.isConnected) return;
+        el.focus();
+        // FLOW-310: after Escape the returned focus shows its ring, as in Sheet.
+        if (byKey.current) showRingUntilBlur(el);
       };
       window.setTimeout(tryFocus, 0);
     };
@@ -77,6 +81,9 @@ export function RouteSheet({
       onEscape={onEscape}
       onBeforeClose={onBeforeClose}
       onRequestClose={onRequestClose}
+      onCloseKind={(key) => {
+        byKey.current = key;
+      }}
       onOpenChange={(next) => {
         if (!next) leave();
       }}

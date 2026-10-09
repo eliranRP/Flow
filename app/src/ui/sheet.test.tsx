@@ -104,13 +104,20 @@ function sheetFocusRule(): string {
   return "";
 }
 
-function ReturnHarness() {
+function ReturnHarness({ onEscape, veto }: { onEscape?: () => void; veto?: { current: boolean } }) {
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   return (
     <>
       <button type="button" ref={opener} onClick={() => { setOpen(true); }}>ניתוק</button>
-      <Sheet open={open} onOpenChange={setOpen} title="לנתק?" returnFocusRef={opener}>
+      <Sheet
+        open={open}
+        onOpenChange={setOpen}
+        title="לנתק?"
+        returnFocusRef={opener}
+        onEscape={onEscape}
+        onBeforeClose={veto ? () => (veto.current ? false : undefined) : undefined}
+      >
         <p>תוכן</p>
       </Sheet>
     </>
@@ -132,6 +139,31 @@ describe("Sheet focus return (FLOW-310)", () => {
   it("returns focus after ✕ with no forced ring", async () => {
     render(<ReturnHarness />);
     fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    const opener = screen.getByRole("button", { name: "ניתוק", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).not.toHaveAttribute("data-focus-ring");
+  });
+
+  it("gives no ring to a later ✕ after an Escape the sheet handled itself", async () => {
+    render(<ReturnHarness onEscape={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "לנתק?" }), { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "לנתק?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    const opener = screen.getByRole("button", { name: "ניתוק", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).not.toHaveAttribute("data-focus-ring");
+  });
+
+  it("gives no ring to a later ✕ after an Escape that onBeforeClose refused", async () => {
+    const veto = { current: true };
+    render(<ReturnHarness veto={veto} />);
+    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "לנתק?" }), { key: "Escape" });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole("dialog", { name: "לנתק?" })).toBeInTheDocument();
+    veto.current = false;
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     const opener = screen.getByRole("button", { name: "ניתוק", hidden: true });
     await waitFor(() => { expect(opener).toHaveFocus(); });

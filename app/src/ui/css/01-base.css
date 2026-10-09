@@ -379,7 +379,7 @@ a.ui-row,
 }
 
 .ui-row:is(:focus-visible, [data-focus-ring]:focus, [aria-pressed="true"])::before,
-.ui-radio-row:is(:focus-visible, [aria-checked="true"])::before,
+.ui-radio-row:is(:focus-visible, [data-focus-ring]:focus, [aria-checked="true"])::before,
 .ui-review-line:focus-visible::before {
   background: var(--color-tint);
 }
@@ -390,7 +390,7 @@ a.ui-row,
 
 /* The square focus ring would draw a second box. The tint is the indicator. */
 .ui-row:is(:focus-visible, [data-focus-ring]),
-.ui-radio-row:focus-visible,
+.ui-radio-row:is(:focus-visible, [data-focus-ring]),
 .ui-review-line:focus-visible {
   outline: none;
 }
