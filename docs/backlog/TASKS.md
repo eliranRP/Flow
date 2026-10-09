@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | FLOW-309 and FLOW-704 server follow-ups |
+| Dev lane 1 | FLOW-704 Jev flag-read stall (app logic, no visual change) and its tests; FLOW-309 project-picker tests | The next non-UI item |
 | Dev lane 2 | FLOW-704 server: `jev_key_status` RPC for the Jev Settings "no key" row; FLOW-509 follow-ups (runbook, read-only scope note, surviving mutations), PR #321 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
@@ -1159,7 +1159,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** in progress (dev lane 1: the flag-read stall and the tests; the note height stays with the UI lanes) · **Depends on:** —
 - [ ] If the flag read stalls past 1s while Jev is on, the card swaps back and writes the flag off; a flag that's off while Jev is on leaves one approvable read on the next launch; the 5-minute flag cache delays a server-side change; each next card waits about 0.8s again during a long stall.
 - [ ] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden.
 - [x] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render. (The scoped key takes this session's live answer; the binding runs in a layout effect; test in `jev-review-open.test.tsx`.)
