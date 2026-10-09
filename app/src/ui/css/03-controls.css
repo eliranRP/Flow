@@ -87,6 +87,19 @@
   box-shadow: 0 1px 0 var(--color-line);
 }
 
+/* A save is running (busy): the other segments read as unavailable, but stay focusable. */
+.ui-seg[aria-busy="true"] .ui-seg-btn {
+  cursor: not-allowed;
+}
+
+.ui-seg[aria-busy="true"] .ui-seg-btn[aria-checked="false"] {
+  color: var(--color-disabled-text);
+}
+
+.ui-seg[aria-busy="true"] .ui-seg-btn[aria-checked="false"]:active {
+  background: transparent;
+}
+
 .ui-chip {
   position: relative;
   display: inline-flex;
