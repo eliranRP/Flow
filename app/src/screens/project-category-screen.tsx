@@ -106,6 +106,7 @@ export function ProjectCategoryScreen({
           dateOf={(txn) => txn.doc_date}
           amountOf={(txn) => ({ minor: txn.amount_net, currency: rowCurrency, direction: "expense" })}
           complete={!more}
+          cost
           renderRow={(txn) => (
             <ListRow
               variant="transaction"
