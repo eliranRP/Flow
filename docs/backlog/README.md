@@ -1,6 +1,6 @@
 # Backlog guide for agents
 
-This folder is where several AI agents (and people) share the Flow backlog. [TASKS.md](TASKS.md) is the backlog itself. This file tells you how to work on it:
+This folder is where several AI agents (and people) share the Flow backlog. Each task is its own file, `tasks/FLOW-<id>.md`, and [TASKS.md](TASKS.md) is the index built from them: the lanes, the priority queue, and one table per area. Never edit TASKS.md by hand. Change a task file (or, for the lane manager, [tasks/index-source.md](tasks/index-source.md)), then run `node scripts/backlog-index.mjs` and commit both; lint and CI fail when TASKS.md is out of date. A new task is a new file plus its id under its area in index-source.md. This file tells you how to work on it:
 
 1. [Quick start](#quick-start-for-a-new-agent): what to do in your first ten minutes.
 2. [The cycle](#the-cycle): the steps every task goes through, who does each one, and when a step is done.
@@ -174,10 +174,10 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
    - Files: <paths or folders this PR will change, including any migration name; for a CSS file under `app/src/ui/css/`, name the CSS blocks, for example `css/06-review-card.css: .ui-review-card`>
    - Progress: claimed
    ```
-   Each id's status line in TASKS.md becomes `claimed (<lane>, YYYY-MM-DD, <branch>)` in the first commit.
+   Each id's status line in its task file becomes `claimed (<lane>, YYYY-MM-DD, <branch>)` in the first commit.
 3. **While you work**, update `Progress` at each step: `claimed`, `building`, `in review`, `fixing`, `approved`, `merged`. Add a file to `Files` as soon as you know you'll touch it. Set each status line to `in-progress (#PR)` when the PR goes to review.
-4. **When you finish**, the merge (or closing the PR) takes the claim off the board. Set `Progress: merged <sha>` in the body, and mark the ids `done (#PR)` in TASKS.md in your next PR that touches it. A dropped claim gets a closing comment saying why, and its status line goes back to `ready`.
-5. **Lanes now.** When a lane starts, stops, or changes what it owns, update the [Lanes now](TASKS.md#lanes-now) table in TASKS.md in the next PR that touches it. That table says which lanes exist and what each one is on; the open PRs say exactly which files are taken.
+4. **When you finish**, the merge (or closing the PR) takes the claim off the board. Set `Progress: merged <sha>` in the body, and mark the ids `done (#PR)` in their task files in your next PR. A dropped claim gets a closing comment saying why, and its status line goes back to `ready`.
+5. **Lanes now.** The lane manager owns the [Lanes now](TASKS.md#lanes-now) table (in tasks/index-source.md) and updates it in its own commits; a PR ticks only its own task files. The table says which lanes exist and what each one is on; the open PRs say exactly which files are taken.
 
 ## How to take a task
 
@@ -202,10 +202,10 @@ Steps:
    git ls-remote --heads origin 'flow-123*'
    ```
    If an open PR, a draft PR, or a branch names the id, the task is taken. Pick the next one. Also check that no open PR changes the files you need ([board](#tracking-progress-so-lanes-dont-collide)).
-2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only the status lines of the task (or every task in the batch) in TASKS.md to `claimed (your lane, date, branch)`. Push it and open a **draft PR** titled `FLOW-123: <task title>` (a batch lists every id) with the `Claim` block at the top of the body. The draft PR is the lock.
+2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only the status lines of the task files (one per task in the batch) to `claimed (your lane, date, branch)` and regenerates TASKS.md. Push it and open a **draft PR** titled `FLOW-123: <task title>` (a batch lists every id) with the `Claim` block at the top of the body. The draft PR is the lock.
 3. **Build** on that branch, or brief a builder to. Keep the PR to this task or batch (related items in one area only).
 4. **Open it for review.** Mark the PR ready. Set the status to `in-progress (#PR)`. Put the id in the PR title and body.
-5. **Finish.** After the merge, and the deploy check and prod check of the batch that carries it, the coordinator moves the task to Done with the PR number. That edit goes in the next PR that touches TASKS.md (usually the next claim).
+5. **Finish.** After the merge, and the deploy check and prod check of the batch that carries it, the task file's status line says `done (#PR)`. That edit goes in the next PR that touches the task file (usually the next claim).
 
 If two draft PRs for the same task appear anyway, the older PR keeps the task and the newer one closes. If a claim has no push for 24 hours, the coordinator can release it with a comment on the PR. A follow-up you find during the work becomes a new task id. Don't make the current task bigger.
 
@@ -260,7 +260,7 @@ Do:
   merges next and nothing else merges first.
 - After each deploy: confirm build.txt on the Pages site shows the batch's last merge sha, run a read-only
   prod check for each task in the batch, then tell the MCP/data agent what is live and which tools changed.
-- Add nits and follow-ups to docs/backlog/TASKS.md as new ids.
+- Add nits and follow-ups as new task files in docs/backlog/tasks/ (listed under their area in index-source.md).
 Don't: force-push main, write to production to test, start PLAN FIRST or ON HOLD work without the owner,
 or put any real data in the repo.
 Report per task in one line: id, PR, merge sha, deploy result, prod check, message sent to the data agent.
