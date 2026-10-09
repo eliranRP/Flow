@@ -239,6 +239,11 @@
   margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
 }
 
+/* A page's own ✕ or other end icon lines up with the content's end edge the same way. */
+.ui-page-title-row > .ui-icon-btn:last-child:not(:first-child) {
+  margin-inline-end: calc((var(--touch-min) - 24px) / -2 - 6px);
+}
+
 .ui-banner .ui-row-title,
 .ui-banner .ui-row-hint,
 .ui-banner-row .ui-row-title,

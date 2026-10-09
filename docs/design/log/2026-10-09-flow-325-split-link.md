@@ -17,5 +17,6 @@
 
 - Kind: polish
 - Changed: On the screenshots the owner said the header sizes and Back looked off. Every page under Back now takes a 28px title, one step under a tab root's 34px, so a page's sections no longer compete with its title. Back's chevron hangs past the 44px target's padding so its point lines up with the title's start edge; before, it sat 18px in. On שויכו היום the first project head stands 24px under the title, up from 8px.
-- Rule: Back's glyph and the title share one start edge; a page under Back titles at 28px.
+- Changed, second pass: the owner asked that everything sit on one line. In every sheet head, Back's chevron point now sits on the rows' start edge and ✕ on their end edge, like the page header's Back; a page header's end icon does the same.
+- Rule: Back's glyph, the title and the rows share one start edge, and an end icon's glyph sits on the content's end edge, in pages and sheets; a page under Back titles at 28px.
 - Source: owner's phone screenshot of the built שויכו היום page, 2026-10-09.
