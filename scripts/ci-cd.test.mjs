@@ -619,6 +619,12 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const picked = local.indexOf('playwright test --fully-parallel "${e2e_specs[@]}"');
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
   assert.match(local, /--full\) full=1 ;;/);
+  // The same-patch skip holds only when main left the database surface alone since the marked fork;
+  // otherwise the gate runs, and a database branch runs every pgTAP file.
+  assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));
+  const skip = local.indexOf('if node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork"; then');
+  assert.ok(skip > 0 && skip < local.indexOf('mode="same patch"'));
+  assert.ok(local.includes("(( ! base_risk )) || db_specs=(supabase/tests/database)"));
   // FLOW-813: --full and FLOW_LOCAL_CI_NO_SKIP never skip a part.
   assert.ok(local.includes('if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi'));
   assert.match(local, /green\(\) \{\n  \(\( skips \)\) && /);
@@ -627,4 +633,21 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" --full <\/dev\/null/);
   const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
   assert.match(install, /git config core\.hooksPath \.githooks\n/);
+});
+
+test("the gate seeds the edge runtime's npm cache and waits for a local Supabase that is still starting", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
+  const seed = readFileSync(new URL("./seed-edge-cache.sh", import.meta.url), "utf8");
+  // Every flow-mcp smoke runs after edge_ready, which seeds the cache when the function is not up.
+  const smokes = local.split("\n").flatMap((line, index, lines) =>
+    line.trim() === "bash scripts/mcp-function-smoke.sh" ? [lines[index - 1].trim()] : []);
+  assert.deepEqual(smokes, ["edge_ready", "edge_ready"]);
+  assert.match(local, /edge_ready\(\) \{[\s\S]*?bash scripts\/seed-edge-cache\.sh/);
+  assert.match(install, /bash scripts\/seed-edge-cache\.sh \|\|/);
+  // Caching must not rewrite the functions' deno.lock files, or local-ci refuses the dirty tree.
+  assert.match(seed, /deno cache --quiet --no-lock /);
+  // A failed first reset or start waits for the database, then tries once more.
+  const retry = local.indexOf("if ! up; then");
+  assert.ok(retry > 0 && local.indexOf("{{.State.Health.Status}}", retry) > retry && local.indexOf("up || rc=$?", retry) > retry);
 });

@@ -19,7 +19,7 @@ The owner asked for a monthly view of all money in and out (FLOW-413), and made 
    - `transactions.in_cash_override`: null follows the category, false takes the whole line out, true keeps it in. It works on loan payments too; the P&L's loan lock is not the cash flag's.
    - `categories.in_cash`, default true. A guessed category does not take a whole line out, as in the P&L: a bank transfer still guessed as העברות counts until the owner confirms it. Its two sides move נכנס and יצא alike, so the month's net holds, while a wrong guess never hides a real expense.
    - Out by default, by name (`private.non_cash_category`, applied when a category is created; a rename keeps the flag, as every rename path keeps the P&L flag, and undo of a delete puts back the owner's setting): both העברות categories, internal transfers in and out, credit card bill payments (the card's charges are already lines), and money received from a loan.
-   - Every company gets an income category, כסף שהתקבל מהלוואות, out of the P&L and out of cash. Existing companies get it unless they already have one by that name or "loan proceeds".
+   - Every company gets an income category, כסף שהתקבל מהלוואות, out of the P&L and out of cash. Existing companies get it unless they already have one by that name or "loan proceeds". A company that keeps loan money in an income category of its own, out of the P&L, with "loan" or "הלווא" in its name (`private.loan_money_category`), is not given a second one; the duplicate the backfill made is removed while nothing uses it, and the company's own category leaves cash in its place (migration `20261013210638`).
    - A loan payment's principal, interest and escrow are all money out: their categories stay in cash.
 5. **Reads.**
    - `cash_months(p_months 1-24, p_today)`: the company's basis and base currency, and the months newest first, the current month included. Each month has one row per currency, the base currency first and always present: `in_minor` (נכנס), `out_minor` (יצא), `net_minor`, `profit_minor` (company_pnl's invoiced net profit for the month, for the "רווח החודש" row), and `excluded_count`, `excluded_in_minor`, `excluded_out_minor` for what the view leaves out.
@@ -28,6 +28,7 @@ The owner asked for a monthly view of all money in and out (FLOW-413), and made 
    - Both reads take the signed-in company (owner, or a viewer of a demo company), like `get_breakdown`.
 6. **Writes**, each returning the prior value for ביטול: `set_category_cash(p_category_id, p_in_cash)` and `set_transaction_cash(p_id, p_in_cash | null)` for the owner or an editor (bookkeeping, [0167](0167-team-members.md)); `set_cash_basis(p_basis)` for the owner only, a company setting like the currency. A viewer writes nothing.
 7. **Nothing is converted.** Each currency is its own row, as in the P&L (0146).
+8. **MCP** (server PR 2). Reads `get_cash_months(months)` and `get_cash_lines(month, side, currency, limit, offset)`; writes `set_category_cash`, `set_line_cash`, `set_lines_cash` (a batch of up to 200, undone with `undo_batch`) and `set_cash_basis`, each with its idempotency key and undo kinds `category_cash`, `line_cash` and `cash_basis`. An undo is a conflict once the value changed since the write. The P&L tools (`get_totals`, `list_projects`, `get_project`, `get_project_group`, `get_profit_months`, `get_breakdown`) default to the invoiced basis, as the app shows, and echo `basis` (FLOW-103).
 
 ## Alternatives rejected
 
@@ -37,7 +38,7 @@ The owner asked for a monthly view of all money in and out (FLOW-413), and made 
 
 ## Consequences
 
-- MCP tools for the view, and the FLOW-103 default switch for the P&L tools, come in server PR 2.
+- An MCP client that asked the P&L tools for a figure without `basis` now gets the invoiced figure; it passes `basis: "cash"` for the old one.
 - The app (Home frame b, the drill-ins, the "מה בתזרים" sheet and the "בתזרים" switch) comes from a UI lane; the owner sees real-app shots before it merges.
 - A SUMIT receipt and the bank deposit for the same payment are both cash on the `paid` basis, as they are both income on the P&L's cash basis today. The optional "יתכן כפל" hint from the plan is not built.
 - Tests counting a new company's default categories count one more.

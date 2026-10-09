@@ -1,0 +1,1 @@
+The design boards (design/src) and the implementation guide now use the approved money words from DESIGN-RULES §3.6: the Home hero reads "רווח בספטמבר", not "רווח נקי בספטמבר", and the unpaid-invoices screen and cards read "חשבוניות פתוחות", not "חשבוניות שלא שולמו". This way a review against the boards no longer flags the app's new copy (FLOW-353 item 5).

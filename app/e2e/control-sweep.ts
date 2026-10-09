@@ -55,14 +55,13 @@ async function fingerprint(page: Page) {
 async function gotoSettled(page: Page, url: string) {
   await page.goto(url);
   await page.waitForFunction(() => document.documentElement.dataset.screensLoaded === "1");
-  // A route that opens a sheet on load: wait until it is open and done moving, or a control under it
-  // reads as reachable and the sheet covers it mid-click (main went red on /add after #360).
-  if (sheetOnLoad.has(url)) {
-    await page.locator("[data-vaul-drawer][data-state='open']").first().waitFor();
-    // Finite animations only: a skeleton shine or a spinner loops forever.
-    await page.waitForFunction(() => document.getAnimations().every((animation) =>
-      animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity));
-  }
+  // A route that opens a sheet on load: wait until it is open, or a control under it reads as
+  // reachable and the sheet covers it mid-click (main went red on /add after #360).
+  if (sheetOnLoad.has(url)) await page.locator("[data-vaul-drawer][data-state='open']").first().waitFor({ timeout: 10_000 });
+  // Every route: wait until nothing is moving, so a click never lands mid-transition (main went red
+  // on the tab bar at /settings/categories). Finite animations only: a skeleton shine or a spinner loops forever.
+  await page.waitForFunction(() => document.getAnimations().every((animation) =>
+    animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity), undefined, { timeout: 10_000 });
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -154,7 +153,8 @@ export function sweepControls(urls: readonly string[]): void {
           continue;
         }
         try {
-          await expect.poll(() => fingerprint(page), { timeout: 1_500 }).not.toEqual(before);
+          // A loaded runner can take a few seconds to answer a tap; a real no-op stays the same throughout.
+          await expect.poll(() => fingerprint(page), { timeout: 5_000 }).not.toEqual(before);
         } catch {
           const invalid = await page.evaluate(() => {
             const field = document.activeElement;

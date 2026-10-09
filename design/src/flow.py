@@ -270,10 +270,10 @@ def home(mode):
     return f'''<div class="scr"><div class="band">{STATUS}
 <div class="hd"><span class="wm">Flow</span><span class="per">החודש {ic("down",16,2.25)}</span></div>
 <div class="gr"><span class="lbl">בוקר טוב, אלירן</span>{EXTAG}</div>
-<div class="hero"><div class="lbl">רווח נקי בספטמבר</div><div class="big">{num(T_INC-T_EXP)}</div>
+<div class="hero"><div class="lbl">רווח בספטמבר</div><div class="big">{num(T_INC-T_EXP)}</div>
 <div class="dl"><span class="delta dn">▼ {n("10%")}</span><span class="lbl">מחודש שעבר</span></div></div>
 <div class="ie lbl"><span>הכנסות<b>{num(T_INC)}</b></span><span>הוצאות<b>{num(T_EXP)}</b></span></div></div>
-<div class="card" style="margin-top:24px">{ic("inbox",22,1.9)}<div class="tx"><div style="font-size:17px">{n(7)} פריטים ממתינים לאישור</div><div class="hint">{n(3)} חשבוניות לא שולמו · {num(23400)}</div></div><span class="cv">{ic("chev",20,2)}</span></div>
+<div class="card" style="margin-top:24px">{ic("inbox",22,1.9)}<div class="tx"><div style="font-size:17px">{n(7)} פריטים ממתינים לאישור</div><div class="hint">{n(3)} חשבוניות פתוחות · {num(23400)}</div></div><span class="cv">{ic("chev",20,2)}</span></div>
 <div class="sec"><h2>פרויקטים מובילים</h2>{rows}<div class="lnk q" style="margin-top:4px">לכל הפרויקטים {ic("chev",16,2)}</div></div>
 {tabbar("home")}</div>'''
 
@@ -364,7 +364,7 @@ def upload(mode):
 <div class="head" style="padding-top:0"><div class="t1">דוח בנק הועלה</div><div class="lbl"><bdi>פועלים_ספטמבר.xlsx</bdi> · {n("01–30/09")}</div><div class="hint">בנק הפועלים · חשבון {n("12-345-678901")}</div></div>
 <div class="pad" style="margin-top:36px"><div class="big" style="font-size:36px;line-height:1.2;margin:0">{n(42)}</div><div class="lbl">שורות נקלטו</div></div>
 <div class="pad list" style="margin-top:12px">{rows}</div>
-<div class="card" style="margin-top:8px;padding:12px 14px">{ic("info",20,1.9)}<div class="tx" style="font-size:15px">{n(3)} חשבוניות עדיין לא שולמו <span class="hint">· לא נספרות ברווח</span></div><span class="cv">{ic("chev",18,2)}</span></div>
+<div class="card" style="margin-top:8px;padding:12px 14px">{ic("info",20,1.9)}<div class="tx" style="font-size:15px">{n(3)} חשבוניות פתוחות <span class="hint">· לא נספרות ברווח</span></div><span class="cv">{ic("chev",18,2)}</span></div>
 <div class="acts" style="margin-top:24px"><div class="btn pri"><span>לאשר {n(7)} פריטים</span></div><div class="btn gho" style="height:40px"><span>הצגת כל {n(42)} השורות</span></div></div>
 {tabbar("home")}</div>'''
 
@@ -448,7 +448,7 @@ def unpaid(mode):
     ls = [("מ.ש. הובלות",6000,"02/09",'שיפוץ דירה ת"א',24),("אבי חשמל",8000,"10/09","וילה רעננה",16),("חומרי בניין השרון",9400,"14/09","בניין מגורים חולון",12)]
     rows = "".join(f'<div style="padding:16px 0;{"border-top:1px solid var(--line);" if k else ""}"><div style="display:flex;justify-content:space-between"><span class="t3" style="font-weight:500">{a}</span><span class="amt t3">{num(v)}</span></div><div class="hint">{n(d)} · {p} · לפני {n(g)} ימים</div><span class="btn sm sec" style="margin-top:10px">{ic("check",16,2.4)}סימון כשולם</span></div>' for k, (a, v, d, p, g) in enumerate(ls))
     return f'''<div class="scr">{STATUS}{topbar()}
-<div class="head" style="padding-top:0"><div class="t1">חשבוניות שלא שולמו</div></div>
+<div class="head" style="padding-top:0"><div class="t1">חשבוניות פתוחות</div></div>
 <div class="pad" style="margin-top:16px"><div class="big" style="font-size:36px;margin:0">{num(23400)}</div><div class="lbl">ממתין לתשלום · לא נכלל ברווח</div></div>
 <div class="pad" style="margin-top:20px">{rows}</div>
 {tabbar("home")}</div>'''
@@ -498,7 +498,7 @@ def ds(mode):
 <div class="cc"><h4>Buttons</h4><div class="btn pri">אישור</div><div class="btn sec" style="margin-top:8px">שינוי</div><div class="btn gho" style="margin-top:4px">דלג</div><div style="display:flex;gap:8px;margin-top:8px"><span class="btn sm sec">{ic("plus",16,2.4)}פרויקט חדש</span><span class="btn sm dis" style="background:var(--line)">מושבת</span></div></div>
 <div class="cc"><h4>FAB + tab bar</h4><div style="position:relative;height:96px;border-radius:16px;overflow:hidden;border:1px solid var(--line)">{tabbar("home")}</div><div style="display:flex;gap:12px;margin-top:12px;align-items:center"><span class="fab">{ic("plus",24,2.4)}</span><span class="hint">48px · accent · the only filled accent shape</span></div></div>
 <div class="cc"><h4>Band · period pill · delta pill</h4><div class="band" style="border-radius:20px;padding:16px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="wm">Flow</span><span class="per">החודש {ic("down",16,2.25)}</span></div><div class="big" style="font-size:36px">{num(200000)}</div><div class="dl"><span class="delta dn">▼ {n("10%")}</span><span class="delta up">▲ {n("8%")}</span><span class="lbl">מחודש שעבר</span></div></div><div style="margin-top:10px;display:flex;gap:8px;align-items:center"><span class="per">החודש {ic("down",16,2.25)}</span><span class="delta dn flat">▼ {n("10%")}</span><span class="hint">on white</span></div></div>
-<div class="cc"><h4>Pending card</h4><div class="card" style="margin:0">{ic("inbox",22,1.9)}<div class="tx"><div style="font-size:17px">{n(7)} פריטים ממתינים לאישור</div><div class="hint">{n(3)} חשבוניות לא שולמו · {num(23400)}</div></div><span class="cv">{ic("chev",20,2)}</span></div></div>
+<div class="cc"><h4>Pending card</h4><div class="card" style="margin:0">{ic("inbox",22,1.9)}<div class="tx"><div style="font-size:17px">{n(7)} פריטים ממתינים לאישור</div><div class="hint">{n(3)} חשבוניות פתוחות · {num(23400)}</div></div><span class="cv">{ic("chev",20,2)}</span></div></div>
 <div class="cc"><h4>Project row · transaction row</h4><div class="rows"><div class="pr"><div><div class="nm">וילה רעננה</div><div class="hint">רווחיות {n("28%")}</div></div><div class="amt">{num(50000)}</div></div><div class="pr"><div><div class="nm">שיפוץ דירה ת"א</div><div class="hint">רווחיות {n("−17%")}</div></div><div class="amt bad">{num(-10000)}</div></div>
 <div class="rowi" style="border-top:1px solid var(--line)">{ic("doc",22,1.9)}<div class="tx"><div>טמבור בע"מ</div><div class="hint">חומרים · {n("22/09")}</div></div><span class="amt n" style="font-weight:600">{num(-12000)}</span></div></div></div>
 <div class="cc"><h4>Chips</h4><div class="chips"><span class="chip on">{ic("spark",15,2)}בניין מגורים חולון</span><span class="chip sug">וילה רעננה <span class="hint">אחרון</span></span></div><div class="chips" style="margin-top:8px"><span class="chip on">{ic("check",15,2.4)}חומרים</span><span class="chip">ציוד והשכרה</span><span class="chip">הובלה</span></div><div class="chips" style="margin-top:8px"><span class="stat">{ic("check",14,2.4)}מאושר · אוטומטי</span><span class="stat">{ic("check",14,2.4)}שולם</span></div></div>
@@ -537,7 +537,7 @@ def build():
             ".strip{display:flex;gap:24px;padding:24px;direction:rtl}.ph iframe{border:0;border-radius:24px;display:block;box-shadow:0 0 0 1px var(--line)}.cap{text-align:center;margin-top:10px;font-size:15px;color:var(--text-secondary)}body{background:var(--tint)}", w=2094), encoding="utf-8")
         # overview grid
         order = ["01-home","02-project","03-review","04-add","05-projects","06-change-sheet","07-categories","08-upload-results","09a-onboarding","10-transaction-detail","11-split","12-unpaid","13-notifications","14-settings"]
-        names = ["01 בית","02 פרויקט","03 לאישור","04 הוספה","05 פרויקטים","06 שינוי שיוך","07 קטגוריות","08 תוצאות העלאה","09 הרשמה","10 פרטי הוצאה","11 פיצול","12 לא שולמו","13 התראות","14 הגדרות"]
+        names = ["01 בית","02 פרויקט","03 לאישור","04 הוספה","05 פרויקטים","06 שינוי שיוך","07 קטגוריות","08 תוצאות העלאה","09 הרשמה","10 פרטי הוצאה","11 פיצול","12 חשבוניות פתוחות","13 התראות","14 הגדרות"]
         cells = "".join(f'<div class="c"><div class="f"><iframe src="{o}-{mode}.html" width="390" height="844" scrolling="no"></iframe></div><div class="cap">{nm}</div></div>' for o, nm in zip(order, names))
         (OUT / f"overview-{mode}.html").write_text(doc("Flow overview", f'<div class="hdr"><span class="wm logo" style="font-size:30px">Flow</span><span class="t2">כל המסכים · {"מצב בהיר" if mode=="light" else "מצב כהה"}</span>{EXTAG}</div><div class="g">{cells}</div>', mode,
             "body{background:var(--tint);padding:28px 36px}.hdr{display:flex;gap:16px;align-items:baseline;margin-bottom:20px}.g{display:grid;grid-template-columns:repeat(7,1fr);gap:22px}.f{width:254px;height:549px;border-radius:30px;overflow:hidden;border:5px solid #1D1728;background:var(--bg)}.f iframe{border:0;transform:scale(.6256);transform-origin:top right;display:block;margin-right:0}.cap{text-align:center;margin-top:8px;font-size:15px}", w=1990), encoding="utf-8")

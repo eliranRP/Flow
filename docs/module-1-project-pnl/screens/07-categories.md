@@ -42,7 +42,7 @@ Title `קטגוריות`.
 
 Seeded expenses: `חומרים`, `קבלני משנה`, `עבודה`, `ציוד והשכרה`, `הובלה`, `ביטוח`, `אחר`.
 
-Seeded income: `תקבול מלקוח`, `הכנסה אחרת`.
+Seeded income: `הכנסה מלקוחות`, `הכנסה אחרת`.
 
 When the visible list on a tab grows past 15, a note under the add button reads `יש הרבה קטגוריות. כדאי למזג`. It does not block adding.
 

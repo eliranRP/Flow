@@ -69,7 +69,7 @@ select id, 'income', 'invoice', 'project', 118000, 100000, 18000, 'source',
   '2026-07-03', 'manual', 'r20:income', 'הכנסה',
   (select id from public.categories
     where company_id = (select id from r20 where label = 'company')
-      and name = 'תקבול מלקוח' and kind = 'income')
+      and name = 'הכנסה מלקוחות' and kind = 'income')
 from r20 where label = 'company';
 
 insert into public.transactions (
