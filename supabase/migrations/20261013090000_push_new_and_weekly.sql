@@ -13,6 +13,9 @@ alter table public.notification_prefs
 
 comment on column public.notification_prefs.new_line_mark is
   'FLOW-502: lines created after this are new for the תנועה חדשה push. Set when the switch turns on and when a push is claimed.';
+-- Users who turned תנועה חדשה on before this start counting now, not from a day back.
+update public.notification_prefs set new_line_mark = pg_catalog.now() where new_transaction;
+
 comment on column public.notification_prefs.weekly_sent_on is
   'FLOW-502: the Israel date of the last סיכום שבועי claimed for this user.';
 
@@ -171,6 +174,10 @@ revoke all on function private.push_weekly_due() from public, anon, authenticate
 -- The send function claims a kind's targets in one call: the claim moves the user's mark (new)
 -- or stamps today (weekly) before the push goes out, so two runs never send the same lines.
 -- A push that fails is not retried; the next new line or next Sunday brings the next one.
+-- created_at is when the inserting transaction began, so a line from a sync that commits after a
+-- later-started sync was claimed is not pushed. It is missed, never sent twice; accepted.
+-- The weekly claim does not check the day: the cron's gate does (only a cron or service caller
+-- reaches it).
 create or replace function public.push_claim_targets(p_kind text)
 returns table (user_id uuid, endpoint text, p256dh text, auth text, fresh integer, waiting integer)
 language plpgsql
@@ -190,6 +197,8 @@ begin
       set new_line_mark = due.upto
       from due
       where p.user_id = due.user_id
+        -- Rechecked on the locked row: a run that waited on another's claim skips the user.
+        and (p.new_line_mark is null or p.new_line_mark < due.upto)
       returning p.user_id, due.fresh, due.waiting
     )
     select c.user_id, s.endpoint, s.p256dh, s.auth, c.fresh, c.waiting
@@ -211,6 +220,7 @@ begin
       set weekly_sent_on = private.israel_now()::date
       from due
       where p.user_id = due.user_id
+        and p.weekly_sent_on is distinct from private.israel_now()::date
       returning p.user_id, due.fresh, due.waiting
     )
     select c.user_id, s.endpoint, s.p256dh, s.auth, c.fresh, c.waiting

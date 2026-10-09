@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(19);
+select plan(23);
 
 do $users$
 begin
@@ -110,6 +110,7 @@ select results_eq(
 select is((select n from waiting_now) > 0, true, 'the review count includes the open item');
 
 -- Weekly: the week's lines and the open count, once a day.
+select is((select count(*)::int from private.push_weekly_due_users()), 1, 'the owner is due for the weekly summary');
 select results_eq(
   $$select fresh, waiting from public.push_claim_targets('weekly')$$,
   $$select 2, n from waiting_now$$,
@@ -121,10 +122,20 @@ select is(
   private.israel_now()::date,
   'the claim stamps today'
 );
+select is((select count(*)::int from private.push_weekly_due_users()), 0, 'nobody is due after the claim');
+select is(private.push_weekly_due(), false, 'so the hourly cron does not post');
+
+-- A run that read the same due list but waited on the claim's row lock claims nothing: the
+-- claim's own conditions are rechecked on the updated row.
+update public.notification_prefs set new_transaction = true, new_line_mark = pg_catalog.now() - interval '1 hour'
+where user_id = tests.get_supabase_uid('pw_owner');
+create temp table stale_due as select * from private.push_new_due_users();
+select is((select count(*)::int from public.push_claim_targets('new')), 1, 'the first run claims the user');
 select is(
-  private.push_weekly_due(),
-  false,
-  'nobody is due after the claim, so the hourly cron does not post'
+  (select count(*)::int from public.notification_prefs p join stale_due d on d.user_id = p.user_id
+   where p.new_line_mark is null or p.new_line_mark < d.upto),
+  0,
+  'the second run''s recheck finds the mark already moved'
 );
 
 -- Refusals and the schedule.
