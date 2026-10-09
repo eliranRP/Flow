@@ -455,7 +455,7 @@ Chips are 36px high (with a 44px hit area), 14px side padding and 8px gaps, and 
 ### 7.5 Period pill
 - The period pill is a tinted, fully round pill, 32px high, with the label (e.g. "החודש") followed by a ▾ chevron in `accent-text`. Pressed state is `tint-pressed`.
 - On the band it uses `band-pill`: **white in light mode, `#1E1929` in dark mode**, with `text` inside.
-- Tapping it opens the period sheet (§7.18, `16-period-sheet`): החודש, חודש קודם, מתחילת השנה, and טווח מותאם (opens the range picker, §7.17). Add more presets only with design. The choice updates every figure on the screen, and the hero label **MUST** name the period ("רווח נקי בספטמבר").
+- Tapping it opens the period sheet (§7.18, `16-period-sheet`): החודש, חודש קודם, מתחילת השנה, and טווח מותאם (opens the range picker, §7.17). Add more presets only with design. The choice updates every figure on the screen, and the hero label **MUST** name the period ("רווח בספטמבר").
 
 ### 7.6 Pending card
 - This is **the one tinted block on Home**. It is `tint` with a 16px radius and a 16px inset.

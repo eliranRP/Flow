@@ -30,7 +30,7 @@ export const DEFAULT_CATEGORY_NAMES = [
   "הובלה",
   "ביטוח",
   "אחר",
-  "תקבול מלקוח",
+  "הכנסה מלקוחות",
   "הכנסה אחרת",
 ] as const;
 
