@@ -1,0 +1,1 @@
+The SUMIT and Mercury connect sheets ask where to import from: "ייבוא מ" with מההתחלה or מתאריך, and the day under it while מתאריך is on (FLOW-505 B). The choice is saved with `set_import_from` once the connection exists; a reconnect opens on the stored date.

@@ -5,20 +5,23 @@ import { MercuryConnectSheet } from "./mercury-connect-sheet";
 import { SumitConnectSheet } from "./sumit-connect-sheet";
 import { padded } from "./story-support";
 
-function MercuryDemo({ busy = false, initialKey = "" }: { busy?: boolean; initialKey?: string }) {
+function MercuryDemo({ busy = false, initialKey = "", initialFrom = null }: { busy?: boolean; initialKey?: string; initialFrom?: string | null }) {
   const [apiKey, setApiKey] = useState(initialKey);
+  const [importFrom, setImportFrom] = useState(initialFrom);
   return (
     <MercuryConnectSheet open onOpenChange={() => undefined} title="חיבור Mercury" apiKey={apiKey} setApiKey={setApiKey}
-      submitLabel="חיבור" busy={busy} onSubmit={() => undefined} />
+      importFrom={importFrom} setImportFrom={setImportFrom} submitLabel="חיבור" busy={busy} onSubmit={() => undefined} />
   );
 }
 
-function SumitDemo() {
+function SumitDemo({ initialFrom = null }: { initialFrom?: string | null }) {
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [importFrom, setImportFrom] = useState(initialFrom);
   return (
     <SumitConnectSheet open onOpenChange={() => undefined} title="חיבור SUMIT" companyId={companyId} setCompanyId={setCompanyId}
-      apiKey={apiKey} setApiKey={setApiKey} submitLabel="חיבור" busy={false} onSubmit={() => undefined} />
+      apiKey={apiKey} setApiKey={setApiKey} importFrom={importFrom} setImportFrom={setImportFrom}
+      submitLabel="חיבור" busy={false} onSubmit={() => undefined} />
   );
 }
 
@@ -60,5 +63,32 @@ export const SumitMissingFields: Story = {
     await expect(within(dialog).getByText("חסר מספר חברה.")).toBeInTheDocument();
     await expect(within(dialog).getByText("חסר מפתח.")).toBeInTheDocument();
     await expect(within(dialog).getByLabelText("מספר חברה")).toHaveFocus();
+  },
+};
+
+/** FLOW-505 B: "ייבוא מ" with מתאריך on shows the day under it. */
+export const MercuryImportFromDate: Story = {
+  render: () => <MercuryDemo initialKey="sample-token-12" initialFrom="2026-01-01" />,
+  play: async ({ canvasElement }) => {
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור Mercury" });
+    await expect(within(dialog).getByRole("radio", { name: "מתאריך" })).toHaveAttribute("aria-checked", "true");
+    await expect(within(dialog).getByRole("button", { name: "תאריך ייבוא: 01/01/2026" })).toBeInTheDocument();
+  },
+};
+
+export const MercuryImportFromDateDark: Story = {
+  render: () => <MercuryDemo initialKey="sample-token-12" initialFrom="2026-01-01" />,
+  globals: { theme: "dark" },
+};
+
+/** מההתחלה hides the day; מתאריך brings it back. */
+export const SumitImportFromToggle: Story = {
+  render: () => <SumitDemo />,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  play: async ({ canvasElement }) => {
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור SUMIT" });
+    await expect(within(dialog).queryByRole("button", { name: /תאריך ייבוא/ })).toBeNull();
+    await userEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    await expect(within(dialog).getByRole("button", { name: /^תאריך ייבוא: 01\/01\/\d{4}$/ })).toBeInTheDocument();
   },
 };

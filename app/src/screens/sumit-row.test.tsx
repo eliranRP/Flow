@@ -392,6 +392,22 @@ describe("SUMIT status row", () => {
     expect(within(kept).queryByText("לא הצלחנו לטעון")).not.toBeInTheDocument();
   });
 
+  it("opens a SUMIT reconnect on the stored import date (FLOW-505)", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") {
+        return Promise.resolve({ data: sumit({ connected: true, sumit_company_id: 1001, last_error: "sumit_auth", import_from: "2026-03-01" }), error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    const sheet = screen.getByRole("dialog", { name: "SUMIT" });
+    expect(within(sheet).getByRole("radio", { name: "מתאריך" })).toHaveAttribute("aria-checked", "true");
+    expect(within(sheet).getByRole("button", { name: "תאריך ייבוא: 01/03/2026" })).toBeInTheDocument();
+  });
+
   it("uses the warning tone for a rejected key and keeps a sync failure connected", async () => {
     rpc.impl = (name) => {
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
