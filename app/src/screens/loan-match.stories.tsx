@@ -46,7 +46,7 @@ function Offer({ loanCount = 1, open: startOpen = false, ...props }: OfferArgs) 
         lineCurrency="USD"
         loans={LOANS.slice(0, loanCount)}
         busy={false}
-        matchHint={loanMatchHint(LOANS.slice(0, loanCount).filter((loan) => loan.currency === (props.lineCurrency ?? "USD")), props.lineCurrency ?? "USD")}
+        matchHint={loanMatchHint(LOANS.slice(0, loanCount), props.lineCurrency ?? "USD")}
         sheetOpen={open}
         onSheetOpenChange={setOpen}
         onMatch={() => undefined}
@@ -72,6 +72,10 @@ export const MatchRowDark: Story = { ...dark390 };
 export const MatchRow320: Story = { ...light320 };
 /** FLOW-115: two loans in the line's currency; the hint counts them, so the row keeps its height. */
 export const MatchRowTwoLoans: Story = { args: { loanCount: 2 } };
+/** FLOW-115: no loan in the line's currency; the hint says so in the sheet's words. */
+export const MatchRowNoLoanInCurrency: Story = { args: { lineCurrency: "ILS" } };
+/** FLOW-115: a long loan name stays on one line, so the row keeps its height. */
+export const MatchRowLongName: Story = { args: { matchHint: "משכנתא ארוכה מאוד מבנק לדוגמה על הנכס ברחוב הארוך ביותר בעיר, 320" }, ...light320 };
 /** FLOW-115: the row while the loans load. Same height as the rows above. */
 export const MatchRowLoading: StoryObj = { render: () => <LoanMatchSkeleton /> };
 /** Two loans: the picker lists both; the paid-off one is off with its reason. */

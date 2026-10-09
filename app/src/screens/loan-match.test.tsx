@@ -484,7 +484,9 @@ describe("LoanTransactionSplit", () => {
   });
 
   it("counts the loans on the שיוך row when there are two (FLOW-115)", async () => {
-    db.loans = [...db.loans, { ...db.loans[0], id: "loan-2", name: "הלוואה שנייה" }];
+    const first = db.loans[0];
+    if (first === undefined) throw new Error("no loan fixture");
+    db.loans = [...db.loans, { ...first, id: "loan-2", name: "הלוואה שנייה" }];
     db.balances = [...db.balances, { loan_id: "loan-2", balance_minor: 10_000_000 }];
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
@@ -494,8 +496,10 @@ describe("LoanTransactionSplit", () => {
 
 describe("loanMatchHint (FLOW-115)", () => {
   it("always gives the row a hint", () => {
-    expect(loanMatchHint([{ name: "משכנתא" }], "ILS")).toBe("משכנתא");
-    expect(loanMatchHint([{ name: "א" }, { name: "ב" }, { name: "ג" }], "ILS")).toBe("3 הלוואות");
-    expect(loanMatchHint([], "USD")).toBe("אין הלוואה בדולר");
+    const ils = (name: string) => ({ name, currency: "ILS" });
+    expect(loanMatchHint([ils("משכנתא"), { name: "דולרית", currency: "USD" }], "ILS")).toBe("משכנתא");
+    expect(loanMatchHint([ils("א"), ils("ב"), ils("ג")], "ILS")).toBe("3 הלוואות");
+    expect(loanMatchHint([ils("א")], "USD")).toBe("אין הלוואה בדולר");
+    expect(loanMatchHint([], "USD")).toBe("אין עדיין הלוואה");
   });
 });
