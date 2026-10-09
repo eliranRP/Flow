@@ -1,0 +1,1 @@
+A viewer saw an expired SUMIT or Mercury key as "צריך לחבר מחדש" in the warning colour, which asks for something a viewer can't do. Like the AI row, those rows now read "לא מחובר כרגע" in the normal colour for a viewer, and "לא מחובר" while writes are held. The owner still sees the warning.

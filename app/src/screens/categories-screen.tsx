@@ -107,6 +107,8 @@ export function CategoriesScreen({
   const linesHref = (category: CategoryRow) =>
     `/search${searchFiltersQuery({ ...EMPTY_FILTERS, category: category.id, direction: category.kind }, new URLSearchParams(search))}`;
   const menuOpener = useRef<HTMLElement | null>(null);
+  // FLOW-310: ✕ and Escape on the new-category sheet return focus to its link.
+  const createOpener = useRef<HTMLButtonElement>(null);
   const pnl = useWrite<PnlChange>({
     failure: pnlFailureText,
     keys: ["categories", "dashboard", "project", "project-category"],
@@ -230,6 +232,7 @@ export function CategoriesScreen({
         <TextLink
           chevron={false}
           wrap
+          buttonRef={createOpener}
           icon={<PlusIcon size={16} stroke={2.2} />}
           onClick={() => {
             setCreateOpen(true);
@@ -303,7 +306,7 @@ export function CategoriesScreen({
           setPickOpen(true);
         }}
       />
-      <Sheet open={pickOpen} onOpenChange={setPickOpen} title="מיזוג אל">
+      <Sheet open={pickOpen} onOpenChange={setPickOpen} title="מיזוג אל" returnFocusRef={menuOpener}>
         <div className="ui-stack">
           {mergeTargets.map((category) => (
             <Button
@@ -324,6 +327,7 @@ export function CategoriesScreen({
         open={createOpen}
         onOpenChange={setCreateOpen}
         title="קטגוריה חדשה"
+        returnFocusRef={createOpener}
         action={
           <Button
             busy={createCategory.isPending}
@@ -347,6 +351,7 @@ export function CategoriesScreen({
         confirmLabel={hideTarget?.hidden ? "החזרה לרשימה" : "הסתרה"}
         destructive={hideTarget?.hidden !== true}
         busy={hide.isPending}
+        returnFocusRef={menuOpener}
         onConfirm={() => {
           if (blocked()) return;
           hide.mutate();
@@ -361,6 +366,7 @@ export function CategoriesScreen({
         confirmLabel="מיזוג"
         destructive
         busy={merge.isPending}
+        returnFocusRef={menuOpener}
         onConfirm={() => {
           if (blocked()) return;
           merge.mutate();

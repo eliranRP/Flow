@@ -29,9 +29,11 @@ export function onboardingFromSettings(search: string, sheet: "sumit" | "mercury
 
 export const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
 
-/** A connector's one-word status (0082 §3). */
-export function connectorWord(kind: SumitKind): string {
-  if (kind === "reconnect") return "צריך לחבר מחדש";
+/** A connector's one-word status (0082 §3). A read-only view can't reconnect, so an expired key
+    reads neutral there, as the AI row does (FLOW-507): "לא מחובר כרגע" for a viewer, "לא מחובר"
+    while writes are held. */
+export function connectorWord(kind: SumitKind, readOnly = false, viewerCopy = false): string {
+  if (kind === "reconnect") return readOnly ? (viewerCopy ? "לא מחובר כרגע" : "לא מחובר") : "צריך לחבר מחדש";
   if (kind === "connected") return "מחובר";
   return "לא מחובר";
 }

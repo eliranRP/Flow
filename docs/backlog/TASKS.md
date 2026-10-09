@@ -16,13 +16,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-310 logic items: sheet history (✕ at open; reload covered) and keyboard (layout-viewport fallback, stale Vaul lift) | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
-| UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (#298); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-6: Search shows only the count under the title, and a row hint shows whole parts (C6-3 merged #292) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-310 money field: the prefix keeps one gap to the digits (#297) | Next small ready bug |
+| Backlog bug fixes | FLOW-507 a viewer's expired SUMIT and Mercury rows read neutral (#301) | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -62,7 +62,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | done (MCP side: #132 #151 #157 #162; screen fields with the UI lane) |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | MCP side done (#132 #151 #157 #162); screens in progress (PR #TBD) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | done (parts 1-4: #137, #143, #149, #160) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -338,7 +338,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** done (MCP side: #132 #151 #157 #162; screen fields with the UI lane) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
+- **Type:** PLAN FIRST · **Status:** MCP side done (#132 #151 #157 #162); screens in progress (PR #TBD, layout B, owner's pick 2026-10-09) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
 - **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
   1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.
@@ -346,15 +346,22 @@ Everything else follows by area, roughly in priority order inside each area.
   3. (c) A fourth part `fees`; `attach_loan_payment` takes `installments` (1 to 12) or exact `parts` that add up to the line.
   4. (a) `loans.kind` (`amortizing`, `interest_only`, `balloon`, `demand`), a `loan_rates` table and `set_loan_rate`. Demand interest is daily on actual/365; rates are entered by hand. Loan draws are out of scope.
 - **Acceptance:** plan approved, then one PR per item with schedule tests at the boundaries.
+- [ ] Screens (the project's plans/flow-106-loan-screens.md, layout B; PR #TBD):
+  - [x] Copy for every loan refusal (`loan-copy.ts`, checked against the migrations).
+  - [x] The loan page `/settings/loans/:id`: balance and status, סוג, ריבית and שינויי ריבית, פרויקט (moved from the list), מצב with the close date from the last payment, קטגוריות לחלקים.
+  - [x] The list: open loans, then paid-off and closed under a collapsed "נסגרו (N)"; a row opens the loan page; the new-loan toast has פתיחה.
+  - [ ] The split editor through `save_loan_split` (fees, N installments, exact parts), demand loans and the installments hint in the match sheet, and moving loan-match.tsx `createSplit`/`correctSplit` to `save_loan_split`: wait for the loan-match PR (#252), which owns loan-match.tsx and transaction-screen.tsx.
+  - [ ] The kind field on the new-loan form (the kind is set on the loan page for now).
+  - [ ] The locked line in Categories for a category a loan uses (categories-screen is in #259).
 
 <a id="flow-110"></a>
 ### FLOW-110 · Loans list and detail
-- **Type:** PLAN FIRST · **Status:** server done (#197, owner chose "unmatch with undo", 2026-10-08); the screens wait for a mockup · **Depends on:** FLOW-501 (where loans live)
+- **Type:** PLAN FIRST · **Status:** server done (#197, owner chose "unmatch with undo", 2026-10-08); screens in progress (PR #TBD, with the FLOW-106 screens) · **Depends on:** FLOW-501 (where loans live)
 - **What:** (1) Reorder loans (persisted order; dropped by the owner, 2026-10-08). (2) Edit and delete on each loan, with a confirm for delete. (3) A loan detail page with its attached payments (principal, interest, escrow, fees) linked to the bank rows. MCP: `reorder_loan`, `delete_loan` (update and list exist).
 - **Acceptance:** mockup approved; MCP tools with undo.
 - [x] Server and MCP: `delete_loan` with `restore_loan` and MCP undo `loan_delete` (payments unmatch, the owner's choice), `reorder_loans` with MCP undo `loan_order`, `list_loans` in the saved order (migration `20261011030000`, decision [0142](../decisions/0142-loan-delete-and-order.md)). Plan: the project's plans/flow-110-loans-server.md.
 - Owner, 2026-10-08: loan reordering is dropped. Loans stay alphabetical; delete with undo and the payments section stay. The server's `reorder_loans` stays unused by the app.
-- [ ] Screens in a UI lane, after a mockup: delete with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section of the FLOW-106 detail page (`mcp_loan_payments`). No reorder (dropped above).
+- [x] Screens (PR #TBD): delete on the loan page with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section (`mcp_loan_payments`: the last 3, then כל התשלומים). No reorder (dropped above); `sort_order` and `reorder_loans` stay for MCP.
 
 <a id="flow-114"></a>
 ### FLOW-114 · Loans server follow-ups
@@ -612,15 +619,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** partly done (#298: focus return, stacked fade, ListRow markup, toast fallback); the open boxes are left · **Depends on:** —
 - [ ] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload. (Dev lane 1, 2026-10-09: ✕ at mount fixed: a close reads the stack from the browser entry, which a push writes at once, not from the router location that follows in a transition. The reload case was already handled by `DropRestoredSheet`, now also covered on real browser entries (`sheet-history-browser.test.tsx`). Left: the Escape case did not reproduce in jsdom, so it needs a device trace before a fix; whether a reload should reopen the status sheet instead of dropping it is a call for the owner or the design lead.)
-- [ ] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes.
-- [ ] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row.
+- [x] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes. (Not reproduced, no regression test: a one-off per-frame probe of the Connections ניתוק confirm saw the top scrim fade 1.00→0 over about 220ms after Escape, ✕ and Back; #298.)
+- [x] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row. (#298: Escape marks the returned control's ring until it blurs; route sheets do the same; Categories' create, merge, hide and move sheets return focus to their opener.)
 - [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
 - [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung. (Dev lane 1, 2026-10-09: the first two done in `keyboard-inset.ts`: while a field has focus, the keyboard is measured against the layout height from before it, and while the keyboard is closed a drawer lift Vaul left behind is dropped after Vaul's own listener. Left: `--sheet-gap` at 320 (a visual change for the design lead) and the real-device QA.)
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
-- [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
-- [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
+- [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
+- [x] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment. (Already true on main: the toast waits for the sheet pad before it shows. The committed e2e/toast.spec.ts samples every frame at 320×693 and 390×844 with `--safe-top` 0, 20 and 47 and fails if the toast covers ✕; 31/31 pass, #298.)
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
 
 <a id="flow-319"></a>
@@ -1010,7 +1017,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Demos use hand-built copies of the review card and tab bar; extract a shared presentational piece (the demo TabBar also writes the shared add-trigger ref and needs a router).
 - [ ] Demo VAT amounts are hard-coded strings; derive them from the formatter.
 - [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; demo CSS reaches into component internals; `data-setup-visible` exists only for tests.
-- [ ] One list row puts the minus after the amount; it should come before the currency sign.
+- [x] One list row puts the minus after the amount; it should come before the currency sign. (Not reproducible on 2026-10-09: every demo and setup story draws −₪ first; the SUMIT demo rows use the shared transaction row.)
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [ ] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)).
 - [ ] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; tests for API-key clear and the Settings write block; a hold-writes check on the first step's submit.
@@ -1022,7 +1029,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-507 · Viewer mode follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
 - [ ] The viewer's review count is a bare number and the visit meter still shows; show a count with "ממתינים" and no meter.
-- [ ] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row.
+- [x] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row. (Mercury too.)
 - [ ] Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop.
