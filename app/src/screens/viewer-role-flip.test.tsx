@@ -41,6 +41,8 @@ vi.mock("../use-is-viewer", async (original) => {
     useCompanyRole: useRole,
     useIsViewer: () => useRole() === "viewer",
     useHoldWrites: () => useRole() !== "owner",
+    // FLOW-601: the owner's settings (connectors, the name, setup) hold for anyone else.
+    useHoldOwnerSettings: () => useRole() !== "owner",
     // The same rule as the real gate, on the test role.
     useWriteGate: (fallback: string) => {
       const now = useRole();

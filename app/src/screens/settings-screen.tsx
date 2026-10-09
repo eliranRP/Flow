@@ -286,11 +286,13 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
 
   // FLOW-601 (mockup a-1-settings): the owner's צוות row, with how many people are on the team.
   // Undefined hides the row; null shows it without a count (still loading, or the read failed).
-  const teamCount: number | null | undefined = sample
-    ? sample.teamCount
-    : live && liveCompany && !holdOwner
-      ? (team.data?.members.length ?? null)
-      : undefined;
+  const teamCount: number | null | undefined = holdOwner
+    ? undefined
+    : sample
+      ? sample.teamCount
+      : live && liveCompany
+        ? (team.data?.members.length ?? null)
+        : undefined;
   const loanSample: LoanRowsSample | undefined = sample
     ? (sample.loans ?? [])
     : preview !== "off"

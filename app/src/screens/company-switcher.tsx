@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
-import { SWITCH_FAILED, inviteLine, teamFailure, type MyCompanies } from "../team-api";
+import { SWITCH_FAILED, inviteLine, type MyCompanies } from "../team-api";
 import { useLeaveShownCompany, useMyCompaniesQuery, useMyInvitesQuery, useOpenCompany } from "../team-queries";
 import { useSheetHistory } from "../ui/back";
 import { BandCompany } from "../ui/band-company";
@@ -68,7 +68,7 @@ export function CompanySheet({
   const leave = useLeaveShownCompany();
   const switchTo = useWrite<string>({
     keys: [],
-    failure: teamFailure(SWITCH_FAILED),
+    failure: SWITCH_FAILED,
     onSuccess: () => { onOpenChange(false); },
     run: async (companyId) => {
       await openCompany(companyId);
