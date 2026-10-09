@@ -130,8 +130,8 @@ green() {
 # Marks a pass here and in the shared cache (a shared folder that can't be written is skipped).
 mark_green() {
   local dir
-  touch "$cache/$1"
-  for dir in "${caches[@]:1}"; do touch "$dir/$1" 2>/dev/null || true; done
+  printf '%s' "${2:-}" >"$cache/$1"
+  for dir in "${caches[@]:1}"; do printf '%s' "${2:-}" >"$dir/$1" 2>/dev/null || true; done
 }
 # Each ancestor of HEAD (within 200 commits) as "commit tree", newest first.
 ancestors() {
@@ -159,19 +159,34 @@ elif grep -qE '^(app|packages|design)/' <<<"$pr_files"; then kind=ui
 elif [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then kind=docs
 else kind=scripts
 fi
-# The branch's own patch against main. A run that passes marks it, so a merge of main that leaves the
-# patch unchanged (main's CI covers main) needs no second run.
+# The branch's own patch against main. A run that passes marks it with the main commit it forked
+# from, so a merge of main that leaves the patch unchanged needs no second run, unless main changed a
+# migration, flow-mcp, packages/shared or the seed since that fork (scripts/gate-base-risk.mjs): the
+# same patch can break on a new main there (#364's viewer checks under #383's RPCs).
 patch_id=""
 [[ -z "$pr_fork" ]] || patch_id="$(git diff "$pr_fork" HEAD | git patch-id --stable | cut -d' ' -f1)"
 passed() {
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id"
+  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id" "$pr_fork"
 }
+# The fork a patch mark was written on (empty for a mark from before the fork was stored).
+mark_fork() {
+  local dir fork
+  for dir in "${caches[@]}"; do
+    fork="$(head -c 40 "$dir/$1" 2>/dev/null || true)"
+    [[ -z "$fork" ]] || { echo "$fork"; return; }
+  done
+}
+base_risk=0
 if (( skips )) && [[ -n "$patch_id" ]] && has_mark "patch-$patch_id"; then
-  mode="same patch"
-  echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
-  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  exit 0
+  if node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork"; then
+    mode="same patch"
+    echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
+    echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+    exit 0
+  fi
+  base_risk=1
+  echo "local-ci: the same patch passed on an older main, but main changed the database surface since; running the gate, with every pgTAP file."
 fi
 # Only docs or Markdown against main: lint and the file-size check, nothing else.
 if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
@@ -254,6 +269,7 @@ if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.to
   db_change=1
   db_list="$(node scripts/pgtap-specs.mjs <<<"$pr_files")"
   [[ -z "$db_list" ]] || mapfile -t db_specs <<<"$db_list"
+  (( ! base_risk )) || db_specs=(supabase/tests/database)
 fi
 
 supabase_exit=""
@@ -325,6 +341,7 @@ static_part() {
   fi
   node scripts/check-migration-transaction.mjs
   node scripts/check-file-size.mjs
+  node scripts/backlog-index.mjs --check
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }
