@@ -11,6 +11,7 @@ const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   override: null as boolean | null,
   excluded: false,
+  review: "approved",
   fail: null as { message: string; code?: string } | null,
 }));
 
@@ -35,7 +36,7 @@ vi.mock("../lib/supabase", () => ({
             vat_status: "source",
             source: "sumit",
             pnl_role: "project",
-            review_status: "approved",
+            review_status: rpc.review,
             project_id: "p1",
             project_name: "פרויקט לדוגמה",
             category_id: "c1",
@@ -72,6 +73,7 @@ function showLive() {
           <MemoryRouter initialEntries={["/transactions/tx"]}>
             <Routes>
               <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+              <Route path="/transactions/:transactionId/split-category" element={<p>split-category</p>} />
             </Routes>
           </MemoryRouter>
         </BooksProvider>
@@ -90,6 +92,7 @@ async function pnlSwitch() {
 
 beforeEach(() => {
   rpc.calls.length = 0;
+  rpc.review = "approved";
   rpc.override = null;
   rpc.excluded = false;
   rpc.fail = null;
@@ -132,6 +135,19 @@ describe("one line out of the P&L, live", () => {
     rpc.fail = { message: "a reversal part needs a project", code: "P0001" };
     showLive();
     fireEvent.click(await pnlSwitch());
-    expect(await screen.findByText("לחלק החזר בפיצול אין פרויקט. בחרו לו פרויקט בפיצול, ואז נסו שוב.")).toBeTruthy();
+    expect(await screen.findByText("לחלק ההחזר אין פרויקט.")).toBeTruthy();
+    // FLOW-343: the toast offers the way out instead of a retry.
+    fireEvent.click(screen.getByRole("button", { name: "לפיצול" }));
+    expect(await screen.findByText("split-category")).toBeTruthy();
+  });
+
+  it("offers no לפיצול while an open review locks the split (FLOW-343)", async () => {
+    rpc.excluded = true;
+    rpc.review = "open";
+    rpc.fail = { message: "a reversal part needs a project", code: "P0001" };
+    showLive();
+    fireEvent.click(await pnlSwitch());
+    expect(await screen.findByText("לחלק ההחזר אין פרויקט.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "לפיצול" })).toBeNull();
   });
 });

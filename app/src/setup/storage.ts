@@ -1,4 +1,9 @@
-/** Per user and company. v1 is localStorage: no per-user jsonb column exists, and the migration slot is held. */
+import { loadSetupState, uploadSetupState, type LocalSetupCopy } from "./server-store";
+
+/**
+ * Per user and company. localStorage is the copy the screens read synchronously; with a company,
+ * setup_states on the server keeps the same object across devices (FLOW-506, server-store.ts).
+ */
 
 export type SetupStore = {
   run_started_at: string | null;
@@ -77,13 +82,67 @@ export function readSetupStore(userId: string | null, companyId: string | null):
   }
 }
 
-export function writeSetupStore(userId: string | null, companyId: string | null, store: SetupStore): void {
-  if (!userId || typeof localStorage === "undefined") return;
+function writeLocal(userId: string, companyId: string | null, store: SetupStore): void {
+  if (typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(setupStorageKey(userId, companyId), JSON.stringify(store));
   } catch {
     // A private-mode write is a no-op. The run still moves in this tab.
   }
+}
+
+export function writeSetupStore(userId: string | null, companyId: string | null, store: SetupStore): void {
+  if (!userId) return;
+  writeLocal(userId, companyId, store);
+  if (companyId) uploadSetupState(userId, companyId, localCopy(userId, companyId));
+}
+
+function isEmptySetupStore(store: SetupStore): boolean {
+  return JSON.stringify(store) === JSON.stringify(emptySetupStore());
+}
+
+/** The later of two stamps; a missing one never wins over a set one. */
+function later(a: string | null | undefined, b: string | null | undefined): string | null {
+  if (a == null || a === "") return b ?? null;
+  if (b == null || b === "") return a;
+  return a >= b ? a : b;
+}
+
+/**
+ * FLOW-506. A write this tab made before the server row arrived, merged into the row: each stamp
+ * keeps the later value and skips merge by step, so neither copy's flags are lost.
+ */
+export function mergeSetupStores(server: SetupStore, local: SetupStore): SetupStore {
+  const skipped: SetupStore["skipped"] = { ...server.skipped };
+  for (const [step, at] of Object.entries(local.skipped) as [keyof SetupStore["skipped"], string][]) {
+    skipped[step] = later(skipped[step], at) ?? at;
+  }
+  return {
+    run_started_at: later(server.run_started_at, local.run_started_at),
+    run_resumed_at: later(server.run_resumed_at, local.run_resumed_at),
+    skipped,
+    confirmed_lists_at: later(server.confirmed_lists_at, local.confirmed_lists_at),
+    sample_review_at: later(server.sample_review_at, local.sample_review_at),
+    installed_at: later(server.installed_at, local.installed_at),
+    ios_steps_seen_at: later(server.ios_steps_seen_at, local.ios_steps_seen_at),
+    card_dismissed_at: later(server.card_dismissed_at, local.card_dismissed_at),
+    completed_toast_at: later(server.completed_toast_at, local.completed_toast_at),
+  };
+}
+
+function localCopy(userId: string, companyId: string): LocalSetupCopy {
+  return {
+    read: () => readSetupStore(userId, companyId),
+    write: (store) => { writeLocal(userId, companyId, store); },
+    parse: parseSetupStore,
+    isEmpty: isEmptySetupStore,
+    merge: mergeSetupStores,
+  };
+}
+
+/** FLOW-506. Settles the local copy from the server row once per page load. */
+export function loadSetupStore(userId: string, companyId: string): Promise<true> {
+  return loadSetupState(userId, companyId, localCopy(userId, companyId));
 }
 
 const sessionEnteredKey = (userId: string) => `flow.setup.session-entered.${userId}`;

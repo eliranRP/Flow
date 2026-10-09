@@ -189,11 +189,18 @@ export function TransactionScreen({
   useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
   // FLOW-108. A sample card keeps its override locally; a live card reads it back from the server.
   const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
+  // The card's split-by-categories link is shown (writes not held, no open review): לפיצול may go there.
+  const splitOpen = useRef(false);
   const pnlLine = useWrite<LinePnlChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה."
       // 0138: in the P&L, a kept-out reversal part counts, so it needs its own project.
-      : error.message.includes("a reversal part needs a project") ? "לחלק החזר בפיצול אין פרויקט. בחרו לו פרויקט בפיצול, ואז נסו שוב."
+      // FLOW-343: short, with the way out on the toast.
+      : error.message.includes("a reversal part needs a project")
+        ? { message: "לחלק ההחזר אין פרויקט.", retry: false, ...(splitOpen.current ? { action: "לפיצול" } : {}) }
         : "לא הצלחנו לעדכן את השורה."),
+    onSplit: () => {
+      void navigate(`/transactions/${transactionId}/split-category${search}`);
+    },
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
       toast.show({
@@ -446,6 +453,7 @@ export function TransactionScreen({
   // Like the פיצול section's rows: no link for the reviewer preview, a viewer, or a line with an open review.
   const reviewBlocked = txn.review_status === "open" && txn.review_reason !== "split_mismatch";
   const splitCategoryTo = onOpenSplit || holdWrites || reviewBlocked ? undefined : `/transactions/${txn.id}/split-category${search}`;
+  splitOpen.current = splitCategoryTo != null;
   // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
   // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
   const pnlRow = loanLine ? (

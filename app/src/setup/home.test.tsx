@@ -7,6 +7,7 @@ import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupHomeSlot } from "./home";
+import { resetSetupServerForTests } from "./server-store";
 import { emptySetupStore, readSetupStore, writeSetupStore } from "./storage";
 
 const userId = "user-1";
@@ -23,6 +24,8 @@ const gate = vi.hoisted(() => ({
   sumit: false,
   jev: false,
   review: false,
+  setupRow: null as { state: unknown } | null,
+  upserts: [] as unknown[],
 }));
 
 const dashboard = {
@@ -81,6 +84,20 @@ const supabase = {
     if (table === "companies") return chain({ owner_id: userId });
     if (table === "company_integrations") return chain(gate.jev ? { provider: "jev" } : null);
     if (table === "review_queue") return chain(gate.review ? [{ id: "r1" }] : []);
+    if (table === "setup_states") {
+      // Answers after the facts, as a slow network would.
+      const row = gate.setupRow;
+      const slow = {
+        select: () => slow,
+        eq: () => slow,
+        upsert: (value: unknown) => {
+          gate.upserts.push(value);
+          return Promise.resolve({ data: null, error: null });
+        },
+        maybeSingle: () => new Promise((resolve) => setTimeout(() => { resolve({ data: row, error: null }); }, 150)),
+      };
+      return slow;
+    }
     return chain(null);
   },
 };
@@ -112,6 +129,9 @@ describe("setup home card", () => {
     gate.sumit = false;
     gate.jev = false;
     gate.review = false;
+    gate.setupRow = null;
+    gate.upserts = [];
+    resetSetupServerForTests();
   });
 
   it("closes with one tap, focuses ביטול, and restores the card on undo", async () => {
@@ -165,5 +185,28 @@ describe("setup home card", () => {
     });
     await expect(screen.findByText("ההגדרה הושלמה.", {}, { timeout: 500 })).rejects.toThrow();
     expect(readSetupStore(userId, companyId).completed_toast_at).toBe(stamped);
+  });
+
+  it("waits for the server copy: a stale phone neither toasts again nor uploads over newer flags", async () => {
+    gate.sumit = true;
+    gate.jev = true;
+    gate.review = true;
+    const done = {
+      ...emptySetupStore(),
+      run_started_at: "2026-10-04T00:00:00.000Z",
+      confirmed_lists_at: "2026-10-04T00:00:00.000Z",
+      installed_at: "2026-10-04T00:00:00.000Z",
+    };
+    localStorage.setItem(`flow.setup.${userId}.${companyId}`, JSON.stringify(done));
+    gate.setupRow = {
+      state: { ...done, completed_toast_at: "2026-10-05T00:00:00.000Z", card_dismissed_at: "2026-10-05T00:00:00.000Z" },
+    };
+    renderHome();
+    await waitFor(() => {
+      expect(readSetupStore(userId, companyId).completed_toast_at).toBe("2026-10-05T00:00:00.000Z");
+    });
+    await expect(screen.findByText("ההגדרה הושלמה.", {}, { timeout: 300 })).rejects.toThrow();
+    expect(screen.queryByRole("button", { name: "סגירת ההגדרה" })).not.toBeInTheDocument();
+    expect(gate.upserts).toHaveLength(0);
   });
 });
