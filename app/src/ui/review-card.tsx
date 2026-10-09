@@ -286,7 +286,8 @@ export function ReviewCard({
           <p className="t-hint ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
         ) : null}
       </div>
-      {flag && (flag.tone === "loud" || flag.line.length > 0) ? <ReviewFlagBlock flag={flag} /> : null}
+      {/* A spike pill is the whole warning: no row at the end repeats it (design lead, 2026-10-09). */}
+      {flag && spike?.pill == null && (flag.tone === "loud" || flag.line.length > 0) ? <ReviewFlagBlock flag={flag} /> : null}
     </article>
   );
 }
@@ -306,7 +307,7 @@ function SplitPartsTitle({ count }: { count: number }) {
 /**
  * Loud: a warning row with the icon, the title in the text colour and the hint in warning.
  * Quiet: one muted hint line. Both start with a hidden "לבדיקה:". Never a control.
- * An amount spike's "↑ N%" and usual amount sit by the amount instead (2026-10-09).
+ * An amount spike's "↑ N%" and usual amount sit by the amount instead, with no row here (2026-10-09).
  */
 function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
   if (flag.tone === "loud") {

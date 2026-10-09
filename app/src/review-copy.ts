@@ -146,8 +146,8 @@ export function reviewFlagView(
       return { tone, kind: flag.kind, line: ["שורה באותו סכום", ...when] };
     }
     case "amount_spike": {
-      // The pill and the usual amount sit by the amount; the loud row keeps its title only, and a
-      // quiet spike with a ratio has no line of its own. With no ratio the quiet line stays.
+      // The pill and the usual amount sit by the amount, and the card draws no flag row beside a
+      // pill. With no ratio there is no pill: the loud title or the quiet line stays.
       const spike = spikeView(flag, party, context.currency ?? "ILS");
       if (tone === "loud") return { tone, kind: flag.kind, title: ["סכום גבוה מהרגיל"], spike };
       return { tone, kind: flag.kind, line: spike.pill == null ? [`גבוה מהרגיל ל${party}`] : [], spike };
