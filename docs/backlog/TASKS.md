@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | Free: FLOW-810 clip check follow-ups in review (the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
-| UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
@@ -347,10 +347,11 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-110"></a>
 ### FLOW-110 · Loans list and detail
 - **Type:** PLAN FIRST · **Status:** server done (#197, owner chose "unmatch with undo", 2026-10-08); the screens wait for a mockup · **Depends on:** FLOW-501 (where loans live)
-- **What:** (1) Reorder loans (persisted order). (2) Edit and delete on each loan, with a confirm for delete. (3) A loan detail page with its attached payments (principal, interest, escrow, fees) linked to the bank rows. MCP: `reorder_loan`, `delete_loan` (update and list exist).
+- **What:** (1) Reorder loans (persisted order; dropped by the owner, 2026-10-08). (2) Edit and delete on each loan, with a confirm for delete. (3) A loan detail page with its attached payments (principal, interest, escrow, fees) linked to the bank rows. MCP: `reorder_loan`, `delete_loan` (update and list exist).
 - **Acceptance:** mockup approved; MCP tools with undo.
 - [x] Server and MCP: `delete_loan` with `restore_loan` and MCP undo `loan_delete` (payments unmatch, the owner's choice), `reorder_loans` with MCP undo `loan_order`, `list_loans` in the saved order (migration `20261011030000`, decision [0142](../decisions/0142-loan-delete-and-order.md)). Plan: the project's plans/flow-110-loans-server.md.
-- [ ] Screens in a UI lane, after a mockup: reorder on the loans list (read `sort_order`), delete with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section of the FLOW-106 detail page (`mcp_loan_payments`).
+- Owner, 2026-10-08: loan reordering is dropped. Loans stay alphabetical; delete with undo and the payments section stay. The server's `reorder_loans` stays unused by the app.
+- [ ] Screens in a UI lane, after a mockup: delete with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section of the FLOW-106 detail page (`mcp_loan_payments`). No reorder (dropped above).
 
 <a id="flow-114"></a>
 ### FLOW-114 · Loans server follow-ups
@@ -790,7 +791,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-335"></a>
 ### FLOW-335 · Period bar, by-month page and Unpaid polish (cycle 5)
-- **Type:** SMALL UI · **Status:** done (#239) · **Depends on:** FLOW-411 and FLOW-330 (#199) · **Overlaps:** FLOW-334 (Home row pitch, project band gap, labelled Back), FLOW-336 and FLOW-337 (plan-first period items) · **Source:** mobile UI/UX review cycle 5 (2026-10-08, deploy 89b9dc5), shots in the project's reviews/ui-ux-cycle-5/
+- **Type:** SMALL UI · **Status:** done (#239; the Unpaid row opening its invoice in #260) · **Depends on:** FLOW-411 and FLOW-330 (#199) · **Overlaps:** FLOW-334 (Home row pitch, project band gap, labelled Back), FLOW-336 and FLOW-337 (plan-first period items) · **Source:** mobile UI/UX review cycle 5 (2026-10-08, deploy 89b9dc5), shots in the project's reviews/ui-ux-cycle-5/
 - **What:** Polish after the period bar, the "לפי חודש" page and one-tap mark paid, shot at 375x667, 393x852 (light and dark) and 412x915.
 - [x] (high) Period presets fail contrast: the unselected labels are `on-band-secondary` #F0E8FF on a 16% white track (#905EE8), 3.57:1 against the 4.5:1 that 15px text needs. Use `on-band` #FFF on a track of at most 10% white (4.76:1); `.ui-seg-band` in `ui.css`.
 - [x] (high, regression from #199) Unpaid's total jumped to the end side (x≈24–128 at 375): `.ui-unpaid-totals bdi { display:block }` inside `dir=ltr` aligns left. Make `.ui-unpaid-totals` a flex column with `align-items:flex-start` and keep each bdi inline-block (`css/18-period-bar.css`, `UnpaidScreen`).
@@ -801,7 +802,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `project-detail-screen.tsx`).
 - [x] "לפי חודש": drop the `.ui-months-note` explainer (rows carry chevrons, as FLOW-328 did elsewhere), and keep the hint's "נכנס ₪…" muted: green is for an income amount in the amount slot only (0120).
 - [x] "לפי חודש" empty state ("אין חודשים בתקופה הזו") is a dead end: add the tint button "כל התקופה" that sets הכול, and an empty-state story. Superseded by FLOW-337 (decision 0150): the page is the whole project, so the empty state has no wider period; the empty-state story is in.
-- [x] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it. Server part: each `list_unpaid` row has `document_url`, the SUMIT link on `https://pay.sumit.co.il/` or null until a sync reads it (`UnpaidRow.document_url` in `packages/shared`).
+- [x] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it. Server part: each `list_unpaid` row has `document_url`, the SUMIT link on `https://pay.sumit.co.il/` or null until a sync reads it (`UnpaidRow.document_url` in `packages/shared`). The row opening its invoice in a new tab (SUMIT links only) is done in #260.
 - [x] Unpaid after a mark: the row says "ממתין לסנכרון" but the page has no way to sync (5 taps through Settings). When any row is marked, show a "רענון מ־SUMIT" row at the bottom that starts the connector sync, or let pull-to-refresh start it.
 - [x] Home and Project: the "מצב תצוגה" tag sits 6px above the band's bottom, inside the 28px corner curve (regression of a FLOW-328 fix); give it `--space-3`.
 - [x] Connector status sheets: "ניתוק" is the bottom row right under "רענון עכשיו", where the thumb lands first. Put ניתוק in its own group after a section gap (`connections-screen.tsx`).
@@ -877,7 +878,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-403"></a>
 ### FLOW-403 · Project timeline and expected months
-- **Type:** PLAN FIRST · **Status:** plan-first, screen only (server parts exist: `get_project` takes any date range, [0129](../decisions/0129-profit-by-month.md) and [0141](../decisions/0141-period-bar.md); `get_expected_months` takes a project, [0131](../decisions/0131-jev-patterns.md); `project_category_months` gives the expected cost per category, [0149](../decisions/0149-project-category-months.md)). A UI lane plans the screen with a mockup · **Depends on:** FLOW-401
+- **Type:** PLAN FIRST · **Status:** done (#260). Approved option A by the owner, 2026-10-08 (plans/jev-bills-forecast.md and its mockup): Home's late-bills row, the `/missing-bills` list, and a צפוי section of three months with a month sheet on the project page. Screen only (server parts exist: `get_project` takes any date range, [0129](../decisions/0129-profit-by-month.md) and [0141](../decisions/0141-period-bar.md); `get_expected_months` takes a project, [0131](../decisions/0131-jev-patterns.md); `project_category_months` gives the expected cost per category, [0149](../decisions/0149-project-category-months.md)). A UI lane plans the screen with a mockup · **Depends on:** FLOW-401
 - **What:** Transactions by a chosen date range (for example last month), plus expected future months from past data, computed in SQL. Shares the recurring-pattern base with FLOW-701.
 - **Acceptance:** plan approved.
 

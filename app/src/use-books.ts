@@ -606,7 +606,7 @@ export async function readLineMetaPage(client: QueryClient, preview: string, ids
 
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta", "profit-months"]) => {
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta", "profit-months", "missing-bills", "expected-months"]) => {
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }

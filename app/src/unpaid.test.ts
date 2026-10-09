@@ -1,6 +1,6 @@
 import type { UnpaidRow } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "./unpaid";
+import { unpaidDocumentUrl, unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "./unpaid";
 
 function row(id: string, gross: bigint, extra: Partial<UnpaidRow> = {}): UnpaidRow {
   return {
@@ -44,5 +44,19 @@ describe("unpaid totals (FLOW-330)", () => {
 
   it("reads a credit note's minus as an open amount, as the list shows it", () => {
     expect(unpaidTotals([row("a", -12_000n)])).toEqual([{ currency: "ILS", minor: 12_000n }]);
+  });
+});
+
+describe("unpaid document link (FLOW-335)", () => {
+  it("keeps only an https link on SUMIT's pay host", () => {
+    expect(unpaidDocumentUrl({ document_url: "https://pay.sumit.co.il/doc/abc" })).toBe("https://pay.sumit.co.il/doc/abc");
+    expect(unpaidDocumentUrl({ document_url: null })).toBeNull();
+    expect(unpaidDocumentUrl({})).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: "http://pay.sumit.co.il/doc/abc" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: "https://pay.sumit.co.il.example.com/doc" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: "https://example.com/?https://pay.sumit.co.il/" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: "javascript:alert(1)" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: "https://pay.sumit.co.il:8443/doc" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: " https://pay.sumit.co.il/doc" })).toBeNull();
   });
 });
