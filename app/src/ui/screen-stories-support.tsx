@@ -49,7 +49,7 @@ export const sampleReview: ReviewRow = {
   project_suggested: true,
   category_suggested: true,
   confidence: 92,
-  supplier_name: "חומרי בניין השרון בע״מ",
+  supplier_name: "חומרי בניין לדוגמה בע״מ",
   auto_approved_today: filedTodayCount,
 };
 

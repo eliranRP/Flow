@@ -35,7 +35,7 @@ function TransactionStory() {
           project_name: "בניין מגורים חולון",
           category_id: "c1",
           category_name: "חומרים",
-          supplier_name: "חומרי בניין השרון בע״מ",
+          supplier_name: "חומרי בניין לדוגמה בע״מ",
           customer_name: null,
           review_status: "approved",
           paid: true,
@@ -332,7 +332,7 @@ export const TransactionLargestExpense: Story = {
           source: "sumit",
           project_name: "בניין מגורים חולון",
           category_name: "חומרים",
-          supplier_name: "חומרי בניין השרון בע״מ",
+          supplier_name: "חומרי בניין לדוגמה בע״מ",
           customer_name: null,
         }}
       />

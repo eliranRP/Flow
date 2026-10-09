@@ -228,7 +228,7 @@ export function useReviewFlags(transactionIds: readonly string[], live: boolean)
 export function JevReviewCard({
   connectorOn,
   prefill,
-  supplier = "חומרי בניין השרון בע״מ",
+  supplier = "חומרי בניין לדוגמה בע״מ",
 }: {
   connectorOn: boolean;
   prefill: JevPrefill | null;
@@ -294,7 +294,7 @@ function LayoutCard({
 }) {
   return (
     <ReviewCard
-      supplier="חומרי בניין השרון בע״מ"
+      supplier="חומרי בניין לדוגמה בע״מ"
       sourceLine="הוצאה · 12/04/2026"
       netAgorot={-2_200_000n}
       vatLine="לפני מע״מ · מע״מ ₪3,960"

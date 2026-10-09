@@ -47,7 +47,7 @@ const stored = {
   share_count: 1,
   project_id: "p-stored",
   category_id: "c-stored",
-  supplier_name: "חומרי בניין השרון בע״מ",
+  supplier_name: "חומרי בניין לדוגמה בע״מ",
   project_name: "פרויקט שמור",
   category_name: "קטגוריה שמורה",
   project_suggested: false,
