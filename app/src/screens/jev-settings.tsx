@@ -25,7 +25,7 @@ export type JevCardState = {
   mode: JevMode;
   threshold: number;
   status: JevStatus;
-  /** FLOW-704: the server holds no Jev key (`jev_key_status` said missing), so a switched-on Jev labels nothing. */
+  /** The server holds no Jev key (`jev_key_status` said missing): the switch locks off (FLOW-348 A). */
   keyMissing?: boolean;
 };
 
@@ -64,9 +64,16 @@ export function jevSwitchOn(state: Pick<JevCardState, "enabled" | "mode" | "stat
   return state.status === "ready" && state.enabled && state.mode !== "off";
 }
 
+/** FLOW-348 A: with no key on the server the switch locks off. A pending or failed key read never locks it. */
+export const JEV_NO_KEY = "צריך מפתח Jev. פונים למנהל המערכת.";
+
+export function jevLocked(state: Pick<JevCardState, "status" | "keyMissing">): boolean {
+  return state.status === "ready" && state.keyMissing === true;
+}
+
 export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "status" | "keyMissing">): string {
   if (state.status === "error") return "שגיאה";
-  if (jevSwitchOn(state) && state.keyMissing === true) return "אין מפתח";
+  if (jevLocked(state)) return JEV_NO_KEY;
   if (jevSwitchOn(state)) return state.mode === "auto" ? "פעיל · מילוי אוטומטי" : "פעיל · הצעות בלבד";
   return "כבוי";
 }
@@ -189,7 +196,8 @@ export function JevSettingsCard({
   reserveOptions?: boolean;
 }) {
   const panelId = useId();
-  const shownOn = jevSwitchOn(state);
+  const locked = jevLocked(state);
+  const shownOn = jevSwitchOn(state) && !locked;
   const showOptions = shownOn;
   const [open, setOpen] = useState(optionsOpen && shownOn);
   const modeHintId = useId();
@@ -226,10 +234,10 @@ export function JevSettingsCard({
       icon={<TagIcon size={24} />}
       checked={shownOn}
       busy={busy}
-      disabled={readOnly}
+      disabled={readOnly || locked}
       inputRef={switchRef}
       onChange={(checked) => {
-        if (busy || readOnly) return;
+        if (busy || readOnly || locked) return;
         const from = shownOn;
         if (onToggle?.(checked) !== false) toggledFrom.current = from;
       }}

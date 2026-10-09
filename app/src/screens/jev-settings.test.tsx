@@ -16,6 +16,7 @@ import {
   JEV_DEFAULT,
   AUTO_HINT,
   JevSettings,
+  JEV_NO_KEY,
   parseJevThreshold,
   readJevIntegration,
   type JevCardState,
@@ -119,17 +120,23 @@ describe("Jev settings card", () => {
     expect(parseJevThreshold("1.01")).toBeNull();
   });
 
-  it("says אין מפתח when Jev is on and the server holds no key, and כבוי when off (FLOW-704)", async () => {
+  it("locks the switch off with one line when the server holds no key, on or off (FLOW-348 A)", async () => {
     db.keyStatus = "missing";
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
     const { unmount } = renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByText("אין מפתח")).toBeInTheDocument());
-    expect(await readySwitch()).toBeChecked();
+    await waitFor(() => expect(screen.getByText(JEV_NO_KEY)).toBeInTheDocument());
+    const locked = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+    expect(locked).not.toBeChecked();
+    expect(locked).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
+    fireEvent.click(locked);
+    expect(db.writes).toEqual([]);
     unmount();
     db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
     renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByText("כבוי")).toBeInTheDocument());
-    expect(screen.queryByText(/אין מפתח/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(JEV_NO_KEY)).toBeInTheDocument());
+    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
+    expect(screen.queryByText("כבוי")).not.toBeInTheDocument();
   });
 
   it("keeps the usual word while the key status is unknown or ok (FLOW-704)", async () => {
@@ -146,7 +153,7 @@ describe("Jev settings card", () => {
     expect(toggle).not.toBeChecked();
     expect(screen.getByText("כבוי")).toBeInTheDocument();
     expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
-    expect(screen.queryByText("אין מפתח")).not.toBeInTheDocument();
+    expect(screen.queryByText(JEV_NO_KEY)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
