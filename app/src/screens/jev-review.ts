@@ -21,6 +21,8 @@ export {
   companyIdFromReviewPayload,
   userRememberedJevOn,
   jevConnectorLiveKey,
+  seedJevConnectorFromLive,
+  jevLiveOn,
   readJevConnectorFlag,
   writeJevConnectorFlag,
   clearJevConnectorFlag,

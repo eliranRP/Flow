@@ -17,6 +17,7 @@ export function Picker({
   listed,
   selectedId,
   suggestionId,
+  suggestionJev = false,
   savingId,
   note,
   noneLabel,
@@ -34,6 +35,8 @@ export function Picker({
   listed: ChangeChoice[];
   selectedId: string;
   suggestionId: string;
+  /** The suggestion is Jev's fill: its row says הצעת Jev (FLOW-704). */
+  suggestionJev?: boolean;
   savingId: string | null;
   note?: string;
   /** A first row with id "", such as "בלי פרויקט". Hidden while searching. */
@@ -67,7 +70,7 @@ export function Picker({
         label={option.name}
         code={option.code}
         date={needle === "" ? option.recent : undefined}
-        tag={option.id === suggestionId}
+        tag={option.id === suggestionId ? (suggestionJev ? "jev" : true) : false}
         selected={option.id === selectedId}
         busy={option.id === savingId}
         disabled={savingId != null && option.id !== savingId}

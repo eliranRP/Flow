@@ -96,6 +96,8 @@ export type StatementRowProps = {
   method?: StatementMethod | null;
   /** "project · category", already joined. */
   suggestion?: string | null;
+  /** The suggestion is Jev's fill: line 2 reads "✦ Jev · …" and the name says הצעת Jev (FLOW-704). */
+  suggestionJev?: boolean;
   pending?: boolean;
   agorot: bigint;
   currency?: string;
@@ -411,9 +413,17 @@ function StatementRow(props: StatementRowProps) {
             <span className="ui-row-hint ui-statement-line">
               {props.pending === true ? <StatusPill>בהמתנה</StatusPill> : null}
               {props.suggestion ? (
-                <span className="ui-statement-suggest" data-clip-ok="">
-                  <span className="ui-statement-spark" aria-hidden="true">✦ </span>
-                  {props.suggestion}
+                // FLOW-704: whole parts, as in the details below. "✦" always shows; on a Jev fill
+                // "Jev" follows when it fits, then the values, which end in "…".
+                <span className="ui-statement-suggest ui-hint-parts" data-clip-ok="">
+                  <span className="ui-hint-part ui-statement-spark" aria-hidden="true">✦</span>
+                  {props.suggestionJev === true ? (
+                    <span className="ui-hint-part ui-statement-spark" aria-hidden="true"> Jev</span>
+                  ) : null}
+                  <span className="ui-hint-part ui-hint-part-keep">
+                    {props.suggestionJev === true ? HINT_SEPARATOR : " "}
+                    {props.suggestion}
+                  </span>
                 </span>
               ) : null}
               {details.length > 0 ? (

@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import { SuggestTag } from "./suggest-tag";
+import { JevTag, SuggestTag } from "./suggest-tag";
 
 type RadioRowProps = {
   label: string;
@@ -8,8 +8,8 @@ type RadioRowProps = {
   code?: string;
   /** Relative last use, at the inline end. */
   date?: string;
-  /** Tint הצעה after the name. The suggestion row sets this. */
-  tag?: boolean;
+  /** Tint הצעה after the name. The suggestion row sets this; "jev" says הצעת Jev (FLOW-704). */
+  tag?: boolean | "jev";
   /** Name, code, and date on one line. The change picker uses this. */
   layout?: "picker";
   /** Live result under the title. Split uses this. */
@@ -40,7 +40,7 @@ export function RadioRow({
   selected,
   onSelect,
 }: RadioRowProps) {
-  const picker = layout === "picker" || code != null || date != null || tag === true;
+  const picker = layout === "picker" || code != null || date != null || tag != null && tag !== false;
   const descId = useId();
   const off = disabled || disabledReason != null;
   const sub = off && disabledReason ? disabledReason : description;
@@ -52,7 +52,7 @@ export function RadioRow({
   const text = picker ? (
     <span className="ui-pick-name">
       <span className="ui-pick-label">{label}</span>
-      {tag ? <SuggestTag /> : null}
+      {tag === "jev" ? <JevTag /> : tag ? <SuggestTag /> : null}
       {sub ? <span className="ui-radio-desc" id={descId}>{sub}</span> : null}
     </span>
   ) : (

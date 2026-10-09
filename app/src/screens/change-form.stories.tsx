@@ -65,6 +65,7 @@ function ChangeStory({
   saveError,
   split,
   splitTitle,
+  jev,
 }: {
   entry?: string;
   projectId?: string;
@@ -79,6 +80,7 @@ function ChangeStory({
   saveError?: boolean;
   split?: boolean;
   splitTitle?: string;
+  jev?: { project?: boolean; category?: boolean };
 } = {}) {
   return (
     <StoryRoute entry={entry}>
@@ -98,6 +100,7 @@ function ChangeStory({
           ...(saveError ? { saveError } : {}),
           ...(split ? { split } : {}),
           ...(splitTitle != null ? { splitTitle } : {}),
+          ...(jev ? { jev } : {}),
         }}
       />
     </StoryRoute>
@@ -108,6 +111,33 @@ export const ChangeSheet: Story = {
   name: "Summary (suggested)",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory />,
+};
+
+/** FLOW-704: Jev's fill says הצעת Jev on שינוי שיוך, as on the card. */
+export const ChangeJevSummary320: Story = {
+  name: "Summary (Jev fill) 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory jev={{ project: true, category: true }} />,
+};
+
+export const ChangeJevSummaryDark320: Story = {
+  name: "Summary (Jev fill) dark 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory jev={{ project: true, category: true }} />,
+};
+
+export const ChangeJevPicker320: Story = {
+  name: "Project picker (Jev fill) 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" jev={{ project: true }} />,
+};
+
+export const ChangeJevPickerDark320: Story = {
+  name: "Project picker (Jev fill) dark 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" jev={{ project: true }} />,
 };
 
 export const ChangeSummaryChanged: Story = {

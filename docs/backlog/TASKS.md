@@ -18,8 +18,8 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (#298); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-343: cycle 7 phone polish (loan setup focus, split copy said once, the card's refund refusal) (FLOW-339 Search merged #299) | #231 follow-ups in the Jev and settings area |
+| UI lane 3 | FLOW-310 clip-check review of whitelisted ellipsis (FLOW-310 focus merged #298); FLOW-341 card with the owner (sent 06:00Z) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 4 | FLOW-704 app side: the Jev Settings row, Jev marks on שינוי שיוך and the review list, the Jev scope read (FLOW-343 merged #306) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-408 lines keep their currency; FLOW-329 loan line hint (#311) | Next small ready bug |
@@ -629,7 +629,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
 - [x] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment. (Already true on main: the toast waits for the sheet pad before it shows. The committed e2e/toast.spec.ts samples every frame at 320×693 and 390×844 with `--safe-top` 0, 20 and 47 and fails if the toast covers ✕; 31/31 pass, #298.)
-- [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
+- [x] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it. (#309: measured every story at 320, 360 and 390. Tightened: the period bar's presets size to their words and switch to "3 ח׳" below 390, since "3 חוד…" showed at 360 to 390; sheet titles wrap to two lines before an ellipsis. Kept: chips, pills, switch labels and the status pill, reasons in the design log.)
 
 <a id="flow-319"></a>
 ### FLOW-319 · Type sizes, headers and text colours, income in green
@@ -1161,13 +1161,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
 - [ ] If the flag read stalls past 1s while Jev is on, the card swaps back and writes the flag off; a flag that's off while Jev is on leaves one approvable read on the next launch; the 5-minute flag cache delays a server-side change; each next card waits about 0.8s again during a long stall.
 - [ ] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden.
-- [ ] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render.
+- [x] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render. (The scoped key takes this session's live answer; the binding runs in a layout effect; test in `jev-review-open.test.tsx`.)
 - [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
-- [ ] Delete the old shared connector key once per launch, not on every read.
-- [ ] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות; a "no key" status once a key-status RPC exists.
+- [x] Delete the old shared connector key once per launch, not on every read.
+- [x] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות.
+- [ ] Jev Settings row: a "no key" status once a key-status RPC exists.
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 - [x] The review card marks a project or category Jev filled with "✦ הצעת Jev" (the shared `JevTag`) instead of הצעה (2026-10-08, #141).
-- [ ] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill.
+- [x] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill. (שינוי שיוך and its picker say "✦ הצעת Jev"; a review list row reads "✦ Jev · project · category", and only "✦" when בהמתנה leaves no room.)
 
 ## Infra and CI
 
