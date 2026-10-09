@@ -79,6 +79,8 @@ export function withChoice(options: ChangeChoice[], id: string, name: string | n
 
 export const KEPT_OUT = "מחוץ לרווח והפסד";
 export const KEPT_OUT_SHORT = "מחוץ לרווח";
+/** FLOW-124: a line split by category with some parts kept out. */
+export const MIXED_SHORT = "חלקית ברווח";
 
 export function combinePhase(left: ScreenPhase, right: ScreenPhase): ScreenPhase {
   if (left.kind === "error") return left;
