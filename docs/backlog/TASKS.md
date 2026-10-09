@@ -259,7 +259,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals
-- **Type:** PLAN FIRST · **Status:** plan-first (owner, 2026-10-09: the user chooses whether the תזרים counts by invoice date or by payment date; the MCP totals default to the same choice, so the app and the tools never disagree; needs a plan and 390px mockups for the owner's card) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** plan-first; the setting itself is in-progress with FLOW-413 (`companies.cash_basis`, `set_cash_basis`, #370; MCP defaults in FLOW-413's server PR 2) (owner, 2026-10-09: the user chooses whether the תזרים counts by invoice date or by payment date; the MCP totals default to the same choice, so the app and the tools never disagree; needs a plan and 390px mockups for the owner's card) · **Depends on:** —
 - **What:** The app shows the invoiced basis ([0060](../decisions/0060-library-review-calls.md)) while MCP `get_totals`, `list_projects` and `get_project` default to cash. The owner's answer (2026-10-09): the user chooses the basis, invoice date or payment date, and the MCP defaults follow the same choice, so the app and the tools never disagree. It changes behaviour for existing MCP clients. Also decide what to do with `get_home` (cash, only used at sign-in): align it or remove it.
 - **Acceptance:** plan and 390px mockups approved by the owner; then the basis choice, MCP defaults that follow it, tools that echo the basis, TOOLS.md updated.
 
@@ -1117,7 +1117,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-413"></a>
 ### FLOW-413 · Monthly cash-flow view (תזרים חודשי)
-- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); dev lane 2 writes the data plan with FLOW-103, then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
+- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); data plan written (dev lane 2, the project's plans/flow-413-cash-flow-plan.md); server PR 1 in-progress (dev lane 3, #370, decision [0168](../decisions/0168-cash-flow-view.md): the cash flags, the basis, `cash_months`, `cash_month_lines`, the setters), then server PR 2 (MCP), then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
 - **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out, and made it the main monthly view on Home. Today the profit view leaves the loan out, so rent alone looks positive.
   - Money out: the full monthly loan payment (principal, interest and escrow), holding costs and utilities, purchase and renovation money.
   - Money in: loan money received is left out by default, with a switch to count it.
