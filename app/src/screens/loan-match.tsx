@@ -107,7 +107,7 @@ export function LoanMatchOffer({
           variant="button"
           eyebrow="הלוואה"
           title="שיוך להלוואה"
-          hint={matchHint}
+          hintParts={matchHint == null ? undefined : [matchHint]}
           icon={<BankIcon />}
           chevron
           busy={busy}
@@ -117,7 +117,7 @@ export function LoanMatchOffer({
       </List>
       <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={returnFocus ? rowRef : undefined}>
         {selectableLoans.length === 0 ? (
-          <p className="t-hint">{loans.length === 0 ? "אין עדיין הלוואה." : `אין הלוואה ${currencyWord(lineCurrency)}.`}</p>
+          <p className="t-hint">{`${loanEmptyLine(loans, lineCurrency)}.`}</p>
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
             {selectableLoans.map((loan) => (
@@ -346,11 +346,7 @@ export function LoanTransactionSplit({
   if (!on || writesHeld || split != null) return null;
   if (query.isLoading) {
     if (!keyedPrincipal) return null;
-    return (
-      <List className="ui-loan-skel">
-        <ListRow variant="skeleton" />
-      </List>
-    );
+    return <LoanMatchSkeleton />;
   }
   if (query.isError) {
     if (!keyedPrincipal) return null;
@@ -372,8 +368,7 @@ export function LoanTransactionSplit({
   // A demand loan has no schedule to split by; MCP attach_loan_payment splits it (0132).
   const offered = loaded.loans.filter((item) => loanTakesPaymentOn(item, docDate) && item.kind !== "demand");
   const lineCurrency = loaded.currency;
-  const currencyLoans = offered.filter((item) => item.currency === lineCurrency);
-  const matchHint = currencyLoans.length === 1 ? currencyLoans[0]?.name : undefined;
+  const matchHint = loanMatchHint(offered, lineCurrency);
   const savingId = match.isPending ? match.variables : null;
   return (
     <LoanMatchOffer
@@ -400,6 +395,34 @@ export function LoanTransactionSplit({
       }}
     />
   );
+}
+
+/** The שיוך row while the loans load, at the row's height (FLOW-115). */
+export function LoanMatchSkeleton() {
+  return (
+    <List className="ui-loan-skel">
+      <ListRow variant="skeleton" />
+    </List>
+  );
+}
+
+/**
+ * FLOW-115: why the match sheet has no loan to pick, in the same words on the row's hint and in the
+ * sheet: none offered at all, or none in the line's currency.
+ */
+export function loanEmptyLine(offered: ReadonlyArray<{ currency: string }>, lineCurrency: string): string {
+  return offered.length === 0 ? "אין עדיין הלוואה" : `אין הלוואה ${currencyWord(lineCurrency)}`;
+}
+
+/**
+ * FLOW-115: the שיוך row always has a hint, so it keeps the skeleton's height when the read lands:
+ * the lone loan's name, else how many loans there are, else why there is none.
+ */
+export function loanMatchHint(offered: ReadonlyArray<{ name: string; currency: string }>, lineCurrency: string): string {
+  const loans = offered.filter((loan) => loan.currency === lineCurrency);
+  if (loans.length === 1) return loans[0]?.name ?? "";
+  if (loans.length === 0) return loanEmptyLine(offered, lineCurrency);
+  return `${String(loans.length)} הלוואות`;
 }
 
 export function useLoanBalances(companyId: string | null) {
