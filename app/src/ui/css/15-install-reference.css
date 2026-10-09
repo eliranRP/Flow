@@ -61,6 +61,14 @@
   flex: none;
 }
 
+/* A home-screen tile in the setup demos (FLOW-506). */
+.ui-app-icon-tile {
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 14px;
+  flex: none;
+}
+
 .ui-ref-body {
   padding-inline: var(--space-side);
 }
