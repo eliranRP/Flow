@@ -26,7 +26,7 @@ select 'materials', id from public.categories where name = 'חומרים' and ki
 insert into r8 (label, id)
 select 'haul', id from public.categories where name = 'הובלה' and kind = 'expense';
 insert into r8 (label, id)
-select 'income_cat', id from public.categories where name = 'תקבול מלקוח' and kind = 'income';
+select 'income_cat', id from public.categories where name = 'הכנסה מלקוחות' and kind = 'income';
 
 reset role;
 insert into public.transactions (

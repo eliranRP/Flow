@@ -1,0 +1,1 @@
+A company that already kept loan money in a category of its own no longer gets a second "כסף שהתקבל מהלוואות" category. An extra one that holds no lines is removed, and the company's own loan money category is left out of the monthly cash view instead.

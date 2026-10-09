@@ -7,7 +7,7 @@ import { STARTER_SETS } from "./starter-categories.ts";
 const migration = readFileSync(
   join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../supabase/migrations/20261013205829_starter_categories.sql",
+    "../../../supabase/migrations/20261013212342_starter_categories.sql",
   ),
   "utf8",
 );

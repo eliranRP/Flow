@@ -50,7 +50,7 @@ def es_projects(mode):
 
 @es("es-05-unpaid-none")
 def es_unpaid(mode):
-    return f'''<div class="scr">{STATUS}{topbar()}{title_head("חשבוניות שלא שולמו")}
+    return f'''<div class="scr">{STATUS}{topbar()}{title_head("חשבוניות פתוחות")}
 {empty("checkc","הכל שולם","אין חשבוניות פתוחות כרגע.", top=150)}
 {tabbar("home", badge=0)}</div>'''
 
