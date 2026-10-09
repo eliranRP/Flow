@@ -188,6 +188,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-206"></a>[FLOW-206](tasks/FLOW-206.md) | Bulk setup without rate-limit stalls | MCP |
 | <a id="flow-210"></a>[FLOW-210](tasks/FLOW-210.md) | Bulk setup follow-ups (#119 review) | BACKLOG NIT |
 | <a id="flow-211"></a>[FLOW-211](tasks/FLOW-211.md) | Flow MCP agent requests (2026-10-08) | MCP |
+| <a id="flow-212"></a>[FLOW-212](tasks/FLOW-212.md) | Flow MCP agent requests (2026-10-09 night) | MCP |
 | <a id="flow-207"></a>[FLOW-207](tasks/FLOW-207.md) | sync_bank job follow-ups (#75 review) | BACKLOG NIT |
 | <a id="flow-208"></a>[FLOW-208](tasks/FLOW-208.md) | Split and undo follow-ups (#88 review) | BACKLOG NIT |
 | <a id="flow-209"></a>[FLOW-209](tasks/FLOW-209.md) | get_project follow-ups (#90 review) | BACKLOG NIT |
