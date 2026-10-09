@@ -4,14 +4,6 @@
   color: var(--color-text-secondary);
 }
 
-.ui-add-rows .ui-row-icon {
-  color: var(--color-accent-text);
-}
-
-.ui-add-rows .ui-row-title {
-  font-weight: var(--type-title-3-weight);
-}
-
 .ui-ptr {
   display: grid;
   place-items: center;

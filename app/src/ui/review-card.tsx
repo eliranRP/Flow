@@ -89,9 +89,9 @@ type ReviewCardProps = {
   /** FLOW-327: both fields are missing. The card ends with "בחרו פרויקט וקטגוריה". */
   missingBoth?: boolean;
   /**
-   * FLOW-702: Jev's auto fill stands on this line. The card says "✦ מולא ע״י Jev" under the rows, with
-   * the reason after it on the same line (so the card does not grow at 375x667) and בטל when `onUndo`
-   * is set (a viewer gets the label only). Shown only with a הצעת Jev pill.
+   * FLOW-702: Jev's auto fill stands on this line. The card says "✦ מולא ע״י Jev" under the rows, one
+   * line with no reason (the owner's pick, so it never wraps), and בטל when `onUndo` is set (a viewer gets
+   * the label only). Shown only with a הצעת Jev pill.
    */
   jevFilled?: { onUndo?: () => void; busy?: boolean } | null;
 };
@@ -238,7 +238,6 @@ export function ReviewCard({
             <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
             <span className="ui-review-reason-text">
               {JEV_FILLED}
-              {why ? <>{" · "}<CopyLine parts={why} /></> : null}
             </span>
             {filled.onUndo ? (
               <TextLink

@@ -252,6 +252,10 @@ describe("Jev settings card", () => {
     autoRadio.focus();
     fireEvent.click(autoRadio);
     await waitFor(() => expect(toggle).toHaveAttribute("aria-busy", "true"));
+    // FLOW-331 r1: both segmented controls say busy, and the percents draw in an LTR bdi.
+    expect(screen.getByRole("radiogroup", { name: "מצב" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("radiogroup", { name: "סף ביטחון" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("radio", { name: "95%" }).querySelector("bdi[dir='ltr']")?.textContent).toBe("95%");
     expect(screen.getByRole("radio", { name: "מילוי אוטומטי" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "מילוי אוטומטי" })).toHaveFocus();
     fireEvent.click(screen.getByRole("radio", { name: "95%" }));

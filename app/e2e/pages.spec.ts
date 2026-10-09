@@ -29,15 +29,14 @@ for (const [path, heading] of pages) {
   });
 }
 
-test("add sheet follows mockup 04 and does not capture yet", async ({ page }) => {
+test("add sheet offers the quick actions that work today (FLOW-331)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  await expect(page.getByText("צילום חשבונית")).toBeVisible();
-  await expect(page.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeVisible();
-  await expect(page.getByText("העלאת דוח בנק")).toHaveCount(0);
-  await expect(page.getByText("ה־AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
+  for (const name of [/פרויקט חדש/, /הלוואה חדשה/, /חיבור בנק/]) {
+    await expect(page.getByRole("button", { name })).toBeEnabled();
+  }
+  await expect(page.getByText(/צילום חשבונית/)).toHaveCount(0);
 });
 
 test("a failed load is not an empty or missing record", async ({ page }) => {

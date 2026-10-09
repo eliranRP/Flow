@@ -259,6 +259,11 @@ describe("viewer gates", () => {
       expect(screen.queryByText("ואפשר גם לפתוח אחד כאן")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "פרויקט חדש" })).not.toBeInTheDocument();
     }],
+    ["V23b", "?new=project opens no sheet for a viewer (FLOW-331)", () => {
+      viewer(<ProjectsScreen sample={{ projects: [] } as unknown as Dashboard} />, "/projects?new=project");
+      expect(screen.getByText("פרויקטים מגיעים מ־SUMIT.")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument();
+    }],
     ["V24", "add is an empty slot", () => {
       viewer(<TabBar allowAdd={false} />);
       const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
