@@ -1,0 +1,6 @@
+<a id="flow-701"></a>
+# FLOW-701 · Jev phase 1
+- **Type:** PLAN FIRST · **Status:** done (parts 1-4 merged in #137, #143, #149, #160; approve-all dropped by the owner) · **Depends on:** —
+- **What:** The proposed first phase: (1) make Jev run after syncs and learn from confirmations, and produce the shadow accuracy report on approved lines; (2) faster review (reasons, "approve all sure ones", income suggestions); (3) anomalies v1 in one list (SQL detects, Jev scores only candidates); (4) recurring patterns in SQL that feed missing bills and expected months. Also a review of other features where Jev can help. The numbers always come from SQL; Jev never approves ([0084](../../decisions/0084-jev-auto-prefill.md)). A daily call cap per company in SQL and a usage log, since the provider has no spend cap.
+- **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions are reviewed one by one like every line, with no approve-all in the app (FLOW-324 dropped; MCP keeps `assign_expenses`); anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
+- **Acceptance:** owner answers the plan's open questions, then one PR per item.

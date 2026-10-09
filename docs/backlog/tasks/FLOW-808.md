@@ -1,0 +1,5 @@
+<a id="flow-808"></a>
+# FLOW-808 · Shared test fixtures and pitfalls upkeep
+- **Type:** SMALL CYCLE · **Status:** done (#181: `tests.fixture_*` in `supabase/tests/helpers.sql`, PITFALLS findings 19 to 31, code checklist) · **Depends on:** —
+- **What:** Commit shared invented test fixtures so builders stop re-creating them, and fold the pending pitfall candidates from recent retros into [PITFALLS](../../review/PITFALLS.md) and the checklists. Themes: a consumer matrix for every payload a contract change touches; a unit or currency change reaches every sum; two PRs redefining one SQL function agree the order up front; never cache constraint or transient refusals in an idempotency store; security-relaxing columns are never owner-writable; every auth path gets a wrong-value negative test; probe a restricted role against every write path; fixed-timeout e2e waits are flakes; a fix needs a test that fails when it is reverted; a persisted flag is a hint, not confirmation; don't peek at another feature's query with a second observer; renames of ops-visible objects need an "Ops changes" PR section.
+- **Acceptance:** PITFALLS and checklists updated; changelog.

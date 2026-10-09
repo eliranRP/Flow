@@ -1,0 +1,5 @@
+<a id="flow-606"></a>
+# FLOW-606 · Company name rule in create_company and the rename sheet
+- **Type:** BACKLOG NIT · **Status:** done (#131, #134) · **Depends on:** FLOW-604
+- [x] `public.create_company` still trims spaces only, has no 100-character limit and accepts control characters. Use `private.trim_name` and `private.company_name_problem` there too (inserts are not checked by the FLOW-604 trigger). Until then, an MCP `undo` of a rename back to such an older name is `refused` by the trigger, and the app's ביטול is refused by the RPC. (Migration `20261008090000`. Companies created before it keep their names.)
+- [x] The rename sheet's `companyNameError` does not refuse a control character, so a pasted tab gets the generic "שם העסק לא נשמר" toast. Add a field error (UI: through the Mercury thread). (#134: "תו לא נתמך בשם – למשל טאב או ירידת שורה", after trimming like `private.trim_name`, and the same check as a field error in onboarding and the setup business step, which now check the name before `create_company`.)

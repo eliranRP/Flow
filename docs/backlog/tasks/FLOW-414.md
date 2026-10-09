@@ -1,0 +1,6 @@
+<a id="flow-414"></a>
+# FLOW-414 · Loan tools: interest kept out of profit, interest-only term, field-named errors
+- **Type:** BUG · **Status:** done (#361, Backlog bug fixes, decision 0166) · **Source:** the Flow MCP agent's requests, relayed by the lane manager 2026-10-09 (bookkeeping priority)
+- [x] `update_loan` refused a kept-out category for interest or escrow ("category does not fit the loan part"), so a rehab or flip hard-money loan's interest could not stay out of profit as a carrying cost. Interest and escrow now take any expense category, counted or kept out, as fees do; principal still needs a kept-out one, and a built-in loan category in use keeps its side (decision 0166). The app's part-category picker follows.
+- [x] `add_loan` with `kind: "interest_only"` and `interest_only_months` equal to `term_months` (12 of 12) was reported as a bare `validation`. It passes on main (zod, the schedule and the SQL check all allow it); a test now locks it in, and the field-named errors below show what a refused payload got wrong (months sent as text, for example).
+- [x] `add_loan`, `update_loan` and `attach_loan_payment` errors name the failing field and what it takes (`interest_only_months: required with kind interest_only`, `parts.escrow: an amount of zero or more, at most two decimals, not rounded`); every tool names an unknown or identity argument.
