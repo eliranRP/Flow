@@ -401,7 +401,7 @@ Reference CSS is in `flow.py` (`BASE`), and the states are shown on boards `ds-4
 | **Secondary** | `tint` fill, `accent-text` text | Important alternatives ("שינוי", "פיצול בין פרויקטים"), and the empty-state action |
 | **Ghost** | Text only, `accent-text` (or `text-secondary` for "ביטול") | Low-emphasis options ("דלג") |
 | **Destructive** | Text only, `bad`, with a trash icon | "מחיקה", always confirmed or undoable |
-| **Small pill** (`.btn.sm`) | 36px high, fully round, usually secondary | Inline actions in rows and headers ("סימון כשולם", "פרויקט חדש") |
+| **Small pill** (`.btn.sm`) | 36px high, fully round, usually secondary | Inline actions in rows and empty states ("סימון כשולם", "פרויקט חדש") |
 
 States:
 
@@ -646,7 +646,7 @@ The rendered empty states and their copy:
 | Screen (board) | Title / line / action |
 |---|---|
 | Home, first run (`es-01-home-first-run`) | Band with the placeholder "כאן יופיע הרווח הנקי של העסק". Body: "עוד אין נתונים" / "מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה." / "העלאת דוח בנק" |
-| Project, no transactions (`es-02-project-empty`) | Header shows `₪0`. "אין עדיין תנועות" / "חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." / "צילום חשבונית" |
+| Project, no transactions (`es-02-project-empty`) | Header shows `₪0`. "אין עדיין תנועות" / "חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." / no button (FLOW-331: capture is not built) |
 | Review, all done (`es-03-review-done`) | "הכל מאושר" / "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש." / "לדף הבית" |
 | Projects, none (`es-04-projects-none`) | "עוד אין פרויקטים" / "פרויקטים נפתחים מעצמם כשמזהים לקוח חוזר בדוח הבנק. אפשר גם לפתוח ידנית." / "פרויקט חדש" |
 | Unpaid, none (`es-05-unpaid-none`) | "הכל שולם" / "אין חשבוניות פתוחות כרגע." / no button (nothing to do) |

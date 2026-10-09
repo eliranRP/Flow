@@ -213,6 +213,8 @@ describe("review card meta (FLOW-304)", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByText("כרטיס שמסתיים ב־4242")).toHaveClass("sr-only");
+    // FLOW-322: the queue holds bank lines too, not only documents.
+    expect(screen.getByText("תנועות שמחכות לשיוך")).toBeInTheDocument();
     expect(db.calls.filter((call) => call.name === "get_line_meta").map((call) => call.args)).toEqual([{ p_ids: ["tx"] }]);
   });
 });

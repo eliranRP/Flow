@@ -272,7 +272,7 @@ export const FlagLoudDark: Story = { ...dark, name: "Flag: loud, dark", args: Fl
 export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: FlagDuplicateQuiet.args };
 export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };
 
-// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev · <reason>" with בטל at the end, one line.
+// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with בטל at the end, one line, no reason.
 export const JevFilled: Story = { name: "Jev filled: undo", args: { ...jevBoth, why: "usual_for_party", filled: "undo" } };
 export const JevFilledDark: Story = { ...dark, name: "Jev filled: undo, dark", args: JevFilled.args };
 export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", args: JevFilled.args };

@@ -590,6 +590,26 @@ describe("LoanSettingsSection", () => {
     expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
   });
 
+  it("opens the new-loan sheet from ?new=loan for an owner only (FLOW-331)", async () => {
+    const at = (ui: ReactNode) => (
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/settings/loans?new=loan"]}>{ui}</MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const owner = render(at(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />));
+    expect(await screen.findByRole("dialog", { name: "הלוואה" })).toBeInTheDocument();
+    owner.unmount();
+    render(at(
+      <ViewerPreview>
+        <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
+      </ViewerPreview>,
+    ));
+    expect(await screen.findByText("כשיתווספו הלוואות הן יופיעו כאן.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "הלוואה" })).not.toBeInTheDocument();
+  });
+
   it("shows the empty state with one primary action, and none for a viewer", async () => {
     const owner = renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     expect(await screen.findByText("אין הלוואות עדיין")).toBeInTheDocument();

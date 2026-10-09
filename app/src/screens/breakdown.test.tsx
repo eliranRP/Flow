@@ -187,6 +187,12 @@ describe("Breakdown screen", () => {
     expect(screen.getByRole("button", { name: periodLabel(allTime()) })).toBeInTheDocument();
   });
 
+  it("says one waiting line in the singular (FLOW-322)", async () => {
+    rpc.impl = () => Promise.resolve({ data: { ...expenses, review_count: 1 }, error: null });
+    wrap("/flow/expense");
+    expect(await screen.findByRole("link", { name: /תנועה אחת ממתינה לאישור/ })).toHaveAttribute("href", "/review");
+  });
+
   it("sends an unknown direction back to Home", () => {
     wrap("/flow/sideways");
     expect(screen.getByText("בית")).toBeInTheDocument();
@@ -259,5 +265,25 @@ describe("Breakdown lines screen", () => {
     const call = rpc.calls.find((c) => c.name === "get_breakdown_lines");
     expect(call?.args).toMatchObject({ p_excluded: true, p_currency: "ILS" });
     expect(screen.getByRole("heading", { name: "מחוץ לרווח" })).toBeInTheDocument();
+  });
+
+  it("picks its own period, and an empty one offers another (FLOW-322)", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_breakdown") return Promise.resolve({ data: expenses, error: null });
+      if (name === "get_breakdown_lines") return Promise.resolve({ data: { rows: [], has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap("/flow/expense/category/ILS/c1");
+    expect(await screen.findByText("אין תנועות כאן בתקופה הזו")).toBeInTheDocument();
+    expect(screen.getByText("אפשר לבחור תקופה אחרת.")).toBeInTheDocument();
+    // The header comes from the same lines: no lines is "—" and no count, not the summary's total.
+    expect(document.querySelector(".ui-breakdown-total")).toHaveTextContent(/^—$/);
+    expect(document.querySelector("header")).not.toHaveTextContent("תנועות");
+    fireEvent.click(screen.getByRole("button", { name: "בחירת תקופה" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^הכול/ }));
+    await waitFor(() => {
+      expect(rpc.calls.some((c) => c.name === "get_breakdown_lines" && !("p_from" in (c.args as object)))).toBe(true);
+    });
+    expect(screen.getByRole("button", { name: periodLabel(allTime()) })).toBeInTheDocument();
   });
 });

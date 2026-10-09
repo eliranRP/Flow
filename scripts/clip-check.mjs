@@ -265,7 +265,15 @@ async function run(options = {}) {
           const panels = page.locator(".ui-sheet-panel");
           const panelCount = await panels.count();
           for (let index = 0; index < panelCount; index += 1) {
-            await panels.nth(index).waitFor({ state: "visible", timeout: 15_000 });
+            try {
+              await panels.nth(index).waitFor({ state: "visible", timeout: 15_000 });
+            } catch (panelError) {
+              // A story whose play function swaps one sheet for another (the categories move picker)
+              // leaves the first panel closing: it never shows again. Measuring skips hidden nodes, so
+              // that panel is left out instead of stopping the whole run.
+              if (!isTimeout(panelError)) throw panelError;
+              log(`${theme} ${String(width)} ${story.id}: sheet panel ${String(index + 1)} not visible, skipped`);
+            }
           }
           const samples = await page.evaluate((clipOkSelector) => {
             const roots = [document.querySelector("#storybook-root"), ...document.querySelectorAll(".ui-sheet-panel")];
