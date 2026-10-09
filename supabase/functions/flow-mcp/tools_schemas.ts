@@ -26,6 +26,7 @@ export const READ_TOOL_NAMES = [
   "get_missing_bills",
   "get_expected_months",
   "list_unpaid",
+  "list_team",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -45,6 +46,9 @@ export const WRITE_TOOL_NAMES = [
   "set_category_pnl",
   "set_overhead_project",
   "rename_company",
+  "invite_member",
+  "set_member_role",
+  "remove_member",
   "add_loan",
   "update_loan",
   "attach_loan_payment",
@@ -92,6 +96,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_missing_bills: new Set(),
   get_expected_months: new Set(["months", "project_id"]),
   list_unpaid: new Set(),
+  list_team: new Set(),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -105,6 +110,9 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
   set_overhead_project: new Set(["idempotency_key", "project_id"]),
   rename_company: new Set(["idempotency_key", "name"]),
+  invite_member: new Set(["idempotency_key", "email", "role"]),
+  set_member_role: new Set(["idempotency_key", "member_id", "role"]),
+  remove_member: new Set(["idempotency_key", "member_id"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
@@ -222,7 +230,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -243,6 +251,22 @@ function companyNameIsValid(name: string): boolean {
   const points = Array.from(name);
   return points.length >= 2 && points.length <= 100;
 }
+// FLOW-601. The database lower-cases and checks the email; this only bounds it.
+export const inviteMemberSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  email: z.string().trim().min(3).max(254),
+  role: z.enum(["editor", "viewer"]).default("viewer"),
+}).strict();
+// member_id is the member's user id from list_team (user_id is reserved for the token's identity).
+export const setMemberRoleSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  member_id: UUID_TEXT,
+  role: z.enum(["editor", "viewer"]),
+}).strict();
+export const removeMemberSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  member_id: UUID_TEXT,
+}).strict();
 export const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().transform(plainSpaces)

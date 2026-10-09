@@ -18,11 +18,11 @@ const migration = readFileSync(
   "utf8",
 );
 
-// 20261013171526 renames the first default income category (money terms glossary).
+// 20261013184836 renames the first default income category (money terms glossary).
 const incomeRename = readFileSync(
   join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../supabase/migrations/20261013171526_default_income_category_name.sql",
+    "../../../supabase/migrations/20261013184836_default_income_category_name.sql",
   ),
   "utf8",
 );

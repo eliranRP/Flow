@@ -9,7 +9,11 @@ export function pnlFailureText(error: Error): string {
 }
 
 /** merge_category's refusals. */
+/** FLOW-406: delete_category and merge_category refuse a parent that still has sub-categories. */
+export const PARENT_HAS_CHILDREN = "יש לקטגוריה תת-קטגוריות. העבירו אותן קודם.";
+
 export function mergeFailureText(error: Error): string {
+  if (error.message.includes("category_has_children")) return PARENT_HAS_CHILDREN;
   if (error.message.includes("a loan uses this category")) {
     return "אי אפשר למזג: הלוואה משתמשת בקטגוריה הזו לחלק שהקטגוריה השנייה לא מתאימה לו.";
   }
@@ -51,6 +55,7 @@ export const DELETE_LOAN_USED = "הלוואה משתמשת בקטגוריה. ה�
 
 /** delete_category's refusals (decision 0144). */
 export function deleteFailureText(error: Error): string {
+  if (error.message.includes("category_has_children")) return PARENT_HAS_CHILDREN;
   if (error.message.includes("loan category is fixed")) return "זו קטגוריה של הלוואה, ואי אפשר למחוק אותה.";
   if (error.message.includes("a loan uses this category")) return "אי אפשר למחוק: הלוואה משתמשת בקטגוריה הזו.";
   return "לא הצלחנו למחוק את הקטגוריה.";

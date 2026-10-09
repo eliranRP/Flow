@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { ProjectCategories } from "./project-categories";
+import { foldOrder, ProjectCategories } from "./project-categories";
 
 const project: NonNullable<ProjectDetail> = {
   id: "a",
@@ -73,5 +73,35 @@ describe("project categories list (FLOW-401)", () => {
     expect(screen.queryAllByRole("img")).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: /חשבונות/ }));
     expect(screen.queryByText("עוד לא הגיע")).toBeNull();
+  });
+
+  it("folds sub-categories under their parent, with the parent's own lines last (FLOW-406)", () => {
+    const row = (id: string, name: string, parent_id: string | null = null) => ({ id, name, kind: "expense" as const, hidden: false, is_default: false, parent_id });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ProjectCategories
+            project={{ ...project, categories: [...project.categories, { id: "c8", name: "תחזוקה", amount_agorot: 10_000n }] }}
+            search=""
+            sampleCategories={[row("c1", "חומרים"), row("c8", "תחזוקה"), row("c5", "חשמל", "c8"), row("c6", "גז", "c8")]}
+            sampleMonths={[]}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const group = screen.getByRole("button", { name: /תחזוקה/ });
+    // 455 + 155 + 100.
+    expect(group).toHaveTextContent("₪710");
+    fireEvent.click(group);
+    const links = screen.getAllByRole("link").map((link) => link.textContent);
+    const own = links.findIndex((text) => text.includes("בלי תת-קטגוריה"));
+    expect(own).toBeGreaterThan(links.findIndex((text) => text.includes("חשמל")));
+    expect(own).toBeGreaterThan(links.findIndex((text) => text.includes("גז")));
+  });
+
+  it("orders a fold: sub-categories, the parent's own lines, then bills not in yet (FLOW-406)", () => {
+    const item = (id: string, missing = false) => ({ line: { currency: "ILS", id, name: id, amount_minor: 0n }, up: null, missing });
+    const order = foldOrder([item("own"), item("late", true), item("sub")], new Set(["own"]));
+    expect(order.map((entry) => entry.line.id)).toEqual(["sub", "own", "late"]);
   });
 });
