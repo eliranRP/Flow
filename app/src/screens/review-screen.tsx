@@ -265,13 +265,14 @@ export function ProjectWaitingList({
         rows={ordered}
         keyOf={(row) => row.transaction_id}
         dateOf={(row) => row.doc_date}
-        amountOf={(row) => ({ minor: row.amount_net, currency: "ILS", direction: "expense" })}
+        amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: "expense" })}
         renderRow={(row) => (
           <ListRow
             variant="transaction"
             title={row.description}
             hint={formatDayMonth(row.doc_date)}
             agorot={row.amount_net}
+            currency={row.currency}
             sign="out"
             source={rowSource(row.source)}
             tag={row.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}

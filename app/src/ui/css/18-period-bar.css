@@ -43,11 +43,20 @@
   box-shadow: none;
 }
 
+/*
+  FLOW-310 clip review: a preset sizes to its words, so "3 חודשים" never ends in an ellipsis
+  beside a roomy "שנה". The page bar split the row evenly and cut it at 390.
+*/
+.ui-seg:has(.ui-seg-short) .ui-seg-btn {
+  flex: 1 1 auto;
+}
+
 .ui-seg-short {
   display: none;
 }
 
-@media (max-width: 359px) {
+/* The long labels need about 290px of bar; on the band they fit from 390 (cut at 360 and 375). */
+@media (max-width: 389px) {
   .ui-seg-long {
     display: none;
   }
