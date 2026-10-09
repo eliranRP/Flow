@@ -5,6 +5,7 @@ import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
+import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
@@ -472,10 +473,31 @@ function stepSample(n: number): NonNullable<TransactionDetail> {
   };
 }
 
+/** FLOW-345: `?long=1` splits the card into eight categories, so its content runs on under the step row. */
+function longSplit(n: number): LineSplitRead {
+  const names = ["חומרים", "עבודה", "הובלה", "ציוד והשכרה", "חשמל", "אינסטלציה", "צבע", "ניקיון"];
+  return {
+    transactionId: `t-step-${String(n)}`,
+    currency: "ILS",
+    lineMinor: BigInt(-n * 10_000),
+    partsMatch: true,
+    parts: names.map((name, i) => ({
+      category_id: `c${String(i + 1)}`,
+      category_name: name,
+      project_id: "p1",
+      project_name: "שיפוץ הרצל 12",
+      amount_minor: BigInt(-n * 1_250),
+      percent: null,
+      rest: i === names.length - 1,
+    })),
+  };
+}
+
 function DevStepTransaction({ n }: { n: number }) {
   // FLOW-345: the cache holds the neighbours, as the live card's prefetch leaves it, so a drag peeks their names.
   const client = useQueryClient();
   const preview = useHomePreview();
+  const [params] = useSearchParams();
   useEffect(() => {
     for (const side of [n - 1, n + 1]) {
       if (side >= 1 && side <= 24) client.setQueryData(transactionQueryOptions(preview, `t-step-${String(side)}`).queryKey, stepSample(side));
@@ -486,6 +508,7 @@ function DevStepTransaction({ n }: { n: number }) {
       sample={stepSample(n)}
       sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }]}
       sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      sampleLineSplit={params.get("long") === "1" ? longSplit(n) : undefined}
     />
   );
 }

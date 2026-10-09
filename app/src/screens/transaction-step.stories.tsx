@@ -137,7 +137,7 @@ export const Middle: Story = {
   name: "In a list",
   render: () => <StepStory at={1} />,
   play: async ({ canvasElement }) => {
-    await expect(row(canvasElement)).toHaveTextContent("הקודמת2 מתוך 3הבאה");
+    await expect(row(canvasElement)).toHaveTextContent(/^הקודמת.*2 מתוך 3.*הבאה$/);
     await expect(within(canvasElement).getByRole("button", { name: "התנועה הקודמת" })).toBeVisible();
     await expect(within(canvasElement).getByRole("button", { name: "התנועה הבאה" })).toBeVisible();
   },

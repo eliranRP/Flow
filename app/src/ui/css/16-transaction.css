@@ -1,7 +1,9 @@
 /*
-  FLOW-345 option D: הקודמת · "3 מתוך 12" · הבאה, a quiet row pinned at the bottom of the card in the
-  thumb zone. No fill and no hairline; the words are accent text links with a 44px hit area. A word at
-  a list end is hidden (visibility, inline) and keeps its box, so the counter stays in the middle.
+  FLOW-345 option D: הקודמת · "3 מתוך 12" · הבאה, a quiet row pinned at the bottom of the screen in the
+  thumb zone. It is filled with the page colour; a hairline shows on top only while card content is
+  scrolled under it, so a card that ends above it stays flat. The words are accent text links with a
+  44px hit area. A word at a list end is hidden (.ui-txn-step-off) and keeps its box, so the counter stays
+  in the middle.
 */
 .ui-txn-step {
   position: fixed;
@@ -16,11 +18,28 @@
   max-inline-size: var(--content-max);
   margin-inline: auto;
   padding: var(--space-1) calc(var(--space-side) - var(--space-2)) calc(var(--safe-bottom) + var(--space-2));
+  /* Transparent until content is under the row, so the hairline never moves the row. */
+  border-top: 1px solid transparent;
   background: var(--color-bg);
+}
+
+.ui-txn-step[data-under] {
+  border-top-color: var(--color-line);
+}
+
+/* Marks the end of the stepped content: 1px tall, pulled back so it adds no space. */
+.ui-txn-step-end {
+  block-size: 1px;
+  margin-block-start: -1px;
+  pointer-events: none;
 }
 
 .ui-txn-step-btn {
   padding-inline: var(--space-2);
+}
+
+.ui-txn-step-btn.ui-txn-step-off {
+  visibility: hidden;
 }
 
 .ui-txn-step-btn:first-child {
@@ -45,16 +64,9 @@
   outline: none;
 }
 
-/* The card's last row scrolls clear of the step row. */
+/* The card's last row scrolls clear of the step row (its hairline included). */
 .ui-txn-stepped {
-  padding-block-end: calc(var(--touch-min) + var(--space-1) + var(--space-2));
-}
-
-/* An icon button that stays focusable at a list end. The cursor comes from the shared disabled rule. */
-.ui-icon-btn[aria-disabled="true"],
-.ui-icon-btn[aria-disabled="true"]:active {
-  background: transparent;
-  color: var(--color-disabled-text);
+  padding-block-end: calc(var(--touch-min) + var(--space-1) + var(--space-2) + 1px);
 }
 
 /* FLOW-117: the other kind's categories under the category picker. */

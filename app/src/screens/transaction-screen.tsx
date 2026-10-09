@@ -1,5 +1,5 @@
 import { formatAmountText, formatMoney, type TransactionDetail } from "@flow/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
 import { LoanCategoryRow } from "./loan-match-row";
@@ -10,7 +10,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
-import { TxnStepRow, usePrefetchNeighbours, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
+import { TxnStepNav, txnParty, usePrefetchNeighbours, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
 import { CardSwipe } from "../ui/card-swipe";
@@ -48,7 +48,7 @@ function splitProjectLabel(
 
 /** What a screen reader hears after prev or next: the kind, the party and the amount, with no bare minus. */
 function txnAnnouncement(txn: NonNullable<TransactionDetail>): string {
-  const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const party = txnParty(txn);
   const kind = txn.direction === "income" ? "הכנסה" : "הוצאה";
   const amount = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
   return `${kind}, ${party}, ${amount}`;
@@ -343,22 +343,21 @@ export function TransactionScreen({
     },
   });
   // FLOW-345: the step row stays while a card loads, fails or is gone, so the walk can go on past it.
-  const stepRow = nav ? <TxnStepRow nav={nav} /> : null;
+  // Every layout goes through this frame, so the row keeps its place in the tree and is not remounted
+  // (its focus move run again) when the card finishes loading.
+  const frame = (body: ReactNode) => (
+    <div className={nav ? "ui-txn-stepped" : undefined}>
+      {body}
+      {nav ? <TxnStepNav nav={nav} ready={txn != null} /> : null}
+    </div>
+  );
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
-    return (
-      <div className={nav ? "ui-txn-stepped" : undefined}>
-        <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />
-        {stepRow}
-      </div>
+    return frame(
+      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />,
     );
   }
   if (!txn) {
-    return (
-      <div className={nav ? "ui-txn-stepped" : undefined}>
-        <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />
-        {stepRow}
-      </div>
-    );
+    return frame(<ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />);
   }
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
@@ -406,7 +405,7 @@ export function TransactionScreen({
     }
     return undefined;
   }
-  const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const party = txnParty(txn);
   const changeProjects = withChoice(
     [
       ...(sample
@@ -490,8 +489,8 @@ export function TransactionScreen({
       }}
     />
   );
-  return (
-    <div className={nav ? "ui-txn-stepped" : undefined}>
+  return frame(
+    <>
       <ScreenHeader
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
@@ -582,7 +581,6 @@ export function TransactionScreen({
           categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
         />
       </CardSwipe>
-      {stepRow}
       <ChangeAssignment
         host="overlay"
         open={changeOpen}
@@ -640,6 +638,6 @@ export function TransactionScreen({
           remove.mutate();
         }}
       />
-    </div>
+    </>,
   );
 }

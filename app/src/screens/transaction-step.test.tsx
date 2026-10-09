@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
@@ -11,7 +11,8 @@ vi.mock("../lib/supabase", () => ({
     auth: {
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
     },
-    rpc: () => Promise.resolve({ data: null, error: null }),
+    // The card's own read never answers here; a test hands the card in through the cache instead.
+    rpc: (name: string) => (name === "get_transaction" ? new Promise(() => undefined) : Promise.resolve({ data: null, error: null })),
   }),
 }));
 
@@ -66,7 +67,7 @@ describe("the step row on the transaction card (FLOW-345 option D)", () => {
   it("sits under the card, not in the top bar, with the words and the place in the list", () => {
     renderCard({ id: "t2", state: list, sample: card("t2", "ספק ב") });
     const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
-    expect(row).toHaveTextContent("הקודמת2 מתוך 3הבאה");
+    expect(row).toHaveTextContent(/^הקודמת.*2 מתוך 3.*הבאה$/);
     expect(row.closest("header")).toBeNull();
     const header = document.querySelector("header");
     if (!header) throw new Error("no header");
@@ -96,5 +97,21 @@ describe("the step row on the transaction card (FLOW-345 option D)", () => {
   it("keeps the row while the card loads, so the walk can go on past it", () => {
     renderCard({ id: "t2", search: "?preview=loading", state: list });
     expect(screen.getByRole("group", { name: "מעבר בין תנועות" })).toHaveTextContent("2 מתוך 3");
+  });
+
+  it("keeps the same row when the card finishes loading, and the pressed word keeps focus", async () => {
+    const client = new QueryClient();
+    renderCard({ id: "t2", state: { ...list, txnVia: "next" }, client });
+    const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
+    const next = screen.getByRole("button", { name: "התנועה הבאה" });
+    expect(next).toHaveFocus();
+    act(() => {
+      client.setQueryData(["txn", "off", "t2"], card("t2", "ספק ב"));
+    });
+    expect(await screen.findByText("ספק ב")).toBeInTheDocument();
+    // The same row and button, not a new one: the loaded card's title took focus and handed it back.
+    expect(screen.getByRole("group", { name: "מעבר בין תנועות" })).toBe(row);
+    expect(screen.getByRole("button", { name: "התנועה הבאה" })).toBe(next);
+    expect(next).toHaveFocus();
   });
 });

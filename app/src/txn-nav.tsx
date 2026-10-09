@@ -1,10 +1,11 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import type { TransactionDetail } from "@flow/shared";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
 import { scrollPageToTop, sheetStack } from "./ui/back";
-import { ReviewCount, reviewCountDigits } from "./screens/review-count";
+import { TxnStepRow } from "./ui/txn-step-row";
 
 /** The list a card was opened from: its rows in the order shown, and its address. */
 export type TxnList = { ids: readonly string[]; from: string };
@@ -158,13 +159,26 @@ export function useTxnNavKeys(nav: TxnNav | null): void {
   }, [move, open]);
 }
 
+/** The name a row goes by: its supplier, else its customer, else its bank description. */
+export function txnParty(row: Pick<NonNullable<TransactionDetail>, "supplier_name" | "customer_name" | "description">): string {
+  return row.supplier_name ?? row.customer_name ?? row.description;
+}
+
+/** Focus may move to the row only from where a card move leaves it: nowhere, the screen title, or the row. */
+function focusIsFree(row: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  if (active == null || active === document.body) return true;
+  if (active.classList.contains("ui-focus-title")) return true;
+  return row?.contains(active) ?? false;
+}
+
 /**
- * FLOW-345 option D: הקודמת and הבאה in a quiet row pinned at the bottom of the card, in the thumb zone,
- * with "3 מתוך 12" between them. At a list end that side's word is hidden but keeps its box, so the
- * counter stays centred. A button move keeps focus on the pressed word on the next card; at an end,
- * where that word is hidden, focus waits on the counter instead.
+ * FLOW-345 option D: the step row (ui/txn-step-row) wired to the walk. A button move keeps focus on the
+ * pressed word on the next card; at an end, where that word is hidden, focus waits on the counter
+ * instead. Focus that has gone elsewhere (a field, a sheet) is left alone. `ready` turns true when a
+ * card that was loading shows: its title takes focus then, and the pressed word takes it back.
  */
-export function TxnStepRow({ nav }: { nav: TxnNav }) {
+export function TxnStepNav({ nav, ready = true }: { nav: TxnNav; ready?: boolean }) {
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
   const countRef = useRef<HTMLParagraphElement>(null);
@@ -174,52 +188,41 @@ export function TxnStepRow({ nav }: { nav: TxnNav }) {
   useEffect(() => {
     // Runs after the title takes focus, so a button move keeps the finger's place.
     if (via !== "next" && via !== "prev") return;
+    const count = countRef.current;
+    if (!focusIsFree(count?.closest<HTMLElement>(".ui-txn-step") ?? null)) return;
     const hidden = via === "next" ? atEnd : atStart;
-    const target = hidden ? countRef.current : via === "next" ? nextRef.current : prevRef.current;
+    const target = hidden ? count : via === "next" ? nextRef.current : prevRef.current;
     target?.focus({ preventScroll: true });
-  }, [via, atStart, atEnd]);
-  const digits = reviewCountDigits(nav.total);
+  }, [via, atStart, atEnd, ready]);
+  const move = nav.move;
   return (
-    <div className="ui-txn-step" role="group" aria-label="מעבר בין תנועות" data-toast-floor="">
-      <button
-        ref={prevRef}
-        type="button"
-        className="ui-text-link ui-txn-step-btn"
-        aria-label="התנועה הקודמת"
-        style={atStart ? { visibility: "hidden" } : undefined}
-        onClick={() => { nav.move("prev", "prev"); }}
-      >
-        הקודמת
-      </button>
-      <p ref={countRef} className="ui-txn-step-count" tabIndex={-1}>
-        <ReviewCount value={nav.index + 1} digits={digits} side="index" />
-        {" מתוך "}
-        <ReviewCount value={nav.total} digits={digits} side="total" />
-      </p>
-      <button
-        ref={nextRef}
-        type="button"
-        className="ui-text-link ui-txn-step-btn"
-        aria-label="התנועה הבאה"
-        style={atEnd ? { visibility: "hidden" } : undefined}
-        onClick={() => { nav.move("next", "next"); }}
-      >
-        הבאה
-      </button>
-    </div>
+    <TxnStepRow
+      index={nav.index + 1}
+      total={nav.total}
+      atStart={atStart}
+      atEnd={atEnd}
+      prevRef={prevRef}
+      nextRef={nextRef}
+      countRef={countRef}
+      onPrev={() => { move("prev", "prev"); }}
+      onNext={() => { move("next", "next"); }}
+    />
   );
 }
 
 /**
  * FLOW-345: the neighbour's name for the edge that peeks in mid-swipe, read from the cache the
- * neighbour prefetch warms. Never fetches; null until that read lands (the edge is then plain).
+ * neighbour prefetch warms. It only watches the cache: it never fetches and never adds an entry
+ * (not even for a list end), so it stays null until that read lands (the edge is then plain).
  */
 export function useNeighbourParty(id: string | null): string | null {
+  const client = useQueryClient();
   const preview = useHomePreview();
-  const cached = useQuery({ ...transactionQueryOptions(preview, id ?? ""), enabled: false });
-  const txn = id == null ? null : cached.data;
-  if (txn == null) return null;
-  return txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const cache = client.getQueryCache();
+  const subscribe = useCallback((onChange: () => void) => cache.subscribe(onChange), [cache]);
+  const txn = useSyncExternalStore(subscribe, () =>
+    id == null ? undefined : client.getQueryData<TransactionDetail>(transactionQueryOptions(preview, id).queryKey));
+  return txn == null ? null : txnParty(txn);
 }
 
 const AnnounceContext = createContext<(text: string) => void>(() => undefined);
