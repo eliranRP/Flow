@@ -83,6 +83,23 @@ export const OverTheLineDark: Story = over.dark;
 export const OverTheLine320: Story = over.narrow;
 export const OverTheLineDark320: Story = over.darkNarrow;
 
+// FLOW-333 C1: the ₪ field fits ₪9,999,999.99 at 320, and the share reads with separators.
+const bigParts: PartDraft[] = [
+  { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "9999999.99" },
+  { key: "b", categoryId: "c-ins", projectId: "p-raan", unit: "amount", value: "1234.56" },
+];
+const big = quadrant(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -2_000_000_000n }} parts={bigParts} />);
+export const BigAmounts: Story = { ...big.base, name: "Big amounts: ₪9,999,999.99" };
+export const BigAmountsDark: Story = big.dark;
+export const BigAmounts320: Story = big.narrow;
+export const BigAmountsDark320: Story = big.darkNarrow;
+
+const huge = quadrant(() => <Editor parts={[{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "1234567.89" }]} />);
+export const ShareOverThousand: Story = { ...huge.base, name: "Share past 1,000%" };
+export const ShareOverThousandDark: Story = huge.dark;
+export const ShareOverThousand320: Story = huge.narrow;
+export const ShareOverThousandDark320: Story = huge.darkNarrow;
+
 const empty = quadrant(() => <Editor />);
 export const Empty: Story = { ...empty.base, name: "Empty" };
 export const EmptyDark: Story = empty.dark;

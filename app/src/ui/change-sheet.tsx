@@ -81,6 +81,8 @@ type Shared = {
    * Listed under their own heading in the category picker. Omitted on a split line.
    */
   reversals?: ChangeChoice[];
+  /** FLOW-333 C3c: the reversal section starts expanded, as on a refund line's split part. */
+  reversalsOpen?: boolean;
   loading?: boolean;
   /**
    * FLOW-325 local picks: a project row with id "" and this label tops the project list,
@@ -141,7 +143,7 @@ export function ChangeAssignment(props: Props) {
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [ownedCategory, setOwnedCategory] = useState(props.categorySuggested === false);
-  const [reversalOpen, setReversalOpen] = useState(false);
+  const [reversalOpen, setReversalOpen] = useState(props.reversalsOpen === true);
   const settled = useRef(false);
   const inflight = useRef<Promise<boolean> | null>(null);
   const warned = useRef(false);
@@ -174,7 +176,7 @@ export function ChangeAssignment(props: Props) {
       setLanded(startView !== "summary");
       setCreatingNew(false);
       setQuery("");
-      setReversalOpen(false);
+      setReversalOpen(props.reversalsOpen === true);
     }
   }
 
@@ -250,7 +252,7 @@ export function ChangeAssignment(props: Props) {
   function openPicker(next: "project" | "category") {
     opener.current = next;
     setQuery("");
-    setReversalOpen(false);
+    setReversalOpen(props.reversalsOpen === true);
     setCreatingNew(false);
     if (props.contained) {
       setLanded(false);
