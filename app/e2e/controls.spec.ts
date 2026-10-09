@@ -469,13 +469,13 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await page.goto("/e2e/connections?preview=1&assistant=connected");
   const assistantRow = page.getByRole("button", { name: "עוזר AI", exact: true });
   await expect(assistantRow).toContainText("מחובר · קריאה וכתיבה");
-  await expect(page.getByText("שימוש אחרון ב-30.9")).toHaveCount(0);
+  await expect(page.getByText("שימוש אחרון 30/09")).toHaveCount(0);
   await assistantRow.click();
-  await expect(page.getByText("שימוש אחרון ב-30.9")).toBeVisible();
+  await expect(page.getByText("שימוש אחרון 30/09")).toBeVisible();
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "dark";
   });
-  const stampLines = await page.getByText("שימוש אחרון ב-30.9").evaluate((node) => node.getClientRects().length);
+  const stampLines = await page.getByText("שימוש אחרון 30/09").evaluate((node) => node.getClientRects().length);
   expect(stampLines).toBe(1);
   await page.getByRole("dialog", { name: "עוזר AI", exact: true }).getByRole("button", { name: "ניתוק" }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
