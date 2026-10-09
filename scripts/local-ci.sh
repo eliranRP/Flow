@@ -14,7 +14,7 @@
 #       (scripts/pgtap-specs.mjs).
 #   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
 #     merge of main that leaves the patch unchanged; lint and the file-size check only when the
-#     branch changes only docs/ or Markdown (a claim commit). Each run appends a line to
+#     branch changes only docs/, Markdown or design images (a claim commit). Each run appends a line to
 #     gate-times.log beside the shared cache: time, branch, mode, diff kind, seconds, result, and
 #     each phase's seconds (node scripts/gate-times.mjs sums it up).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
@@ -151,12 +151,15 @@ if [[ -z "$pr_fork" ]] && (( ! full )); then
 fi
 pr_files=""
 [[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
-# The diff kind gate-times.log groups by: migration, server (other supabase/), ui (app, packages,
-# design), docs (docs/ or Markdown only), else scripts.
+# Docs, Markdown and the design images (rendered screens, logo files): nothing the app, its
+# tests or Storybook reads. The app reads only design/system's CSS from design/.
+docs_files='^docs/|\.md$|^design/.*\.(png|jpe?g|webp|gif|svg)$'
+# The diff kind gate-times.log groups by: migration, server (other supabase/), docs (docs_files
+# only), ui (app, packages, design), else scripts.
 if grep -q '^supabase/migrations/' <<<"$pr_files"; then kind=migration
 elif grep -q '^supabase/' <<<"$pr_files"; then kind=server
+elif [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then kind=docs
 elif grep -qE '^(app|packages|design)/' <<<"$pr_files"; then kind=ui
-elif [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then kind=docs
 else kind=scripts
 fi
 # The branch's own patch against main. A run that passes marks it with the main commit it forked
@@ -206,8 +209,8 @@ fi
 base_area() {
   (( ! base_only )) || [[ " $base_areas " == *" $1 "* ]]
 }
-# Only docs or Markdown against main: lint and the file-size check, nothing else.
-if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
+# Only docs_files against main: lint and the file-size check, nothing else.
+if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then
   mode="docs"
   phase "docs only: lint and the file-size check"
   pnpm lint
