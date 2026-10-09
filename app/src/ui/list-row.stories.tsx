@@ -183,7 +183,7 @@ function MercuryRows() {
   );
 }
 
-/** A line kept out of profit fades whole, next to one that counts (owner's pick C, 2026-10-09). */
+/** A line kept out of profit fades but keeps its hint readable, next to one that counts (owner's pick C, FLOW-352). */
 function SetAsideRows() {
   return (
     <List>

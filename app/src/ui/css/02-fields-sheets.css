@@ -215,6 +215,25 @@
   opacity: 0.6;
 }
 
+/* The kept-out words lead the hint and are the reason the row is faded, so they are never cut
+   (FLOW-352): the row's text column is at least as wide as those words, and the name takes the
+   ellipsis instead. The name's own width no longer counts toward that minimum. */
+.ui-row-set-aside :is(.ui-row-main, .ui-row-text) {
+  min-inline-size: min-content;
+}
+
+.ui-row-set-aside .ui-row-title {
+  contain: inline-size;
+}
+
+.ui-row-set-aside .ui-hint-parts {
+  min-inline-size: min-content;
+}
+
+.ui-row-set-aside .ui-hint-parts > .ui-hint-part:first-child {
+  flex-shrink: 0;
+}
+
 .ui-nowrap {
   white-space: nowrap;
 }

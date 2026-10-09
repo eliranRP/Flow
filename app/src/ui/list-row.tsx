@@ -44,7 +44,7 @@ type Common = {
   className?: string;
   /** Warning paints the hint and the icon. Muted paints the icon like the hint. */
   tone?: "warning" | "muted";
-  /** A line kept out of profit: the whole row fades, so it reads as set aside (owner's pick C, 2026-10-09). */
+  /** A line kept out of profit fades, so it reads as set aside (owner's pick C, 2026-10-09); its hint stays at full muted grey (FLOW-352). */
   setAside?: boolean;
   /** The hint slot holds a skeleton bar, at the real hint line height. */
   skelHint?: boolean;
@@ -120,7 +120,7 @@ export type StatementRowProps = {
   details?: StatementDetail[];
   /** Real agorot only, no ".00" (Search, FLOW-339 option C). */
   realCents?: boolean;
-  /** A line kept out of profit: the whole row fades (owner's pick C, 2026-10-09). */
+  /** A line kept out of profit: it fades but keeps line 2 at full muted grey (owner's pick C; FLOW-352). */
   setAside?: boolean;
 };
 
