@@ -77,6 +77,7 @@ Limits that apply to the whole cycle:
 - **Few words, icons first.** Short, gender-neutral Hebrew. Icons instead of labels where possible. Advanced options hidden ([DESIGN-RULES](../design/DESIGN-RULES.md)).
 - **PLAN FIRST tasks** need a written plan and a mockup, and the owner's approval, before anyone builds them. The approval must be written in the task. No `PLAN FIRST` UI work starts between 00:00 and 09:00 Israel time. Small UI is signed off by the design lead ([owner approvals](../design/DESIGN-TEAM.md#owner-approvals)).
 - **ON HOLD tasks** wait until the owner says go. Don't start them, even if they look ready.
+- **Future features** live in their own [section](TASKS.md#future-features) at the end of TASKS.md. They are parked, not queued: no claim, plan, or mockup until the owner brings one back.
 - **Migrations.** One new SQL file per PR in `supabase/migrations/`. Its timestamp must be later than the last line of `supabase/migrations.lock`, and different from every other open PR's migration. Append `<file> <sha256>` as the last line of the lock. Never edit a migration that is already applied; add a new one. CI checks this with `scripts/check-migration-order.mjs` and `scripts/check-migration-transaction.mjs`.
 - **Decisions** go in `docs/decisions/` with the next number after the highest one in [the index](../decisions/README.md). Never reuse a number or fill a gap. Update the index in the same commit.
 - **Changelog.** Every docs change gets an entry as its own file, `docs/changelog.d/YYYY-MM-DD-<id>.md` ([how](../changelog.d/README.md)). Never edit `docs/changelog.md` in a task PR: parallel PRs conflict on it. The coordinator folds the fragments in with `node scripts/changelog-fold.mjs`, in its own PR, after a batch deploys.
@@ -189,6 +190,7 @@ Task statuses in [TASKS.md](TASKS.md):
 | `in-progress` | Built or in review. Add the PR number. |
 | `plan-first` | Needs a plan, a mockup, and the owner's approval before a build. The planning itself can be claimed. |
 | `on-hold` | Waits for the owner's go or decision. Don't claim it. |
+| `future` | Parked by the owner for later, in the [Future features](TASKS.md#future-features) section. Not in the queue; don't claim or plan it until the owner brings it back. |
 | `blocked` | Waits on another task or on access. The blocker is named. |
 | `done` | Merged, deployed, and checked. Moved to the Done list. |
 
