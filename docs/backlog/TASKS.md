@@ -19,10 +19,10 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-505 follow-up: "ייבוא מ" sent with the connect call to both connect functions; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-502 web push, app side (option A): the review reminder card, Settings → התראות, the push worker (FLOW-704 "no key" merged #329) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-506 setup demo CSS stops reaching into components | FLOW-503 Mercury in the setup flow (after #332), then the FLOW-506 shared demo card and tab bar |
+| Backlog bug fixes | FLOW-503 Mercury in the setup flow | The FLOW-506 shared demo card and tab bar |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -119,7 +119,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
-| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | PLAN FIRST | plan-first (owner card) |
+| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -909,9 +909,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-348"></a>
 ### FLOW-348 · Jev switched on with no key
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
-- **What:** With Jev on and no key on the server, Connections shows the switch on and a muted "אין מפתח" (#329). Jev labels nothing, and the row doesn't say what to do or who can fix it. The key is a server setting, so the app can't take it. Proposal A (recommended): the switch locks off with one reason, "צריך מפתח Jev, פנו למנהל המערכת", as a switch decided by something else (§3.7). B: the switch stays on and the hint becomes a link that opens a short sheet saying what the key does and who sets it.
-- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+- **Type:** SMALL UI · **Status:** ready (owner picked option A, 2026-10-09) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** When the server holds no Jev key (`jev_key_status()` says `missing`), the "תיוג חכם (Jev)" switch on Connections locks off (the disabled switch look, not tappable) with one muted line under the title: "צריך מפתח Jev. פונים למנהל המערכת." No "אפשרויות" link while it is locked. A pending or failed key read keeps today's row, so it never locks on a guess. Replaces the "אין מפתח" hint from #329. Mockup: the project's mockups/plan-first/flow-348/a.png.
+- **Acceptance:** stories at 390, 320 and dark 320; a design log entry; design lead sign-off.
 
 <a id="flow-349"></a>
 ### FLOW-349 · One set of period choices everywhere
@@ -1017,14 +1017,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** ready for a lane (owner picked option A, 2026-10-09: one quiet card on the review screen's empty state, "תזכורת בערב כשיש תנועות לאישור?" with כן / לא עכשיו, asked once; and Settings → התראות with three switches: תנועה חדשה "כשנכנסת תנועה מהבנק" (off by default, the owner's addition), תזכורת ערב, סיכום שבועי "ראשון בבוקר"; mockups in the project's mockups/plan-first/flow-502/) · **Depends on:** —
 - **What:** A pre-permission card after a user gesture (iOS needs the app on the Home Screen first), service-worker push, server send from an edge function, per-user opt-in. Start with the evening review nudge, then the Sunday summary. Add it to setup step 5 once it ships. About 2–3 PRs.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
+- [x] Option A approved by the owner (#324): one quiet card on the review empty state, Settings → התראות with three switches (תנועה חדשה, off by default; תזכורת ערב; סיכום שבועי, ראשון בבוקר).
 - [x] Server part 1 (#335): `push_subscriptions` and per-user `notification_prefs`; `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs`, `answer_push_prompt`; the `push-send` function (Web Push with VAPID, no library) and the `flow-push-evening` cron at 20:00 Israel time for owners with open review lines. Runbook [push.md](../runbooks/push.md).
 - [ ] Owner step: make the VAPID key pair and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` as function secrets and `VITE_VAPID_PUBLIC_KEY` in the app build.
-- [ ] App (UI lane 4): the service worker, the review-screen card asked once, Settings → התראות with three switches.
+- [ ] App (UI lane 4, PR #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`. It merges after the server PR (#335).
 - [ ] Server part 2: send תנועה חדשה after a sync and סיכום שבועי on Sunday morning.
+- [ ] Setup step 5 offers it once it ships.
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#342), approved by the design lead (2026-10-09) · **Depends on:** —
 - **What:** Setup hid Mercury until its import was live. It is live now: add it as a connector option next to SUMIT, reusing the shared connect sheet.
 - **Acceptance:** setup step works with Mercury connected or skipped; CONTROLS row; design review.
 
