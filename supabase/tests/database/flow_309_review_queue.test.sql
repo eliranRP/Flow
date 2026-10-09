@@ -108,7 +108,7 @@ update public.transactions set line_status = 'posted' where idempotency_key like
 
 select pg_temp.sync();
 reset role;
-select is(pg_temp.open_reason('txn_open'), 'missing_project', 'a posted unfiled line takes a real reason, not null');
+select is(pg_temp.open_reason('txn_open'), 'missing_category', 'a posted unfiled line takes a real reason, not null (a guessed category is still missing)');
 select is(pg_temp.open_reason('txn_filed'), 'none', 'a posted line the owner already filed leaves review');
 select is(pg_temp.open_reason('txn_changed'), 'none', 'a row resolved as changed is not queued again');
 select is(pg_temp.open_reason('txn_kept_out'), 'suggested', 'a guessed kept-out category with a project takes suggested');
@@ -127,7 +127,7 @@ update public.review_queue set status = 'open', resolved_at = null
 where transaction_id = pg_temp.id('txn_changed');
 select pg_temp.sync();
 reset role;
-select is(pg_temp.open_reason('txn_changed'), 'missing_project', 'a reopened row with no reason takes a real reason');
+select is(pg_temp.open_reason('txn_changed'), 'missing_category', 'a reopened row with no reason takes a real reason');
 
 select * from finish();
 rollback;

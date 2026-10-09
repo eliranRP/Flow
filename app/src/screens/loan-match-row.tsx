@@ -286,7 +286,7 @@ export function LoanCategoryRow({
               part: field.part,
               amount_minor: Number(amounts[index] ?? 0n),
               scheduled_minor: Number(before?.scheduledMinor ?? 0n),
-              ...(field.part === "fees" && before?.categoryId ? { category_id: before.categoryId } : {}),
+              ...(before?.categoryId ? { category_id: before.categoryId } : {}),
             };
           });
           save.mutate(parts);

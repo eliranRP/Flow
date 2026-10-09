@@ -131,8 +131,8 @@ select is(pg_temp.open_reason('txn_kept_proj'), 'none',
   'a confirmed kept-out category is not queued');
 select is(pg_temp.open_reason('txn_rent_guess'), 'none',
   'a guessed in-P&L category on a project''s income is not queued');
-select is(pg_temp.open_reason('txn_guess_none'), 'missing_project',
-  'income with no project still waits as missing_project (FLOW-121)');
+select is(pg_temp.open_reason('txn_guess_none'), 'missing_category',
+  'income with no project and a guessed category waits as missing_category (FLOW-121, FLOW-309)');
 select is(pg_temp.open_reason('txn_guess_west'), 'none',
   'cross-tenant: another company''s line is not queued by this company''s sync');
 
