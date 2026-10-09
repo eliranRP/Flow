@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -58,6 +58,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `get_project_categories` | `id` | `list_projects` `projects[].id` |
 | `set_category_parent` | `category_id`, `parent_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_parent"` | `id` | the category id `set_category_parent` used |
+| `get_project_group` | `id` | `list_project_groups` `groups[].id`, or `list_projects` `groups[].id` |
+| `set_project_group` | `project_id`, `group_id` | `list_projects` `projects[].id`, `list_project_groups` `groups[].id` |
+| `undo` `kind: "project_group"` | `id` | the group id `create_project_group` returned |
+| `undo` `kind: "project_group_member"` | `id` | the project id `set_project_group` used |
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
 | `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
@@ -94,7 +98,17 @@ These reads need the standby signing key. Without it, `tools/list` is empty and 
 
 Input: `{ "from": "2026-09-01", "to": "2026-09-30", "basis": "cash" }`.
 
-Output `data`: `basis` (the basis used, `cash` when omitted) and `projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `is_overhead`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
+Output `data`: `basis` (the basis used, `cash` when omitted) and `projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `is_overhead`, `group_id` (its project group, null for none), `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
+
+`groups[]` (FLOW-406, [0164](../decisions/0164-sub-categories-and-groups.md)) lists every project group of the company in order, an empty one too: `id`, `name`, `sort_order`, `project_count`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_before_shared_agorot`, `profit_agorot` and `by_currency[]` (the same fields as a project's, company currency first). A group is the sum of its projects' rows for the same dates and basis, so a line still counts once and the company totals don't change. A project is in at most one group, and groups don't nest.
+
+### list_project_groups
+
+`list_project_groups()`. Input `{}`. Output `data.groups[]`: `id`, `name`, `sort_order`, `project_count`, in order. No figures; `list_projects` and `get_project_group` have them.
+
+### get_project_group
+
+`get_project_group(p_id, p_basis, p_from, p_to)`. Input `{ "id", "basis", "from", "to" }`: `from` and `to` are YYYY-MM-DD, both or neither (one alone or `from` after `to` is `validation`); `basis` defaults to `cash`. Output `data`: the group's row as in `list_projects` `groups[]`, plus `basis`, `from`, `to`, `base_currency` and `projects[]`, the full `list_projects` rows of its projects (in the same order). An unknown id and another company's group are both `not_found`.
 
 ### get_project
 
@@ -191,7 +205,7 @@ Input: `{ "scope": "all", "query": "מלט", "from": "2026-06-01", "to": "2026-0
 
 ### get_totals
 
-`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `unassigned_income_agorot`, `unassigned_expense_agorot`, `overhead_project_id`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`, `loan_split_fallback_count`, `unassigned_income_minor`, `unassigned_expense_minor`). The buckets add up ([0101](../decisions/0101-unassigned-and-overhead-project.md)): `direct + shared + overhead + unassigned_expense = expense`, and the projects' `profit_minor` minus `overhead` plus `unassigned_income - unassigned_expense` is `net_profit`, within 1 minor unit per shared loan-split part. Unassigned income has no project. Unassigned cost has no `pnl_role`, a project role and no project, or a shared role and no split. Cost filed to the overhead project (see `set_overhead_project`) is in `overhead_*`, not `direct_*`. `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields. A line whose category is only a guess counts in the main buckets even when that category is kept out, and moves to `excluded_*` once the category is confirmed; a guessed loan category stays out ([0114](../decisions/0114-kept-out-guesses.md)). A loan payment with a valid three-part split counts by part: interest and escrow in the totals, the principal in `excluded_expense_*` and `excluded_count`, and the bank line's own category gets nothing. `loan_split_fallback_count` is the number of lines in the period that have a split but count whole, because a part needs review or the line carries VAT. It is 0 when none do. `count` counts lines in the P&L only, so a split line counts once and a kept-out line is in `excluded_count`, not `count`. Before decision [0099](../decisions/0099-categories-outside-pnl.md) `count` included kept-out lines; `count + excluded_count` is the old number (a loan payment that counts by part adds 1 to both). A project's shared share of each part rounds half to even. On `cash`, a supplier invoice or credit note with no cash date (unpaid) is in no field at all, not even `excluded_*` or `count`; on `invoiced` it counts by its document date ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)).
+`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `unassigned_income_agorot`, `unassigned_expense_agorot`, `overhead_project_id`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`, `loan_split_fallback_count`, `unassigned_income_minor`, `unassigned_expense_minor`). The buckets add up ([0101](../decisions/0101-unassigned-and-overhead-project.md)): `direct + shared + overhead + unassigned_expense = expense`, and the projects' `profit_minor` minus `overhead` plus `unassigned_income - unassigned_expense` is `net_profit`, within 1 minor unit per shared loan-split part. Unassigned income has no project. Unassigned cost has no `pnl_role`, a project role and no project, or a shared role and no split. Cost filed to the overhead project (see `set_overhead_project`) is in `overhead_*`, not `direct_*`. `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields. A line whose category is only a guess counts in the main buckets even when that category is kept out, and moves to `excluded_*` once the category is confirmed; a guessed loan category stays out ([0114](../decisions/0114-kept-out-guesses.md)). A loan payment with a valid three-part split counts by part: interest and escrow in the totals, the principal in `excluded_expense_*` and `excluded_count`, and the bank line's own category gets nothing. `loan_split_fallback_count` is the number of lines in the period that have a split but count whole, because a part needs review or the line carries VAT. It is 0 when none do. `count` counts lines in the P&L only, so a split line counts once and a kept-out line is in `excluded_count`, not `count`. Before decision [0099](../decisions/0099-categories-outside-pnl.md) `count` included kept-out lines; `count + excluded_count` is the old number (a loan payment that counts by part adds 1 to both). A project's shared share of each part rounds half to even. On `cash`, a supplier invoice or credit note with no cash date (unpaid) is in no field at all, not even `excluded_*` or `count`; on `invoiced` it counts by its document date ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)). `groups[]` is the same list as in `list_projects` (FLOW-406).
 
 ### get_breakdown
 
@@ -388,6 +402,22 @@ Renames a category (owner only). `name` is trimmed, 2 to 120 letters, and not an
 ```
 
 Puts a category under a parent category of the same company (owner only), or takes it out with `parent_id: null` (FLOW-406, [0164](../decisions/0164-sub-categories-and-groups.md)). There is one level only. Refused: `category_parent_nested` (the parent is itself a sub-category, or the category already has sub-categories), `category_parent_kind` (an income category under an expense one, or the reverse) and `category_parent_loan_part` (a loan category is never a parent or a sub-category). `category not found` and `parent not found` are `not_found`. The category's `group_name` follows the parent's name. A parent with sub-categories can't be deleted or merged away (`category_has_children`). Output `data`: `category_id`, `parent_id`, `prior` (the parent before, or null), `undo_kind: "category_parent"` and `id`. Undo, with the category id, puts the parent before back; it is `conflict` once the parent was changed again or the old parent can no longer take it.
+
+### create_project_group
+
+```json
+{ "idempotency_key": "group-1", "name": "North sites" }
+```
+
+Creates a project group (owner only, FLOW-406). The name follows `create_project`: 2 to 120 letters, trimmed, no hidden character, and not a name another group of the company has (`project group already exists`, `refused`). Output `data`: `id`, `name`, `undo_kind: "project_group"`. Undo, with the group id, deletes the group; it is `conflict` while a project is in it or an open `set_project_group` write would put one back.
+
+### set_project_group
+
+```json
+{ "idempotency_key": "group-2", "project_id": "c0ffee00-1111-4000-8000-0000000000b1", "group_id": "c0ffee00-1111-4000-8000-0000000000b2" }
+```
+
+Puts a project in a group (owner only), or takes it out with `group_id: null`. Moving it to another group takes it out of the first. Nothing in the P&L changes. `project not found` and `group not found` are `not_found`. Output `data`: `project_id`, `group_id`, `prior` (the group before, or null), `undo_kind: "project_group_member"` and `id` (the project id). Undo puts the group before back; it is `conflict` once the project's group changed again or the old group was deleted.
 
 ### set_category_group
 
