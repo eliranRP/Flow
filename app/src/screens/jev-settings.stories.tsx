@@ -33,12 +33,12 @@ export const OnDark: Story = { args: { state: on, optionsOpen: true }, ...dark39
 export const On320: Story = { args: { state: on, optionsOpen: true }, ...light320 };
 export const OnDark320: Story = { args: { state: on, optionsOpen: true }, ...dark320 };
 
-// FLOW-702: auto mode shows the threshold choices; a stored threshold off the list selects none.
 /** FLOW-704: switched on, but the server holds no Jev key. */
 export const OnNoKey: Story = { args: { state: noKey }, ...light390 };
 export const OnNoKey320: Story = { args: { state: noKey }, ...light320 };
 export const OnNoKeyDark320: Story = { args: { state: noKey }, ...dark320 };
 
+// FLOW-702: auto mode shows the threshold choices; a stored threshold off the list selects none.
 export const OnAuto: Story = { args: { state: auto, optionsOpen: true }, ...light390 };
 export const OnAutoDark: Story = { args: { state: auto, optionsOpen: true }, ...dark390 };
 export const OnAuto320: Story = { args: { state: auto, optionsOpen: true }, ...light320 };
