@@ -283,7 +283,7 @@ describe("LoanSettingsSection", () => {
     expect(screen.getByRole("button", { name: "סוג לפי דרישה" })).toBeInTheDocument();
     expect(screen.queryByLabelText("תקופה בחודשים")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("מסים וביטוח לחודש")).not.toBeInTheDocument();
-    expect(screen.getByText("ריבית יומית על היתרה, לפי 365 יום. בלי לוח תשלומים.")).toBeInTheDocument();
+    expect(screen.getByText("ריבית יומית על היתרה, בלי לוח תשלומים.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     expect(db.inserts[0]).toMatchObject({

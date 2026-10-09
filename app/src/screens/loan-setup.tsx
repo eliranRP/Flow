@@ -348,7 +348,7 @@ export function LoanSetupForm({
       )}
       {kind === "interest_only" || kind === "balloon" ? (
         <TextField
-          label={kind === "interest_only" ? "חודשי ריבית בלבד" : "פריסה (חודשים)"}
+          label={kind === "interest_only" ? "חודשי ריבית בלבד" : "פריסה בחודשים"}
           value={kindMonths}
           dir="ltr"
           inputMode="numeric"
@@ -436,7 +436,7 @@ export function LoanSetupForm({
       {/* Empty, the region leaves the layout, so the gap above שמירה is the usual one between fields. */}
       <div aria-live="polite" className={canSave && shown ? undefined : "sr-only"}>
         {canSave && shown && demand ? (
-          <p>ריבית יומית על היתרה, לפי 365 יום. בלי לוח תשלומים.</p>
+          <p className="ui-row-hint">ריבית יומית על היתרה, בלי לוח תשלומים.</p>
         ) : canSave && shown ? (
           <>
           <p>

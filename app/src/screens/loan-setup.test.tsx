@@ -405,10 +405,10 @@ describe("LoanSetupForm", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "סוג בלון" })).toBeInTheDocument();
-    expect(screen.getByLabelText("פריסה (חודשים)")).toHaveValue("360");
+    expect(screen.getByLabelText("פריסה בחודשים")).toHaveValue("360");
     expect(screen.getByText(/בלון בסוף התקופה/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("פריסה (חודשים)"), { target: { value: "30" } });
-    fireEvent.blur(screen.getByLabelText("פריסה (חודשים)"));
+    fireEvent.change(screen.getByLabelText("פריסה בחודשים"), { target: { value: "30" } });
+    fireEvent.blur(screen.getByLabelText("פריסה בחודשים"));
     expect(screen.getByText("כתבו בין 60 ל־600 חודשים.")).toBeInTheDocument();
   });
 
