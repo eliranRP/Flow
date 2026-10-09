@@ -123,7 +123,7 @@ function skippedRow(id: string, supplier: string) {
   };
 }
 
-describe("the דולגו section under הצג הכול (FLOW-309)", () => {
+describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
   it("lists the skipped rows after the pending ones; a row opens the line; החזרה לתור reopens it", async () => {
     let skipped = [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")];
     rpc.impl = (name, args) => {
@@ -292,7 +292,7 @@ describe("the empty queue's link to the skipped cards (FLOW-309, owner pick 2026
     };
   }
 
-  it("says how many were skipped and opens them under הצג הכול", async () => {
+  it("says how many were skipped and opens them under הצגת הכול", async () => {
     emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")], error: null }));
     renderWithLine("/review");
     expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
