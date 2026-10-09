@@ -20,9 +20,9 @@ function seed(): ReviewRow[] {
   const names: Array<readonly [string, string]> = [
     ["r1", "מחסן הנמל"],
     ["r2", "עגורני החוף"],
-    ["r3", "ברזל הדרום"],
-    ["r4", "צבע הדרום"],
-    ["r5", "חשמל הצפון"],
+    ["r3", "ברזל לדוגמה"],
+    ["r4", "צבע לדוגמה"],
+    ["r5", "חשמלאות לדוגמה"],
   ];
   for (let n = names.length + 1; n <= seedSize; n += 1) names.push([`r${String(n)}`, `ספק בדיקה ${String(n)}`]);
   return names.slice(0, seedSize).map(([id, supplier]) => ({
@@ -118,7 +118,7 @@ export function e2ePreviewWrite(): {
  * FLOW-309: `&fit=1` turns the first card into the short-phone worst case: a supplier name that
  * wraps at 320, Jev's reason line, and the plural filed-today banner. Invented names.
  */
-export const E2E_FIT_SUPPLIER = "חומרי בניין ואינסטלציה השרון בע״מ";
+export const E2E_FIT_SUPPLIER = "חומרי בניין ואינסטלציה לדוגמה בע״מ";
 
 export function e2eFitRows(rows: ReviewRow[]): ReviewRow[] {
   return rows.map((row) => row.id === "r1"

@@ -16,10 +16,9 @@ import {
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
 import { useToast } from "../ui/toast";
-import { IOS_HOME_NOTE, PUSH_BLOCKED, PUSH_FAILED } from "./review-push-prompt";
+import { IOS_HOME_NOTE, IosHomeNote, PUSH_BLOCKED, PUSH_FAILED } from "./review-push-prompt";
 
 const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint?: string }> = [
   { key: "new_transaction", label: "תנועה חדשה", hint: "כשנכנסת תנועה מהבנק" },
@@ -29,8 +28,6 @@ const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint?: string }
 
 const UNSUPPORTED_NOTE = "הדפדפן הזה לא שולח התראות.";
 const SAVE_FAILED = "לא הצלחנו לשמור.";
-const IOS_HOME_LINK = "למסך הבית";
-const [IOS_HOME_BEFORE, IOS_HOME_AFTER] = IOS_HOME_NOTE.split(IOS_HOME_LINK) as [string, string];
 
 /** The Settings row's hint: the switches that are on, or כבוי. */
 export function notificationsHint(prefs: NotificationPrefs): string {
@@ -81,13 +78,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
   const prefs = live ? (query.data ?? NO_PREFS) : local;
   const note = can === "ios-home-screen" ? IOS_HOME_NOTE : can === "unsupported" ? UNSUPPORTED_NOTE : null;
   // On an iPhone tab, "למסך הבית" leads to the install steps instead of ending the sentence.
-  const noteBody = can === "ios-home-screen" ? (
-    <>
-      {IOS_HOME_BEFORE}
-      <TextLink to={`/install${search}`} className="ui-text-link-inline" chevron={false}>{IOS_HOME_LINK}</TextLink>
-      {IOS_HOME_AFTER}
-    </>
-  ) : note;
+  const noteBody = can === "ios-home-screen" ? <IosHomeNote /> : note;
 
   async function change(key: NotificationPrefKey, on: boolean) {
     if (busy != null) return;

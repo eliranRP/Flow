@@ -501,7 +501,7 @@ describe("review queue list", () => {
         const rows = [
           reviewRow("r1", "מחסן הנמל", "p1"),
           reviewRow("r2", "עגורני החוף", "p2"),
-          reviewRow("r3", "ברזל הדרום", "p1"),
+          reviewRow("r3", "ברזל לדוגמה", "p1"),
         ];
         return Promise.resolve({ data: open ? rows : rows.filter((row) => row.id !== "r2"), error: null });
       }
@@ -515,12 +515,12 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /עגורני החוף/ }));
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
-    await approveWhenIdle("ברזל הדרום");
+    await approveWhenIdle("ברזל לדוגמה");
     expect(screen.queryByRole("heading", { name: "מחסן הנמל" })).not.toBeInTheDocument();
   });
 
   it("keeps the list order across three approvals", async () => {
-    const names = ["מחסן הנמל", "עגורני החוף", "ברזל הדרום", "צבע הדרום", "חשמל הצפון"];
+    const names = ["מחסן הנמל", "עגורני החוף", "ברזל לדוגמה", "צבע לדוגמה", "חשמלאות לדוגמה"];
     const removed = new Set<string>();
     rpc.impl = (name, args) => {
       if (name === "list_review") {
@@ -536,12 +536,12 @@ describe("review queue list", () => {
     };
     renderAt("/review");
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
-    fireEvent.click(await screen.findByRole("link", { name: /ברזל הדרום/ }));
-    expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("link", { name: /ברזל לדוגמה/ }));
+    expect(await screen.findByRole("heading", { name: "ברזל לדוגמה" })).toBeInTheDocument();
     showsPlace("3 מתוך 5");
-    await approveWhenIdle("צבע הדרום");
+    await approveWhenIdle("צבע לדוגמה");
     showsPlace("3 מתוך 4");
-    await approveWhenIdle("חשמל הצפון");
+    await approveWhenIdle("חשמלאות לדוגמה");
     showsPlace("3 מתוך 3");
     await approveWhenIdle("מחסן הנמל");
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();

@@ -42,7 +42,7 @@ export function InvoiceReadingFrame() {
       <div className="ui-ref-body">
         <div className="ui-field-line">
           <span className="t-label">ספק</span>
-          <span>חומרי בניין השרון בע״מ <CheckIcon size={16} /></span>
+          <span>חומרי בניין לדוגמה בע״מ <CheckIcon size={16} /></span>
         </div>
         <div className="ui-field-line">
           <span className="t-label">סכום</span>

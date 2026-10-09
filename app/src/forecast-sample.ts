@@ -76,7 +76,7 @@ export const SAMPLE_EXPECTED: ExpectedMonths = {
   recurring: [
     party("expense", "s-power", "אור חשמל", 185_000n),
     party("expense", "s-home", "בטוח בית", 126_000n, true),
-    party("expense", "s-gas", "גז הצפון", 50_000n, true),
+    party("expense", "s-gas", "גז לדוגמה", 50_000n, true),
     party("expense", "s-clean", "שי ניקיון", 48_000n),
     party("income", "c-rent", "שוכר לדוגמה", 1_200_000n, true),
   ],

@@ -67,7 +67,7 @@ export const ProjectDetail: Story = {
           transactions: [
             {
               id: "t1",
-              description: "חומרי בניין השרון",
+              description: "חומרי בניין לדוגמה",
               doc_date: "2026-09-14",
               amount_net: -8_500_000n,
               direction: "expense",
@@ -156,6 +156,48 @@ export const ProjectMixedCurrency: Story = {
     </StoryRoute>
   ),
 };
+
+// FLOW-339: a profit in shekels and a loss in dollars; the band's label names both.
+export const ProjectMixedSigns: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/mix2" tabs>
+      <ExampleBar />
+      <ProjectDetailScreen
+        sample={{
+          id: "mix2",
+          name: "נמל לדוגמה",
+          status: "active",
+          state_label: "פעיל",
+          budget_agorot: null,
+          income_agorot: 100_000n,
+          direct_agorot: 40_000n,
+          shared_agorot: 0n,
+          profit_agorot: 60_000n,
+          by_currency: [
+            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, profit_minor: 60_000n },
+            { currency: "USD", income_minor: 50_000n, direct_minor: 175_000n, shared_minor: 0n, profit_minor: -125_000n },
+          ],
+          categories_by_currency: [
+            { currency: "ILS", id: "i1", name: "חומרים", amount_minor: 40_000n },
+            { currency: "USD", id: "u1", name: "הובלה", amount_minor: 175_000n },
+          ],
+          categories: [],
+          pending_count: 0,
+          transactions: [
+            { id: "ms1", description: "תשלום לקוח לדוגמה", doc_date: "2026-10-04", amount_net: 100_000n, direction: "income", category: null },
+            { id: "ms2", description: "ספק חומרים לדוגמה", doc_date: "2026-09-22", amount_net: -40_000n, direction: "expense", category: "חומרים" },
+            { id: "ms3", description: "לקוח חו״ל לדוגמה", doc_date: "2026-09-12", amount_net: 50_000n, currency: "USD", direction: "income", category: null },
+            { id: "ms4", description: "חברת הובלה לדוגמה", doc_date: "2026-08-28", amount_net: -175_000n, currency: "USD", direction: "expense", category: "הובלה" },
+          ],
+        }}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectMixedSignsDark: Story = { ...ProjectMixedSigns, globals: { theme: "dark" } };
+export const ProjectMixedSigns320: Story = { ...ProjectMixedSigns, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 const periodProject: NonNullable<ProjectDetailData> = {
   id: "p-a",

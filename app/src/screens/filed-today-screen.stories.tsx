@@ -18,7 +18,7 @@ const sampleFiled: FiledTodayRow[] = Array.from({ length: filedTodayCount }, (_,
   doc_date: "2026-09-29",
   amount_net: -350_000n,
   direction: "expense" as const,
-  supplier_name: index === 0 ? "מנופי המרכז בע״מ" : `ספק ${String(index + 1)}`,
+  supplier_name: index === 0 ? "מנופים לדוגמה בע״מ" : `ספק ${String(index + 1)}`,
   project_name: "שיפוץ הרצל 12",
   category_name: "חומרים",
 }));
