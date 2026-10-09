@@ -54,6 +54,18 @@ describe("setup step 5 reminder card", () => {
     expect(screen.getByRole("button", { name: "סיום" })).toHaveFocus();
   });
 
+  it("sits above the install demo and steps, so its answers clear the pinned סיום (FLOW-353)", () => {
+    const { container } = wrap(step({ prefs: NO_PREFS, support: "ok" }));
+    const card = container.querySelector(".ui-prompt-card");
+    const steps = container.querySelector(".ui-install-steps");
+    const demo = container.querySelector(".ui-setup-stage-host");
+    expect(card).not.toBeNull();
+    for (const after of [steps, demo]) {
+      expect(after).not.toBeNull();
+      if (card && after) expect(card.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
   it("is not asked once answered, when the reminder is on, where push can't work, or on an iPhone tab", () => {
     const cases: Array<{ prefs: NotificationPrefs; support: PushSupport }> = [
       { prefs: { ...NO_PREFS, prompt_answered: true }, support: "ok" },
