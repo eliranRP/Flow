@@ -625,9 +625,13 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   // The same-patch skip holds only when main left the database surface alone since the marked fork;
   // otherwise the gate runs, and a database branch runs every pgTAP file.
   assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));
-  const skip = local.indexOf('if node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork"; then');
+  const skip = local.indexOf('risk_out="$(node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork")" && {');
   assert.ok(skip > 0 && skip < local.indexOf('mode="same patch"'));
-  assert.ok(local.includes("(( ! base_risk )) || db_specs=(supabase/tests/database)"));
+  assert.ok(local.includes("if (( base_risk )) && base_area database; then db_specs=(supabase/tests/database); fi"));
+  // Only the phases main's risky areas reach run again: no lint, Storybook or smoke.
+  const only = local.indexOf("if (( base_only )); then\n  # Lint reads only");
+  assert.ok(only > 0 && only < local.indexOf('run_parts "$lint_key=lint" static unit'));
+  assert.ok(local.includes('if (( base_only )); then\n    echo "local-ci: Storybook smoke skipped (base risk only)."'));
   // FLOW-813: --full and FLOW_LOCAL_CI_NO_SKIP never skip a part.
   assert.ok(local.includes('if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi'));
   assert.match(local, /green\(\) \{\n  \(\( skips \)\) && /);
