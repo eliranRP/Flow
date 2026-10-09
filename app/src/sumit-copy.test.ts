@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { israelSyncPhrase, israelUsePhrase, msUntilNextIsraelDay, retryClock } from "./sumit-copy";
+import { hebrewSumitError, israelSyncPhrase, israelUsePhrase, msUntilNextIsraelDay, retryClock } from "./sumit-copy";
 
 const now = Date.parse("2026-09-28T20:00:00.000Z");
 
@@ -44,5 +44,11 @@ describe("msUntilNextIsraelDay", () => {
     const before = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(evening);
     const after = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(evening + wait);
     expect(after).not.toBe(before);
+  });
+});
+
+describe("hebrewSumitError import date", () => {
+  it("names a bad import date instead of the generic failure", () => {
+    expect(hebrewSumitError("import date is invalid")).toBe("תאריך הייבוא לא תקין. בחרו תאריך אחר.");
   });
 });

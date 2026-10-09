@@ -4,6 +4,7 @@ const MERCURY_ERRORS: Record<string, string> = {
   unauthorized: "אין הפעלה מחוברת.",
   "no company": "אין חברה פעילה לחיבור.",
   "api key is required": "צריך מפתח.",
+  "import date is invalid": "תאריך הייבוא לא תקין. בחרו תאריך אחר.",
   "could not store the connection": "לא הצלחנו לשמור את החיבור.",
   "Mercury is not connected": "Mercury לא מחובר.",
   sync_failed: "הרענון נכשל. נסו שוב.",

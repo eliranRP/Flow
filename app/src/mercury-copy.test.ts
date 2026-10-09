@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mercuryRefreshDone } from "./mercury-copy";
+import { hebrewMercuryError, mercuryRefreshDone } from "./mercury-copy";
 
 describe("mercuryRefreshDone (FLOW-509)", () => {
   it("counts the new lines after a run that read everything", () => {
@@ -15,5 +15,11 @@ describe("mercuryRefreshDone (FLOW-509)", () => {
     expect(mercuryRefreshDone({ complete: true, inserted: "3" })).toBe("הרענון הסתיים.");
     expect(mercuryRefreshDone(null)).toBe("הרענון הסתיים.");
     expect(mercuryRefreshDone(undefined)).toBe("הרענון הסתיים.");
+  });
+});
+
+describe("hebrewMercuryError import date", () => {
+  it("names a bad import date instead of the generic failure", () => {
+    expect(hebrewMercuryError("import date is invalid")).toBe("תאריך הייבוא לא תקין. בחרו תאריך אחר.");
   });
 });
