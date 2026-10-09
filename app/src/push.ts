@@ -54,18 +54,13 @@ export function pushSupport(): PushSupport {
   return "ok";
 }
 
-// The generated database types do not carry the push RPCs (#335) yet, so they are called untyped.
-// Each call names its function literally so scripts/smoke-allow-rpcs.test.mjs sees it.
-type RpcResult = PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
-type UntypedClient = { rpc: (name: string, args?: Record<string, unknown>) => RpcResult };
-
-function db(): UntypedClient {
+function db() {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
-  return supabase as unknown as UntypedClient;
+  return supabase;
 }
 
-async function result(call: RpcResult): Promise<unknown> {
+async function result(call: PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>): Promise<unknown> {
   const { data, error } = await call;
   if (error) throw Object.assign(new Error(error.message), error.code ? { code: error.code } : {});
   return data;
@@ -92,12 +87,12 @@ export function useNotificationPrefsQuery(enabled: boolean) {
   return useQuery({ queryKey: PUSH_PREFS_KEY, enabled, retry: false, queryFn: readNotificationPrefs });
 }
 
-/** Null leaves a switch as it is. Returns the stored prefs. */
+/** A switch left out stays as it is. Returns the stored prefs. */
 export async function saveNotificationPrefs(change: Partial<Record<NotificationPrefKey, boolean>>): Promise<NotificationPrefs> {
   return prefsFromData(await result(db().rpc("set_notification_prefs", {
-    p_new_transaction: change.new_transaction ?? null,
-    p_evening_reminder: change.evening_reminder ?? null,
-    p_weekly_summary: change.weekly_summary ?? null,
+    p_new_transaction: change.new_transaction,
+    p_evening_reminder: change.evening_reminder,
+    p_weekly_summary: change.weekly_summary,
   })));
 }
 
