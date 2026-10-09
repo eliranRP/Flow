@@ -14,13 +14,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-804 option A part 1 (owner's pick 2026-10-09): code split so Home loads only its own code, on `claude/project-thread-qenhll` (`App.tsx`, `screen-loaders.ts`, `use-books.ts`, `setup/route.tsx`, `vite.config.ts`) | FLOW-804 A part 2: size budget, 2-second Home test, phone flow tests |
-| Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
+| Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
+| Dev lane 2 | FLOW-406 server 1b: roll-up reads (`get_project` roll-up and own rows, `project_category_months` parent rows, `get_breakdown` level, search parent match with `category_exact`), PR on `claude/project-thread-pz6l1n` (1a merged #354) | FLOW-406 server 2: project groups |
 | Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
 | UI lane 1 | FLOW-106 screens: the split editor "חלוקת התשלום" (match sheet merged #374) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-309 pairing on the review card (option A: "✓ שולם · קבלה dd/mm" under the amount, on #350's `receipts`/`paid`/`paid_on`) + long supplier names (overflow-wrap on the review supplier line, the project picker, unpaid hints, the add-sheet hint) | Next UI task for the review and transaction screens |
 | UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-502 setup step 5 offers the evening reminder once | Next small ready item from the lane manager |
@@ -125,7 +125,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
-| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
+| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
@@ -613,9 +613,11 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-309"></a>
 ### FLOW-309 · Review queue follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready (UI lane 2 has the counter, focus, spacing, e2e and mid-swap items, 2026-10-09) · **Depends on:** —
-- [ ] Unit-test the live refresh of filed-today and the transaction on approve and undo; restore the toast fade-ramp assertion.
+- [x] Unit-test the live refresh of filed-today and the transaction on approve and undo; restore the toast fade-ramp assertion. (Backlog bug fixes: `review-refresh.test.tsx` keeps both reads open and checks each is read again after אישור and after ביטול. `toast.spec.ts` `assertFade`: after a pad move the toast must ramp, with no pad move it must appear in one frame (0075). No flow pads the sheet today, so the ramp branch has no case yet.)
+- [ ] A toast ramp case once a flow pads the sheet (or a test-only safe area that forces a pad, as the spec before 263b1d25 did).
 - [ ] Decide whether the queue banner counts every filed-today row (it should match the list); align the preview's filed-today list with live.
-- [ ] Fixtures for a single-project item with `project_suggested` false; a real soft-keyboard test.
+- [x] Fixtures for a single-project item with `project_suggested` false. (Already there: `dev/review-e2e-fixture.ts` seed rows and `e2eChangeSample` with one project, `books-states-card.test.tsx` ChangeForm with one project, and the Jev review tests.)
+- [ ] A real soft-keyboard test for the review change sheet.
 - [x] (UI lane 2, #304: tabular digits, and each number reserves the total's digits; at 320 the counter and its bar stay put from 1 to 10 of 12, e2e `review-fit.spec.ts`. Only the total itself crossing 9→10 or 99→100 still widens it once) Counter shifts sideways at 9→10 and 99→100 (tabular digits, reserve width).
 - [x] (UI lane 2, #304: with focus in the bar, focus goes to the next card's first button after אישור or דלג, to לדף הבית when the queue empties, and back to the returning card's אישור after ביטול on the toast; a tap that never focused the bar moves nothing, and a tap's focus draws no ring) Focus falls to body after a successful אישור or ביטול; move it to the next card's אישור.
 - [x] (UI lane 2, #304: the banner sits 8px under the counter row above 720px tall, 4px in the short-phone block. Measured at 320x693 with a two-line supplier, Jev's two-line reason and the wrapped plural banner: the card ends 21px above the pinned bar, שינוי and דלג 8px above the tab bar (the pinned bar, #278 and #296 already fit it); the page scrolls 10px. The plural title can't share a line with לרשימה at 320 without new copy (242px for 188)) Banner and card spacing: keep the 8px step and trim only on short screens; at 320×693 a wrapping supplier plus a reason line pushes שינוי/דלג under the tab bar; a one-line banner saves 44px.
@@ -639,7 +641,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes. (Not reproduced, no regression test: a one-off per-frame probe of the Connections ניתוק confirm saw the top scrim fade 1.00→0 over about 220ms after Escape, ✕ and Back; #298.)
 - [x] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row. (#298: Escape marks the returned control's ring until it blurs; route sheets do the same; Categories' create, merge, hide and move sheets return focus to their opener.)
 - [x] (owner, 2026-10-09: "Close sheet", Back keeps closing the sheet as today, no code change) Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8).
-- [ ] Confirm a quick double tap on the help backdrop can't close the code sheet (split from the Back decision above; no test covers it yet).
+- [x] Confirm a quick double tap on the help backdrop can't close the code sheet (split from the Back decision above). (Backlog bug fixes: `assistant-settings.test.tsx`; the second tap lands on the code sheet's backdrop after the help has closed, and the code stays.)
 - [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung. (Dev lane 1, 2026-10-09: the first two done in `keyboard-inset.ts`: while a field has focus, the keyboard is measured against the layout height from before it, and while the keyboard is closed a drawer lift Vaul left behind is dropped after Vaul's own listener. Left: `--sheet-gap` at 320 (a visual change for the design lead) and the real-device QA.)
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
@@ -958,20 +960,20 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-351"></a>
 ### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 done #372; items 1 and 2 in the second PR) · **Depends on:** —
 - **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
-- [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
-- [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
-- [ ] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
-- [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
-- [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
+- [x] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
+- [x] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
+- [x] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
+- [x] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
+- [x] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
 <a id="flow-352"></a>
 ### FLOW-352 · Phone polish after the October 9 evening deploy (cycle 11)
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** item 1 after #371, item 4 after #372 (same files)
 - **Source:** cycle 11 phone review of deploy 23d1fd5, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-11/shots/`.
-- [ ] Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
+- [x] (UI lane 2, #380: a value that doesn't fit beside its pill takes the row's width and the pill drops under it; the value clamps at two lines) Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
 - [ ] Picker sheets: `.ui-radio-desc` uses the label style (weight 500, secondary grey), so the line under an option reads as heavy as the option name. Use the row hint style: weight 400, `--color-text-muted` (css/12-split.css:163-171). Shots of 3-4 pickers before and after.
 - [x] (UI lane 1, with the FLOW-106 split editor PR) Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
 - [ ] Kept-out rows fade at 50% opacity, which drops the "מחוץ לרווח" line to about 2.1:1 and the name to 3.4:1 in light mode. Fade the icon, name and amount to about 0.6 and keep the hint at full muted grey (about 5.8:1) (css/02-fields-sheets.css:197-199). Design lead's call within the owner's pick C; the rows still read as faded.
@@ -1031,9 +1033,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** One level of sub-categories with a parent rollup; project groups; starter categories by field in setup. Plan: decision [0164](../decisions/0164-sub-categories-and-groups.md) (data option A).
 - **Acceptance:** each server PR has pgTAP for the one-level, kind and loan-part rules, roll-up = sum of parts, unchanged company totals across the `group_name` backfill, and tenant isolation; the screens match the approved mockups.
 - [x] Plan and mockups approved (owner, 2026-10-09: data A, drill-in screens).
-- [ ] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
+- [x] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
   - [x] 1a (#354): `parent_id`, the rules, the `group_name` backfill and mirror, `set_category_parent`, refusals on a parent, `list_categories` fields, MCP `set_category_parent` and `parent_id` on the create tools.
-  - [ ] 1b: roll-up reads (`get_project`, `project_category_months`, `get_breakdown`, search).
+  - [x] 1b (#363): roll-up reads: `get_project` `category_rollups*` and `parent_id`, `project_category_months` `parents[]`, `get_breakdown` by parent (MCP `level`), search parent match with `category_exact`.
 - [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.
@@ -1278,9 +1280,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready (the flag-read stall and the tests done in #330; the note height stays with the UI lanes) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (the flag-read stall and the tests in #330; the card height by UI lane 2) · **Depends on:** —
 - [x] If the flag read stalls past 1s while Jev is on, the card swaps back and writes the flag off; a flag that's off while Jev is on leaves one approvable read on the next launch; the 5-minute flag cache delays a server-side change; each next card waits about 0.8s again during a long stall. (Dev lane 1, #330: a stall writes nothing and is not cached as off, so the next open of the review screen asks again; the flag cache is one minute; after a stalled suggestion read the next card does not wait. The card still shows without Jev during a stall, since it can't know the answer; a fill that lands later still shows.)
-- [ ] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden.
+- [x] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden. (UI lane 2: while a row shows its skeleton the ✦ line is held, hidden, so a reason or "מולא ע״י Jev" lands in place; e2e checks the heights at 390 and 320.)
 - [x] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render. (The scoped key takes this session's live answer; the binding runs in a layout effect; test in `jev-review-open.test.tsx`.)
 - [x] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads. The two tests: #330, `jev-review-open.test.tsx`.)
 - [x] Delete the old shared connector key once per launch, not on every read.

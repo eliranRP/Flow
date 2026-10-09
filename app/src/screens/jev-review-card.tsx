@@ -39,7 +39,7 @@ import {
   type JevQueueData,
   type JevReviewState,
 } from "./jev-review";
-import type { ReviewFlag } from "../review-copy";
+import { jevReasonText, type ReviewFlag } from "../review-copy";
 
 export const JEV_REVIEW_SAMPLE: JevPrefill = {
   suggestionId: "s1",
@@ -265,32 +265,64 @@ const LONG_PROJECT = "וילה רעננה — שיפוץ מלא של הקומה 
 const LONG_CATEGORY = "חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי והסביבה הקרובה";
 const LONG_SUPPLIER = "ספק חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי";
 
-const LAYOUT_CASES = [
+type LayoutSuggestion = {
+  project?: string;
+  projectSuggested?: boolean;
+  projectJev?: boolean;
+  category?: string;
+  categorySuggested?: boolean;
+  categoryJev?: boolean;
+};
+
+/** The longest reason Jev gives, so the held line is checked against the widest case. */
+const LAYOUT_WHY = jevReasonText({ reason: "usual_for_party", partyFilings: 12, matchingFilings: 10 }, "expense");
+
+/**
+ * Each case waits with the rows as they stand and settles on Jev's answer. FLOW-704: a card Jev fills
+ * (a reason, or "מולא ע״י Jev" with ביטול) keeps its height; a card Jev can't fill holds no line.
+ */
+const LAYOUT_CASES: readonly {
+  id: string;
+  waiting: LayoutSuggestion;
+  settled: LayoutSuggestion;
+  why?: boolean;
+  auto?: boolean;
+}[] = [
   {
     id: "filled",
-    suggestion: {
-      project: "וילה רעננה",
-      projectSuggested: true,
-      category: "חומרים",
-      categorySuggested: true,
-    },
+    waiting: { project: "וילה רעננה", projectSuggested: true, category: "חומרים", categorySuggested: true },
+    settled: { project: "וילה רעננה", projectSuggested: true, projectJev: true, category: "חומרים", categorySuggested: true, categoryJev: true },
+    why: true,
+  },
+  {
+    id: "auto",
+    waiting: { project: "וילה רעננה", projectSuggested: true, category: "חומרים", categorySuggested: true },
+    settled: { project: "וילה רעננה", projectSuggested: true, projectJev: true, category: "חומרים", categorySuggested: true, categoryJev: true },
+    auto: true,
   },
   {
     id: "note",
-    suggestion: { project: "פרויקט שמור" },
+    waiting: { project: "פרויקט שמור" },
+    settled: { project: "פרויקט שמור", category: "חומרים", categorySuggested: true, categoryJev: true },
+    why: true,
   },
   {
     id: "sumit",
-    suggestion: { project: "פרויקט שמור", category: "קטגוריה שמורה" },
+    waiting: { project: "פרויקט שמור", category: "קטגוריה שמורה" },
+    settled: { project: "פרויקט שמור", category: "קטגוריה שמורה" },
   },
-] as const;
+];
 
 function LayoutCard({
   suggestion,
   pending,
+  why = false,
+  auto = false,
 }: {
-  suggestion: { project?: string; projectSuggested?: boolean; category?: string; categorySuggested?: boolean };
+  suggestion: LayoutSuggestion;
   pending: boolean;
+  why?: boolean;
+  auto?: boolean;
 }) {
   return (
     <ReviewCard
@@ -300,20 +332,22 @@ function LayoutCard({
       vatLine="לפני מע״מ · מע״מ ₪3,960"
       suggestion={suggestion}
       pending={pending}
+      jevWhy={why ? LAYOUT_WHY : null}
+      jevFilled={auto ? { onUndo: () => undefined } : null}
       onProject={() => undefined}
       onCategory={() => undefined}
     />
   );
 }
 
-/** Waiting and settled pairs for the three note layouts. */
+/** Waiting and settled pairs: Jev fills with a reason, fills on its own, fills one row, and fills nothing. */
 export function JevReviewLayout() {
   return (
     <div>
       {LAYOUT_CASES.map((item) => (
         <div key={item.id} data-layout={item.id}>
-          <div data-phase="waiting"><LayoutCard suggestion={item.suggestion} pending /></div>
-          <div data-phase="settled"><LayoutCard suggestion={item.suggestion} pending={false} /></div>
+          <div data-phase="waiting"><LayoutCard suggestion={item.waiting} pending /></div>
+          <div data-phase="settled"><LayoutCard suggestion={item.settled} pending={false} why={item.why} auto={item.auto} /></div>
         </div>
       ))}
     </div>
