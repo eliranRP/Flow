@@ -89,6 +89,29 @@ export const ProjectsSearchDark320: Story = {
 };
 
 /** FLOW-410: with no query every active project shows, past the first six. */
+/** FLOW-342 (A): a name that is no project offers the transaction search, one row. */
+export const ProjectsMiss: Story = {
+  name: "Projects, no project matches",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsSearch} initialQuery="חשמל" />
+    </StoryRoute>
+  ),
+};
+export const ProjectsMissDark: Story = { ...ProjectsMiss, name: "Projects, no project matches, dark", globals: { theme: "dark" } };
+export const ProjectsMiss320: Story = {
+  ...ProjectsMiss,
+  name: "Projects, no project matches, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const ProjectsMissDark320: Story = {
+  ...ProjectsMiss,
+  name: "Projects, no project matches, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
 export const ProjectsManyActive: Story = {
   name: "Projects, every active project",
   render: () => (

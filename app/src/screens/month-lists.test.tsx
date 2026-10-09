@@ -96,6 +96,19 @@ describe("project recent list months", () => {
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");
   });
 
+  it("leads a split line's row with this project's part, and names the whole line quietly (owner, 2026-10-09)", () => {
+    wrap(<ProjectDetailScreen sample={project([
+      { ...txn("a", "2026-09-14", -317_000n, "expense"), parts_minor: 25_000n },
+      txn("c", "2026-09-10", -100_000n, "expense"),
+    ])} />);
+    const split = screen.getByRole("link", { name: /^Line a/ });
+    expect(split.querySelector(".ui-num")?.textContent).toBe("−₪250.00");
+    expect(split).toHaveTextContent("מתוך ₪3,170");
+    const plain = screen.getByRole("link", { name: /^Line c/ });
+    expect(plain.querySelector(".ui-num")?.textContent).toBe("−₪1,000.00");
+    expect(plain).not.toHaveTextContent("מתוך");
+  });
+
   it("takes a signed share as it comes: a reversal part is already minus (decision 0138)", () => {
     wrap(<ProjectDetailScreen sample={project([
       // A supplier refund filed as income: 70.00 left as income, 30.00 put back against expenses.

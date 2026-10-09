@@ -12,6 +12,8 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:6193",
     serviceWorkers: "block",
+    // The pre-push gate points this at a cloud container's Chromium when Playwright's can't download.
+    ...(process.env.FLOW_CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.FLOW_CHROMIUM_PATH } } : {}),
   },
   webServer: {
     command: "python3 e2e/storybook-static-server.py",

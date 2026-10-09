@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | FLOW-309 and FLOW-704 server follow-ups |
 | Dev lane 2 | FLOW-704 server: `jev_key_status` RPC for the Jev Settings "no key" row; FLOW-509 follow-ups (runbook, read-only scope note, surviving mutations), PR #321 | The lane manager's next non-UI item |
-| UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
+| UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 Search option C (the owner's pick 2026-10-09): one-line rows, no ".00", "נטו" month heads (FLOW-704 app side merged #315) | The FLOW-704 card shrink after UI lane 2's review-card PR |
@@ -114,9 +114,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
-| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
+| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | in progress (owner picked A; #314) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
-| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
+| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 | 71 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | in-progress (#325) |
 
@@ -873,7 +873,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-342"></a>
 ### FLOW-342 · Two magnifiers on the Projects tab
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** in progress (owner picked A on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The Projects tab shows two identical magnifiers about 100px apart: the header icon opens transaction search and the field below filters projects. Options: (A) the field alone, and a project-name miss offers "חיפוש בתנועות"; (B) keep both and label the header icon.
 - **Acceptance:** owner's choice on a card; a design log entry.
 
@@ -888,7 +888,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-344"></a>
 ### FLOW-344 · Loan setup preview while the form is incomplete
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **Type:** PLAN FIRST · **Status:** in progress (owner picked B, hide, on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
 - **What:** With the amount cleared, the preview keeps the last result (₪599.55 a month) and only turns muted, so it still reads as this loan's payment. Options: (A) "—" in place of the figure until the form is valid; (B) hide the preview until then.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 

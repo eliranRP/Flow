@@ -82,11 +82,10 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Breakdown lines | a line | Opens the transaction. | never | no | route `/transactions/:id` | none | unit |
 | Breakdown lines | עוד תנועות | Loads the next 40 lines with `get_breakdown_lines`. | never | the button | more lines | the shared error state | unit |
 | Projects | search field | FLOW-410. Filters every project by name or status, finished ones included, whenever the query is not empty. A finished match reads "הסתיים" as its hint. With an empty query every active project shows, with no cap. | never | no | rows match the query | none | unit, e2e |
-| Projects | ניקוי החיפוש | Clears the query. Shown when the filter matches nothing. | never | no | the query is empty | none | pass |
+| Projects | חיפוש בתנועות: {text} | FLOW-342 (A). The one row shown when the filter matches no project: magnifier, the text, a chevron. Opens search with the text typed (keeps the preview flag); the field's ✕ clears the filter. | never | no | route `/search?q=…` | none | unit, e2e |
 | Projects | a project row | Opens that project. | never | no | route `/projects/:id` | none | pass |
 | Projects | finished expander | "עוד N שהסתיימו" ("עוד פרויקט אחד שהסתיים" for one), shown when the query is empty and there is a finished project. Reveals finished projects. | never | no | the extra rows appear | none | pass |
 | Projects, empty | פרויקט חדש | Opens the project sheet. With projects, the header has no פרויקט חדש: it is on + (FLOW-331). | never | no | sheet title פרויקט | none | pass |
-| Projects | חיפוש תנועות | FLOW-323. The same magnifier at the end of the header bar, alone in the header (FLOW-331). Opens search with the field focused. | never | no | route `/search`, the field focused | none | e2e |
 | Projects | שמירה on the new-project sheet | Calls `upsert_project`. | never | the button is busy | toast "הפרויקט נשמר", sheet closes | toast "לא הצלחנו לשמור את הפרויקט." | pass |
 | Projects | ביטול on the new-project sheet | Closes the sheet without saving. | never | no | sheet gone | none | pass |
 | Projects | שם on the new-project sheet | A tap on the left edge, the centre, or the right edge focuses the field. | never | no | the text field is focused | none | pass |
