@@ -35,3 +35,20 @@ test("pgtapSpecs picks changed tests and tests naming a changed object", () => {
 test("pgtapSpecs picks nothing for a change outside the database", () => {
   assert.deepEqual(pgtapSpecs(["docs/backlog/TASKS.md"], new Map([[`${T}/a.test.sql`, "select 1;"]]), () => null), []);
 });
+
+test("namesIn reads the in-place patch, drops, policies and indexes, and skips returns trigger", () => {
+  const sql = `
+    select pg_temp.anchor_count(pg_get_functiondef('public.list_gizmos(uuid, text)'::regprocedure), 'x');
+    drop function if exists private.old_gizmo;
+    create policy gizmo_read on public.gizmo_rows for select using (true);
+    create index gizmo_idx on gizmo_parts (id);
+    create function private.touch_gizmo() returns trigger security definer set search_path = '' as $$ begin return new; end $$;`;
+  assert.deepEqual([...namesIn(sql)].sort(), ["gizmo_parts", "gizmo_rows", "list_gizmos", "old_gizmo", "touch_gizmo"]);
+});
+
+test("pgtapSpecs runs every file for a migration that names nothing, or a helper change", () => {
+  const tests = new Map([[`${T}/a.test.sql`, "select 1;"], [`${T}/b.test.sql`, "select 2;"]]);
+  const all = [`${T}/a.test.sql`, `${T}/b.test.sql`];
+  assert.deepEqual(pgtapSpecs(["supabase/migrations/1_x.sql"], tests, () => "update public.rows set a = 1;"), all);
+  assert.deepEqual(pgtapSpecs(["supabase/tests/helpers.sql"], tests, () => null), all);
+});

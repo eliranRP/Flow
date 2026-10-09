@@ -9,7 +9,7 @@
 #     - up to FLOW_E2E_MAX (6) e2e specs that reach them, the branch's own specs first (Docker);
 #     - the Storybook build with its layout, clip and secret specs, only when a story spec or the
 #       Storybook setup changes;
-#     - for a migration or pgTAP change: a fresh local database (every migration applied), the
+#     - for a migration, pgTAP, seed or flow-mcp change: a fresh local database (every migration applied), the
 #       flow-mcp smoke, the db types check, and the pgTAP files that name what changed
 #       (scripts/pgtap-specs.mjs).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
@@ -18,7 +18,8 @@
 # On success it writes .git/flow-local-ci with the commit it passed on, so the hook can skip a repeat.
 # FLOW-813: the default run skips the app parts (typecheck, builds, app unit tests, Storybook) whose
 # inputs (the git tree of app, packages, design, _shared and the root configs) already passed here.
-# --full, or FLOW_LOCAL_CI_NO_SKIP=1, runs everything. The cache of green runs is
+# --full runs everything; FLOW_LOCAL_CI_NO_SKIP=1 only turns these skips off. CSS and token changes
+# get their layout checks on main. The cache of green runs is
 # $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a folder
 # every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable; set it
 # empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
@@ -100,6 +101,10 @@ lint_key="lint-$({ git ls-tree -r HEAD | grep -vE $'\t(docs|design|supabase)/'; 
 # The files this branch changes against main (git diff origin/main...HEAD). Main's own changes, which
 # a merge of main brings in, already passed on main, so the default run never re-checks them.
 pr_fork="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+if [[ -z "$pr_fork" ]] && (( ! full )); then
+  echo "local-ci: no origin/main to compare with. Run git fetch origin main, or push with FLOW_LOCAL_CI=full." >&2
+  exit 1
+fi
 pr_files=""
 [[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
 # The files changed since $1 that this branch also changes against main.
@@ -164,12 +169,12 @@ if (( ! full )); then
   fi
 fi
 
-# FLOW-813: a branch that changes a migration or a pgTAP file gets a fresh local database (every
+# FLOW-813: a branch that changes a migration, pgTAP, the seed or flow-mcp gets a fresh database (every
 # migration applied by the reset), the flow-mcp smoke, the db types check, and the pgTAP files that
 # name what it changed (scripts/pgtap-specs.mjs). Main runs every pgTAP file.
 db_specs=()
 db_change=0
-if (( ! full )) && grep -qE '^supabase/(migrations|tests/database)/' <<<"$pr_files"; then
+if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.toml$|functions/flow-mcp/)' <<<"$pr_files"; then
   db_change=1
   db_list="$(node scripts/pgtap-specs.mjs <<<"$pr_files")"
   [[ -z "$db_list" ]] || mapfile -t db_specs <<<"$db_list"
@@ -379,7 +384,7 @@ storybook_smoke() {
     changed="$(branch_changes "$base")"
     # The vitest Storybook project above already ran the stories the change reaches. The build and
     # its layout, clip and secret specs run when a story spec or the Storybook setup changes.
-    if ! grep -qE '^app/e2e/storybook-[^/]+\.spec\.ts$|^app/\.storybook/|^app/playwright\.storybook\.config\.ts$|^scripts/storybook-stories\.mjs$|^(package\.json|pnpm-lock\.yaml)$' <<<"$changed"; then
+    if ! grep -qE '^app/e2e/storybook-|^app/\.storybook/|^app/playwright\.storybook\.config\.ts$|^scripts/storybook-stories\.mjs$|^(app/)?package\.json$|^pnpm-lock\.yaml$' <<<"$changed"; then
       echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
