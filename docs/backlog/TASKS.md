@@ -124,6 +124,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
+| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -947,6 +948,17 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Date sheet ("ייבוא מתאריך" and the loan setup date sheet): the month arrows are ‹ › text glyphs that RTL mirrors, so both point at the month name. Use outward SVG chevrons (§3.4). The picked day is a square box where mockup 15b has a filled circle; at 320 a rounded sliver shows beside it. This also holds the 15b date details that a done FLOW-115 item left open.
 - [ ] Review reminder card on an iPhone tab: "למסך הבית" in the card's note is plain text, with הבנתי as the only action. Link it to the install steps, as Settings → התראות does.
 - [ ] Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
+<a id="flow-351"></a>
+### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
+- [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
+- [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
+- [ ] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
+- [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
+- [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
 ## Projects and reports
