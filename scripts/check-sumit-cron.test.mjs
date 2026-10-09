@@ -11,7 +11,7 @@ const dailySchedule = new URL("../supabase/migrations/20261003140000_sumit_daily
 const drainUrl = new URL("../supabase/migrations/20261003160000_sumit_drain_url.sql", import.meta.url);
 const engine = new URL("../supabase/migrations/20261003210000_connector_engine.sql", import.meta.url);
 const totals = new URL("../supabase/migrations/20261004130000_mercury_ils_totals.sql", import.meta.url);
-const mercuryUrl = new URL("../supabase/migrations/20261013030000_mercury_sync_atomic.sql", import.meta.url);
+const mercuryUrl = new URL("../supabase/migrations/20261013040000_mercury_sync_atomic.sql", import.meta.url);
 const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
 const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 
