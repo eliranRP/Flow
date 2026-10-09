@@ -136,6 +136,19 @@ describe("CardSwipe", () => {
     expect(onStep).not.toHaveBeenCalled();
   });
 
+  it("a second finger outside the card still stops the release from stepping", () => {
+    setReducedMotion(false);
+    const onStep = vi.fn();
+    render(<Card onStep={onStep} />);
+    const node = box();
+    fireEvent.touchStart(node, { touches: [{ clientX: 100, clientY: 300 }] });
+    fireEvent.touchMove(node, { touches: [{ clientX: 260, clientY: 300 }] });
+    // The other finger rests on the header, so the card never saw its touchstart.
+    fireEvent.touchEnd(node, { touches: [{ clientX: 200, clientY: 40 }], changedTouches: [{ clientX: 260, clientY: 300 }] });
+    expect(onStep).not.toHaveBeenCalled();
+    expect(node.style.transform).toBe("");
+  });
+
   it("does not swipe while the page is pinch-zoomed, so a sideways pan moves the zoomed view", () => {
     setReducedMotion(false);
     let onResize: (() => void) | null = null;

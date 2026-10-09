@@ -541,6 +541,8 @@ Everything else follows by area, roughly in priority order inside each area.
   - [ ] From #100's design session: add the project's waiting list (card rows only) to the walk.
   - [ ] ˅ at the last loaded category row loads the next page.
   - [ ] From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
+  - [ ] From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
+  - [ ] From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail

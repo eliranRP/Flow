@@ -130,7 +130,8 @@ export function CardSwipe({
     const start = track.current;
     track.current = null;
     settle();
-    if (start?.axis !== "x") return;
+    // A finger still down (one that landed outside the card too) makes this no swipe.
+    if (start?.axis !== "x" || event.touches.length > 0) return;
     const touch = event.changedTouches[0];
     if (!touch) return;
     const width = box.current?.getBoundingClientRect().width ?? 0;
