@@ -1,3 +1,5 @@
+import { formatDayMonth } from "./ui/date-math";
+
 const SUMIT_ERRORS: Record<string, string> = {
   unauthorized: "אין הפעלה מחוברת.",
   "no company": "עדיין אין עסק על החשבון.",
@@ -40,7 +42,10 @@ function previousIsraelDay(now: number): string {
   return israelDayKey(probe);
 }
 
-/** Today is a clock, yesterday names אתמול, and an older day is D.M. */
+/**
+ * Today is a clock, yesterday names אתמול, and an older day is dd/mm (dd/mm/yyyy in another year),
+ * as the investment card prints it (FLOW-356, DESIGN-RULES §3.5).
+ */
 function israelWhen(iso: string, now: number, lead: string): string | null {
   const at = Date.parse(iso);
   if (!Number.isFinite(at)) return null;
@@ -49,17 +54,16 @@ function israelWhen(iso: string, now: number, lead: string): string | null {
   if (clock == null) return null;
   if (day === israelDayKey(now)) return `${lead} ב-${clock}`;
   if (day === previousIsraelDay(now)) return `${lead} אתמול ב-${clock}`;
-  const [, month, date] = day.split("-");
-  return `${lead} ב-${String(Number(date))}.${String(Number(month))}`;
+  return `${lead}\u00A0${formatDayMonth(day, new Date(now))}`;
 }
 
-/** Last-sync phrase in Israel time. Today is a clock, yesterday names אתמול, and an older day is D.M. */
+/** Last-sync phrase in Israel time. Today is a clock, yesterday names אתמול, and an older day is dd/mm. */
 export function israelSyncPhrase(iso: string | null | undefined, now = Date.now()): string | null {
   if (!iso) return null;
   return israelWhen(iso, now, "עודכן");
 }
 
-/** Last assistant use, with the same today / yesterday / D.M rules. */
+/** Last assistant use, with the same today / yesterday / dd/mm rules. */
 export function israelUsePhrase(iso: string | null | undefined, now = Date.now()): string | null {
   if (!iso) return null;
   return israelWhen(iso, now, "שימוש אחרון");

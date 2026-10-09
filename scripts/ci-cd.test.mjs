@@ -620,7 +620,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
   assert.match(local, /--full\) full=1 ;;/);
   // The scoped vitest runs (unit and storybook) follow scripts/storybook-stories.mjs's relatedRun.
-  assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1'));
+  assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1'));
   assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests'));
   // The same-patch skip holds only when main left the database surface alone since the marked fork;
   // otherwise the gate runs, and a database branch runs every pgTAP file.
@@ -671,4 +671,13 @@ test("the gate treats design images as docs and asks storybook-stories.mjs wheth
   assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then\n  mode="docs"'));
   assert.ok(local.includes('"$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes'));
   assert.ok(local.includes('${base:+--base "$base"} <<<"$changed" >"$scope"'));
+});
+
+test("the gate starts containerd then dockerd and fails, never skips, when a change needs Docker and it won't start", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  assert.ok(local.includes('(sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)'));
+  assert.ok(local.includes('(sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)'));
+  assert.match(local, /if ! start_docker; then[\s\S]*?Nothing is left to main\.[\s\S]*?exit 1\n  else/);
+  assert.doesNotMatch(local, /Docker is not running, so the e2e specs/);
+  assert.ok(local.includes("skipping them: ${e2e_specs[*]}"));
 });

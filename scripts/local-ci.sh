@@ -28,8 +28,9 @@
 # $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a folder
 # every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable; set it
 # empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
-# commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run
-# leaves the e2e specs to main and says which; a database change needs Docker.
+# commits, so a squash merge whose tree a lane passed counts too. A run that needs Docker (a
+# database change, or e2e specs that reach the change) starts it (containerd, then dockerd) and
+# fails when it can't. No required phase is skipped; a phase left to main says why.
 set -euo pipefail
 
 full=0
@@ -232,15 +233,15 @@ branch_changes() {
 }
 
 # Where this branch left main, when every app input the branch changes is an app, e2e, shared or
-# _shared .ts/.tsx source, a migration (a test globs them) or app CSS (no test imports it): the vitest
-# module graph finds the tests and stories those reach. Anything else (setup, config, the design
-# package, scripts, lockfile, a deleted or renamed file) runs all (scripts/storybook-stories.mjs,
-# relatedRun).
+# _shared .ts/.tsx source, a migration (a test globs them), app CSS (no test imports it), or a
+# manifest, tsconfig or lockfile whose change the tests don't read: the vitest module graph finds the
+# tests and stories those reach. Anything else (setup, config, the design package, scripts, a
+# dependency, a deleted or renamed file) runs all (scripts/storybook-stories.mjs, relatedRun).
 changed_base() {
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
   [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
-    | node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1
+    | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
   echo "$pr_fork"
 }
 
@@ -292,29 +293,48 @@ if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.to
 fi
 # The e2e specs read the database: they run again only when main moved it.
 if (( base_only )) && ! base_area database; then
+  (( ${#e2e_specs[@]} == 0 )) \
+    || echo "local-ci: this patch already passed its e2e specs, and main has not moved the database since; skipping them: ${e2e_specs[*]}"
   e2e_specs=()
   e2e_left=1
 fi
 
+# Starts Docker when it is down. In cloud containers dockerd alone can fail with "timeout waiting
+# for containerd", so containerd starts first and dockerd is pointed at its socket.
+start_docker() {
+  local sock=/run/containerd/containerd.sock
+  docker info >/dev/null 2>&1 && return 0
+  if ! pgrep -x dockerd >/dev/null 2>&1; then
+    if [[ ! -S "$sock" ]] && ! pgrep -x containerd >/dev/null 2>&1; then
+      (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
+      for _ in $(seq 1 15); do [[ -S "$sock" ]] && break; sleep 1; done
+    fi
+    if [[ -S "$sock" ]]; then
+      (sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
+    else
+      (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
+    fi
+  fi
+  for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && return 0; sleep 1; done
+  return 1
+}
+
 supabase_exit=""
 if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
   phase "Docker and local Supabase"
-  if ! docker info >/dev/null 2>&1; then
-    (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
-    for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done
-  fi
-  if ! docker info >/dev/null 2>&1; then
-    if (( full )); then
-      echo "local-ci: Docker is not running and could not be started." >&2
-      exit 1
+  if ! start_docker; then
+    if (( full )); then need="the full run"
+    elif (( db_change )); then need="this change touches the database"
+    else need="these e2e specs reach this change: ${e2e_specs[*]}"
     fi
-    if (( db_change )); then
-      echo "local-ci: Docker is not running, and this change touches the database. Start Docker and push again." >&2
-      exit 1
-    fi
-    echo "local-ci: Docker is not running, so the e2e specs for this change are left to main: ${e2e_specs[*]}" >&2
-    e2e_specs=()
-    e2e_left=1
+    {
+      echo "local-ci: Docker is not running and could not be started, and $need. Nothing is left to main."
+      echo "  Start it, then push again:"
+      echo "    sudo containerd &   # wait until /run/containerd/containerd.sock exists"
+      echo "    sudo dockerd --containerd=/run/containerd/containerd.sock &"
+      echo "  Logs: /tmp/flow-containerd.log, /tmp/flow-dockerd.log"
+    } >&2
+    exit 1
   else
     supabase_log="$(mktemp)"
     supabase_exit="$(mktemp)"

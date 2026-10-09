@@ -146,3 +146,24 @@ test("the vitest runs take every test for setup, config, design, scripts or a re
     assert.equal(relatedRun(["M\tapp/src/ui/hero.tsx", line]), false, line);
   }
 });
+
+test("with a base, a config change the tests don't read keeps the related run; one they read runs all", () => {
+  const r = configRepo();
+  try {
+    const run = (...lines) => relatedRun(["M\tapp/src/ui/hero.tsx", ...lines], { root: r.dir, base: r.base });
+    r.json("app/package.json", { ...r.app, scripts: { ...r.app.scripts, "test:perf": "playwright test -c perf" } });
+    r.json("app/tsconfig.json", { ...r.tsconfig, include: ["src", "perf"] });
+    r.write("pnpm-lock.yaml", r.lock("4.1.0", "19.0.0"));
+    assert.equal(run("M\tapp/package.json", "M\tapp/tsconfig.json", "M\tpnpm-lock.yaml"), true);
+    assert.equal(relatedRun(["M\tapp/package.json"]), false, "no base: a manifest runs all");
+    r.json("app/package.json", { ...r.app, scripts: { ...r.app.scripts, test: "vitest run --pool forks" } });
+    assert.equal(run("M\tapp/package.json"), false, "a test script");
+    r.json("app/package.json", { ...r.app, devDependencies: { storybook: "9.1.0" } });
+    assert.equal(run("M\tapp/package.json"), false, "a dependency");
+    r.write("pnpm-lock.yaml", r.lock("4.0.0", "19.1.0"));
+    assert.equal(run("M\tpnpm-lock.yaml"), false, "the app's lockfile entries");
+    assert.equal(run("A\tapp/tsconfig.perf.json"), false, "a new tsconfig");
+  } finally {
+    fs.rmSync(r.dir, { recursive: true, force: true });
+  }
+});

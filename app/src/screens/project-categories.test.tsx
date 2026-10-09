@@ -94,7 +94,7 @@ describe("project categories list (FLOW-401)", () => {
     expect(group).toHaveTextContent("₪710");
     fireEvent.click(group);
     const links = screen.getAllByRole("link").map((link) => link.textContent);
-    const own = links.findIndex((text) => text.includes("בלי תת-קטגוריה"));
+    const own = links.findIndex((text) => text.includes("בלי תת־קטגוריה"));
     expect(own).toBeGreaterThan(links.findIndex((text) => text.includes("חשמל")));
     expect(own).toBeGreaterThan(links.findIndex((text) => text.includes("גז")));
   });

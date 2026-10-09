@@ -46,6 +46,11 @@ function lineCount(category: ListedCategory): number | undefined {
   return category.count ?? category.lines;
 }
 
+/** A parent's row counts its sub-categories' lines too (FLOW-356). */
+function rowLines(category: ListedCategory, parent: boolean): number | undefined {
+  return parent ? category.rollup_lines ?? lineCount(category) : lineCount(category);
+}
+
 function countLine(count: number): string {
   return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
 }
@@ -71,13 +76,14 @@ function CategoryLine({
   category: ListedCategory;
   /** FLOW-322: the category's lines, in search. A parent's opens its sub-categories (FLOW-406). */
   href?: string;
-  /** FLOW-406: a parent says how many sub-categories it has, with a chevron. */
+  /** FLOW-406: a parent opens its sub-categories, with a chevron. */
   subCount?: number;
   muted?: boolean;
   /** A viewer row keeps the height and drops the pointer. */
   plain?: boolean;
   onMenu?: (opener: HTMLElement) => void;
 }) {
+  const lines = rowLines(category, subCount != null);
   return (
     <ListRow
       variant="item"
@@ -86,9 +92,10 @@ function CategoryLine({
       title={category.name}
       muted={muted}
       chevron={subCount != null}
-      meta={subCount != null
-        ? subCount === 0 ? "תת-קטגוריות מוסתרות" : subCount === 1 ? "תת-קטגוריה אחת" : `${String(subCount)} תת-קטגוריות`
-        : lineCount(category) == null ? undefined : countLine(lineCount(category) ?? 0)}
+      // FLOW-356: one count column. A parent counts its own and its sub-categories' lines, and every
+      // row keeps the chevron's space, so the counts line up.
+      chevronSpace
+      meta={lines == null ? undefined : countLine(lines)}
       tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
       action={onMenu == null ? undefined : (
         <IconButton
@@ -316,7 +323,7 @@ export function CategoriesScreen({
             setCreateOpen(true);
           }}
         >
-          {parent == null ? "קטגוריה חדשה" : "הוספת תת-קטגוריה"}
+          {parent == null ? "קטגוריה חדשה" : "הוספת תת־קטגוריה"}
         </TextLink>
         )}
         {hiddenRows.length > 0 ? (
@@ -387,7 +394,7 @@ export function CategoriesScreen({
       <Sheet
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title={parent == null ? "קטגוריה חדשה" : "תת-קטגוריה חדשה"}
+        title={parent == null ? "קטגוריה חדשה" : "תת־קטגוריה חדשה"}
         returnFocusRef={createOpener}
         action={
           <Button

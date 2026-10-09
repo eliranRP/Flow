@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { PrefetchProjects, projectLink } from "./prefetch";
@@ -30,7 +30,7 @@ describe("PrefetchProjects (FLOW-804)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    return { query, view };
+    return { client, query, view };
   }
 
   it("reads a project the moment its row is touched, on the link's period", () => {
@@ -50,5 +50,25 @@ describe("PrefetchProjects (FLOW-804)", () => {
     const { query, view } = setup("/?preview=1");
     fireEvent.pointerDown(view.getByText("פרויקט"));
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it("reads no project while Home is idle", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, query } = setup("/");
+      act(() => {
+        client.setQueryData(["dashboard", "off", "any"], { projects: [{ id: "a" }, { id: "b" }] });
+      });
+      await act(async () => vi.advanceTimersByTimeAsync(10_000));
+      expect(query).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reads a touched project once, without retries", () => {
+    const { query, view } = setup("/");
+    fireEvent.pointerDown(view.getByText("פרויקט"));
+    expect((query.mock.calls[0]?.[0] as { retry: unknown }).retry).toBe(false);
   });
 });
