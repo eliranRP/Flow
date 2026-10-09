@@ -232,12 +232,11 @@ export function loanParts(loan: Pick<LoanDetail, "kind">): LoanSplitPart[] {
   return loan.kind === "demand" ? ["interest", "principal", "fees"] : [...LOAN_PARTS];
 }
 
-/** 112500 → "11.25%", 60000 → "6.00%", 82500 → "8.25%", 8250 → "0.825%". */
+/** 112500 → "11.25%", 60000 → "6%", 105000 → "10.5%", 8250 → "0.825%": no trailing zeros (FLOW-347, §3.5). */
 export function formatRatePpm(ppm: number): string {
   const whole = Math.trunc(ppm / 10_000);
-  const frac = String(Math.abs(ppm % 10_000)).padStart(4, "0").replace(/0{1,2}$/, "");
-  const shown = frac.length < 2 ? frac.padEnd(2, "0") : frac;
-  return `${String(whole)}.${shown}%`;
+  const frac = String(Math.abs(ppm % 10_000)).padStart(4, "0").replace(/0+$/, "");
+  return frac === "" ? `${String(whole)}%` : `${String(whole)}.${frac}%`;
 }
 
 /** The rate in force on a day, and the rate row it comes from (null: the loan's own rate). */
@@ -249,7 +248,7 @@ export function rateInForce(loan: Pick<LoanDetail, "annualRatePpm" | "rates">, t
   return { ppm, from };
 }
 
-/** "11.25% · מ־01/09/2026", or "6.00% · מההתחלה". */
+/** "11.25% · מ־01/09/2026", or "6% · מההתחלה". */
 export function rateValue(loan: Pick<LoanDetail, "annualRatePpm" | "rates">, today: string): string {
   const { ppm, from } = rateInForce(loan, today);
   return from == null ? `${formatRatePpm(ppm)} · מההתחלה` : `${formatRatePpm(ppm)} · מ־${formatDisplay(from)}`;

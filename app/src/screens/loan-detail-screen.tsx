@@ -581,7 +581,7 @@ function LoanDetailReady({
   }
 }
 
-/** "11.25% · מ־01/09/2026", the date kept left to right, or "6.00% · מההתחלה". */
+/** "11.25% · מ־01/09/2026", the date kept left to right, or "6% · מההתחלה". */
 function RateValue({ loan, today }: { loan: Pick<LoanBundle["loan"], "annualRatePpm" | "rates">; today: string }) {
   const { ppm, from } = rateInForce(loan, today);
   return (

@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-502 web push, app side (option A): the review reminder card, Settings → התראות, the push worker (FLOW-704 "no key" merged #329) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-503 Mercury in the setup flow | The FLOW-506 shared demo card and tab bar |
+| Backlog bug fixes | FLOW-347 loan rates without trailing zeros | The FLOW-506 shared demo card and tab bar, once the review-card PRs (#330, #336) merge |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -902,8 +902,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] (med) שויכו היום by project: heads take three shapes. Only a group of 3+ shows its totals; a one-line group shows "תנועה אחת" with no total; "בלי פרויקט" puts its count on the name line. Every head: name, then the count in muted `meta`, then the totals (§3.7, FLOW-334 rule). Shot sb-routes--filed-today-by-project--full.png.
 - [ ] (low) Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
 - [ ] (low) Loan setup at 375x667: the page is 942px and שמירה sits at y≈890, so every save needs a scroll. Move it into an `ActionBar place="edge"` (§3.3, §3.7 FLOW-333). Shot sb-loan-setup--example--full.png.
-- [ ] (low) Breakdown category lines: cost rows have no minus, but a refund ("₪194.00") is green with no sign. Give it "+" (§5, no colour without a sign). Shot sb-breakdown--group-lines--se-light.png.
-- [ ] (low) Loan page rates keep trailing zeros ("6.00%", "10.50%"); show "6%", "10.5%" (§3.5). Shot sb-loan-page--interest-only-rates--full.png.
+- [x] (Backlog bug fixes, 2026-10-09: not reproducible; the refund row already reads "זיכוי ₪194.00", the word that §5 uses as its sign under יצא, as `breakdown.test.tsx` checks) (low) Breakdown category lines: cost rows have no minus, but a refund ("₪194.00") is green with no sign. Give it "+" (§5, no colour without a sign). Shot sb-breakdown--group-lines--se-light.png.
+- [x] (Backlog bug fixes, 2026-10-09: `formatRatePpm` drops every trailing zero, so "6%", "10.5%", "11.25%"; the rate field opens on "6") (low) Loan page rates keep trailing zeros ("6.00%", "10.50%"); show "6%", "10.5%" (§3.5). Shot sb-loan-page--interest-only-rates--full.png.
 - [ ] (low) Search dock chips at 375: "תקופה" shows as a 12px sliver and "לאישור" is off screen (at 320 "קטגוריה" is cut too), with no cue that the row scrolls. Put תקופה first and fade the row's end. Shots sb-search--results--se-light.png, sb-search--all-lines--w320-light.png.
 - **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
 
