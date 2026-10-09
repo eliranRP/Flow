@@ -541,8 +541,8 @@ Everything else follows by area, roughly in priority order inside each area.
   - [ ] From #100's design session: add the project's waiting list (card rows only) to the walk.
   - [ ] ˅ at the last loaded category row loads the next page.
   - [ ] From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
-  - [ ] From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
-  - [ ] From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
+  - [x] (#296) From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
+  - [x] (#296) From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
@@ -761,7 +761,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
 - [x] C9 The line's own project appears twice in a part's project picker. (C1, C3a–C3c, C4, C5, C7, C9: #261)
 - [x] (UI lane 2, #278: 24px back on short phones, a square tile and a closer hairline; the card ends 16px above the bar) C13 (from #231 design review) A Jev card at 375x667 no longer fits above the action bar with the slim banner on: main already misses by about 10px with a reason line, and the filled line ("✦ מולא ע״י Jev" + בטל, one line since #245) adds about 19px; a quiet or loud flag adds more. Add a Screens/Routes story at 375x667 with a Jev card (filled line, a quiet flag, the slim banner on), which needs Jev suggestions and fills in the sample queue, then win back about 20–30px so it fits.
-- [ ] C14 (follow-up from #278) At 375x667 a card with a loud flag (54px warning row) still runs about 19px under the action bar; at 320x667 the slim banner wraps and the quiet-flag card runs about 8px under. Make the loud flag one line on short phones, or accept the scroll.
+- [x] (UI lane 2, #296: the loud flag is one 44px line on short phones and the slim banner 8px shorter; 375x667 loud ends 7px above the bar, 320x667 quiet 8px above. The loud card at 320x667 with the wrapped banner still runs 10px under and scrolls, accepted) C14 (follow-up from #278) At 375x667 a card with a loud flag (54px warning row) still runs about 19px under the action bar; at 320x667 the slim banner wraps and the quiet-flag card runs about 8px under. Make the loud flag one line on short phones, or accept the scroll.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
 <a id="flow-334"></a>
