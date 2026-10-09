@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvestmentCard, INVESTMENT_ERROR } from "../ui/investment-card";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { shiftDays, israelToday } from "../ui/date-math";
+import { formatDayMonth, shiftDays, israelToday } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { categoryBack } from "./project-category-screen";
@@ -124,7 +124,8 @@ describe("the card", () => {
     expect(screen.getByText("₪1,900,000")).toBeInTheDocument();
     expect(screen.getByText("₪337,600")).toBeInTheDocument();
     expect(screen.getByText("₪850,000")).toBeInTheDocument();
-    expect(screen.getByText("01/10/2026")).toBeInTheDocument();
+    // FLOW-353: this year's date drops its year so "עודכן" and the date fit on one line at 320.
+    expect(screen.getByText(formatDayMonth("2026-10-01"))).toBeInTheDocument();
     expect(rpc.calls).toHaveLength(0);
   });
 

@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { UnpaidScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { at320, dark, ExampleBar } from "../ui/screen-stories-support";
+import { israelToday, shiftDays } from "../ui/date-math";
 
 const sampleUnpaid: UnpaidRow[] = [
   {
@@ -63,6 +64,20 @@ export const UnpaidWithDocument: Story = {
 };
 export const UnpaidWithDocumentDark: Story = { ...UnpaidWithDocument, name: "Unpaid, document link, dark", ...dark };
 export const UnpaidWithDocument320: Story = { ...UnpaidWithDocument, name: "Unpaid, document link, 320", ...at320 };
+
+// FLOW-353: a document from today says היום, yesterday אתמול; at 320 the date and the age stay whole.
+export const UnpaidRecent320: Story = {
+  name: "Unpaid, today and yesterday, 320",
+  ...at320,
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen
+        sample={sampleUnpaid.map((row, index) => (index < 2 ? { ...row, doc_date: shiftDays(israelToday(), -index) } : row))}
+      />
+    </StoryRoute>
+  ),
+};
 
 export const UnpaidEmpty: Story = {
   render: () => (
