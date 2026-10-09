@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-505 follow-up: "ייבוא מ" sent with the connect call to both connect functions; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-502 web push, app side (option A): the review reminder card, Settings → התראות, the push worker (FLOW-704 "no key" merged #329) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-339 VAT on the transaction amount's line | The FLOW-506 shared demo card |
@@ -118,9 +118,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | done (UI lane 2, #336: option D, owner 2026-10-09) |
-| 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
+| 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (UI lane 4, #345: Search chips, loans at 320, pinned שמירה) |
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
-| 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
+| 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (UI lane 4, #345) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -899,7 +899,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-347"></a>
 ### FLOW-347 · Phone polish after the October 9 morning builds (cycle 8)
-- **Type:** SMALL UI · **Status:** ready · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **Type:** SMALL UI · **Status:** done in part (UI lane 4, #345: the loans list at 320, loan setup שמירה, Search dock chips; the rest stays ready) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
 - [ ] (med) Settings → Categories ⋯ with only one category on its side: the sheet still offers "העברה לקטגוריה אחרת", and the picker opens with the hide switch only, no targets and no reason; ✕ is the only exit. Hide the row when there is nowhere to move (§3.7, a sheet lists only actions that work today). Shots probe-categories-menu--se.png, probe-categories-move--se.png.
 - [ ] (med) שויכו היום by project: heads take three shapes. Only a group of 3+ shows its totals; a one-line group shows "תנועה אחת" with no total; "בלי פרויקט" puts its count on the name line. Every head: name, then the count in muted `meta`, then the totals (§3.7, FLOW-334 rule). Shot sb-routes--filed-today-by-project--full.png.
 - [ ] (low) Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
@@ -917,7 +917,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-349"></a>
 ### FLOW-349 · One set of period choices everywhere
-- **Type:** SMALL UI · **Status:** ready (design lead, 2026-10-09: a consistency fix, no owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **Type:** SMALL UI · **Status:** done (UI lane 4, #345; design lead, 2026-10-09: a consistency fix, no owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
 - **What:** Every "תקופה" sheet uses Home's list, words and order through one shared sheet: חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם, with Home's hints. Search's sheet today says כל התקופה first and "2026" for the year; any other period picker (the breakdown's) follows too. Mockup: the project's mockups/plan-first/flow-349/a.png (today: current.png).
 - **Acceptance:** one shared component and story; Search, breakdown and Home use it; a design log entry.
 

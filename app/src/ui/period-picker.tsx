@@ -1,4 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  PRESET_KINDS,
+  customRange,
+  periodHint,
+  presetLabel,
+  presetPeriod,
+  samePeriod,
+  type PeriodChoice,
+  type PeriodScope,
+} from "../period";
 import { useSheetHistory } from "./back";
 import { Button } from "./button";
 import { Chip } from "./chip";
@@ -26,17 +36,76 @@ export type PeriodOption = {
   onSelect: () => void;
 };
 
+/**
+ * FLOW-349: the one list every "תקופה" sheet shows, in Home's words and order: חודש, 3 חודשים,
+ * 6 חודשים, שנה, הכול (each window that ends now), with Home's hints. טווח מותאם follows.
+ */
+export function presetPeriodOptions(
+  period: PeriodChoice,
+  onChange: (period: PeriodChoice) => void,
+  scope: PeriodScope = "company",
+): PeriodOption[] {
+  return PRESET_KINDS.map((kind) => {
+    const choice = presetPeriod(kind);
+    return {
+      label: presetLabel(kind),
+      hint: kind === "all" && scope === "project" ? "מתחילת הפרויקט" : periodHint(choice),
+      selected: samePeriod(choice, period),
+      onSelect: () => {
+        onChange(choice);
+      },
+    };
+  });
+}
+
+type PresetPeriodSheetProps = {
+  period: PeriodChoice;
+  onChange: (period: PeriodChoice) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** On a project, הכול reads מתחילת הפרויקט. */
+  scope?: PeriodScope;
+};
+
+/** The shared period sheet (FLOW-349): Home's list, then טווח מותאם, which opens the range sheet. */
+export function PresetPeriodSheet({ period, onChange, open, onOpenChange, scope = "company" }: PresetPeriodSheetProps) {
+  const [range, setRange] = useState(false);
+  return (
+    <>
+      <PeriodSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        options={presetPeriodOptions(period, onChange, scope)}
+        onCustom={() => {
+          setRange(true);
+        }}
+      />
+      <RangeSheet
+        open={range}
+        onOpenChange={setRange}
+        onApply={(from, to) => {
+          onChange(customRange(from, to));
+        }}
+      />
+    </>
+  );
+}
+
 type PeriodPickerProps = {
   pill: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  options: PeriodOption[];
+  /** The shared list (FLOW-349): with these the pill opens PresetPeriodSheet. */
+  period?: PeriodChoice;
+  onChange?: (period: PeriodChoice) => void;
+  /** An older caller's own rows. */
+  options?: PeriodOption[];
   onCustom?: () => void;
   /** Page sits on a white screen, so the pill is tint with accent text. Band stays on the violet band. */
   tone?: "band" | "page";
 };
 
-export function PeriodPicker({ pill, open, onOpenChange, options, onCustom, tone = "band" }: PeriodPickerProps) {
+export function PeriodPicker({ pill, open, onOpenChange, period, onChange, options = [], onCustom, tone = "band" }: PeriodPickerProps) {
   return (
     <>
       <button
@@ -52,7 +121,11 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom, tone
           <ChevronDownIcon />
         </span>
       </button>
-      <PeriodSheet open={open} onOpenChange={onOpenChange} options={options} onCustom={onCustom} selectedLabel={pill} />
+      {period != null && onChange != null ? (
+        <PresetPeriodSheet period={period} onChange={onChange} open={open} onOpenChange={onOpenChange} />
+      ) : (
+        <PeriodSheet open={open} onOpenChange={onOpenChange} options={options} onCustom={onCustom} selectedLabel={pill} />
+      )}
     </>
   );
 }

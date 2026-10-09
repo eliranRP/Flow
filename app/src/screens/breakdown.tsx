@@ -17,7 +17,7 @@ import {
   writeGroupBy,
 } from "../breakdown";
 import { useHeldOrder } from "../list-hold";
-import { PRESET_KINDS, customRange, periodHint, periodLabel, presetLabel, presetPeriod, samePeriod } from "../period";
+import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useBooks, useBreakdownLinesQuery, useBreakdownQuery } from "../use-books";
@@ -29,7 +29,7 @@ import { ChartIcon, DocumentIcon, ReviewIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
-import { PeriodPicker, RangeSheet } from "../ui/period-picker";
+import { PeriodPicker } from "../ui/period-picker";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -54,38 +54,16 @@ function Totals({ direction, totals }: { direction: BreakdownDirection; totals: 
 
 function PeriodControl({ sheet, setSheet }: { sheet: boolean; setSheet: (open: boolean) => void }) {
   const books = useBooks();
-  const [range, setRange] = useState(false);
+  // The same list as Home's period bar (FLOW-349, decision 0141): each window that ends now.
   return (
-    <>
-      <PeriodPicker
-        tone="page"
-        pill={periodLabel(books.period)}
-        open={sheet}
-        onOpenChange={setSheet}
-        onCustom={() => {
-          setRange(true);
-        }}
-        options={PRESET_KINDS.map((kind) => {
-          // The same presets as Home's period bar (decision 0141): each window that ends now.
-          const choice = presetPeriod(kind);
-          return {
-            label: presetLabel(kind),
-            hint: periodHint(choice),
-            selected: samePeriod(choice, books.period),
-            onSelect: () => {
-              books.setPeriod(choice);
-            },
-          };
-        })}
-      />
-      <RangeSheet
-        open={range}
-        onOpenChange={setRange}
-        onApply={(from, to) => {
-          books.setPeriod(customRange(from, to));
-        }}
-      />
-    </>
+    <PeriodPicker
+      tone="page"
+      pill={periodLabel(books.period)}
+      open={sheet}
+      onOpenChange={setSheet}
+      period={books.period}
+      onChange={books.setPeriod}
+    />
   );
 }
 
