@@ -107,10 +107,13 @@ describe("review approve and undo refresh", () => {
     act(() => {
       for (const handler of rpc.handlers) handler("INITIAL_SESSION", session);
     });
-    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
-    await waitFor(() => { expect(reads("list_auto_assigned_today")).toBeGreaterThan(0); });
-    await waitFor(() => { expect(reads("get_transaction")).toBeGreaterThan(0); });
-    // Both were read once on open; the approve's write invalidates them, so they read again.
+    const approveButton = await screen.findByRole("button", { name: "אישור" });
+    // Both are read once on open, before אישור, so a read after the approve is a refresh.
+    await waitFor(() => {
+      expect(reads("list_auto_assigned_today")).toBe(1);
+      expect(reads("get_transaction")).toBe(1);
+    });
+    fireEvent.click(approveButton);
     const toast = await screen.findByRole("button", { name: "ביטול" });
     await waitFor(() => {
       expect(rpc.calls).toContain("approve_review_item");

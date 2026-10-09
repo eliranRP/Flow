@@ -674,12 +674,12 @@ describe("assistant settings", () => {
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
   });
 
-  it("a quick double tap on the help backdrop closes only the help, never the shown-once code", async () => {
+  it("a second tap on the backdrop under the help leaves the shown-once code sheet open", async () => {
     vi.stubEnv("VITE_FLOW_MCP_URL", "https://example.com/functions/v1/flow-mcp");
     renderAssistant(
       <AssistantSettings
         sample={{ state: "empty" }}
-        initialSecret={{ id: "mcp-1", secret: "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2", scope: ["read", "write"] }}
+        initialSecret={{ id: "mcp-1", secret: SAMPLE_ASSISTANT_SECRET, scope: ["read", "write"] }}
       />,
     );
     const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
@@ -703,7 +703,7 @@ describe("assistant settings", () => {
       await new Promise((resolve) => { window.setTimeout(resolve, 400); });
     });
     expect(screen.getByRole("dialog", { name: "הקוד מוכן" })).toBeInTheDocument();
-    expect(screen.getByDisplayValue("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2")).toBeInTheDocument();
+    expect(screen.getByDisplayValue(SAMPLE_ASSISTANT_SECRET)).toBeInTheDocument();
   });
 
   it("keeps the code step and the expired step until the sheet has closed", async () => {
