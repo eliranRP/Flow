@@ -88,7 +88,7 @@ describe("one line out of the P&L", () => {
   it("brings one line of a kept-out category back in and marks it", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });
     expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
-    expect(screen.getByText("הקטגוריה חומרים לא נספרת ברווח. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
+    expect(screen.getByText("הקטגוריה חומרים לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.")).toBeTruthy();
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
     expect(screen.queryByText("לא נספר ברווח")).toBeNull();
@@ -141,7 +141,7 @@ describe("one line out of the P&L", () => {
   it("marks a split line whose parts are all kept out, and brings it back in with true", async () => {
     show({ ...base, pnl_state: "out" });
     expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
-    expect(screen.getByText("הקטגוריות בפיצול לא נספרות ברווח. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
+    expect(screen.getByText("הקטגוריות בפיצול לא נספרות ברווח. אפשר לספור ברווח רק את השורה הזו.")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();

@@ -116,9 +116,9 @@ export function linePnlState(
 /** The switch row's one line of scope, shown only while the line is out (DESIGN-RULES §2.1). */
 function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
   if (!pnl.out) return undefined;
-  if (pnl.partsOut) return "הקטגוריות בפיצול לא נספרות ברווח. אפשר להחזיר רק את השורה הזו.";
+  if (pnl.partsOut) return "הקטגוריות בפיצול לא נספרות ברווח. אפשר לספור ברווח רק את השורה הזו.";
   if (pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
-  return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר להחזיר רק את השורה הזו.`;
+  return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.`;
 }
 
 export function TransactionScreen({

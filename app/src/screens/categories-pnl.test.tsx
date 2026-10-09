@@ -89,7 +89,7 @@ describe("categories kept out of the P&L", () => {
     const more = await screen.findByRole("button", { name: "עוד, חומרים" });
     fireEvent.click(more);
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "לא נספר ברווח" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
 
     await waitFor(() => {
       expect(pnlCalls()).toEqual([{ p_id: "c1", p_excluded: true }]);
@@ -153,10 +153,10 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "לא נספר ברווח" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
     expect(await screen.findByText("לא הצלחנו לעדכן את הקטגוריה.")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
-    expect(within(sheet).getByRole("button", { name: "לא נספר ברווח" })).toBeEnabled();
+    expect(within(sheet).getByRole("button", { name: "לא לספור ברווח" })).toBeEnabled();
   });
 
   it("says why when a loan's use of the category refuses the change (FLOW-134)", async () => {
@@ -164,8 +164,8 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "לא נספר ברווח" }));
-    expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן המצב שלה ברווח קבוע.")).toBeInTheDocument();
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
+    expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן אי אפשר לשנות אם היא נספרת ברווח.")).toBeInTheDocument();
   });
 
   it("waits for the save when the sheet is dismissed mid-write", async () => {
@@ -174,7 +174,7 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    const action = within(sheet).getByRole("button", { name: "לא נספר ברווח" });
+    const action = within(sheet).getByRole("button", { name: "לא לספור ברווח" });
     fireEvent.click(action);
     // FLOW-405: the P&L action is a sheet row, busy with a spinner while it saves.
     await waitFor(() => { expect(action).toHaveAttribute("aria-busy", "true"); });

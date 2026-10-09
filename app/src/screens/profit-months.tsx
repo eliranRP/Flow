@@ -70,7 +70,7 @@ function countWords(count: number, one: string, many: string): string {
 }
 
 /**
- * The "לפי חודש" row on the project: "6 חודשים · 2 ברווח, 3 בהפסד, 1 חודש פתוח". The open month is
+ * The "לפי חודש" row on the project: "6 חודשים · 2 ברווח, 3 בהפסד, 1 פתוח". The open month is
  * counted as חודש פתוח, not as a profit or a loss; a month with no lines is not counted.
  */
 export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "ILS"): string | undefined {
@@ -90,7 +90,7 @@ export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "
   const parts = [
     profit > 0 ? `${String(profit)} ברווח` : null,
     loss > 0 ? `${String(loss)} בהפסד` : null,
-    open > 0 ? `${String(open)} חודש פתוח` : null,
+    open > 0 ? `${String(open)} פתוח` : null,
   ].filter((part): part is string => part != null);
   const head = countWords(total, "חודש אחד", "חודשים");
   return parts.length === 0 ? head : `${head} · ${parts.join(", ")}`;
@@ -105,7 +105,7 @@ export type ProfitMonthsSample = { projectName: string; data: NonNullable<Profit
  * Every month of the project since its first line, newest first (FLOW-337, owner pick 2026-10-08):
  * the page reads get_profit_months with no dates, which runs from the project's first month with a
  * line to the current month (decision 0129), whatever period the band shows. Each row is the month,
- * "נכנס · יצא", and the month's profit; a loss is `bad` with a minus. A tap opens the project with
+ * "הכנסות · הוצאות", and the month's profit; a loss is `bad` with a minus. A tap opens the project with
  * that month as its period; Back returns to the project on its own period. No chart (DESIGN-RULES §5).
  */
 export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } = {}) {
@@ -179,12 +179,12 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
   // One line of whole parts at 320: a part that does not fit drops with its "·" (design lead, #259).
   const hint: ReactNode[] = currencies.flatMap((row) => [
     <span key={`${row.currency}-in`}>
-      נכנס{" "}
+      הכנסות{" "}
       {/* Muted like the rest of the hint: green is for an income amount in the amount slot (0120). */}
       <bdi dir="ltr" className="ui-num">{formatAmountText(row.income_minor, row.currency)}</bdi>
     </span>,
     <span key={`${row.currency}-out`}>
-      יצא{" "}
+      הוצאות{" "}
       <bdi dir="ltr" className="ui-num">{formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}</bdi>
     </span>,
   ]);
@@ -192,7 +192,7 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
   const label = [
     title,
     month.open ? "חודש פתוח" : null,
-    ...currencies.map((row) => `${row.profit_minor < 0n ? "הפסד" : "רווח"} ${formatAmountText(row.profit_minor, row.currency)}, נכנס ${formatAmountText(row.income_minor, row.currency)}, יצא ${formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}`),
+    ...currencies.map((row) => `${row.profit_minor < 0n ? "הפסד" : "רווח"} ${formatAmountText(row.profit_minor, row.currency)}, הכנסות ${formatAmountText(row.income_minor, row.currency)}, הוצאות ${formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}`),
     beforeOverhead ? "לפני הוצאות כלליות" : null,
   ].filter((part): part is string => part != null).join(", ");
   return (

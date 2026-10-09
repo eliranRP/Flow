@@ -128,7 +128,7 @@ export function CategoryMenuSheet({
               {loanLine == null ? (
                 <ListRow
                   variant="button"
-                  title={keptOut ? "לספור ברווח" : KEPT_OUT}
+                  title={keptOut ? "לספור ברווח" : "לא לספור ברווח"}
                   busy={pnlBusy}
                   onClick={() => {
                     if (pnlBusy || blocked()) return;

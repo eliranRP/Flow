@@ -152,8 +152,8 @@ describe("FLOW-337 by month is the whole project", () => {
     expect(document.querySelector(".ui-months-note")).toBeNull();
     // The meta is one line of whole parts, so a part that does not fit drops with its "·" (#259).
     const parts = Array.from(document.querySelector(".ui-row-hint-line")?.querySelectorAll(".ui-hint-part") ?? []);
-    expect(parts[0]?.textContent).toMatch(/^נכנס /);
-    expect(parts[1]?.textContent).toMatch(/^ · יצא /);
+    expect(parts[0]?.textContent).toMatch(/^הכנסות /);
+    expect(parts[1]?.textContent).toMatch(/^ · הוצאות /);
   });
 
   it("an empty project says so, with no dead-end period to widen", () => {
