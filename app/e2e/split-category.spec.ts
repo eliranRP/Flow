@@ -93,3 +93,40 @@ test("a dropped connection keeps the screen and offers ניסיון חוזר", a
   await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "פיצול לפי קטגוריות" })).toBeVisible();
 });
+
+test.describe("on a touch screen (FLOW-325 §10)", () => {
+  test.use({ hasTouch: true });
+
+  /** A touch swipe across a part's row, from 30% in; a positive distance moves the finger right. */
+  async function swipePart(page: Page, name: string, distance: number, dy = 0) {
+    const box = await page.locator(".ui-sremove").filter({ hasText: name }).boundingBox();
+    if (!box) throw new Error(`no part ${name}`);
+    const x = box.x + box.width * 0.3;
+    const y = box.y + 24;
+    const session = await page.context().newCDPSession(page);
+    const point = (px: number, py: number) => [{ x: Math.round(px), y: Math.round(py), id: 1 }];
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(x, y) });
+    for (let step = 1; step <= 10; step += 1) {
+      await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: point(x + (distance * step) / 10, y + (dy * step) / 10) });
+    }
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await session.detach();
+  }
+
+  test("a part swiped right is removed, as its ✕ does; a short or vertical move keeps it", async ({ page }) => {
+    await page.goto("/e2e/split-category");
+    await addPart(page, "חשמל", "פרויקט הרצליה");
+    await addPart(page, "ביטוח", "פרויקט רעננה");
+    const removeElec = page.getByRole("button", { name: "הסרת החלק חשמל" });
+    // 20px is under a flick, and a mostly vertical move belongs to the page scroll.
+    await swipePart(page, "חשמל", 20);
+    await swipePart(page, "חשמל", 12, 80);
+    await expect(removeElec).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await swipePart(page, "חשמל", 220);
+    await expect(removeElec).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "הסרת החלק ביטוח" })).toBeVisible();
+    // The drag opened no picker on the way.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
