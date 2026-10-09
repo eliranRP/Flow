@@ -96,7 +96,7 @@
   color: var(--color-disabled-text);
 }
 
-.ui-seg[aria-busy="true"] .ui-seg-btn:active {
+.ui-seg[aria-busy="true"] .ui-seg-btn[aria-checked="false"]:active {
   background: transparent;
 }
 

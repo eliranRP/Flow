@@ -44,13 +44,15 @@ describe("AddForm bank row", () => {
     ["off", "landed /settings/connections?preview=1&sheet=mercury", null, null],
     ["unknown", "landed /settings/connections?preview=1&sheet=mercury", null, null],
     ["reconnect", "landed /settings/connections?preview=1&sheet=mercury", null, "צריך לחבר מחדש"],
-  ] as const)("%s", async (bank, target, meta, hint) => {
+  ] as const)("%s", async (bank, target, connected, warning) => {
     renderAdd(bank);
     const row = await screen.findByRole("button", { name: /חיבור בנק/ });
-    if (meta == null) expect(within(row).queryByText("מחובר")).not.toBeInTheDocument();
-    else expect(within(row).getByText(meta)).toBeInTheDocument();
-    if (hint == null) expect(within(row).queryByText("צריך לחבר מחדש")).not.toBeInTheDocument();
-    else expect(within(row).getByText(hint)).toBeInTheDocument();
+    // Both are the row's hint line: "מחובר" muted, "צריך לחבר מחדש" in the warning tone.
+    if (connected == null) expect(within(row).queryByText("מחובר")).not.toBeInTheDocument();
+    else expect(within(row).getByText(connected)).toBeInTheDocument();
+    if (warning == null) expect(within(row).queryByText("צריך לחבר מחדש")).not.toBeInTheDocument();
+    else expect(within(row).getByText(warning)).toBeInTheDocument();
+    expect(row.classList.contains("ui-row-tone-warning")).toBe(bank === "reconnect");
     fireEvent.click(row);
     expect(await screen.findByText(target)).toBeInTheDocument();
   });
@@ -98,6 +100,20 @@ describe("+ quick action history", () => {
     window.history.back();
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
     expect(window.location.pathname).toBe("/projects");
+    window.history.back();
+    await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
+    view.unmount();
+  });
+
+  it("over Loans itself, one Back closes the loan sheet and the next leaves Loans", async () => {
+    window.history.replaceState(null, "", "/review?preview=1");
+    window.history.pushState(null, "", "/settings/loans?preview=1");
+    const view = renderBrowser("/settings/loans?preview=1");
+    await quickAction(/הלוואה חדשה/);
+    expect(await screen.findByRole("dialog", { name: /הלוואה/ })).toBeInTheDocument();
+    window.history.back();
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: /הלוואה/ })).not.toBeInTheDocument(); });
+    expect(window.location.pathname).toBe("/settings/loans");
     window.history.back();
     await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
     view.unmount();
