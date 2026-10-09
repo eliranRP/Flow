@@ -266,7 +266,19 @@
   }
 
   .ui-review-queue .ui-banner + .ui-review-motion > .ui-review {
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  /* FLOW-333 C13: a Jev card (the filled line and a quiet flag) under the slim banner fits above the
+     pinned bar at 375x667. A square tile is as tall as the supplier and source lines, and the rows sit
+     closer to their hairline. 24px back; the rows keep 44px. */
+  .ui-review {
+    --review-tile-h: var(--review-tile-w);
+  }
+
+  .ui-review-ai {
+    margin-top: var(--space-1);
+    padding-top: var(--space-2);
   }
 
   /* With the filed-today banner, the subtitle is what pushes אישור under the tab bar. */
