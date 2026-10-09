@@ -203,7 +203,7 @@ export function LoanCategoryRow({
     const viewTotal = editing.parts.reduce((sum, part) => sum + part.amount_minor, 0n);
     return (
       <>
-        <ListRow variant="button" {...rowProps} chevron buttonRef={rowRef} label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`} onClick={() => { setShown(split); setSheet(true); }} />
+        <ListRow variant="button" {...rowProps} className="ui-list-wrap-title" chevron buttonRef={rowRef} label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`} onClick={() => { setShown(split); setSheet(true); }} />
         <LoanPartsSheet
           readOnly
           open={open}
@@ -256,7 +256,7 @@ export function LoanCategoryRow({
         <ListRow
           variant="button"
           {...rowProps}
-          className={LOAN_ROW_CLASS_NAME}
+          className={`${LOAN_ROW_CLASS_NAME} ui-list-wrap-title`}
           chevron
           buttonRef={rowRef}
           label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`}
