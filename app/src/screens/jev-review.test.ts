@@ -10,6 +10,8 @@ import {
   completeJevScopeLookup,
   JEV_SUGGESTION_CHUNK,
   fetchJevConnector,
+  JEV_CONNECTOR_STALE_MS,
+  JevConnectorStall,
   jevFilledOnCard,
   jevShown,
   jevConnectorStorageKey,
@@ -287,9 +289,15 @@ describe("Jev review prefill", () => {
     writeJevConnectorFlag(true, scope);
     connectorDb.hang = true;
     const pending = fetchJevConnector();
+    const settled = expect(pending).rejects.toBeInstanceOf(JevConnectorStall);
     await vi.advanceTimersByTimeAsync(JEV_READ_MS);
-    await expect(pending).resolves.toBe(false);
+    // FLOW-704: a stall is not an answer, so it is not cached as off.
+    await settled;
     expect(readJevConnectorFlag(scope)).toBe(true);
+  });
+
+  it("keeps the connector cache to a minute, so a change made elsewhere shows soon", () => {
+    expect(JEV_CONNECTOR_STALE_MS).toBe(60 * 1000);
   });
 });
 

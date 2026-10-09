@@ -278,6 +278,22 @@ export const JEV_READ_MS = 1000;
 
 const JEV_OFF_QUEUE: JevQueueData = { connectorOn: false, byId: {} };
 
+/**
+ * FLOW-704: what a queue read that missed the deadline gives back. The queue tells it apart from a
+ * read that answered, so the next card does not wait out the deadline again during a long stall.
+ */
+export const JEV_QUEUE_STALLED: JevQueueData = Object.freeze({ connectorOn: false, byId: Object.freeze({}) });
+
+/** FLOW-704: the connector read missed its deadline. Not an answer, so it is not cached as off. */
+export class JevConnectorStall extends Error {
+  constructor() {
+    super("The Jev connector read missed its deadline.");
+    this.name = "JevConnectorStall";
+  }
+}
+
+const STALLED = Symbol("stalled");
+
 function abortError(reason?: unknown): Error {
   return reason instanceof Error ? reason : new DOMException("The operation was aborted.", "AbortError");
 }
@@ -348,15 +364,19 @@ export async function loadJevConnector(signal?: AbortSignal): Promise<boolean> {
 }
 
 /**
- * The one-second read. A completed read stores the flag. A timeout returns off
- * and leaves the stored flag alone, so it cannot overwrite an on that settings just wrote.
+ * The one-second read. A completed read stores the flag. A timeout throws `JevConnectorStall` and
+ * leaves the stored flag alone, so it cannot overwrite an on that settings just wrote. The card
+ * reads a stall as off for now, and the next queue read asks again instead of keeping an off that
+ * no read gave (FLOW-704).
  */
 export async function fetchJevConnector(signal?: AbortSignal): Promise<boolean> {
-  return withJevDeadline(signal, async (linked) => {
-    const on = await loadJevConnector(linked);
-    writeJevConnectorFlag(on);
-    return on;
-  }, false);
+  const on = await withJevDeadline<boolean | typeof STALLED>(signal, async (linked) => {
+    const answer = await loadJevConnector(linked);
+    writeJevConnectorFlag(answer);
+    return answer;
+  }, STALLED);
+  if (on === STALLED) throw new JevConnectorStall();
+  return on;
 }
 
 /**

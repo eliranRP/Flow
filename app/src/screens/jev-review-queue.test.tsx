@@ -7,7 +7,13 @@ import { reviewHold, reviewPin } from "../review-pin";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { ReviewQueue } from "./flow-screens";
-import { bindJevConnectorScope, jevConnectorStorageKey, jevQueueQueryKey, type JevConnectorScope } from "./jev-review";
+import {
+  bindJevConnectorScope,
+  jevConnectorQueryKey,
+  jevConnectorStorageKey,
+  jevQueueQueryKey,
+  type JevConnectorScope,
+} from "./jev-review";
 
 const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 
@@ -670,6 +676,80 @@ describe("Jev review one tap", () => {
       p_project_id: "p-stored",
       p_category_id: "c-stored",
     });
+  });
+
+  it("does not wait out the deadline again on a new queue after a stalled Jev read (FLOW-704)", async () => {
+    db.holdSuggestions = new Promise<void>(() => undefined);
+    db.integration = { enabled: true, mode: "shadow" };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const next: ReviewRow = { ...stored, id: "r2", transaction_id: "t2", supplier_name: "עגורני החוף", description: "עגורני החוף" };
+    const tree = (rows: ReviewRow[]) => (
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={rows} search="" />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    db.rows = [stored];
+    const view = render(tree([stored]));
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    });
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    }, { timeout: 2500 });
+    const pendingFrames: string[] = [];
+    const observer = new MutationObserver(() => {
+      if (document.querySelector("[data-jev-pending]")) pendingFrames.push("pending");
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    db.rows = [next];
+    view.rerender(tree([next]));
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(pendingFrames).toEqual([]);
+    expect(db.seenIds).toContainEqual(["t2"]);
+    observer.disconnect();
+  });
+
+  it("asks for the connector again after a stalled flag read instead of keeping off (FLOW-704)", async () => {
+    db.holdIntegration = new Promise<void>(() => undefined);
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{
+      id: "s1",
+      transaction_id: "t1",
+      answers: {
+        project: { choice: "p1", confidence: 0.91 },
+        category: { choice: "c1", confidence: 0.88 },
+      },
+    }];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={[open]} search="" />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    db.rows = [open];
+    const first = render(tree());
+    await waitFor(() => {
+      expect(client.getQueryState(jevConnectorQueryKey(scope))?.status).toBe("error");
+    }, { timeout: 2500 });
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    // The stall wrote nothing: no answer came back.
+    expect(localStorage.getItem(jevConnectorStorageKey(scope))).toBeNull();
+    first.unmount();
+    db.holdIntegration = null;
+    render(tree());
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(db.integrationReads).toBe(1);
+    expect(client.getQueryData(jevConnectorQueryKey(scope))).toBe(true);
   });
 
   it("keeps אישור disabled while a complete stored guess is still loading, then sends the Jev ids", async () => {

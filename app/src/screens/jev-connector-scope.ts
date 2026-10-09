@@ -8,7 +8,8 @@ export function jevConnectorQueryKey(scope: JevConnectorScope | null = boundJevC
     : (["jev-connector", scope.userId, scope.companyId] as const);
 }
 
-export const JEV_CONNECTOR_STALE_MS = 5 * 60 * 1000;
+/** FLOW-704: a minute, so a change made elsewhere (MCP, another device) reaches the card soon. */
+export const JEV_CONNECTOR_STALE_MS = 60 * 1000;
 
 /** Survives a reload, so the next launch still knows whether to wait on the card. */
 const JEV_CONNECTOR_FLAG = "flow.jev-connector";
