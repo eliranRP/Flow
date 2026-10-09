@@ -1161,9 +1161,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-812"></a>
 ### FLOW-812 · Faster CI
-- **Type:** SMALL CYCLE · **Status:** claimed (CI agent, 2026-10-07, claude/project-thread-uiob2d) · **Depends on:** —
-- **What:** A PR waits about 11 minutes for CI because one runner does every storybook step after the unit tests, and the static-story smoke opens every story in one serial test (about 6 minutes). Run the storybook smoke and the main Playwright suite as shards on parallel runners behind the `check` and `e2e` gate jobs. Start local Supabase while dependencies install.
-- **Acceptance:** Same tests run; the required check names stay `lint`, `check`, `e2e`; PR CI wall time drops by at least a third.
+- **Type:** SMALL CYCLE · **Status:** in review (dev lane 1; the 2026-10-07 claim on claude/project-thread-uiob2d was stale: branch gone, its PRs closed) · **Depends on:** —
+- **What:** Pull requests have no GitHub CI since #106; main runs the suite before each batch deploy. Run 883 (2026-10-09) took 9.9 minutes from plan to the end of deploy, and the every-story shards (5.6 minutes each, 4 of the 8 story groups per runner) and e2e shard 1 (database checks, then half the Playwright suite) set the pace. Split the every-story smoke into 4 runners and the main Playwright suite into 3; shard 1 keeps the database checks.
+- **Acceptance:** Same tests run; the required check names stay `lint`, `check`, `e2e`; main's run (plan to deployed) drops by at least a fifth.
 
 <a id="flow-813"></a>
 ### FLOW-813 · Faster pre-push local CI
