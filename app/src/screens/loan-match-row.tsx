@@ -26,9 +26,6 @@ import {
 
 type Draft = Partial<Record<LoanSplitPart, string>>;
 
-/** The matched row's class. A new match moves focus to it (FLOW-114). */
-const LOAN_ROW_CLASS = LOAN_ROW_CLASS_NAME;
-
 function draftOf(parts: ReadonlyArray<{ part: LoanSplitPart; amountMinor: bigint }>): Draft {
   const draft: Draft = {};
   for (const part of parts) draft[part.part] = minorToInput(part.amountMinor);
@@ -147,7 +144,13 @@ export function LoanCategoryRow({
   const undoSent = useRef(false);
   const unmatch = useWrite({
     failure: loanClearFailureText,
-    silent: isAlreadyUnmatched,
+    // Unmatched elsewhere meanwhile, on the first tap or on a retry: close and show the card as it is now.
+    silent: (error) => {
+      if (!isAlreadyUnmatched(error)) return false;
+      setSheet(false);
+      void Promise.all(LOAN_WRITE_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+      return true;
+    },
     keys: LOAN_WRITE_KEYS,
     onSuccess: () => {
       setSheet(false);
@@ -244,7 +247,7 @@ export function LoanCategoryRow({
         <ListRow
           variant="button"
           {...rowProps}
-          className={LOAN_ROW_CLASS}
+          className={LOAN_ROW_CLASS_NAME}
           chevron
           buttonRef={rowRef}
           label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`}
@@ -270,6 +273,8 @@ export function LoanCategoryRow({
         loading={stored.isLoading}
         saving={save.isPending}
         unmatching={unmatch.isPending}
+        unmatchDisabled={stored.isFetching}
+        retrying={stored.isFetching}
         canSave={canSave}
         returnFocusRef={rowRef}
         onRetry={stored.isError ? () => { void stored.refetch(); } : undefined}
@@ -288,14 +293,7 @@ export function LoanCategoryRow({
         }}
         onUnmatch={() => {
           if (unmatch.isPending || save.isPending) return;
-          unmatch.mutate(undefined, {
-            onError: (error) => {
-              if (!isAlreadyUnmatched(error)) return;
-              // Unmatched elsewhere meanwhile: close and show the card as it is now.
-              setSheet(false);
-              void Promise.all(LOAN_WRITE_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
-            },
-          });
+          unmatch.mutate(undefined);
         }}
       />
     </>

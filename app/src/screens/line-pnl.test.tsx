@@ -125,7 +125,7 @@ describe("one line out of the P&L", () => {
     show({ ...base, pnl_state: "mixed" }, client);
     expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
     expect(screen.queryByRole("link", { name: /לפי הקטגוריות בפיצול/ })).toBeNull();
-    expect(screen.getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
+    expect(screen.getByText("לפי חלקי ההלוואה")).toBeTruthy();
     expect(screen.queryByText("חלקית ברווח")).toBeNull();
   });
 

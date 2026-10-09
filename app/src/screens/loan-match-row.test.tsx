@@ -346,6 +346,32 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     expect(screen.getByText("ניסיון חוזר").closest("button")).not.toBeNull();
   });
 
+  it("closes and refreshes when a retry of a changed split finds it already unmatched", async () => {
+    db.clearError = { message: "loan split changed", code: "40001" };
+    const { invalidate } = renderRow();
+    const dialog = await openSheet();
+    fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
+    expect(await screen.findByText("השיוך השתנה בינתיים.")).toBeInTheDocument();
+    db.clearError = { message: "line has no loan split", code: "P0001" };
+    invalidate.mockClear();
+    const retry = screen.getByText("ניסיון חוזר").closest("button");
+    if (retry == null) throw new Error("no retry");
+    fireEvent.click(retry);
+    await waitFor(() => { expect(calls("clear_loan_split")).toHaveLength(2); });
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    expect(screen.queryByText("לא הצלחנו לבטל את השיוך.")).not.toBeInTheDocument();
+    const keys = invalidate.mock.calls.map(([filters]) => (filters?.queryKey as string[] | undefined)?.[0]);
+    expect(new Set(keys)).toEqual(new Set(LOAN_WRITE_KEYS));
+  });
+
+  it("keeps ביטול השיוך off while the stored parts are read", async () => {
+    renderRow();
+    fireEvent.click(loanRow());
+    const dialog = await screen.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    expect(within(dialog).getByRole("button", { name: "ביטול השיוך" })).toBeDisabled();
+    await waitFor(() => { expect(within(dialog).getByRole("button", { name: "ביטול השיוך" })).toBeEnabled(); });
+  });
+
   it("says the fees category does not fit", async () => {
     db.saveError = { message: "category does not fit the loan part" };
     renderRow();
@@ -432,7 +458,7 @@ describe("the transaction card with a matched payment", () => {
     db.pnlFixed = false;
     showLive();
     await screen.findByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ });
-    expect(await screen.findByText("תשלום הלוואה · נספר לפי הפיצול")).toBeInTheDocument();
+    expect(await screen.findByText("לפי חלקי ההלוואה")).toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: /ברווח והפסד/ })).not.toBeInTheDocument();
   });
 

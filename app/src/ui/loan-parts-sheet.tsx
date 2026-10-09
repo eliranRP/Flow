@@ -49,6 +49,8 @@ export function LoanPartsSheet({
   onSave,
   onUnmatch,
   onRetry,
+  retrying = false,
+  unmatchDisabled = false,
   readOnly = false,
   returnFocusRef,
 }: {
@@ -76,6 +78,10 @@ export function LoanPartsSheet({
   onUnmatch?: () => void;
   /** The stored parts failed to load: a "ניסיון חוזר" under the problem line reads them again. */
   onRetry?: () => void;
+  /** The stored parts are being read again: ניסיון חוזר shows busy. */
+  retrying?: boolean;
+  /** ביטול השיוך waits, such as while the stored parts are read. */
+  unmatchDisabled?: boolean;
   /** A viewer: static amounts, no שמירה and no ביטול השיוך. */
   readOnly?: boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
@@ -115,7 +121,7 @@ export function LoanPartsSheet({
             quiet
             full
             busy={unmatching}
-            disabled={saving || loading}
+            disabled={saving || loading || unmatchDisabled}
             onClick={() => { if (!busy) onUnmatch?.(); }}
           >
             {unmatching ? "מבטל…" : "ביטול השיוך"}
@@ -153,7 +159,7 @@ export function LoanPartsSheet({
         </div>
         {problem ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
         {onRetry ? (
-          <Button type="button" variant="secondary" onClick={onRetry}>ניסיון חוזר</Button>
+          <Button type="button" variant="secondary" className="ui-loan-parts-retry" busy={retrying} onClick={() => { if (!retrying) onRetry(); }}>ניסיון חוזר</Button>
         ) : null}
       </div>
     </Sheet>

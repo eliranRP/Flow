@@ -39,15 +39,15 @@ export type LoanBalanceRow = {
   projectName?: string | null;
 };
 
+/** The matched row's class (loan-match-row.tsx). Kept here so the two files don't import each other. */
+export const LOAN_ROW_CLASS_NAME = "ui-loan-row";
+
 /**
  * FLOW-131. A line posted while another write held the loan is flagged even when it
  * fits (`skip locked`, decision 0121). The flag has no reason column, so a busy loan,
  * a payment past the balance and a re-synced amount look the same here: the hint says
  * "may". Saving the split runs the balance check again.
  */
-/** The matched row's class (loan-match-row.tsx). Kept here so the two files don't import each other. */
-export const LOAN_ROW_CLASS_NAME = "ui-loan-row";
-
 export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. שמירת הפיצול תבדוק את היתרה מחדש.";
 /** The re-sync flagged the parts because the line's amount changed; the client can tell this one apart. */
 export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. בדקו את החלקים ושמרו.";

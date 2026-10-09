@@ -54,3 +54,7 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+
+.ui-loan-parts-retry {
+  margin-block-start: var(--space-2);
+}
