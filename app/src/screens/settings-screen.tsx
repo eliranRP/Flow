@@ -4,7 +4,7 @@ import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, 
 import { useLoanBalances, type LoanBalanceRow } from "./loan-match";
 import { useAuth } from "../auth";
 import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
-import { MY_COMPANIES_KEY } from "../team-queries";
+import { MY_COMPANIES_KEY, useTeamQuery } from "../team-queries";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -21,7 +21,7 @@ import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyS
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BellIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
+import { AlertIcon, BellIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -63,6 +63,8 @@ export type SettingsSample = {
   loans?: LoanRowsSample;
   /** FLOW-502. The Settings התראות hint. */
   notifications?: NotificationPrefs;
+  /** FLOW-601. The צוות row's count; left out, a sample has no צוות row. */
+  teamCount?: number;
 };
 
 /** FLOW-501. Invented loans for `?preview=1`. */
@@ -120,7 +122,9 @@ function assistantTally(sample: AssistantSample): ConnectorTally["state"] {
 }
 
 /** The page Back returns to, so Settings can put focus back on its row. */
-let settingsOpened: "connections" | "loans" | "notifications" | null = null;
+let settingsOpened: SettingsPage | null = null;
+
+type SettingsPage = "connections" | "loans" | "notifications" | "team";
 
 /**
  * `/settings` (0082, amended by 0116): the account rows, then one quiet group
@@ -147,6 +151,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const navigationType = useNavigationType();
   const { session } = useAuth();
   const holdWrites = useHoldWrites();
+  // FLOW-601: the business name, its currency, connectors, setup and the team are the owner's.
+  const holdOwner = useHoldOwnerSettings();
   const blocked = useBlockedPreview();
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
@@ -158,6 +164,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const live = sample == null && preview === "off";
   const liveCompanyId = live ? (signedInCompanyId ?? null) : null;
   const liveCompany = liveCompanyId != null;
+  const team = useTeamQuery(liveCompany && !holdOwner);
   const sumit = useSumitStatusQuery(sample == null && (preview !== "off" || signedInCompanyId != null));
   const mercury = useMercuryStatusQuery(sample == null && (preview !== "off" || signedInCompanyId != null));
   const jev = useJevIntegrationQuery(liveCompany);
@@ -262,8 +269,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         return state === "connected" ? "active" : state === "expired" ? "reconnect" : "off";
       }),
     ];
-  // A viewer cannot reconnect, so an expired connector reads as off (V29).
-  const hint = connectionsHint(holdWrites
+  // A viewer or an editor cannot reconnect, so an expired connector reads as off (V29).
+  const hint = connectionsHint(holdOwner
     ? tallies.map((item) => (item.state === "reconnect" ? { ...item, state: "off" as const } : item))
     : tallies);
   const connectionsRowHint: ReactNode = noCompany
@@ -277,6 +284,13 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           : <><bdi className="ui-num" dir="ltr">{String(hint.active)}</bdi> מתוך <bdi className="ui-num" dir="ltr">{String(hint.total)}</bdi> פעילים</>;
   const connectionsWarning = !noCompany && hint.kind === "attention";
 
+  // FLOW-601 (mockup a-1-settings): the owner's צוות row, with how many people are on the team.
+  // Undefined hides the row; null shows it without a count (still loading, or the read failed).
+  const teamCount: number | null | undefined = sample
+    ? sample.teamCount
+    : live && liveCompany && !holdOwner
+      ? (team.data?.members.length ?? null)
+      : undefined;
   const loanSample: LoanRowsSample | undefined = sample
     ? (sample.loans ?? [])
     : preview !== "off"
@@ -313,7 +327,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         ) : null
       ) : namedBusiness !== "" ? (
         <List>
-          {holdWrites ? (
+          {holdOwner ? (
             <ListRow variant="static" title={namedBusiness} icon={<BuildingIcon />} />
           ) : (
             <ListRow
@@ -327,7 +341,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
             />
           )}
           {/* FLOW-504: a change waits for the stored currency, so undo never writes a guess. */}
-          {currencyReady && !holdWrites ? (
+          {currencyReady && !holdOwner ? (
             <ListRow
               variant="button"
               title="מטבע העסק"
@@ -348,9 +362,19 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
             />
           )}
           {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
+          {teamCount !== undefined ? (
+            <SettingsPageRow
+              page="team"
+              href="/settings/team"
+              title="צוות"
+              icon={<PeopleIcon />}
+              meta={teamCount == null ? undefined : <bdi className="ui-num" dir="ltr">{String(teamCount)}</bdi>}
+              label={teamCount == null ? undefined : `צוות: ${String(teamCount)}`}
+            />
+          ) : null}
         </List>
       ) : null}
-      {!noCompany && !holdWrites && namedBusiness !== "" && currencyReady ? (
+      {!noCompany && !holdOwner && namedBusiness !== "" && currencyReady ? (
         <CompanyCurrencySheet
           open={currencyOpen}
           onOpenChange={setCurrencyOpen}
@@ -359,7 +383,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           returnFocusRef={currencyRowRef}
         />
       ) : null}
-      {!noCompany && !holdWrites && namedBusiness !== "" ? (
+      {!noCompany && !holdOwner && namedBusiness !== "" ? (
         <RenameCompanySheet
           open={renameOpen}
           onOpenChange={(next) => { setRenameSheet(next); }}
@@ -427,11 +451,11 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </List>
         </>
       )}
-      {showInstall || showSignOut || (setupEntry != null && !holdWrites) ? (
+      {showInstall || showSignOut || (setupEntry != null && !holdOwner) ? (
         <>
           <SectionHead title="עוד" />
           <List>
-            {setupEntry && !holdWrites ? (
+            {setupEntry && !holdOwner ? (
               <ListRow
                 variant="item"
                 href={setupEntry.href}
@@ -471,14 +495,19 @@ function SettingsPageRow({
   title,
   icon,
   hint,
+  meta,
+  label,
   skeleton = false,
   warning = false,
 }: {
-  page: "connections" | "loans" | "notifications";
+  page: SettingsPage;
   href: string;
   title: string;
   icon: ReactNode;
-  hint: ReactNode;
+  hint?: ReactNode;
+  /** At the row's end, before the chevron: the צוות count (FLOW-601). */
+  meta?: ReactNode;
+  label?: string;
   skeleton?: boolean;
   warning?: boolean;
 }) {
@@ -494,8 +523,10 @@ function SettingsPageRow({
         title={title}
         icon={icon}
         hint={hint}
+        meta={meta}
+        label={label}
         skelHint={skeleton}
-        describeHint={!skeleton}
+        describeHint={!skeleton && hint != null}
         wrapHint
         tone={warning ? "warning" : undefined}
         chevron

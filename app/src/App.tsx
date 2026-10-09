@@ -23,6 +23,11 @@ import { HomeScreen } from "./screens/HomeScreen";
 // Before the router mounts: the split screen holds Back through this listener.
 import "./screens/split-pop";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
+import { INVITES_PATH, landingWithInvites } from "./invite-landing";
+import { TeamScreen } from "./screens/team-screen";
+import { InvitesScreen } from "./screens/invites-screen";
+import { INVITES_PATH, landingWithInvites } from "./invite-landing";
+import { DevCompany, DevInvites, DevTeam } from "./dev/team-fixtures";
 import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, screenLoaders } from "./screen-loaders";
 import { ScreenSuspense } from "./screen-suspense";
@@ -54,6 +59,8 @@ const LoanDetailScreen = lazy(() => screenLoaders.loanDetail().then((m) => ({ de
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
 const InstallScreen = lazy(() => screenLoaders.install().then((m) => ({ default: m.InstallScreen })));
+const TeamScreen = lazy(() => screenLoaders.team().then((m) => ({ default: m.TeamScreen })));
+const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default: m.InvitesScreen })));
 
 /**
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops
@@ -90,12 +97,16 @@ const DevTransaction = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ def
 const DevTransactionGate = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTransactionGate })));
 const DevTxnList = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTxnList })));
 const DevUnpaid = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevUnpaid })));
+const devTeam = () => import("./dev/team-fixtures");
+const DevCompany = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevCompany })));
+const DevInvites = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevInvites })));
+const DevTeam = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevTeam })));
 
 // The dev server serves each module on request, so a screen loaded on its tap would wait for a
 // chain of requests there. In dev every screen and fixture is fetched at start, as before FLOW-804.
 if (import.meta.env.DEV) {
   // The e2e sweeps wait for this mark, so a screen or sheet never mounts between their look and their tap.
-  void Promise.all([preloadScreens(), devRoutes(), devLineSplit(), devBreakdown(), jevReviewCard()])
+  void Promise.all([preloadScreens(), devRoutes(), devLineSplit(), devBreakdown(), jevReviewCard(), devTeam()])
     .catch(() => undefined)
     .then(() => {
       document.documentElement.dataset.screensLoaded = "1";
@@ -215,7 +226,12 @@ function AppRoutes() {
                   <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
                   <Route path="/e2e/categories" element={<DevCategories />} />
                   <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
+                  <Route path="/e2e/team" element={<DevTeam />} />
                 </Route>
+                <Route element={<DevShell section="home" />}>
+                  <Route path="/e2e/company" element={<DevCompany />} />
+                </Route>
+                <Route path="/e2e/invites" element={<DevInvites />} />
                 <Route path="/e2e/txn" element={<DevTransaction />} />
                 <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
                 <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
@@ -229,6 +245,7 @@ function AppRoutes() {
             <Route element={<RequireAuth />}>
               <Route element={<FullScreen />}>
                 <Route path="onboarding" element={<OnboardingScreen />} />
+                <Route path="invites" element={<InvitesScreen />} />
                 <Route path="setup" element={<SetupIndex />} />
                 <Route path="setup/:step" element={<SetupStepScreen />} />
                 <Route path="search" element={<SearchScreen />} />
@@ -271,6 +288,7 @@ function AppRoutes() {
                 <Route path="settings/connections" element={<ConnectionsScreen />} />
                 <Route path="settings/loans" element={<LoansScreen />} />
                 <Route path="settings/notifications" element={<NotificationsScreen />} />
+                <Route path="settings/team" element={<TeamScreen />} />
                 {/* FLOW-106 B / FLOW-110: one loan's page. */}
                 <Route path="settings/loans/:loanId" element={<LoanDetailScreen />} />
               </Route>
@@ -443,9 +461,12 @@ function AuthCallback() {
         const schemas = await loadReadSchemas();
         if (stopped()) return;
         const summary = schemas.homeSummarySchema.parse(home.data);
+        // FLOW-601: no company yet and open invites: the invites first (mockup invite-3).
+        const landing = await landingWithInvites(client, Boolean(summary.company_id), afterSignInPath(Boolean(summary.company_id), stored));
+        if (stopped()) return;
         rememberSignInReturn(null);
-        setMessage(afterSignInMessage(Boolean(summary.company_id), stored));
-        void navigate(afterSignInPath(Boolean(summary.company_id), stored), { replace: true });
+        setMessage(landing === INVITES_PATH ? "נכנסתם. יש לכם הזמנות." : afterSignInMessage(Boolean(summary.company_id), stored));
+        void navigate(landing, { replace: true });
       })
       .catch((error: unknown) => {
         console.error("Auth callback failed", error);

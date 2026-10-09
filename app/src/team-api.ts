@@ -1,8 +1,8 @@
 import { createContext, createElement, useContext, type ReactNode } from "react";
-import { z } from "zod";
 import { getSupabase } from "./lib/supabase";
 import { ROLE_CHOICE_LABEL } from "./ui/role-choice";
 import { assertNoError, isTransientWriteError, type WriteFailure } from "./use-write";
+import type { AcceptResult, InviteResult, MyCompanies, MyInvite, Team } from "./team-schemas";
 
 /**
  * FLOW-601 (decision 0167): the team and company RPCs the app calls, their payloads, and the
@@ -15,71 +15,19 @@ export type MemberRole = "editor" | "viewer";
 
 export const ROLE_LABEL: Record<TeamRole, string> = { owner: "בעלים", ...ROLE_CHOICE_LABEL };
 
-const teamRole = z.enum(["owner", "editor", "viewer"]);
-const memberRole = z.enum(["editor", "viewer"]);
+export type {
+  AcceptResult,
+  InviteResult,
+  MyCompanies,
+  MyCompany,
+  MyInvite,
+  Team,
+  TeamInvite,
+  TeamMember,
+} from "./team-schemas";
 
-export const myCompaniesSchema = z.object({
-  active_id: z.string().nullable(),
-  role: teamRole.nullable(),
-  companies: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    role: teamRole,
-    is_demo: z.boolean(),
-    active: z.boolean(),
-  })),
-});
-export type MyCompanies = z.infer<typeof myCompaniesSchema>;
-export type MyCompany = MyCompanies["companies"][number];
-
-export const teamSchema = z.object({
-  company_id: z.string(),
-  role: teamRole,
-  can_manage: z.boolean(),
-  members: z.array(z.object({
-    user_id: z.string(),
-    name: z.string().nullable(),
-    email: z.string().nullable(),
-    role: teamRole,
-    you: z.boolean(),
-  })),
-  invites: z.array(z.object({
-    id: z.string(),
-    email: z.string(),
-    role: memberRole,
-    created_at: z.string(),
-  })),
-});
-export type Team = z.infer<typeof teamSchema>;
-export type TeamMember = Team["members"][number];
-export type TeamInvite = Team["invites"][number];
-
-export const inviteResultSchema = z.object({
-  id: z.string(),
-  email: z.string(),
-  role: memberRole,
-  status: z.string(),
-  existing: z.boolean(),
-});
-export type InviteResult = z.infer<typeof inviteResultSchema>;
-
-export const myInviteSchema = z.object({
-  id: z.string(),
-  company_id: z.string(),
-  company_name: z.string(),
-  role: memberRole,
-  invited_by_name: z.string().nullable(),
-  created_at: z.string(),
-});
-export type MyInvite = z.infer<typeof myInviteSchema>;
-
-export const acceptResultSchema = z.object({
-  id: z.string(),
-  company_id: z.string(),
-  name: z.string(),
-  role: teamRole,
-});
-export type AcceptResult = z.infer<typeof acceptResultSchema>;
+/** FLOW-804: the schemas load with the first team call, not with Home's first paint. */
+const loadSchemas = () => import("./team-schemas");
 
 export type TeamApi = {
   /** False when there is no client to call, as in a story without a fake. */
@@ -115,7 +63,7 @@ export const liveTeamApi: TeamApi = {
     const result = await client().rpc("list_my_companies");
     assertNoError(result);
     // A missing payload is a user with no company yet, as a missing company row was before.
-    return myCompaniesSchema.parse(result.data ?? { active_id: null, role: null, companies: [] });
+    return (await loadSchemas()).myCompaniesSchema.parse(result.data ?? { active_id: null, role: null, companies: [] });
   },
   switchCompany: async (companyId) => {
     assertNoError(await client().rpc("switch_company", { p_company_id: companyId }));
@@ -123,12 +71,12 @@ export const liveTeamApi: TeamApi = {
   listTeam: async () => {
     const result = await client().rpc("list_team");
     assertNoError(result);
-    return teamSchema.parse(result.data);
+    return (await loadSchemas()).teamSchema.parse(result.data);
   },
   inviteMember: async (email, role) => {
     const result = await client().rpc("invite_member", { p_email: email, p_role: role });
     assertNoError(result);
-    return inviteResultSchema.parse(result.data);
+    return (await loadSchemas()).inviteResultSchema.parse(result.data);
   },
   cancelInvite: async (inviteId) => {
     assertNoError(await client().rpc("cancel_invite", { p_invite_id: inviteId }));
@@ -142,12 +90,12 @@ export const liveTeamApi: TeamApi = {
   myInvites: async () => {
     const result = await client().rpc("my_invites");
     assertNoError(result);
-    return z.array(myInviteSchema).parse(result.data ?? []);
+    return (await loadSchemas()).myInvitesSchema.parse(result.data ?? []);
   },
   acceptInvite: async (inviteId) => {
     const result = await client().rpc("accept_invite", { p_invite_id: inviteId });
     assertNoError(result);
-    return acceptResultSchema.parse(result.data);
+    return (await loadSchemas()).acceptResultSchema.parse(result.data);
   },
   declineInvite: async (inviteId) => {
     assertNoError(await client().rpc("decline_invite", { p_invite_id: inviteId }));
