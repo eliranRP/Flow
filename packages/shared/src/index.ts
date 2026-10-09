@@ -121,6 +121,8 @@ export {
   LOAN_INTEREST_CATEGORY,
   LOAN_PRINCIPAL_CATEGORY,
 } from "./categories.ts";
+export { STARTER_SETS } from "./starter-categories.ts";
+export type { StarterSetKey } from "./starter-categories.ts";
 export {
   allocateLoanSplit,
   allocateLoanSplitWithFees,

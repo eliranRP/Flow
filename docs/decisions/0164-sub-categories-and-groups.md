@@ -73,6 +73,7 @@ This is the one change existing data sees. A group label that becomes a real cat
   - `get_project_group(id, basis, from, to)`: the group's totals and its projects, for the drill-in.
   - `upsert_project_group`, `delete_project_group` (its projects keep their lines and lose the group), and `set_project_group(project, group)`.
 - **Starter set:** `apply_starter_categories(p_set)` runs only while the company has no transactions and no category beyond the default seed; otherwise it fails with `starter_locked`. It replaces the default seed with the set. Setup state (decision 0163) records the pick.
+  - *As built (server 3):* the set keys are `rentals`, `renovation` and `general` (the default seed's names). Only the owner applies a set; an editor or a viewer gets `forbidden`, an unknown key `unknown_starter_set`. The loan-part and kept-out defaults (תשלומי הלוואה, ריבית משכנתא, מסים וביטוח, העברות, כסף שהתקבל מהלוואות) stay with their ids and move after the set's rows; the rest of the seed is replaced. The set's rows are defaults (`is_default`), so a second pick during setup replaces the first, and the first default income category is the set's. A foreign key that still points at a replaced default also gives `starter_locked`. The keys and labels are in `packages/shared/src/starter-categories.ts`, not `categories.ts`. There is no MCP tool.
 
 ### MCP tools
 
