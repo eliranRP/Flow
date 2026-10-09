@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanMatchHint } from "./loan-match";
+import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanAmountChangedHint, loanMatchHint } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -392,6 +392,38 @@ describe("LoanTransactionSplit", () => {
     db.readError = null;
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר: שיוך להלוואה" }));
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    // FLOW-115: the retry link is gone, so focus lands on the שיוך row, not the page.
+    await waitFor(() => { expect(matchButton()).toHaveFocus(); });
+  });
+
+  it("keeps the match sheet open on ✕, Escape and Back while the match saves (FLOW-115)", async () => {
+    let release!: () => void;
+    db.saveHold = new Promise<void>((resolve) => { release = resolve; });
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const dialog = await screen.findByRole("dialog", { name: "שיוך להלוואה" });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(screen.getByRole("dialog", { name: "שיוך להלוואה" })).toBeInTheDocument();
+    act(() => { release(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שיוך להלוואה" })).not.toBeInTheDocument(); });
+  });
+
+  it("returns focus to the tapped loan when the match fails (FLOW-115)", async () => {
+    db.saveError = { message: "boom" };
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const radio = await screen.findByRole("radio", { name: "הלוואת דוגמה" });
+    fireEvent.click(radio);
+    expect(await screen.findByText("לא הצלחנו לשייך את ההלוואה.")).toBeInTheDocument();
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveFocus(); });
+    expect(screen.getByRole("dialog", { name: "שיוך להלוואה" })).toBeInTheDocument();
   });
 
   it("disables a loan whose balance is below the payment's principal, before any save (FLOW-106)", async () => {
@@ -572,5 +604,12 @@ describe("loanMatchHint (FLOW-115)", () => {
     expect(loanMatchHint([ils("א"), ils("ב"), ils("ג")], "ILS")).toBe("3 הלוואות");
     expect(loanMatchHint([ils("א")], "USD")).toBe("אין הלוואה בדולר");
     expect(loanMatchHint([], "USD")).toBe("אין עדיין הלוואה");
+  });
+});
+
+describe("loanAmountChangedHint (FLOW-115)", () => {
+  it("says whether the line amount went up or down, and by how much", () => {
+    expect(loanAmountChangedHint(10_000n, "ILS")).toBe("סכום השורה עלה ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו.");
+    expect(loanAmountChangedHint(-10_000n, "ILS")).toBe("סכום השורה ירד ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו.");
   });
 });
