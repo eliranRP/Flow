@@ -18,7 +18,7 @@ export function Stepper({
   value: number;
   min: number;
   max: number;
-  /** One line under the label, such as the dates the value covers. */
+  /** One line of dates or numbers under the label, such as the dates the value covers; drawn LTR. */
   hint?: string;
   disabled?: boolean;
   onChange: (value: number) => void;
@@ -33,7 +33,7 @@ export function Stepper({
     <div className="ui-stepper" data-disabled={disabled ? "true" : undefined}>
       <span className="ui-stepper-copy">
         <span id={labelId} className="t-label">{label}</span>
-        {hint ? <span id={hintId} className="t-hint ui-stepper-hint">{hint}</span> : null}
+        {hint ? <span id={hintId} className="t-hint ui-stepper-hint"><bdi className="ui-num" dir="ltr">{hint}</bdi></span> : null}
       </span>
       <span className="ui-stepper-controls">
         <button

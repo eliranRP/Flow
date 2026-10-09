@@ -60,28 +60,11 @@
 .ui-lsedit-head {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
 }
 
 .ui-lsedit-meta {
   color: var(--color-text-secondary);
-}
-
-.ui-lsedit-banner {
-  margin: 0;
-  color: var(--color-error);
-}
-
-.ui-lsedit-fees-cat[data-missing="true"] .ui-row-hint {
-  color: var(--color-error);
-}
-
-.ui-lsedit-left {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.ui-lsedit-left[data-over="true"] {
-  color: var(--color-error);
 }
 
 /* "חלוקה אחרת" under the match sheet's loans. */

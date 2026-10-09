@@ -197,15 +197,18 @@ export function LoanSplitEditor({
         />
         {mode === "schedule" ? (
           <>
-            <Stepper
-              label="מספר תשלומים"
-              value={demand ? 1 : count}
-              min={1}
-              max={demand ? 1 : Math.min(plan?.maxCount ?? 1, LOAN_INSTALLMENTS_MAX)}
-              hint={plan?.dates ?? undefined}
-              disabled={demand || saving}
-              onChange={setCount}
-            />
+            {demand ? null : (
+              // A demand loan has no installments: one payment takes the interest accrued to its date.
+              <Stepper
+                label="מספר תשלומים"
+                value={count}
+                min={1}
+                max={Math.min(plan?.maxCount ?? 1, LOAN_INSTALLMENTS_MAX)}
+                hint={plan?.dates ?? undefined}
+                disabled={saving}
+                onChange={setCount}
+              />
+            )}
             <MoneyField
               id="loan-split-fees"
               label="עמלות"
