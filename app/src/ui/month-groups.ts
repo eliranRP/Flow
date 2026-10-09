@@ -48,6 +48,34 @@ export function groupByMonth<T>(
 }
 
 /**
+ * Rows grouped under a key (a project on שויכו היום, FLOW-334), in the order each key first
+ * appears; rows keep their order inside a group. Every group is drawn, one included, since its
+ * head carries the name the rows no longer repeat. Totals add up each row's shown value, as
+ * groupByMonth does.
+ */
+export function groupByKey<T>(
+  rows: readonly T[],
+  groupOf: (row: T) => { key: string; title: string },
+  amountOf: (row: T) => MonthAmount,
+  cents = false,
+): MonthGroup<T>[] {
+  const groups = new Map<string, MonthGroup<T>>();
+  for (const row of rows) {
+    const { key, title } = groupOf(row);
+    let group = groups.get(key);
+    if (group == null) {
+      group = { key, title, rows: [], totals: [] };
+      groups.set(key, group);
+    }
+    group.rows.push(row);
+    addTo(group.totals, amountOf(row), cents);
+  }
+  const list = [...groups.values()];
+  for (const group of list) group.totals.sort(byCurrency);
+  return list;
+}
+
+/**
  * Rows split into days, in the order the rows appear (FLOW-305). A held row that breaks the day
  * order stays under the day it was drawn under: a day head is never repeated. Null when a date
  * can't be read, so the caller draws the rows with no day heads.

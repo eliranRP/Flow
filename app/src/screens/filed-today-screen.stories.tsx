@@ -68,3 +68,39 @@ export const FiledTodayLineMarks: Story = {
     </StoryRoute>
   ),
 };
+
+/**
+ * FLOW-334: the rows sit under one head per project, with its count and total; each row's hint is
+ * only its category. A line with no project gets the "בלי פרויקט" head. A long name wraps to two
+ * lines before it cuts, and an income line counts green in its head.
+ */
+const byProject: FiledTodayRow[] = [
+  { ...filedLine, id: "t-p1", supplier_name: "חומרי בניין לדוגמה", amount_net: -350_000n },
+  { ...filedLine, id: "t-p2", supplier_name: "הובלות לדוגמה", project_name: "שיפוץ דירה ביאליק 8 חולון, שלב ב׳ – גמרים וריצוף", category_name: "הובלה", amount_net: -120_000n },
+  { ...filedLine, id: "t-p3", supplier_name: "צבעים לדוגמה", amount_net: -84_050n },
+  { ...filedLine, id: "t-p4", supplier_name: "לקוח לדוגמה", category_name: "עבודות", direction: "income", amount_net: 1_200_000n },
+  { ...filedLine, id: "t-p5", supplier_name: "עמלת בנק", project_name: null, category_name: "עמלות", amount_net: -2_500n, source: "mercury" },
+];
+
+function filedByProject() {
+  return (
+    <StoryRoute entry="/review/filed" tabs>
+      <ExampleBar />
+      <FiledTodayScreen sample={byProject} />
+    </StoryRoute>
+  );
+}
+
+export const FiledTodayByProject: Story = { name: "Filed today, by project", render: filedByProject };
+export const FiledTodayByProjectDark: Story = { name: "Filed today, by project (dark)", render: filedByProject, globals: { theme: "dark" } };
+export const FiledTodayByProject320: Story = {
+  name: "Filed today, by project (320)",
+  render: filedByProject,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const FiledTodayByProjectDark320: Story = {
+  name: "Filed today, by project (dark, 320)",
+  render: filedByProject,
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};

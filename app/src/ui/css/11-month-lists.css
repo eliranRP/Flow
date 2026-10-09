@@ -58,6 +58,29 @@
   white-space: nowrap;
 }
 
+/* FLOW-334: a group head (שויכו היום by project). A project name may run long, so it wraps (up to
+   2 lines) before it cuts, and the figures drop under it, start-aligned. The count is muted and
+   sits 12px before the figures. */
+.ui-group-title {
+  display: -webkit-box;
+  min-inline-size: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-group-head .ui-month-totals {
+  column-gap: var(--space-3);
+}
+
+.ui-group-count {
+  color: var(--color-text-muted);
+  font-weight: var(--type-meta-weight);
+  white-space: nowrap;
+}
+
 /* FLOW-305: quiet day heads inside a month (היום, אתמול, יום ב׳ · 05/10). 15/1.4/500 text-secondary,
    16px above and 4px below, not sticky (one pinned bar is enough at 320), no hairline. */
 .ui-day-head {
