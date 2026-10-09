@@ -1,0 +1,1 @@
+A review card waiting on Jev keeps the height it settles to: while a row Jev may fill shows its skeleton, the "✦" line under the rows is held with nothing shown, so the reason or "מולא ע״י Jev" line lands in place and the card no longer jumps (FLOW-704).

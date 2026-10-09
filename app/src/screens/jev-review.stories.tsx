@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { JEV_REVIEW_SAMPLE, JevReviewCard } from "./jev-review-card";
+import { JEV_REVIEW_SAMPLE, JevReviewCard, JevReviewLayout } from "./jev-review-card";
 
 const meta = {
   title: "Screens/Jev review",
@@ -24,3 +24,8 @@ export const Off: Story = { args: { connectorOn: false }, ...light390 };
 export const OffDark: Story = { args: { connectorOn: false }, ...dark390 };
 export const Off320: Story = { args: { connectorOn: false }, ...light320 };
 export const OffDark320: Story = { args: { connectorOn: false }, ...dark320 };
+
+/** FLOW-704: each card waiting on Jev, then settled. A card Jev fills keeps its height (the ✦ line is held). */
+export const WaitAndSettle: Story = { render: () => <JevReviewLayout />, ...light390 };
+export const WaitAndSettleDark320: Story = { render: () => <JevReviewLayout />, ...dark320 };
+export const WaitAndSettle320: Story = { render: () => <JevReviewLayout />, ...light320 };

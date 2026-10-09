@@ -175,6 +175,9 @@ export function ReviewCard({
   const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
   const spike = flag?.spike ?? null;
   const filled = jevFilled != null && !pending && (jevOnCard || jevFilled.alone === true) ? jevFilled : null;
+  // FLOW-704: a row Jev may fill holds a skeleton while the read waits; the ✦ line under the rows is held
+  // too (text hidden), so a fill that lands keeps the card's height.
+  const jevSlot = pending && !mismatch && lines.some((line) => line.value === "לא נבחר" || line.suggested);
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
@@ -282,6 +285,12 @@ export function ReviewCard({
           <p className="t-hint ui-review-reason">
             <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
             <span className="ui-review-reason-text"><CopyLine parts={why} /></span>
+          </p>
+        ) : null}
+        {jevSlot ? (
+          <p className="t-hint ui-review-reason ui-review-reason-slot" aria-hidden="true">
+            <span className="ui-review-reason-mark">✦</span>
+            <span className="ui-review-reason-text">{"\u00A0"}</span>
           </p>
         ) : null}
         {note == null ? null : pending ? (

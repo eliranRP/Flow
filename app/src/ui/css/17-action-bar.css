@@ -100,6 +100,11 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   color: var(--color-text-muted);
 }
 
+/* FLOW-704: the line held while Jev's read waits; it takes the line's height and shows nothing. */
+.ui-review-reason-slot {
+  visibility: hidden;
+}
+
 .ui-review-reason-mark {
   flex: none;
   color: var(--color-accent-text);
