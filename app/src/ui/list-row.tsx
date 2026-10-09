@@ -1,4 +1,4 @@
-import { Fragment, useId, type ReactNode, type Ref } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { BigNumber } from "./big-number";
@@ -386,12 +386,19 @@ function StatementRow(props: StatementRowProps) {
                 </span>
               ) : null}
               {details.length > 0 ? (
-                <span className="ui-statement-details" data-clip-ok="">
+                // FLOW-339 C6-6: whole parts as many as fit, as on a transaction row's hint, so a
+                // project or category never ends as one letter and "…". A state to act on
+                // ("ממתינה לאישור") never drops: it shortens instead.
+                <span className="ui-statement-details ui-hint-parts">
                   {details.map((detail, index) => (
-                    <Fragment key={`${String(index)}:${detail.text}`}>
-                      {index > 0 ? " · " : null}
+                    <span
+                      key={`${String(index)}:${detail.text}`}
+                      className={detail.tone === "accent" ? "ui-hint-part ui-hint-part-keep" : "ui-hint-part"}
+                      data-clip-ok=""
+                    >
+                      {index > 0 ? HINT_SEPARATOR : null}
                       <span className={detail.tone === "accent" ? "ui-statement-accent" : undefined}>{detail.text}</span>
-                    </Fragment>
+                    </span>
                   ))}
                 </span>
               ) : null}

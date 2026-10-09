@@ -15,7 +15,6 @@ import {
   searchFiltersQuery,
   searchRowAmount,
   searchRowTitle,
-  searchTotals,
 } from "./search";
 
 // Invented lines only.
@@ -161,18 +160,9 @@ describe("rows", () => {
     expect(searchRowTitle(row("c", { description: "העברה" }))).toBe("העברה");
   });
 
-  it("totals money out and in per currency, ILS first, with kept-out lines adding nothing", () => {
-    const totals = searchTotals([
-      row("u", { currency: "USD", amount_net: -500n }),
-      row("a", { amount_net: -1_000n }),
-      row("b", { amount_net: 2_500n, direction: "income" }),
-      row("k", { amount_net: -9_999n, kept_out: true }),
-    ]);
-    expect(totals).toEqual([
-      { currency: "ILS", incomeMinor: 2_500n, expenseMinor: 1_000n },
-      { currency: "USD", incomeMinor: 0n, expenseMinor: 500n },
-    ]);
-    expect(searchRowAmount(row("k", { kept_out: true })).minor).toBe(0n);
+  it("adds nothing to the month head for a kept-out line", () => {
+    expect(searchRowAmount(row("k", { amount_net: -9_999n, kept_out: true })).minor).toBe(0n);
+    expect(searchRowAmount(row("a", { amount_net: -1_000n })).minor).toBe(-1_000n);
   });
 
   it("counts in words", () => {
