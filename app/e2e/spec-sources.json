@@ -134,6 +134,18 @@
       "screens/HomeScreen.tsx",
       "screens/project-detail-screen.tsx"
     ],
+    "phone-flows.spec.ts": [
+      "screens/HomeScreen.tsx",
+      "screens/project-detail-screen.tsx",
+      "screens/review-screen.tsx",
+      "screens/change-form.tsx",
+      "screens/search.tsx",
+      "screens/transaction-screen.tsx",
+      "screens/split-screen.tsx",
+      "ui/review-card.tsx",
+      "ui/change-sheet.tsx",
+      "ui/toast.tsx"
+    ],
     "reversal-pick.spec.ts": [
       "screens/review-screen.tsx",
       "screens/review-queue.tsx"

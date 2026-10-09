@@ -606,6 +606,10 @@ fi
 pnpm build-storybook
 pnpm test:storybook:smoke
 
+phase "Home speed test (FLOW-804)"
+pnpm build
+pnpm --filter @flow/app test:perf
+
 wait_supabase
 
 phase "e2e: database checks"
