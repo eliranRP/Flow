@@ -245,12 +245,11 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 /* The glyphs line up with the sheet's content edges (owner, 2026-10-09): Back's chevron point sits
    on the rows' start edge and ✕ on their end edge. The 44px targets keep their size; their inner
    padding and the glyph's own inset (8px for the chevron, 6px for ✕) hang past the gutter. */
-.ui-sheet-head > .ui-icon-btn:first-child {
+.ui-sheet-head > .ui-back-btn:first-child {
   margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
 }
 
-.ui-sheet-head > .ui-icon-btn:last-child:not(:first-child),
-.ui-sheet-head > :not(.ui-icon-btn) + .ui-icon-btn:last-child {
+.ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
   margin-inline-end: calc((var(--touch-min) - 24px) / -2 - 6px);
 }
 

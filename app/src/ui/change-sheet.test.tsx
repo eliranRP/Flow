@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -365,6 +365,7 @@ describe("ChangeAssignment split by categories link (FLOW-325 §10)", () => {
             )}
           />
           <Route path="/transactions/:id/split-category" element={<h1>עורך</h1>} />
+          <Route path="/review" element={<h1>לאישור</h1>} />
         </Routes>
       </MemoryRouter>
     );
@@ -385,6 +386,21 @@ describe("ChangeAssignment split by categories link (FLOW-325 §10)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "פיצול לפי קטגוריות" }));
     expect(handler).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("heading", { name: "עורך" })).toBeInTheDocument();
+  });
+
+  it("drops the leave when the sheet closes before the approve settles", async () => {
+    let leave: ((to: string) => void) | null = null;
+    render(<SplitHarness onSplitCategory={(next) => { leave = next; }} />);
+    fireEvent.click(await screen.findByRole("button", { name: "פיצול לפי קטגוריות" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "בחירת פרויקט" })).not.toBeInTheDocument();
+    });
+    act(() => {
+      leave?.("/transactions/t1/split-category");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("heading", { name: "עורך" })).not.toBeInTheDocument();
   });
 
   it("does nothing on a press while busy, and the rows wait", async () => {

@@ -184,6 +184,12 @@ export function ChangeAssignment(props: Props) {
       ? containedView
       : urlView;
   const sheetOpen = props.host === "overlay" ? props.open : true;
+  // FLOW-325 §10: the split link's leave runs after the approve settles. A close, Back or a view
+  // change meanwhile voids it, so a dismissed sheet never pulls the person into the editor.
+  const splitTicket = useRef(0);
+  useEffect(() => () => {
+    splitTicket.current += 1;
+  }, [view, sheetOpen]);
   if (openSeen !== sheetOpen) {
     setOpenSeen(sheetOpen);
     // Set during render, so the first open frame already shows the start view.
@@ -465,7 +471,7 @@ export function ChangeAssignment(props: Props) {
   );
   const title = view === "project" ? "בחירת פרויקט" : view === "category" ? "בחירת קטגוריה" : view === "new" ? "פרויקט חדש" : "שינוי שיוך";
   const leading = view === "summary" || landedOnPicker() ? undefined : (
-    <IconButton label="חזרה" onClick={back}>
+    <IconButton label="חזרה" className="ui-back-btn" onClick={back}>
       <BackIcon />
     </IconButton>
   );
@@ -669,7 +675,9 @@ export function ChangeAssignment(props: Props) {
             onPress: () => {
               // A pick or the approve is still writing: the press does nothing.
               if (savingId != null || props.splitCategoryBusy === true) return;
+              const ticket = splitTicket.current;
               props.onSplitCategory?.((to) => {
+                if (splitTicket.current !== ticket) return;
                 afterHistory(() => {
                   void navigate(to, { replace: true });
                 });

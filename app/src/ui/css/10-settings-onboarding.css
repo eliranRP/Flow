@@ -235,12 +235,12 @@
   font-size: 1.75rem;
 }
 
-.ui-page-stacked .ui-page-title-row > .ui-icon-btn:first-child {
+.ui-page-stacked .ui-page-title-row > .ui-back-btn:first-child {
   margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
 }
 
-/* A page's own ✕ or other end icon lines up with the content's end edge the same way. */
-.ui-page-title-row > .ui-icon-btn:last-child:not(:first-child) {
+/* A page's own end icon (✕ or ⋯) lines up with the content's end edge the same way. */
+.ui-page-stacked .ui-page-title-row > .ui-icon-btn:last-child:not(:first-child) {
   margin-inline-end: calc((var(--touch-min) - 24px) / -2 - 6px);
 }
 
