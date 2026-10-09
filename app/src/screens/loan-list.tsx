@@ -70,7 +70,7 @@ export function loanListHintParts(row: LoanListRow): string[] {
  * A paid-off loan shows only נפרעה and its date: its balance is no longer news (FLOW-138, Eliran picked "Hide").
  * A closed loan drops a zero balance too, and keeps one that is still owed.
  */
-export function showsLoanBalance(row: LoanListRow): boolean {
+export function showsLoanBalance(row: Pick<LoanListRow, "status" | "balanceMinor">): boolean {
   if (row.status === "paid_off") return false;
   return !(row.status === "closed" && row.balanceMinor === 0n);
 }

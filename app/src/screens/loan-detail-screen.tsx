@@ -61,7 +61,7 @@ import {
   type MemoryLoanStore,
 } from "./loan-detail-store";
 import { formatLoanMoney } from "./loan-form";
-import { LoanBalance } from "./loan-list";
+import { LoanBalance, showsLoanBalance } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
 
@@ -317,6 +317,8 @@ function LoanDetailReady({
   const [allPayments, setAllPayments] = useState(false);
   const listed = allPayments ? payments : payments.slice(0, LOAN_PAYMENTS_SHOWN);
   const parts = loanParts(loan);
+  // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
+  const ended = !showsLoanBalance(loan);
 
   function row(key: string, label: string, value: ReactNode, icon: ReactElement, onOpen: (() => void) | null, hint?: string) {
     return holdWrites || onOpen == null ? (
@@ -332,12 +334,21 @@ function LoanDetailReady({
         <ScreenHeader title={loan.name} kicker="הלוואות" backTo={back} />
         <ViewerNote />
         <div className="ui-page-pad ui-loan-head">
-          <p className="t-display">
-            <BigNumber agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
-          </p>
+          {ended ? null : (
+            <p className="t-display">
+              <BigNumber agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
+            </p>
+          )}
           <div className="ui-status-row">
             <StatusPill>{statusPill(loan)}</StatusPill>
-            <span className="t-hint">{loan.kind === "demand" ? "יתרת קרן" : "יתרה"}</span>
+            {ended ? (
+              // The מצב row goes, so the status changes from here (reopening a loan stays one tap away).
+              holdWrites ? null : (
+                <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" onClick={() => { open("status"); }}>שינוי</TextLink>
+              )
+            ) : (
+              <span className="t-hint">{loan.kind === "demand" ? "יתרת קרן" : "יתרה"}</span>
+            )}
           </div>
         </div>
         {flagged.length > 0 ? (
@@ -355,9 +366,9 @@ function LoanDetailReady({
         <List>
           {row("kind", "סוג", kindValue(loan), <LoanIcon />, () => { open("kind"); })}
           {row("rate", "ריבית", <RateValue loan={loan} today={today} />, <PercentIcon />, () => { setRate(null); open("rate"); })}
-          {payment == null ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
+          {payment == null || ended ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
           {row("project", "פרויקט", projectName ?? NO_PROJECT, <ProjectsIcon />, () => { open("project"); })}
-          {row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); })}
+          {ended ? null : row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); })}
         </List>
 
         {/* No rate rows yet: the ריבית row above opens קביעת ריבית, so the section waits (mockup B6). */}

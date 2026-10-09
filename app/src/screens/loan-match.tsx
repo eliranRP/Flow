@@ -2,12 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useLocation } from "react-router-dom";
 import type { TransactionLoanSplit } from "@flow/shared";
-import { BankIcon, AlertIcon } from "../ui/icons";
+import { BankIcon, AlertIcon, PlusIcon } from "../ui/icons";
 import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { RadioRow } from "../ui/radio-row";
 import { TextLink } from "../ui/text-link";
+import { Button } from "../ui/button";
 import { currencyWord } from "../ui/investment-card";
 import { sheetStack, useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
@@ -101,7 +102,7 @@ export function LoanMatchOffer({
   /** FLOW-106 §3.4: what one tap writes per loan, or why the loan cannot take the line. */
   offers?: readonly LoanOffer[];
   onMatch: (loanId: string) => void;
-  /** FLOW-106: "חלוקה אחרת" (fees, several installments, exact parts) opens the split editor. */
+  /** FLOW-106: "פיצול אחר" (fees, several installments, exact parts) opens the split editor. */
   onOther?: () => void;
 }) {
   const setSheet = onSheetOpenChange;
@@ -134,11 +135,13 @@ export function LoanMatchOffer({
         {selectableLoans.length === 0 ? (
           // FLOW-115: no loan to pick is not a dead end. The sheet says why and offers the next
           // step, a new loan in Settings → הלוואות (the + sheet's quick action, FLOW-331).
+          // FLOW-356: one line (the row's hint already says why) and the 44px tint button.
           <div className="ui-loan-empty">
-            <p className="t-hint">{`${loanEmptyLine(loans, lineCurrency)}.`}</p>
             <p className="t-hint">{LOAN_EMPTY_NEXT_STEP}</p>
-            {/* The link replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
-            <TextLink to={quickNewPath("/settings/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</TextLink>
+            <div className="ui-empty-action">
+              {/* The link replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
+              <Button variant="pill" icon={<PlusIcon />} to={quickNewPath("/settings/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</Button>
+            </div>
           </div>
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
@@ -166,7 +169,7 @@ export function LoanMatchOffer({
             disabled={savingId != null}
             onClick={onOther}
           >
-            חלוקה אחרת
+            פיצול אחר
           </TextLink>
         ) : null}
       </Sheet>
