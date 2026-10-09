@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { categoryRowSchema, dashboardSchema, projectDetailSchema, reviewRowSchema } from "./dashboard";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import {
+  categoryRowSchema,
+  dashboardSchema,
+  mercuryStatusSchema,
+  type MercuryStatus,
+  projectDetailSchema,
+  projectGroupDetailSchema,
+  reviewRowSchema,
+} from "./dashboard";
+import type { Database } from "./database.types.ts";
 
 const project = {
   id: "p",
@@ -206,5 +215,81 @@ describe("reviewRowSchema receipts (FLOW-309)", () => {
     expect(parsed.receipts).toBeUndefined();
     expect(parsed.paid).toBeUndefined();
     expect(parsed.paid_on).toBeNull();
+  });
+});
+
+describe("project groups (FLOW-406)", () => {
+  const row = { ...project, profit_before_shared_agorot: 0, group_id: "g" };
+  const group = {
+    id: "g",
+    name: "צפון",
+    sort_order: 1,
+    project_count: 1,
+    income_agorot: 100,
+    direct_agorot: 40,
+    shared_agorot: 0,
+    profit_before_shared_agorot: 60,
+    profit_agorot: "60",
+    by_currency: [{ currency: "ILS", income_minor: 100, direct_minor: 40, shared_minor: 0, profit_minor: 60 }],
+  };
+  const dashboard = {
+    company_id: "c",
+    name: "דוגמה",
+    vat_registered: true,
+    basis: "cash",
+    from: null,
+    to: null,
+    income_agorot: 100,
+    direct_agorot: 40,
+    shared_agorot: 0,
+    overhead_agorot: 0,
+    expense_agorot: 40,
+    net_profit_agorot: 60,
+    prev_income_agorot: null,
+    prev_expense_agorot: null,
+    prev_net_agorot: null,
+    active_projects: 1,
+    review_count: 0,
+  };
+
+  it("reads groups[] with bigint agorot and each project's group_id", () => {
+    const parsed = dashboardSchema.parse({ ...dashboard, projects: [row], groups: [group] });
+    expect(parsed.groups?.[0]?.profit_agorot).toBe(60n);
+    expect(parsed.groups?.[0]?.by_currency[0]?.profit_minor).toBe(60n);
+    expect(parsed.projects[0]?.group_id).toBe("g");
+  });
+
+  it("parses a payload from before groups", () => {
+    const parsed = dashboardSchema.parse({ ...dashboard, projects: [{ ...row, group_id: undefined }] });
+    expect(parsed.groups).toBeUndefined();
+    expect(parsed.projects[0]?.group_id).toBeUndefined();
+  });
+
+  it("reads one group with its projects", () => {
+    const parsed = projectGroupDetailSchema.parse({ ...group, basis: "cash", from: null, to: null, projects: [row] });
+    expect(parsed.projects[0]?.id).toBe("p");
+    expect(parsed.income_agorot).toBe(100n);
+  });
+});
+
+// FLOW-508: the Mercury status schema is written by hand; it must keep the view's columns.
+type ConnectorStatusRow = Database["public"]["Views"]["connector_connection_status"]["Row"];
+
+describe("mercuryStatusSchema", () => {
+  it("has exactly the columns of connector_connection_status", () => {
+    expectTypeOf<keyof MercuryStatus>().toEqualTypeOf<keyof ConnectorStatusRow>();
+    const row: Record<keyof ConnectorStatusRow, null> = {
+      account_labels: null,
+      company_id: null,
+      connected: null,
+      import_from: null,
+      last_error: null,
+      last_sync_at: null,
+      next_attempt_at: null,
+      provider: null,
+      skip_count: null,
+      syncing: null,
+    };
+    expect(Object.keys(mercuryStatusSchema.shape).sort()).toEqual(Object.keys(row).sort());
   });
 });

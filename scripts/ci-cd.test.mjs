@@ -604,18 +604,19 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     assert.ok(local.includes(part), part);
     assert.ok(ci.includes(part.trim().replace(/^pnpm test:e2e$/, "pnpm test:e2e --shard")), `CI ${part}`);
   }
-  // The fast gate stamps after the Storybook tests; --full stamps only after e2e.
-  const stamps = [...local.matchAll(/echo "\$head" >/g)].map((m) => m.index);
-  assert.equal(stamps.length, 2);
-  // The fast gate stamps after the scoped Storybook smoke; --full runs the whole smoke after it.
+  // passed() stamps the commit and marks the branch's patch. The fast gate calls it after the scoped
+  // Storybook smoke and the e2e specs; --full calls it only after e2e. The same-patch exit stamps too.
+  assert.match(local, /passed\(\) \{\n  echo "\$head" >"\$\(git rev-parse --git-dir\)\/flow-local-ci"\n/);
+  assert.equal([...local.matchAll(/echo "\$head" >/g)].length, 2);
+  const fast = local.indexOf('  passed\n  phase "passed on ${head:0:7} (main opens');
   const scoped = local.indexOf('FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story"');
-  assert.ok(scoped > local.indexOf("pnpm test:storybook\n") && stamps[0] > scoped);
-  assert.ok(stamps[0] < local.indexOf("pnpm test:storybook:smoke\n"));
-  assert.ok(local.indexOf("if (( ! full )); then") < stamps[0]);
-  assert.ok(stamps[1] > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
+  assert.ok(scoped > local.indexOf("pnpm test:storybook\n") && fast > scoped);
+  assert.ok(fast < local.indexOf("pnpm test:storybook:smoke\n"));
+  assert.ok(local.indexOf("if (( ! full )); then") < fast);
+  assert.ok(local.indexOf('\npassed\nphase "passed on ${head:0:7}"') > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
   // FLOW-813: the fast gate runs the e2e specs that reach the change before it stamps.
   const picked = local.indexOf('playwright test --fully-parallel "${e2e_specs[@]}"');
-  assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < stamps[0]);
+  assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
   assert.match(local, /--full\) full=1 ;;/);
   // FLOW-813: --full and FLOW_LOCAL_CI_NO_SKIP never skip a part.
   assert.ok(local.includes('if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi'));

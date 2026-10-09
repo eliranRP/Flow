@@ -11,6 +11,7 @@ export { ProjectsScreen } from "./projects-screen";
 export { ProjectDetailScreen } from "./project-detail-screen";
 export { projectMonthAmount } from "./project-transactions";
 export { FiledTodayScreen } from "./filed-today-screen";
+export { DEV_FILED_ROWS } from "../dev/filed-today-sample";
 export { ProjectCategoryScreen } from "./project-category-screen";
 export { UNPAID_MARKED, UnpaidScreen } from "./unpaid-screen";
 export { linePnlState, TransactionScreen } from "./transaction-screen";

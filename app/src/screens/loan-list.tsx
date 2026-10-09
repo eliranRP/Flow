@@ -66,6 +66,15 @@ export function loanListHintParts(row: LoanListRow): string[] {
   return [kind, row.projectName ?? null].filter((part): part is string => part != null && part !== "");
 }
 
+/**
+ * A paid-off loan shows only נפרעה and its date: its balance is no longer news (FLOW-138, Eliran picked "Hide").
+ * A closed loan drops a zero balance too, and keeps one that is still owed.
+ */
+export function showsLoanBalance(row: LoanListRow): boolean {
+  if (row.status === "paid_off") return false;
+  return !(row.status === "closed" && row.balanceMinor === 0n);
+}
+
 /** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
 export function LoanBalance({ minor, currency, className }: { minor: bigint; currency: string; className?: string }) {
   const { whole, cents } = splitCents(withCents(showMoney(minor, currency)), "detail");
@@ -94,20 +103,21 @@ function LoanRows({
       {rows.map((row) => {
         const hint = loanListHint(row);
         const parts = loanListHintParts(row);
+        const balance = showsLoanBalance(row) ? withCents(showMoney(row.balanceMinor, row.currency)) : null;
         const common = {
           title: row.name,
           icon: <BankIcon />,
           tone: muted ? ("muted" as const) : row.flaggedParts > 0 ? ("warning" as const) : undefined,
           muted,
           hintParts: parts.length > 0 ? parts : undefined,
-          meta: <LoanBalance minor={row.balanceMinor} currency={row.currency} />,
+          meta: balance != null ? <LoanBalance minor={row.balanceMinor} currency={row.currency} /> : undefined,
         };
         return onOpen ? (
           <ListRow
             key={row.id}
             variant="button"
             {...common}
-            label={`${row.name}, ${withCents(showMoney(row.balanceMinor, row.currency))}${hint ? `, ${hint}` : ""}`}
+            label={[row.name, balance, hint].filter((part) => part != null && part !== "").join(", ")}
             chevron
             buttonRef={(node) => { rowRef?.(row.id, node); }}
             onClick={() => { onOpen(row); }}

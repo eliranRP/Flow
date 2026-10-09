@@ -36,7 +36,7 @@ const LOANS = [
 ] as const;
 
 /** Args stay plain JSON: Storybook cannot serialise bigint amounts, so stories pick loans by count. */
-type OfferArgs = Partial<Omit<ComponentProps<typeof LoanMatchOffer>, "loans">> & { loanCount?: 1 | 2; open?: boolean };
+type OfferArgs = Partial<Omit<ComponentProps<typeof LoanMatchOffer>, "loans">> & { loanCount?: 0 | 1 | 2; open?: boolean };
 
 function Offer({ loanCount = 1, open: startOpen = false, ...props }: OfferArgs) {
   const [open, setOpen] = useState(startOpen);
@@ -74,6 +74,12 @@ export const MatchRow320: Story = { ...light320 };
 export const MatchRowTwoLoans: Story = { args: { loanCount: 2 } };
 /** FLOW-115: no loan in the line's currency; the hint says so in the sheet's words. */
 export const MatchRowNoLoanInCurrency: Story = { args: { lineCurrency: "ILS" } };
+/** FLOW-115: no loan yet. The sheet says so and offers הלוואה חדשה. */
+export const SheetNoLoans: Story = { args: { loanCount: 0, open: true } };
+export const SheetNoLoansDark320: Story = { args: { loanCount: 0, open: true }, ...dark390, ...light320 };
+/** FLOW-115: loans exist, none in the line's currency. The sheet names the currency and offers a new one. */
+export const SheetOtherCurrency: Story = { args: { lineCurrency: "ILS", open: true } };
+export const SheetOtherCurrency320: Story = { args: { lineCurrency: "ILS", open: true }, ...light320 };
 /** FLOW-115: a long loan name stays on one line, so the row keeps its height. */
 export const MatchRowLongName: Story = { args: { matchHint: "משכנתא ארוכה מאוד מבנק לדוגמה על הנכס ברחוב הארוך ביותר בעיר, 320" }, ...light320 };
 /** FLOW-115: the row while the loans load. Same height as the rows above. */

@@ -19,6 +19,7 @@ export function SetupStep({
   onSubmit,
   primary,
   secondary,
+  lead,
   children,
 }: {
   step: SetupStepId;
@@ -30,6 +31,8 @@ export function SetupStep({
   onSubmit?: (event: SubmitEvent<HTMLFormElement>) => void;
   primary?: ReactNode;
   secondary?: ReactNode;
+  /** Shown above the demo, for a question that must sit above the pinned button (FLOW-353). */
+  lead?: ReactNode;
   children?: ReactNode;
 }) {
   const counted = step >= 1;
@@ -70,6 +73,7 @@ export function SetupStep({
         <FocusTitle className="t-title-1">{title}</FocusTitle>
         <p className="ui-setup-line t-label">{line}</p>
       </div>
+      {lead}
       {demo ? <DemoSlot demo={demo} /> : null}
       {children ? <div className="ui-setup-body">{children}</div> : null}
       {primary || secondary ? (

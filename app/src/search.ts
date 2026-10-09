@@ -1,7 +1,8 @@
-import { searchPageSchema, type SearchPage, type SearchRow } from "@flow/shared";
+import type { SearchPage, SearchRow } from "@flow/shared";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getSupabase } from "./lib/supabase";
+import { loadReadSchemas } from "./load-read-schemas";
 import { allTime, periodFromSearch, periodSearch, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import { waitForAccessToken } from "./wait-for-session";
@@ -170,7 +171,7 @@ export function useSearchQuery(filters: SearchFilters, active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("search_transactions", searchArgs(filters, pageParam));
       if (error) throw error;
-      return searchPageSchema.parse(data);
+      return (await loadReadSchemas()).searchPageSchema.parse(data);
     },
     getNextPageParam: nextSearchOffset,
   });

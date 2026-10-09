@@ -1,0 +1,1 @@
+Main's e2e: the controls sweep on /add waits for the add sheet to finish opening before it checks which controls are reachable, so a control the sheet is about to cover is no longer clicked mid-animation.

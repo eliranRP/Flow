@@ -79,6 +79,13 @@ export default defineConfig(({ mode }) => {
       include: ["@tanstack/react-query", "@supabase/supabase-js"],
     },
     base: "/",
+    resolve: {
+      // FLOW-804: supabase-js builds a realtime and a storage client that Flow never uses.
+      alias: [
+        { find: /^@supabase\/realtime-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
+        { find: /^@supabase\/storage-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
+      ],
+    },
     envDir: path.resolve(__dirname, ".."),
     server: {
       host: "0.0.0.0",

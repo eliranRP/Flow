@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { lazy, useEffect, useLayoutEffect, useRef } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode, usePreviewSearch } from "../preview";
@@ -19,7 +19,6 @@ import {
   withPatch,
   type SetupStepId,
 } from "./model";
-import { StepBusiness, StepInstall, StepJev, StepLists, StepReview, StepSumit } from "./steps";
 import { resetSetupServerForTests } from "./server-store";
 import { useSetupStore } from "./store";
 import {
@@ -30,6 +29,16 @@ import {
   writeSetupStore,
 } from "./storage";
 import { useSetupViewer } from "./viewer";
+import { screenLoaders } from "../screen-loaders";
+
+// FLOW-804: the steps load when a setup screen opens, so Home's first load skips them.
+const loadSteps = screenLoaders.setupSteps;
+const StepBusiness = lazy(() => loadSteps().then((m) => ({ default: m.StepBusiness })));
+const StepSumit = lazy(() => loadSteps().then((m) => ({ default: m.StepSumit })));
+const StepJev = lazy(() => loadSteps().then((m) => ({ default: m.StepJev })));
+const StepLists = lazy(() => loadSteps().then((m) => ({ default: m.StepLists })));
+const StepReview = lazy(() => loadSteps().then((m) => ({ default: m.StepReview })));
+const StepInstall = lazy(() => loadSteps().then((m) => ({ default: m.StepInstall })));
 
 /** First route on load. Survives Shell remounts after full-screen routes. */
 let landingPath: string | null = null;

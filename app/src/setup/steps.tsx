@@ -353,6 +353,18 @@ export function StepInstall({
       demo={iphone ? "ios" : "android"}
       onBack={onBack}
       onSkip={onSkip}
+      lead={
+        // FLOW-502: the review card's evening reminder, asked once across both places. FLOW-353: above
+        // the demo, so its answers sit above the pinned סיום at 375x667.
+        <div className="ui-setup-ask">
+          <ReviewPushPrompt
+            sample={pushSample?.prefs}
+            support={pushSample?.support}
+            focusAfter={focusSetupAction}
+            iphoneTab="hide"
+          />
+        </div>
+      }
       primary={
         iphone || standalone ? (
           <Button type="button" full onClick={() => { onFinish(iphone ? "ios" : "install"); }}>סיום</Button>
@@ -375,13 +387,6 @@ export function StepInstall({
     >
       <p className="sr-only">הכתובת בספארי היא <bdi dir="ltr">{host}</bdi>.</p>
       <InstallSteps mode={prompt && !standalone ? "android-prompt" : mode} className="ui-setup-steps" />
-      {/* FLOW-502: the review card's evening reminder, asked once across both places. */}
-      <ReviewPushPrompt
-        sample={pushSample?.prefs}
-        support={pushSample?.support}
-        focusAfter={focusSetupAction}
-        iphoneTab="hide"
-      />
     </SetupStep>
   );
 }

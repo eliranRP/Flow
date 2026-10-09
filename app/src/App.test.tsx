@@ -1,25 +1,38 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserRouter, MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { App } from "./App";
 import { HELP_EMAIL } from "./config";
 import { getSupabase } from "./lib/supabase";
+import { preloadScreens } from "./screen-loaders";
 
-function renderAt(path: string) {
+// FLOW-804: screens load on demand. With every screen (and the dev fixtures) fetched first, a
+// few ticks settle a route.
+beforeAll(async () => {
+  await Promise.all([preloadScreens(), import("./dev-routes")]);
+}, 60_000);
+
+async function settle(): Promise<void> {
+  for (let tick = 0; tick < 3; tick += 1) await act(async () => {});
+}
+
+async function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <App />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  await settle();
+  return view;
 }
 
 describe("App", () => {
-  it("shows the first-run Home in preview, without a fake profit", () => {
-    renderAt("/?preview=1");
+  it("shows the first-run Home in preview, without a fake profit", async () => {
+    await renderAt("/?preview=1");
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
@@ -36,8 +49,8 @@ describe("App", () => {
     expect(tabs).toEqual(["בית", "פרויקטים", "הוספה", "לאישור", "הגדרות"]);
   });
 
-  it("shows the offline error from preview=error, without the ui-band", () => {
-    renderAt("/?preview=error");
+  it("shows the offline error from preview=error, without the ui-band", async () => {
+    await renderAt("/?preview=error");
     expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
@@ -46,8 +59,8 @@ describe("App", () => {
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
-  it("shows the server load error from preview=error-server", () => {
-    renderAt("/?preview=error-server");
+  it("shows the server load error from preview=error-server", async () => {
+    await renderAt("/?preview=error-server");
     expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
     expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
@@ -55,8 +68,8 @@ describe("App", () => {
     expect(document.querySelector(".ui-band")).toBeNull();
   });
 
-  it("sizes the project loading band to the loaded project lines", () => {
-    renderAt("/projects/a?preview=loading");
+  it("sizes the project loading band to the loaded project lines", async () => {
+    await renderAt("/projects/a?preview=loading");
     expect(document.querySelector(".ui-project-skel")).not.toBeNull();
     expect(document.querySelector(".ui-skel-project-title")).not.toBeNull();
     expect(document.querySelector(".ui-skel-project-period")).not.toBeNull();
@@ -67,8 +80,8 @@ describe("App", () => {
     expect(document.querySelector(".ui-hero")).toBeNull();
   });
 
-  it("shows the ld-01 loading skeleton from preview=loading", () => {
-    renderAt("/?preview=loading");
+  it("shows the ld-01 loading skeleton from preview=loading", async () => {
+    await renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
     expect(document.querySelector(".ui-band")).not.toBeNull();
@@ -81,7 +94,7 @@ describe("App", () => {
   });
 
   it("opens Add as a sheet over Home and keeps the tab bar", async () => {
-    renderAt("/add?preview=1");
+    await renderAt("/add?preview=1");
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
     // FLOW-331: quick actions that work today, all enabled, and no "coming later" line.
@@ -99,7 +112,7 @@ describe("App", () => {
   });
 
   it("opens the project sheet from + → פרויקט חדש, and Back does not reopen +", async () => {
-    renderAt("/add?preview=1");
+    await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /פרויקט חדש/ }));
     expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
@@ -107,7 +120,7 @@ describe("App", () => {
   });
 
   it("opens the project sheet again on a second + → פרויקט חדש from Projects", async () => {
-    renderAt("/projects?preview=1");
+    await renderAt("/projects?preview=1");
     for (let round = 0; round < 2; round += 1) {
       fireEvent.click(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הוספה" }));
       fireEvent.click(await screen.findByRole("button", { name: /פרויקט חדש/ }));
@@ -120,19 +133,19 @@ describe("App", () => {
   });
 
   it("opens the new-loan sheet from + → הלוואה חדשה", async () => {
-    renderAt("/add?preview=1");
+    await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /הלוואה חדשה/ }));
     expect(await screen.findByRole("dialog", { name: "הלוואה" })).toBeInTheDocument();
   });
 
   it("opens the bank sheet on Connections from + → חיבור בנק", async () => {
-    renderAt("/add?preview=1");
+    await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /חיבור בנק/ }));
     expect(await screen.findByRole("heading", { name: "חיבורים", hidden: true })).toBeInTheDocument();
   });
 
   it("closes the add sheet on Escape after the exit animation", async () => {
-    renderAt("/add?preview=1");
+    await renderAt("/add?preview=1");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
@@ -144,7 +157,7 @@ describe("App", () => {
   });
 
   it("closes the add sheet back to the screen that opened it", async () => {
-    renderAt("/projects?preview=1");
+    await renderAt("/projects?preview=1");
     fireEvent.click(screen.getByRole("link", { name: "הוספה" }));
     expect(await screen.findByRole("dialog", { name: "הוספה" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
@@ -158,39 +171,39 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
   });
 
-  it("opens the review change sheet over the review ui-page", () => {
-    renderAt("/review/change?preview=1");
+  it("opens the review change sheet over the review ui-page", async () => {
+    await renderAt("/review/change?preview=1");
     expect(screen.getByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "לאישור", hidden: true })).toBeInTheDocument();
   });
 
-  it("leaves the tab bar off transaction detail", () => {
-    renderAt("/transactions/1?preview=1");
+  it("leaves the tab bar off transaction detail", async () => {
+    await renderAt("/transactions/1?preview=1");
     expect(screen.getByRole("heading", { name: "פרטי תנועה" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "ניווט ראשי" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "חזרה לבית" })).not.toBeInTheDocument();
   });
 
-  it("shows the project empty state when there are no transactions", () => {
-    renderAt("/projects/1?preview=1");
+  it("shows the project empty state when there are no transactions", async () => {
+    await renderAt("/projects/1?preview=1");
     expect(screen.getByText("אין עדיין תנועות")).toBeInTheDocument();
     expect(screen.getByText("חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן.")).toBeInTheDocument();
     // FLOW-331: no capture button until capture ships.
     expect(screen.queryByRole("link", { name: "צילום חשבונית" })).not.toBeInTheDocument();
   });
 
-  it("offers sign-in help only after a failed attempt", () => {
-    renderAt("/sign-in?error=popup_closed");
+  it("offers sign-in help only after a failed attempt", async () => {
+    await renderAt("/sign-in?error=popup_closed");
     expect(screen.queryByRole("link", { name: "צריך עזרה בכניסה?" })).not.toBeInTheDocument();
   });
 
-  it("links a failed sign-in to help", () => {
-    renderAt("/sign-in?error=server_error");
+  it("links a failed sign-in to help", async () => {
+    await renderAt("/sign-in?error=server_error");
     expect(screen.getByRole("link", { name: "צריך עזרה בכניסה?" })).toHaveAttribute("href", "/help");
   });
 
-  it("shows help as a title, one line, and a mailto", () => {
-    renderAt("/help");
+  it("shows help as a title, one line, and a mailto", async () => {
+    await renderAt("/help");
     expect(screen.getByRole("heading", { name: "עזרה" })).toBeInTheDocument();
     expect(screen.getByText("לעזרה בכניסה כותבים לנו.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
@@ -213,6 +226,7 @@ describe("App", () => {
         </BrowserRouter>
       </QueryClientProvider>,
     );
+    await settle();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     await waitFor(() => {
       expect(window.location.pathname).toBe("/settings");
@@ -225,13 +239,13 @@ describe("App", () => {
   });
 
   it("routes Settings to the Connections and Loans pages under the הגדרות tab (FLOW-501)", async () => {
-    const settings = renderAt("/settings?preview=1");
+    const settings = await renderAt("/settings?preview=1");
     expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
     settings.unmount();
 
-    const connections = renderAt("/settings/connections?preview=1");
+    const connections = await renderAt("/settings/connections?preview=1");
     expect(await screen.findByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "SUMIT" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mercury" })).toBeInTheDocument();
@@ -241,7 +255,7 @@ describe("App", () => {
     expect(within(nav).getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
     connections.unmount();
 
-    renderAt("/settings/loans?preview=1");
+    await renderAt("/settings/loans?preview=1");
     expect(await screen.findByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
     expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
@@ -249,19 +263,19 @@ describe("App", () => {
   });
 
   it("moves an old Settings sheet link to the Connections page with the sheet open", async () => {
-    renderAt("/settings?preview=1&sheet=sumit");
+    await renderAt("/settings?preview=1&sheet=sumit");
     expect(await screen.findByRole("dialog", { name: "חיבור SUMIT" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "חיבורים", hidden: true })).toBeInTheDocument();
   });
 
   it("sends Loans with no company back to Settings", async () => {
-    renderAt("/settings/loans?preview=empty");
+    await renderAt("/settings/loans?preview=empty");
     expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "הלוואות" })).not.toBeInTheDocument();
   });
 
   it("sends a signed-out visitor to sign-in", async () => {
-    renderAt("/");
+    await renderAt("/");
     expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
     expect(screen.getByText("הרווח וההפסד של העסק, בלי אקסלים")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "תנאי שימוש" })).toBeInTheDocument();
