@@ -8,7 +8,8 @@ export function jevConnectorQueryKey(scope: JevConnectorScope | null = boundJevC
     : (["jev-connector", scope.userId, scope.companyId] as const);
 }
 
-export const JEV_CONNECTOR_STALE_MS = 5 * 60 * 1000;
+/** FLOW-704: a minute, so a change made elsewhere (MCP, another device) reaches the card soon. */
+export const JEV_CONNECTOR_STALE_MS = 60 * 1000;
 
 /** Survives a reload, so the next launch still knows whether to wait on the card. */
 const JEV_CONNECTOR_FLAG = "flow.jev-connector";
@@ -191,8 +192,8 @@ export function jevConnectorLiveKey(userId: string | null): readonly ["jev-conne
 
 /**
  * FLOW-704: when the scope binds after this session's live read said on, the scoped key takes that
- * answer (and its time), so the connector is not read a second time. Off is not carried over: a
- * read past its deadline also returns off, and that must not stand as a known off.
+ * answer (and its time), so the connector is not read a second time. Only an answered on is
+ * carried over; a read past its deadline is an error, never a known off.
  */
 export function jevLiveOn(client: QueryClient, userId: string | null): number | null {
   const live = client.getQueryState<boolean>(jevConnectorLiveKey(userId));

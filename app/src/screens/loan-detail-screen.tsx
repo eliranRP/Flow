@@ -142,7 +142,7 @@ export function LoanDetailScreen({
           title={LOAN_ERROR_TITLE}
           body="נסו שוב בעוד רגע"
           action={(
-            <Button variant="pill" className="ui-btn-retry" icon={<RefreshIcon />} busy={read.retrying} onClick={read.retry}>
+            <Button variant="pill" icon={<RefreshIcon />} busy={read.retrying} onClick={read.retry}>
               ניסיון חוזר
             </Button>
           )}
@@ -581,7 +581,7 @@ function LoanDetailReady({
   }
 }
 
-/** "11.25% · מ־01/09/2026", the date kept left to right, or "6.00% · מההתחלה". */
+/** "11.25% · מ־01/09/2026", the date kept left to right, or "6% · מההתחלה". */
 function RateValue({ loan, today }: { loan: Pick<LoanBundle["loan"], "annualRatePpm" | "rates">; today: string }) {
   const { ppm, from } = rateInForce(loan, today);
   return (

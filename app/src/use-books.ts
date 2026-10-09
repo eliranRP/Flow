@@ -44,6 +44,7 @@ import {
   completeJevScopeLookup,
   dropLegacyJevConnectorKey,
   fetchJevConnector,
+  JEV_QUEUE_STALLED,
   jevConnectorQueryKey,
   seedJevConnectorFromLive,
   jevScopeFollowsLive,
@@ -226,7 +227,7 @@ async function settleReviewJevScope(
         queryFn: ({ signal }) => withJevDeadline(
           signal,
           (linked) => loadJevSuggestions(ids, linked),
-          { connectorOn: false, byId: {} },
+          JEV_QUEUE_STALLED,
         ),
       });
     }).catch(() => undefined);

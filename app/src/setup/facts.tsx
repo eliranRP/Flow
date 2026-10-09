@@ -3,7 +3,7 @@ import { useAuth } from "../auth";
 import { getSupabase } from "../lib/supabase";
 import { usePreviewMode } from "../preview";
 import { isStandalone } from "../ui/install-prompt";
-import { useDashboardQuery, useSumitStatusQuery } from "../use-books";
+import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
 import { emptyFacts, type SetupFacts } from "./model";
 
 async function jevRowExists(): Promise<boolean> {
@@ -35,6 +35,7 @@ export function useSetupFacts(active = true): SetupFacts {
   const companyId = dashboard.data?.company_id ?? null;
   const hasCompany = typeof companyId === "string" && companyId !== "";
   const sumit = useSumitStatusQuery(live && hasCompany);
+  const mercury = useMercuryStatusQuery(live && hasCompany);
   const jev = useQuery({
     queryKey: ["setup-jev", companyId],
     enabled: live && hasCompany,
@@ -48,11 +49,12 @@ export function useSetupFacts(active = true): SetupFacts {
   const standalone = isStandalone();
   if (!live || !dashboard.data) return { ...emptyFacts(!live), standalone };
   if (!hasCompany) return { ...emptyFacts(true), companyId: null, standalone };
-  const waiting = sumit.isLoading || jev.isLoading || review.isLoading;
+  const waiting = sumit.isLoading || mercury.isLoading || jev.isLoading || review.isLoading;
   return {
     ready: !waiting,
     companyId,
     sumitConnected: sumit.data?.connected === true,
+    mercuryConnected: mercury.data?.connected === true,
     jevSaved: jev.data === true,
     hasResolvedReview: review.data === true,
     standalone,
