@@ -1014,6 +1014,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
 - [x] (UI lane 3, 2026-10-09, option B) App: `ImportFromField` (app/src/ui) in the SUMIT and Mercury connect sheets, in Settings and in setup; `set_import_from` runs once the connection exists, only when the choice changed; a reconnect opens on the stored date (Mercury now, SUMIT once `sumit_status` returns it).
+- [ ] (lane 2's #332 review) The connection row exists before `set_import_from` runs, so a sync tick in that window imports from the start once (the rows stay after narrowing). Pass `importFrom` to the `mercury-connect` and `sumit-connect` edge functions so the first sync already honours it.
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups

@@ -135,4 +135,20 @@ describe("setup SUMIT connect", () => {
     expect(saved?.p_from).toMatch(/^\d{4}-01-01$/);
     restore();
   });
+
+  it("leaves ייבוא מ alone in setup when it was not touched", async () => {
+    const restore = reducedMotion();
+    invoke.mockResolvedValue({ data: {}, error: null });
+    rpc.mockClear();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={vi.fn()} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(onConnected).toHaveBeenCalledOnce(); });
+    expect(rpc.mock.calls.map(([name]) => name)).not.toContain("set_import_from");
+    restore();
+  });
 });
