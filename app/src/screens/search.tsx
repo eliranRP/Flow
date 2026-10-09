@@ -3,7 +3,7 @@ import type { SearchRow } from "@flow/shared";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import * as searchE2eFixture from "../dev/search-e2e-fixture";
-import { allTime, customRange, periodLabel, presetPeriod, samePeriod, windowLabel, type PresetKind } from "../period";
+import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import {
@@ -32,7 +32,8 @@ import { ErrorState } from "../ui/error-state";
 import { DocumentIcon, SearchIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
-import { PeriodSheet, RangeSheet } from "../ui/period-picker";
+import { ChipScroller } from "../ui/chip-scroller";
+import { PresetPeriodSheet } from "../ui/period-picker";
 import { RadioRow } from "../ui/radio-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { wantsSearchFocus } from "../ui/search-entry";
@@ -82,8 +83,6 @@ export function resetSearchMemory(): void {
   remembered.clear();
   focusedEntries.clear();
 }
-
-const PERIOD_KINDS: readonly PresetKind[] = ["month", "months3", "months6", "year"];
 
 /**
  * FLOW-323 option A: every transaction, newest first, with the search field and the filter chips
@@ -324,33 +323,12 @@ function SearchChips({
   const [projectOpen, setProjectOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [periodOpen, setPeriodOpen] = useState(false);
-  const [rangeOpen, setRangeOpen] = useState(false);
   const setProjectSheet = useSheetHistory("search-project", projectOpen, setProjectOpen);
   const setCategorySheet = useSheetHistory("search-category", categoryOpen, setCategoryOpen);
   const toggleDirection = (direction: SearchDirection) => {
     onChange({ direction: filters.direction === direction ? null : direction });
   };
   const period = filters.period;
-  const periodOptions = [
-    {
-      label: "כל התקופה",
-      selected: period.kind === "all",
-      onSelect: () => {
-        onChange({ period: allTime() });
-      },
-    },
-    ...PERIOD_KINDS.map((kind) => {
-      const choice = presetPeriod(kind);
-      return {
-        label: periodLabel(choice),
-        hint: windowLabel(choice),
-        selected: period.kind === kind && samePeriod(period, choice),
-        onSelect: () => {
-          onChange({ period: choice });
-        },
-      };
-    }),
-  ];
   const active = projects.filter((project) => project.status !== "finished");
   const finished = projects.filter((project) => project.status === "finished");
   const expense = categories.filter((category) => category.kind === "expense");
@@ -365,7 +343,11 @@ function SearchChips({
   }, []);
   return (
     <>
-      <div className="ui-search-chips" role="group" aria-label="סינון" ref={chipsRef}>
+      {/* FLOW-347: תקופה first, so it is never the cut chip; the row's end fades while more wait. */}
+      <ChipScroller className="ui-search-chips" label="סינון" scrollerRef={chipsRef}>
+        <Chip pressed={period.kind !== "all"} onClick={() => { setPeriodOpen(true); }}>
+          {period.kind === "all" ? "תקופה" : periodLabel(period)}
+        </Chip>
         <Chip pressed={filters.direction === "expense"} onClick={() => { toggleDirection("expense"); }}>הוצאות</Chip>
         <Chip pressed={filters.direction === "income"} onClick={() => { toggleDirection("income"); }}>הכנסות</Chip>
         <Chip pressed={filters.project != null} onClick={() => { setProjectSheet(true); }}>
@@ -374,11 +356,8 @@ function SearchChips({
         <Chip pressed={filters.category != null} onClick={() => { setCategorySheet(true); }}>
           {filters.category != null ? categoryLabel ?? "קטגוריה" : "קטגוריה"}
         </Chip>
-        <Chip pressed={period.kind !== "all"} onClick={() => { setPeriodOpen(true); }}>
-          {period.kind === "all" ? "תקופה" : periodLabel(period)}
-        </Chip>
         <Chip pressed={filters.review} onClick={() => { onChange({ review: !filters.review }); }}>לאישור</Chip>
-      </div>
+      </ChipScroller>
       <Sheet open={projectOpen} onOpenChange={setProjectSheet} title="פרויקט">
         <div role="radiogroup" aria-label="פרויקט">
           <RadioRow label="כל הפרויקטים" selected={filters.project == null} onSelect={() => { onChange({ project: null }); setProjectSheet(false); }} />
@@ -409,21 +388,7 @@ function SearchChips({
           <RadioRow label="בלי קטגוריה" selected={filters.category === "none"} onSelect={() => { onChange({ category: "none" }); setCategorySheet(false); }} />
         </div>
       </Sheet>
-      <PeriodSheet
-        open={periodOpen}
-        onOpenChange={setPeriodOpen}
-        options={periodOptions}
-        onCustom={() => {
-          setRangeOpen(true);
-        }}
-      />
-      <RangeSheet
-        open={rangeOpen}
-        onOpenChange={setRangeOpen}
-        onApply={(from, to) => {
-          onChange({ period: customRange(from, to) });
-        }}
-      />
+      <PresetPeriodSheet period={period} onChange={(next) => { onChange({ period: next }); }} open={periodOpen} onOpenChange={setPeriodOpen} />
     </>
   );
 }
