@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { categoryRowSchema, dashboardSchema, projectDetailSchema, reviewRowSchema } from "./dashboard";
+import {
+  categoryRowSchema,
+  dashboardSchema,
+  projectDetailSchema,
+  projectGroupDetailSchema,
+  reviewRowSchema,
+} from "./dashboard";
 
 const project = {
   id: "p",
@@ -206,5 +212,59 @@ describe("reviewRowSchema receipts (FLOW-309)", () => {
     expect(parsed.receipts).toBeUndefined();
     expect(parsed.paid).toBeUndefined();
     expect(parsed.paid_on).toBeNull();
+  });
+});
+
+describe("project groups (FLOW-406)", () => {
+  const row = { ...project, profit_before_shared_agorot: 0, group_id: "g" };
+  const group = {
+    id: "g",
+    name: "צפון",
+    sort_order: 1,
+    project_count: 1,
+    income_agorot: 100,
+    direct_agorot: 40,
+    shared_agorot: 0,
+    profit_before_shared_agorot: 60,
+    profit_agorot: "60",
+    by_currency: [{ currency: "ILS", income_minor: 100, direct_minor: 40, shared_minor: 0, profit_minor: 60 }],
+  };
+  const dashboard = {
+    company_id: "c",
+    name: "דוגמה",
+    vat_registered: true,
+    basis: "cash",
+    from: null,
+    to: null,
+    income_agorot: 100,
+    direct_agorot: 40,
+    shared_agorot: 0,
+    overhead_agorot: 0,
+    expense_agorot: 40,
+    net_profit_agorot: 60,
+    prev_income_agorot: null,
+    prev_expense_agorot: null,
+    prev_net_agorot: null,
+    active_projects: 1,
+    review_count: 0,
+  };
+
+  it("reads groups[] with bigint agorot and each project's group_id", () => {
+    const parsed = dashboardSchema.parse({ ...dashboard, projects: [row], groups: [group] });
+    expect(parsed.groups?.[0]?.profit_agorot).toBe(60n);
+    expect(parsed.groups?.[0]?.by_currency[0]?.profit_minor).toBe(60n);
+    expect(parsed.projects[0]?.group_id).toBe("g");
+  });
+
+  it("parses a payload from before groups", () => {
+    const parsed = dashboardSchema.parse({ ...dashboard, projects: [{ ...row, group_id: undefined }] });
+    expect(parsed.groups).toBeUndefined();
+    expect(parsed.projects[0]?.group_id).toBeUndefined();
+  });
+
+  it("reads one group with its projects", () => {
+    const parsed = projectGroupDetailSchema.parse({ ...group, basis: "cash", from: null, to: null, projects: [row] });
+    expect(parsed.projects[0]?.id).toBe("p");
+    expect(parsed.income_agorot).toBe(100n);
   });
 });

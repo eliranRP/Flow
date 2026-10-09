@@ -9,6 +9,8 @@ export const READ_TOOL_NAMES = [
   "list_projects",
   "get_project",
   "get_project_categories",
+  "list_project_groups",
+  "get_project_group",
   "list_categories",
   "list_review",
   "get_expense",
@@ -70,6 +72,8 @@ export const WRITE_TOOL_NAMES = [
   "rename_category",
   "set_category_group",
   "set_category_parent",
+  "create_project_group",
+  "set_project_group",
   "set_jev_mode",
   "undo_jev_prefill",
   "undo",
@@ -79,6 +83,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
   get_project: new Set(["id", "basis", "from", "to"]),
   get_project_categories: new Set(["id", "months"]),
+  list_project_groups: new Set(),
+  get_project_group: new Set(["id", "basis", "from", "to"]),
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
@@ -138,6 +144,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   rename_category: new Set(["idempotency_key", "category_id", "name"]),
   set_category_group: new Set(["idempotency_key", "category_id", "group_name"]),
   set_category_parent: new Set(["idempotency_key", "category_id", "parent_id"]),
+  create_project_group: new Set(["idempotency_key", "name"]),
+  set_project_group: new Set(["idempotency_key", "project_id", "group_id"]),
   set_jev_mode: new Set(["idempotency_key", "enabled", "mode", "threshold"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
@@ -230,7 +238,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -639,6 +647,16 @@ export const setCategoryParentSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
   parent_id: UUID_TEXT.nullable(),
+}).strict();
+// FLOW-406 server 2: project groups (decision 0164). Names follow create_project.
+export const createProjectGroupSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: visibleName(2, 120),
+}).strict();
+export const setProjectGroupSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  project_id: UUID_TEXT,
+  group_id: UUID_TEXT.nullable(),
 }).strict();
 export const setCompanyCurrencySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,

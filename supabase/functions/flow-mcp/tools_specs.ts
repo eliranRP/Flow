@@ -25,7 +25,7 @@ export function isWriteTool(name: string): boolean {
 
 function readTools() {
   return [
-    toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). The output echoes basis.", {
+    toolSpec("list_projects", "Projects and their profit for a period, and groups[] (FLOW-406: each project group's id, name, sort_order, project_count, income, direct, shared and profit, and by_currency, the sum of its projects' rows; every group, an empty one too). Each project has group_id (null when none). Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). The output echoes basis.", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
@@ -39,6 +39,13 @@ function readTools() {
     toolSpec("get_project_categories", "One project's expense categories month by month, to spot what looks off. id is the project id from list_projects; months is how many complete months to look back (3 to 12, default 6). Returns months (the first day of each complete month, oldest first), this_month and today, and categories[]: id, name, group_name (set_category_group), currency, this_month_minor (so far), months_minor (one per month, 0 when none), months_seen (months with a cost), expected_minor (the median of those months, only when there are at least 3), typical_day, and flag: high (this month is above 1.5 x expected and at least ILS 200 / 50 in other currencies above it), new (a cost of at least ILS 500 / 150 after none in the months), missing (expected, past its typical day, nothing yet) or null. Amounts are positive minor units per currency, by document date, the same parts as get_project's categories (approved lines, split parts and the project's share of shared lines, P&L only). The company currency's rows come first. A project outside the company is not_found.", {
       id: { type: "string" },
       months: { type: "integer" },
+    }),
+    toolSpec("list_project_groups", "The company's project groups (FLOW-406), in order: id, name, sort_order and project_count. A project is in at most one group (set_project_group); groups don't nest.", {}),
+    toolSpec("get_project_group", "One project group's P&L for all time or a period (from and to, YYYY-MM-DD, both or neither): its figures as in list_projects groups[], and projects[], the list_projects rows of its projects with the same dates and basis. id is from list_project_groups. basis is cash or invoiced (default cash). A group outside the company is not_found.", {
+      id: { type: "string" },
+      basis: { type: "string", enum: ["cash", "invoiced"] },
+      from: { type: "string" },
+      to: { type: "string" },
     }),
     toolSpec("list_categories", "The company's categories. rehab is the category's rehab switch (true, false, or null for the default) and in_rehab whether it counts as rehab (set_category_rehab). lines is how many lines on the books are in it (whole or by a split part; delete_category sends these back to review), split_lines how many of them have a split part in it, and loan_used whether a loan uses it (delete_category refuses).", {}),
     toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense). supplier matches part of the supplier's name, or of the customer's (customer_name) on an income line. An invoice and the receipts that pay it are one item: receipts lists them (transaction_id, doc_date, amount_gross, currency), paid is true when they cover the invoice, paid_on is the last receipt's date; approving the invoice files its receipts too.", {
@@ -69,7 +76,7 @@ function readTools() {
       amount_min: { type: ["number", "string"] },
       amount_max: { type: ["number", "string"] },
     }),
-    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). direct + shared + overhead + unassigned expense = expense. unassigned is income with no project, and cost with no role, a project role and no project, or a shared role and no split.", {
+    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). direct + shared + overhead + unassigned expense = expense. unassigned is income with no project, and cost with no role, a project role and no project, or a shared role and no split. groups[] is as in list_projects (FLOW-406).", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
@@ -435,6 +442,15 @@ function writeTools() {
       category_id: { type: "string" },
       group_name: { type: ["string", "null"] },
     }, true),
+    toolSpec("create_project_group", "Create a project group (owner only), 2 to 120 letters, a name the company doesn't use for another group. Returns id, name and undo_kind. Undo is kind project_group with the group id; it deletes the group while it holds no project, a conflict otherwise.", {
+      idempotency_key: { type: "string" },
+      name: { type: "string" },
+    }, true),
+    toolSpec("set_project_group", "Put a project in a group (owner only), or take it out with group_id null. A project is in one group at most; moving it to another takes it out of the first. Company totals don't change. Returns project_id, group_id, prior and undo_kind. Undo is kind project_group_member with the project id, a conflict once its group was changed again.", {
+      idempotency_key: { type: "string" },
+      project_id: { type: "string" },
+      group_id: { type: ["string", "null"] },
+    }, true),
     toolSpec("set_jev_mode", "Turn the Jev AI tagger on or off and choose its mode, as Settings → תיוג חכם does (members who can write, not a viewer). enabled is the switch; mode is shadow (suggestions only), auto (Jev fills a project and category at or above the threshold; the owner still approves every line, and undo_jev_prefill takes a fill back) or off; threshold is 0.50 to 1 (the app offers 0.80, 0.85, 0.90 and 0.95). A mode or threshold left out keeps the stored one (shadow and 0.90 at first). Returns id (the company), enabled, mode, threshold, prior (the values before, or null when Jev was never set) and undo_kind. Undo is kind jev_mode with the company id: it puts the values before back, a conflict once they changed again. get_jev_status reads the current values.", {
       idempotency_key: { type: "string" },
       enabled: { type: "boolean" },
@@ -447,7 +463,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {

@@ -90,6 +90,7 @@ export function projectRow(row: Review) {
     shared_agorot: row.shared_agorot,
     profit_agorot: row.profit_agorot,
     is_overhead: row.is_overhead === true,
+    group_id: row.group_id ?? null,
     by_currency: row.by_currency ?? [],
   };
 }
@@ -115,6 +116,7 @@ export function totalsOf(body: Review) {
     excluded_income_agorot: body.excluded_income_agorot,
     excluded_expense_agorot: body.excluded_expense_agorot,
     by_currency: body.by_currency ?? [],
+    groups: Array.isArray(body.groups) ? body.groups : [],
   };
 }
 

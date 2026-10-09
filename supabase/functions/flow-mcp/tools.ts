@@ -88,7 +88,8 @@ export async function callTool(
     if (isFail(body)) return body;
     if (name === "get_totals") return ok(totalsOf(body));
     const projects = Array.isArray(body.projects) ? body.projects as Review[] : [];
-    return ok({ basis, projects: projects.map(projectRow) });
+    const groups = Array.isArray(body.groups) ? body.groups : [];
+    return ok({ basis, projects: projects.map(projectRow), groups });
   }
 
   if (name === "get_project") {
@@ -109,6 +110,32 @@ export async function callTool(
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
     return ok({ ...(result.json as Review), basis });
+  }
+
+  if (name === "list_project_groups") {
+    const result = await rpc("list_project_groups", {});
+    if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+    return ok({ groups: result.json });
+  }
+
+  if (name === "get_project_group") {
+    const groupId = args.id;
+    if (typeof groupId !== "string" || !UUID.test(groupId)) return fail("validation", "validation");
+    const basis = args.basis == null ? "cash" : args.basis;
+    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const from = dateOf(args.from);
+    if (typeof from !== "string" && from != null) return from;
+    const to = dateOf(args.to);
+    if (typeof to !== "string" && to != null) return to;
+    if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
+    const body: Record<string, unknown> = { p_id: groupId.toLowerCase(), p_basis: basis };
+    if (from != null) Object.assign(body, { p_from: from, p_to: to });
+    const result = await rpc("get_project_group", body);
+    if (result.status >= 400) return fail("refused", READ_REFUSED);
+    // The RPC returns null for an unknown id and for another company's group.
+    if (result.json == null) return fail("not_found", "not found");
+    if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+    return ok(result.json as Review);
   }
 
   if (name === "get_project_categories") {
