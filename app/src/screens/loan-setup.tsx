@@ -332,9 +332,10 @@ export function LoanSetupForm({
           />
         </div>
       ) : null}
-      {shown ? (
-        // FLOW-115: the kept preview dims while a field is incomplete or wrong, so it doesn't read as the new loan.
-        <div aria-live="polite" className={ready && !invalid ? undefined : "ui-loan-preview-stale"}>
+      {/* FLOW-344 (B): the preview shows only while every field is valid, so it never reads as another loan's payment. */}
+      <div aria-live="polite">
+        {canSave && shown ? (
+          <>
           <p>
             תשלום חודשי{" "}
             <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
@@ -356,8 +357,9 @@ export function LoanSetupForm({
               <bdi className="ui-num" dir="ltr">{formatLoanMoney(finalLine.amountMinor, currency)}</bdi>
             </p>
           ) : null}
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </div>
       {!advanced ? (
         <p className="ui-field-message ui-field-message-slot" role={shownError("payment") ? "alert" : undefined}>
           {shownError("payment") ?? ""}
