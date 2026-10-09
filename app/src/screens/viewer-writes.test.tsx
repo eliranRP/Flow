@@ -132,7 +132,7 @@ describe("viewer write controls", () => {
     expect(screen.queryByRole("button", { name: /SUMIT/ })).not.toBeInTheDocument();
     expect(screen.getByText("עוזר AI")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /עוזר AI/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toBeDisabled();
     expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
     // FLOW-501: reading is allowed, so both pages stay a tap away.
     expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
@@ -299,7 +299,7 @@ describe("viewer gates", () => {
       );
       const note = screen.getByText(VIEWER_NOTE);
       expect(note).toHaveClass("t-hint");
-      const overhead = screen.getByRole("switch", { name: "רווח אחרי כלליות" });
+      const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
       expect(overhead).toBeDisabled();
       expect(overhead.getAttribute("aria-describedby") ?? "").toContain(note.id);
       const row = overhead.closest("label");

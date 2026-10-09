@@ -1,11 +1,12 @@
--- FLOW-106 part 2: a loan names its own category for each part (decision 0128).
+-- FLOW-106 part 2: a loan names its own category for each part (decision 0128; interest and
+-- escrow may be kept out since 0166).
 -- update_loan sets them, attach uses them, undo restores them, and the rule holds for
 -- the app's own writes and for a category that flips in or out of the P&L.
 -- Fixed dates. @example.com only.
 
 begin;
 
-select plan(30);
+select plan(32);
 
 do $users$
 begin
@@ -159,12 +160,14 @@ select is(
 );
 select is(pg_temp.listed()->>'interest_category_name', 'Example partner interest', 'list_loans names the interest category');
 
--- 4-7. Categories that do not fit the part, or are not the company's.
+-- 4-7. Interest may go to a kept-out category (0166); categories that do not fit the part, or
+-- are not the company's, are refused.
 select is(
-  pg_temp.update_loan('f106d-bad-1', jsonb_build_object('interest_category_id', pg_temp.id('cat_out')))->'error'->>'message',
-  'category does not fit the loan part',
-  'interest cannot go to a kept-out category'
+  pg_temp.update_loan('f106d-kept-out', jsonb_build_object('interest_category_id', pg_temp.id('cat_out')))->>'ok',
+  'true',
+  'interest may go to a kept-out category'
 );
+select pg_temp.update_loan('f106d-kept-out-back', jsonb_build_object('interest_category_id', pg_temp.id('cat_in')));
 select is(
   pg_temp.update_loan('f106d-bad-2', jsonb_build_object('principal_category_id', pg_temp.id('cat_in2')))->'error'->>'message',
   'category does not fit the loan part',
@@ -222,13 +225,13 @@ select is(
   'the parts count by their categories'
 );
 
--- 14-15. A category in use cannot flip sides of the P&L.
+-- 14-15. A category holding interest may flip sides of the P&L (0166); one holding principal
+-- may not.
 select tests.authenticate_as('f106d_owner');
-select throws_ok(
-  $$ select public.set_category_excluded_from_pnl(pg_temp.id('cat_in'), true) $$,
-  '23514',
-  'loan category is fixed',
-  'a category holding interest cannot be kept out'
+select lives_ok(
+  $$ select public.set_category_excluded_from_pnl(pg_temp.id('cat_in'), true);
+     select public.set_category_excluded_from_pnl(pg_temp.id('cat_in'), false); $$,
+  'a category holding interest may be kept out and counted again'
 );
 select throws_ok(
   $$ select public.set_category_excluded_from_pnl(pg_temp.id('cat_out'), false) $$,
@@ -253,14 +256,12 @@ select lives_ok(
 );
 reset role;
 select tests.authenticate_as('f106d_owner');
-select throws_ok(
+select lives_ok(
   $$ update public.loan_splits s set category_id = pg_temp.id('cat_out')
      from public.transactions t
      where t.id = s.transaction_id and t.idempotency_key = 'f106d:jan' and s.part = 'escrow';
      set constraints all immediate; $$,
-  '23514',
-  'loan_split_category',
-  'but not escrow into a kept-out category'
+  'and escrow into a kept-out category (0166)'
 );
 reset role;
 -- The corrections above ran the deferred checks at once; later writes defer them again.
@@ -310,7 +311,7 @@ select is(
   'another company''s category is not found'
 );
 
--- 24. A category a loan names, with no parts filed yet, keeps its side of the P&L.
+-- 24. A category a loan names for escrow may move out of the P&L (0166).
 insert into public.categories (company_id, name, kind, sort_order)
 values
   (pg_temp.id('company'), 'Example named escrow', 'expense', 910),
@@ -327,11 +328,9 @@ join (values
 where c.company_id = pg_temp.id('company');
 select pg_temp.update_loan('f106d-named', jsonb_build_object('escrow_category_id', pg_temp.id('cat_named')));
 select tests.authenticate_as('f106d_owner');
-select throws_ok(
+select lives_ok(
   $$ select public.set_category_excluded_from_pnl(pg_temp.id('cat_named'), true) $$,
-  '23514',
-  'loan category is fixed',
-  'a category a loan names for escrow cannot be kept out, before any part is filed'
+  'a category a loan names for escrow may be kept out'
 );
 reset role;
 
@@ -346,17 +345,18 @@ select is(
 );
 
 -- 26. Undo is refused when that category changed sides of the P&L since.
-select pg_temp.update_loan('f106d-side', jsonb_build_object('interest_category_id', pg_temp.id('cat_side')));
-select pg_temp.update_loan('f106d-swap-2', jsonb_build_object('interest_category_id', pg_temp.id('cat_in2')));
 update public.categories set excluded_from_pnl = true where id = pg_temp.id('cat_side');
+select pg_temp.update_loan('f106d-side', jsonb_build_object('principal_category_id', pg_temp.id('cat_side')));
+select pg_temp.update_loan('f106d-swap-2', jsonb_build_object('principal_category_id', pg_temp.id('cat_out')));
+update public.categories set excluded_from_pnl = false where id = pg_temp.id('cat_side');
 select is(
   pg_temp.undo('f106d-undo-swap-2')->'error'->>'message',
   'category does not fit the loan part',
-  'undo cannot put interest back on a category now kept out'
+  'undo cannot put principal back on a category now counted'
 );
 select is(
-  (select interest_category_id from public.loans where id = pg_temp.id('loan')),
-  pg_temp.id('cat_in2'),
+  (select principal_category_id from public.loans where id = pg_temp.id('loan')),
+  pg_temp.id('cat_out'),
   'and the mapping is unchanged'
 );
 
@@ -418,6 +418,43 @@ select throws_ok(
   'the app cannot add a loan with a P&L category for principal'
 );
 reset role;
+
+-- 31-32. A hard-money loan keeps its interest out of profit (0166): the interest part files
+-- under a kept-out category and drops out of the P&L, as principal does.
+insert into public.categories (company_id, name, kind, sort_order, excluded_from_pnl)
+values (pg_temp.id('company'), 'Example carrying cost', 'expense', 913, true);
+insert into f106d (label, id)
+select 'cat_carry', c.id from public.categories c
+where c.company_id = pg_temp.id('company') and c.name = 'Example carrying cost';
+select pg_temp.update_loan('f106d-carry', jsonb_build_object('interest_category_id', pg_temp.id('cat_carry')));
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original,
+  vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
+)
+values (pg_temp.id('company'), 'expense', 'expense', 'posted', -100000, -100000, 100000, 0, 'unknown',
+  '2026-03-01', 'USD', 'manual', 'f106d:mar', 'Example loan payment');
+select pg_temp.as_mcp();
+select is(
+  public.mcp_attach_loan_payment(
+    'f106d-attach-mar',
+    (select id from public.transactions where idempotency_key = 'f106d:mar'),
+    pg_temp.id('loan'),
+    '[{"part": "interest", "amount_minor": 50000, "scheduled_minor": 50000},
+      {"part": "escrow", "amount_minor": 10000, "scheduled_minor": 10000},
+      {"part": "principal", "amount_minor": 40000, "scheduled_minor": 40000}]'::jsonb
+  )->>'ok',
+  'true',
+  'a payment attaches with interest in a kept-out category'
+);
+reset role;
+select is(
+  (select jsonb_agg(jsonb_build_object('part', l.part, 'in_pnl', l.in_pnl) order by l.part)
+   from private.pnl_lines l
+   join public.transactions t on t.id = l.transaction_id
+   where t.idempotency_key = 'f106d:mar' and l.part in ('interest', 'principal')),
+  '[{"part": "interest", "in_pnl": false}, {"part": "principal", "in_pnl": false}]'::jsonb,
+  'the kept-out interest stays out of the P&L'
+);
 
 select * from finish();
 rollback;

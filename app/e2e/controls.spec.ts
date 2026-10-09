@@ -528,7 +528,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
-  const overhead = page.getByRole("switch", { name: "רווח אחרי כלליות" });
+  const overhead = page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   await expect(page.getByRole("button", { name: "התנתקות" })).toHaveCount(0);
@@ -549,7 +549,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
-  await expect(page.getByRole("switch", { name: "רווח אחרי כלליות" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "הלוואות" })).toHaveCount(0);
   await page.goto("/e2e/connections?preview=1&nocompany=1");
   const sumit = page.getByRole("button", { name: "SUMIT" });

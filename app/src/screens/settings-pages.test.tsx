@@ -76,6 +76,15 @@ describe("connectionsHint", () => {
 });
 
 describe("Settings rows", () => {
+  it("does not count Jev as active when the server holds no key (FLOW-348 A)", () => {
+    const on = { ...business.jev, enabled: true };
+    const { unmount } = renderAt(<SettingsScreen sample={{ ...business, jev: on }} />);
+    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("4 מתוך 4 פעילים");
+    unmount();
+    renderAt(<SettingsScreen sample={{ ...business, jev: { ...on, keyMissing: true } }} />);
+    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("3 מתוך 4 פעילים");
+  });
+
   it("opens the two pages from one quiet group under the account", () => {
     renderAt(<SettingsScreen sample={{ ...business, loans: twoLoans }} />);
     const connections = screen.getByRole("link", { name: "חיבורים" });

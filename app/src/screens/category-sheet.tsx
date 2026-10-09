@@ -31,6 +31,11 @@ export function countsAsRehab(category: CategoryRow): boolean {
   return category.excluded_from_pnl !== true && category.loan_part == null;
 }
 
+/** Where a category's lines can move: same kind and visible. Only a loan category lists the built-in loan categories, which take only loan payment parts. */
+export function moveTargets(from: ManagedCategory, rows: ManagedCategory[]): ManagedCategory[] {
+  return rows.filter((row) => row.id !== from.id && row.kind === from.kind && !row.hidden && (from.loan_part != null || row.loan_part == null));
+}
+
 function lineCount(lines: number | undefined): string | undefined {
   if (lines == null) return undefined;
   return lines === 1 ? "תנועה אחת" : `${String(lines)} תנועות`;
@@ -76,10 +81,9 @@ export function CategoryMenuSheet({
   const hidden = category?.hidden === true;
   // A loan category, a hidden one, or one with no lines has nothing to move on its own: it can only merge.
   const mergeOnly = moveFrom != null && (moveFrom.loan_part != null || moveFrom.hidden || moveFrom.lines === 0);
-  const targets = moveFrom == null
-    ? []
-    // Same kind and visible. Only a loan category lists the built-in loan categories: those take only loan payment parts.
-    : rows.filter((row) => row.id !== moveFrom.id && row.kind === moveFrom.kind && !row.hidden && (moveFrom.loan_part != null || row.loan_part == null));
+  const targets = moveFrom == null ? [] : moveTargets(moveFrom, rows);
+  // FLOW-347: a sheet lists only actions that work today, so no move row when there is nowhere to move.
+  const canMove = category != null && moveTargets(category, rows).length > 0;
 
   function openMove(from: ManagedCategory) {
     onClose();
@@ -124,7 +128,7 @@ export function CategoryMenuSheet({
               {loanLine == null ? (
                 <ListRow
                   variant="button"
-                  title={keptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
+                  title={keptOut ? "לספור ברווח" : KEPT_OUT}
                   busy={pnlBusy}
                   onClick={() => {
                     if (pnlBusy || blocked()) return;
@@ -154,12 +158,14 @@ export function CategoryMenuSheet({
                   }}
                 />
               ) : null}
-              <ListRow
-                variant="button"
-                title="העברה לקטגוריה אחרת"
-                disabled={pnlBusy}
-                onClick={() => { openMove(category); }}
-              />
+              {canMove ? (
+                <ListRow
+                  variant="button"
+                  title="העברה לקטגוריה אחרת"
+                  disabled={pnlBusy}
+                  onClick={() => { openMove(category); }}
+                />
+              ) : null}
               <ListRow
                 variant="button"
                 title={hidden ? "החזרה לרשימה" : "הסתרה"}

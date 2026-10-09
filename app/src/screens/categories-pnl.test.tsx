@@ -116,7 +116,7 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, פיקדונות" }));
     const sheet = await screen.findByRole("dialog", { name: "פיקדונות" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "החזרה לרווח והפסד" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "לספור ברווח" }));
     await waitFor(() => {
       expect(pnlCalls()).toEqual([{ p_id: "c2", p_excluded: false }]);
     });
