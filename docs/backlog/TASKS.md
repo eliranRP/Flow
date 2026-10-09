@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
-| Dev lane 2 | FLOW-137: prime-linked loan rates (Flow MCP agent request) | More Flow MCP agent requests |
+| Dev lane 2 | FLOW-811: CI and deploy follow-ups (row-hash baseline script, composite foreign key indexes) | FLOW-812 faster CI (claim looks stale), more Flow MCP agent requests |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-404 השקעה card on the project page (#223) | FLOW-114 loan match on the transaction card (owner picked B, one row), FLOW-333 editor items, the detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-334 H1 (sticky compact bar) + H2 (labelled Back) in ScreenHeader, and FLOW-322 except the transaction detail hint and Home, PR #259 (FLOW-124/125 merged #253) | Settings, project screens, and other areas outside the review and transaction screens |
@@ -1161,11 +1161,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-811"></a>
 ### FLOW-811 · CI and deploy follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (this PR) except the Dependabot item · **Depends on:** —
 - [x] Migration checker: scan nested dollar-quoted bodies and commits inside DO or function bodies; don't flag `begin atomic`; flag unwrapped create/drop index. (A nested body after `do` or `as` is now scanned too; the other three were already in.)
-- [ ] Record the production row-hash baseline query in a script, so a baseline can be recomputed after a deploy.
-- [ ] If Dependabot is added, give it the fixture deny-list secret (CI fails closed without it).
-- [ ] Optional: indexes for composite foreign keys without a matching index (advisor info).
+- [x] Record the production row-hash baseline query in a script, so a baseline can be recomputed after a deploy. (`scripts/prod-row-hash.sh`: prints the baseline, or compares with one; runbook "Row-hash baseline".)
+- [ ] If Dependabot is added, give it the fixture deny-list secret (CI fails closed without it). (Not now: there is no Dependabot.)
+- [x] Optional: indexes for composite foreign keys without a matching index (advisor info). (34 indexes cover the 35 keys the advisor listed; a pgTAP test fails on a new foreign key without one.)
 - [x] Smoke: a failure message on the sheet-stack scrim check; anchor the auth allowlist to the Supabase host; a unit test for the reporter. (The scrim check already had its message. The write guard moved to `e2e/smoke-allow.ts`: the auth, status and list-RPC POSTs pass only on the Supabase origin. Unit tests for it and the reporter.)
 - [x] Add `supabase migration repair` to the CI/CD runbook. (Already in `docs/runbooks/ci-cd.md`.)
 - [x] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR. (`docs/changelog.d`.)
