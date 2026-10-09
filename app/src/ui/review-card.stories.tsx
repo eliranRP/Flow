@@ -33,7 +33,7 @@ type CardArgs = {
   /** FLOW-703: Jev answered "no project". */
   projectNoneJev?: boolean;
   /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no בטל. */
-  filled?: "undo" | "label" | "busy";
+  filled?: "undo" | "label" | "busy" | "off";
 };
 
 function CardView({
@@ -71,7 +71,7 @@ function CardView({
       flag={reviewFlagView(flags, { direction, currency })}
       direction={direction}
       missingBoth={missingBoth}
-      jevFilled={filled == null ? null : filled === "label" ? {} : { busy: filled === "busy", onUndo: () => undefined }}
+      jevFilled={filled == null ? null : filled === "label" ? {} : { busy: filled === "busy", alone: filled === "off", onUndo: () => undefined }}
     />
   );
 }
@@ -279,3 +279,7 @@ export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", a
 export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
 export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
 export const JevFilledFlag320: Story = { ...narrow, name: "Jev filled: with quiet flag, 320", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };
+// FLOW-706: Jev is off. The stored values with הצעה, no הצעת Jev pill, and the fill still undoable.
+export const JevFilledOff: Story = { name: "Jev filled: Jev off", args: { ...jevCard, filled: "off" } };
+export const JevFilledOff320: Story = { ...narrow, name: "Jev filled: Jev off, 320", args: JevFilledOff.args };
+export const JevFilledOffDark: Story = { ...dark, name: "Jev filled: Jev off, dark", args: JevFilledOff.args };

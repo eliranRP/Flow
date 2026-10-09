@@ -130,8 +130,14 @@ export function withJev<T extends JevRow>(row: T, state: JevReviewState): T & {
  * stored row: a field Jev shows holds the value the job wrote. A visual-only suggestion is not a fill.
  */
 export function jevFilledOnCard(row: JevRow, state: JevReviewState): boolean {
-  const auto = state.connectorOn ? state.prefill?.auto : undefined;
+  const auto = state.prefill?.auto;
   if (auto?.state !== "filled") return false;
+  if (!state.connectorOn) {
+    // FLOW-706: off shows no Jev values, but a fill still standing stays undoable (decision 0145).
+    if (state.prefill?.transactionId !== row.transaction_id) return false;
+    return (auto.projectId != null && row.project_id === auto.projectId && projectOpen(row))
+      || (auto.categoryId != null && row.category_id === auto.categoryId && categoryOpen(row));
+  }
   const shown = jevShown(row, state);
   return (shown.project && auto.projectId != null && row.project_id === auto.projectId)
     || (shown.category && auto.categoryId != null && row.category_id === auto.categoryId);

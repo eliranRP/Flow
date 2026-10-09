@@ -418,6 +418,8 @@ export function ReviewQueue({
   // FLOW-702: the auto job's fill still stands on the stored row; בטל takes it back (a viewer reads it only).
   const jevFilled = !jevLoading && card.transaction_id && jevFilledOnCard(card, jev) ? {
     busy: jevUndo.pendingFor(card.transaction_id),
+    // FLOW-706: with Jev off the card has no הצעת Jev pill, and the fill stays undoable.
+    alone: !jev.connectorOn,
     ...(holdWrites || leaving ? {} : {
       onUndo: () => {
         if (previewWrite == null && blocked(sample ? "empty" : preview)) return;

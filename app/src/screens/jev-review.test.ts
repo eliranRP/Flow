@@ -440,8 +440,47 @@ describe("Jev auto fills (FLOW-702)", () => {
     expect(jevFilledOnCard(filledRow, state)).toBe(true);
     expect(jevFilledOnCard({ ...filledRow, project_id: null, category_id: null }, state)).toBe(false);
     expect(jevFilledOnCard({ ...filledRow, project_assigned: true, category_assigned: true }, state)).toBe(false);
-    expect(jevFilledOnCard(filledRow, { ...state, connectorOn: false })).toBe(false);
     expect(jevFilledOnCard(filledRow, { connectorOn: true, prefill })).toBe(false);
+  });
+
+  it("with Jev off, labels a fill that still stands on the stored row (FLOW-706)", () => {
+    const off: JevReviewState = {
+      connectorOn: false,
+      prefill: { suggestionId: "", transactionId: "t1", project: null, category: null, auto: { state: "filled", projectId: "p1", categoryId: "c1" } },
+    };
+    expect(jevFilledOnCard(filledRow, off)).toBe(true);
+    // One field still holding the fill is enough.
+    expect(jevFilledOnCard({ ...filledRow, project_id: "p2" }, off)).toBe(true);
+    expect(jevFilledOnCard({ ...filledRow, project_id: "p2", category_id: "c2" }, off)).toBe(false);
+    expect(jevFilledOnCard({ ...filledRow, project_assigned: true, category_assigned: true }, off)).toBe(false);
+    expect(jevFilledOnCard({ ...filledRow, transaction_id: "t2" }, off)).toBe(false);
+    const undone: JevReviewState = {
+      connectorOn: false,
+      prefill: { suggestionId: "", transactionId: "t1", project: null, category: null, auto: { state: "undone", projectId: "p1", categoryId: "c1" } },
+    };
+    expect(jevFilledOnCard(filledRow, undone)).toBe(false);
+    // Off shows no Jev value on the row.
+    expect(jevShown(filledRow, off)).toEqual({ project: false, category: false });
+  });
+
+  it("reads only the standing fills while Jev is off (FLOW-706)", async () => {
+    connectorDb.fills = [
+      { transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null },
+      { transaction_id: "t2", project_id: null, category_id: "c1", undone_at: "2026-10-08T10:00:00Z" },
+    ];
+    const { loadJevFillsOff } = await import("./jev-review-card");
+    const queue = await loadJevFillsOff(["t1", "t2", "t3", ""]);
+    expect(queue.connectorOn).toBe(false);
+    expect(queue.byId).toEqual({
+      t1: { suggestionId: "", transactionId: "t1", project: null, category: null, auto: { state: "filled", projectId: "p1", categoryId: "c1" } },
+    });
+    connectorDb.fills = [];
+    connectorDb.fillsError = true;
+    try {
+      await expect(loadJevFillsOff(["t1"])).rejects.toThrow();
+    } finally {
+      connectorDb.fillsError = false;
+    }
   });
 
   it("fills nothing on a line whose fill was undone", () => {
