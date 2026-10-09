@@ -228,21 +228,16 @@ branch_changes() {
   grep -Fxf <(printf '%s\n' "$pr_files") <<<"$since" || true
 }
 
-# Where this branch left main, when every app input the branch changes is an app, shared or _shared
-# .ts/.tsx source or a migration (a test globs them): the vitest module graph finds the tests those
-# reach. Anything else (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
+# Where this branch left main, when every app input the branch changes is an app, e2e, shared or
+# _shared .ts/.tsx source, a migration (a test globs them) or app CSS (no test imports it): the vitest
+# module graph finds the tests and stories those reach. Anything else (setup, config, the design
+# package, scripts, lockfile, a deleted or renamed file) runs all (scripts/storybook-stories.mjs,
+# relatedRun).
 changed_base() {
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
-  local changed removed
-  # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
-  # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
-  changed="$(git diff --name-only "$pr_fork" HEAD -- "${app_inputs[@]}")"
-  removed="$(git diff --name-only --diff-filter=DR "$pr_fork" HEAD -- "${app_inputs[@]}")"
-  if [[ -n "$removed" ]] || grep -qx 'app/src/test-setup.ts' <<<"$changed" \
-    || [[ -n "$(grep -vE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^supabase/migrations/[^/]+\.sql$' <<<"$changed" || true)" ]]; then
-    return 1
-  fi
+  [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
+    | node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1
   echo "$pr_fork"
 }
 

@@ -619,6 +619,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const picked = local.indexOf('playwright test --fully-parallel "${e2e_specs[@]}"');
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
   assert.match(local, /--full\) full=1 ;;/);
+  // The scoped vitest runs (unit and storybook) follow scripts/storybook-stories.mjs's relatedRun.
+  assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1'));
+  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests'));
   // The same-patch skip holds only when main left the database surface alone since the marked fork;
   // otherwise the gate runs, and a database branch runs every pgTAP file.
   assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));
