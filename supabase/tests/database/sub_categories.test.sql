@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(29);
+select plan(35);
 
 do $users$
 begin
@@ -102,6 +102,32 @@ select lives_ok(
 );
 select is(pg_temp.parent_of('power'), null::uuid, 'clears the parent');
 
+-- An older build's group write is held to the same rules.
+select throws_ok(
+  format($$select public.set_category_group(%L, 'Utilities')$$, pg_temp.id('bills')),
+  '23514', 'category_parent_nested', 'a group write can''t put a parent under another'
+);
+select throws_ok(
+  format($$select public.set_category_group(%L, 'Utilities')$$, pg_temp.id('loan_cat')),
+  '23514', 'category_parent_loan_part', 'a group write can''t give a loan category a parent'
+);
+
+-- A row coming back from a snapshot never makes a parent.
+reset role;
+insert into public.categories (company_id, name, kind, sort_order, group_name)
+values (pg_temp.id('co'), 'Restored', 'expense', 99, 'Gone Group');
+select is(
+  (select count(*)::int from public.categories where company_id = pg_temp.id('co') and name = 'Gone Group'),
+  0,
+  'a restored row whose group is gone comes back without a parent, and none is made'
+);
+select is(
+  (select group_name from public.categories where company_id = pg_temp.id('co') and name = 'Restored'),
+  null,
+  'and its label is cleared'
+);
+select tests.authenticate_as('sc_owner');
+
 -- A renamed parent renames its children's label.
 select lives_ok(format($$select public.rename_category(%L, 'House Bills')$$, pg_temp.id('bills')), 'the parent is renamed');
 select is(
@@ -181,6 +207,16 @@ select is(
   public.mcp_create_category('sc-create-1', 'Sewer', 'expense', pg_temp.id('bills'))->'data'->>'parent_id',
   pg_temp.id('bills')::text,
   'MCP create_category takes a parent'
+);
+select is(
+  public.mcp_create_category('sc-create-1', 'Sewer', 'expense', pg_temp.id('bills'))->'data'->>'id',
+  (select id::text from public.categories where company_id = pg_temp.id('co') and name = 'Sewer'),
+  'a replay returns the same category'
+);
+select is(
+  public.mcp_create_category('sc-create-1', 'Sewer', 'expense', pg_temp.id('utilities'))->'error'->>'code',
+  'conflict',
+  'the same key with another parent is a conflict'
 );
 select is(
   (public.mcp_create_categories('sc-batch-1', jsonb_build_array(
