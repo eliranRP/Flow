@@ -82,6 +82,7 @@ const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
 export const AllLines: Story = { render: () => <Search entry="/search" /> };
 export const AllLinesDark: Story = { ...dark, render: () => <Search entry="/search" /> };
 export const AllLines320: Story = { ...narrow, render: () => <Search entry="/search" /> };
+export const AllLines320Dark: Story = { ...dark, ...narrow, render: () => <Search entry="/search" /> };
 
 /** Typed text, tinted in each name it matches; the count line totals the shown rows. */
 export const Results: Story = { render: () => <Search entry="/search?q=חומרי" /> };

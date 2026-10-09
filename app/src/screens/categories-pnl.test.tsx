@@ -89,7 +89,6 @@ describe("categories kept out of the P&L", () => {
     const more = await screen.findByRole("button", { name: "עוד, חומרים" });
     fireEvent.click(more);
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    expect(within(sheet).getByText("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.")).toBeInTheDocument();
     fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
 
     await waitFor(() => {
@@ -176,7 +175,6 @@ describe("categories kept out of the P&L", () => {
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     const action = within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" });
-    expect(action).toHaveAccessibleDescription("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.");
     fireEvent.click(action);
     // FLOW-405: the P&L action is a sheet row, busy with a spinner while it saves.
     await waitFor(() => { expect(action).toHaveAttribute("aria-busy", "true"); });

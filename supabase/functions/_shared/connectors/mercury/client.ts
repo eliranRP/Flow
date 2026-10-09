@@ -63,6 +63,8 @@ interface SessionState {
   secret: string;
   fetch: typeof fetch;
   now: () => Date;
+  /** Treasury account ids this session listed, or null before the ledger read. */
+  treasuryIds: string[] | null;
 }
 
 const SESSIONS = new WeakMap<object, SessionState>();
@@ -82,8 +84,14 @@ export function openMercury(secret: string, deps: MercuryDeps = {}): ConnectorSe
     secret: typeof secret === "string" ? secret : "",
     fetch: deps.fetch ?? fetch,
     now: deps.now ?? (() => new Date()),
+    treasuryIds: null,
   });
   return session;
+}
+
+/** How many treasury accounts this session's sync listed, or null when it has not listed them. */
+export function mercuryTreasuryAccountCount(session: ConnectorSession): number | null {
+  return SESSIONS.get(session)?.treasuryIds?.length ?? null;
 }
 
 function stateOf(session: ConnectorSession): SessionState {
@@ -471,10 +479,23 @@ function takePageCap(error: unknown, prior: unknown[], at: string, start: string
   throw error;
 }
 
+function olderThan(row: unknown, start: string): boolean {
+  return isRecord(row) && typeof row.canonicalDay === "string" && row.canonicalDay.slice(0, 10) < start;
+}
+
+/**
+ * The ledger comes newest first. Paging stops after the first page that reaches a day before
+ * the window start less TREASURY_CANCEL_MARGIN_DAYS, so a sync reads the window, not the
+ * account's whole history (FLOW-509). A cancel can carry its original's day, so the margin keeps
+ * a backdated cancel of a yield that old in the read; its original is in the stored lines.
+ */
+export const TREASURY_CANCEL_MARGIN_DAYS = 60;
+
 async function listTreasuryTransactions(
   session: ConnectorSession,
   treasuryId: string,
   cursor: string | undefined,
+  start: string | null,
 ): Promise<unknown[]> {
   const path = `/treasury/${treasuryId}/transactions`;
   const rows: unknown[] = [];
@@ -492,6 +513,7 @@ async function listTreasuryTransactions(
     rows.push(...body.transactions);
     const next = body.cursor;
     if (typeof next !== "number" && typeof next !== "string") return rows;
+    if (start && body.transactions.some((row) => olderThan(row, start))) return rows;
     const token = String(next);
     if (token.length === 0 || (pageCursor != null && token === pageCursor) || seen.has(token)) {
       throw new MercuryPageCapError(rows, null);
@@ -511,9 +533,11 @@ async function fetchTreasuryLedger(
   session: ConnectorSession,
   resumeId: string | null,
   resumeCursor: string | undefined,
+  start: string | null,
 ): Promise<{ lines: unknown[]; resume: { treasuryId: string; page: string } | null }> {
   const accounts = await listTreasuryAccounts(session);
   const ids = accounts.map((account) => requireTreasuryLabel(account).id);
+  stateOf(session).treasuryIds = ids;
   const startAt = resumeId && ids.includes(resumeId) ? ids.indexOf(resumeId) : 0;
   const lines: unknown[] = [];
   for (let index = startAt; index < ids.length; index += 1) {
@@ -521,7 +545,7 @@ async function fetchTreasuryLedger(
     if (!treasuryId) continue;
     const cursor = index === startAt ? resumeCursor : undefined;
     try {
-      lines.push(...await listTreasuryTransactions(session, treasuryId, cursor));
+      lines.push(...await listTreasuryTransactions(session, treasuryId, cursor, start));
     } catch (error) {
       if (error instanceof MercuryPageCapError && error.resumeAfter) {
         return {
@@ -580,6 +604,7 @@ export async function fetchMercurySince(
       session,
       decoded.phase === "treasury" ? decoded.treasuryId : null,
       decoded.phase === "treasury" ? decoded.page ?? undefined : undefined,
+      start ? addCalendarDays(start.slice(0, 10), -TREASURY_CANCEL_MARGIN_DAYS) : null,
     );
     treasuryRows = ledger.lines;
     if (ledger.resume) {

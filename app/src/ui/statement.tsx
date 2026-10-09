@@ -12,7 +12,8 @@ import { BankIcon, CameraIcon, CardIcon, DocumentIcon, TransferIcon } from "./ic
 export type StatementMethod = { icon: ReactNode; text: string; spoken?: string; ltr?: boolean };
 
 /** One muted fact on a statement row's second line. Accent marks a state to act on ("ממתינה לאישור"). */
-export type StatementDetail = { text: string; tone?: "accent" };
+/** `keep`: a state to act on that never drops off line 2; it shortens instead. `accent` also keeps it. */
+export type StatementDetail = { text: string; tone?: "accent"; keep?: boolean };
 
 export type StatementSource = "sumit" | "mercury" | "manual" | "photo";
 
@@ -69,21 +70,24 @@ export function statementRowLabel(input: {
   title: string;
   method?: StatementMethod | null;
   suggestion?: string | null;
+  suggestionJev?: boolean;
   agorot: bigint;
   currency?: string;
   sign: "in" | "out";
   inWord?: string;
   pending?: boolean;
   details?: readonly StatementDetail[];
+  realCents?: boolean;
 }): string {
   const abs = input.agorot < 0n ? -input.agorot : input.agorot;
   const income = input.sign === "in" && input.agorot >= 0n;
-  const amount = withCents(formatAmountText(abs, input.currency ?? "ILS", { detail: true, direction: income ? "income" : "expense" }));
+  const text = formatAmountText(abs, input.currency ?? "ILS", { detail: true, direction: income ? "income" : "expense" });
+  const amount = input.realCents === true ? text : withCents(text);
   const word = input.sign === "in" ? input.inWord ?? "הכנסה" : "הוצאה";
   const parts = [
     input.title,
     input.method ? input.method.spoken ?? input.method.text : null,
-    input.suggestion ? `הצעה: ${input.suggestion}` : null,
+    input.suggestion ? `${input.suggestionJev === true ? "הצעת Jev" : "הצעה"}: ${input.suggestion}` : null,
     ...(input.details ?? []).map((detail) => detail.text),
     `${word} ${amount}`,
     input.pending ? "בהמתנה" : null,

@@ -1,7 +1,8 @@
 -- Read-only status for scripts/check-sumit-cron.sh.
 -- One line: ok, bad-daily, or bad-drain.
 -- The daily command is the connector refresh insert, copied exactly.
--- The drain command reads Vault flow_sync_url and Vault cron_secret.
+-- The drain command reads Vault flow_sync_url and Vault cron_secret. Mercury rows use Vault
+-- flow_mercury_sync_url when it is set (FLOW-509, 20261013050000_mercury_sync_atomic.sql).
 -- It does not fall back to Kong and it does not embed a literal header.
 with expected as (
   select $cron$
@@ -21,7 +22,15 @@ drain_expected as (
       select net.http_post(
         url := (
           select case p.provider
-            when 'mercury' then replace(decrypted_secret, '/sumit-sync', '/mercury-sync')
+            when 'mercury' then coalesce(
+              (
+                select nullif(btrim(m.decrypted_secret), '')
+                from vault.decrypted_secrets m
+                where m.name = 'flow_mercury_sync_url'
+                limit 1
+              ),
+              replace(decrypted_secret, '/sumit-sync', '/mercury-sync')
+            )
             else decrypted_secret
           end
           from vault.decrypted_secrets
