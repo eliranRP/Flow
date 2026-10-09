@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507 a viewer's expired SUMIT and Mercury rows read neutral | Next small ready bug |
+| Backlog bug fixes | FLOW-507 a viewer's expired SUMIT and Mercury rows read neutral (#301) | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
