@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps } from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LOAN_AMOUNT_CHANGED_HINT, LOAN_BUSY_HINT, LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
+import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -17,15 +17,13 @@ const db = vi.hoisted(() => ({
     needs_review: boolean;
     loan_id: string;
   }>,
-  inserts: [] as unknown[],
-  updates: [] as Array<{ id: unknown; values: unknown }>,
-  counted: null as Record<string, unknown> | null,
-  insertError: null as { message: string; code?: string } | null,
-  insertHold: null as Promise<void> | null,
+  /** Every table read, by table name. */
+  reads: [] as string[],
+  rpcs: [] as Array<{ name: string; args: unknown }>,
+  saveError: null as { message: string; code?: string } | null,
+  saveHold: null as Promise<void> | null,
   readError: null as { message: string } | null,
   readHold: null as Promise<void> | null,
-  updateError: null as { message: string; code?: string } | null,
-  clearError: null as { message: string; code?: string } | null,
   loans: [{
     id: "loan-1",
     name: "הלוואת דוגמה",
@@ -57,10 +55,14 @@ const loan = {
   escrowMinor: 0,
   balanceMinor: 10_000_000n,
 };
-const MATCH_ROW = /^שיוך להלוואה/;
+const MATCH_ROW = /^הלוואה,? ?שיוך להלוואה/;
 
 function matchButton() {
   return screen.getByRole("button", { name: MATCH_ROW });
+}
+
+function held<T>(finish: () => T): Promise<T> {
+  return db.readHold ? db.readHold.then(() => finish()) : Promise.resolve(finish());
 }
 
 vi.mock("../use-is-viewer", () => ({
@@ -70,132 +72,66 @@ vi.mock("../use-is-viewer", () => ({
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     from: (table: string) => {
+      db.reads.push(table);
       if (table === "transactions") {
         return {
           select: () => ({
             eq: () => ({
-              single: () => {
-                const finish = () => ({
-                  data: db.readError ? null : db.txn,
-                  error: db.readError,
-                });
-                if (db.readHold) return db.readHold.then(() => finish());
-                return Promise.resolve(finish());
-              },
+              single: () => held(() => ({ data: db.readError ? null : db.txn, error: db.readError })),
             }),
           }),
         };
       }
       if (table === "loan_splits") {
-        return {
-          select: () => ({
-            eq: () => {
-              const finish = () => ({ data: db.splits, error: null });
-              if (db.readHold) return db.readHold.then(() => finish());
-              return Promise.resolve(finish());
-            },
-          }),
-          insert: (rows: unknown) => {
-            db.inserts.push(rows);
-            const finish = () => {
-              if (!db.insertError && Array.isArray(rows)) {
-                for (const row of rows as Array<Record<string, unknown>>) {
-                  db.splits.push({
-                    id: `split-${String(db.splits.length)}`,
-                    part: String(row.part),
-                    amount_minor: Number(row.amount_minor),
-                    scheduled_minor: Number(row.scheduled_minor),
-                    needs_review: false,
-                    loan_id: String(row.loan_id),
-                  });
-                }
-              }
-              return { data: null, error: db.insertError };
-            };
-            if (db.insertHold) return db.insertHold.then(() => finish());
-            return Promise.resolve(finish());
-          },
-          update: (values: unknown) => ({
-            eq: (_column: string, id: unknown) => {
-              db.updates.push({ id, values });
-              return Promise.resolve({ data: null, error: db.updateError });
-            },
-          }),
-        };
+        return { select: () => ({ eq: () => held(() => ({ data: db.splits, error: null })) }) };
       }
       if (table === "loans") {
-        return {
-          select: () => ({
-            eq: () => {
-              const finish = () => ({ data: db.loans, error: null });
-              if (db.readHold) return db.readHold.then(() => finish());
-              return Promise.resolve(finish());
-            },
-          }),
-        };
+        return { select: () => ({ eq: () => held(() => ({ data: db.loans, error: null })) }) };
       }
       if (table === "categories") {
         return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                not: () => {
-                  const finish = () => ({ data: db.categories, error: null });
-                  if (db.readHold) return db.readHold.then(() => finish());
-                  return Promise.resolve(finish());
-                },
-              }),
-            }),
-          }),
+          select: () => ({ eq: () => ({ eq: () => ({ not: () => held(() => ({ data: db.categories, error: null })) }) }) }),
         };
       }
       if (table === "loan_balances") {
-        return {
-          select: () => ({
-            eq: () => {
-              const finish = () => ({ data: db.balances, error: null });
-              if (db.readHold) return db.readHold.then(() => finish());
-              return Promise.resolve(finish());
-            },
-          }),
-        };
+        return { select: () => ({ eq: () => held(() => ({ data: db.balances, error: null })) }) };
       }
       throw new Error(table);
     },
-    rpc: (name: string) => Promise.resolve({
-      data: name === "get_loan_split" ? db.counted : null,
-      error: name === "clear_loan_split_review" ? db.clearError : null,
-    }),
+    rpc: (name: string, args: unknown) => {
+      db.rpcs.push({ name, args });
+      if (name === "save_loan_split") {
+        const finish = () => ({ data: null, error: db.saveError });
+        return db.saveHold ? db.saveHold.then(finish) : Promise.resolve(finish());
+      }
+      return Promise.resolve({ data: null, error: null });
+    },
   }),
 }));
 
-function PanelHarness(props: Partial<ComponentProps<typeof LoanSplitPanel>> = {}) {
+function saves() {
+  return db.rpcs.filter((call) => call.name === "save_loan_split").map((call) => call.args as {
+    p_transaction_id: string;
+    p_loan_id: string;
+    p_parts: Array<Record<string, unknown>>;
+  });
+}
+
+function OfferHarness(props: Partial<ComponentProps<typeof LoanMatchOffer>> = {}) {
   const [open, setOpen] = useState(false);
-  const splitSectionRef = useRef<HTMLHeadingElement>(null);
   return (
     <MemoryRouter>
-      <LoanSplitPanel
-        offerMatch
+      <LoanMatchOffer
         lineCurrency="ILS"
-        displayCurrency="ILS"
-        parts={null}
         loans={[loan]}
-        needsReview={false}
-        currencyMismatch={false}
         busy={false}
         sheetOpen={open}
         onSheetOpenChange={setOpen}
-        splitSectionRef={splitSectionRef}
         onMatch={vi.fn()}
-        onCorrect={vi.fn()}
         {...props}
       />
     </MemoryRouter>
   );
-}
-
-function panel(props: Partial<ComponentProps<typeof LoanSplitPanel>> = {}) {
-  return render(<PanelHarness {...props} />);
 }
 
 function renderSplit(props: Partial<ComponentProps<typeof LoanTransactionSplit>> = {}) {
@@ -222,15 +158,12 @@ function renderSplit(props: Partial<ComponentProps<typeof LoanTransactionSplit>>
 beforeEach(() => {
   db.txn = { company_id: "co-1", amount_original: 100_000, currency: "ILS" };
   db.splits = [];
-  db.inserts = [];
-  db.updates = [];
-  db.counted = null;
-  db.insertError = null;
-  db.insertHold = null;
+  db.reads = [];
+  db.rpcs = [];
+  db.saveError = null;
+  db.saveHold = null;
   db.readError = null;
   db.readHold = null;
-  db.updateError = null;
-  db.clearError = null;
   db.loans = [{
     id: "loan-1",
     name: "הלוואת דוגמה",
@@ -245,152 +178,27 @@ beforeEach(() => {
   db.balances = [{ loan_id: "loan-1", balance_minor: 10_000_000 }];
 });
 
-describe("LoanSplitPanel", () => {
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("LoanMatchOffer", () => {
   it("offers a loan when the line is not split yet", () => {
     const onMatch = vi.fn();
-    panel({ onMatch });
-    fireEvent.click(screen.getByRole("button", { name: "שיוך להלוואה" }));
+    render(<OfferHarness onMatch={onMatch} />);
+    fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
     expect(onMatch).toHaveBeenCalledWith("loan-1");
   });
 
-  it("says the amount changed when the parts no longer sum to the line", () => {
-    panel({
-      needsReview: true,
-      amountChanged: true,
-      byParts: true,
-      parts: [
-        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
-        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1", inPnl: false },
-      ],
-    });
-    expect(screen.getByText(LOAN_AMOUNT_CHANGED_HINT)).toBeInTheDocument();
-    expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
-  });
-
-  it("shows the three parts and a one-tap correction when review is waiting", () => {
-    const onCorrect = vi.fn();
-    panel({
-      onCorrect,
-      needsReview: true,
-      byParts: true,
-      parts: [
-        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
-        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1", inPnl: false },
-      ],
-    });
-    expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toBeInTheDocument();
-    expect(screen.getByText("ריבית")).toBeInTheDocument();
-    expect(screen.getByText("מסים וביטוח")).toBeInTheDocument();
-    expect(screen.getByText("קרן")).toBeInTheDocument();
-    expect(screen.getByText("−₪5")).toBeInTheDocument();
-    expect(screen.getByText("−₪2")).toBeInTheDocument();
-    expect(screen.getByText("−₪3")).toBeInTheDocument();
-    expect(screen.getByText("−₪10")).toBeInTheDocument();
-    expect(screen.getByText("הפיצול ממתין לבדיקה.")).toBeInTheDocument();
-    // FLOW-131: the flag cannot say why, so the hint names the busy loan as a maybe.
-    expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "עדכון הפיצול" })).toHaveAccessibleDescription(LOAN_BUSY_HINT);
-    expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
-    expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
-    expect(onCorrect).toHaveBeenCalled();
-  });
-
-  it("shows what counts in profit, the kept-out principal, and a total equal to the line", () => {
-    panel({
-      byParts: true,
-      parts: [
-        { id: "c", part: "principal", amountMinor: 100_000n, scheduledMinor: 100_000n, needsReview: false, loanId: "loan-1", inPnl: false },
-        { id: "a", part: "interest", amountMinor: 105_000n, scheduledMinor: 105_000n, needsReview: false, loanId: "loan-1", inPnl: true },
-        { id: "b", part: "escrow", amountMinor: 40_000n, scheduledMinor: 40_000n, needsReview: false, loanId: "loan-1", inPnl: true },
-      ],
-    });
-    expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח ₪1,450");
-    expect(screen.getAllByText("מחוץ לרווח")).toHaveLength(1);
-    const principal = screen.getByText("קרן").closest(".ui-row");
-    expect(principal).toHaveTextContent("מחוץ לרווח");
-    expect(principal).toHaveTextContent("−₪1,000");
-    const total = screen.getByText("סה״כ").closest(".ui-row");
-    expect(total).toHaveTextContent("−₪2,450");
-    const titles = [...document.querySelectorAll(".ui-row-title")].map((node) => node.textContent);
-    expect(titles).toEqual(["ריבית", "מסים וביטוח", "קרן", "סה״כ"]);
-  });
-
-  it("shows a fees part as a fourth row, counted in profit, after the principal", () => {
-    panel({
-      byParts: true,
-      parts: [
-        { id: "d", part: "fees", amountMinor: 30_000n, scheduledMinor: 30_000n, needsReview: false, loanId: "loan-1", inPnl: true },
-        { id: "c", part: "principal", amountMinor: 100_000n, scheduledMinor: 100_000n, needsReview: false, loanId: "loan-1", inPnl: false },
-        { id: "a", part: "interest", amountMinor: 0n, scheduledMinor: 0n, needsReview: false, loanId: "loan-1", inPnl: true },
-        { id: "b", part: "escrow", amountMinor: 40_000n, scheduledMinor: 40_000n, needsReview: false, loanId: "loan-1", inPnl: true },
-      ],
-    });
-    const titles = [...document.querySelectorAll(".ui-row-title")].map((node) => node.textContent);
-    expect(titles).toEqual(["ריבית", "מסים וביטוח", "קרן", "עמלות", "סה״כ"]);
-    const fees = screen.getByText("עמלות").closest(".ui-row");
-    expect(fees).toHaveTextContent("−₪300");
-    expect(fees).not.toHaveTextContent("מחוץ לרווח");
-    expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח ₪700");
-    expect(screen.getByText("סה״כ").closest(".ui-row")).toHaveTextContent("−₪1,700");
-  });
-
-  it("counts the whole line when the P&L does not count by parts", () => {
-    panel({
-      byParts: false,
-      parts: [
-        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: false, loanId: "loan-1", inPnl: null },
-        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: false, loanId: "loan-1", inPnl: null },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: false, loanId: "loan-1", inPnl: false },
-      ],
-    });
-    expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
-    expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
-    expect(screen.getByText("סה״כ").closest(".ui-row")).toHaveTextContent("−₪10");
-  });
-
   it("hides matching for a viewer", () => {
-    panel({ readOnly: true });
-    expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
-  });
-
-  it("keeps the split and hides the correction for a viewer", () => {
-    panel({
-      readOnly: true,
-      needsReview: true,
-      parts: [
-        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
-        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1" },
-      ],
-    });
-    expect(screen.getByText("ריבית")).toBeInTheDocument();
-    expect(screen.getByText("הפיצול ממתין לבדיקה.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עדכון הפיצול" })).not.toBeInTheDocument();
-    expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
-  });
-
-  it("does not offer a one-tap correction when the currency does not match", () => {
-    panel({
-      needsReview: true,
-      currencyMismatch: true,
-      parts: [
-        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
-        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1" },
-      ],
-    });
-    expect(screen.getByText("המטבע של השורה לא מתאים להלוואה.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עדכון הפיצול" })).not.toBeInTheDocument();
-    expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
+    render(<OfferHarness readOnly />);
+    expect(screen.queryByRole("button", { name: /שיוך להלוואה/ })).not.toBeInTheDocument();
   });
 
   it("shows a busy radio while a match is saving", () => {
-    panel({ savingId: "loan-1" });
-    fireEvent.click(screen.getByRole("button", { name: "שיוך להלוואה" }));
+    render(<OfferHarness savingId="loan-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
     expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveAttribute("aria-busy", "true");
   });
 });
@@ -449,46 +257,55 @@ describe("ProjectLoanList", () => {
 });
 
 describe("LoanTransactionSplit", () => {
-  it("sends one insert when the loan row is tapped twice while pending", async () => {
+  it("sends one save_loan_split when the loan row is tapped twice while pending", async () => {
     let release!: () => void;
-    db.insertHold = new Promise<void>((resolve) => { release = resolve; });
+    db.saveHold = new Promise<void>((resolve) => { release = resolve; });
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
     const radio = screen.getByRole("radio", { name: "הלוואת דוגמה" });
     fireEvent.click(radio);
-    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
     fireEvent.click(radio);
     await new Promise((r) => { setTimeout(r, 50); });
-    expect(db.inserts).toHaveLength(1);
+    expect(saves()).toHaveLength(1);
     act(() => { release(); });
     await new Promise((r) => { setTimeout(r, 50); });
-    expect(db.inserts).toHaveLength(1);
+    expect(saves()).toHaveLength(1);
   });
 
-  it("maps 23505, refetches, and closes the picker", async () => {
-    db.insertError = { message: "duplicate key", code: "23505" };
+  it("matches in one call: the line, the loan and the schedule's parts, no categories and no table writes", async () => {
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
-    db.splits = [
-      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: false, loan_id: "loan-1" },
-      { id: "b", part: "escrow", amount_minor: 0, scheduled_minor: 0, needs_review: false, loan_id: "loan-1" },
-      { id: "c", part: "principal", amount_minor: 99_500, scheduled_minor: 99_500, needs_review: false, loan_id: "loan-1" },
-    ];
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => { expect(screen.getByText("התשלום כבר שויך להלוואה.")).toBeInTheDocument(); });
-    await waitFor(() => { expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toBeInTheDocument(); });
-    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    const [call] = saves();
+    expect(call?.p_transaction_id).toBe("txn-1");
+    expect(call?.p_loan_id).toBe("loan-1");
+    expect(call?.p_parts.map((part) => part.part)).toEqual(["interest", "escrow", "principal"]);
+    expect(call?.p_parts.reduce((sum, part) => sum + Number(part.amount_minor), 0)).toBe(100_000);
+    // The server files each part under the loan's category, else the keyed default (0128).
+    expect(call?.p_parts.some((part) => "category_id" in part)).toBe(false);
+    expect(db.rpcs.filter((item) => item.name === "clear_loan_split_review")).toHaveLength(0);
   });
 
   it("says the loan closed before the payment date (FLOW-136)", async () => {
-    db.insertError = { message: "loan_closed: paid off before 2026-09-01", code: "23514" };
+    db.saveError = { message: "loan closed" };
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
     await waitFor(() => { expect(screen.getByText("ההלוואה נסגרה לפני תאריך התשלום.")).toBeInTheDocument(); });
+  });
+
+  it("toasts the server's balance check", async () => {
+    db.saveError = { message: "loan balance exceeded", code: "P0001" };
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(screen.getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument(); });
   });
 
   it("shows a paid-off loan disabled with its reason", async () => {
@@ -500,12 +317,12 @@ describe("LoanTransactionSplit", () => {
     expect(radio).toBeDisabled();
     expect(radio).toHaveAccessibleDescription("ההלוואה נפרעה");
     fireEvent.click(radio);
-    expect(db.inserts).toHaveLength(0);
+    expect(saves()).toHaveLength(0);
   });
 
-  it("shows a busy radio while the insert is pending", async () => {
+  it("shows a busy radio while the save is pending", async () => {
     let release!: () => void;
-    db.insertHold = new Promise<void>((resolve) => { release = resolve; });
+    db.saveHold = new Promise<void>((resolve) => { release = resolve; });
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
@@ -514,36 +331,6 @@ describe("LoanTransactionSplit", () => {
       expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveAttribute("aria-busy", "true");
     });
     act(() => { release(); });
-  });
-
-  it("files each part under the category with that loan_part, whatever its name", async () => {
-    renderSplit();
-    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
-    fireEvent.click(matchButton());
-    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
-    const rows = db.inserts[0] as Array<{ part: string; category_id: string }>;
-    expect(Object.fromEntries(rows.map((row) => [row.part, row.category_id]))).toEqual({
-      interest: "cat-i",
-      escrow: "cat-e",
-      principal: "cat-p",
-    });
-  });
-
-  it("files a part under the loan's own category when it names one", async () => {
-    const own = { ...db.loans[0], interest_category_id: "cat-own", escrow_category_id: null, principal_category_id: null };
-    db.loans = [own as (typeof db.loans)[number]];
-    renderSplit();
-    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
-    fireEvent.click(matchButton());
-    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
-    const rows = db.inserts[0] as Array<{ part: string; category_id: string }>;
-    expect(Object.fromEntries(rows.map((row) => [row.part, row.category_id]))).toEqual({
-      interest: "cat-own",
-      escrow: "cat-e",
-      principal: "cat-p",
-    });
   });
 
   it("does not offer שיוך on a category that is not the loan principal", async () => {
@@ -584,107 +371,30 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
   });
 
-  it("refuses a payment above the loan balance", async () => {
+  it("refuses a payment above the loan balance before it calls the server", async () => {
     db.balances = [{ loan_id: "loan-1", balance_minor: 100 }];
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
     await waitFor(() => { expect(screen.getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument(); });
-    expect(db.inserts).toHaveLength(0);
+    expect(saves()).toHaveLength(0);
   });
 
-  it("reads a four-part split with fees and keeps the fees when correcting it", async () => {
-    db.splits = [
-      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: true, loan_id: "loan-1" },
-      { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: true, loan_id: "loan-1" },
-      { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: true, loan_id: "loan-1" },
-      { id: "d", part: "fees", amount_minor: 250, scheduled_minor: 250, needs_review: true, loan_id: "loan-1" },
-    ];
-    db.txn = { company_id: "co-1", amount_original: 1_450, currency: "ILS" };
-    renderSplit();
-    await waitFor(() => { expect(screen.getByText("עמלות")).toBeInTheDocument(); });
-    expect(screen.getByText("עמלות").closest(".ui-row")).toHaveTextContent("−₪2.50");
-    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
-    await waitFor(() => { expect(db.updates).toHaveLength(4); });
-    // 14.50 less the 2.50 fees: interest 5, escrow 2, and principal takes the other 5.
-    expect(db.updates).toEqual([
-      { id: "a", values: { amount_minor: 500 } },
-      { id: "b", values: { amount_minor: 200 } },
-      { id: "c", values: { amount_minor: 500 } },
-      { id: "d", values: { amount_minor: 250 } },
-    ]);
-  });
-
-  it("uses correction failure copy", async () => {
-    db.splits = [
-      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: true, loan_id: "loan-1" },
-      { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: true, loan_id: "loan-1" },
-      { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: true, loan_id: "loan-1" },
-    ];
-    db.updateError = { message: "denied", code: "42501" };
-    renderSplit();
-    await waitFor(() => { expect(screen.getByRole("button", { name: "עדכון הפיצול" })).toBeInTheDocument(); });
-    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
-    await waitFor(() => { expect(screen.getByText("אין הרשאה לעדכן את הפיצול.")).toBeInTheDocument(); });
-  });
-
-  it("says the payment is above the balance when clearing re-checks it (FLOW-131)", async () => {
-    db.splits = [
-      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: true, loan_id: "loan-1" },
-      { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: true, loan_id: "loan-1" },
-      { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: true, loan_id: "loan-1" },
-    ];
-    db.clearError = { message: "loan_split_balance", code: "23514" };
-    // The parts sum to the line, so the flag reads as the busy-loan case.
-    db.txn = { company_id: "co-1", amount_original: 1_000, currency: "ILS" };
-    renderSplit();
-    await waitFor(() => { expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument(); });
-    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
-    await waitFor(() => { expect(screen.getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument(); });
-  });
-
-  it("moves focus to the split heading after a successful match", async () => {
-    renderSplit();
+  it("skips the split reads when get_transaction says the line has no split (FLOW-114)", async () => {
+    renderSplit({ split: null });
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
-    fireEvent.click(matchButton());
-    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toHaveFocus();
-    });
+    expect(db.reads).not.toContain("loan_splits");
+    expect(db.rpcs.map((call) => call.name)).not.toContain("get_loan_split");
   });
 
-  it("formats split parts in the loan currency", async () => {
-    db.txn = { company_id: "co-1", amount_original: 100_000, currency: "USD" };
-    db.loans = [{
-      id: "loan-1",
-      name: "הלוואת דוגמה",
-      currency: "USD",
-      principal_minor: 10_000_000,
-      annual_rate_ppm: 60_000,
-      term_months: 360,
-      start_date: "2026-02-01",
-      payment_minor: 59_955,
-      escrow_minor: 0,
-    }];
-    db.splits = [
-      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: false, loan_id: "loan-1" },
-      { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: false, loan_id: "loan-1" },
-      { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: false, loan_id: "loan-1" },
-    ];
-    db.counted = {
-      by_parts: true,
-      parts: [
-        { part: "interest", amount_minor: 500, in_pnl: true },
-        { part: "escrow", amount_minor: 200, in_pnl: true },
-        { part: "principal", amount_minor: 300, in_pnl: false },
-      ],
-    };
-    renderSplit();
-    await waitFor(() => { expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toBeInTheDocument(); });
-    expect(screen.getByText("−$5")).toBeInTheDocument();
-    expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח $7");
-    expect(screen.getByText("קרן").closest(".ui-row")).toHaveTextContent("מחוץ לרווח");
+  it("reads nothing on a matched line: the category row shows the loan", async () => {
+    renderSplit({
+      split: { loan_id: "loan-1", loan_name: "הלוואת דוגמה", needs_review: false, by_parts: true, parts: [] },
+    });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(db.reads).toEqual([]);
+    expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
   it("does not offer a paid-off loan for a payment after the day it ended", async () => {
@@ -728,13 +438,27 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => { expect(db.inserts.length).toBe(1); });
-    const rows = db.inserts[0] as Array<{ part: string; amount_minor: number; scheduled_minor: number }>;
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    const rows = saves()[0]?.p_parts ?? [];
     expect(rows.map((row) => [row.part, row.amount_minor, row.scheduled_minor])).toEqual([
       ["interest", 100_000, 100_000],
       ["escrow", 0, 0],
       ["principal", 0, 0],
     ]);
+  });
+
+  it("moves focus to the loan row after a match (FLOW-114)", async () => {
+    renderSplit();
+    // The card's category row turns into the loan row once the match lands.
+    const row = document.createElement("button");
+    row.className = "ui-loan-row";
+    row.textContent = "loan row";
+    document.body.append(row);
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(row).toHaveFocus(); });
+    row.remove();
   });
 
   it("hints the lone matching loan on the שיוך row", async () => {
