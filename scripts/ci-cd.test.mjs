@@ -172,6 +172,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
     assert.ok(unitStep.includes(`\n          ${part}\n`), part);
   }
   assert.equal((job("check-core").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);
+  assert.match(job("check-core"), /run: \|\n {10}pnpm test:connectors\n {10}node scripts\/check-deny-list\.mjs\n/);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
   assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
   assert.match(job("e2e-shard"), /bash scripts\/cd-preflight.sh/);

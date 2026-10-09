@@ -225,6 +225,7 @@ unit_part() {
     bash -c "$rest"
   fi
   pnpm test:connectors
+  node scripts/check-deny-list.mjs
 }
 build_part() {
   pnpm build

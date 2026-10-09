@@ -108,11 +108,14 @@ jobs:
           deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared
           deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors
       # The Mercury fixture deny-list is an Actions secret. Fork PRs do not receive it.
+      # check-deny-list scans every tracked file against it and prints only file:line.
       - name: Mercury connector tests
         env:
           MERCURY_FIXTURE_DENYLIST: ${{ secrets.MERCURY_FIXTURE_DENYLIST }}
           GITHUB_EVENT_HEAD_REPO_FORK: ${{ github.event.pull_request.head.repo.fork }}
-        run: pnpm test:connectors
+        run: |
+          pnpm test:connectors
+          node scripts/check-deny-list.mjs
       - name: Build the hosted dist
         run: pnpm build
       - name: Stamp the commit and check the hosted bundle
