@@ -66,9 +66,13 @@ export function loanListHintParts(row: LoanListRow): string[] {
   return [kind, row.projectName ?? null].filter((part): part is string => part != null && part !== "");
 }
 
-/** A paid-off loan shows only נפרעה and its date: its balance is no longer news (FLOW-138, Eliran picked "Hide"). */
+/**
+ * A paid-off loan shows only נפרעה and its date: its balance is no longer news (FLOW-138, Eliran picked "Hide").
+ * A closed loan drops a zero balance too, and keeps one that is still owed.
+ */
 export function showsLoanBalance(row: LoanListRow): boolean {
-  return row.status !== "paid_off";
+  if (row.status === "paid_off") return false;
+  return !(row.status === "closed" && row.balanceMinor === 0n);
 }
 
 /** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */

@@ -32,7 +32,7 @@ export const GroupedDark: Story = { ...dark };
 export const ClosedOpen: Story = { args: { closedOpen: true } };
 export const ClosedOpenDark: Story = { args: { closedOpen: true }, ...dark };
 export const ClosedOpen320: Story = { args: { closedOpen: true }, ...at320 };
-/** FLOW-138: a paid-off loan shows only נפרעה and its date, no balance. */
+/** FLOW-138: a paid-off loan, and a closed one with nothing owed, show only how and when it ended. */
 export const ClosedOpenDark320: Story = {
   args: { closedOpen: true },
   ...dark,
@@ -41,6 +41,8 @@ export const ClosedOpenDark320: Story = {
     const paid = within(canvasElement).getByRole("button", { name: /נפרעה/ });
     await expect(paid.getAttribute("aria-label")).not.toMatch(/\$/);
     await expect(paid.querySelector(".ui-loan-amount")).toBeNull();
+    const closed = within(canvasElement).getByRole("button", { name: /נסגרה/ });
+    await expect(closed.querySelector(".ui-loan-amount")).toBeNull();
   },
 };
 /** Every loan closed: the group says הלוואות שנסגרו under the empty state. */

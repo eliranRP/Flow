@@ -271,8 +271,9 @@ describe("the list", () => {
     expect(loanListHint({ ...(rows[0] as LoanListRow), kind: "amortizing", projectName: null })).toBeUndefined();
   });
 
-  it("hides the balance of a paid-off loan only (FLOW-138)", () => {
-    expect(rows.map((row) => showsLoanBalance(row))).toEqual([true, true, true, false]);
+  it("hides the balance of a paid-off loan and of a closed loan with nothing owed (FLOW-138)", () => {
+    expect(rows.map((row) => showsLoanBalance(row))).toEqual([true, true, false, false]);
+    expect(showsLoanBalance({ ...(rows[2] as LoanListRow), balanceMinor: 1200n })).toBe(true);
   });
 
   it("leads with ממתין לבדיקה, so a narrow row drops the kind and keeps the warning in words (FLOW-347)", () => {
