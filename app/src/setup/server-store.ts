@@ -44,7 +44,7 @@ export function uploadSetupState(userId: string, companyId: string, store: Setup
     if (typeof table.upsert !== "function") return;
     void Promise.resolve(
       table.upsert(
-        { user_id: userId, company_id: companyId, state: store, updated_at: new Date().toISOString() },
+        { user_id: userId, company_id: companyId, state: store },
         { onConflict: "user_id,company_id" },
       ),
     ).catch(() => undefined);

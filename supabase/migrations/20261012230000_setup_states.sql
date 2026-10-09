@@ -21,6 +21,23 @@ create table public.setup_states (
 
 create index setup_states_company_idx on public.setup_states (company_id);
 
+-- The server stamps updated_at, so a device clock never decides it.
+create function private.setup_states_touch()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.updated_at := pg_catalog.now();
+  return new;
+end;
+$$;
+revoke all on function private.setup_states_touch() from public, anon, authenticated;
+
+create trigger setup_states_touch
+  before insert or update on public.setup_states
+  for each row execute function private.setup_states_touch();
+
 alter table public.setup_states enable row level security;
 create policy setup_states_owner_select on public.setup_states
   for select to authenticated

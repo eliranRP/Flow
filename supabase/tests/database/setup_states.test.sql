@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(11);
+select plan(12);
 
 do $users$
 begin
@@ -37,6 +37,12 @@ select is(
   (select state->>'card_dismissed_at' from public.setup_states),
   '2026-10-09T01:00:00.000Z',
   'the owner reads back their own row'
+);
+update public.setup_states set updated_at = '2000-01-01T00:00:00Z';
+select is(
+  (select updated_at from public.setup_states),
+  pg_catalog.now(),
+  'the server stamps updated_at, whatever the client sends'
 );
 select throws_ok(
   $$insert into public.setup_states (user_id, company_id, state)
