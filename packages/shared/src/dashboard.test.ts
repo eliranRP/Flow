@@ -251,8 +251,8 @@ describe("project groups (FLOW-406)", () => {
 
   it("reads groups[] with bigint agorot and each project's group_id", () => {
     const parsed = dashboardSchema.parse({ ...dashboard, projects: [row], groups: [group] });
-    expect(parsed.groups[0]?.profit_agorot).toBe(60n);
-    expect(parsed.groups[0]?.by_currency[0]?.profit_minor).toBe(60n);
+    expect(parsed.groups?.[0]?.profit_agorot).toBe(60n);
+    expect(parsed.groups?.[0]?.by_currency[0]?.profit_minor).toBe(60n);
     expect(parsed.projects[0]?.group_id).toBe("g");
   });
 
