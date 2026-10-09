@@ -1093,3 +1093,39 @@ Deno.test("set_category_parent and create_category with a parent forward their i
   }
   assertEquals(calls.length, before);
 });
+
+Deno.test("get_breakdown level parent and search_expenses category_exact (FLOW-406)", async () => {
+  const PARENT = "33333333-3333-4333-8333-333333333406";
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_breakdown") return { status: 200, json: { direction: "expense", totals: [], groups: [], excluded: [], review_count: 0 } };
+    if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
+    return { status: 200, json: { rows: [], has_more: false } };
+  });
+  await callTool("get_breakdown", { direction: "expense", level: "parent" }, ["read"], rpc);
+  assertEquals(calls.at(-1)?.body.p_group_by, "parent");
+  await callTool("get_breakdown", { direction: "expense", level: "parent", group: PARENT }, ["read"], rpc);
+  assertEquals(calls.at(-1)?.body.p_group_by, "parent");
+  await callTool("get_breakdown", { direction: "expense", level: "category" }, ["read"], rpc);
+  assertEquals(calls.at(-1)?.body.p_group_by, "category");
+
+  await callTool("search_expenses", { scope: "filed", category_id: PARENT, category_exact: true }, ["read"], rpc);
+  assertEquals(calls.at(-1)?.body.p_category_exact, true);
+  await callTool("search_expenses", { scope: "filed", category_id: PARENT }, ["read"], rpc);
+  assertEquals("p_category_exact" in (calls.at(-1)?.body ?? {}), false);
+
+  const before = calls.length;
+  for (const [tool, input] of [
+    ["get_breakdown", { direction: "expense", level: "parent", group_by: "project" }],
+    ["get_breakdown", { direction: "expense", level: "sub" }],
+    ["search_expenses", { scope: "filed", category_exact: true }],
+    ["search_expenses", { scope: "filed", category_id: "none", category_exact: true }],
+    ["search_expenses", { scope: "filed", category_id: PARENT, category_exact: "yes" }],
+  ] as const) {
+    const result = await callTool(tool, input, ["read"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(input));
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+});
