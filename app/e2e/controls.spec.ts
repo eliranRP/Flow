@@ -280,8 +280,10 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   expect(prefixInside).toBe(true);
 
   await page.goto("/e2e/split");
-  await page.getByRole("button", { name: "פיצול ידני" }).click();
-  const share = page.locator("input[name^='split-pct-']").first();
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
+  await page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }).getByRole("radio", { name: "%" }).click();
+  const share = page.locator("input[id^='psplit-pct-']").first();
   const shareBox = share.locator("xpath=ancestor::*[contains(@class,'ui-percent-control')]");
   await focusAt(page, shareBox, share, 0.02);
   await focusAt(page, shareBox, share, 0.5);
@@ -762,32 +764,27 @@ test("a toast dismisses on tap", async ({ page }) => {
   await expect(note).toHaveCount(0);
 });
 
-test("split choices, manual percents, and close", async ({ page }) => {
+test("split parts, units, the hold, and close", async ({ page }) => {
   await page.goto("/e2e/split");
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("בחרו איך לפצל")).toBeVisible();
-  await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
-  await page.getByRole("button", { name: "הצגת הפירוט" }).click();
-  await expect(page.getByRole("button", { name: "הסתרת הפירוט" })).toBeVisible();
-  await page.getByRole("radio", { name: "לפי הכנסות" }).click();
-  await expect(page.getByText(/לפי הכנסות · 3 פרויקטים/)).toBeVisible();
-  await page.getByRole("radio", { name: "שווה בין פרויקטים שאבחר" }).click();
-  await page.getByRole("button", { name: "שיפוץ הרצל 12" }).click();
-  await expect(page.getByRole("button", { name: "שיפוץ הרצל 12" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "פיצול ידני" }).click();
-  const field = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
+  await expect(page.getByText("נשאר לשורה")).toBeVisible();
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "שיפוץ דירה ביאליק 8 חולון" }).click();
+  await page.getByRole("radiogroup", { name: "יחידה, שיפוץ דירה ביאליק 8 חולון" }).getByRole("radio", { name: "%" }).click();
+  const field = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
   await field.fill("120");
   await expect(page.getByText("עד 100%")).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/e2e\/split$/);
-  await expect(page.getByText("עד 100%")).toBeVisible();
-  await page.getByRole("button", { name: "חזרה לאפשרויות" }).click();
-  await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toBeVisible();
-  await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
+  await expect(page.getByRole("button", { name: "ביטול השינוי" })).toBeVisible();
+  await field.fill("40");
+  await page.getByRole("button", { name: /^הסרת החלק/ }).click();
+  await expect(page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" })).toHaveCount(0);
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
+  await page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" }).fill("50");
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.locator("#e2e-split-saved")).not.toHaveText("");
-  await expect(page).toHaveURL(/\/e2e\/split$/);
-  await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/transactions\//);
 });
 

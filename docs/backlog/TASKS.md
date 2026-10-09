@@ -126,6 +126,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
+| 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -962,6 +963,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
 - [x] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
+<a id="flow-346"></a>
+### FLOW-346 · Split between projects works like the split by categories, in exact amounts
+- **Type:** SMALL UI · **Status:** done (#325) · **Source:** owner's ask in the project thread (2026-10-09): "make it look similar ... clean simple and easy ... remove the features we have today and keep it the same way we did for category"
+- **What:** The project split takes exact amounts or percents per project with a rest row, in the category editor's layout; the presets and the manual percent list go. `save_split` and MCP `assign_expense_split` take `amount_minor` shares (decision 0169).
+- **Acceptance:** the design lead signs off against DESIGN-RULES; the owner sees 390px screenshots before merge; a design log entry.
 
 ## Projects and reports
 
