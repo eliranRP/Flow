@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { LOAN_TERM_MONTHS_MAX, type LoanKind } from "../../../packages/shared/src/loan-schedule.ts";
-import { DATE, fail, isCalendarDate, type ToolResult, UUID } from "./tools_args.ts";
+import { DATE, fail, isCalendarDate, shownKey, type ToolResult, UUID } from "./tools_args.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -249,6 +249,23 @@ function visibleName(min: number, max: number) {
 export function invalid(error: z.ZodError): ToolResult {
   return fail("validation", error.issues.some((issue) => issue.message === HIDDEN_NAME) ? HIDDEN_NAME : "validation");
 }
+/**
+ * `validation` naming each failing field and why, as "field: reason" joined by "; " (FLOW-414:
+ * the loan tools). The hidden-character rule keeps its own message.
+ */
+export function invalidFields(error: z.ZodError): ToolResult {
+  if (error.issues.some((issue) => issue.message === HIDDEN_NAME)) return fail("validation", HIDDEN_NAME);
+  const lines = error.issues.map((issue) => {
+    if (issue.code === z.ZodIssueCode.unrecognized_keys) {
+      return issue.keys.map((key) => `${shownKey([...issue.path, key].join("."))}: unknown field`).join("; ");
+    }
+    const field = issue.path.length > 0 ? issue.path.join(".") : "arguments";
+    if (issue.code === z.ZodIssueCode.invalid_union) return `${field}: expected a number or text`;
+    if (issue.code === z.ZodIssueCode.invalid_format) return `${field}: wrong format`;
+    return `${field}: ${issue.message.replace(/^Invalid input: /, "")}`;
+  });
+  return fail("validation", [...new Set(lines)].join("; "));
+}
 const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
 const LOAN_KIND = z.enum(["amortizing", "interest_only", "balloon", "demand"]);
@@ -257,19 +274,34 @@ const LOAN_MONTHS = z.number().int().min(1).max(LOAN_TERM_MONTHS_MAX);
  * The kind fields go together (decision 0132): interest_only_months only with interest_only,
  * amortization_months only with balloon, and a demand loan has no term, payment or escrow.
  */
-function kindFieldsFit(body: {
+function kindFieldsProblem(body: {
   kind?: LoanKind;
   term_months?: number;
   payment?: unknown;
   escrow?: unknown;
   interest_only_months?: number | null;
   amortization_months?: number | null;
-}): boolean {
+}): { field: string; message: string } | null {
   const kind = body.kind ?? "amortizing";
-  if ((kind === "interest_only") !== (body.interest_only_months != null)) return false;
-  if ((kind === "balloon") !== (body.amortization_months != null)) return false;
-  if (kind === "demand") return body.term_months === undefined && body.payment === undefined && body.escrow === undefined;
-  return body.term_months !== undefined;
+  if (kind === "interest_only" && body.interest_only_months == null) {
+    return { field: "interest_only_months", message: "required with kind interest_only" };
+  }
+  if (kind !== "interest_only" && body.interest_only_months != null) {
+    return { field: "interest_only_months", message: "only with kind interest_only" };
+  }
+  if (kind === "balloon" && body.amortization_months == null) {
+    return { field: "amortization_months", message: "required with kind balloon" };
+  }
+  if (kind !== "balloon" && body.amortization_months != null) {
+    return { field: "amortization_months", message: "only with kind balloon" };
+  }
+  if (kind === "demand") {
+    for (const field of ["term_months", "payment", "escrow"] as const) {
+      if (body[field] !== undefined) return { field, message: "not with kind demand" };
+    }
+    return null;
+  }
+  return body.term_months === undefined ? { field: "term_months", message: "required unless kind is demand" } : null;
 }
 export const addLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -287,7 +319,8 @@ export const addLoanSchema = z.object({
   interest_only_months: LOAN_MONTHS.optional(),
   amortization_months: LOAN_MONTHS.optional(),
 }).strict().superRefine((body, ctx) => {
-  if (!kindFieldsFit(body)) ctx.addIssue({ code: z.ZodIssueCode.custom });
+  const problem = kindFieldsProblem(body);
+  if (problem != null) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [problem.field], message: problem.message });
 });
 export const updateLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -315,16 +348,19 @@ export const updateLoanSchema = z.object({
   interest_only_months: LOAN_MONTHS.optional(),
   amortization_months: LOAN_MONTHS.optional(),
 }).strict().superRefine((body, ctx) => {
+  const issue = (field: string, message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
   if (body.interest_only_months !== undefined && body.kind !== undefined && body.kind !== "interest_only") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom });
+    issue("interest_only_months", "only with kind interest_only");
   }
   if (body.amortization_months !== undefined && body.kind !== undefined && body.kind !== "balloon") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom });
+    issue("amortization_months", "only with kind balloon");
   }
-  if (body.kind === "interest_only" && body.interest_only_months === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom });
-  if (body.kind === "balloon" && body.amortization_months === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom });
-  if (body.kind === "demand" && (body.term_months !== undefined || body.payment !== undefined || body.escrow !== undefined)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  if (body.kind === "interest_only" && body.interest_only_months === undefined) issue("interest_only_months", "required with kind interest_only");
+  if (body.kind === "balloon" && body.amortization_months === undefined) issue("amortization_months", "required with kind balloon");
+  if (body.kind === "demand") {
+    for (const field of ["term_months", "payment", "escrow"] as const) {
+      if (body[field] !== undefined) issue(field, "not with kind demand");
+    }
   }
 });
 export const setLoanRateSchema = z.object({
@@ -369,10 +405,10 @@ export const attachLoanSchema = z.object({
   fees_category_id: UUID_TEXT.optional(),
 }).strict().superRefine((body, ctx) => {
   if (body.parts !== undefined && (body.installments !== undefined || body.fees !== undefined)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["parts"], message: "not with installments or fees" });
   }
   if (body.fees_category_id !== undefined && body.fees === undefined && body.parts?.fees === undefined) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fees_category_id"], message: "only with fees" });
   }
 });
 export const createProjectSchema = z.object({
