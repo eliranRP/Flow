@@ -1,0 +1,1 @@
+Main's e2e: the controls sweep waits for every screen to stop moving before each tap, and gives a tap up to 5 s to show an effect, so a loaded runner no longer reports a tab bar link as doing nothing.
