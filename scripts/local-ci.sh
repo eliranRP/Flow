@@ -4,7 +4,7 @@
 #   default (about 4 minutes cold, under 2 when the app is unchanged): lint, the migration checks,
 #     Deno, typecheck, unit and connector tests,
 #     both dist builds, the Storybook tests, and the e2e specs that reach the changed files (needs
-#     Docker for local Supabase; about 3 more minutes for a screen change, see FLOW-813 in TASKS).
+#     Docker for local Supabase; about 3.5 more minutes for a screen change, see FLOW-813 in TASKS).
 #   --full (about 12 minutes): adds the every-story smoke, local Supabase (pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
