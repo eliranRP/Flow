@@ -29,6 +29,7 @@ const db = vi.hoisted(() => {
     hold: Promise<void> | null;
     readHold: Promise<void> | null;
     failRefresh: boolean;
+    keyStatus: string | null;
     writes: Array<Record<string, unknown>>;
   } = {
     row: null,
@@ -37,6 +38,7 @@ const db = vi.hoisted(() => {
     hold: null,
     readHold: null,
     failRefresh: false,
+    keyStatus: "ok",
     writes: [],
   };
   return state;
@@ -55,7 +57,8 @@ vi.mock("../lib/supabase", () => ({
         }),
       }),
     }),
-    rpc: (_name: string, args: Record<string, unknown>) => {
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name === "jev_key_status") return Promise.resolve({ data: db.keyStatus, error: null });
       db.writes.push(args);
       const finish = () => {
         if (!db.writeError) {
@@ -100,6 +103,7 @@ describe("Jev settings card", () => {
     db.hold = null;
     db.readHold = null;
     db.failRefresh = false;
+    db.keyStatus = "ok";
     db.writes = [];
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
@@ -113,6 +117,27 @@ describe("Jev settings card", () => {
     expect(parseJevThreshold("0.955")).toBe(0.96);
     expect(parseJevThreshold("1")).toBe(1);
     expect(parseJevThreshold("1.01")).toBeNull();
+  });
+
+  it("says פעיל · אין מפתח when Jev is on and the server holds no key, and כבוי when off (FLOW-704)", async () => {
+    db.keyStatus = "missing";
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    const { unmount } = renderLive(<JevSettings />);
+    await waitFor(() => expect(screen.getByText("פעיל · אין מפתח")).toBeInTheDocument());
+    expect(await readySwitch()).toBeChecked();
+    unmount();
+    db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
+    renderLive(<JevSettings />);
+    await waitFor(() => expect(screen.getByText("כבוי")).toBeInTheDocument());
+    expect(screen.queryByText(/אין מפתח/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the usual word while the key status is unknown or ok (FLOW-704)", async () => {
+    db.keyStatus = null;
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    renderLive(<JevSettings />);
+    await waitFor(() => expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument());
+    expect(db.writes).toEqual([]);
   });
 
   it("says כבוי when off and פעיל · הצעות בלבד when on", () => {

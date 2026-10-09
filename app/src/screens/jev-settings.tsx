@@ -25,6 +25,8 @@ export type JevCardState = {
   mode: JevMode;
   threshold: number;
   status: JevStatus;
+  /** FLOW-704: the server holds no Jev key (`jev_key_status` said missing), so a switched-on Jev labels nothing. */
+  keyMissing?: boolean;
 };
 
 export const JEV_DEFAULT: JevCardState = {
@@ -62,8 +64,9 @@ export function jevSwitchOn(state: Pick<JevCardState, "enabled" | "mode" | "stat
   return state.status === "ready" && state.enabled && state.mode !== "off";
 }
 
-export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "status">): string {
+export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "status" | "keyMissing">): string {
   if (state.status === "error") return "שגיאה";
+  if (jevSwitchOn(state) && state.keyMissing === true) return "פעיל · אין מפתח";
   if (jevSwitchOn(state)) return state.mode === "auto" ? "פעיל · מילוי אוטומטי" : "פעיל · הצעות בלבד";
   return "כבוי";
 }
@@ -110,6 +113,26 @@ export async function readJevIntegration(): Promise<StoredJev> {
   const stored = storedFromRow(data);
   if (!stored) throw new Error("validation");
   return stored;
+}
+
+/**
+ * FLOW-704: whether the server holds a Jev key, "ok" or "missing" (never the key). Null while
+ * unknown: a failed or pending read says nothing, so the row keeps its usual word.
+ */
+export function useJevKeyStatusQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: ["jev-key-status"],
+    enabled,
+    retry: false,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<"ok" | "missing" | null> => {
+      const supabase = getSupabase();
+      if (!supabase) return null;
+      const { data, error } = await supabase.rpc("jev_key_status");
+      if (error) throw new Error(error.message);
+      return data === "ok" || data === "missing" ? data : null;
+    },
+  });
 }
 
 /** The stored Jev row, shared by the Connections page and the Settings חיבורים hint (FLOW-501). */
@@ -329,6 +352,7 @@ function JevSettingsSample({ sample, optionsOpen, readOnly }: { sample: JevCardS
 function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readOnly: boolean }) {
   const client = useQueryClient();
   const query = useJevIntegrationQuery(true);
+  const keyMissing = useJevKeyStatusQuery(true).data === "missing";
   const save = useWrite<StoredJev>({
     failure: "לא הצלחנו לשמור.",
     keys: ["jev-integration"],
@@ -358,7 +382,7 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
   const reading = current == null;
   const fetchingError = reading && (retrying.current || retryingView);
   const view: JevCardState = !reading
-    ? { ...current, status: "ready" }
+    ? { ...current, status: "ready", keyMissing }
     : fetchingError || !query.isPending
       ? { enabled: false, mode: "shadow", threshold: 0.9, status: "error" }
       : { enabled: false, mode: "shadow", threshold: 0.9, status: "loading" };
