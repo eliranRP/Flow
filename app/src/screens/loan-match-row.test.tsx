@@ -181,7 +181,7 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     expect(screen.getByText("category row")).toBeInTheDocument();
   });
 
-  it("saves the edited parts in one save_loan_split, with the stored schedule and the fees category", async () => {
+  it("saves the edited parts in one save_loan_split, with the stored schedule and each part's category", async () => {
     renderRow();
     const dialog = await openSheet();
     fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4100" } });
@@ -193,9 +193,9 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
       p_transaction_id: "tx",
       p_loan_id: "loan-1",
       p_parts: [
-        { part: "interest", amount_minor: 168_000, scheduled_minor: 163_000 },
-        { part: "escrow", amount_minor: 38_000, scheduled_minor: 38_000 },
-        { part: "principal", amount_minor: 410_000, scheduled_minor: 415_000 },
+        { part: "interest", amount_minor: 168_000, scheduled_minor: 163_000, category_id: "cat-i" },
+        { part: "escrow", amount_minor: 38_000, scheduled_minor: 38_000, category_id: "cat-e" },
+        { part: "principal", amount_minor: 410_000, scheduled_minor: 415_000, category_id: "cat-p" },
         { part: "fees", amount_minor: 4_000, scheduled_minor: 4_000, category_id: "cat-f" },
       ],
     });
@@ -240,9 +240,9 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
       p_transaction_id: "tx",
       p_loan_id: "loan-1",
       p_parts: [
-        { part: "interest", amount_minor: 163_000, scheduled_minor: 163_000 },
-        { part: "escrow", amount_minor: 38_000, scheduled_minor: 38_000 },
-        { part: "principal", amount_minor: 415_000, scheduled_minor: 415_000 },
+        { part: "interest", amount_minor: 163_000, scheduled_minor: 163_000, category_id: "cat-i" },
+        { part: "escrow", amount_minor: 38_000, scheduled_minor: 38_000, category_id: "cat-e" },
+        { part: "principal", amount_minor: 415_000, scheduled_minor: 415_000, category_id: "cat-p" },
         { part: "fees", amount_minor: 4_000, scheduled_minor: 4_000, category_id: "cat-f" },
       ],
     });
@@ -377,7 +377,7 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     renderRow();
     const dialog = await openSheet();
     fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
-    expect(await screen.findByText("קטגוריית העמלות לא מתאימה.")).toBeInTheDocument();
+    expect(await screen.findByText("הקטגוריה לא מתאימה לחלק הזה.")).toBeInTheDocument();
   });
 
   it("marks a split that waits for review and opens it with the line's new split", async () => {
