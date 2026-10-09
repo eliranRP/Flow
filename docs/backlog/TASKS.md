@@ -1071,7 +1071,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row. (Mercury too.)
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
-- [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: drop it; the disabled switch is enough.)
+- [x] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: keep it.)
 - [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
