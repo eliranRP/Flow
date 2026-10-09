@@ -15,13 +15,16 @@ export function reviewAwaitingLabel(count: number): string {
 
 type TabBarProps = {
   label?: string;
+  /** Names the current tab where the path can't: the dev fixtures under /e2e/ (FLOW-334). */
+  section?: TabSection | null;
   reviewCount?: number;
   fabPressed?: boolean;
   /** A viewer has no add. The empty slot keeps the five-column rhythm. */
   allowAdd?: boolean;
 };
 
-type Section = "home" | "projects" | "review" | "settings";
+export type TabSection = "home" | "projects" | "review" | "settings";
+type Section = TabSection;
 
 /** Pushed screens keep the tab of the section they belong to. /add highlights none. */
 export function tabSection(pathname: string): Section | null {
@@ -32,11 +35,11 @@ export function tabSection(pathname: string): Section | null {
   return null;
 }
 
-export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPressed = false, allowAdd = true }: TabBarProps) {
+export function TabBar({ label = "ניווט ראשי", section: pinned, reviewCount = 0, fabPressed = false, allowAdd = true }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();
   const goBack = useGoBack();
-  const section = tabSection(location.pathname);
+  const section = pinned === undefined ? tabSection(location.pathname) : pinned;
   const onAdd = location.pathname === "/add";
   const badge = reviewCount > 99 ? "99+" : String(reviewCount);
   const fab = (
