@@ -1,14 +1,17 @@
 import { formatAmountText } from "@flow/shared";
 
-/** View-only overhead. The share is each project's income portion of company overhead. Decision 0021 and 0065. */
+/**
+ * View-only overhead. The share is each project's income portion of company overhead. Decision 0021 and 0065.
+ * FLOW-339: the switch shows its own state, so the hint never repeats it; off has no hint.
+ */
 export function overheadHint(
   on: boolean,
   detail: { available: boolean; shareAgorot?: bigint | null; currency?: string; scope?: "project" | "company" },
-): string {
-  if (!on) return "כבוי · מציג רווח לפני הוצאות כלליות";
-  if (detail.scope === "company") return "דלוק · כל פרויקט מציג רווח אחרי חלקו בהוצאות הכלליות";
-  if (!detail.available) return "דלוק · אין הכנסות בפרויקטים, אז אי אפשר לחלק את ההוצאות הכלליות";
-  return `דלוק · החלק בהוצאות הכלליות הוא ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
+): string | undefined {
+  if (!on) return undefined;
+  if (detail.scope === "company") return "כל פרויקט מציג רווח אחרי חלקו בהוצאות הכלליות";
+  if (!detail.available) return "אין הכנסות בפרויקטים, אז אי אפשר לחלק את ההוצאות הכלליות";
+  return `החלק בהוצאות כלליות ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
 }
 
 export function shownProfit(

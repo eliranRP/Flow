@@ -88,6 +88,8 @@ export function CategoriesScreen({
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
   const holdWrites = useHoldWrites();
+  // FLOW-507: the role can turn viewer while a sheet is open, so each write checks it again.
+  const writeBlocked = () => holdWrites || blocked();
   const categories = useCategoriesQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null && preview === "off");
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
@@ -288,7 +290,7 @@ export function CategoriesScreen({
         rows={rows}
         loanLine={menuLoanLine}
         pnlBusy={pnl.isPending}
-        blocked={blocked}
+        blocked={writeBlocked}
         returnFocusRef={menuOpener}
         onClose={() => { setMenu(null); }}
         onPnl={(category) => {
@@ -313,7 +315,7 @@ export function CategoriesScreen({
           <Button
             busy={createCategory.isPending}
             onClick={() => {
-              if (blocked()) return;
+              if (writeBlocked()) return;
               createCategory.mutate();
             }}
           >
@@ -334,7 +336,7 @@ export function CategoriesScreen({
         busy={hide.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {
-          if (blocked()) return;
+          if (writeBlocked()) return;
           hide.mutate();
         }}
       />
@@ -350,7 +352,7 @@ export function CategoriesScreen({
         busy={merge.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {
-          if (blocked()) return;
+          if (writeBlocked()) return;
           merge.mutate();
         }}
       />

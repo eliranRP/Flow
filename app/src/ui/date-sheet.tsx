@@ -4,6 +4,7 @@ import { Button } from "./button";
 import { Chip } from "./chip";
 import { dayLabel, formatDisplay, israelToday, monthTitle, shiftDays, shiftMonth } from "./date-math";
 import { IconButton } from "./icon-button";
+import { OutwardChevron } from "./icons";
 import { MonthGrid } from "./month-grid";
 import { Sheet } from "./sheet";
 
@@ -146,7 +147,7 @@ export function DateSheet({
             setCursor((current) => shiftMonth(current, -1));
           }}
         >
-          ›
+          <OutwardChevron side="start" />
         </IconButton>
         <p className="t-label">{monthTitle(cursor.year, cursor.month)}</p>
         <IconButton
@@ -156,7 +157,7 @@ export function DateSheet({
             setCursor((current) => shiftMonth(current, 1));
           }}
         >
-          ‹
+          <OutwardChevron side="end" />
         </IconButton>
       </div>
       <MonthGrid

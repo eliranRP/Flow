@@ -9,6 +9,8 @@ import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useReviewQuery } from "../use-books";
 import { reviewFocusPath } from "../review-paths";
 import { assertNoError, useWrite } from "../use-write";
+import { approveFailure, approveShown } from "../approve-review";
+import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { useJevReview } from "./jev-review-card";
 import { jevShown, withJev } from "./jev-review";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_SPLIT_NOTE, type ChangeChoice } from "../ui/change-sheet";
@@ -277,6 +279,54 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     },
   });
 
+  // FLOW-325 §10 (option A): פיצול לפי קטגוריות approves the line with the values on the sheet,
+  // then opens the parts editor. save_line_split refuses a line with an open review, so the
+  // approve comes first; a failed approve stays on the sheet.
+  const splitLeave = useRef<((to: string) => void) | null>(null);
+  const splitGuard = useRef(false);
+  const splitTo = row?.transaction_id ? `/transactions/${row.transaction_id}/split-category${search}` : null;
+  const approveSplit = useWrite({
+    failure: approveFailure,
+    success: "הפריט אושר",
+    keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
+    onSuccess: () => {
+      wroteReview.current = true;
+      if (splitTo != null) splitLeave.current?.(splitTo);
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      if (!supabase || row == null || projectId === "" || categoryId === "") throw new Error("supabase");
+      await approveShown(supabase, {
+        id: row.id,
+        projectId,
+        categoryId,
+        shownProjectId: row.project_id,
+        shownCategoryId: row.category_id,
+      }, () => invalidate([...LEDGER_FOCUS_KEYS]));
+    },
+  });
+  // Shown on the project list of an ordinary card with both fields set. Not for a viewer, a shared
+  // cost (its own split), or a split_mismatch card (עדכון הפיצול on the card). A line whose review
+  // is already closed opens the editor with no approve.
+  const splitCategoryShown = !holdWrites && !splitReview && row?.reason !== "split_mismatch"
+    && projectId !== "" && categoryId !== "" && (sample != null || splitTo != null);
+  function onSplitCategory(leave: (to: string) => void) {
+    if (sample) return;
+    if (splitGuard.current || approveSplit.isPending || splitTo == null) return;
+    if (blocked()) return;
+    if (closedReview.current) {
+      leave(splitTo);
+      return;
+    }
+    splitLeave.current = leave;
+    splitGuard.current = true;
+    approveSplit.mutate(undefined, {
+      onSettled: () => {
+        splitGuard.current = false;
+      },
+    });
+  }
+
   async function createProject(name: string): Promise<ChangeChoice> {
     if (holdWrites) throw new Error("preview");
     return saveNewProject(name, blocked, toast, (project) => {
@@ -406,6 +456,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
       }}
       onCreateProject={createProject}
+      {...(splitCategoryShown ? { onSplitCategory, splitCategoryBusy: approveSplit.isPending } : {})}
     />
   );
 }

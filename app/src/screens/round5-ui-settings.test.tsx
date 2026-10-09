@@ -778,9 +778,10 @@ describe("settings account", () => {
     const disconnectAt = sheetText.indexOf("ניתוק");
     expect(reasonAt).toBeGreaterThanOrEqual(0);
     expect(reasonAt).toBeLessThan(companyAt);
-    expect(companyAt).toBeLessThan(reconnectAt);
-    expect(reconnectAt).toBeLessThan(disconnectAt);
-    expect(within(authSheet).getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
+    expect(companyAt).toBeLessThan(disconnectAt);
+    expect(reconnectAt).toBeGreaterThan(companyAt);
+    // FLOW-350: חיבור מחדש is pinned in the sheet's foot; ניתוק stays in the body under the fields.
+    expect(within(authSheet).getByRole("button", { name: "חיבור מחדש" }).closest(".ui-sheet-foot")).not.toBeNull();
     expect(within(authSheet).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
     expect(within(authSheet).queryByText("החיבור ל־SUMIT נכשל.")).not.toBeInTheDocument();
   });

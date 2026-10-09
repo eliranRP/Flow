@@ -6,6 +6,7 @@ import {
   heroLabelProfit,
   primaryCurrency,
   profitInCurrency,
+  profitSign,
   projectAmountFigures,
   roundedHeroProfit,
 } from "../by-currency";
@@ -246,7 +247,7 @@ export function HomeBooks({
         {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0150). */}
         <PeriodSwipe period={period} onChange={onPeriod}>
           <Hero
-            label={heroProfitLabel(period, hero)}
+            label={heroProfitLabel(period, profitSign(heroFigures.map((figure) => figure.agorot)) === "mixed" ? "mixed" : hero)}
             figures={heroFigures}
             explanation={heroExplanation()}
           />

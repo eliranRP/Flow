@@ -170,6 +170,18 @@ describe("Home hero", () => {
     expect(screen.getByRole("heading", { name: "−₪100,000" })).toBeInTheDocument();
     expect(screen.getByText(heroExplanation())).toBeInTheDocument();
   });
+
+  it("names both a profit and a loss when the currencies disagree (FLOW-339)", () => {
+    const row = { direct_minor: 0n, shared_minor: 0n, overhead_minor: 0n, count: 3 };
+    renderHome(books({
+      by_currency: [
+        { ...row, currency: "ILS", income_minor: 5_000_000n, expense_minor: 2_000_000n, net_profit_minor: 3_000_000n },
+        { ...row, currency: "USD", income_minor: 100_000n, expense_minor: 400_000n, net_profit_minor: -300_000n },
+      ],
+    }));
+    expect(screen.getByText(`רווח והפסד ${periodPhrase(thisMonth())}`)).toBeInTheDocument();
+    expect(screen.queryByText(`רווח ${periodPhrase(thisMonth())}`)).not.toBeInTheDocument();
+  });
 });
 
 describe("Home flow rows (FLOW-301)", () => {

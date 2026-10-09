@@ -42,14 +42,14 @@ function line(id: string, patch: Partial<SearchRow>): SearchRow {
 }
 
 const rows: SearchRow[] = [
-  line("s1", { doc_date: "2026-10-06", supplier_name: "חומרי בניין השרון", amount_net: -124_000n }),
-  line("s2", { doc_date: "2026-10-02", supplier_name: "חומרי בניין השרון", amount_net: -38_650n, waiting_review: true, project_id: null, project_name: null, category_id: null, category_name: null }),
-  line("s3", { doc_date: "2026-09-27", supplier_name: "חומרי גמר הגליל", amount_net: -210_400n, project_id: "p2", project_name: "וילה לדוגמה" }),
+  line("s1", { doc_date: "2026-10-06", supplier_name: "חומרי בניין לדוגמה", amount_net: -124_000n }),
+  line("s2", { doc_date: "2026-10-02", supplier_name: "חומרי בניין לדוגמה", amount_net: -38_650n, waiting_review: true, project_id: null, project_name: null, category_id: null, category_name: null }),
+  line("s3", { doc_date: "2026-09-27", supplier_name: "חומרי גמר לדוגמה", amount_net: -210_400n, project_id: "p2", project_name: "וילה לדוגמה" }),
   line("s4", { doc_date: "2026-09-21", supplier_name: null, description: "החזר חומרי גמר", amount_net: 31_000n, direction: "income", category_name: "החזר מספק", project_id: "p2", project_name: "וילה לדוגמה", split_parts: 2 }),
   line("s5", { doc_date: "2026-09-18", supplier_name: null, customer_name: "לקוח לדוגמה", direction: "income", amount_net: 1_500_000n, project_name: "שיפוץ לדוגמה 12", category_id: "c3", category_name: "עבודה" }),
   line("s6", { doc_date: "2026-09-12", supplier_name: "Northwind Traders", currency: "USD", amount_net: -42_990n, category_id: "c4", category_name: "תוכנה", project_id: null, project_name: null }),
   line("s7", { doc_date: "2026-09-03", supplier_name: "ריבית בנק לדוגמה", amount_net: -41_200n, kept_out: true, category_id: "c5", category_name: "ריבית" }),
-  line("s8", { doc_date: "2026-08-28", supplier_name: "חשמל השרון", amount_net: -64_000n, line_status: "pending", project_id: "p2", project_name: "וילה לדוגמה" }),
+  line("s8", { doc_date: "2026-08-28", supplier_name: "חשמל לדוגמה", amount_net: -64_000n, line_status: "pending", project_id: "p2", project_name: "וילה לדוגמה" }),
 ];
 
 const sample: SearchSample = {
