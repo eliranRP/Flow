@@ -1,11 +1,10 @@
--- MCP cycle 3a: single-expense writes, typed undo, and the gates around them.
--- This file: grants, assign and undo, set category, and cross-company refusals.
--- The rest of the cycle is in mcp_cycle3a_gates and mcp_cycle3a_sync.
+-- MCP cycle 3a, gates: revoked and read-only tokens, idempotent replays,
+-- and review closes from the app.
 -- Dates are fixed. Addresses and names are fixtures.
 
 begin;
 
-select plan(45);
+select plan(24);
 
 do $users$
 begin
@@ -457,457 +456,234 @@ select 'cross_company', id from private.mcp_credentials where token_hash = 'hash
 insert into mcp3 (label, id)
 select 'owner_user', id from auth.users where email = 'mcp3-owner@test.flow';
 
-select ok(
-  (
-    select count(*)
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where (
-      (n.nspname = 'public' and p.proname in (
-        'approve_review_item', 'mcp_assign_expense', 'mcp_set_expense_category', 'mcp_undo'
-      ))
-      or (n.nspname = 'private' and p.proname in (
-        'mcp_error', 'mcp_refused', 'mcp_shares', 'mcp_require_writer',
-        'mcp_idempotency_lookup', 'mcp_idempotency_store', 'mcp_record_write'
-      ))
-    )
-    and exists (
-      select 1 from unnest(coalesce(p.proconfig, array[]::text[])) as cfg
-      where cfg = 'search_path=""'
-    )
-  ) = 11,
-  'each write wrapper pins search_path to the empty string'
-);
-
-select ok(
-  has_function_privilege('authenticated', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)', 'execute')
-  and has_function_privilege('authenticated', 'public.mcp_set_expense_category(text, uuid, uuid)', 'execute')
-  and has_function_privilege('authenticated', 'public.mcp_undo(text, text, uuid)', 'execute')
-  and has_function_privilege('authenticated', 'public.approve_review_item(uuid, uuid, uuid, boolean, uuid, uuid, boolean)', 'execute')
-  and not has_function_privilege('anon', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)', 'execute')
-  and not has_function_privilege('service_role', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)', 'execute')
-  and not has_function_privilege('service_role', 'public.mcp_undo(text, text, uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'private.mcp_require_writer()', 'execute')
-  and not has_function_privilege('anon', 'private.mcp_idempotency_store(uuid, text, text, jsonb)', 'execute'),
-  'authenticated can call the wrappers and cannot call the private helpers'
-);
-
-select ok(
-  not (
-    select p.prosecdef
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'private' and p.proname = 'mcp_error'
-  )
-  and not (
-    select p.prosecdef
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'private' and p.proname = 'mcp_refused'
-  )
-  and (
-    select p.prosecdef
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'private' and p.proname = 'mcp_require_writer'
-  ),
-  'json helpers are not security definer and the writer gate is'
-);
-
-select ok(
-  strpos(
-    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)'::regprocedure),
-    'for update'
-  ) < strpos(
-    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)'::regprocedure),
-    'from public.review_queue q'
-  )
-  and strpos(
-    pg_get_functiondef('public.mcp_set_expense_category(text, uuid, uuid)'::regprocedure),
-    'for update'
-  ) < strpos(
-    pg_get_functiondef('public.mcp_set_expense_category(text, uuid, uuid)'::regprocedure),
-    'from public.review_queue q'
-  ),
-  'assign and category lock the expense before the review'
-);
-
-do $$ begin perform pg_temp.as_mcp('write'); end $$;
-
-select throws_ok(
-  $$select id from private.mcp_writes$$,
-  '42501',
-  null,
-  'a client cannot read undo rows'
-);
-
-select throws_ok(
-  $$select idempotency_key from private.mcp_idempotency$$,
-  '42501',
-  null,
-  'a client cannot read idempotency rows'
-);
-
-select throws_ok(
-  format(
-    $$insert into private.mcp_writes (token_id, user_id, review_id, kind) values (%L::uuid, %L::uuid, %L::uuid, 'review')$$,
-    (select id from mcp3 where label = 'write'),
-    (select id from mcp3 where label = 'owner_user'),
-    (select id from mcp3 where label = 'queued_review')
-  ),
-  '42501',
-  null,
-  'a client cannot forge an undo row'
-);
-
-select throws_ok(
-  format(
-    $$insert into private.mcp_idempotency (token_id, idempotency_key, request_hash, response) values (%L::uuid, 'forged', 'hash', '{}'::jsonb)$$,
-    (select id from mcp3 where label = 'write')
-  ),
-  '42501',
-  null,
-  'a client cannot forge an idempotency row'
-);
-
 reset role;
-do $$ begin perform pg_temp.as_mcp('write'); end $$;
+do $$ begin perform pg_temp.as_mcp('revoked'); end $$;
 
 select is(
   (
     public.mcp_assign_expense(
-      'assign-plain',
-      (select id from mcp3 where label = 'plain'),
-      (select id from mcp3 where label = 'beta'),
+      'assign-revoked',
+      (select id from mcp3 where label = 'finished_txn'),
+      (select id from mcp3 where label = 'finished'),
       (select id from mcp3 where label = 'haul'),
       false
-    )->'data'->>'undo_kind'
+    )->'error'->>'message'
   ),
-  'reassign',
-  'assign with no open review returns a reassign undo'
+  'revoked',
+  'a revoked token is rejected'
 );
 
 select is(
-  (select project_id from public.transactions where idempotency_key = 'mcp3:plain'),
-  (select id from mcp3 where label = 'beta'),
-  'assign writes the owner project'
-);
-
-select is(
-  (select user_assigned from public.transactions where idempotency_key = 'mcp3:plain'),
-  true,
-  'assign sets user_assigned'
+  (select project_id from public.transactions where idempotency_key = 'mcp3:finished'),
+  (select id from mcp3 where label = 'alpha'),
+  'a revoked token writes nothing'
 );
 
 reset role;
+do $$ begin perform pg_temp.as_mcp('read'); end $$;
+
 select is(
-  (select count(*) from private.mcp_writes w join mcp3 t on t.id = w.transaction_id where t.label = 'plain'),
-  1::bigint,
-  'the assign and its undo row commit together'
+  (
+    public.mcp_assign_expense(
+      'assign-readonly',
+      (select id from mcp3 where label = 'finished_txn'),
+      (select id from mcp3 where label = 'finished'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'error'->>'code'
+  ),
+  'forbidden',
+  'a read-only token cannot write'
 );
 
-insert into mcp3 (label, id)
-select 'plain_undo', w.reassign_id
-from private.mcp_writes w
-join mcp3 t on t.id = w.transaction_id
-where t.label = 'plain';
-
+reset role;
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
   (
-    public.mcp_undo(
-      'undo-plain',
-      'reassign',
-      (select id from mcp3 where label = 'plain_undo')
-    )->'data'->>'kind'
-  ),
-  'reassign',
-  'undo of a reassign returns that kind'
-);
-
-select is(
-  (
-    select jsonb_build_object(
-      'project_id', t.project_id,
-      'category_id', t.category_id,
-      'pnl_role', t.pnl_role,
-      'user_assigned', t.user_assigned,
-      'category_suggested', t.category_suggested,
-      'shares', coalesce((
-        select jsonb_agg(jsonb_build_object(
-          'project_id', a.project_id, 'share_bp', a.share_bp, 'amount_net', a.amount_net
-        ) order by a.project_id)
-        from public.allocations a
-        where a.transaction_id = t.id
-      ), '[]'::jsonb)
-    )
-    from public.transactions t
-    where t.idempotency_key = 'mcp3:plain'
-  ),
-  (
-    select jsonb_build_object(
-      'project_id', project_id,
-      'category_id', category_id,
-      'pnl_role', pnl_role::public.pnl_role,
-      'user_assigned', user_assigned,
-      'category_suggested', category_suggested,
-      'shares', shares
-    )
-    from mcp3_prior
-    where label = 'plain'
-  ),
-  'undo restores the exact prior project, category, role, flags, and shares'
-);
-
-select is(
-  (
-    public.mcp_undo(
-      'undo-plain-again',
-      'reassign',
-      (select id from mcp3 where label = 'plain_undo')
-    )->'error'->>'code'
-  ),
-  'not_found',
-  'a second undo is not_found'
-);
-
-select is(
-  (
     public.mcp_assign_expense(
-      'assign-queued',
-      (select id from mcp3 where label = 'queued'),
-      (select id from mcp3 where label = 'beta'),
-      (select id from mcp3 where label = 'haul'),
-      true
-    )->'data'->>'closed_review'
-  ),
-  'true',
-  'assign closes an open review'
-);
-
-select is(
-  (select remembered_category_id from public.suppliers where name = 'ספק בדיקה'),
-  (select id from mcp3 where label = 'haul'),
-  'remember writes the supplier rule'
-);
-
-select is(
-  (
-    select q.status
-    from public.review_queue q
-    where q.id = (select id from mcp3 where label = 'queued_review')
-  ),
-  'approved'::public.review_status,
-  'the review leaves the open queue'
-);
-
-select is(
-  (
-    public.mcp_undo(
-      'undo-queued',
-      'review',
-      (select id from mcp3 where label = 'queued_review')
-    )->'data'->>'kind'
-  ),
-  'review',
-  'undo of a closed review reopens it'
-);
-
-select is(
-  (
-    select q.status
-    from public.review_queue q
-    where q.id = (select id from mcp3 where label = 'queued_review')
-  ),
-  'open'::public.review_status,
-  'the card is back in the queue'
-);
-
-select is(
-  (select remembered_category_id from public.suppliers where name = 'ספק בדיקה'),
-  null,
-  'undo restores the supplier rule'
-);
-
-select is(
-  (select project_id from public.transactions where idempotency_key = 'mcp3:queued'),
-  (select id from mcp3 where label = 'alpha'),
-  'review undo restores the prior project'
-);
-
-select is(
-  (
-    public.mcp_set_expense_category(
-      'cat-queued',
-      (select id from mcp3 where label = 'queued'),
-      (select id from mcp3 where label = 'haul')
-    )->'data'->>'closed_review'
-  ),
-  'true',
-  'set category closes an open review and keeps the project path'
-);
-
-select is(
-  (select project_id from public.transactions where idempotency_key = 'mcp3:queued'),
-  (select id from mcp3 where label = 'alpha'),
-  'set category keeps the current project'
-);
-
-select is(
-  (select category_id from public.transactions where idempotency_key = 'mcp3:queued'),
-  (select id from mcp3 where label = 'haul'),
-  'set category writes the category'
-);
-
-select is(
-  (
-    public.mcp_set_expense_category(
-      'cat-plain',
-      (select id from mcp3 where label = 'category'),
-      (select id from mcp3 where label = 'haul')
-    )->'data'->>'undo_kind'
-  ),
-  'reassign',
-  'a category change with no review is a reassign undo'
-);
-
-select is(
-  (select project_id from public.transactions where idempotency_key = 'mcp3:category'),
-  (select id from mcp3 where label = 'alpha'),
-  'a category change keeps the project'
-);
-
-select is(
-  (
-    select jsonb_agg(jsonb_build_object('project_id', a.project_id, 'share_bp', a.share_bp) order by a.project_id)
-    from public.allocations a
-    join public.transactions t on t.id = a.transaction_id
-    where t.idempotency_key = 'mcp3:category'
-  ),
-  jsonb_build_array(jsonb_build_object(
-    'project_id', (select id from mcp3 where label = 'alpha'),
-    'share_bp', 10000
-  )),
-  'a category change keeps the shares'
-);
-
-select is(
-  (
-    public.mcp_assign_expense(
-      'assign-edit',
-      (select id from mcp3 where label = 'edit'),
-      (select id from mcp3 where label = 'beta'),
+      'assign-finished',
+      (select id from mcp3 where label = 'finished_txn'),
+      (select id from mcp3 where label = 'finished'),
       (select id from mcp3 where label = 'haul'),
       false
     )->'ok'
   )::boolean,
   true,
-  'the edit row is assigned'
-);
-
-reset role;
-insert into mcp3 (label, id)
-select 'edit_undo', w.reassign_id
-from private.mcp_writes w
-where w.transaction_id = (select id from mcp3 where label = 'edit')
-  and w.kind = 'reassign';
-
-do $$ begin perform pg_temp.as_mcp('write'); end $$;
-
-select lives_ok(
-  format(
-    $$select public.set_transaction_category(%L::uuid, %L::uuid, true)$$,
-    (select id from mcp3 where label = 'edit'),
-    (select id from mcp3 where label = 'materials')
-  ),
-  'the owner edits the category after the assistant'
+  'a finished project can be assigned'
 );
 
 select is(
   (
-    public.mcp_undo(
-      'undo-edit',
-      'reassign',
-      (select id from mcp3 where label = 'edit_undo')
+    public.mcp_assign_expense(
+      'assign-replay',
+      (select id from mcp3 where label = 'replay'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'data'->>'id'
+  ),
+  (
+    public.mcp_assign_expense(
+      'assign-replay',
+      (select id from mcp3 where label = 'replay'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'data'->>'id'
+  ),
+  'the same key and body return the stored response'
+);
+
+reset role;
+select is(
+  (select count(*) from private.mcp_writes w where w.transaction_id = (select id from mcp3 where label = 'replay')),
+  1::bigint,
+  'a replay does not write a second undo row'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-replay',
+      (select id from mcp3 where label = 'replay'),
+      (select id from mcp3 where label = 'alpha'),
+      (select id from mcp3 where label = 'materials'),
+      false
     )->'error'->>'code'
   ),
   'conflict',
-  'undo after an owner edit is conflict'
+  'the same key with a different body is conflict'
 );
 
 select is(
-  (select category_id from public.transactions where idempotency_key = 'mcp3:edit'),
+  (select project_id from public.transactions where idempotency_key = 'mcp3:replay'),
+  (select id from mcp3 where label = 'beta'),
+  'the conflict leaves the first assignment'
+);
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-review-id',
+      (select id from mcp3 where label = 'stale_review'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'error'->>'message'
+  ),
+  'id is not a transaction; list_review.id is the review id',
+  'a review id in a transaction argument is validation'
+);
+
+select is(
+  (
+    public.approve_review_item(
+      (select id from mcp3 where label = 'stale_review'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false,
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      true
+    )->'error'->>'code'
+  ),
+  'stale',
+  'shown values that differ write nothing'
+);
+
+select is(
+  (select category_id from public.transactions where idempotency_key = 'mcp3:stale'),
   (select id from mcp3 where label = 'materials'),
-  'the later edit stays'
+  'a stale close leaves the category'
+);
+
+select is(
+  (
+    public.approve_review_item(
+      (select id from mcp3 where label = 'app_review'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false,
+      null,
+      null,
+      false
+    )->'ok'
+  )::boolean,
+  true,
+  'the app close succeeds when the shown check is off'
+);
+
+select is(
+  (
+    public.approve_review_item(
+      (select id from mcp3 where label = 'app_review'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false,
+      null,
+      null,
+      false
+    )->'error'->>'code'
+  ),
+  'already_closed',
+  'a second close is already_closed'
 );
 
 select is(
   (
     public.mcp_undo(
-      'undo-unknown',
-      'reassign',
-      '99999999-9999-4000-8000-000000000099'
+      'undo-app',
+      'review',
+      (select id from mcp3 where label = 'app_review')
     )->'error'->>'code'
   ),
   'not_found',
-  'an unknown undo id is not_found'
+  'an app approval is not an assistant undo'
 );
 
 select is(
   (
-    public.mcp_assign_expense(
-      'assign-cross',
-      (select id from mcp3 where label = 'other_txn'),
+    public.approve_review_item(
+      '99999999-9999-4000-8000-000000000098',
       (select id from mcp3 where label = 'beta'),
       (select id from mcp3 where label = 'haul'),
+      false,
+      null,
+      null,
+      false
+    )->'error'->>'code'
+  ),
+  'not_found',
+  'a missing review is not_found'
+);
+
+select is(
+  (
+    public.approve_review_item(
+      (select id from mcp3 where label = 'stale_review'),
+      (select id from mcp3 where label = 'other_project'),
+      (select id from mcp3 where label = 'haul'),
+      false,
+      null,
+      null,
       false
     )->'error'->>'message'
   ),
-  'transaction not found',
-  'a cross-company transaction is refused'
-);
-
-reset role;
-select is(
-  (select project_id from public.transactions where idempotency_key = 'mcp3:other'),
-  (select id from mcp3 where label = 'other_project'),
-  'the other company row is unchanged'
-);
-do $$ begin perform pg_temp.as_mcp('write'); end $$;
-
-select is(
-  (
-    public.mcp_assign_expense(
-      'assign-cross-category',
-      (select id from mcp3 where label = 'own'),
-      (select id from mcp3 where label = 'beta'),
-      (select id from mcp3 where label = 'other_category'),
-      false
-    )->'error'->>'message'
-  ),
-  'category not found',
-  'another company category cannot be written'
+  'project or category not found',
+  'another company project is refused'
 );
 
 select is(
   (
-    public.mcp_assign_expense(
-      'assign-own',
-      (select id from mcp3 where label = 'own'),
-      (select id from mcp3 where label = 'beta'),
-      (select id from mcp3 where label = 'haul'),
-      false
-    )->'data'->>'undo_kind'
+    select q.status
+    from public.review_queue q
+    where q.id = (select id from mcp3 where label = 'stale_review')
   ),
-  'reassign',
-  'the owner can still assign their own row'
-);
-
-select is(
-  (select project_id from public.transactions where idempotency_key = 'mcp3:own'),
-  (select id from mcp3 where label = 'beta'),
-  'the owner row received the project'
+  'open'::public.review_status,
+  'the refused close leaves the review open'
 );
 
 select * from finish();

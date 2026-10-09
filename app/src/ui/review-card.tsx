@@ -91,9 +91,10 @@ type ReviewCardProps = {
   /**
    * FLOW-702: Jev's auto fill stands on this line. The card says "✦ מולא ע״י Jev" under the rows, one
    * line with no reason (the owner's pick, so it never wraps), and בטל when `onUndo` is set (a viewer gets
-   * the label only). Shown only with a הצעת Jev pill.
+   * the label only). Shown only with a הצעת Jev pill, or with `alone` (FLOW-706: Jev is off, so the
+   * card shows the stored values without the pill, and the fill stays undoable).
    */
-  jevFilled?: { onUndo?: () => void; busy?: boolean } | null;
+  jevFilled?: { onUndo?: () => void; busy?: boolean; alone?: boolean } | null;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -163,7 +164,7 @@ export function ReviewCard({
   const mismatch = reason === "split_mismatch";
   const jevOnCard = !pending && lines.some((line) => line.jev);
   const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
-  const filled = jevOnCard && jevFilled != null ? jevFilled : null;
+  const filled = jevFilled != null && !pending && (jevOnCard || jevFilled.alone === true) ? jevFilled : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">

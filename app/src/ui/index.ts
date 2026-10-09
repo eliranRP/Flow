@@ -62,3 +62,5 @@ export { CurrencySheet, CURRENCY_CHOICES, currencyChoiceLabel } from "./currency
 export { PeriodSwipe } from "./period-swipe";
 export { InvestmentCard, currencyWord, currentEquityNote, forcedEquityNote } from "./investment-card";
 export type { EquityNote, InvestmentField, InvestmentFigures, InvestmentRow, MinorInCurrency } from "./investment-card";
+export { LoanPartsSheet, LOAN_PART_LABEL, LOAN_PART_ORDER, loanPartsCount, loanPaymentTitle } from "./loan-parts-sheet";
+export type { LoanPartField, LoanPartKey } from "./loan-parts-sheet";
