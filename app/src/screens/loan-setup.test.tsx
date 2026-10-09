@@ -396,6 +396,28 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("כתבו את מספר החודשים.")).toBeInTheDocument();
   });
 
+  it("shows a balloon loan's spread field and its balloon line (FLOW-106 §3.3)", () => {
+    renderForm(
+      <LoanSetupForm
+        companyCurrency="ILS"
+        initial={{ ...mortgage, term: "60" }}
+        kind={{ value: "balloon", onOpen: () => undefined }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "סוג בלון" })).toBeInTheDocument();
+    expect(screen.getByLabelText("פריסה בחודשים")).toHaveValue("360");
+    expect(screen.getByText(/בלון בסוף התקופה/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("פריסה בחודשים"), { target: { value: "30" } });
+    fireEvent.blur(screen.getByLabelText("פריסה בחודשים"));
+    expect(screen.getByText("כתבו בין 60 ל־600 חודשים.")).toBeInTheDocument();
+  });
+
+  it("asks for the interest-only months within the term (FLOW-106 §3.3)", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" initial={{ ...mortgage, term: "12", kindMonths: "13" }} kind={{ value: "interest_only", onOpen: () => undefined }} />);
+    fireEvent.blur(screen.getByLabelText("חודשי ריבית בלבד"));
+    expect(screen.getByText("כתבו בין 1 ל־12 חודשים.")).toBeInTheDocument();
+  });
+
   it("keeps the computed payment under עוד and shows interest", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
     expect(screen.queryByLabelText("תשלום חודשי")).not.toBeInTheDocument();

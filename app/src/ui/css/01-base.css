@@ -222,15 +222,6 @@ a.ui-row,
   background: var(--color-tint-pressed);
 }
 
-.ui-btn-retry {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-
-.ui-btn-retry:active:not(:disabled) {
-  background: var(--color-accent-pressed);
-}
-
 .ui-btn-danger,
 .ui-btn-danger-tint {
   min-height: var(--touch-min);
