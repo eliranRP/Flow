@@ -571,7 +571,8 @@ function ReviewerSplit() {
           // useWrite already toasted. Returning false keeps that toast and the screen.
           return false;
         }
-        return undefined;
+        // The sample write already moved to the queue.
+        return "left";
       }}
     />
   );

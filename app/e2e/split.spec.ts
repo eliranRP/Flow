@@ -58,7 +58,7 @@ test("a percent part rounds to whole agorot and the parts add up to the line", a
 test("parts past the line hold once, then a second close discards", async ({ page }) => {
   await addPart(page, "פרגולה בית כהן");
   await page.getByLabel("סכום, פרגולה בית כהן").fill("20");
-  await expect(page.getByText("עוברים את השורה")).toBeVisible();
+  await expect(page.getByText("עוברים את השורה", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("button", { name: "ביטול השינוי" })).toBeVisible();
   await expect(page).toHaveURL(/\/e2e\/split$/);

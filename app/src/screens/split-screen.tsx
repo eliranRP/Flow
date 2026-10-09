@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { amountOf, amountText, percentOf, percentText, shareOfLine, type PartUnit } from "../line-split";
@@ -168,6 +168,20 @@ async function saveShares(transactionId: string, shares: ProjectShare[]): Promis
   assertNoError(await supabase.rpc("save_split", { p_transaction_id: transactionId, p_shares: shares }));
 }
 
+/**
+ * The open editor's browser-back guard. It listens from module load, before the router does: a
+ * listener added on mount runs after the router's, which has already left the screen by then.
+ */
+let popGuard: ((event: PopStateEvent) => void) | null = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", (event) => { popGuard?.(event); }, true);
+}
+
+/** A part's value field. The field adds its own name prefix to the id, so match the end. */
+function partField(part: ProjectPart): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[id$="psplit-${part.unit === "percent" ? "pct" : "amt"}-${part.key}"]`);
+}
+
 function ProjectSplitEditor({
   transactionId,
   projects: givenProjects,
@@ -213,6 +227,7 @@ function ProjectSplitEditor({
   const [saving, setSaving] = useState(false);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const [lastEdited, setLastEdited] = useState<string | null>(null);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
   /** A new part takes the unit of the last part typed, as in the split by categories. */
   const [typedUnit, setTypedUnit] = useState<PartUnit>(() => initial.parts.at(-1)?.unit ?? "amount");
   const addRef = useRef<HTMLButtonElement>(null);
@@ -333,9 +348,9 @@ function ProjectSplitEditor({
       window.history.pushState(window.history.state, "", hereRef.current);
       void leaveRef.current();
     }
-    window.addEventListener("popstate", onPop, true);
+    popGuard = onPop;
     return () => {
-      window.removeEventListener("popstate", onPop, true);
+      if (popGuard === onPop) popGuard = null;
     };
   }, []);
 
@@ -351,6 +366,7 @@ function ProjectSplitEditor({
       const key = newProjectPartKey();
       setParts((list) => [...list, { key, projectId: id, unit: typedUnit, value: "" }]);
       setLastEdited(key);
+      setFocusKey(key);
       setTarget({ kind: "part", key });
       return;
     }
@@ -361,11 +377,23 @@ function ProjectSplitEditor({
     if (target?.kind === "part") update(target.key, { projectId: id });
   }
 
+  // Picking a project closes the picker at once, before the new part's field exists; once it
+  // renders, the sheet's focus return (which waits for the sheet to go) lands on it.
+  useLayoutEffect(() => {
+    if (focusKey == null) return;
+    const part = parts.find((item) => item.key === focusKey);
+    const field = part ? partField(part) : null;
+    if (field) {
+      pickerOpener.current = field;
+      setFocusKey(null);
+    }
+  }, [focusKey, parts]);
+
   /** A part's picker hands focus to its value field, so the next tap types. */
   function closePicker() {
     if (target?.kind === "part") {
       const part = parts.find((item) => item.key === target.key);
-      const field = part ? document.getElementById(`psplit-${part.unit === "percent" ? "pct" : "amt"}-${part.key}`) : null;
+      const field = part ? partField(part) : null;
       if (field) pickerOpener.current = field;
     }
     setTarget(null);
