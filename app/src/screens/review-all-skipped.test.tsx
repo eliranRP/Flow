@@ -125,7 +125,7 @@ function skippedRow(id: string, supplier: string) {
 
 describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
   it("lists the skipped rows after the pending ones; a row opens the line; החזרה לתור reopens it", async () => {
-    let skipped = [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")];
+    let skipped = [skippedRow("s1", "ברזל ומתכת לדוגמה"), skippedRow("s2", "צבע וגבס")];
     rpc.impl = (name, args) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
       if (name === "list_skipped_review") return Promise.resolve({ data: skipped, error: null });
@@ -142,18 +142,18 @@ describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
     expect(within(section).getByText("2")).toBeInTheDocument();
     const pending = screen.getByRole("link", { name: /מחסן הנמל/ });
     expect(pending.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(section).getByRole("link", { name: /ברזל הצפון/ })).toHaveAttribute("href", "/transactions/t-s1");
-    fireEvent.click(within(section).getByRole("button", { name: "החזרה לתור: ברזל הצפון" }));
+    expect(within(section).getByRole("link", { name: /ברזל ומתכת לדוגמה/ })).toHaveAttribute("href", "/transactions/t-s1");
+    fireEvent.click(within(section).getByRole("button", { name: "החזרה לתור: ברזל ומתכת לדוגמה" }));
     expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
     await waitFor(() => {
-      expect(within(section).queryByRole("link", { name: /ברזל הצפון/ })).toBeNull();
+      expect(within(section).queryByRole("link", { name: /ברזל ומתכת לדוגמה/ })).toBeNull();
     });
     fireEvent.click(screen.getByRole("button", { name: "לכרטיס" }));
     expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
   });
 
   it("moves focus to the next row's החזרה לתור after a reopen, then to the page heading (FLOW-327 r1)", async () => {
-    let skipped = [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")];
+    let skipped = [skippedRow("s1", "ברזל ומתכת לדוגמה"), skippedRow("s2", "צבע וגבס")];
     rpc.impl = (name, args) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
       if (name === "list_skipped_review") return Promise.resolve({ data: skipped, error: null });
@@ -165,7 +165,7 @@ describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review/all");
-    const first = await screen.findByRole("button", { name: "החזרה לתור: ברזל הצפון" });
+    const first = await screen.findByRole("button", { name: "החזרה לתור: ברזל ומתכת לדוגמה" });
     first.focus();
     fireEvent.click(first);
     await waitFor(() => {
@@ -183,12 +183,12 @@ describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
   it("says when the reopen failed, reads the list again and offers ניסיון חוזר", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
-      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל ומתכת לדוגמה")], error: null });
       if (name === "reopen_review") return Promise.resolve({ data: null, error: { message: "review item not found" } });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review/all");
-    fireEvent.click(await screen.findByRole("button", { name: "החזרה לתור: ברזל הצפון" }));
+    fireEvent.click(await screen.findByRole("button", { name: "החזרה לתור: ברזל ומתכת לדוגמה" }));
     const reads = rpc.calls.filter((call) => call.name === "list_skipped_review").length;
     expect(await screen.findByText("לא הצלחנו להחזיר לתור.")).toBeInTheDocument();
     await waitFor(() => {
@@ -203,13 +203,13 @@ describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
   it("shows a viewer the skipped rows with no החזרה לתור and never reopens (FLOW-327 r1)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
-      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל ומתכת לדוגמה")], error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review/all", { viewer: true });
     const heading = await screen.findByRole("heading", { name: "דולגו" });
     const section = heading.closest("section") as HTMLElement;
-    expect(within(section).getByRole("link", { name: /ברזל הצפון/ })).toBeInTheDocument();
+    expect(within(section).getByRole("link", { name: /ברזל ומתכת לדוגמה/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /החזרה לתור/ })).toBeNull();
     expect(rpc.calls.some((call) => call.name === "reopen_review")).toBe(false);
   });
@@ -242,7 +242,7 @@ describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
   it("with nothing pending, shows the hint and the skipped rows instead of the empty state", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [], error: null });
-      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל ומתכת לדוגמה")], error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review/all");
@@ -265,7 +265,7 @@ describe("the דולגו section under הצגת הכול (FLOW-309)", () => {
     });
     expect(screen.queryByText("הכל מאושר")).toBeNull();
     expect(screen.queryByText("אין פריטים שמחכים לאישור.")).toBeNull();
-    release({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+    release({ data: [skippedRow("s1", "ברזל ומתכת לדוגמה")], error: null });
     expect(await screen.findByRole("heading", { name: "דולגו" })).toBeInTheDocument();
     expect(screen.getByText("אין פריטים שמחכים לאישור.")).toBeInTheDocument();
     expect(screen.queryByText("הכל מאושר")).toBeNull();
@@ -293,7 +293,7 @@ describe("the empty queue's link to the skipped cards (FLOW-309, owner pick 2026
   }
 
   it("says how many were skipped and opens them under הצגת הכול", async () => {
-    emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")], error: null }));
+    emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל ומתכת לדוגמה"), skippedRow("s2", "צבע וגבס")], error: null }));
     renderWithLine("/review");
     expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
     const link = await screen.findByRole("link", { name: "2 פריטים דולגו" });
@@ -307,7 +307,7 @@ describe("the empty queue's link to the skipped cards (FLOW-309, owner pick 2026
   });
 
   it("says פריט אחד דולג for one", async () => {
-    emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null }));
+    emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל ומתכת לדוגמה")], error: null }));
     renderWithLine("/review");
     expect(await screen.findByRole("link", { name: "פריט אחד דולג" })).toBeInTheDocument();
   });

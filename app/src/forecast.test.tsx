@@ -101,7 +101,7 @@ describe("expected months", () => {
     expect(november?.parties.map((party) => [party.name, party.direction, party.minor])).toEqual([
       ["אור חשמל", "expense", 185_000n],
       ["בטוח בית", "expense", 126_000n],
-      ["גז הצפון", "expense", 50_000n],
+      ["גז לדוגמה", "expense", 50_000n],
       ["שי ניקיון", "expense", 48_000n],
     ]);
   });

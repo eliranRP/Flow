@@ -123,7 +123,7 @@ function DirectHarness({
         contained
         start={start}
         returnFocusRef={start === "category" ? categoryRow : projectRow}
-        supplier="נגריית הגליל"
+        supplier="נגרייה לדוגמה"
         amount="₪100"
         direction="expense"
         projects={[{ id: "p1", name: "בית הכרם" }, { id: "p2", name: "גבעת אורנים" }]}

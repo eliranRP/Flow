@@ -203,7 +203,7 @@ function StatementBankRows({ only }: { only?: BankKind }) {
     ach: <ListRow key="ach" variant="statement" title="Fabrikam Supply Co" fallback="bank" method={achMethod} suggestion="וילה לדוגמה · חומרים" agorot={-245_000n} currency="USD" sign="out" href="/review/all?item=12" />,
     wire: <ListRow key="wire" variant="statement" title="לקוח לדוגמה" fallback="bank" method={wireMethod} agorot={1_500_000n} currency="USD" sign="in" href="/review/all?item=13" />,
     check: <ListRow key="check" variant="statement" title="קבלן לדוגמה" fallback="bank" method={checkMethod} pending agorot={-80_000n} currency="USD" sign="out" href="/review/all?item=14" />,
-    none: <ListRow key="none" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={noMetaMethod} agorot={-120_050n} sign="out" href="/review/all?item=15" />,
+    none: <ListRow key="none" variant="statement" title="חשמל לדוגמה בע״מ" fallback="bank" method={noMetaMethod} agorot={-120_050n} sign="out" href="/review/all?item=15" />,
   };
   return <List>{only ? rows[only] : Object.values(rows)}</List>;
 }
@@ -211,18 +211,18 @@ function StatementBankRows({ only }: { only?: BankKind }) {
 function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "jev" | "jevPending" | "jevPair" | "long" | "fallback" | "all" }) {
   const rows = {
     income: <ListRow key="income" variant="statement" title="לקוח לדוגמה" fallback="invoice" method={invoiceMethod} agorot={500_000n} sign="in" href="/review/all?item=1" />,
-    expense: <ListRow key="expense" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
+    expense: <ListRow key="expense" variant="statement" title="חשמל לדוגמה בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
     pending: <ListRow key="pending" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} pending agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=3" />,
     suggestion: (
-      <ListRow key="suggestion" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
+      <ListRow key="suggestion" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
     ),
     // FLOW-704: Jev's fill reads "✦ Jev · …" and the row's name says הצעת Jev.
     jev: (
-      <ListRow key="jev" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=7" />
+      <ListRow key="jev" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=7" />
     ),
     // With בהמתנה at 320 only "✦" fits; the row's name still says הצעת Jev.
     jevPending: (
-      <ListRow key="jevPending" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} pending suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=8" />
+      <ListRow key="jevPending" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} pending suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=8" />
     ),
     long: (
       <ListRow

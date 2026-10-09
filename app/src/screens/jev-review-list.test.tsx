@@ -64,7 +64,7 @@ const ruled: ReviewRow = {
   ...open,
   id: "r2",
   transaction_id: "t2",
-  supplier_name: "בטון הצפון",
+  supplier_name: "בטון לדוגמה",
   project_id: "p9",
   project_name: "מחסן הנמל",
   project_suggested: true,

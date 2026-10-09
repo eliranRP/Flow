@@ -173,7 +173,7 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   const forward = range.getByRole("button", { name: "חודש הבא" });
   await expect(forward).toBeDisabled();
   expect(await cursorOf(forward)).toBe("not-allowed");
-  await range.locator("button.ui-icon-btn", { hasText: "›" }).click();
+  await range.locator('button.ui-icon-btn[aria-label="חודש קודם"]').click();
   await expect(forward).toBeEnabled();
   const day = range.getByRole("group", { name: "טווח מותאם" }).getByRole("button").first();
   await day.click();

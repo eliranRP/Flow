@@ -209,6 +209,12 @@
   color: var(--color-accent-text);
 }
 
+/* Picked and today: the filled circle wins, so the digit keeps its contrast. */
+.ui-day[aria-current="date"][aria-selected="true"] b {
+  box-shadow: none;
+  color: var(--color-on-accent);
+}
+
 .ui-day:disabled {
   color: var(--color-disabled-text);
 }
