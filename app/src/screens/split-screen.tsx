@@ -34,6 +34,7 @@ import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { Amount, LINE_SPLIT_MAX_PARTS, money, Percent } from "./line-split-parts";
 import { combinePhase, saveNewProject, useBlockedPreview } from "./screen-shared";
+import { holdSplitPop } from "./split-pop";
 
 /** The keys a project split write refreshes. */
 const PROJECT_SPLIT_KEYS = ["dashboard", "txn", "project", "project-category", "project-waiting", "home", "breakdown", "breakdown-lines", "review"];
@@ -166,15 +167,6 @@ async function saveShares(transactionId: string, shares: ProjectShare[]): Promis
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   assertNoError(await supabase.rpc("save_split", { p_transaction_id: transactionId, p_shares: shares }));
-}
-
-/**
- * The open editor's browser-back guard. It listens from module load, before the router does: a
- * listener added on mount runs after the router's, which has already left the screen by then.
- */
-let popGuard: ((event: PopStateEvent) => void) | null = null;
-if (typeof window !== "undefined") {
-  window.addEventListener("popstate", (event) => { popGuard?.(event); }, true);
 }
 
 /** A part's value field. The field adds its own name prefix to the id, so match the end. */
@@ -348,10 +340,8 @@ function ProjectSplitEditor({
       window.history.pushState(window.history.state, "", hereRef.current);
       void leaveRef.current();
     }
-    popGuard = onPop;
-    return () => {
-      if (popGuard === onPop) popGuard = null;
-    };
+    // The guard listens from App's load (split-pop.ts), before the router: this screen loads on demand.
+    return holdSplitPop(onPop);
   }, []);
 
   function openPicker(next: PickTarget, opener: HTMLElement | null) {

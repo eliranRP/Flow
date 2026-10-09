@@ -43,6 +43,9 @@ test("scroll on the project is still there after the expense", async ({ page }) 
 });
 
 test("each screen returns to where it was opened, and a fresh visit uses its parent", async ({ page }) => {
+  // 20 full page loads. Since FLOW-804 each one on the dev server also fetches every screen on
+  // demand, which takes this loop past the default 30 s.
+  test.setTimeout(60_000);
   const paths: Array<[string, string, string, RegExp]> = [
     ["פרויקט לדוגמה", "חזרה", "/projects/herzl?preview=1", /\/projects\?preview=1$/],
     ["תנועה לדוגמה", "חזרה", "/transactions/1?preview=1", /\/projects\?preview=1$/],

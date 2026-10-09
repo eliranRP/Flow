@@ -51,6 +51,19 @@ async function fingerprint(page: Page) {
   }));
 }
 
+/** Opens the route once the dev server has loaded every lazy screen (FLOW-804) and React has drawn it. */
+async function gotoSettled(page: Page, url: string) {
+  await page.goto(url);
+  await page.waitForFunction(() => document.documentElement.dataset.screensLoaded === "1");
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  }));
+}
+
 function hitTarget(el: Element): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const rect = el.getBoundingClientRect();
@@ -83,14 +96,14 @@ export function sweepControls(urls: readonly string[]): void {
   for (const url of urls) {
     test(`no enabled control is a no-op on ${url}`, async ({ page }) => {
       test.setTimeout(180_000);
-      await page.goto(url);
+      await gotoSettled(page, url);
       const found = await describeControls(page);
       const failures: string[] = [];
       let skipped = 0;
       for (const control of found) {
         if (control.name.includes("המשך עם Google")) continue;
         if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
-        await page.goto(url);
+        await gotoSettled(page, url);
         const target = page.locator("a[href], button, input, textarea").nth(control.index);
         const here = page.url();
         if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
