@@ -100,3 +100,22 @@ export const OnBand: Story = {
 };
 export const OnBandDark: Story = { ...OnBand, name: "On band, dark", globals: { theme: "dark" } };
 export const OnBand320: Story = { ...OnBand, name: "On band, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
+
+const percents = [
+  { value: "0.8", label: "80%", numeric: true },
+  { value: "0.85", label: "85%", numeric: true },
+  { value: "0.9", label: "90%", numeric: true },
+  { value: "0.95", label: "95%", numeric: true },
+];
+
+/** #231 follow-up: numeric options draw in an LTR bdi, so "90%" keeps its sign on the right. */
+export const Numeric: Story = {
+  args: { label: "סף ביטחון", value: "0.9", onChange: () => undefined, options: percents },
+};
+export const Numeric320: Story = { ...Numeric, name: "Numeric, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
+
+/** #231 follow-up: a save is running. The group is aria-busy and ignores taps, and keeps focus. */
+export const Busy: Story = {
+  args: { label: "סף ביטחון", value: "0.9", onChange: () => undefined, options: percents, busy: true },
+};
+export const BusyDark: Story = { ...Busy, name: "Busy, dark", globals: { theme: "dark" } };
