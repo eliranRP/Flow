@@ -70,8 +70,11 @@ export const Merge: Story = {
     onOpenChange: () => undefined,
     title: "למזג את הקטגוריה?",
     item: "כללי ← חומרים",
-    consequence: "התנועות עוברות אל היעד. אי אפשר להפריד אחר כך.",
+    consequence: "התנועות עוברות אל היעד, וכללי מוסתרת. אי אפשר להפריד אחר כך.",
     confirmLabel: "מיזוג",
+    // FLOW-341: red because it can't be undone, but no bin: a merge is not a delete.
+    destructive: true,
+    icon: null,
     onConfirm: () => undefined,
   },
 };

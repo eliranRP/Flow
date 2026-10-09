@@ -67,6 +67,7 @@ export function FiledTodayScreen({
             title={row.supplier_name ?? row.description}
             {...loanRowProps(filedMarks.get(row.id), [row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · "))}
             agorot={row.amount_net}
+            currency={row.currency}
             sign={row.direction === "income" ? "in" : "out"}
             source={rowSource(row.source)}
             tag={row.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}

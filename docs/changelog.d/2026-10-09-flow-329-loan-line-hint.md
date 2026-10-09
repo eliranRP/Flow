@@ -1,0 +1,1 @@
+A line in a loan category with no loan split said "תשלום הלוואה · נספר לפי הפיצול" on its locked P&L row, though nothing was split. It now says "תשלום הלוואה · לפי הקטגוריה", which is how it counts. A matched line still says "לפי חלקי ההלוואה".

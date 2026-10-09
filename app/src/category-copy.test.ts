@@ -10,7 +10,6 @@ import {
   mergeFailureText,
   moveFailureText,
   movedToast,
-  moveHint,
   moveTitle,
   pnlFailureText,
   restoreFailureText,
@@ -58,9 +57,6 @@ describe("delete and move all lines (FLOW-405)", () => {
   });
 
   it("counts moved lines and names the move refusals", () => {
-    expect(moveHint("חומרים", 42)).toBe("42 תנועות עוברות לקטגוריה אחרת. חומרים נשארת.");
-    expect(moveHint("חומרים", 1)).toBe("תנועה אחת עוברת לקטגוריה אחרת. חומרים נשארת.");
-    expect(moveHint("חומרים", 0)).toBe("אין תנועות להעביר.");
     expect(moveTitle(42)).toBe("העברת 42 תנועות אל");
     expect(moveTitle(undefined)).toBe("העברת התנועות אל");
     expect(movedToast(0, "חומרים", "קבלנים")).toBe("לא היו תנועות להעביר מחומרים");

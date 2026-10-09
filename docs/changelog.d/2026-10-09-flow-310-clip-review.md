@@ -1,0 +1,1 @@
+The period bar no longer cuts "3 חודשים" and "6 חודשים" to "3 חוד…": each preset takes the room its words need, and phones under 390px wide show "3 ח׳". A long sheet title wraps to a second line before it ends in "…".

@@ -10,7 +10,7 @@ import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useReviewQue
 import { reviewFocusPath } from "../review-paths";
 import { assertNoError, useWrite } from "../use-write";
 import { useJevReview } from "./jev-review-card";
-import { withJev } from "./jev-review";
+import { jevShown, withJev } from "./jev-review";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_SPLIT_NOTE, type ChangeChoice } from "../ui/change-sheet";
 import { ScreenState } from "../ui/screen-state";
 import { RouteSheet } from "../ui/route-sheet";
@@ -39,6 +39,8 @@ type ChangeSample = {
   categorySuggested?: boolean;
   /** False when the project is the owner's or a remembered rule, so it is not הצעה. */
   project_suggested?: boolean;
+  /** The suggested fields Jev filled, so they say הצעת Jev (FLOW-704). */
+  jev?: { project?: boolean; category?: boolean };
 };
 
 export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
@@ -125,6 +127,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     });
   }, [sample?.saveError, toast]);
   const filledRow = row ? withJev(row, jev) : row;
+  // FLOW-704: a field showing Jev's value says הצעת Jev here too, as on the card.
+  const shownJev = sample
+    ? { project: sample.jev?.project === true, category: sample.jev?.category === true }
+    : row ? jevShown(row, jev) : { project: false, category: false };
   const suggestionProjectId = sample
     ? (sample.project_suggested === false ? "" : (sample.suggestionId ?? ""))
     : (filledRow?.project_suggested === true ? (filledRow.project_id ?? "") : "");
@@ -314,6 +320,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       categoryId={categoryId}
       suggestionProjectId={suggestionProjectId}
       suggestionCategoryId={suggestionCategoryId}
+      suggestionProjectJev={shownJev.project}
+      suggestionCategoryJev={shownJev.category}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       {...(income || splitReview ? {} : { remember, onRemember: setRemember })}

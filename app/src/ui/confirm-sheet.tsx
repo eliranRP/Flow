@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { Button } from "./button";
 import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
@@ -14,6 +14,8 @@ type ConfirmSheetProps = {
   detail?: string;
   confirmLabel: string;
   destructive?: boolean;
+  /** The confirm button's icon. A destructive confirm shows the bin unless this says otherwise; null shows none (FLOW-341: a merge is not a delete). */
+  icon?: ReactNode;
   busy?: boolean;
   onConfirm: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
@@ -30,6 +32,7 @@ export function ConfirmSheet({
   detail,
   confirmLabel,
   destructive = false,
+  icon,
   busy = false,
   onConfirm,
   returnFocusRef,
@@ -44,7 +47,7 @@ export function ConfirmSheet({
         variant={destructive ? "danger-tint" : "primary"}
         full
         busy={busy}
-        icon={destructive ? <TrashIcon /> : undefined}
+        icon={icon !== undefined ? icon ?? undefined : destructive ? <TrashIcon /> : undefined}
         onClick={() => {
           onConfirm();
         }}

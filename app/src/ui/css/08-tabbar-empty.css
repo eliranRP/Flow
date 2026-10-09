@@ -246,13 +246,16 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   -webkit-line-clamp: 2;
 }
 
+/* FLOW-310 clip review: a sheet title is often a name (a category, a project). It wraps to a
+   second line before it ends in an ellipsis. */
 .ui-sheet-head .t-title-2 {
-  display: block;
+  display: -webkit-box;
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .ui-sheet-hint {

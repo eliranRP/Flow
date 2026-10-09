@@ -100,7 +100,6 @@ export function CategoriesScreen({
   const [mergeInto, setMergeInto] = useState("");
   const [hideTarget, setHideTarget] = useState<CategoryRow | null>(null);
   const [mergeOpen, setMergeOpen] = useState(false);
-  const [pickOpen, setPickOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const toast = useToast();
   // FLOW-322: a category row opens that category's lines, every period, in search.
@@ -173,7 +172,6 @@ export function CategoriesScreen({
   // Follow the refetched row, so the rehab switch shows the saved value while the sheet stays open.
   const menuRow = menu ? rows.find((row) => row.id === menu.id) ?? menu : null;
   const menuLoanLine = menuRow ? loanCategoryLine(menuRow) : null;
-  const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
   const previewNoCompany = sample == null && params.get("preview") === "empty";
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
   if (previewNoCompany || liveNoCompany) {
@@ -300,29 +298,12 @@ export function CategoriesScreen({
           setHideTarget(category);
           setMenu(null);
         }}
-        onMerge={(category) => {
-          setMergeFrom(category.id);
-          setMenu(null);
-          setPickOpen(true);
+        onMerge={(from, into) => {
+          setMergeFrom(from.id);
+          setMergeInto(into.id);
+          setMergeOpen(true);
         }}
       />
-      <Sheet open={pickOpen} onOpenChange={setPickOpen} title="מיזוג אל" returnFocusRef={menuOpener}>
-        <div className="ui-stack">
-          {mergeTargets.map((category) => (
-            <Button
-              key={category.id}
-              variant="secondary"
-              onClick={() => {
-                setMergeInto(category.id);
-                setPickOpen(false);
-                setMergeOpen(true);
-              }}
-            >
-              {category.name}
-            </Button>
-          ))}
-        </div>
-      </Sheet>
       <Sheet
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -348,8 +329,8 @@ export function CategoriesScreen({
         title={hideTarget?.hidden ? "להחזיר את הקטגוריה לרשימה?" : "להסתיר את הקטגוריה?"}
         item={hideTarget?.name}
         consequence={hideTarget?.hidden ? "הקטגוריה תופיע שוב ברשימה." : "הקטגוריה לא נמחקת. אפשר להחזיר אותה מ״מוסתרות״."}
+        // FLOW-341: hiding can be undone, so its button is neutral; the bin stays on real deletes.
         confirmLabel={hideTarget?.hidden ? "החזרה לרשימה" : "הסתרה"}
-        destructive={hideTarget?.hidden !== true}
         busy={hide.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {
@@ -362,9 +343,10 @@ export function CategoriesScreen({
         onOpenChange={setMergeOpen}
         title="למזג את הקטגוריה?"
         item={`${fromName} ← ${intoName}`}
-        consequence="התנועות עוברות אל היעד. אי אפשר להפריד אחר כך."
+        consequence={`התנועות עוברות אל היעד, ו${fromName} מוסתרת. אי אפשר להפריד אחר כך.`}
         confirmLabel="מיזוג"
         destructive
+        icon={null}
         busy={merge.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {
