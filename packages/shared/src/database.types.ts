@@ -1178,6 +1178,9 @@ isOneToOne: false
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
+"match_lines":
+{ Args: { "p_currency"?: string,"p_direction"?: string,"p_rows": Json,"p_window_days"?: number }; Returns: Json
+                           },
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },

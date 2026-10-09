@@ -31,6 +31,7 @@ export const READ_TOOL_NAMES = [
   "list_team",
   "get_cash_months",
   "get_cash_lines",
+  "match_lines",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -111,6 +112,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   list_team: new Set(),
   get_cash_months: new Set(["months"]),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
+  match_lines: new Set(["rows", "window_days", "direction", "currency"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),

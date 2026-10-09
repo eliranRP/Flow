@@ -125,6 +125,22 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
+    toolSpec("match_lines", "Reconcile an outside ledger export against Flow in one read (FLOW-213). rows (1 to 500) are {date (YYYY-MM-DD), amount_minor (a non-zero integer in minor units; the sign is ignored), ref (optional text up to 200 characters, echoed back)}. A row matches a Flow line of the same gross amount without its sign, in currency (default the company's base currency), whose document date or payment date is within window_days (0 to 31, default 5) of the row's date; direction (income or expense) narrows the lines. Removed and void lines never match; pending (waiting for review) lines do. Each row is paired with at most one line and each line with at most one row, closest dates first, then by row order. Returns currency, window_days, direction, from and to (the rows' first and last date), rows[] (index, date, amount_minor, ref, match: the paired line or null, candidate_count, candidates: up to 5 lines, closest first), matched_count, unmatched_rows (indexes of the rows with no pair), unclaimed_count and unclaimed_lines (up to 200 lines dated from to to that no row took, oldest first). A line has transaction_id, doc_date, cash_date, amount_minor (the signed gross: income positive, expense negative), currency, direction, line_status, party (supplier or customer), description, project_name (null for a shared or split line), pnl_role, category_name, and day_diff on a match or candidate. Read only.", {
+      rows: {
+        type: "array",
+        minItems: 1,
+        maxItems: 500,
+        items: {
+          type: "object",
+          properties: { date: { type: "string" }, amount_minor: { type: "integer" }, ref: { type: "string" } },
+          required: ["date", "amount_minor"],
+          additionalProperties: false,
+        },
+      },
+      window_days: { type: "integer", minimum: 0, maximum: 31 },
+      direction: { type: "string", enum: ["income", "expense"] },
+      currency: { type: "string" },
+    }),
     toolSpec("get_anomalies", "Flags on the open review lines (newest 500), found in SQL: duplicate (another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days, not an invoice and its own receipt; other_transaction_id, other_doc_date), amount_spike (at least 3 times the median of that supplier's or customer's last 12 lines in the year before, and at least 100.00 more; typical_amount_minor, ratio), new_party_large (the first line of a supplier or customer, at or above the company's 90th percentile posted line over the year up to the newest open line; company_p90_minor). Each item has transaction_id, kind and jev_score (0 to 1: how likely Jev thinks the flag is a real problem, scored in the same call that labelled the line; null when Jev did not score it). A flag is a reason to look, not an error; the owner decides.", {}),
     toolSpec("get_jev_suggestions", "Jev's suggestions on the open review lines (newest 500 that have one): transaction_id, direction (expense or income), project_id and project_name, category_id and category_name (null when Jev did not answer), no_project (true when Jev answered no project: overhead, or not one project), confidence, reason, party_filings and matching_filings, anomaly_score (Jev's score of an anomaly flag on that line, or null), and prefilled (true when Jev auto filled this line and it was not undone; undo_jev_prefill takes it back). reason comes from SQL: same_as_last (the suggestion equals how the owner filed this supplier or customer last time), usual_for_party (it equals at least 2 of the last 5 filed lines), new_party (nothing filed yet for that party), model_only (none of these). Jev only suggests; it never approves a line, and assign_expense or assign_expenses is still how a line is filed.", {}),
     toolSpec("get_missing_bills", "Recurring suppliers (an expense line in at least 3 of the last 6 complete months and in one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has supplier_id, supplier_name, currency, typical_amount_minor (median monthly net, negative for expenses), typical_day, expected_by, months_seen, last_doc_date, and the usual project_id and category_id.", {}),
