@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-339 Settings → Loans balance at the list amount size, cents on one line (#293) | Next small ready bug |
+| Backlog bug fixes | FLOW-310 money field: the prefix keeps one gap to the digits (#297) | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -614,7 +614,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row.
 - [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
 - [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung.
-- [ ] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length.
+- [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
