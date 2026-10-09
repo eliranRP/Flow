@@ -15,10 +15,10 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
-| Dev lane 2 | FLOW-406 plan recorded as decision 0164 (docs only), PR #352; FLOW-502 server PR 2 merged #343 | FLOW-406 server 1: sub-categories (`parent_id`, roll-ups, MCP) |
+| Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | UI lane 1 | FLOW-339: the band label with a profit in one currency and a loss in another, and the project overhead switch's label (FLOW-340 C merged #338) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-505 follow-up: "ייבוא מ" sent with the connect call to both connect functions; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -118,8 +118,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | done (#314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | done (UI lane 2, #336: option D, owner 2026-10-09) |
-| 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (UI lane 4, #345: Search chips, loans at 320, pinned שמירה) |
-| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
+| 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (UI lane 4, #345: Search chips, loans at 320, pinned שמירה; UI lane 3, #359: the Categories move row) |
+| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | done (owner picked A; UI lane 3, #359) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (UI lane 4, #345) |
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
@@ -623,7 +623,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload. (Dev lane 1, 2026-10-09: ✕ at mount fixed: a close reads the stack from the browser entry, which a push writes at once, not from the router location that follows in a transition. The reload case was already handled by `DropRestoredSheet`, now also covered on real browser entries (`sheet-history-browser.test.tsx`). Left: the Escape case did not reproduce in jsdom, so it needs a device trace before a fix; whether a reload should reopen the status sheet instead of dropping it is a call for the owner or the design lead.)
 - [x] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes. (Not reproduced, no regression test: a one-off per-frame probe of the Connections ניתוק confirm saw the top scrim fade 1.00→0 over about 220ms after Escape, ✕ and Back; #298.)
 - [x] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row. (#298: Escape marks the returned control's ring until it blurs; route sheets do the same; Categories' create, merge, hide and move sheets return focus to their opener.)
-- [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
+- [x] (owner, 2026-10-09: "Close sheet", Back keeps closing the sheet as today, no code change) Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8).
+- [ ] Confirm a quick double tap on the help backdrop can't close the code sheet (split from the Back decision above; no test covers it yet).
 - [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung. (Dev lane 1, 2026-10-09: the first two done in `keyboard-inset.ts`: while a field has focus, the keyboard is measured against the layout height from before it, and while the keyboard is closed a drawer lift Vaul left behind is dropped after Vaul's own listener. Left: `--sheet-gap` at 320 (a visual change for the design lead) and the real-device QA.)
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
@@ -908,8 +909,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-347"></a>
 ### FLOW-347 · Phone polish after the October 9 morning builds (cycle 8)
-- **Type:** SMALL UI · **Status:** done in part (UI lane 4, #345: the loans list at 320, loan setup שמירה, Search dock chips; the rest stays ready) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
-- [ ] (med) Settings → Categories ⋯ with only one category on its side: the sheet still offers "העברה לקטגוריה אחרת", and the picker opens with the hide switch only, no targets and no reason; ✕ is the only exit. Hide the row when there is nowhere to move (§3.7, a sheet lists only actions that work today). Shots probe-categories-menu--se.png, probe-categories-move--se.png.
+- **Type:** SMALL UI · **Status:** done in part (UI lane 4, #345: the loans list at 320, loan setup שמירה, Search dock chips; UI lane 3, #359: the Categories move row; the rest stays ready) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- [x] (UI lane 3, 2026-10-09: the move row shows only when the category has a visible category of its kind to move to, the same list the picker offers) (med) Settings → Categories ⋯ with only one category on its side: the sheet still offers "העברה לקטגוריה אחרת", and the picker opens with the hide switch only, no targets and no reason; ✕ is the only exit. Hide the row when there is nowhere to move (§3.7, a sheet lists only actions that work today). Shots probe-categories-menu--se.png, probe-categories-move--se.png.
 - [ ] (med) שויכו היום by project: heads take three shapes. Only a group of 3+ shows its totals; a one-line group shows "תנועה אחת" with no total; "בלי פרויקט" puts its count on the name line. Every head: name, then the count in muted `meta`, then the totals (§3.7, FLOW-334 rule). Shot sb-routes--filed-today-by-project--full.png.
 - [ ] (low) Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
 - [ ] (low) Loan setup at 375x667: the page is 942px and שמירה sits at y≈890, so every save needs a scroll. Move it into an `ActionBar place="edge"` (§3.3, §3.7 FLOW-333). Shot sb-loan-setup--example--full.png.
@@ -920,7 +921,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-348"></a>
 ### FLOW-348 · Jev switched on with no key
-- **Type:** SMALL UI · **Status:** ready (owner picked option A, 2026-10-09) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **Type:** SMALL UI · **Status:** done (UI lane 3; owner picked option A, 2026-10-09) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
 - **What:** When the server holds no Jev key (`jev_key_status()` says `missing`), the "תיוג חכם (Jev)" switch on Connections locks off (the disabled switch look, not tappable) with one muted line under the title: "צריך מפתח Jev. פונים למנהל המערכת." No "אפשרויות" link while it is locked. A pending or failed key read keeps today's row, so it never locks on a guess. Replaces the "אין מפתח" hint from #329. Mockup: the project's mockups/plan-first/flow-348/a.png.
 - **Acceptance:** stories at 390, 320 and dark 320; a design log entry; design lead sign-off.
 
@@ -989,6 +990,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** each server PR has pgTAP for the one-level, kind and loan-part rules, roll-up = sum of parts, unchanged company totals across the `group_name` backfill, and tenant isolation; the screens match the approved mockups.
 - [x] Plan and mockups approved (owner, 2026-10-09: data A, drill-in screens).
 - [ ] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
+  - [x] 1a (#354): `parent_id`, the rules, the `group_name` backfill and mirror, `set_category_parent`, refusals on a parent, `list_categories` fields, MCP `set_category_parent` and `parent_id` on the create tools.
+  - [ ] 1b: roll-up reads (`get_project`, `project_category_months`, `get_breakdown`, search).
 - [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.

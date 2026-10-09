@@ -16,6 +16,7 @@ import {
   JEV_DEFAULT,
   AUTO_HINT,
   JevSettings,
+  JEV_NO_KEY,
   parseJevThreshold,
   readJevIntegration,
   type JevCardState,
@@ -119,17 +120,24 @@ describe("Jev settings card", () => {
     expect(parseJevThreshold("1.01")).toBeNull();
   });
 
-  it("says אין מפתח when Jev is on and the server holds no key, and כבוי when off (FLOW-704)", async () => {
+  it("locks the switch off with one line when the server holds no key, on or off (FLOW-348 A)", async () => {
     db.keyStatus = "missing";
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
     const { unmount } = renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByText("אין מפתח")).toBeInTheDocument());
-    expect(await readySwitch()).toBeChecked();
+    await waitFor(() => expect(screen.getByText(JEV_NO_KEY)).toBeInTheDocument());
+    const locked = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+    expect(locked).not.toBeChecked();
+    expect(locked).toHaveAttribute("aria-disabled", "true");
+    expect(locked).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
+    fireEvent.click(locked);
+    expect(db.writes).toEqual([]);
     unmount();
     db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
     renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByText("כבוי")).toBeInTheDocument());
-    expect(screen.queryByText(/אין מפתח/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(JEV_NO_KEY)).toBeInTheDocument());
+    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText("כבוי")).not.toBeInTheDocument();
   });
 
   it("keeps the usual word while the key status is unknown or ok (FLOW-704)", async () => {
@@ -146,7 +154,7 @@ describe("Jev settings card", () => {
     expect(toggle).not.toBeChecked();
     expect(screen.getByText("כבוי")).toBeInTheDocument();
     expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
-    expect(screen.queryByText("אין מפתח")).not.toBeInTheDocument();
+    expect(screen.queryByText(JEV_NO_KEY)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
@@ -381,6 +389,22 @@ describe("Jev settings card", () => {
     await waitFor(() => expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toHaveFocus());
     expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).not.toBeInTheDocument();
+  });
+
+  it("focuses the locked switch when a retry finds no key (FLOW-348 A)", async () => {
+    db.readError = { message: "down" };
+    db.keyStatus = "missing";
+    renderLive(<JevSettings />);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: תיוג חכם" });
+    retry.focus();
+    db.readError = null;
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    fireEvent.click(retry);
+    await waitFor(() => expect(screen.getByText(JEV_NO_KEY)).toBeInTheDocument());
+    const locked = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+    await waitFor(() => expect(locked).toHaveFocus());
+    expect(locked).toHaveAttribute("aria-disabled", "true");
+    expect(document.activeElement).not.toBe(document.body);
   });
 
   it("leaves focus on the retry when the load fails again", async () => {
