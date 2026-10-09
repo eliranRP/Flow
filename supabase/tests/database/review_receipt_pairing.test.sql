@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(37);
+select plan(42);
 
 do $users$
 begin
@@ -292,6 +292,39 @@ select tests.authenticate_as('rrp_owner');
 select public.approve_review_item(pg_temp.open_row('inv_f'), pg_temp.id('harbor'), pg_temp.id('works'));
 reset role;
 select is(pg_temp.project_of('rec_f'), pg_temp.id('harbor'), 'the owner''s approval of the invoice moves it');
+
+-- 10. A skipped invoice the owner files another way stops holding its receipt.
+select pg_temp.doc('inv_g', 'invoice', 'ext-g', null, 80000, '2026-10-12');
+select pg_temp.doc('rec_g', 'receipt', 'ext-rg', 'ext-g', 80000, '2026-10-13');
+select pg_temp.sync();
+reset role;
+select tests.authenticate_as('rrp_owner');
+select public.resolve_review(pg_temp.open_row('inv_g'), 'skipped');
+select public.reassign_transaction(pg_temp.id('inv_g'), pg_temp.id('harbor'), pg_temp.id('works'));
+reset role;
+select pg_temp.sync();
+reset role;
+select is(pg_temp.project_of('rec_g'), pg_temp.id('harbor'), 'a skipped invoice filed later moves its receipt');
+select is(pg_temp.open_rows('rec_g'), 0, 'and the receipt waits for nothing');
+
+-- 11. A receipt the owner refiles after the joint approval is theirs.
+select pg_temp.doc('inv_h', 'invoice', 'ext-h', null, 90000, '2026-10-12');
+select pg_temp.doc('rec_h', 'receipt', 'ext-rh', 'ext-h', 90000, '2026-10-13');
+select pg_temp.sync();
+reset role;
+select tests.authenticate_as('rrp_owner');
+select public.approve_review_item(pg_temp.open_row('inv_h'), pg_temp.id('harbor'), pg_temp.id('works'));
+select public.reassign_transaction(pg_temp.id('rec_h'), pg_temp.id('meadow'), pg_temp.id('works'));
+select public.reassign_transaction(pg_temp.id('inv_h'), pg_temp.id('harbor'), pg_temp.id('other_in'));
+reset role;
+select is(pg_temp.project_of('rec_h'), pg_temp.id('meadow'), 'a later change to the invoice leaves the refiled receipt');
+select is(pg_temp.category_of('rec_h'), pg_temp.id('works'), 'and its category');
+select tests.authenticate_as('rrp_owner');
+select public.reopen_review(
+  (select q.id from public.review_queue q where q.transaction_id = pg_temp.id('inv_h') and q.status = 'approved'));
+reset role;
+select is(pg_temp.project_of('rec_h'), pg_temp.id('meadow'), 'undo of the invoice leaves it too');
+
 
 select * from finish();
 rollback;

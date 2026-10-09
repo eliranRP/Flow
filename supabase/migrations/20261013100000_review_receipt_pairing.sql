@@ -7,18 +7,20 @@
 -- several receipts (part payments); a receipt has one invoice.
 --
 -- Status rules (private.follow_invoice):
--- 1. While the invoice waits in review (an open row, or its latest row is a skip), its receipts
---    get no card of their own: their open rows are removed.
+-- 1. While the invoice waits in review (an open row, or a skip as its latest row while it is still
+--    unfiled), its receipts get no card of their own: their open rows are removed (a split_mismatch
+--    row, the receipt's own review, stays).
 -- 2. When the invoice is settled and filed, each receipt takes its project, category and role.
 --    A settled invoice row (approved or changed) gives the receipt a closed row of the same status
 --    with paired_with naming that row and a snapshot of the receipt's own values. An invoice that
 --    was filed without review (no settled row) moves its receipts the same way, with no row.
---    A receipt the owner filed on their own (user_assigned with no paired row, or a settled row of
---    its own) keeps its own filing. Outside the owner's approval or change of the invoice (a sync,
+--    A receipt the owner filed on their own (user_assigned with no paired row, a settled row of
+--    its own, a split by category, or a refiling after the joint approval, seen against
+--    paired_project_id / paired_category_id) keeps its own filing and stops following. Outside the owner's approval or change of the invoice (a sync,
 --    a line change, the pass below), a receipt a rule already filed keeps that filing too.
 -- 3. Undo: when a settled invoice row opens again (reopen_review, undo_reassign, mcp_undo), each
 --    receipt row paired with it puts the receipt back from its snapshot and is removed, so the
---    receipt waits with its invoice again.
+--    receipt waits with its invoice again. A receipt the owner refiled since is only unpaired.
 -- Two triggers apply the rules, so every write path follows them: review_queue rows (insert, or a
 -- status change) and the invoice and receipt lines themselves. sync_review_queue also skips a
 -- receipt whose invoice waits, so a sync does not add and drop its row each time, and
@@ -36,7 +38,12 @@ set local lock_timeout = '5s';
 
 alter table public.review_queue
   add column paired_with uuid references public.review_queue (id) on delete set null,
-  add column prior_project_assigned boolean;
+  add column prior_project_assigned boolean,
+  add column paired_project_id uuid,
+  add column paired_category_id uuid;
+
+comment on column public.review_queue.paired_project_id is
+  'FLOW-309. The project the pairing gave the receipt. A receipt the owner refiled since is theirs: it stops following. Decision 0164.';
 
 comment on column public.review_queue.paired_with is
   'FLOW-309. On a receipt''s row: the invoice row it was settled with. Reopening that row undoes the receipt too. Decision 0164.';
@@ -44,9 +51,9 @@ comment on column public.review_queue.paired_with is
 create index review_queue_paired_with_idx on public.review_queue (paired_with)
   where paired_with is not null;
 
--- The receipts of an invoice, by the invoice's external id.
-create index transactions_linked_receipt_idx on public.transactions (company_id, linked_external_id)
-  where doc_kind = 'receipt' and linked_external_id is not null;
+-- The receipts and credit notes of an invoice, by the invoice's external id.
+create index transactions_linked_doc_idx on public.transactions (company_id, linked_external_id)
+  where doc_kind in ('receipt', 'credit') and linked_external_id is not null;
 
 -- The receipts paired with an invoice line (the matching rule above). None for any other line.
 create or replace function private.invoice_receipts(p_invoice uuid)
@@ -104,8 +111,38 @@ as $$
   limit 1;
 $$;
 
--- Rule 1 for one receipt line: true while its invoice waits in review (an open row, or a skip as
--- its latest row). sync_review_queue does not queue such a receipt.
+-- Rule 1 for one invoice line: true while it waits in review, that is with an open row, or with
+-- a skip as its latest row while it is still unfiled (a skipped invoice the owner filed another
+-- way waits for nothing).
+create or replace function private.invoice_waits(p_invoice uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.review_queue q
+    where q.transaction_id = p_invoice and q.status = 'open'
+  )
+  or coalesce((
+    select q.status = 'skipped'
+      and t.project_id is null
+      and (
+        t.category_id is null
+        or not private.line_category_out(c.excluded_from_pnl, t.category_suggested, c.loan_part)
+      )
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id and t.company_id = q.company_id
+    left join public.categories c on c.id = t.category_id and c.company_id = t.company_id
+    where q.transaction_id = p_invoice
+    order by q.created_at desc, q.id desc
+    limit 1
+  ), false);
+$$;
+
+-- Rule 1 for one receipt line: true while its invoice waits. sync_review_queue does not queue
+-- such a receipt, and filed_today_rows does not count it.
 create or replace function private.receipt_waits(p_receipt uuid)
 returns boolean
 language sql
@@ -113,23 +150,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  with inv as (
-    select private.receipt_invoice(p_receipt) as id
-  )
-  select inv.id is not null and (
-    exists (
-      select 1 from public.review_queue q
-      where q.transaction_id = inv.id and q.status = 'open'
-    )
-    or coalesce((
-      select q.status = 'skipped'
-      from public.review_queue q
-      where q.transaction_id = inv.id
-      order by q.created_at desc, q.id desc
-      limit 1
-    ), false)
-  )
-  from inv;
+  select coalesce(private.invoice_waits(private.receipt_invoice(p_receipt)), false);
 $$;
 
 -- Rule 3: the receipt rows settled with an invoice row put their receipts back and go.
@@ -151,6 +172,17 @@ begin
     order by q.id
     for update
   loop
+    -- A receipt the owner refiled after the joint approval is theirs: unpaired, not put back.
+    if exists (
+      select 1 from public.transactions t
+      where t.id = rr.transaction_id and t.company_id = rr.company_id
+        and (t.project_id is distinct from rr.paired_project_id
+          or t.category_id is distinct from rr.paired_category_id)
+    ) then
+      update public.review_queue set paired_with = null where id = rr.id;
+      continue;
+    end if;
+
     perform 1 from public.transactions t
     where t.id = rr.transaction_id and t.company_id = rr.company_id
     for update;
@@ -230,22 +262,14 @@ begin
   left join public.categories c on c.id = t.category_id and c.company_id = t.company_id
   where t.id = p_invoice;
 
-  -- Rule 1: the invoice waits (an open row, or a skip as its latest row).
-  waiting := exists (
-    select 1 from public.review_queue q
-    where q.transaction_id = inv.id and q.company_id = inv.company_id and q.status = 'open'
-  ) or coalesce((
-    select q.status = 'skipped'
-    from public.review_queue q
-    where q.transaction_id = inv.id and q.company_id = inv.company_id
-    order by q.created_at desc, q.id desc
-    limit 1
-  ), false);
+  -- Rule 1: the invoice waits. A split_mismatch row is the receipt's own review and stays.
+  waiting := private.invoice_waits(inv.id);
   if waiting then
     delete from public.review_queue q
     where q.company_id = inv.company_id
       and q.transaction_id = any(receipt_ids)
-      and q.status = 'open';
+      and q.status = 'open'
+      and q.reason is distinct from 'split_mismatch';
     return;
   end if;
 
@@ -279,9 +303,10 @@ begin
     from public.transactions t
     where t.id = any(receipt_ids) and t.company_id = inv.company_id
     order by t.doc_date, t.id
-    -- A receipt another transaction holds (a sync writing it) is left to that transaction: its
-    -- own trigger follows the invoice once the receipt is written, and waiting here could
-    -- deadlock with a sync that holds the receipt and waits for the invoice.
+    -- A receipt another transaction holds (a sync writing it) is skipped rather than waited
+    -- for, which could deadlock with a sync that holds the receipt and waits for the invoice.
+    -- A skipped receipt that is still unfiled is queued by the next sync, and its row's insert
+    -- pairs it then.
     for update skip locked
   loop
     select q.id into paired_row
@@ -303,9 +328,23 @@ begin
     where q.transaction_id = r.id and q.company_id = r.company_id
       and q.paired_with is null and q.status in ('approved', 'changed')
     limit 1;
-    owner_filed := paired_row is null and open_row is null
-      and (own_row is not null or r.user_assigned);
+    -- So is a receipt split by category, whose split this would lose.
+    owner_filed := (paired_row is null and open_row is null and (own_row is not null or r.user_assigned))
+      or exists (
+        select 1 from public.line_splits sp
+        where sp.transaction_id = r.id and sp.company_id = r.company_id
+      );
     if owner_filed then
+      continue;
+    end if;
+    -- A receipt the owner refiled after the joint approval is theirs too: it stops following.
+    if paired_row is not null and exists (
+      select 1 from public.review_queue q
+      where q.id = paired_row
+        and (r.project_id is distinct from q.paired_project_id
+          or r.category_id is distinct from q.paired_category_id)
+    ) then
+      update public.review_queue set paired_with = null where id = paired_row;
       continue;
     end if;
     if not coalesce(p_owner, false) and paired_row is null and open_row is null then
@@ -375,10 +414,14 @@ begin
       -- Already settled with the invoice: the snapshot from then stays.
       update public.review_queue
       set paired_with = coalesce(settled_id, paired_with),
-          status = coalesce(settled_status, status)
+          status = coalesce(settled_status, status),
+          paired_project_id = inv.project_id,
+          paired_category_id = inv.category_id
       where id = paired_row
         and (paired_with is distinct from coalesce(settled_id, paired_with)
-          or status is distinct from coalesce(settled_status, status));
+          or status is distinct from coalesce(settled_status, status)
+          or paired_project_id is distinct from inv.project_id
+          or paired_category_id is distinct from inv.category_id);
     elsif settled_id is not null then
       if open_row is not null then
         delete from public.review_queue q
@@ -388,6 +431,8 @@ begin
         set status = settled_status,
             resolved_at = now(),
             paired_with = settled_id,
+            paired_project_id = inv.project_id,
+            paired_category_id = inv.category_id,
             prior_project_id = r.project_id,
             prior_category_id = r.category_id,
             prior_pnl_role = r.pnl_role,
@@ -403,12 +448,12 @@ begin
       else
         insert into public.review_queue (
           company_id, transaction_id, status, reason, resolved_at, paired_with,
-          prior_project_id, prior_category_id, prior_pnl_role, prior_user_assigned,
+          paired_project_id, paired_category_id, prior_project_id, prior_category_id, prior_pnl_role, prior_user_assigned,
           prior_category_suggested, prior_category_assigned, prior_project_assigned,
           prior_allocations, doc_fingerprint
         ) values (
           r.company_id, r.id, settled_status, null, now(), settled_id,
-          r.project_id, r.category_id, r.pnl_role, r.user_assigned,
+          inv.project_id, inv.category_id, r.project_id, r.category_id, r.pnl_role, r.user_assigned,
           r.category_suggested, r.category_assigned, r.project_assigned,
           prior_shares,
           private.doc_fingerprint(
@@ -427,11 +472,13 @@ $$;
 
 revoke all on function private.invoice_receipts(uuid) from public, anon, authenticated;
 revoke all on function private.receipt_invoice(uuid) from public, anon, authenticated;
+revoke all on function private.invoice_waits(uuid) from public, anon, authenticated;
 revoke all on function private.receipt_waits(uuid) from public, anon, authenticated;
 revoke all on function private.unfollow_invoice_row(uuid) from public, anon, authenticated;
 revoke all on function private.follow_invoice(uuid, boolean) from public, anon, authenticated;
 grant execute on function private.invoice_receipts(uuid) to service_role;
 grant execute on function private.receipt_invoice(uuid) to service_role;
+grant execute on function private.invoice_waits(uuid) to service_role;
 grant execute on function private.receipt_waits(uuid) to service_role;
 grant execute on function private.unfollow_invoice_row(uuid) to service_role;
 grant execute on function private.follow_invoice(uuid, boolean) to service_role;
@@ -553,8 +600,9 @@ create trigger transactions_receipt_pairing
 
 -- list_review: patched from the current definition with counted anchors, so changes merged since
 -- stay. Each item adds the invoice's receipts: receipts lists each paired receipt (oldest first);
--- paid is true when they cover the invoice after its credit notes (list_unpaid's sum); paid_on is
--- the latest receipt's date. A line that is not an income invoice has [] / false / null.
+-- paid is true when they cover the invoice after its credit notes (list_unpaid's sum; a pair is
+-- one source, and SUMIT lines are ILS only, so the amounts share a currency); paid_on is the latest
+-- receipt's date. A line that is not an income invoice has [] / false / null.
 create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer
 language sql
@@ -639,11 +687,11 @@ begin
   end if;
   def := replace(def, posted_anchor, $n$    and t.line_status = 'posted'
     -- FLOW-309: a receipt waits with its invoice (decision 0164).
-    and not private.receipt_waits(t.id)
+    and not (t.doc_kind = 'receipt' and t.linked_external_id is not null and private.receipt_waits(t.id))
     and (
       -- FLOW-121$n$);
   def := replace(def, pending_anchor, $n$    and t.line_status = 'pending'
-    and not private.receipt_waits(t.id)
+    and not (t.doc_kind = 'receipt' and t.linked_external_id is not null and private.receipt_waits(t.id))
     and not exists ($n$);
   execute def;
 end
@@ -663,7 +711,10 @@ begin
   end if;
   execute replace(def, anchor, anchor || $n$
       -- FLOW-309: a receipt that waits with its invoice (decision 0164).
-      and not private.receipt_waits(filed.id)$n$);
+      and not (
+        filed.doc_kind = 'receipt' and filed.linked_external_id is not null
+        and private.receipt_waits(filed.id)
+      )$n$);
 end
 $patch$;
 
