@@ -1063,3 +1063,30 @@ Deno.test("list_review supplier filter finds an income line by its customer", as
     assertEquals(data.reviews.map((row) => row.id), ["q1", "q2"]);
   }
 });
+
+Deno.test("list_review echoes an invoice's paired receipts (FLOW-309)", async () => {
+  // The receipt joins its invoice's item: no card of its own, and paid / paid_on for "✓ שולם".
+  const invoice = {
+    id: "r1",
+    transaction_id: INCOME_TXN,
+    direction: "income",
+    doc_kind: "invoice",
+    description: "Example customer",
+    receipts: [{ transaction_id: TXN, doc_date: "2026-10-12", amount_gross: 1180000, currency: "ILS" }],
+    paid: true,
+    paid_on: "2026-10-12",
+  };
+  const { rpc } = rpcOf((name) => {
+    if (name === "list_review") return { status: 200, json: [invoice] };
+    if (name === "get_line_meta") return { status: 200, json: [] };
+    return { status: 500, json: null };
+  });
+  const listed = await callTool("list_review", {}, ["read"], rpc);
+  assertEquals(listed.isError, false);
+  if (!listed.structuredContent.ok) throw new Error("list_review failed");
+  const rows = (listed.structuredContent.data as { reviews: Array<Record<string, unknown>> }).reviews;
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0]?.receipts, invoice.receipts);
+  assertEquals(rows[0]?.paid, true);
+  assertEquals(rows[0]?.paid_on, "2026-10-12");
+});

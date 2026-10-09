@@ -602,13 +602,13 @@ isOneToOne: false
                   ]
                 },"review_queue": {
                   Row: {
-                    "company_id": string,"created_at": string,"doc_fingerprint": string | null,"id": string,"prior_allocations": Json | null,"prior_category_assigned": boolean | null,"prior_category_id": string | null,"prior_category_suggested": boolean | null,"prior_pnl_role": Database["public"]['Enums']["pnl_role"] | null,"prior_project_id": string | null,"prior_remembered_category_id": string | null,"prior_user_assigned": boolean | null,"reason": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["review_status"],"transaction_id": string | null,"updated_at": string,"written_remembered_category_id": string | null
+                    "company_id": string,"created_at": string,"doc_fingerprint": string | null,"id": string,"paired_with": string | null,"prior_allocations": Json | null,"prior_category_assigned": boolean | null,"prior_category_id": string | null,"prior_category_suggested": boolean | null,"prior_pnl_role": Database["public"]['Enums']["pnl_role"] | null,"prior_project_assigned": boolean | null,"prior_project_id": string | null,"prior_remembered_category_id": string | null,"prior_user_assigned": boolean | null,"reason": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["review_status"],"transaction_id": string | null,"updated_at": string,"written_remembered_category_id": string | null
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"prior_allocations"?: Json | null,"prior_category_assigned"?: boolean | null,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string,"written_remembered_category_id"?: string | null
+                    "company_id": string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"paired_with"?: string | null,"prior_allocations"?: Json | null,"prior_category_assigned"?: boolean | null,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_assigned"?: boolean | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string,"written_remembered_category_id"?: string | null
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"prior_allocations"?: Json | null,"prior_category_assigned"?: boolean | null,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string,"written_remembered_category_id"?: string | null
+                    "company_id"?: string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"paired_with"?: string | null,"prior_allocations"?: Json | null,"prior_category_assigned"?: boolean | null,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_assigned"?: boolean | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string,"written_remembered_category_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -623,6 +623,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "transactions"
       referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "review_queue_paired_with_fkey"
+      columns: ["paired_with"]
+isOneToOne: false
+      referencedRelation: "review_queue"
+      referencedColumns: ["id"]
     }
                   ]
                 },"setup_states": {
