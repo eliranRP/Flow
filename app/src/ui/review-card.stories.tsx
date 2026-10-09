@@ -400,3 +400,8 @@ export const SupplierThreeLines320: Story = {
     supplier: "חברת ההובלות והשינוע לדוגמה בע״מ סניף צפון",
   },
 };
+
+/** FLOW-352 1 (cycle 11): beside the הצעה pill at 320 a long value wraps to a second line. Invented names. */
+const longValueCard = { ...OneCard.args, project: "וילה הדקלים", category: "חומרי גמר וצבע", editable: true };
+export const ValueWraps320: Story = { ...narrow, name: "Stress: value on two lines beside הצעה, 320", args: longValueCard };
+export const ValueWrapsDark320: Story = { ...dark, ...narrow, name: "Stress: value on two lines beside הצעה, dark 320", args: longValueCard };
