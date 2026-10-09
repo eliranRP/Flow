@@ -154,10 +154,13 @@ export function StepSumit({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [companyNumber, setCompanyNumber] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [importFrom, setImportFrom] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
   const connect = useSumitConnect({
     companyId: companyNumber,
     apiKey,
     setApiKey,
+    // Only a touched choice is saved; a new connection already imports from the start.
+    importFrom: importFrom.touched ? importFrom.value : undefined,
     onSuccess: () => {
       setConnectSheet(false);
       onConnected();
@@ -188,6 +191,8 @@ export function StepSumit({
         setCompanyId={setCompanyNumber}
         apiKey={apiKey}
         setApiKey={setApiKey}
+        importFrom={importFrom.value}
+        setImportFrom={(value) => { setImportFrom({ touched: true, value }); }}
         submitLabel="חיבור"
         busy={connect.isPending}
         onSubmit={() => {

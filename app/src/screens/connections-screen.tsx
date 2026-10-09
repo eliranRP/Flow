@@ -89,6 +89,20 @@ export function ConnectionsScreen({
   const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
   const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
   const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
+  // "ייבוא מ" (FLOW-505): each connect sheet shows the stored date until it is touched, and only a
+  // touched choice is saved, so a status that arrives late or changes in another tab is never undone.
+  const [sumitImport, setSumitImport] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
+  const [mercuryImport, setMercuryImport] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
+  const [importSeen, setImportSeen] = useState({ sumit: connectOpen, mercury: mercuryConnectOpen });
+  if (importSeen.sumit !== connectOpen || importSeen.mercury !== mercuryConnectOpen) {
+    setImportSeen({ sumit: connectOpen, mercury: mercuryConnectOpen });
+    if (connectOpen && !importSeen.sumit) setSumitImport({ touched: false, value: null });
+    if (mercuryConnectOpen && !importSeen.mercury) setMercuryImport({ touched: false, value: null });
+  }
+  const sumitImportFrom = sumitImport.touched ? sumitImport.value : (status.data?.import_from ?? null);
+  const mercuryImportFrom = mercuryImport.touched ? mercuryImport.value : (mercuryStatus.data?.import_from ?? null);
+  const setSumitImportFrom = useCallback((value: string | null) => { setSumitImport({ touched: true, value }); }, []);
+  const setMercuryImportFrom = useCallback((value: string | null) => { setMercuryImport({ touched: true, value }); }, []);
   const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
   const [focusMercury, setFocusMercury] = useState(false);
@@ -122,6 +136,7 @@ export function ConnectionsScreen({
     companyId,
     apiKey,
     setApiKey,
+    importFrom: sumitImport.touched ? sumitImport.value : undefined,
     onSuccess: () => {
       setConnectSheet(false);
     },
@@ -129,6 +144,7 @@ export function ConnectionsScreen({
   const mercuryConnect = useMercuryConnect({
     apiKey: mercuryApiKey,
     setApiKey: setMercuryApiKey,
+    importFrom: mercuryImport.touched ? mercuryImport.value : undefined,
     onSuccess: () => {
       setMercuryConnectSheet(false);
     },
@@ -567,6 +583,8 @@ export function ConnectionsScreen({
         setCompanyId={setCompanyId}
         apiKey={apiKey}
         setApiKey={setApiKey}
+        importFrom={sumitImportFrom}
+        setImportFrom={setSumitImportFrom}
         submitLabel={authReconnect ? "חיבור מחדש" : "חיבור"}
         busy={connect.isPending}
         disabled={holdWrites}
@@ -642,6 +660,8 @@ export function ConnectionsScreen({
         authReconnect={mercuryAuthReconnect}
         apiKey={mercuryApiKey}
         setApiKey={setMercuryApiKey}
+        importFrom={mercuryImportFrom}
+        setImportFrom={setMercuryImportFrom}
         submitLabel={mercuryAuthReconnect ? "חיבור מחדש" : "חיבור"}
         busy={mercuryConnect.isPending}
         disabled={holdWrites}

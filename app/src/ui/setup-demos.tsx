@@ -315,9 +315,9 @@ function ProjectsScene({ pointer }: SceneProps) {
   return (
     <div className="ui-setup-demo" data-demo-frame={frame}>
       <div className="ui-setup-skel" aria-hidden="true" style={styleOf({ "--setup-fade": skeleton })}>
-        <Skeleton width="lg" />
-        <Skeleton width="md" />
-        <Skeleton width="lg" />
+        <Skeleton width="lg" still />
+        <Skeleton width="md" still />
+        <Skeleton width="lg" still />
       </div>
       <p className="t-label">פרויקטים</p>
       <ProjectRow label="וילה רעננה" amount={rowA} checked={rowA >= 1} />
@@ -590,7 +590,7 @@ function HomeGrid({ amount, open }: { amount: number; open: boolean }) {
         <span className="ui-setup-tile" key={slot} />
       ))}
       <span className="ui-setup-icon ui-setup-land" style={styleOf({ "--setup-land": amount })}>
-        <AppIcon size="note" />
+        <AppIcon size="tile" />
         <span className="ui-setup-cap" dir="rtl">
           Flow
         </span>
