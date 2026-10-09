@@ -1,0 +1,1 @@
+The local gate's default run picks e2e specs and the Storybook smoke from the files the branch changes against main (`git diff origin/main...HEAD`), not from everything since the lane's last green commit. A merge of main no longer re-runs specs for main's own changes, and a docs-only merge runs no e2e spec and skips the Storybook build (FLOW-813 follow-up).

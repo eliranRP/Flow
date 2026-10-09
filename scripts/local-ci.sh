@@ -20,6 +20,9 @@
 # set it empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
 # commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run leaves
 # the e2e specs to main and says which.
+# The e2e specs and the Storybook smoke look only at files this branch changes against main
+# (git diff origin/main...HEAD), so a merge of main re-runs nothing for main's own changes, and a
+# merge that brings in only docs runs no e2e spec and builds no Storybook.
 set -euo pipefail
 
 full=0
@@ -118,6 +121,23 @@ changed_base() {
   return 1
 }
 
+# The files this branch changes against main (git diff origin/main...HEAD). Main's own changes, which
+# a merge of main brings in, already passed on main, so the default run never re-checks them.
+pr_fork="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+pr_files=""
+[[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
+# The files changed since $1 that this branch also changes against main.
+branch_changes() {
+  local since
+  since="$(git diff --name-only "$1" HEAD)"
+  if [[ -z "$pr_fork" ]]; then
+    printf '%s\n' "$since"
+    return
+  fi
+  [[ -n "$since" && -n "$pr_files" ]] || return 0
+  grep -Fxf <(printf '%s\n' "$pr_files") <<<"$since" || true
+}
+
 # FLOW-813: the e2e specs that reach the files changed since the last commit whose specs passed here
 # (or since main, which runs them all before each deploy). app/e2e/spec-sources.json maps each spec
 # to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
@@ -135,7 +155,7 @@ if (( ! full )); then
     echo "local-ci: no main to compare with, so the e2e specs are left to main." >&2
     e2e_left=1
   else
-    e2e_list="$(git diff --name-only "$e2e_base" HEAD | node scripts/e2e-specs.mjs)"
+    e2e_list="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs)"
     [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
   fi
 fi
@@ -337,7 +357,7 @@ storybook_smoke() {
   fi
   [[ -n "$base" ]] || base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
   if [[ -n "$base" ]]; then
-    changed="$(git diff --name-only "$base" HEAD)"
+    changed="$(branch_changes "$base")"
     if ! grep -qE '^(app|packages|design|supabase/functions/_shared)/|^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json)$|^scripts/(storybook-stories|e2e-specs|check-prod-bundle|hosted-env)\.mjs$' <<<"$changed"; then
       echo "local-ci: Storybook smoke skipped: no app change since ${base:0:7}."
       rm -rf "$logs_dir"
