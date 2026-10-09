@@ -1,0 +1,1 @@
+The pre-push gate no longer opens every story when a change only touches package scripts, tsconfig include lists or the lockfile entries of tools the app does not use. It still opens every story when the app's dependencies, its Storybook scripts, the compiler options the app builds with, or the app's lockfile entries change.
