@@ -185,7 +185,7 @@ describe("review list paths", () => {
 });
 
 describe("review queue list", () => {
-  it("puts הצג הכול on the start side of the counter line, before the bar and above the filed banner", async () => {
+  it("puts הצגת הכול on the start side of the counter line, before the bar and above the filed banner", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -196,7 +196,7 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    const link = await screen.findByRole("link", { name: "הצג הכול" });
+    const link = await screen.findByRole("link", { name: "הצגת הכול" });
     expect(link).toHaveAttribute("href", "/review/all");
     const meter = screen.getByRole("meter", { name: "התקדמות התור" });
     const banner = screen.getByText(/שויכו אוטומטית היום/);
@@ -218,7 +218,7 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
+    fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     const first = await screen.findByRole("link", { name: /מחסן הנמל/ });
     const second = screen.getByRole("link", { name: /עגורני החוף/ });
     // FLOW-305: the date moved from each row into one quiet day head above the rows.
@@ -251,9 +251,9 @@ describe("review queue list", () => {
     };
     renderAt("/review?item=r2&from=all");
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
-    // FLOW-327 r1: Back already goes to the list, so the card leaves הצג הכול out; with Back the
+    // FLOW-327 r1: Back already goes to the list, so the card leaves הצגת הכול out; with Back the
     // header stays on one line so the pinned bar clears the tab bar at 375x667.
-    expect(screen.queryByRole("link", { name: "הצג הכול" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "הצגת הכול" })).toBeNull();
     const title = screen.getByRole("heading", { name: "לאישור" });
     expect(title.closest("header")).not.toHaveClass("ui-page-stacked");
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
@@ -291,7 +291,7 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?project=p1");
-    const link = await screen.findByRole("link", { name: "הצג הכול" });
+    const link = await screen.findByRole("link", { name: "הצגת הכול" });
     expect(link).toHaveAttribute("href", "/review/all?project=p1");
     expect(screen.getByRole("heading", { name: "לאישור" }).closest("header")).not.toHaveClass("ui-page-stacked");
     fireEvent.click(link);
@@ -512,7 +512,7 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
+    fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /עגורני החוף/ }));
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
     await approveWhenIdle("ברזל הדרום");
@@ -535,7 +535,7 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
+    fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /ברזל הדרום/ }));
     expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
     showsPlace("3 מתוך 5");
@@ -579,7 +579,7 @@ describe("review queue list", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
+    fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /מחסן הנמל/ }));
     fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
     expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
