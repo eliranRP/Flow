@@ -26,13 +26,13 @@ export const Default: Story = {
   },
 };
 export const UnpaidOnly: Story = {
-  args: { title: "3 חשבוניות לא שולמו", to: "/unpaid" },
+  args: { title: "3 חשבוניות פתוחות", to: "/unpaid" },
   render: (args) => (
     <Banner
       {...args}
       hint={
         <>
-          <bdi dir="ltr">₪23,400</bdi> · טרם נגבה
+          <bdi dir="ltr">₪23,400</bdi> · לגבייה
         </>
       }
     />
@@ -49,16 +49,16 @@ const unpaidRow: BannerRow = {
   id: "unpaid",
   to: "/unpaid",
   icon: unpaidIcon,
-  title: <><bdi dir="ltr">3</bdi> חשבוניות לא שולמו</>,
-  hint: <><bdi dir="ltr">₪23,400</bdi> · טרם נגבה</>,
+  title: <><bdi dir="ltr">3</bdi> חשבוניות פתוחות</>,
+  hint: <><bdi dir="ltr">₪23,400</bdi> · לגבייה</>,
 };
 const reviewOne: BannerRow = { id: "review", to: "/review", title: "פריט אחד ממתין לאישור" };
 const unpaidOne: BannerRow = {
   id: "unpaid",
   to: "/unpaid",
   icon: unpaidIcon,
-  title: "חשבונית אחת לא שולמה",
-  hint: <><bdi dir="ltr">₪4,680</bdi> · טרם נגבה</>,
+  title: "חשבונית פתוחה אחת",
+  hint: <><bdi dir="ltr">₪4,680</bdi> · לגבייה</>,
 };
 
 export const RowsBoth: Story = {

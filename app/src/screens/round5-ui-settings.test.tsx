@@ -113,14 +113,14 @@ describe("settings account", () => {
     expect(screen.queryByText("Flow · POC 0.1")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
-    const overhead = screen.getByRole("switch", { name: "רווח אחרי כלליות" });
-    expect(document.getElementById(overhead.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חלק מהכלליות נכנס לכל פרויקט");
+    const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
+    expect(document.getElementById(overhead.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חלק מההוצאות הכלליות נכנס לכל פרויקט");
     // FLOW-326: the switch is a grouped row with the icon in the same slot as קטגוריות.
     const overheadRow = overhead.closest("label");
     expect(overheadRow).toHaveClass("ui-row");
     expect(overheadRow?.querySelector(".ui-row-icon svg")).not.toBeNull();
     expect(overheadRow?.closest(".ui-project-list")).toContainElement(screen.getByRole("link", { name: /קטגוריות/ }));
-    expect(screen.getByText("חלק מהכלליות נכנס לכל פרויקט")).toBeInTheDocument();
+    expect(screen.getByText("חלק מההוצאות הכלליות נכנס לכל פרויקט")).toBeInTheDocument();
   });
 
   it("shows a static email row when there is no company", async () => {
@@ -154,7 +154,7 @@ describe("settings account", () => {
     expect(screen.queryByRole("button", { name: "owner@example.com" })).not.toBeInTheDocument();
     expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).not.toBeInTheDocument();
     const sumit = screen.getByRole("button", { name: "SUMIT" });
     expect(sumit).toBeEnabled();
     expect(document.getElementById(sumit.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
@@ -279,7 +279,7 @@ describe("settings account", () => {
     expect(email.closest(".ui-row")?.tagName).toBe("DIV");
     expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).not.toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "set_after_overhead")).toBe(false);
     const sumit = screen.getByRole("button", { name: "SUMIT" });
     expect(sumit).toBeEnabled();

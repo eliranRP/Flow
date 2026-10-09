@@ -150,10 +150,18 @@ describe("FLOW-337 by month is the whole project", () => {
     expect(screen.getByText(/^מתחילת הפרויקט · רווח/)).toBeInTheDocument();
     expect(document.querySelector(".ui-income")).toBeNull();
     expect(document.querySelector(".ui-months-note")).toBeNull();
-    // The meta is one line of whole parts, so a part that does not fit drops with its "·" (#259).
+    // The meta is one line: only "הוצאות", and only on a month with income (#367).
     const parts = Array.from(document.querySelector(".ui-row-hint-line")?.querySelectorAll(".ui-hint-part") ?? []);
-    expect(parts[0]?.textContent).toMatch(/^נכנס /);
-    expect(parts[1]?.textContent).toMatch(/^ · יצא /);
+    expect(parts[0]?.textContent).toMatch(/^הוצאות /);
+    expect(parts).toHaveLength(1);
+  });
+
+  it("a month with no income has no hint, since its profit already is minus the expenses (#367)", () => {
+    const noIncome = { currency: "ILS", income_minor: 0n, expense_minor: 40_000n, profit_minor: -40_000n };
+    const month = { month: "2026-09", from: "2026-09-01", to: "2026-09-30", open: false, by_currency: [noIncome] };
+    render(wrap(<ProfitMonthsScreen sample={{ projectName: "פרויקט לדוגמה", data: { ...data, months: [month], by_currency: [noIncome] } }} />));
+    expect(document.querySelector(".ui-row-hint-line")).toBeNull();
+    expect(screen.queryByText(/^הכנסות /)).toBeNull();
   });
 
   it("an empty project says so, with no dead-end period to widen", () => {

@@ -59,7 +59,7 @@ function renderHome({
 }
 
 const reviewLink = () => screen.queryByRole("link", { name: /ממתינ\S* לאישור/ });
-const unpaidLink = () => screen.queryByRole("link", { name: /לא שולמ/ });
+const unpaidLink = () => screen.queryByRole("link", { name: /חשבוני(ת|ות) פתוח/ });
 
 describe("Home attention card (FLOW-321)", () => {
   it("shows no card when nothing waits and nothing is unpaid", () => {
@@ -76,7 +76,7 @@ describe("Home attention card (FLOW-321)", () => {
     const rows = within(card as HTMLElement).getAllByRole("link");
     expect(rows).toHaveLength(2);
     const review = screen.getByRole("link", { name: "7 פריטים ממתינים לאישור" });
-    const unpaid = screen.getByRole("link", { name: "3 חשבוניות לא שולמו ₪23,400 · טרם נגבה" });
+    const unpaid = screen.getByRole("link", { name: "3 חשבוניות פתוחות ₪23,400 · לגבייה" });
     expect(review).toHaveAttribute("href", "/review");
     expect(unpaid).toHaveAttribute("href", "/unpaid");
     expect(rows[0]).toBe(review);
@@ -88,7 +88,7 @@ describe("Home attention card (FLOW-321)", () => {
   it("uses singular copy for one of each, with distinct names", () => {
     renderHome({ review: 1, unpaid: 1, gross: 468_000n });
     expect(screen.getByRole("link", { name: "פריט אחד ממתין לאישור" })).toHaveAttribute("href", "/review");
-    expect(screen.getByRole("link", { name: "חשבונית אחת לא שולמה ₪4,680 · טרם נגבה" })).toHaveAttribute("href", "/unpaid");
+    expect(screen.getByRole("link", { name: "חשבונית פתוחה אחת ₪4,680 · לגבייה" })).toHaveAttribute("href", "/unpaid");
     expect(screen.queryByText(/פריטים/)).toBeNull();
     expect(screen.queryByText(/חשבוניות/)).toBeNull();
   });
@@ -106,11 +106,11 @@ describe("Home attention card (FLOW-321)", () => {
 
   it("shows one unpaid row with its total when nothing waits, singular and plural", () => {
     const { unmount } = renderHome({ review: 0, unpaid: 1, gross: 100_000n });
-    expect(screen.getByRole("link", { name: "חשבונית אחת לא שולמה ₪1,000 · טרם נגבה" })).toHaveClass("ui-banner");
+    expect(screen.getByRole("link", { name: "חשבונית פתוחה אחת ₪1,000 · לגבייה" })).toHaveClass("ui-banner");
     expect(reviewLink()).toBeNull();
     unmount();
     renderHome({ review: 0, unpaid: 4, gross: 2_340_000n });
-    expect(screen.getByRole("link", { name: "4 חשבוניות לא שולמו ₪23,400 · טרם נגבה" })).toHaveAttribute("href", "/unpaid");
+    expect(screen.getByRole("link", { name: "4 חשבוניות פתוחות ₪23,400 · לגבייה" })).toHaveAttribute("href", "/unpaid");
     expect(reviewLink()).toBeNull();
   });
 

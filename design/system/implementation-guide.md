@@ -178,7 +178,7 @@ From top to bottom:
 - You **MUST NOT** use the band on any other screen: not on sheets, not on onboarding, not "just for emphasis".
 - It is solid `--color-band`: no gradient, no image, no shadow. The bottom corners use `--radius-band` (28px) and there is 28px of padding at the bottom. It starts under the status bar.
 - It holds **only the summary**:
-  - **Home:** wordmark "Flow" and period pill → greeting (plus example tag) → label "רווח נקי ב…" → profit in `hero` → change pill with "מחודש שעבר" → income and expenses line.
+  - **Home:** wordmark "Flow" and period pill → greeting (plus example tag) → label "רווח ב…" → profit in `hero` → change pill with "מחודש שעבר" → income and expenses line.
   - **Project:** back and ⋯ → project name (`title-2`) with client and period (`label`) → "רווח · רווחיות X%" → profit → income and expenses line.
 - Inside the band, text is `on-band`, labels are `on-band-secondary`, and pills use `band-pill` or `band-chip` backgrounds with `text` or `bad`/`good` inside.
 - The first content block below the band starts 24px under it (the Home pending card).
@@ -354,7 +354,7 @@ Every number **MUST** be wrapped in an isolated LTR span. This covers amounts wi
 | Date, full | `DD/MM/YYYY` | `21/09/2026` |
 | Date range | `DD–DD/MM` with an en dash | `01–30/09` |
 | Date, long (headings, lock screen) | Hebrew weekday and month names | `יום שלישי, 29 בספטמבר` |
-| Month or period | Hebrew month name | `ספטמבר` · `רווח נקי בספטמבר` |
+| Month or period | Hebrew month name | `ספטמבר` · `רווח בספטמבר` |
 | Relative (recent items) | `Intl.RelativeTimeFormat('he', {numeric:'auto'})` | `היום` · `אתמול` · `לפני 3 ימים` |
 | Time | 24-hour | `18:00` |
 | Phone and company number | Israeli grouping, LTR | `050-123-4567` · `51-234567-8` |
@@ -461,7 +461,7 @@ Chips are 36px high (with a 44px hit area), 14px side padding and 8px gaps, and 
 - This is **the one tinted block on Home**. It is `tint` with a 16px radius and a 16px inset.
   - Inbox icon in `accent-text` on the start side.
   - Title in `body`/17px: "7 פריטים ממתינים לאישור".
-  - Hint line: "3 חשבוניות לא שולמו · ₪23,400".
+  - Hint line: "3 חשבוניות פתוחות · ₪23,400".
   - Disclosure chevron on the end side in `text-muted`.
 - Pressed state is `tint-pressed`. Tapping it goes to **03 Review**.
 - When there are 0 pending items and 0 unpaid invoices, **hide the card**. Don't show "0 items".
@@ -780,7 +780,7 @@ Motion is short, calm and functional. Nothing bounces, overshoots or loops for a
 ### 11.1 Hebrew tone
 - **Short, friendly, direct, second person.** Talk to the contractor like a helpful bookkeeper. Say what happened and what to do next. Aim for one line where possible.
 - **Gender-neutral second person.** Use plural imperatives for instructions ("העלו", "בחרו", "הוסיפו למסך הבית"), and noun or infinitive forms for buttons ("אישור", "שמירה", "ביטול", "הוספה", "סימון כשולם"). Avoid "אתה"/"את". The draft 04 subtitle "אתה רק מאשר" **SHOULD** become, for example, "ה־AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר".
-- Use plain words, not accounting jargon. Write "רווח", "הכנסות", "הוצאות", "לא שולמו", "כלליות". Where a term is unavoidable (מע״מ, ח.פ.), keep it standard.
+- Use plain words, not accounting jargon. Write "רווח", "הכנסות", "הוצאות", "חשבוניות פתוחות", "הוצאות כלליות". Where a term is unavoidable (מע״מ, ח.פ.), keep it standard.
 - **Explain the AI briefly.** Show suggestions with ✦ and a confidence % in `hint`. Give a one-line "למה?" reason ("לפי כלל: חומרי בניין השרון ← חולון").
 - **No exclamation marks, no emoji, no ALL-CAPS English.**
 - Use Hebrew punctuation: geresh and gershayim (ח״פ, בע״מ, משפ׳), an en dash with spaces ( – ) for asides, and a middle dot ( · ) to separate hint facts.

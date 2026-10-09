@@ -87,7 +87,7 @@ function pnlCalls() {
 }
 
 async function pnlSwitch() {
-  return screen.findByRole("switch", { name: "ברווח והפסד" });
+  return screen.findByRole("switch", { name: "נספר ברווח" });
 }
 
 beforeEach(() => {
@@ -103,7 +103,7 @@ describe("one line out of the P&L, live", () => {
     showLive();
     fireEvent.click(await pnlSwitch());
     await waitFor(() => { expect(pnlCalls()).toEqual([{ p_id: "tx", p_in_pnl: false }]); });
-    expect(await screen.findByText("מחוץ לרווח")).toBeTruthy();
+    expect(await screen.findByText("לא נספר ברווח")).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(pnlCalls().at(-1)).toEqual({ p_id: "tx", p_in_pnl: null }); });
   });

@@ -241,7 +241,7 @@ export function periodPhrase(period: PeriodChoice, now = new Date(), scope: Peri
 /** The word matches the figure. A loss says הפסד. */
 export function heroProfitLabel(period: PeriodChoice, profitAgorot: bigint | "mixed", now = new Date()): string {
   // FLOW-339: a profit in one currency and a loss in another names both.
-  const word = profitAgorot === "mixed" ? "רווח והפסד" : profitAgorot < 0n ? "הפסד" : "רווח נקי";
+  const word = profitAgorot === "mixed" ? "רווח והפסד" : profitAgorot < 0n ? "הפסד" : "רווח";
   return `${word} ${periodPhrase(period, now)}`;
 }
 

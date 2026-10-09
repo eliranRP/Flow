@@ -178,7 +178,7 @@ function BreakdownBody({
                   <ListRow
                     key={sum.currency}
                     variant="project"
-                    title="מחוץ לרווח"
+                    title="לא נספר ברווח"
                     hint={lineCountHint(sum.count, false)}
                     agorot={sum.amount_minor}
                     currency={sum.currency}
@@ -248,7 +248,7 @@ function LinesBody({
   const sum = excluded ? breakdown?.excluded.find((e) => e.currency === currency) : group;
   // Only the server's buckets have no name. Until the summary names a real group, the title is the side.
   const title = excluded
-    ? "מחוץ לרווח"
+    ? "לא נספר ברווח"
     : group != null || isBucketKey(groupBy, groupKey)
       ? groupTitle(direction, groupBy, groupKey, group?.name)
       : directionLabel(direction);
