@@ -208,13 +208,21 @@ function StatementBankRows({ only }: { only?: BankKind }) {
   return <List>{only ? rows[only] : Object.values(rows)}</List>;
 }
 
-function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "long" | "fallback" | "all" }) {
+function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "jev" | "jevPending" | "jevPair" | "long" | "fallback" | "all" }) {
   const rows = {
     income: <ListRow key="income" variant="statement" title="לקוח לדוגמה" fallback="invoice" method={invoiceMethod} agorot={500_000n} sign="in" href="/review/all?item=1" />,
     expense: <ListRow key="expense" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
     pending: <ListRow key="pending" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} pending agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=3" />,
     suggestion: (
       <ListRow key="suggestion" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
+    ),
+    // FLOW-704: Jev's fill reads "✦ Jev · …" and the row's name says הצעת Jev.
+    jev: (
+      <ListRow key="jev" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=7" />
+    ),
+    // With בהמתנה at 320 only "✦" fits; the row's name still says הצעת Jev.
+    jevPending: (
+      <ListRow key="jevPending" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} pending suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=8" />
     ),
     long: (
       <ListRow
@@ -233,7 +241,8 @@ function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "s
     ),
     fallback: <ListRow key="fallback" variant="statement" title="4242-1234" fallback="bank" method={bankMethod} agorot={-10_000n} sign="out" href="/review/all?item=6" />,
   };
-  if (kind === "all") return <List>{Object.values(rows)}</List>;
+  if (kind === "all") return <List>{Object.values(rows).filter((row) => row.key !== "jev" && row.key !== "jevPending")}</List>;
+  if (kind === "jevPair") return <List>{[rows.suggestion, rows.jev, rows.jevPending]}</List>;
   return <List>{rows[kind]}</List>;
 }
 
@@ -249,6 +258,9 @@ export const StatementIncome: Story = { args: statementArgs, render: () => <Stat
 export const StatementExpense: Story = { args: statementArgs, render: () => <StatementSample kind="expense" /> };
 export const StatementPending: Story = { args: statementArgs, render: () => <StatementSample kind="pending" /> };
 export const StatementSuggestion: Story = { args: statementArgs, render: () => <StatementSample kind="suggestion" /> };
+export const StatementJev320: Story = { args: statementArgs, render: () => <StatementSample kind="jevPair" />, ...statementFrame("flow320", "light") };
+export const StatementJev390: Story = { args: statementArgs, render: () => <StatementSample kind="jevPair" />, ...statementFrame("flow390", "light") };
+export const StatementJev320Dark: Story = { args: statementArgs, render: () => <StatementSample kind="jevPair" />, ...statementFrame("flow320", "dark") };
 export const StatementLongName: Story = { args: statementArgs, render: () => <StatementSample kind="long" /> };
 export const StatementNoLetters: Story = { args: statementArgs, render: () => <StatementSample kind="fallback" /> };
 export const StatementAll390: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow390", "light") };

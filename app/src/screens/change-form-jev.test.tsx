@@ -119,4 +119,24 @@ describe("the change sheet seeded with a Jev guess (FLOW-703)", () => {
     const toggle = await screen.findByRole("switch", { name: /לזכור לספק הזה/, hidden: true });
     expect(toggle).toBeChecked();
   });
+
+  it("says הצעת Jev on a field Jev filled, and הצעה on the line's own suggestion (FLOW-704)", async () => {
+    state.row = row();
+    state.jev = {
+      connectorOn: true,
+      prefill: { suggestionId: "s1", transactionId: "t1", project: null, category: { id: "c2", name: "הובלה" } },
+    };
+    const view = renderChange();
+    const category = await screen.findByRole("button", { name: "קטגוריה: הובלה, שינוי", hidden: true });
+    expect(category.querySelector(".ui-suggest-tag-jev")?.textContent).toBe("✦הצעת Jev");
+    expect(view.container.querySelectorAll(".ui-suggest-tag:not(.ui-suggest-tag-jev)")).toHaveLength(0);
+  });
+
+  it("keeps הצעה when the suggestion is the line's own (FLOW-704)", async () => {
+    state.row = row({ category_id: "c1", category_name: "חומרים", category_suggested: true });
+    renderChange();
+    const category = await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי", hidden: true });
+    expect(category.querySelector(".ui-suggest-tag")?.textContent).toBe("הצעה");
+    expect(category.querySelector(".ui-suggest-tag-jev")).toBeNull();
+  });
 });
