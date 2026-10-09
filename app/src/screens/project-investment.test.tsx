@@ -356,6 +356,18 @@ describe("the rehab sheet", () => {
     expect(screen.getByRole("link", { name: "מה נספר בשיפוץ? בהגדרות הקטגוריות" })).toHaveAttribute("href", "/settings/categories");
   });
 
+  it("opens a counted category's lines all time on the cash basis (FLOW-404)", async () => {
+    serveRehab();
+    renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    const materials = await screen.findByRole("link", { name: /חומרים/ });
+    expect(materials).toHaveAttribute("href", "/projects/p1/categories/c-mat?period=all&basis=cash");
+    // A line with no category opens nothing, and keeps the chevron's space so the amounts line up.
+    const none = screen.getByText("בלי קטגוריה").closest(".ui-row");
+    expect(none?.tagName).not.toBe("A");
+    expect(none?.querySelector(".ui-row-chevron-space")).not.toBeNull();
+  });
+
   it("says loading while it reads", async () => {
     serveRehab({ hold: true });
     renderSection();

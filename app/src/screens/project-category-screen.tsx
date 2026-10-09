@@ -7,7 +7,7 @@ import { periodFromSearch, periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { usualFor, useProjectCategoryMonthsQuery, type UpKind } from "../project-category-months";
-import { useProjectCategoryQuery } from "../use-books";
+import { BOOKS_BASIS, useProjectCategoryQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { Button } from "../ui/button";
@@ -59,7 +59,9 @@ export function ProjectCategoryScreen({
   const location = useLocation();
   // The project's period travels in the URL, so the lines match the category row that opened them.
   const period = periodFromSearch(new URLSearchParams(location.search));
-  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
+  // FLOW-404: the rehab list opens a category on the cash basis (`?basis=cash`), so its lines add up to the row.
+  const basis = params.get("basis") === "cash" ? "cash" : BOOKS_BASIS;
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period, basis);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const months = useProjectCategoryMonthsQuery(sample ? "" : projectId, period);
   const [sampleOpen, setSampleOpen] = useState(false);
@@ -96,7 +98,10 @@ export function ProjectCategoryScreen({
     <div>
       {/* FLOW-339: the project names Back ("‹ שיפוץ הרצל 12"), so the subtitle leaves it out. */}
       <ScreenHeader title={name} kicker={projectName} subtitle={subtitle} backTo={backOverride ?? back} />
-      <UsualLine usual={sample ? sample.usual ?? null : usualFor(months.data, categoryId, rowCurrency)} currency={rowCurrency} />
+      {/* The usual month is on the books basis, so a cash-basis list from the rehab sheet leaves it out. */}
+      {basis === "cash" ? null : (
+        <UsualLine usual={sample ? sample.usual ?? null : usualFor(months.data, categoryId, rowCurrency)} currency={rowCurrency} />
+      )}
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (

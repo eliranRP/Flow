@@ -152,6 +152,18 @@ export const ListOfRows: Story = {
   ),
 };
 
+/** FLOW-408: a row that opens nothing keeps the chevron's space, so its amount lines up with linked rows. */
+export const ProjectRowsLineUp: Story = {
+  args: { variant: "project", title: "חומרים", agorot: "3000000" },
+  render: () => (
+    <List>
+      <ListRow variant="project" title="חומרים" agorot={3_000_000n} loss={false} href="/projects/1/categories/c1" chevron />
+      <ListRow variant="project" title="בלי קטגוריה" agorot={420_000n} loss={false} chevronSpace />
+      <ListRow variant="project" title="Utilities" agorot={125_000n} currency="USD" loss={false} href="/projects/1/categories/c2?currency=USD" chevron />
+    </List>
+  ),
+};
+
 /** Option C (decision 0120): income green with no plus and small cents (".00" included), expense with − and cents,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {

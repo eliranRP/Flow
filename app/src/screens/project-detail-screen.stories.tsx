@@ -277,6 +277,23 @@ export const ProjectExpenses: Story = {
 export const ProjectExpensesDark: Story = { ...ProjectExpenses, name: "Project, expenses section, dark", ...dark };
 export const ProjectExpenses320: Story = { ...ProjectExpenses, name: "Project, expenses section, 320", ...at320 };
 
+/** FLOW-334: the waiting row reads as Home's review row (inbox icon, tint), not a category. */
+export const ProjectExpensesWaiting: Story = {
+  name: "Project, expenses section, waiting row",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/expenses" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={{ ...overviewProject, pending_count: 2, pending_agorot: 1_250_000n }}
+        section="expenses"
+        sectionTo={sectionTo}
+      />
+    </StoryRoute>
+  ),
+};
+export const ProjectExpensesWaitingDark: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, dark", ...dark };
+export const ProjectExpensesWaiting320: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, 320", ...at320 };
+
 export const ProjectTransactionsSection: Story = {
   name: "Project, transactions section",
   render: () => (

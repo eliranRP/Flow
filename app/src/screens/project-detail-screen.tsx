@@ -16,7 +16,6 @@ import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
-import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
@@ -286,7 +285,7 @@ export function ProjectDetailScreen({
   const investmentShown = investmentFigure(investmentData) != null;
   const overhead = (
     <Toggle
-      label="אחרי חלק בהוצאות כלליות"
+      label="רווח אחרי כלליות"
       hint={overheadHint(overheadOn, {
         available: project.overhead_weighted === true,
         shareAgorot: project.base_currency != null && project.base_currency !== "ILS"
@@ -432,6 +431,8 @@ function ProjectMenu({
   const blocked = useBlockedPreview();
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
   const save = useWrite({
     failure: "לא הצלחנו לעדכן את הפרויקט.",
     success: finished ? "הפרויקט חזר לפעיל" : "הפרויקט סומן כהסתיים",
@@ -451,6 +452,7 @@ function ProjectMenu({
   return (
     <>
       <IconButton
+        ref={opener}
         label="עוד"
         onBand
         onClick={() => {
@@ -461,29 +463,30 @@ function ProjectMenu({
       </IconButton>
       <Sheet open={menu} onOpenChange={setMenu} title="עוד">
         {overhead}
-        {investmentTo == null ? null : (
-          <List>
+        {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
+        <List className="ui-project-menu-list">
+          {investmentTo == null ? null : (
             <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
-          </List>
-        )}
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setMenu(false);
-            setConfirm(true);
-          }}
-        >
-          {finished ? "החזרה לפעיל" : "סיום הפרויקט"}
-        </Button>
+          )}
+          <ListRow
+            variant="button"
+            title={action}
+            onClick={() => {
+              setMenu(false);
+              setConfirm(true);
+            }}
+          />
+        </List>
       </Sheet>
+      {/* Either way can be undone, so the confirm is neutral: no red and no bin (FLOW-341 rule). */}
       <ConfirmSheet
         open={confirm}
         onOpenChange={setConfirm}
         title={finished ? "להחזיר את הפרויקט לפעיל?" : "לסיים את הפרויקט?"}
         item={name}
         consequence="פרויקט לא נמחק. אפשר להחזיר אותו אחר כך."
-        confirmLabel="אישור"
-        destructive={!finished}
+        confirmLabel={action}
+        returnFocusRef={opener}
         busy={save.isPending}
         onConfirm={() => {
           if (blocked()) return;
