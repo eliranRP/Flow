@@ -379,6 +379,20 @@ export const ConnectionsViewer: Story = {
   ),
 };
 
+/** FLOW-507: a viewer can't reconnect, so expired keys read "לא מחובר כרגע" with no warning tone. */
+export const ConnectionsViewerReconnect: Story = {
+  name: "Connections, viewer, reconnect",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <ConnectionsScreen sample={{ ...pagesBusiness, lastError: "sumit_auth", mercuryLastError: "auth", assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+export const ConnectionsViewerReconnectDark: Story = { ...ConnectionsViewerReconnect, name: "Connections, viewer, reconnect, dark", ...dark };
+
 export const ConnectionsNoCompany: Story = {
   name: "Connections, no company",
   render: () => (
