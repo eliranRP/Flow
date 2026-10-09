@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type BrowserContext, type ConsoleMessage, type Page } from "@playwright/test";
 import { classifyStorybookRequest, isAllowedStorybookUrl, type StorybookRequestKind } from "./storybook-network";
 
@@ -6,6 +7,7 @@ type StoryEntry = {
   type: string;
   title: string;
   name: string;
+  importPath?: string;
 };
 
 type StoryIndex = {
@@ -88,6 +90,37 @@ function recordProblems(page: Page, problems: string[]) {
 }
 
 /**
+ * The pre-push gate checks only the stories a change reaches: FLOW_STORY_SCOPE names a file of
+ * "<tier> <story file>" lines from scripts/storybook-stories.mjs ("all" or unset checks every
+ * story). Whole tiers are taken, nearest first, while the stories fit FLOW_STORY_BUDGET; the first
+ * tier is always taken. main checks every story before each deploy.
+ */
+function scopedStories(all: StoryEntry[]): StoryEntry[] {
+  const scopeFile = process.env.FLOW_STORY_SCOPE;
+  if (!scopeFile) return all;
+  const lines = readFileSync(scopeFile, "utf8").split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.includes("all")) return all;
+  const budget = Number(process.env.FLOW_STORY_BUDGET ?? "250");
+  const tiers = new Map<number, Set<string>>();
+  for (const line of lines) {
+    const [tier, file] = line.split(" ");
+    const files = tiers.get(Number(tier)) ?? new Set<string>();
+    files.add(file ?? "");
+    tiers.set(Number(tier), files);
+  }
+  const picked = new Set<string>();
+  let count = 0;
+  for (const tier of [...tiers.keys()].sort((a, b) => a - b)) {
+    const files = tiers.get(tier) ?? new Set<string>();
+    const size = all.filter((entry) => entry.importPath !== undefined && files.has(entry.importPath)).length;
+    if (picked.size > 0 && count + size > budget) break;
+    for (const file of files) picked.add(file);
+    count += size;
+  }
+  return all.filter((entry) => entry.importPath !== undefined && picked.has(entry.importPath));
+}
+
+/**
  * Every story is opened once. The stories are split round-robin into shards so Playwright workers
  * can open them side by side; together the shards cover the whole index.
  */
@@ -113,8 +146,9 @@ async function checkStoryShard(page: Page, context: BrowserContext, shard: numbe
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
   const allStories = Object.values(index.entries).filter((entry) => entry.type === "story");
   expect(allStories.length).toBeGreaterThan(50);
-  const stories = allStories.filter((_, i) => i % STORY_SHARDS === shard);
-  expect(stories.length).toBeGreaterThan(0);
+  const scoped = scopedStories(allStories);
+  const stories = scoped.filter((_, i) => i % STORY_SHARDS === shard);
+  if (scoped.length === allStories.length) expect(stories.length).toBeGreaterThan(0);
 
   const failures: string[] = [];
   for (const entry of stories) {

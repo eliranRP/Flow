@@ -62,25 +62,25 @@ function folderSources(root, folder) {
 }
 
 /**
- * @param {{ root: string, map: any }} options
- * @returns {{ all: RegExp[], closures: Map<string, Set<string>>, app: Set<string> }}
+ * Follows relative imports, the screens barrel by name, and @flow/shared from the start files.
+ * A file `stop` matches is kept but not followed.
+ * @param {string} root
+ * @returns {(start: string[], stop?: (file: string) => boolean) => Set<string>}
  */
-export function specClosures({ root, map }) {
-  const all = map.all.map((pattern) => new RegExp(pattern));
+export function importWalker(root) {
   const texts = new Map();
   const read = (file) => {
     if (!texts.has(file)) texts.set(file, fs.readFileSync(path.join(root, file), "utf8"));
     return texts.get(file);
   };
-  const walk = (start, followAll) => {
+  return (start, stop = () => false) => {
     const seen = new Set();
     const stack = [...start];
     while (stack.length > 0) {
       const file = stack.pop();
       if (seen.has(file)) continue;
       seen.add(file);
-      // A spec does not follow a file that runs every spec (App.tsx, the screens barrel).
-      if (!/\.(ts|tsx)$/.test(file) || (!followAll && all.some((pattern) => pattern.test(file)))) continue;
+      if (!/\.(ts|tsx)$/.test(file) || stop(file)) continue;
       const text = read(file);
       for (const match of text.matchAll(importPattern)) {
         const resolved = resolveImport(root, file, match[2] ?? match[3] ?? match[4]);
@@ -99,6 +99,17 @@ export function specClosures({ root, map }) {
     }
     return seen;
   };
+}
+
+/**
+ * @param {{ root: string, map: any }} options
+ * @returns {{ all: RegExp[], closures: Map<string, Set<string>>, app: Set<string> }}
+ */
+export function specClosures({ root, map }) {
+  const all = map.all.map((pattern) => new RegExp(pattern));
+  const walker = importWalker(root);
+  // A spec does not follow a file that runs every spec (App.tsx, the screens barrel).
+  const walk = (start, followAll) => walker(start, (file) => !followAll && all.some((pattern) => pattern.test(file)));
   const closures = new Map();
   for (const [spec, entries] of Object.entries(map.specs)) {
     const start = [`app/e2e/${spec}`];

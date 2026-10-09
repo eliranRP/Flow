@@ -3,7 +3,9 @@
 # this script, and main runs the full suite on GitHub before each batch deploy.
 #   default (about 4 minutes cold, under 2 when the app is unchanged): lint, the migration checks,
 #     Deno, typecheck, unit and connector tests,
-#     both dist builds, the Storybook tests, and the e2e specs that reach the changed files (needs
+#     both dist builds, the Storybook tests, the built-Storybook layout specs and the every-story
+#     check for the stories the change reaches (when the app changed, about 3.5 minutes), and the
+#     e2e specs that reach the changed files (needs
 #     Docker for local Supabase; about 3.5 more minutes for a screen change, see FLOW-813 in TASKS).
 #   --full (about 12 minutes): adds the every-story smoke, local Supabase (pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
@@ -316,7 +318,57 @@ else
   pnpm test:storybook
 fi
 
+# The built-Storybook checks main runs in check (storybook) and check (stories): the layout, clip and
+# secret specs, and the every-story check for the stories the change reaches (scripts/storybook-stories.mjs,
+# at most FLOW_STORY_BUDGET stories, default 250). Skipped when these app inputs passed, or when nothing
+# under app, packages or design changed since the last commit that passed them (or since main).
+storybook_smoke() {
+  if green "smoke-$app_key"; then
+    echo "local-ci: Storybook smoke skipped: these app inputs already passed."
+    return 0
+  fi
+  local base="" commit tree changed scope
+  if (( skips )); then
+    while read -r commit tree; do
+      if has_mark "tree-smoke-$tree"; then base="$commit"; break; fi
+    done < <(ancestors)
+  fi
+  [[ -n "$base" ]] || base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+  scope="$(mktemp)"
+  if [[ -n "$base" ]]; then
+    changed="$(git diff --name-only "$base" HEAD)"
+    if ! grep -qE '^(app|packages|design)/|^(package\.json|pnpm-lock\.yaml)$' <<<"$changed"; then
+      echo "local-ci: Storybook smoke skipped: no app change since ${base:0:7}."
+      rm -f "$scope"
+      return 0
+    fi
+    node scripts/storybook-stories.mjs <<<"$changed" >"$scope"
+  else
+    echo all >"$scope"
+  fi
+  if grep -qx all "$scope"; then
+    echo "local-ci: the every-story check opens every story."
+  else
+    echo "local-ci: the every-story check opens the stories in $(wc -l <"$scope") files the changes since ${base:0:7} reach (up to ${FLOW_STORY_BUDGET:-250} stories; main opens the rest)."
+  fi
+  # Cloud containers ship a Chromium; use it when Playwright's own can't be downloaded.
+  if ! pnpm --filter @flow/app exec playwright install chromium && [[ -x /opt/pw-browsers/chromium ]]; then
+    echo "local-ci: using /opt/pw-browsers/chromium." >&2
+    export FLOW_CHROMIUM_PATH=/opt/pw-browsers/chromium
+  fi
+  local build_log
+  build_log="$(mktemp)"
+  pnpm build-storybook >"$build_log" 2>&1 || { cat "$build_log"; return 1; }
+  rm -f "$build_log"
+  FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --workers="${FLOW_STORY_WORKERS:-4}"
+  rm -f "$scope"
+  mark_green "smoke-$app_key"
+  mark_green "tree-smoke-$head_tree"
+}
+
 if (( ! full )); then
+  phase "check: Storybook smoke (layout specs and the stories this change reaches)"
+  storybook_smoke
   if (( ${#e2e_specs[@]} > 0 )); then
     wait_supabase
     phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
@@ -328,7 +380,7 @@ if (( ! full )); then
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  phase "passed on ${head:0:7} (main runs the every-story smoke and all e2e before each deploy)"
+  phase "passed on ${head:0:7} (main opens every story and runs all e2e before each deploy)"
   exit 0
 fi
 
