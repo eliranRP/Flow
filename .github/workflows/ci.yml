@@ -457,6 +457,7 @@ jobs:
           supabase secrets set --project-ref sxqpnetmtufkzowutduq --env-file "$envfile"
           supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy push-send --project-ref sxqpnetmtufkzowutduq
 
       - name: Smoke the production hostname
         run: bash scripts/cd-smoke.sh "$GITHUB_SHA"
