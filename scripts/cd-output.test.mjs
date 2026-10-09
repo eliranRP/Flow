@@ -215,7 +215,9 @@ test("preflight-kind does not read stdin", async () => {
     const timer = setTimeout(() => {
       child.kill();
       reject(new Error("preflight-kind waited for stdin"));
-    }, 500);
+      // Generous: a child that reads stdin waits forever on the open pipe, so any bound catches it,
+      // and a short one failed under gate load just from process start-up.
+    }, 15_000);
     child.on("exit", (status) => {
       clearTimeout(timer);
       resolve(status);

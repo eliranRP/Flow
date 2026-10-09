@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -54,11 +54,8 @@ function ownerSession(secret: string, anon: string, user: User): Session {
   };
 }
 
-test("a card-line category pick stays on the card and shows the new value", async ({ page }) => {
-  const status = localStatus();
-  test.skip(!status, "local Supabase is required for the real review save");
-  if (!status) return;
-
+/** A fresh owner with two open expense reviews (חומרים on הרצל), signed in on the page. */
+async function seedOwner(page: Page, status: NonNullable<ReturnType<typeof localStatus>>) {
   const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `field-${stamp}@test.flow`;
   const supplier = `ספק שדה ${stamp}`;
@@ -68,7 +65,7 @@ test("a card-line category pick stays on the card and shows the new value", asyn
   expect(created.error, created.error?.message).toBeNull();
   const user = created.data.user;
   expect(user).not.toBeNull();
-  if (!user) return;
+  if (!user) throw new Error("no user");
   const session = ownerSession(status.jwt, status.anon, user);
   const anon = createClient(status.url, status.anon, { auth: { persistSession: false, autoRefreshToken: false } });
   const applied = await anon.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
@@ -130,6 +127,15 @@ test("a card-line category pick stays on the card and shows the new value", asyn
     window.localStorage.setItem(key, JSON.stringify(value));
   }, { key: storageKey, value: stored });
 
+  return { admin, reviewId, supplier, other, haul, stamp };
+}
+
+test("a card-line category pick stays on the card and shows the new value", async ({ page }) => {
+  const status = localStatus();
+  test.skip(!status, "local Supabase is required for the real review save");
+  if (!status) return;
+  const { admin, reviewId, supplier, other, haul, stamp } = await seedOwner(page, status);
+
   await page.goto("/review");
   await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
   await page.getByRole("button", { name: /קטגוריה:/ }).click();
@@ -155,4 +161,29 @@ test("a card-line category pick stays on the card and shows the new value", asyn
   expect(saved.data?.status).toBe("open");
   const txn = await admin.from("transactions").select("category_id").eq("idempotency_key", `field-e2e:${stamp}`).single();
   expect(txn.data?.category_id).toBe(haul?.id);
+});
+
+test("פיצול לפי קטגוריות in the change sheet approves, then opens the parts editor (FLOW-325 §10)", async ({ page }) => {
+  const status = localStatus();
+  test.skip(!status, "local Supabase is required for the real approve");
+  if (!status) return;
+  const { admin, reviewId, supplier, stamp } = await seedOwner(page, status);
+
+  await page.goto("/review");
+  await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
+  await page.getByRole("link", { name: "שינוי" }).click();
+  await page.getByRole("dialog", { name: "שינוי שיוך" }).getByRole("button", { name: /^פרויקט:/ }).click();
+  const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
+  await expect(projects).toBeVisible();
+  await projects.getByRole("button", { name: "פיצול לפי קטגוריות" }).click();
+  await expect(page).toHaveURL(/\/transactions\/[^/]+\/split-category/);
+  await expect(page.getByRole("heading", { name: "פיצול לפי קטגוריות" })).toBeVisible();
+  // The line is approved, so the editor is open for parts (no "approve first" banner).
+  await expect(page.getByRole("button", { name: "הוספת חלק" })).toBeEnabled();
+  await expect(page.getByText("אשרו את התנועה בתור לאישור, ואז פצלו.")).toHaveCount(0);
+  const review = await admin.from("review_queue").select("status").eq("id", reviewId).single();
+  expect(review.data?.status).toBe("approved");
+  const txn = await admin.from("transactions").select("project_id, category_id").eq("idempotency_key", `field-e2e:${stamp}`).single();
+  expect(txn.data?.project_id).toBeTruthy();
+  expect(txn.data?.category_id).toBeTruthy();
 });
