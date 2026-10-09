@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
-| Dev lane 2 | FLOW-406 plan recorded as decision 0164 (docs only), PR #352; FLOW-502 server PR 2 merged #343 | FLOW-406 server 1: sub-categories (`parent_id`, roll-ups, MCP) |
+| Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | UI lane 1 | FLOW-340 option C (owner's pick 2026-10-09), PR #338 on `claude/project-thread-0wt3o6`: the short project page (profit on the band, one row per section, each its own screen); merges after the owner's yes on shots (FLOW-342 + FLOW-344 merged #314) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
@@ -990,6 +990,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** each server PR has pgTAP for the one-level, kind and loan-part rules, roll-up = sum of parts, unchanged company totals across the `group_name` backfill, and tenant isolation; the screens match the approved mockups.
 - [x] Plan and mockups approved (owner, 2026-10-09: data A, drill-in screens).
 - [ ] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
+  - [x] 1a (#354): `parent_id`, the rules, the `group_name` backfill and mirror, `set_category_parent`, refusals on a parent, `list_categories` fields, MCP `set_category_parent` and `parent_id` on the create tools.
+  - [ ] 1b: roll-up reads (`get_project`, `project_category_months`, `get_breakdown`, search).
 - [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.
