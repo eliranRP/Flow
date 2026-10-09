@@ -54,16 +54,19 @@ export function pushSupport(): PushSupport {
   return "ok";
 }
 
-// The push RPCs land with the FLOW-502 server PR; until the generated types carry them, call them untyped.
-// Before this merges, each call names its function literally on supabase.rpc so scripts/smoke-allow-rpcs.test.mjs
-// sees it (the migrations must define the functions first).
-type UntypedRpc = (name: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
+// The generated database types do not carry the push RPCs (#335) yet, so they are called untyped.
+// Each call names its function literally so scripts/smoke-allow-rpcs.test.mjs sees it.
+type RpcResult = PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
+type UntypedClient = { rpc: (name: string, args?: Record<string, unknown>) => RpcResult };
 
-async function rpc(name: string, args?: Record<string, unknown>): Promise<unknown> {
+function db(): UntypedClient {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
-  const call = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
-  const { data, error } = await call(name, args);
+  return supabase as unknown as UntypedClient;
+}
+
+async function result(call: RpcResult): Promise<unknown> {
+  const { data, error } = await call;
   if (error) throw Object.assign(new Error(error.message), error.code ? { code: error.code } : {});
   return data;
 }
@@ -82,7 +85,7 @@ export function prefsFromData(data: unknown): NotificationPrefs {
 }
 
 export async function readNotificationPrefs(): Promise<NotificationPrefs> {
-  return prefsFromData(await rpc("get_notification_prefs"));
+  return prefsFromData(await result(db().rpc("get_notification_prefs")));
 }
 
 export function useNotificationPrefsQuery(enabled: boolean) {
@@ -91,16 +94,16 @@ export function useNotificationPrefsQuery(enabled: boolean) {
 
 /** Null leaves a switch as it is. Returns the stored prefs. */
 export async function saveNotificationPrefs(change: Partial<Record<NotificationPrefKey, boolean>>): Promise<NotificationPrefs> {
-  return prefsFromData(await rpc("set_notification_prefs", {
+  return prefsFromData(await result(db().rpc("set_notification_prefs", {
     p_new_transaction: change.new_transaction ?? null,
     p_evening_reminder: change.evening_reminder ?? null,
     p_weekly_summary: change.weekly_summary ?? null,
-  }));
+  })));
 }
 
 /** Records the review card's answer, so it is asked once. Yes also turns on the evening reminder. */
 export async function answerPushPrompt(yes: boolean): Promise<NotificationPrefs> {
-  return prefsFromData(await rpc("answer_push_prompt", { p_yes: yes }));
+  return prefsFromData(await result(db().rpc("answer_push_prompt", { p_yes: yes })));
 }
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
@@ -150,7 +153,7 @@ export async function subscribeThisDevice(): Promise<SubscribeResult> {
     const p256dh = json.keys?.p256dh;
     const auth = json.keys?.auth;
     if (json.endpoint == null || p256dh == null || auth == null) return "failed";
-    await rpc("push_subscribe", { p_endpoint: json.endpoint, p_p256dh: p256dh, p_auth: auth, p_user_agent: navigator.userAgent });
+    await result(db().rpc("push_subscribe", { p_endpoint: json.endpoint, p_p256dh: p256dh, p_auth: auth, p_user_agent: navigator.userAgent }));
     return "ok";
   } catch {
     return "failed";
