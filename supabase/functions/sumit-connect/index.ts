@@ -3,6 +3,7 @@ import { connectValidated } from "../_shared/connect-order.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import { parseImportFrom, saveImportFrom } from "../_shared/import-from.ts";
+import { companyHint, ownedCompany } from "../_shared/owner.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -37,9 +38,8 @@ Deno.serve(async (req) => {
     if (importFrom === false) return json({ error: "import date is invalid" }, 400);
 
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
-    const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
-    if (company.error || !company.data) return json({ error: "no company" }, 400);
-    const companyRowId = company.data.id;
+    const companyRowId = await ownedCompany(admin, user.data.user.id, companyHint(req));
+    if (!companyRowId) return json({ error: "no company" }, 400);
 
     const kekVersion = Deno.env.get("SUMIT_KEK_VERSION") || "1";
     const saved = await connectValidated({

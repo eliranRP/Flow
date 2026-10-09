@@ -138,14 +138,14 @@ export const Rename: Story = {
 export const Rename320: Story = { ...Rename, name: "Rename, 320", ...at320 };
 export const RenameDark: Story = { ...Rename, name: "Rename, dark", ...dark };
 
-/** FLOW-401: the קבוצה row after שינוי שם, and its picker. One tap applies a group. */
+/** FLOW-401: the קטגוריית אב row after שינוי שם, and its picker. One tap applies a group. */
 export const Group: Story = {
   name: "Group, the picker",
   render: () => <Screen />,
   play: async ({ canvasElement }) => {
     const sheet = await openMenu(canvasElement, "חשמל ואינסטלציה");
-    await userEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    await body(canvasElement).findByRole("dialog", { name: "קבוצה" });
+    await userEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    await body(canvasElement).findByRole("dialog", { name: "בחירת קטגוריית אב" });
   },
 };
 export const Group320: Story = { ...Group, name: "Group, 320", ...at320 };
@@ -156,9 +156,9 @@ export const GroupNew: Story = {
   render: () => <Screen />,
   play: async ({ canvasElement }) => {
     const sheet = await openMenu(canvasElement, "חומרים");
-    await userEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
-    const picker = await body(canvasElement).findByRole("dialog", { name: "קבוצה" });
-    await userEvent.click(within(picker).getByRole("button", { name: "קבוצה חדשה" }));
-    await within(picker).findByLabelText("שם הקבוצה");
+    await userEvent.click(within(sheet).getByRole("button", { name: /^קטגוריית אב/ }));
+    const picker = await body(canvasElement).findByRole("dialog", { name: "בחירת קטגוריית אב" });
+    await userEvent.click(within(picker).getByRole("button", { name: "קטגוריית אב חדשה" }));
+    await within(picker).findByLabelText("שם הקטגוריה");
   },
 };
