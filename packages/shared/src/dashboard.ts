@@ -206,6 +206,8 @@ export const projectCategoryMonthRowSchema = z.object({
   id: z.string().nullable(),
   name: z.string().nullable(),
   group_name: z.string().nullable(),
+  /** FLOW-406: the category's parent; omitted on older payloads. */
+  parent_id: z.string().nullable().optional(),
   currency: z.string(),
   this_month_minor: z.number().int(),
   months_minor: z.array(z.number().int()),
@@ -221,6 +223,20 @@ export const projectCategoryMonthsSchema = z.object({
   this_month: z.string(),
   months: z.array(z.string()),
   categories: z.array(projectCategoryMonthRowSchema),
+  /** FLOW-406: one row per parent with sub-categories, months summed. Omitted on older payloads. */
+  parents: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().nullable(),
+        currency: z.string(),
+        this_month_minor: z.number().int(),
+        own_this_month_minor: z.number().int(),
+        children: z.number().int(),
+        months_minor: z.array(z.number().int()),
+      }),
+    )
+    .optional(),
 });
 
 export const sumitStatusSchema = z.object({
@@ -289,6 +305,7 @@ export const projectDetailSchema = z
           name: z.string().nullable(),
           amount_minor: agorotSchema,
           has_shared_share: z.boolean().optional(),
+          parent_id: z.string().nullable().optional(),
         }),
       )
       .optional(),
@@ -300,6 +317,7 @@ export const projectDetailSchema = z
           name: z.string().nullable(),
           amount_minor: agorotSchema,
           has_shared_share: z.boolean().optional(),
+          parent_id: z.string().nullable().optional(),
         }),
       )
       .optional(),
@@ -310,8 +328,49 @@ export const projectDetailSchema = z
         amount_agorot: agorotSchema,
         /** True when this line includes this project's share of a shared cost. */
         has_shared_share: z.boolean().optional(),
+        /** FLOW-406: the category's parent; omitted on older payloads. */
+        parent_id: z.string().nullable().optional(),
       }),
     ),
+    /** FLOW-406: one row per parent with sub-categories: its own rows plus its children's. */
+    category_rollups: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string().nullable(),
+          amount_agorot: agorotSchema,
+          own_amount_agorot: agorotSchema,
+          children: z.number().int(),
+          has_shared_share: z.boolean().optional(),
+        }),
+      )
+      .optional(),
+    category_rollups_by_currency: z
+      .array(
+        z.object({
+          currency: z.string().regex(/^[A-Z]{3}$/),
+          id: z.string(),
+          name: z.string().nullable(),
+          amount_minor: agorotSchema,
+          own_amount_minor: agorotSchema,
+          children: z.number().int(),
+          has_shared_share: z.boolean().optional(),
+        }),
+      )
+      .optional(),
+    excluded_category_rollups_by_currency: z
+      .array(
+        z.object({
+          currency: z.string().regex(/^[A-Z]{3}$/),
+          id: z.string(),
+          name: z.string().nullable(),
+          amount_minor: agorotSchema,
+          own_amount_minor: agorotSchema,
+          children: z.number().int(),
+          has_shared_share: z.boolean().optional(),
+        }),
+      )
+      .optional(),
     /** Project expenses whose category is still a suggestion. Omitted on older payloads. */
     pending_count: z.number().int().nonnegative().optional(),
     pending_agorot: agorotSchema.optional(),

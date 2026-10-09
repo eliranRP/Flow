@@ -185,10 +185,10 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const projects = isUnknownArray(home.projects) ? home.projects : [];
   const hasBooks = jsonAmount(home.income_agorot) !== 0 || jsonAmount(home.expense_agorot) !== 0 || projects.length > 0;
   if (hasBooks) {
-    await expect(page.getByText("נכנס", { exact: true })).toBeVisible();
-    await expect(page.getByText("יצא", { exact: true })).toBeVisible();
+    await expect(page.getByText("הכנסות", { exact: true })).toBeVisible();
+    await expect(page.getByText("הוצאות", { exact: true })).toBeVisible();
   } else {
-    await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
   }
   await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);

@@ -12,7 +12,7 @@ async function addPart(page: Page, category: string, project: string, reversal =
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
   await expect(categories).toBeVisible();
   // A refund line opens its reversal section expanded (FLOW-333 C3c).
-  if (reversal) await expect(categories.getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
+  if (reversal) await expect(categories.getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: category }).click();
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects).toBeVisible();
@@ -57,7 +57,7 @@ test("a refund's reversal part needs a project before it saves", async ({ page }
   await page.goto("/e2e/split-category?line=refund");
   await page.getByRole("button", { name: "הוספת חלק" }).click();
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
-  await expect(categories.getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
+  await expect(categories.getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: "חומרי בניין" }).click();
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects.getByText("חלק החזר צריך פרויקט.")).toBeVisible();

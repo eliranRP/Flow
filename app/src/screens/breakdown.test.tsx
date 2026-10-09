@@ -104,7 +104,7 @@ describe("Breakdown screen", () => {
     expect(call?.args).toHaveProperty("p_from");
     expect(screen.getByText("בלי קטגוריה")).toBeInTheDocument();
     expect(screen.getByText("12 תנועות · כולל חלק משותף")).toBeInTheDocument();
-    // FLOW-339: a cost under "יצא" is already named, so no minus on the header or the groups.
+    // FLOW-339: a cost under "הוצאות" is already named, so no minus on the header or the groups.
     expect(screen.getByText("₪48,320")).toBeInTheDocument();
     expect(screen.getAllByText("$1,200")).toHaveLength(2);
     expect(screen.queryByText(/^−/)).toBeNull();
@@ -119,7 +119,7 @@ describe("Breakdown screen", () => {
     expect(within(waiting).queryByText(/₪/)).not.toBeInTheDocument();
     expect(within(waiting).getByText("כבר כלולים בסכום")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "לא נכלל בסכום" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /מחוץ לרווח/ })).toHaveAttribute("href", "/flow/expense/excluded/ILS");
+    expect(screen.getByRole("link", { name: /לא נספר ברווח/ })).toHaveAttribute("href", "/flow/expense/excluded/ILS");
   });
 
   it("regroups by supplier and remembers the choice on the device", async () => {
@@ -135,7 +135,7 @@ describe("Breakdown screen", () => {
   it("calls the income grouping לקוח", async () => {
     wrap("/flow/income");
     expect(await screen.findByRole("radio", { name: "לקוח" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "נכנס" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "הכנסות" })).toBeInTheDocument();
   });
 
   it("shows the empty state with a period button", async () => {
@@ -232,7 +232,7 @@ describe("Breakdown lines screen", () => {
       name === "get_breakdown_lines" ? Promise.resolve({ data: lines, error: null }) : new Promise(() => undefined);
     wrap("/flow/expense/category/ILS/c1");
     await screen.findByText("ספק לדוגמה");
-    expect(screen.getByRole("heading", { name: "יצא" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "הוצאות" })).toBeInTheDocument();
     expect(screen.queryByText("בלי קטגוריה")).not.toBeInTheDocument();
   });
 
@@ -266,7 +266,7 @@ describe("Breakdown lines screen", () => {
     await screen.findByText("ספק לדוגמה");
     const call = rpc.calls.find((c) => c.name === "get_breakdown_lines");
     expect(call?.args).toMatchObject({ p_excluded: true, p_currency: "ILS" });
-    expect(screen.getByRole("heading", { name: "מחוץ לרווח" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
   });
 
   it("picks its own period, and an empty one offers another (FLOW-322)", async () => {

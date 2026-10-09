@@ -28,9 +28,9 @@ import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
 /** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {
-  interest: "חלק מתשלום הלוואה\u00a0· תמיד ברווח והפסד",
-  escrow: "חלק מתשלום הלוואה\u00a0· תמיד ברווח והפסד",
-  principal: "קטגוריית הלוואה\u00a0· תמיד מחוץ לרווח והפסד",
+  interest: "חלק מתשלום הלוואה\u00a0· תמיד נספרת ברווח",
+  escrow: "חלק מתשלום הלוואה\u00a0· תמיד נספרת ברווח",
+  principal: "קטגוריית הלוואה\u00a0· לא נספרת ברווח",
 };
 
 function loanCategoryLine(category: CategoryRow): string | null {
@@ -116,7 +116,7 @@ export function CategoriesScreen({
     onSuccess: (done) => {
       setMenu(null);
       toast.show({
-        message: `${done.name} · ${done.excluded ? KEPT_OUT : "ברווח והפסד"}`,
+        message: `${done.name} · ${done.excluded ? KEPT_OUT : "נספר ברווח"}`,
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => { pnl.mutate({ ...done, excluded: !done.excluded, undo: true }); },

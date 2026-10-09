@@ -579,7 +579,7 @@ export function LoanSettingsSection({
         </>
       )}
       {holdWrites || failed || empty ? null : (
-        <List>
+        <List className="ui-loan-new">
           <ListRow
             variant="button"
             title="הלוואה חדשה"

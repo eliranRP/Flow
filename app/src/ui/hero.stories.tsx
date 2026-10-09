@@ -54,7 +54,7 @@ const ytd = "הכנסות פחות הוצאות";
 
 export const YearToDate: Story = {
   args: {
-    label: "רווח נקי מתחילת השנה",
+    label: "רווח מתחילת השנה",
     agorot: "3916400",
     explanation: ytd,
     income: "47200000",
@@ -65,7 +65,7 @@ export const YearToDate: Story = {
 
 export const ThisMonth: Story = {
   args: {
-    label: "רווח נקי החודש",
+    label: "רווח החודש",
     agorot: "1840000",
     explanation: "הכנסות פחות הוצאות",
     income: "8200000",
@@ -87,7 +87,7 @@ export const Loss: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "כאן יופיע הרווח הנקי של העסק",
+    label: "כאן יופיע הרווח של העסק",
     agorot: "",
     explanation: "",
     income: "",

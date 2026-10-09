@@ -6,8 +6,9 @@ const SLACK = 2;
 
 /**
  * A row of chips that scrolls sideways (FLOW-347). When more chips wait past the inline end, the
- * row's end fades, so a cut chip reads as "there is more" instead of a sliver. RTL scrollLeft runs
- * negative, so the remaining distance uses its magnitude.
+ * row's end fades, so a cut chip reads as "there is more" instead of a sliver. Once the row is
+ * scrolled, its start fades too, so the first chips read as off screen (FLOW-351). RTL scrollLeft
+ * runs negative, so both distances use its magnitude.
  */
 export function ChipScroller({
   label,
@@ -21,11 +22,14 @@ export function ChipScroller({
   children: ReactNode;
 }) {
   const own = useRef<HTMLDivElement | null>(null);
-  const [more, setMore] = useState(false);
+  const [more, setMore] = useState<"start" | "end" | "both" | undefined>(undefined);
   const measure = useCallback(() => {
     const row = own.current;
     if (!row) return;
-    setMore(row.scrollWidth - row.clientWidth - Math.abs(row.scrollLeft) > SLACK);
+    const scrolled = Math.abs(row.scrollLeft);
+    const end = row.scrollWidth - row.clientWidth - scrolled > SLACK;
+    const start = scrolled > SLACK;
+    setMore(start && end ? "both" : start ? "start" : end ? "end" : undefined);
   }, []);
 
   // A chip whose label grows ("פרויקט" to a long name) changes the row's scroll width without
@@ -58,7 +62,7 @@ export function ChipScroller({
       className={cx("ui-chip-scroller", className)}
       role="group"
       aria-label={label}
-      data-more={more ? "end" : undefined}
+      data-more={more}
       ref={setRow}
     >
       {children}

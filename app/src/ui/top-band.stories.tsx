@@ -42,11 +42,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { heading: "רווח נקי מתחילת השנה", amount: "3916400" },
+  args: { heading: "רווח מתחילת השנה", amount: "3916400" },
 };
 
 export const Preview: Story = {
-  args: { preview: true, heading: "מצב תצוגה", label: "כאן יופיע הרווח הנקי של העסק" },
+  args: { preview: true, heading: "מצב תצוגה", label: "כאן יופיע הרווח של העסק" },
 };
 
 export const LongHebrew: Story = {

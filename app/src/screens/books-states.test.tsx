@@ -190,7 +190,7 @@ describe("rejected reads", () => {
     renderAt("/");
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.queryByText("הכל שולם")).not.toBeInTheDocument();
-    expect(screen.getByText("נכנס")).toBeInTheDocument();
+    expect(screen.getByText("הכנסות")).toBeInTheDocument();
   });
 
   it("shows the split form error instead of an empty project list when projects fail", async () => {
@@ -588,7 +588,7 @@ describe("an unchanged complete review", () => {
   it("closes after a reversal pick, with no remember note and no supplier rule", async () => {
     const calls = await openComplete();
     fireEvent.click(screen.getByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
-    fireEvent.click(await screen.findByRole("button", { name: "הכנסה שהוחזרה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "החזר ללקוח" }));
     fireEvent.click(await screen.findByRole("radio", { name: "שכירות" }));
     await waitFor(() => {
       expect(writes(calls)).toContain("resolve_review");

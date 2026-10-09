@@ -15,9 +15,9 @@ describe("line marks on transaction rows (FLOW-124, FLOW-125)", () => {
   it("names the ⊘ on a row out of the P&L", () => {
     render(
       <MemoryRouter>
-        <ListRow variant="transaction" title="ריבית" agorot={-41_200n} sign="out" source={rowSource("sumit")} tag={<KeptOutTag label="מחוץ לרווח והפסד" />} href="/transactions/t2" />
+        <ListRow variant="transaction" title="ריבית" agorot={-41_200n} sign="out" source={rowSource("sumit")} tag={<KeptOutTag label="לא נספר ברווח" />} href="/transactions/t2" />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("img", { name: "מחוץ לרווח והפסד" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "לא נספר ברווח" })).toBeInTheDocument();
   });
 });
