@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** FLOW-346: a shared line opens with no project on the rest; picking one makes the split saveable. */
+async function pickRest(page: Page, project: string) {
+  await page.getByRole("button", { name: /^השאר,/ }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: project }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
 test.use({ viewport: { width: 390, height: 844 } });
 
 const refusal = "לא נשמר. בדקו את הפרטים ונסו שוב.";
@@ -100,10 +107,10 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await expect(page).toHaveURL(/\/reviewer\/split\?save=ok$/);
   await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("בחרו איך לפצל")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^השאר,/ })).toContainText("בחירת פרויקט");
   const close = page.getByRole("button", { name: "סגירה" });
   expect(await close.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
-  await page.getByRole("radio", { name: /שווה בין כל הפרויקטים/ }).click();
+  await pickRest(page, "בית הספר אלון");
   await close.click();
   await toast(page, "הפיצול נשמר");
   await expect(page).toHaveURL(/\/reviewer\/review\?save=ok$/);
@@ -344,11 +351,11 @@ test("reviewer screens stay inside the viewport at 320 in both themes", async ({
 
 test("a refused split save has no retry", async ({ page }) => {
   await page.goto("/reviewer/split?save=fail");
-  await page.getByRole("radio", { name: /שווה בין כל הפרויקטים/ }).click();
+  await pickRest(page, "בית הספר אלון");
   await page.getByRole("button", { name: "סגירה" }).click();
   await toast(page, refusal);
   await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
 });
 
 test("a split expense saves the category on the tap and keeps it after close", async ({ page }) => {
@@ -370,7 +377,7 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await page.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
   await expect(page).toHaveURL(/\/reviewer\/split$/);
-  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
   await expect(page.getByText("ליסינג הדרך")).toBeVisible();
 });
 
@@ -378,15 +385,20 @@ test("a split returns to one project and the project totals follow", async ({ pa
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/unsplit");
   await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
-  await expect(page.getByRole("radio", { name: "לפרויקט אחד" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
   const alon = page.getByRole("article", { name: "בית הספר אלון" });
   const namal = page.getByRole("article", { name: "מחסן הנמל" });
   await expect(alon.getByText("₪533.44")).toBeVisible();
-  await page.getByRole("radio", { name: "לפרויקט אחד" }).click();
-  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
-  await expect(page.getByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeVisible();
-  await page.getByRole("radio", { name: "בית הספר אלון" }).click();
+  // The editor opens on the saved split; with every part removed, the rest takes the whole line.
+  await expect(page.getByRole("button", { name: /^השאר, בית הספר אלון/ })).toBeVisible();
+  const removeButtons = page.getByRole("button", { name: /^הסרת החלק / });
+  await expect(removeButtons).toHaveCount(5);
+  for (let left = 5; left > 0; left -= 1) {
+    await removeButtons.first().click();
+    await expect(removeButtons).toHaveCount(left - 1);
+  }
+  await page.getByRole("button", { name: "סגירה" }).click();
   await toast(page, "השיוך נשמר");
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(0);
   await expect(alon.getByText("₪3,200")).toBeVisible();
