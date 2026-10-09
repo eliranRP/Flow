@@ -132,6 +132,14 @@
   display: block;
 }
 
+/* FLOW-355: Home's one period pill sits under the label, at its own width. */
+.ui-hero-pill {
+  display: flex;
+  align-self: flex-start;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
 .ui-hero-explain {
   margin: 0;
   max-inline-size: 100%;

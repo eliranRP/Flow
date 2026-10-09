@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeSkeleton } from "./home-skeleton";
+import { defaultPeriod, windowLabel } from "../period";
 import { expectRtl } from "../ui/test-support";
 
 describe("HomeSkeleton", () => {
@@ -13,10 +14,10 @@ describe("HomeSkeleton", () => {
     expect(screen.queryByText("מצב תצוגה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(document.querySelector(".ui-spinner")).toBeNull();
-    expect(screen.getByRole("button", { name: /בחירת תקופה$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${windowLabel(defaultPeriod())} – בחירת תקופה` }).closest(".ui-band .ui-hero")).not.toBeNull();
     expect(document.querySelector(".ui-skel-pill")).toBeNull();
     expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
-    expect(document.querySelector(".ui-skel-explain")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-explain")).toBeNull();
     expect(document.querySelector(".ui-skel-card")).not.toBeNull();
     expect(document.querySelector(".ui-band .ui-hero")).not.toBeNull();
     expect(document.querySelector(".ui-flow")).not.toBeNull();

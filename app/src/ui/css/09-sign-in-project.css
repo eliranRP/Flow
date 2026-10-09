@@ -164,7 +164,6 @@
 
 .ui-skel-label { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
 .ui-skel-hero-num { inline-size: var(--skel-lg); block-size: var(--skel-hero); border-radius: var(--radius-input); }
-.ui-skel-explain { inline-size: min(100%, 280px); block-size: var(--skel-block-lg); }
 .ui-skel-flow-label { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
 .ui-skel-figure { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
 

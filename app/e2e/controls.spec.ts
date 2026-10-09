@@ -137,29 +137,17 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");
-  // The period bar (decision 0141): a preset is one tap, the arrows step by its length.
-  const presets = page.locator(".ui-band").getByRole("radiogroup", { name: "תקופה" });
-  await presets.getByRole("radio", { name: "חודש", exact: true }).click();
-  await expect(presets.getByRole("radio", { name: "חודש", exact: true })).toHaveAttribute("aria-checked", "true");
-  const earlier = page.locator(".ui-pbar-arrow").first();
-  const later = page.locator(".ui-pbar-arrow").nth(1);
-  await expect(later).toHaveAttribute("aria-disabled", "true");
-  expect(await cursorOf(later)).toBe("not-allowed");
-  const label = page.getByRole("button", { name: /בחירת תקופה$/ });
+  // FLOW-355 (A): one period pill on the band; it opens the period sheet, and a row applies on tap.
+  await expect(page.locator(".ui-band").getByRole("radiogroup", { name: "תקופה" })).toHaveCount(0);
+  const label = page.locator(".ui-band").getByRole("button", { name: /בחירת תקופה$/ });
   const before = await label.textContent();
-  await earlier.click();
-  await expect(later).not.toHaveAttribute("aria-disabled", "true");
-  await expect(label).not.toHaveText(before ?? "");
-  await later.click();
-  await expect(later).toHaveAttribute("aria-disabled", "true");
-  await expect(label).toHaveText(before ?? "");
-
   await label.click();
   const periodSheet = page.getByRole("dialog", { name: "תקופה" });
   await expect(periodSheet).toBeVisible();
   await periodSheet.getByRole("radio", { name: "שנה" }).click();
   await expect(periodSheet).toHaveCount(0);
-  await expect(presets.getByRole("radio", { name: "שנה" })).toHaveAttribute("aria-checked", "true");
+  await expect(label).not.toHaveText(before ?? "");
+  await expect(page.getByText(/^רווח ב־\d{4}$/)).toBeVisible();
 
   await label.click();
   await page.getByRole("button", { name: "טווח מותאם" }).click();
