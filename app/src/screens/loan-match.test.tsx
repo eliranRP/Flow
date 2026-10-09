@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanMatchHint } from "./loan-match";
+import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanAmountChangedHint, loanMatchHint } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -532,5 +532,12 @@ describe("loanMatchHint (FLOW-115)", () => {
     expect(loanMatchHint([ils("א"), ils("ב"), ils("ג")], "ILS")).toBe("3 הלוואות");
     expect(loanMatchHint([ils("א")], "USD")).toBe("אין הלוואה בדולר");
     expect(loanMatchHint([], "USD")).toBe("אין עדיין הלוואה");
+  });
+});
+
+describe("loanAmountChangedHint (FLOW-115)", () => {
+  it("says whether the line amount went up or down, and by how much", () => {
+    expect(loanAmountChangedHint(10_000n, "ILS")).toBe("סכום השורה עלה ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו.");
+    expect(loanAmountChangedHint(-10_000n, "ILS")).toBe("סכום השורה ירד ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו.");
   });
 });
