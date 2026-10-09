@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-338 project band loss drawn white on the band (CSS scope, no screen change) | Next small ready bug |
+| Backlog bug fixes | FLOW-338 a loss on the band drawn white, project page and Home hero (#290) | Next small ready bug |
 | File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (#277), then the pgTAP file `mcp_cycle3a.test.sql` into `mcp_cycle3a`, `mcp_cycle3a_gates` and `mcp_cycle3a_sync` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | Guard: `scripts/check-file-size.mjs` fails local CI and CI when a file goes over the limits, with `scripts/file-size-allow.txt` for exceptions |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -816,7 +816,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-338"></a>
 ### FLOW-338 · Project band shows a loss in red on violet
-- **Type:** BUG · **Status:** done (this PR) · **Depends on:** — · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** BUG · **Status:** done (#290) · **Depends on:** — · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** On the project page the band's loss figure is drawn with `.ui-loss` (rgb(195,48,43) in light, salmon in dark) on the violet band, about 1.6:1. DESIGN-RULES §3.5 says the hero stays the on-band white including a minus, and the label names the loss. Stop passing `loss` to the band figure (`project-detail-screen.tsx`), or scope `.ui-band .ui-loss { color: var(--color-on-band) }`.
 - **Acceptance:** a band-loss story in light and dark; contrast check on the band; a design log entry.
 
@@ -824,6 +824,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-339 · Phone polish after the October 8 builds (cycle 6)
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-333 C13 (review card fit at 375x667), FLOW-334 · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** Polish found at 375x667, 393x852 (light and dark) and 412x915 after the October 8 builds.
+- [ ] (low) Band label with mixed-sign currencies: since FLOW-338 (#290) a loss on the band is white, and with two currencies where one is a loss the label still says רווח (project page `bandLoss` needs a single currency; Home's `heroLabelProfit` picks the non-negative figure). Name the loss in the label or per line.
 - [ ] (med) Review card, Jev filled line: the בטל link's `::after` hit area (y≈267–311 at 375) covers the bottom 13px of the category row, so a tap meant for the row can undo Jev's fill. Give the filled line its own 44px row or `--space-3` above it, budgeted with FLOW-333 C13.
 - [ ] (med) Breakdown: the header under "יצא" and every category row carry a minus. A figure labelled as a cost carries none (FLOW-328, FLOW-334 H3); keep it only when refunds beat costs, as Home does. Both levels use one header order.
 - [ ] (med) Search: the subtitle carries three figures and month heads up to two unlabelled totals, about 11 figures a screen. Keep only the count in the subtitle. A row hint that does not fit shows the project or the category whole, not a one-letter cut (the meta rule in DESIGN-RULES §3.7).
