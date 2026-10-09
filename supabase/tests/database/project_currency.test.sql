@@ -167,8 +167,8 @@ select is(
   pg_temp.out_of('dock') -> 'categories_by_currency',
   (
     select jsonb_build_array(
-      jsonb_build_object('currency', 'USD', 'id', m.id, 'name', 'Sample Materials', 'amount_minor', 125000, 'has_shared_share', false),
-      jsonb_build_object('currency', 'USD', 'id', f.id, 'name', 'Sample Fuel', 'amount_minor', 60000, 'has_shared_share', true)
+      jsonb_build_object('currency', 'USD', 'id', m.id, 'name', 'Sample Materials', 'amount_minor', 125000, 'has_shared_share', false, 'parent_id', null),
+      jsonb_build_object('currency', 'USD', 'id', f.id, 'name', 'Sample Fuel', 'amount_minor', 60000, 'has_shared_share', true, 'parent_id', null)
     )
     from public.categories m, public.categories f
     where m.company_id = (select id from pc_ref where label = 'co') and m.name = 'Sample Materials'

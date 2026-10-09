@@ -59,9 +59,11 @@
 }
 
 /* FLOW-347: under 360px the bank icon (the same on every row) gives its 36px to the name, so a
-   short name like "משכנתא דוגמה" stays on one line next to its balance. */
+   short name like "משכנתא דוגמה" stays on one line next to its balance. The הלוואה חדשה row
+   drops its icon too, so its words start on the same edge as the names above (FLOW-351). */
 @media (max-width: 359px) {
-  .ui-loan-list .ui-row-icon {
+  .ui-loan-list .ui-row-icon,
+  .ui-loan-new .ui-row-icon {
     display: none;
   }
 }
