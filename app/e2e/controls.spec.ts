@@ -651,7 +651,7 @@ test("install, onboarding, and legal screens", async ({ page }) => {
   await page.getByRole("button", { name: "לא עכשיו" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
   await page.goto("/e2e/install-other");
-  await expect(page.getByText("שיתוף ואז הוספה למסך הבית")).toBeVisible();
+  await expect(page.getByText("בוחרים שיתוף ואז ״הוספה למסך הבית״")).toBeVisible();
   await expect(page.getByText("ההתקנה באייפון עובדת רק מספארי.")).toHaveCount(0);
   await page.getByRole("button", { name: "הבנתי" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
