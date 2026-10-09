@@ -17,7 +17,7 @@ Everything in this repo is public. Never write real data here: no real names, co
 1. Read this file. Then read [CONTRIBUTING.md](../../CONTRIBUTING.md), [PITFALLS](../review/PITFALLS.md), and the two review checklists ([code](../review/CHECKLIST-code.md), [design](../review/CHECKLIST-design.md)).
 2. Find out your role and your lane ([How the team works](#how-the-team-works)). If nobody else is coordinating, you are the **coordinator**. Create the team in [Team setup](#team-setup) before you take a task.
 3. Read the board: the open PRs and their `Claim` blocks, and [Lanes now](TASKS.md#lanes-now) ([how](#tracking-progress-so-lanes-dont-collide)).
-4. Open [TASKS.md](TASKS.md). Take the highest task in the [priority queue](TASKS.md#priority-queue) whose status is `ready`, that has no open PR, and whose files no open PR is changing. Add related items in the same area to the batch (see [How to take a task](#how-to-take-a-task)).
+4. Open [TASKS.md](TASKS.md). Take the highest task in the [priority queue](TASKS.md#priority-queue) whose task file says `ready`, that has no open PR, and whose files no open PR is changing. Add related items in the same area to the batch (see [How to take a task](#how-to-take-a-task)).
 5. Run the [cycle](#the-cycle) for that task or batch, to the end, keeping the PR's `Claim` block current. Then take the next one.
 
 ## The cycle
@@ -26,7 +26,7 @@ Every task goes through these steps, in this order. Work on one small task per c
 
 | # | Step | Who | Input | Output | Done when |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Claim | Coordinator | A `ready` task in TASKS.md | A branch and a draft PR titled `FLOW-<id>: <title>` | The draft PR exists and the task's status says `claimed` |
+| 1 | Claim | Coordinator | A `ready` task file | A branch and a draft PR titled `FLOW-<id>: <title>` | The draft PR exists and the task's status says `claimed` |
 | 2 | Brief | Coordinator | The task | A short brief (see [Writing a brief](#writing-a-brief)) | Every open question is answered in the brief |
 | 3 | Build | Builder | The brief and the branch | Commits pushed to the branch, PR marked ready | Lint, typecheck, and the touched tests pass locally, the push passed the pre-push check, and the builder has stopped |
 | 4 | Code review | Code reviewer | The PR and its head commit, as soon as it is pushed | A verdict, a findings report, and patches | The verdict is APPROVED or CHANGES REQUESTED |
@@ -182,7 +182,7 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 
 ## How to take a task
 
-Task statuses in [TASKS.md](TASKS.md):
+Task statuses live only in the task files (`docs/backlog/tasks/FLOW-<id>.md`); the TASKS.md index carries none, so a status change never touches it:
 
 | Status | Meaning |
 | --- | --- |
@@ -203,7 +203,7 @@ Steps:
    git ls-remote --heads origin 'flow-123*'
    ```
    If an open PR, a draft PR, or a branch names the id, the task is taken. Pick the next one. Also check that no open PR changes the files you need ([board](#tracking-progress-so-lanes-dont-collide)).
-2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only the status lines of the task files (one per task in the batch) to `claimed (your lane, date, branch)` and regenerates TASKS.md. Push it and open a **draft PR** titled `FLOW-123: <task title>` (a batch lists every id) with the `Claim` block at the top of the body. The draft PR is the lock.
+2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only the status lines of the task files (one per task in the batch) to `claimed (your lane, date, branch)`. A status change leaves TASKS.md as it is. Push it and open a **draft PR** titled `FLOW-123: <task title>` (a batch lists every id) with the `Claim` block at the top of the body. The draft PR is the lock.
 3. **Build** on that branch, or brief a builder to. Keep the PR to this task or batch (related items in one area only).
 4. **Open it for review.** Mark the PR ready. Set the status to `in-progress (#PR)`. Put the id in the PR title and body.
 5. **Finish.** After the merge, and the deploy check and prod check of the batch that carries it, the task file's status line says `done (#PR)`. That edit goes in the next PR that touches the task file (usually the next claim).
