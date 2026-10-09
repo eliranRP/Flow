@@ -417,7 +417,7 @@ test("a project's by-month list opens a month, and Back steps back one screen at
 test("a transaction shows its VAT, changes, and confirms delete", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
   await expect(page.getByRole("button", { name: "חשבונית ותשלום" })).toHaveCount(0);
-  await expect(page.getByText("מע״מ משוער 18%")).toBeVisible();
+  await expect(page.getByText(/^לפני מע״מ · מע״מ משוער ₪[\d,.]+ · \d{2}\/\d{2}\/\d{4}$/)).toBeVisible();
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "מחיקה" }).click();
   await expect(page.getByRole("dialog", { name: "למחוק את הרשומה?" })).toBeVisible();

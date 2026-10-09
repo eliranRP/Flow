@@ -32,7 +32,7 @@ import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
 import type { LineSplitRead } from "../line-split";
 import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
-import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, vatStatusLabel, withChoice } from "./screen-shared";
+import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 
 function splitProjectLabel(
   txn: { allocations?: Array<{ project_name?: string | null }> },
@@ -512,6 +512,14 @@ export function TransactionScreen({
           </p>
           <p className="t-hint">
             {vatShown ? "לפני מע״מ · " : null}
+            {/* FLOW-339: the VAT sits on the amount's line, with no minus; only a guessed rate says so. */}
+            {vatShown && txn.vat_amount !== 0n ? (
+              <>
+                {txn.vat_status === "assumed" ? "מע״מ משוער " : "מע״מ "}
+                <bdi dir="ltr">{formatMoney(absAgorot(txn.vat_amount), txn.currency, { agorot: true })}</bdi>
+                {" · "}
+              </>
+            ) : null}
             <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
           </p>
           {reviewLabel || paymentLabel || pnlPill ? (
@@ -557,13 +565,6 @@ export function TransactionScreen({
           readOnly={holdWrites}
           split={txn.loan_split}
         />
-        {vatShown && txn.vat_amount !== 0n ? (
-          <p className="ui-page-pad t-hint">
-            מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
-            {" · "}
-            {vatStatusLabel(txn.vat_status)}
-          </p>
-        ) : null}
         <List>{pnlRow}</List>
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
