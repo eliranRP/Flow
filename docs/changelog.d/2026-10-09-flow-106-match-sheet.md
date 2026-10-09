@@ -1,0 +1,1 @@
+The loan picker on a loan payment says what one tap records for each loan: the schedule payment, several missed payments at once when the line covers them exactly, or a demand loan's accrued interest with the rest to principal. A loan that can't take the payment shows why (FLOW-106).

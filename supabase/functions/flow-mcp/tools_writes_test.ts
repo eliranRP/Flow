@@ -281,6 +281,21 @@ Deno.test("split_line validates parts and refuses read tokens", async () => {
   assertEquals(calls.length, 0);
 });
 
+Deno.test("assign_expense_split passes exact amount shares to the RPC (FLOW-346)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const result = await callTool("assign_expense_split", {
+    idempotency_key: "split-exact",
+    transaction_id: TXN,
+    shares: [{ project_id: PROJECT, amount_minor: 800000 }, { project_id: PROJECT_B, amount_minor: 2066316 }],
+  }, ["write"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].body.p_shares, [
+    { project_id: PROJECT, amount_minor: 800000 },
+    { project_id: PROJECT_B, amount_minor: 2066316 },
+  ]);
+});
+
 Deno.test("assign_expense_split validates shares and refuses read tokens", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
   const denied = await callTool("assign_expense_split", {
@@ -328,6 +343,13 @@ Deno.test("assign_expense_split validates shares and refuses read tokens", async
       [{ project_id: PROJECT, share: 0 }, { project_id: PROJECT_B, share: 100 }],
       [{ project_id: PROJECT, share: 101 }, { project_id: PROJECT_B, share: -1 }],
       [{ project_id: PROJECT, share: 50, note: "x" }, { project_id: PROJECT_B, share: 50 }],
+      // FLOW-346: amount shares are whole cents above zero, one kind per call, never both keys.
+      [{ project_id: PROJECT, amount_minor: 100 }, { project_id: PROJECT_B, share: 50 }],
+      [{ project_id: PROJECT, amount_minor: 100, share: 50 }, { project_id: PROJECT_B, amount_minor: 100 }],
+      [{ project_id: PROJECT, amount_minor: 0 }, { project_id: PROJECT_B, amount_minor: 100 }],
+      [{ project_id: PROJECT, amount_minor: 1.5 }, { project_id: PROJECT_B, amount_minor: 100 }],
+      [{ project_id: PROJECT }, { project_id: PROJECT_B, amount_minor: 100 }],
+      [{ project_id: PROJECT, amount_minor: 100 }, { project_id: PROJECT.toUpperCase(), amount_minor: 100 }],
       Array.from({ length: 51 }, (_, i) => ({
         project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`,
         share: i === 0 ? 50 : 1,
@@ -888,8 +910,8 @@ Deno.test("assign_expenses lists shares[] on its items like assign_expense_split
     type: "array",
     items: {
       type: "object",
-      properties: { project_id: { type: "string" }, share: { type: "integer" } },
-      required: ["project_id", "share"],
+      properties: { project_id: { type: "string" }, share: { type: "integer" }, amount_minor: { type: "integer" } },
+      required: ["project_id"],
       additionalProperties: false,
     },
   });
