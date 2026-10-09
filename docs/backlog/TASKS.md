@@ -122,6 +122,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
+| 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -921,6 +922,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** ready (design lead, 2026-10-09: a consistency fix, no owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
 - **What:** Every "תקופה" sheet uses Home's list, words and order through one shared sheet: חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם, with Home's hints. Search's sheet today says כל התקופה first and "2026" for the year; any other period picker (the breakdown's) follows too. Mockup: the project's mockups/plan-first/flow-349/a.png (today: current.png).
 - **Acceptance:** one shared component and story; Search, breakdown and Home use it; a design log entry.
+
+<a id="flow-350"></a>
+### FLOW-350 · Phone polish after the October 9 midday builds (cycle 9)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 9 phone review of deploy 2c3bb3c, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-9/shots/`.
+- [ ] SUMIT connect sheet at 320 and 375x667: after מתאריך the body scrolls and only 9px of חיבור stay in view. With מההתחלה, חיבור sits 15px under the segmented control, against about 37px under each field, so it jumps 60px when the option changes. Pin חיבור in the sheet's foot, as the loan setup sheet does (FLOW-347), and give the segmented control the fields' reserved line. Mercury's sheet still fits.
+- [ ] Date sheet ("ייבוא מתאריך" and the loan setup date sheet): the month arrows are ‹ › text glyphs that RTL mirrors, so both point at the month name. Use outward SVG chevrons (§3.4). The picked day is a square box where mockup 15b has a filled circle; at 320 a rounded sliver shows beside it. This also holds the 15b date details that a done FLOW-115 item left open.
+- [ ] Review reminder card on an iPhone tab: "למסך הבית" in the card's note is plain text, with הבנתי as the only action. Link it to the install steps, as Settings → התראות does.
+- [ ] Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
 ## Projects and reports
 
