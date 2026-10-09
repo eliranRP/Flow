@@ -72,7 +72,8 @@ export function RadioRow({
       aria-busy={busy || undefined}
       aria-label={label}
       aria-describedby={sub ? descId : undefined}
-      disabled={off || busy}
+      // A busy row keeps focus while it saves (aria-disabled only), so a failure can hand it back (FLOW-115).
+      disabled={off}
       onClick={() => {
         if (!off && !busy) onSelect();
       }}

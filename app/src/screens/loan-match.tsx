@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
@@ -50,8 +50,14 @@ export const LOAN_ROW_CLASS_NAME = "ui-loan-row";
  * "may". Saving the split runs the balance check again.
  */
 export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. שמירת הפיצול תבדוק את היתרה מחדש.";
-/** The re-sync flagged the parts because the line's amount changed; the client can tell this one apart. */
-export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. בדקו את החלקים ושמרו.";
+/**
+ * The re-sync flagged the parts because the line's amount changed; the client can tell this one apart.
+ * FLOW-115: the line says why and prints only the change, not both amounts.
+ */
+export function loanAmountChangedHint(changeMinor: bigint, currency: string): string {
+  const change = showMoney(changeMinor < 0n ? -changeMinor : changeMinor, currency);
+  return `סכום השורה ${changeMinor < 0n ? "ירד" : "עלה"} ב־${change}, אז החלקים צריכים בדיקה. בדקו ושמרו.`;
+}
 
 function asCurrency(currency: string): LoanCurrency | null {
   if (currency === "ILS" || currency === "USD") return currency;
@@ -324,6 +330,13 @@ export function LoanTransactionSplit({
   const matchRowRef = useRef<HTMLButtonElement>(null);
   const [handedOff, setHandedOff] = useState(false);
   const query = useLoanMatchRead(transactionId, split, on && !writesHeld);
+  // FLOW-115: after a retry lands, focus moves from the retry link (now gone) to the שיוך row.
+  const retried = useRef(false);
+  useEffect(() => {
+    if (!retried.current || !query.isSuccess) return;
+    retried.current = false;
+    matchRowRef.current?.focus({ preventScroll: true });
+  }, [query.isSuccess, query.dataUpdatedAt]);
   const match = useWrite<string>({
     failure: failureText,
     success: "התשלום שויך להלוואה",
@@ -354,7 +367,10 @@ export function LoanTransactionSplit({
       <LoanReadError
         label="שיוך להלוואה"
         busy={query.isFetching}
-        onRetry={() => { void query.refetch(); }}
+        onRetry={() => {
+          retried.current = true;
+          void query.refetch();
+        }}
       />
     );
   }
@@ -379,6 +395,8 @@ export function LoanTransactionSplit({
       savingId={savingId}
       sheetOpen={sheetOpen}
       onSheetOpenChange={(next) => {
+        // FLOW-115: a dismiss during the save waits for it, as the parts sheet does (0075).
+        if (!next && match.isPending) return;
         if (next) setHandedOff(false);
         setSheet(next);
       }}
@@ -386,9 +404,13 @@ export function LoanTransactionSplit({
       matchButtonRef={matchRowRef}
       onMatch={(loanId) => {
         if (match.isPending) return;
+        // FLOW-115: on a failure focus goes back to the loan that was tapped, still in the sheet. The
+        // busy mark may already be gone, so the row is found by its loan's name.
+        const name = offered.find((item) => item.id === loanId)?.name;
         match.mutate(loanId, {
           onError: () => {
-            const row = document.querySelector<HTMLElement>(".ui-pick-row[aria-busy=\"true\"]");
+            const rows = [...document.querySelectorAll<HTMLElement>(".ui-pick-row[role=\"radio\"]")];
+            const row = rows.find((item) => item.getAttribute("aria-label") === name);
             (row ?? matchRowRef.current)?.focus({ preventScroll: true });
           },
         });

@@ -385,6 +385,37 @@ describe("LoanTransactionSplit", () => {
     db.readError = null;
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר: שיוך להלוואה" }));
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    // FLOW-115: the retry link is gone, so focus lands on the שיוך row, not the page.
+    await waitFor(() => { expect(matchButton()).toHaveFocus(); });
+  });
+
+  it("keeps the match sheet open on a dismiss while the match saves (FLOW-115)", async () => {
+    let release!: () => void;
+    db.saveHold = new Promise<void>((resolve) => { release = resolve; });
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const dialog = await screen.findByRole("dialog", { name: "שיוך להלוואה" });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(screen.getByRole("dialog", { name: "שיוך להלוואה" })).toBeInTheDocument();
+    act(() => { release(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שיוך להלוואה" })).not.toBeInTheDocument(); });
+  });
+
+  it("returns focus to the tapped loan when the match fails (FLOW-115)", async () => {
+    db.saveError = { message: "boom" };
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const radio = await screen.findByRole("radio", { name: "הלוואת דוגמה" });
+    fireEvent.click(radio);
+    expect(await screen.findByText("לא הצלחנו לשייך את ההלוואה.")).toBeInTheDocument();
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveFocus(); });
+    expect(screen.getByRole("dialog", { name: "שיוך להלוואה" })).toBeInTheDocument();
   });
 
   it("refuses a payment above the loan balance before it calls the server", async () => {
