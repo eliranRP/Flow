@@ -63,7 +63,7 @@ function folderSources(root, folder) {
 
 /**
  * @param {{ root: string, map: any }} options
- * @returns {{ all: RegExp[], closures: Map<string, Set<string>> }}
+ * @returns {{ all: RegExp[], closures: Map<string, Set<string>>, app: Set<string> }}
  */
 export function specClosures({ root, map }) {
   const all = map.all.map((pattern) => new RegExp(pattern));
@@ -72,21 +72,15 @@ export function specClosures({ root, map }) {
     if (!texts.has(file)) texts.set(file, fs.readFileSync(path.join(root, file), "utf8"));
     return texts.get(file);
   };
-  const closures = new Map();
-  for (const [spec, entries] of Object.entries(map.specs)) {
-    const start = [`app/e2e/${spec}`];
-    for (const entry of entries) {
-      if (entry.endsWith("/")) start.push(...folderSources(root, `app/src/${entry}`));
-      else start.push(`app/src/${entry}`);
-    }
+  const walk = (start, followAll) => {
     const seen = new Set();
     const stack = [...start];
     while (stack.length > 0) {
       const file = stack.pop();
       if (seen.has(file)) continue;
       seen.add(file);
-      // A file that runs every spec (App.tsx, the screens barrel) is not followed.
-      if (all.some((pattern) => pattern.test(file)) || !/\.(ts|tsx)$/.test(file)) continue;
+      // A spec does not follow a file that runs every spec (App.tsx, the screens barrel).
+      if (!/\.(ts|tsx)$/.test(file) || (!followAll && all.some((pattern) => pattern.test(file)))) continue;
       const text = read(file);
       for (const match of text.matchAll(importPattern)) {
         const resolved = resolveImport(root, file, match[2] ?? match[3] ?? match[4]);
@@ -103,9 +97,18 @@ export function specClosures({ root, map }) {
         }
       }
     }
-    closures.set(spec, seen);
+    return seen;
+  };
+  const closures = new Map();
+  for (const [spec, entries] of Object.entries(map.specs)) {
+    const start = [`app/e2e/${spec}`];
+    for (const entry of entries) {
+      if (entry.endsWith("/")) start.push(...folderSources(root, `app/src/${entry}`));
+      else start.push(`app/src/${entry}`);
+    }
+    closures.set(spec, walk(start, false));
   }
-  return { all, closures };
+  return { all, closures, app: walk(["app/src/main.tsx"], true) };
 }
 
 /**
@@ -114,8 +117,12 @@ export function specClosures({ root, map }) {
  * @returns {string[]} spec file names
  */
 export function selectSpecs(changed, { root, map }) {
-  const { all, closures } = specClosures({ root, map });
-  const runsAll = changed.some((file) => all.some((pattern) => pattern.test(file)));
+  const { all, closures, app } = specClosures({ root, map });
+  const reached = new Set([...closures.values()].flatMap((closure) => [...closure]));
+  // A source only App.tsx reaches (the session providers, the keyboard inset) is on every page.
+  const runsAll = changed.some(
+    (file) => all.some((pattern) => pattern.test(file)) || (app.has(file) && !reached.has(file)),
+  );
   return [...closures.keys()]
     .filter((spec) => runsAll || changed.some((file) => closures.get(spec).has(file)))
     .sort();

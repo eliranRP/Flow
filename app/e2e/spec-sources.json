@@ -1,5 +1,5 @@
 {
-  "about": "FLOW-813: which app sources each e2e spec exercises, for the pre-push gate (scripts/e2e-specs.mjs). Entries are under app/src; one ending in / takes every source in that folder. A spec runs when it, a file it imports, or anything its entries import (followed through relative imports, the screens barrel by name, and @flow/shared) changed. A change matching an `all` pattern runs every spec. `ignored` specs run on their own configs.",
+  "about": "FLOW-813: which app sources each e2e spec exercises, for the pre-push gate (scripts/e2e-specs.mjs). Entries are under app/src; one ending in / takes every source in that folder. A spec runs when it, a file it imports, or anything its entries import (followed through relative imports, the screens barrel by name, and @flow/shared) changed. A change matching an `all` pattern, or to an app source that only App.tsx reaches (the session providers), runs every spec. Migrations and edge functions pick no spec here: the specs that use local Supabase run on main. `ignored` specs run on their own configs.",
   "all": [
     "^app/src/(App|main|dev-routes)\\.tsx$",
     "^app/src/screens/flow-screens\\.tsx$",
@@ -59,7 +59,8 @@
       "screens/settings-screen.tsx",
       "screens/loan-setup.tsx",
       "screens/loan-project-picker.tsx",
-      "screens/project-detail-screen.tsx"
+      "screens/project-detail-screen.tsx",
+      "screens/projects-screen.tsx"
     ],
     "mcp-cycle3b.spec.ts": [
       "reviewer-preview.tsx"
@@ -107,7 +108,8 @@
       "screens/line-split.tsx"
     ],
     "split.spec.ts": [
-      "screens/split-screen.tsx"
+      "screens/split-screen.tsx",
+      "screens/project-detail-screen.tsx"
     ],
     "toast.spec.ts": [
       "reviewer-preview.tsx",

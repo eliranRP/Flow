@@ -93,6 +93,7 @@ changed_base() {
 # (or since main, which runs them all before each deploy). app/e2e/spec-sources.json maps each spec
 # to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
 e2e_specs=()
+e2e_left=0
 if (( ! full )); then
   e2e_base=""
   if (( skips )); then
@@ -101,7 +102,10 @@ if (( ! full )); then
     done
   fi
   [[ -n "$e2e_base" ]] || e2e_base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
-  if [[ -n "$e2e_base" ]]; then
+  if [[ -z "$e2e_base" ]]; then
+    echo "local-ci: no main to compare with, so the e2e specs are left to main." >&2
+    e2e_left=1
+  else
     e2e_list="$(git diff --name-only "$e2e_base" HEAD | node scripts/e2e-specs.mjs)"
     [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
   fi
@@ -121,6 +125,7 @@ if (( full || ${#e2e_specs[@]} > 0 )); then
     fi
     echo "local-ci: Docker is not running, so the e2e specs for this change are left to main: ${e2e_specs[*]}" >&2
     e2e_specs=()
+    e2e_left=1
   else
     supabase_log="$(mktemp)"
     supabase_exit="$(mktemp)"
@@ -289,9 +294,11 @@ if (( ! full )); then
     phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
     eval "$(bash scripts/ci-local-supabase-env.sh)"
     pnpm --filter @flow/app exec playwright install chromium
-    pnpm --filter @flow/app exec playwright test --fully-parallel --workers=100% "${e2e_specs[@]}"
+    # Playwright's default workers (half the cores): on every core the toast timing specs time out.
+    pnpm --filter @flow/app exec playwright test --fully-parallel "${e2e_specs[@]}"
   fi
-  touch "$cache/commit-e2e-$head"
+  # Only a run that checked every spec the change reaches moves the next run's base here.
+  (( e2e_left )) || touch "$cache/commit-e2e-$head"
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
   phase "passed on ${head:0:7} (main runs the every-story smoke and all e2e before each deploy)"
   exit 0

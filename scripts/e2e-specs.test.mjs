@@ -56,3 +56,7 @@ test("App.tsx, CSS and the e2e config run every spec; tests and stories run none
   assert.deepEqual(select("app/src/screens/jev-settings.test.tsx", "app/src/screens/jev-settings.stories.tsx"), []);
   assert.deepEqual(select("supabase/migrations/x.sql", "docs/backlog/TASKS.md"), []);
 });
+
+test("a source only App.tsx reaches runs every spec", () => {
+  assert.deepEqual(select("app/src/session-providers.tsx"), Object.keys(map.specs).sort());
+});
