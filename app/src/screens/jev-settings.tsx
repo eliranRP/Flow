@@ -9,7 +9,13 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
 import { useWrite } from "../use-write";
-import { jevConnectorOn, jevConnectorQueryKey, writeJevConnectorFlag } from "./jev-review";
+import {
+  boundJevConnectorScope,
+  jevConnectorOn,
+  jevConnectorQueryKey,
+  readJevConnectorFlag,
+  writeJevConnectorFlag,
+} from "./jev-review";
 
 export type JevMode = "off" | "shadow" | "auto";
 export type JevStatus = "ready" | "error" | "loading";
@@ -140,6 +146,7 @@ export function JevSettingsCard({
   onThreshold,
   onRetry,
   readOnly = false,
+  reserveOptions = false,
 }: {
   state: JevCardState;
   busy?: boolean;
@@ -154,6 +161,8 @@ export function JevSettingsCard({
   onRetry?: () => void;
   /** A viewer sees the switch and cannot change it. */
   readOnly?: boolean;
+  /** While loading, hold the אפשרויות line only when Jev was last known on (FLOW-704). */
+  reserveOptions?: boolean;
 }) {
   const panelId = useId();
   const shownOn = jevSwitchOn(state);
@@ -164,6 +173,15 @@ export function JevSettingsCard({
   useEffect(() => {
     if (!showOptions) setOpen(false);
   }, [showOptions]);
+  // The hint under the switch is not a live region. After the owner's own tap lands, say the new state once.
+  const toggledFrom = useRef<boolean | null>(null);
+  const [said, setSaid] = useState("");
+  const word = jevStatusWord(state);
+  useEffect(() => {
+    if (toggledFrom.current == null || busy) return;
+    if (state.status === "ready" && shownOn !== toggledFrom.current) setSaid(`${TITLE}: ${word}`);
+    toggledFrom.current = null;
+  }, [busy, shownOn, state.status, word]);
   // A save does not disable the choices: a focused segment that turns disabled drops focus to the body.
   // Taps while busy are ignored below, the same way the switch stays focusable with aria-busy.
   const auto = state.mode === "auto";
@@ -188,6 +206,7 @@ export function JevSettingsCard({
       inputRef={switchRef}
       onChange={(checked) => {
         if (busy || readOnly) return;
+        toggledFrom.current = shownOn;
         onToggle?.(checked);
       }}
     />
@@ -196,10 +215,13 @@ export function JevSettingsCard({
   return (
     <div>
       <List>{row}</List>
+      <p className="sr-only" role="status" data-jev-said="">{said}</p>
       {state.status === "loading" ? (
-        <div className="ui-jev-options" aria-hidden="true">
-          <span className="ui-jev-options-reserve" />
-        </div>
+        reserveOptions ? (
+          <div className="ui-jev-options" aria-hidden="true">
+            <span className="ui-jev-options-reserve" />
+          </div>
+        ) : null
       ) : showOptions ? (
         <div className="ui-jev-options">
           <TextLink
@@ -291,6 +313,7 @@ function JevSettingsSample({ sample, optionsOpen, readOnly }: { sample: JevCardS
       state={state}
       optionsOpen={optionsOpen}
       readOnly={readOnly}
+      reserveOptions={sample.enabled && sample.mode !== "off"}
       onToggle={readOnly ? undefined : (enabled) => {
         setState((current) => ({ ...current, ...turnedOn(current, enabled), status: current.status }));
       }}
@@ -315,6 +338,12 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
       client.setQueryData(jevConnectorQueryKey(), on);
       await client.invalidateQueries({ queryKey: jevConnectorQueryKey() });
     },
+  });
+  // Read once on mount: the cached or remembered connector flag is the last known state.
+  const [lastKnownOn] = useState(() => {
+    if (client.getQueryData(jevConnectorQueryKey()) === true) return true;
+    const scope = boundJevConnectorScope();
+    return scope != null && readJevConnectorFlag(scope) === true;
   });
   const retryRef = useRef<HTMLButtonElement>(null);
   const switchRef = useRef<HTMLInputElement>(null);
@@ -368,6 +397,7 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
       state={view}
       busy={save.isPending}
       readOnly={readOnly}
+      reserveOptions={lastKnownOn}
       retryBusy={retryingView}
       retryRef={retryRef}
       switchRef={switchRef}

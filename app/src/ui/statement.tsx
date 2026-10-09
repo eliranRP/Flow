@@ -69,6 +69,7 @@ export function statementRowLabel(input: {
   title: string;
   method?: StatementMethod | null;
   suggestion?: string | null;
+  suggestionJev?: boolean;
   agorot: bigint;
   currency?: string;
   sign: "in" | "out";
@@ -83,7 +84,7 @@ export function statementRowLabel(input: {
   const parts = [
     input.title,
     input.method ? input.method.spoken ?? input.method.text : null,
-    input.suggestion ? `הצעה: ${input.suggestion}` : null,
+    input.suggestion ? `${input.suggestionJev === true ? "הצעת Jev" : "הצעה"}: ${input.suggestion}` : null,
     ...(input.details ?? []).map((detail) => detail.text),
     `${word} ${amount}`,
     input.pending ? "בהמתנה" : null,

@@ -19,6 +19,8 @@ import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, REVIEW_NONE_WAITING, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
+import { useJevQueue } from "./jev-review-card";
+import { jevShown, withJev } from "./jev-review";
 
 /** The row opened from the list. A later URL replace must not move this. */
 let reviewReturnId: string | null = null;
@@ -179,6 +181,10 @@ export function ReviewAllList({
     return () => { window.clearTimeout(timer); };
   }, [search, rows]);
   const ordered = useHeldOrder(rows, (row) => row.id);
+  // FLOW-704: the same Jev read as the queue, so a line Jev fills reads "✦ Jev · …" here too.
+  const preview = useHomePreview();
+  const jevIds = useMemo(() => rows.map((row) => row.transaction_id), [rows]);
+  const jevQueue = useJevQueue(jevIds, preview === "off");
   // FLOW-305: one bank-details read for the bank lines on this page. A failed read keeps "בנק".
   const bankIds = useMemo(() => rows.filter((row) => row.source === "mercury").map((row) => row.transaction_id), [rows]);
   const lineMeta = useLineMetaPageQuery(bankIds);
@@ -210,20 +216,25 @@ export function ReviewAllList({
         amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: row.direction })}
         days
         cents
-        renderRow={(row) => (
-          <ListRow
-            variant="statement"
-            title={row.supplier_name ?? row.description}
-            fallback={row.source === "mercury" ? "bank" : "invoice"}
-            method={statementMethodOf(row.source, row.doc_kind, lineMeta.data?.get(row.transaction_id))}
-            suggestion={statementSuggestion(row)}
-            pending={row.line_status === "pending"}
-            agorot={row.amount_net}
-            currency={row.currency}
-            sign={row.direction === "income" ? "in" : "out"}
-            href={reviewFocusPath(search, row.id)}
-          />
-        )}
+        renderRow={(row) => {
+          const jev = jevQueue.stateFor(row.transaction_id);
+          const shown = jevShown(row, jev);
+          return (
+            <ListRow
+              variant="statement"
+              title={row.supplier_name ?? row.description}
+              fallback={row.source === "mercury" ? "bank" : "invoice"}
+              method={statementMethodOf(row.source, row.doc_kind, lineMeta.data?.get(row.transaction_id))}
+              suggestion={statementSuggestion(withJev(row, jev))}
+              suggestionJev={shown.project || shown.category}
+              pending={row.line_status === "pending"}
+              agorot={row.amount_net}
+              currency={row.currency}
+              sign={row.direction === "income" ? "in" : "out"}
+              href={reviewFocusPath(search, row.id)}
+            />
+          );
+        }}
       />
       {skipped ? <ReviewSkippedSection search={search} cardPath={cardPath} /> : null}
     </div>

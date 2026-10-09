@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useHomePreview } from "../preview";
@@ -84,7 +84,13 @@ function useJevConnectorScope(): {
   const cached = books == null ? undefined : client.getQueryData(["dashboard", preview, books.period]);
   const companyId = companyIdFrom(cached);
   const hooked = sessionUserId != null && companyId != null ? { userId: sessionUserId, companyId } : null;
-  if (hooked) bindJevConnectorScope(hooked);
+  // FLOW-704: bound after commit, not during render. This render's key already uses `hooked`, and a
+  // layout effect lands before any query in this component fetches.
+  const hookedUser = hooked?.userId;
+  const hookedCompany = hooked?.companyId;
+  useLayoutEffect(() => {
+    if (hookedUser != null && hookedCompany != null) bindJevConnectorScope({ userId: hookedUser, companyId: hookedCompany });
+  }, [hookedUser, hookedCompany]);
   const nothingRemembered = sessionUserId != null && !userRememberedJevOn(sessionUserId);
   const pending = hooked == null && phase === "pending" && !nothingRemembered;
   const scope = pending ? null : (hooked ?? boundJevConnectorScope());
@@ -120,8 +126,15 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const scopePending = readable && pending;
   const nothingRemembered = sessionUserId != null && !userRememberedJevOn(sessionUserId);
   const remembered = readable && !followsLive && !pending && scope != null && readJevConnectorFlag(scope) === true;
+  const client = useQueryClient();
+  const liveKey = jevConnectorLiveKey(sessionUserId);
+  const scoped = !followsLive && scope != null;
   const connector = useQuery({
-    queryKey: !followsLive && scope != null ? jevConnectorQueryKey(scope) : jevConnectorLiveKey(sessionUserId),
+    queryKey: scoped ? jevConnectorQueryKey(scope) : liveKey,
+    // FLOW-704: a scope that appears after mount takes this session's live answer, so the card
+    // does not read the connector a second time.
+    initialData: scoped ? () => client.getQueryData<boolean>(liveKey) : undefined,
+    initialDataUpdatedAt: scoped ? () => client.getQueryState(liveKey)?.dataUpdatedAt : undefined,
     enabled: readable && !scopePending && (scope != null || followsLive || nothingRemembered),
     retry: false,
     staleTime: JEV_CONNECTOR_STALE_MS,
