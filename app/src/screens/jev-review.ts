@@ -22,6 +22,7 @@ export {
   userRememberedJevOn,
   jevConnectorLiveKey,
   seedJevConnectorFromLive,
+  jevLiveOn,
   readJevConnectorFlag,
   writeJevConnectorFlag,
   clearJevConnectorFlag,

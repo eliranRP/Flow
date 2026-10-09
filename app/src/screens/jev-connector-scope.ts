@@ -120,7 +120,6 @@ export function dropJevConnectorForAuthChange(): void {
   followsLive = false;
   scopeGeneration += 1;
   scopePhase = "off";
-  legacyKeyDropped = false;
   emitScope();
 }
 
@@ -131,6 +130,7 @@ export function resetJevScopeMemory(): void {
   followsLive = false;
   scopeGeneration += 1;
   scopePhase = "off";
+  legacyKeyDropped = false;
   emitScope();
 }
 
@@ -190,16 +190,22 @@ export function jevConnectorLiveKey(userId: string | null): readonly ["jev-conne
 }
 
 /**
- * FLOW-704: when the scope binds after this session's live read, the scoped key takes that answer
- * (and its time), so the connector is not read a second time. The flag is remembered for the scope.
+ * FLOW-704: when the scope binds after this session's live read said on, the scoped key takes that
+ * answer (and its time), so the connector is not read a second time. Off is not carried over: a
+ * read past its deadline also returns off, and that must not stand as a known off.
  */
+export function jevLiveOn(client: QueryClient, userId: string | null): number | null {
+  const live = client.getQueryState<boolean>(jevConnectorLiveKey(userId));
+  return live?.status === "success" && live.data === true ? live.dataUpdatedAt : null;
+}
+
 export function seedJevConnectorFromLive(client: QueryClient, scope: JevConnectorScope): void {
   const key = jevConnectorQueryKey(scope);
   if (client.getQueryData(key) !== undefined) return;
-  const live = client.getQueryState<boolean>(jevConnectorLiveKey(scope.userId));
-  if (live?.data === undefined || live.status !== "success") return;
-  client.setQueryData(key, live.data, { updatedAt: live.dataUpdatedAt });
-  writeJevConnectorFlag(live.data, scope);
+  const at = jevLiveOn(client, scope.userId);
+  if (at == null) return;
+  client.setQueryData(key, true, { updatedAt: at });
+  writeJevConnectorFlag(true, scope);
 }
 
 export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefined {

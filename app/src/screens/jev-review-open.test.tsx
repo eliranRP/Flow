@@ -428,13 +428,13 @@ describe("cold review scope", () => {
     window.clearTimeout(releaseAt);
   });
 
-  it("reads the connector once when the company binds after the live read (FLOW-704)", async () => {
+  it("reads the connector once when the company binds after a live read said on (FLOW-704)", async () => {
     db.restoreSession = true;
     let releaseCompany: () => void = () => undefined;
     db.holdCompany = new Promise<void>((resolve) => {
       releaseCompany = resolve;
     });
-    db.integration = { enabled: false, mode: "off" };
+    db.integration = { enabled: true, mode: "shadow" };
     db.review = [stored];
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderReview(client);
@@ -448,10 +448,10 @@ describe("cold review scope", () => {
       expect(boundJevConnectorScope()).toEqual(scope);
     });
     await waitFor(() => {
-      expect(client.getQueryData(jevConnectorQueryKey(scope))).toBe(false);
+      expect(client.getQueryData(jevConnectorQueryKey(scope))).toBe(true);
     });
     expect(db.integrationReads).toBe(1);
-    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    expect(readJevConnectorFlag(scope)).toBe(true);
   });
 
   it("does not list review while getSession has not answered", async () => {

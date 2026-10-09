@@ -432,6 +432,33 @@ describe("Jev settings card", () => {
     expect(container.querySelector("[data-jev-said]")).toHaveTextContent(/^$/);
   });
 
+  it("trusts a cached off over a remembered on for the loading reserve (FLOW-704)", async () => {
+    db.readHold = new Promise(() => undefined);
+    writeJevConnectorFlag(true, scope);
+    const { container } = renderLive(<JevSettings />, (client) => {
+      client.setQueryData(jevConnectorQueryKey(scope), false);
+    });
+    await waitFor(() => expect(container.querySelector(".ui-row")).toHaveAttribute("aria-busy", "true"));
+    expect(container.querySelector(".ui-jev-options")).toBeNull();
+  });
+
+  it("reserves from a cached on with nothing remembered (FLOW-704)", async () => {
+    db.readHold = new Promise(() => undefined);
+    const { container } = renderLive(<JevSettings />, (client) => {
+      client.setQueryData(jevConnectorQueryKey(scope), true);
+    });
+    await waitFor(() => { expect(container.querySelector(".ui-jev-options-reserve")).not.toBeNull(); });
+  });
+
+  it("announces nothing when a blocked tap saves nothing (FLOW-704)", async () => {
+    db.row = { enabled: false, mode: "off", threshold: 0.9 };
+    const { container } = renderLive(<JevSettings blocked={() => true} />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    expect(db.writes).toHaveLength(0);
+    expect(container.querySelector("[data-jev-said]")).toHaveTextContent(/^$/);
+  });
+
   it("turns the אפשרויות chevron with the panel (FLOW-704)", () => {
     const { container } = render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true }} />);
     const link = screen.getByRole("button", { name: "אפשרויות" });

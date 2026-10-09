@@ -108,6 +108,15 @@ describe("Review list rows on a Jev fill (FLOW-704)", () => {
     expect(ruleRow.querySelector(".ui-statement-suggest")?.textContent).toBe("✦ מחסן הנמל · בטון");
   });
 
+  it("keeps ✦ and הצעה when only one value on the line is Jev's", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    const owned = { ...ruled, project_suggested: false, category_id: null, category_name: null, category_suggested: false };
+    db.suggestions = [{ id: "s2", transaction_id: "t2", answers: { category: { choice: "c1", confidence: 0.9 } } }];
+    renderList([owned]);
+    const row = await screen.findByRole("link", { name: /הצעה: מחסן הנמל · חומרים/ }, { timeout: 3000 });
+    expect(row.querySelector(".ui-statement-suggest")?.textContent).toBe("✦ מחסן הנמל · חומרים");
+  });
+
   it("leaves the rows as stored when Jev is off", async () => {
     db.integration = { enabled: false, mode: "off" };
     renderList([ruled]);

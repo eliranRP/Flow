@@ -154,7 +154,8 @@ export function JevSettingsCard({
   retryBusy?: boolean;
   retryRef?: Ref<HTMLButtonElement>;
   switchRef?: Ref<HTMLInputElement>;
-  onToggle?: (enabled: boolean) => void;
+  /** False when no save started, so nothing is announced (FLOW-704). */
+  onToggle?: (enabled: boolean) => boolean | undefined;
   /** הצעות בלבד or מילוי אוטומטי (FLOW-702). */
   onMode?: (mode: "shadow" | "auto") => void;
   onThreshold?: (value: number) => void;
@@ -206,8 +207,8 @@ export function JevSettingsCard({
       inputRef={switchRef}
       onChange={(checked) => {
         if (busy || readOnly) return;
-        toggledFrom.current = shownOn;
-        onToggle?.(checked);
+        const from = shownOn;
+        if (onToggle?.(checked) !== false) toggledFrom.current = from;
       }}
     />
   );
@@ -316,6 +317,7 @@ function JevSettingsSample({ sample, optionsOpen, readOnly }: { sample: JevCardS
       reserveOptions={sample.enabled && sample.mode !== "off"}
       onToggle={readOnly ? undefined : (enabled) => {
         setState((current) => ({ ...current, ...turnedOn(current, enabled), status: current.status }));
+        return true;
       }}
       onMode={readOnly ? undefined : (mode) => { setState((current) => ({ ...current, mode })); }}
       onThreshold={readOnly ? undefined : (threshold) => { setState((current) => ({ ...current, threshold })); }}
@@ -341,7 +343,8 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
   });
   // Read once on mount: the cached or remembered connector flag is the last known state.
   const [lastKnownOn] = useState(() => {
-    if (client.getQueryData(jevConnectorQueryKey()) === true) return true;
+    const cached = client.getQueryData<boolean>(jevConnectorQueryKey());
+    if (cached !== undefined) return cached;
     const scope = boundJevConnectorScope();
     return scope != null && readJevConnectorFlag(scope) === true;
   });
@@ -385,11 +388,12 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
     });
   }
 
-  function commit(next: StoredJev) {
-    if (readOnly) return;
-    if (blocked?.()) return;
-    if (save.isPending) return;
+  function commit(next: StoredJev): boolean {
+    if (readOnly) return false;
+    if (blocked?.()) return false;
+    if (save.isPending) return false;
     save.mutate(next);
+    return true;
   }
 
   return (
@@ -402,8 +406,8 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
       retryRef={retryRef}
       switchRef={switchRef}
       onToggle={readOnly ? undefined : (enabled) => {
-        if (!stored || save.isPending) return;
-        commit(turnedOn(stored, enabled));
+        if (!stored || save.isPending) return false;
+        return commit(turnedOn(stored, enabled));
       }}
       onMode={readOnly ? undefined : (mode) => {
         if (!stored || save.isPending) return;

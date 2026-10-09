@@ -17,7 +17,7 @@ import { ReviewSkippedSection, useSkippedReviewQuery } from "./review-skipped";
 import { ScreenHeader } from "../ui/screen-header";
 import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
-import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, REVIEW_NONE_WAITING, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
+import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, REVIEW_NONE_WAITING, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, reviewSuggestion, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 import { useJevQueue } from "./jev-review-card";
 import { jevShown, withJev } from "./jev-review";
@@ -218,15 +218,20 @@ export function ReviewAllList({
         cents
         renderRow={(row) => {
           const jev = jevQueue.stateFor(row.transaction_id);
-          const shown = jevShown(row, jev);
+          const view = withJev(row, jev);
+          // "✦ Jev" only when every value on the line is Jev's: a rule's or the owner's value is not.
+          const parts = reviewSuggestion(view, false, jevShown(row, jev));
+          const allJev = parts != null && (parts.projectJev === true || parts.categoryJev === true)
+            && (parts.project == null || parts.projectJev === true)
+            && (parts.category == null || parts.categoryJev === true);
           return (
             <ListRow
               variant="statement"
               title={row.supplier_name ?? row.description}
               fallback={row.source === "mercury" ? "bank" : "invoice"}
               method={statementMethodOf(row.source, row.doc_kind, lineMeta.data?.get(row.transaction_id))}
-              suggestion={statementSuggestion(withJev(row, jev))}
-              suggestionJev={shown.project || shown.category}
+              suggestion={statementSuggestion(view)}
+              suggestionJev={allJev}
               pending={row.line_status === "pending"}
               agorot={row.amount_net}
               currency={row.currency}
