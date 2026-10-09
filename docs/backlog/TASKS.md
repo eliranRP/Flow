@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507/506 write-gate tests: inner gates behind the viewer gate, Settings write block, setup first step hold (Mercury follow-ups merged #365) | FLOW-506 setup business step and install rows unify, after #358 |
+| Backlog bug fixes | FLOW-507/506 write-gate tests: inner gates after a role change, Settings switches, setup first step hold (Mercury follow-ups merged #365) | FLOW-506 setup business step and install rows unify, after #358 |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -1105,7 +1105,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
 - [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
-- [ ] Tests for the Settings write block; a hold-writes check on the first step's submit.
+- [x] (Backlog bug fixes, 2026-10-09: the business step's submit returns while writes are held, and `viewer-role-flip.test.tsx` covers it for viewer and unknown with an owner control; the Settings switches lock when the role turns viewer, in the same file, beside `viewer-writes.test.tsx`.) Tests for the Settings write block; a hold-writes check on the first step's submit.
 - [ ] Spec drift: demo timing, the SUMIT sheet sizes at 320, hiding vs focusing שוב during a replay; step 3 scrolls a little longer than designed.
 - [x] (Backlog bug fixes, 2026-10-09: removed, with their 320 overrides) Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`).
 - [ ] The banner's tone-bad icon; note inset vs frame.
@@ -1119,7 +1119,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [x] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: keep it.)
-- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
+- [x] (Backlog bug fixes, 2026-10-09: `viewer-role-flip.test.tsx` opens each sheet or form as the owner, turns the role to viewer or unknown, then submits: the new project form, SUMIT and Mercury connect, SUMIT refresh, ניתוק and its question, the category menu (מחוץ לרווח והפסד, נספרת בשיפוץ) and new category, and the + sheet, which leaves for Home. Each case has an owner control that writes, and removing any of these checks fails its case. The category screen had no check inside its sheets; its writes now check the role again. Jev and the overhead switch lock on the change, so a tap reaches no handler.) Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
 <a id="flow-508"></a>

@@ -19,6 +19,7 @@ import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
 import { detectInstallMode, hasInstallPrompt, isStandalone, runInstallPrompt, type InstallMode } from "../ui/install-prompt";
 import { assertNoError, useWrite } from "../use-write";
+import { useHoldWrites } from "../use-is-viewer";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { CountTitle, NameHint } from "./card";
 import {
@@ -67,6 +68,7 @@ export function StepBusiness({
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const hintId = useId();
   const created = useRef<string | null>(null);
+  const holdWrites = useHoldWrites();
   const save = useWrite({
     failure: SAVE_ERROR,
     keys: ["home", "dashboard", "sumit"],
@@ -88,7 +90,8 @@ export function StepBusiness({
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (save.isPending) return;
+    // FLOW-506: the run starts only for an owner, but the role can change while the step is open.
+    if (holdWrites || save.isPending) return;
     // The create_company rule (FLOW-606), on the field instead of a save toast.
     const problem = companyNameError(name);
     // Commit the message before focus, so the field is announced with it.
