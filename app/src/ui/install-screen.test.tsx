@@ -67,7 +67,7 @@ describe("InstallScreen", () => {
   it("shows Firefox's menu steps in Firefox on iPhone, and generic share steps elsewhere", () => {
     const { unmount } = renderInstall("iphone-other", undefined, undefined, "firefox");
     expect(screen.getByText("☰")).toBeInTheDocument();
-    expect(screen.getByText("שיתוף ואז הוספה למסך הבית")).toBeInTheDocument();
+    expect(screen.getByText("בוחרים שיתוף ואז ״הוספה למסך הבית״")).toBeInTheDocument();
     unmount();
     renderInstall("iphone-other", undefined, undefined, "other");
     expect(screen.getByText("מקישים על סמל השיתוף של הדפדפן")).toBeInTheDocument();

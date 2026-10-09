@@ -45,7 +45,7 @@ export const IOS_CHROME_INSTALL_STEPS: readonly InstallStepCopy[] = [
 
 export const IOS_FIREFOX_INSTALL_STEPS: readonly InstallStepCopy[] = [
   { id: "menu", text: <>מקישים על <bdi dir="ltr">☰</bdi> בתפריט של Firefox</> },
-  { id: "share", text: "שיתוף ואז הוספה למסך הבית" },
+  { id: "share", text: "בוחרים שיתוף ואז ״הוספה למסך הבית״" },
   { id: "add", text: "מקישים הוספה" },
 ];
 
