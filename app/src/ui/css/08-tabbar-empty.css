@@ -226,9 +226,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   background: var(--color-control-off);
 }
 
+/* FLOW-339: centered, so ✕ (a 44px button) sits on the title's line, not about 7px under it. */
 .ui-sheet-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   min-width: 0;

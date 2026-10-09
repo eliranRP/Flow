@@ -5,8 +5,6 @@ import { usePreviewSearch } from "../preview";
 import { readSheetBackground } from "../sheet-background";
 import { useMercuryStatusQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
-import { useGoBack } from "../ui/back";
-import { Button } from "../ui/button";
 import { BankIcon, LoanIcon, ProjectsIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { RouteSheet } from "../ui/route-sheet";
@@ -22,13 +20,13 @@ export function addBankState(status: { isLoading: boolean; isError: boolean; dat
 
 /**
  * The + tab (FLOW-331): quick actions that work today, until photo capture (FLOW-306) ships. Each
- * one replaces the /add entry, so Back from the screen it opens does not reopen this sheet.
+ * one replaces the /add entry, so Back from the screen it opens does not reopen this sheet. ✕ is the
+ * only close: a ביטול belongs on confirm sheets (FLOW-339).
  */
 export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
   const search = usePreviewSearch();
   const mercury = useMercuryStatusQuery(sampleBank == null);
   const bank = sampleBank ?? addBankState(mercury);
-  const goBack = useGoBack();
   const navigate = useNavigate();
   const over = readSheetBackground(useLocation().state)?.pathname;
   const writeGate = useWriteGate("/");
@@ -74,7 +72,6 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
           }}
         />
       </div>
-      <Button variant="ghost" full onClick={() => { goBack(`/${search}`); }}>ביטול</Button>
     </RouteSheet>
   );
 }
