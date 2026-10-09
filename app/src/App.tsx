@@ -20,6 +20,8 @@ import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/in
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
 import { HomeScreen } from "./screens/HomeScreen";
+// Before the router mounts: the split screen holds Back through this listener.
+import "./screens/split-pop";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
 import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, screenLoaders } from "./screen-loaders";
@@ -89,6 +91,12 @@ const DevTransactionGate = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({
 const DevTxnList = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTxnList })));
 const DevUnpaid = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevUnpaid })));
 
+// The dev server serves each module on request, so a screen loaded on its tap would wait for a
+// chain of requests there. In dev every screen and fixture is fetched at start, as before FLOW-804.
+if (import.meta.env.DEV) {
+  void Promise.all([preloadScreens(), devRoutes(), devLineSplit(), devBreakdown(), jevReviewCard()]).catch(() => undefined);
+}
+
 export function App() {
   useKeyboardInset();
   useEffect(() => {
@@ -107,6 +115,8 @@ export function App() {
     };
   }, []);
   useEffect(() => {
+    // The dev server already fetched every screen at start (below the imports).
+    if (import.meta.env.DEV) return;
     // After the page has loaded, so the other screens never compete with Home's own reads.
     let idle = 0;
     function schedule() {

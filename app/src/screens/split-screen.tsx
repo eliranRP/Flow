@@ -38,16 +38,9 @@ import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { hasCategorySplit, LINE_HAS_CATEGORY_SPLIT, projectSplitFailure } from "../line-split-copy";
 import { collapseSplit, combinePhase, saveNewProject, useBlockedPreview } from "./screen-shared";
+import { holdSplitPop } from "./split-pop";
 import { clearSplitDraft, evenSentence, percentWords, readSplitDraft, sameBasis, writeSplitDraft } from "./split-screen-draft";
 
-type SplitPop = (event: PopStateEvent) => void;
-let splitPop: SplitPop | null = null;
-if (typeof window !== "undefined" && !(window as Window & { __flowSplitPop?: boolean }).__flowSplitPop) {
-  (window as Window & { __flowSplitPop?: boolean }).__flowSplitPop = true;
-  window.addEventListener("popstate", (event) => {
-    splitPop?.(event);
-  }, true);
-}
 
 export function SplitScreen({
   sampleProjects,
@@ -457,11 +450,8 @@ export function SplitScreen({
         if (inflight.current === work) inflight.current = null;
       });
     }
-    // The module listener is already on window, so a later pop cannot miss it.
-    splitPop = onPop;
-    return () => {
-      if (splitPop === onPop) splitPop = null;
-    };
+    // The listener in split-pop.ts is already on window, so a later pop cannot miss it.
+    return holdSplitPop(onPop);
   }, []);
   function openManual() {
     if (busy) return;
