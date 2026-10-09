@@ -541,8 +541,9 @@ storybook_smoke() {
   if [[ -n "$base" ]]; then
     changed="$(branch_changes "$base")"
     # The vitest Storybook project above already ran the stories the change reaches. The build and
-    # its layout, clip and secret specs run when a story spec or the Storybook setup changes.
-    if ! grep -qE '^app/e2e/storybook-|^app/\.storybook/|^app/playwright\.storybook\.config\.ts$|^scripts/storybook-stories\.mjs$|^(app/)?package\.json$|^pnpm-lock\.yaml$' <<<"$changed"; then
+    # its layout, clip and secret specs run when a story spec or the Storybook setup changes; a
+    # manifest, tsconfig or lockfile counts only when the part the build reads changed.
+    if [[ "$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes ]]; then
       echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
@@ -558,7 +559,7 @@ storybook_smoke() {
   scope="$logs_dir/storybook-scope.txt"
   pnpm build-storybook >"$logs_dir/build-storybook.log" 2>&1 || { cat "$logs_dir/build-storybook.log"; return 1; }
   node scripts/storybook-stories.mjs --index app/storybook-static/index.json --budget "${FLOW_STORY_BUDGET:-250}" \
-    <<<"$changed" >"$scope"
+    ${base:+--base "$base"} <<<"$changed" >"$scope"
   if grep -qx all "$scope"; then
     echo "local-ci: the every-story check opens every story."
   else
