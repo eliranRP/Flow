@@ -226,9 +226,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   background: var(--color-control-off);
 }
 
+/* The ✕ is a 44px target; centring it on the one-line title puts its glyph on the title's line (FLOW-339). */
 .ui-sheet-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   min-width: 0;
