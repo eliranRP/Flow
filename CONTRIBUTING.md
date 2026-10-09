@@ -42,6 +42,7 @@ Every new feature or user action ships with a `flow-mcp` tool in the same pull r
 
 Small files keep builders reading less and stop parallel PRs from colliding. This applies to code, stories and CSS (not to generated files such as `database.types.ts`).
 
+- The pre-push hook runs `scripts/local-ci.sh` on what your branch changes against `main`: lint, typecheck, the unit and Storybook tests those files reach, up to 6 e2e specs, and for a migration a fresh local database with the pgTAP files that name what it changed. `main` runs everything before each deploy, so a failure there that your push did not catch is the next PR to merge.
 - Aim for under 400 lines per file. **800 lines is the limit.** A test file may go to 1,200. `node scripts/check-file-size.mjs` enforces this in local CI and in CI for ts, tsx, js, mjs, sql, sh, css and py files (tests are `.test.`, `.spec.`, `_test.`, and everything under `supabase/tests/` and `app/e2e/`); migrations and `database.types.ts` are exempt, and a file that must stay over goes in `scripts/file-size-allow.txt` with its line count as a cap.
 - One screen per file in `app/src/screens/` (`<name>-screen.tsx`); a screen's small sub-pages may share its file. Helpers that several screens share go in `screen-shared.tsx` or a small module named for what it does, never back into a big file.
 - A file already over the limit does not grow: put new code in a new file, and move code out when you change a large part of it. Splits are their own PR, with no behaviour or look change ([FLOW-807](docs/backlog/TASKS.md#flow-807)).
