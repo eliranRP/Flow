@@ -1,4 +1,4 @@
-import { useId, type CSSProperties, type KeyboardEventHandler } from "react";
+import { useId, type KeyboardEventHandler } from "react";
 import { flowControlName } from "./field-name";
 import { holdFieldMouse, holdFieldPointer } from "./field-pointer";
 
@@ -74,7 +74,6 @@ export function MoneyField({
   const fieldId = flowControlName("flow-amount", generated, id);
   const errorId = `${fieldId}-error`;
   const shown = grouped(value);
-  const shellStyle = { "--money-digits": `${String(shown.length)}ch` } as CSSProperties;
   return (
     <div className={error ? "ui-field ui-field-error" : "ui-field"}>
       <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
@@ -82,13 +81,15 @@ export function MoneyField({
       </label>
       <div
         className="ui-money-field ui-field-control"
-        style={shellStyle}
         data-vaul-no-drag=""
         onPointerDown={holdFieldPointer}
         onMouseDown={holdFieldMouse}
       >
-        <span className="ui-money-prefix" aria-hidden="true">
-          {prefix}
+        {/* The prefix sits beside a hidden copy of the digits, so its gap stays the same whatever
+            the commas and dot measure (FLOW-310). */}
+        <span className="ui-money-lead" aria-hidden="true">
+          <span className="ui-money-prefix">{prefix}</span>
+          <span className="ui-money-mirror">{shown}</span>
         </span>
         <input
           id={fieldId}

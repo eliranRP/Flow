@@ -21,6 +21,8 @@ type Common = {
   /** Hint uses t-hint, and the control points at it with aria-describedby. */
   describeHint?: boolean;
   href?: string;
+  /** The href is an outside page: it opens in a new tab, and the name says so. */
+  external?: boolean;
   state?: unknown;
   action?: ReactNode;
   /** The action sits under the row, on the start side under the name (FLOW-335). */
@@ -209,6 +211,7 @@ export function ListRow(props: ListRowProps) {
           <ChevronIcon />
         </span>
       ) : null}
+      {props.external === true && props.href != null ? <span className="sr-only">{NEW_TAB}</span> : null}
     </>
   );
 
@@ -279,7 +282,18 @@ export function ListRow(props: ListRowProps) {
         : "ui-row ui-hit",
     toneClass,
   );
-  const row = props.href ? (
+  const row = props.href && props.external === true ? (
+    <a
+      href={props.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      aria-label={externalName(described ? rowName(props) : props.label)}
+      aria-describedby={described}
+    >
+      {body}
+    </a>
+  ) : props.href ? (
     <Link
       to={props.href}
       state={props.state}
@@ -303,6 +317,13 @@ export function ListRow(props: ListRowProps) {
     );
   }
   return withAction(props, row);
+}
+
+const NEW_TAB = "(נפתח בלשונית חדשה)";
+
+/** An outside link's own name keeps the new-tab note the hidden span gives the content. */
+function externalName(name: string | undefined): string | undefined {
+  return name == null ? undefined : `${name} ${NEW_TAB}`;
 }
 
 function rowName(props: { label?: string; title: ReactNode }): string | undefined {

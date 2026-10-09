@@ -43,13 +43,14 @@ import {
 import { BreakdownLinesScreen, BreakdownScreen } from "./screens/breakdown";
 import { ProfitMonthsScreen } from "./screens/profit-months";
 import { SearchScreen } from "./screens/search";
+import { MissingBillsScreen } from "./screens/missing-bills-screen";
 import { LineSplitScreen } from "./screens/line-split";
 import { DevLineSplit } from "./dev/line-split-e2e";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
 import { useKeyboardInset } from "./ui/keyboard-inset";
-import { DevCategories, DevChange, DevConnections, DevExpense, DevFiled, DevHome, DevInstall, DevLoans, DevProject, DevProjectCategory, DevProjectDetail, DevProjectMonths, DevProjects, DevReview, DevReviewBanner, DevSettings, DevSplit, DevTransaction, DevTransactionGate, DevTxnList, DevUnpaid } from "./dev-routes";
+import { DevCategories, DevChange, DevConnections, DevExpense, DevFiled, DevHome, DevInstall, DevLoans, DevMissingBills, DevProject, DevProjectCategory, DevProjectDetail, DevProjectMonths, DevProjects, DevReview, DevReviewBanner, DevSettings, DevSplit, DevTransaction, DevTransactionGate, DevTxnList, DevUnpaid } from "./dev-routes";
 
 export function App() {
   useKeyboardInset();
@@ -130,6 +131,7 @@ function AppRoutes() {
               <Route path="/e2e/loans" element={<DevLoans />} />
               <Route path="/e2e/categories" element={<DevCategories />} />
               <Route path="/e2e/unpaid" element={<DevUnpaid />} />
+              <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
               <Route path="/e2e/txn" element={<DevTransaction />} />
               <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
               <Route path="/e2e/project-category" element={<DevProjectCategory />} />
@@ -174,6 +176,7 @@ function AppRoutes() {
               </Route>
               <Route path="review/filed" element={<FiledTodayScreen />} />
               <Route path="unpaid" element={<UnpaidScreen />} />
+              <Route path="missing-bills" element={<MissingBillsScreen />} />
               {/* FLOW-322: the placeholder notifications page is gone; an old link lands on Settings. */}
               <Route path="notifications" element={<Navigate to="/settings" replace />} />
               <Route path="settings" element={<SettingsScreen />} />
