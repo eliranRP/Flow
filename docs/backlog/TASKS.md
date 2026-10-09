@@ -17,7 +17,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | FLOW-114 server follow-ups (`save_loan_split` category on every part; the loan line backfill checked and logged, no migration), FLOW-133 dblink undo tests, FLOW-309 income `missing_category` reason | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
-| UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
+| UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
@@ -588,7 +588,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-309"></a>
 ### FLOW-309 · Review queue follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (UI lane 2 has the counter, focus, spacing, e2e and mid-swap items, 2026-10-09) · **Depends on:** —
 - [ ] Unit-test the live refresh of filed-today and the transaction on approve and undo; restore the toast fade-ramp assertion.
 - [ ] Decide whether the queue banner counts every filed-today row (it should match the list); align the preview's filed-today list with live.
 - [ ] Fixtures for a single-project item with `project_suggested` false; a real soft-keyboard test.
