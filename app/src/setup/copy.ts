@@ -36,7 +36,7 @@ export const DEFAULT_CATEGORY_NAMES = [
 
 export const STEP_TITLE: Record<number, string> = {
   0: "פרטי העסק",
-  1: "חיבור SUMIT",
+  1: "חיבור ספרים ובנק",
   2: "תיוג חכם",
   3: "הפרויקטים שלך",
   4: "אישור ראשון",

@@ -36,6 +36,7 @@ describe("setup step model", () => {
     expect(doneCount(store, open)).toBe(0);
     expect(firstNotDone(store, open)).toBe(1);
     expect(isDone(1, store, facts({ sumitConnected: true }))).toBe(true);
+    expect(isDone(1, store, facts({ mercuryConnected: true }))).toBe(true);
     expect(doneCount(started(), facts({ sumitConnected: true, jevSaved: true, hasResolvedReview: true, standalone: true }))).toBe(4);
   });
 
