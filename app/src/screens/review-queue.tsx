@@ -479,7 +479,7 @@ export function ReviewQueue({
         barFocus.current = event.target instanceof Element && event.target.closest(".ui-action-bar") != null;
       }}
     >
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
+      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
       {rows.length > 0 ? (
         <div className="ui-review-meter">
           {/* FLOW-327 r1: on the start side, near the thumb. A card opened from the list leaves it

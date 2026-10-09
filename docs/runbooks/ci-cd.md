@@ -184,6 +184,18 @@ pnpm exec wrangler pages deployment list --project-name=flow-app
 
 That command needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment. Rolling back Pages does not roll back the database.
 
+## Row-hash baseline
+
+`scripts/prod-row-hash.sh` hashes every table in `public` and `private`, read only: one line per table with its row count and an md5 of its rows in sorted order. No row values are printed. Take a baseline before a deploy that should not change data, and compare after it:
+
+```bash
+SUPABASE_DB_URL=... bash scripts/prod-row-hash.sh > /tmp/flow-baseline.tsv
+# deploy
+SUPABASE_DB_URL=... bash scripts/prod-row-hash.sh /tmp/flow-baseline.tsv
+```
+
+The compare prints each table whose count or hash moved (`changed`, `new`, `gone`) and exits 2, or prints `Row hashes match the baseline.` and exits 0. Tables people and jobs write to (transactions, review items, MCP writes, idempotency, rate limits, connector queues) move between the two runs on their own; a table a migration should not touch must not. A migration that rewrites data is checked against what it was meant to change. Keep baseline files outside the repo: they describe real data.
+
 ## Roll back a migration
 
 Do not run `supabase db reset` against the hosted project. Migrations are forward-only. To undo a change that already landed, add a new migration that reverses it and push that through the deploy job. Do not edit a migration file after it has been applied.

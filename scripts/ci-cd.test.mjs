@@ -149,8 +149,8 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /pnpm check:reviewer-bundle/);
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
-  assert.match(ci, /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\}\/2\n/);
-  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/2\n/);
+  assert.match(ci, /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\}\/3\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/4\n/);
   assert.match(job("check-storybook"), /pnpm test:storybook:smoke --grep-invert "every static story"\n/);
   assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
   assert.equal(ci.includes("check-unit"), false);

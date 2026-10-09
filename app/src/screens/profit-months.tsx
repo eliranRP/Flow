@@ -176,21 +176,19 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
   const loss = profit < 0n;
   // A month with no project income has no overhead share: its figure is before overhead (0129).
   const beforeOverhead = afterOverhead && month.overhead_weighted !== true;
-  const hint: ReactNode = (
-    <>
-      {currencies.map((row, index) => (
-        <span key={row.currency}>
-          {index > 0 ? " · " : null}
-          נכנס{" "}
-          {/* Muted like the rest of the hint: green is for an income amount in the amount slot (0120). */}
-          <bdi dir="ltr" className="ui-num">{formatAmountText(row.income_minor, row.currency)}</bdi>
-          {" · "}יצא{" "}
-          <bdi dir="ltr" className="ui-num">{formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}</bdi>
-        </span>
-      ))}
-      {beforeOverhead ? " · לפני הוצאות כלליות" : null}
-    </>
-  );
+  // One line of whole parts at 320: a part that does not fit drops with its "·" (design lead, #259).
+  const hint: ReactNode[] = currencies.flatMap((row) => [
+    <span key={`${row.currency}-in`}>
+      נכנס{" "}
+      {/* Muted like the rest of the hint: green is for an income amount in the amount slot (0120). */}
+      <bdi dir="ltr" className="ui-num">{formatAmountText(row.income_minor, row.currency)}</bdi>
+    </span>,
+    <span key={`${row.currency}-out`}>
+      יצא{" "}
+      <bdi dir="ltr" className="ui-num">{formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}</bdi>
+    </span>,
+  ]);
+  if (beforeOverhead) hint.push("לפני הוצאות כלליות");
   const label = [
     title,
     month.open ? "בתהליך" : null,
@@ -202,8 +200,7 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
       variant="project"
       title={title}
       tag={month.open ? <StatusPill>בתהליך</StatusPill> : undefined}
-      hint={hint}
-      wrapHint
+      hintParts={hint}
       label={label}
       agorot={profit}
       currency={main?.currency ?? "ILS"}

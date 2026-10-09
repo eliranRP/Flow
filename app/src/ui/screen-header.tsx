@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
-import { BackButton } from "./back";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { BackButton, useGoBack } from "./back";
 import { FocusTitle } from "./focus-title";
+import { IconButton } from "./icon-button";
+import { BackIcon } from "./icons";
 
 type HeaderChrome = {
   subtitle?: string;
@@ -47,10 +49,15 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   } = props;
   const barOnly = props.barOnly === true;
   const title = props.title;
-  const start = leading ?? (backTo ? <BackButton fallback={backTo} /> : null);
+  // FLOW-334 H2 (decision 0156): with a Back, the kicker names where it goes, so it becomes Back's label.
+  const labelledBack = leading == null && backTo != null && kicker != null && kicker !== "";
+  const start = leading ?? (backTo ? <BackButton fallback={backTo} text={labelledBack ? kicker : undefined} /> : null);
   const stacked = props.layout === "stacked"
     || (props.layout == null && !barOnly && start != null && size !== "compact");
-  const kickerLine = kicker ? <p className="t-hint">{kicker}</p> : null;
+  const kickerLine = kicker && !labelledBack ? <p className="t-hint">{kicker}</p> : null;
+  // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title scrolls off.
+  const compact = stacked && leading == null && backTo != null && title != null;
+  const titleEnd = useRef<HTMLSpanElement>(null);
   return (
     <header className={stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page"}>
       {stacked ? null : kickerLine}
@@ -63,7 +70,80 @@ export function ScreenHeader(props: ScreenHeaderProps) {
       </div>
       {stacked ? kickerLine : null}
       {stacked && title != null ? <FocusTitle className="t-title-1">{title}</FocusTitle> : null}
+      {compact ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
+      {compact ? <CompactBar title={title} backTo={backTo} titleEnd={titleEnd} /> : null}
     </header>
+  );
+}
+
+/** The compact bar's height under the safe area: one touch target. */
+const COMPACT_BAR = 44;
+
+/** The safe area on top (installed app under a notch), in px. --safe-top is an env(), so a probe resolves it. */
+function safeTop(): number {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;padding-top:var(--safe-top)";
+  document.body.append(probe);
+  const value = Number.parseFloat(getComputedStyle(probe).paddingTop);
+  probe.remove();
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** Headers whose bar is showing. Month heads pin under the bar while any is (11-month-lists.css). */
+let barsShowing = 0;
+
+function setBarShowing(delta: number): void {
+  barsShowing = Math.max(0, barsShowing + delta);
+  document.documentElement.toggleAttribute("data-compact-bar", barsShowing > 0);
+}
+
+/** True once the mark has scrolled up under the compact bar. */
+function useScrolledPast(mark: RefObject<HTMLElement | null>): boolean {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    const node = mark.current;
+    if (node == null || typeof IntersectionObserver === "undefined") return;
+    const top = COMPACT_BAR + safeTop();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1];
+        if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
+      },
+      { rootMargin: `-${String(top)}px 0px 0px 0px` },
+    );
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [mark]);
+  useEffect(() => {
+    if (!past) return;
+    setBarShowing(1);
+    return () => {
+      setBarShowing(-1);
+    };
+  }, [past]);
+  return past;
+}
+
+/**
+ * FLOW-334 H1 (owner, 2026-10-08): Back and a small title, pinned to the top once the large title
+ * has scrolled off, like iOS large titles. The page's own Back keeps the start-edge swipe.
+ */
+function CompactBar({ title, backTo, titleEnd }: { title: string; backTo: string; titleEnd: RefObject<HTMLElement | null> }) {
+  const past = useScrolledPast(titleEnd);
+  const goBack = useGoBack();
+  if (!past) return null;
+  return (
+    <div className="ui-compact-bar">
+      <div className="ui-compact-bar-row">
+        <IconButton label="חזרה" onClick={() => { goBack(backTo); }}>
+          <BackIcon />
+        </IconButton>
+        {/* The page's h1 is still there; this is its echo. */}
+        <span className="ui-compact-title t-title-3" aria-hidden="true">{title}</span>
+      </div>
+    </div>
   );
 }
