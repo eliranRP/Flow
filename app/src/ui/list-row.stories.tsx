@@ -55,6 +55,16 @@ export const Skeleton: Story = {
 export const Project: Story = {
   args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
 };
+// FLOW-335: an outside link (SUMIT's document) opens in a new tab; the name says so.
+export const ProjectExternal: Story = {
+  name: "Project, outside link",
+  args: { variant: "project", title: "לקוח לדוגמה", hint: "01/09", agorot: "1000000" },
+  render: () => (
+    <List>
+      <ListRow variant="project" title="לקוח לדוגמה" hint="01/09" agorot={1_000_000n} loss={false} href="https://pay.sumit.co.il/example/doc-1" external chevron />
+    </List>
+  ),
+};
 export const TransactionIn: Story = {
   args: { variant: "transaction", title: "קבלה 1042", hint: "חומרים · 12/09", agorot: "1800000", sign: "in", source: "invoice" },
 };
@@ -262,7 +272,7 @@ export const StatementMethods320Dark: Story = { args: statementArgs, render: () 
 /** FLOW-501: a loan on the Loans page. The meta slot holds the balance with small cents; a waiting loan warns. */
 function LoanRows() {
   return (
-    <List>
+    <List className="ui-loan-list">
       <ListRow
         variant="button"
         title="משכנתא אלון"

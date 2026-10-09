@@ -13,6 +13,7 @@ import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQ
 import { TxnNavButtons, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
+import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { StatusPill } from "../ui/chip";
@@ -490,88 +491,90 @@ export function TransactionScreen({
           </div>
         ) : menuButton}
       />
-      <div className="ui-page-pad">
-        <p className="t-title-3 ui-party">{party}</p>
-        <p className="t-display">
-          <BigNumber
-            agorot={absAgorot(txn.amount_net)}
-            presentation="detail"
-            currency={txn.currency}
-            direction={txn.direction === "income" ? "income" : "expense"}
-            income={txn.direction === "income"}
-            size="display"
-          />
-        </p>
-        <p className="t-hint">
-          {vatShown ? "לפני מע״מ · " : null}
-          <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
-        </p>
-        {reviewLabel || paymentLabel || pnlPill ? (
-          <div className="ui-status-row">
-            {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
-            {paymentLabel ? <StatusPill icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusPill> : null}
-            {pnlPill}
-          </div>
-        ) : null}
-      </div>
-      <List>
-        {holdWrites ? (
-          <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} />
-        ) : (
-          <ListRow variant="button" buttonRef={projectRowRef} eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} chevron onClick={() => {
-            if (splitRow) {
-              openSplit();
-              return;
-            }
-            setChangeStart("project");
-            setChangeSheet(true);
-          }} />
-        )}
-        {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
-        <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} active={sample == null} readOnly={holdWrites}>
+      <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} onStep={(step) => { nav?.move(step, "swipe"); }}>
+        <div className="ui-page-pad">
+          <p className="t-title-3 ui-party">{party}</p>
+          <p className="t-display">
+            <BigNumber
+              agorot={absAgorot(txn.amount_net)}
+              presentation="detail"
+              currency={txn.currency}
+              direction={txn.direction === "income" ? "income" : "expense"}
+              income={txn.direction === "income"}
+              size="display"
+            />
+          </p>
+          <p className="t-hint">
+            {vatShown ? "לפני מע״מ · " : null}
+            <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
+          </p>
+          {reviewLabel || paymentLabel || pnlPill ? (
+            <div className="ui-status-row">
+              {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
+              {paymentLabel ? <StatusPill icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusPill> : null}
+              {pnlPill}
+            </div>
+          ) : null}
+        </div>
+        <List>
           {holdWrites ? (
-            <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+            <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} />
           ) : (
-            <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
-              setChangeStart("category");
+            <ListRow variant="button" buttonRef={projectRowRef} eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} chevron onClick={() => {
+              if (splitRow) {
+                openSplit();
+                return;
+              }
+              setChangeStart("project");
               setChangeSheet(true);
             }} />
           )}
-        </LoanCategoryRow>
-      </List>
-      <LoanTransactionSplit
-        transactionId={txn.id}
-        docDate={txn.doc_date}
-        loanPart={shownLoanPart}
-        categoryId={shownCategoryId || null}
-        direction={txn.direction}
-        active={sample == null}
-        readOnly={holdWrites}
-        split={txn.loan_split}
-      />
-      {vatShown && txn.vat_amount !== 0n ? (
-        <p className="ui-page-pad t-hint">
-          מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
-          {" · "}
-          {vatStatusLabel(txn.vat_status)}
-        </p>
-      ) : null}
-      <List>{pnlRow}</List>
-      {lineMeta.isError && lineMeta.data == null ? (
-        <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
-      ) : (
-        <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
-      )}
-      <LineSplitSection
-        txn={txn}
-        split={lineSplit}
-        readOnly={holdWrites}
-        categories={sample ? (sampleCategories ?? []) : (categories.data ?? [])}
-        loanSplit={loanSplitFlag || loanSplitView != null}
-        projectSplitTo={`/transactions/${txn.id}/split${search}`}
-        onProjectSplit={onOpenSplit ? openSplit : undefined}
-        categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
-      />
+          {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
+          <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} active={sample == null} readOnly={holdWrites}>
+            {holdWrites ? (
+              <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+            ) : (
+              <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
+                setChangeStart("category");
+                setChangeSheet(true);
+              }} />
+            )}
+          </LoanCategoryRow>
+        </List>
+        <LoanTransactionSplit
+          transactionId={txn.id}
+          docDate={txn.doc_date}
+          loanPart={shownLoanPart}
+          categoryId={shownCategoryId || null}
+          direction={txn.direction}
+          active={sample == null}
+          readOnly={holdWrites}
+          split={txn.loan_split}
+        />
+        {vatShown && txn.vat_amount !== 0n ? (
+          <p className="ui-page-pad t-hint">
+            מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
+            {" · "}
+            {vatStatusLabel(txn.vat_status)}
+          </p>
+        ) : null}
+        <List>{pnlRow}</List>
+        {lineMeta.isError && lineMeta.data == null ? (
+          <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
+        ) : (
+          <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
+        )}
+        <LineSplitSection
+          txn={txn}
+          split={lineSplit}
+          readOnly={holdWrites}
+          categories={sample ? (sampleCategories ?? []) : (categories.data ?? [])}
+          loanSplit={loanSplitFlag || loanSplitView != null}
+          projectSplitTo={`/transactions/${txn.id}/split${search}`}
+          onProjectSplit={onOpenSplit ? openSplit : undefined}
+          categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
+        />
+      </CardSwipe>
       <ChangeAssignment
         host="overlay"
         open={changeOpen}

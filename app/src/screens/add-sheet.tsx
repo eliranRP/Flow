@@ -5,8 +5,6 @@ import { usePreviewSearch } from "../preview";
 import { readSheetBackground } from "../sheet-background";
 import { useMercuryStatusQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
-import { useGoBack } from "../ui/back";
-import { Button } from "../ui/button";
 import { BankIcon, LoanIcon, ProjectsIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { RouteSheet } from "../ui/route-sheet";
@@ -28,7 +26,6 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
   const search = usePreviewSearch();
   const mercury = useMercuryStatusQuery(sampleBank == null);
   const bank = sampleBank ?? addBankState(mercury);
-  const goBack = useGoBack();
   const navigate = useNavigate();
   const over = readSheetBackground(useLocation().state)?.pathname;
   const writeGate = useWriteGate("/");
@@ -74,7 +71,6 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
           }}
         />
       </div>
-      <Button variant="ghost" full onClick={() => { goBack(`/${search}`); }}>ביטול</Button>
     </RouteSheet>
   );
 }

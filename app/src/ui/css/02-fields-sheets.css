@@ -8,7 +8,7 @@
 }
 
 /* FLOW-115: the amount and its currency are one field: the control sits --space-2 under the input. */
-.ui-loan-amount {
+.ui-loan-amount-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -36,9 +36,26 @@
   min-height: calc(var(--touch-min) + 28px);
 }
 
+/* A loan's balance in a row's meta slot: the list amount size, not the hint size the slot sets,
+   so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
 .ui-loan-amount {
   color: var(--color-text);
+  font-size: var(--type-amount-size);
+  line-height: var(--type-amount-line);
+  font-weight: var(--type-amount-weight);
   white-space: nowrap;
+}
+
+/* A loan's name is the row's identity: at 320 it wraps to two lines instead of losing the name
+   to an ellipsis; the hint keeps two lines too (FLOW-339, design lead). */
+.ui-loan-list .ui-row-title,
+.ui-loan-list .ui-row-hint {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* FLOW-107. A part kept out of the profit: icon and words, muted, never only colour. */
@@ -396,7 +413,7 @@
   cursor: text;
 }
 
-.ui-money-prefix,
+.ui-money-lead,
 .ui-percent-suffix {
   position: absolute;
   z-index: 1;
@@ -405,13 +422,32 @@
   display: flex;
   align-items: center;
   color: inherit;
-  font-weight: 600;
   pointer-events: none;
 }
 
+.ui-percent-suffix {
+  font-weight: 600;
+}
+
+/* The prefix sits just to the left of the right-aligned digits: the lead lays out the prefix and a
+   hidden copy of the digits in the input's own font, so commas and the dot keep the gap at 0.35em. */
+.ui-money-lead {
+  inset-inline: var(--field-pad);
+  justify-content: flex-end;
+  gap: 0.35em;
+  overflow: hidden;
+  white-space: pre;
+}
+
 .ui-money-prefix {
-  /* Sits just to the left of the right-aligned digits. --money-digits is the text width. */
-  inset-inline-end: calc(var(--field-pad) + var(--money-digits, 0ch) + 0.35em);
+  flex: none;
+  font-weight: 600;
+}
+
+.ui-money-mirror {
+  visibility: hidden;
+  font-size: max(16px, var(--type-body-size));
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .ui-money-field input {

@@ -38,18 +38,14 @@ import { SegmentedControl } from "../ui/segmented-control";
 
 type Sum = { currency: string; amount_minor: bigint };
 
-/** Signed for display: an expense shows a minus, a net refund does not. */
-function shown(direction: BreakdownDirection, amount: bigint): bigint {
-  return direction === "expense" ? -amount : amount;
-}
-
+/** Under "יצא" a cost is already named, so it carries no minus; only refunds that beat the costs show one (FLOW-339, as Home's יצא). */
 function Totals({ direction, totals }: { direction: BreakdownDirection; totals: Sum[] }) {
   if (totals.length === 0) return null;
   return (
     <p className="ui-breakdown-total ui-page-pad">
       {totals.map((total) => (
         <span key={total.currency} className="ui-breakdown-total-line">
-          <BigNumber agorot={shown(direction, total.amount_minor)} currency={total.currency} size="display" income={direction === "income"} />
+          <BigNumber agorot={total.amount_minor} currency={total.currency} size="display" income={direction === "income"} />
         </span>
       ))}
     </p>
@@ -175,7 +171,7 @@ function BreakdownBody({
                 variant="project"
                 title={groupTitle(direction, shownBy, group.key, group.name)}
                 hint={lineCountHint(group.count, group.shared)}
-                agorot={shown(direction, group.amount_minor)}
+                agorot={group.amount_minor}
                 currency={group.currency}
                 loss={false}
                 chevron
@@ -206,7 +202,7 @@ function BreakdownBody({
                     variant="project"
                     title="מחוץ לרווח"
                     hint={lineCountHint(sum.count, false)}
-                    agorot={shown(direction, sum.amount_minor)}
+                    agorot={sum.amount_minor}
                     currency={sum.currency}
                     loss={false}
                     chevron
@@ -289,18 +285,17 @@ function LinesBody({
   const more = sample ? false : lines.hasNextPage;
   // The header comes from the same lines as the list: no lines is "—" and no count (design lead, #259).
   const none = rows.length === 0 && !more;
-  // The period is the pill under the title (FLOW-334), so the subtitle doesn't repeat it.
-  const subtitleParts: string[] = [directionLabel(direction)];
-  if (sum && !none) subtitleParts.push(lineCountHint(sum.count, false));
-
+  // The period is the pill under the title (FLOW-334), so the subtitle doesn't repeat it. The figure
+  // then its count, in the same order as the summary screen (FLOW-339).
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} below={periodControl} />
+      <ScreenHeader layout="stacked" title={title} subtitle={directionLabel(direction)} backTo={back} below={periodControl} />
       {none ? (
         <p className="ui-breakdown-total ui-page-pad">
           <span className="ui-breakdown-total-line t-display text-text-secondary">—</span>
         </p>
       ) : sum ? <Totals direction={direction} totals={[sum]} /> : null}
+      {sum && !none ? <p className="ui-breakdown-hint ui-page-pad t-hint">{lineCountHint(sum.count, false)}</p> : null}
       {rows.length === 0 ? (
         <EmptyState
           icon={<DocumentIcon />}
@@ -333,7 +328,7 @@ function LinesBody({
                 hint={hint}
                 agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
                 currency={row.currency}
-                sign={outgoing ? "out" : "in"}
+                sign={outgoing ? (direction === "expense" ? "cost" : "out") : "in"}
                 inWord={direction === "expense" ? "זיכוי" : undefined}
                 source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}

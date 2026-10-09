@@ -205,7 +205,7 @@ export function LoanSetupForm({
         </div>
       ) : null}
       {/* FLOW-115: the currency belongs to the amount, --space-2 under it; a message-height slot keeps the field rhythm. */}
-      <div className="ui-loan-amount">
+      <div className="ui-loan-amount-field">
       <MoneyField
         label="סכום מקורי"
         value={principal}

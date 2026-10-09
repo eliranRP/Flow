@@ -33,43 +33,8 @@ import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
 import { TextLink } from "../ui/text-link";
 import { useBlockedPreview } from "./screen-shared";
+import { connectorWord, MERCURY_REFRESH_KEYS, onboardingFromSettings, sumitKind } from "./connections-status";
 import type { SettingsSample } from "./settings-screen";
-
-type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
-
-function sumitKind(input: {
-  forced: "loading" | "error" | null;
-  noCompany: boolean;
-  statusLoading: boolean;
-  statusFailed: boolean;
-  authReconnect: boolean;
-  connected: boolean;
-}): SumitKind {
-  if (input.forced === "loading") return "loading";
-  if (input.forced === "error") return "error";
-  if (input.noCompany) return "disconnected";
-  if (input.statusLoading) return "loading";
-  if (input.statusFailed) return "error";
-  if (input.authReconnect) return "reconnect";
-  if (input.connected) return "connected";
-  return "disconnected";
-}
-
-/** Connections → onboarding, then back to Connections with the same connector's sheet open. */
-function onboardingFromSettings(search: string, sheet: "sumit" | "mercury"): string {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : "");
-  params.set("return", `/settings/connections?sheet=${sheet}`);
-  return `/onboarding?${params.toString()}`;
-}
-
-const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
-
-/** A connector's one-word status (0082 §3). */
-function connectorWord(kind: SumitKind): string {
-  if (kind === "reconnect") return "צריך לחבר מחדש";
-  if (kind === "connected") return "מחובר";
-  return "לא מחובר";
-}
 
 /**
  * `/settings/connections` (FLOW-501): SUMIT and Mercury under ספרים ובנק,

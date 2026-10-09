@@ -1,0 +1,35 @@
+/* FLOW-403: Jev missing bills and expected months (plan option A). */
+
+/* An expected figure: "כ־" then the whole amount, on one line, in the main text colour. */
+.ui-approx {
+  flex: none;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-approx-income {
+  color: var(--color-income);
+}
+
+/* Two currencies stack at the row's end; one currency is a single line. */
+.ui-expected-figures {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+
+.ui-expected-error {
+  margin: 0;
+}
+
+/* The month sheet: name and amount per row, no hit tint (nothing opens). */
+.ui-expected-parties {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

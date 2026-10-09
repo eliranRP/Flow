@@ -3,9 +3,21 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { MoneyField } from "./money-field";
 import { longHebrew, padded } from "./story-support";
 
-function Demo({ label, value = "", error, disabled }: { label: string; value?: string; error?: string; disabled?: boolean }) {
+function Demo({ label, value = "", error, disabled, prefix }: { label: string; value?: string; error?: string; disabled?: boolean; prefix?: string }) {
   const [amount, setAmount] = useState(value);
-  return <MoneyField label={label} value={amount} onValueChange={setAmount} error={error} disabled={disabled} />;
+  return <MoneyField label={label} value={amount} onValueChange={setAmount} error={error} disabled={disabled} prefix={prefix} />;
+}
+
+/** FLOW-310: the prefix keeps the same gap to the digits however many commas and dots they hold. */
+function Separators() {
+  return (
+    <div className="flex flex-col gap-4">
+      <Demo label="סכום" value="5" />
+      <Demo label="סכום" value="1500" />
+      <Demo label="סכום" value="1234567.89" />
+      <Demo label="סכום בדולרים" value="1234567.89" prefix="$" />
+    </div>
+  );
 }
 
 const meta = {
@@ -34,6 +46,13 @@ export const LargeAmount320Dark: Story = {
   globals: { theme: "dark" },
   parameters: { viewport: { defaultViewport: "flow320" } },
   render: () => <Demo label="תקציב בשקלים, או ריק" value="9999999.99" />,
+};
+export const PrefixGap: Story = { args, render: () => <Separators /> };
+export const PrefixGap320Dark: Story = {
+  args,
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <Separators />,
 };
 export const LongHebrew: Story = { args: { ...args, label: longHebrew }, render: () => <Demo label={longHebrew} value="9999999.99" /> };
 /** FLOW-325: a row's message outside the field describes it (aria-describedby). */

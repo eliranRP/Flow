@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
-import { CloseIcon, DocumentIcon, ReviewIcon } from "./icons";
+import { CalendarIcon, CloseIcon, DocumentIcon, ReviewIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { filedTodayBannerTitle } from "../filed-today-copy";
 import { longHebrew, padded } from "./story-support";
@@ -81,6 +81,30 @@ export const RowsSingular: Story = {
   name: "Rows, one of each",
   args: { title: "" },
   render: () => <BannerRows rows={[reviewOne, unpaidOne]} />,
+};
+// FLOW-403. The third row: late recurring bills, a count with no total.
+const missingRow: BannerRow = {
+  id: "missing",
+  to: "/missing-bills",
+  icon: <CalendarIcon size={24} stroke={1.9} />,
+  title: <><bdi dir="ltr">2</bdi> חשבונות לא הגיעו</>,
+};
+export const RowsThree: Story = {
+  name: "Rows, three",
+  args: { title: "" },
+  render: () => <BannerRows rows={[reviewRow, unpaidRow, missingRow]} />,
+};
+export const RowsThreeDark: Story = { ...RowsThree, name: "Rows, three, dark", globals: { theme: "dark" } };
+export const RowsThree320: Story = { ...RowsThree, name: "Rows, three, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
+export const RowsMissingOnly: Story = {
+  name: "Rows, missing only",
+  args: { title: "" },
+  render: () => <BannerRows rows={[missingRow]} />,
+};
+export const RowsMissingOne: Story = {
+  name: "Rows, one late bill",
+  args: { title: "" },
+  render: () => <BannerRows rows={[reviewRow, { ...missingRow, title: "חשבון אחד לא הגיע" }]} />,
 };
 export const RowsLongHebrew: Story = {
   name: "Rows, long Hebrew",

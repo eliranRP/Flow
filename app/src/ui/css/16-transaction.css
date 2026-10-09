@@ -122,3 +122,50 @@
   /* Fits "קטגוריה" at the meta size: 75px. */
   --review-label-w: calc(var(--type-meta-size) * 5);
 }
+
+/*
+  FLOW-314: a sideways swipe on the card opens the next or previous one. pan-y keeps the page's
+  vertical scroll (and pinch-zoom) with the browser; the card follows the finger and settles back.
+  A swiped-to card enters from the side the finger moved away from.
+*/
+.ui-cswipe {
+  overflow-x: clip;
+}
+
+.ui-cswipe-card {
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.ui-cswipe-on {
+  touch-action: pan-y pinch-zoom;
+}
+
+.ui-cswipe-drag {
+  transition: none;
+}
+
+.ui-cswipe-card[data-enter="next"] {
+  animation: ui-cswipe-from-left var(--dur-base) var(--ease-standard);
+}
+
+.ui-cswipe-card[data-enter="prev"] {
+  animation: ui-cswipe-from-right var(--dur-base) var(--ease-standard);
+}
+
+@keyframes ui-cswipe-from-left {
+  from { opacity: 0; transform: translateX(-32px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ui-cswipe-from-right {
+  from { opacity: 0; transform: translateX(32px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-cswipe-card,
+  .ui-cswipe-card[data-enter] {
+    transition: none;
+    animation: none;
+  }
+}

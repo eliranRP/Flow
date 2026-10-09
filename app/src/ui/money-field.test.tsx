@@ -23,6 +23,15 @@ function BudgetForm() {
 }
 
 describe("MoneyField", () => {
+  it("lays the prefix beside a hidden copy of the shown digits, so separators keep its gap (FLOW-310)", () => {
+    const { container } = render(<MoneyField label="סכום" value="1234567.89" prefix="$" onValueChange={() => undefined} />);
+    const lead = container.querySelector(".ui-money-lead");
+    expect(lead).toHaveAttribute("aria-hidden", "true");
+    expect(lead?.querySelector(".ui-money-prefix")).toHaveTextContent("$");
+    expect(lead?.querySelector(".ui-money-mirror")).toHaveTextContent("1,234,567.89");
+    expect(screen.getByLabelText("סכום")).toHaveValue("1,234,567.89");
+  });
+
   it("a message outside the field describes it, next to its own error (FLOW-325)", () => {
     render(
       <>
