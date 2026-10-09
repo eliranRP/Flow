@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
-| Dev lane 2 | FLOW-502 server PR 2: the תנועה חדשה push after a sync and the סיכום שבועי push on Sunday morning, PR #343 (server PR 1 merged #335) | FLOW-406 data and MCP plan (docs), then FLOW-309 invoice and receipt pairing, server side |
+| Dev lane 2 | FLOW-406 plan recorded as decision 0164 (docs only), PR #TBD; FLOW-502 server PR 2 merged #343 | FLOW-406 server 1: sub-categories (`parent_id`, roll-ups, MCP) |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-505 follow-up: "ייבוא מ" sent with the connect call to both connect functions; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
@@ -965,9 +965,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-406"></a>
 ### FLOW-406 · Sub-categories and project groups
-- **Type:** PLAN FIRST · **Status:** on-hold (owner: not this cycle) · **Depends on:** FLOW-405
-- **What:** One level of sub-categories with a parent rollup; project groups (unit, building, portfolio); industry templates in setup that seed categories.
-- **Acceptance:** owner's go, then a plan.
+- **Type:** PLAN FIRST · **Status:** ready (owner picked drill-in, 2026-10-09; mockups /mnt/project-files/mockups/plan-first/flow-406/ cat-b, cat-b-2, proj-b, proj-b-2, picker, setup; real-app shots to Eliran before merge) · **Depends on:** FLOW-405
+- **What:** One level of sub-categories with a parent rollup; project groups; starter categories by field in setup. Plan: decision [0164](../decisions/0164-sub-categories-and-groups.md) (data option A).
+- **Acceptance:** each server PR has pgTAP for the one-level, kind and off-P&L rules, roll-up = sum of parts, unchanged company totals across the `group_name` backfill, and tenant isolation; the screens match the approved mockups.
+- [x] Plan and mockups approved (owner, 2026-10-09: data A, drill-in screens).
+- [ ] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
+- [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
+- [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
+- [ ] Screens (UI lane 3), after the server PRs.
 
 <a id="flow-407"></a>
 ### FLOW-407 · Export for the accountant
