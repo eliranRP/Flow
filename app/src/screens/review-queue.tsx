@@ -1,5 +1,5 @@
 import { formatMoney, type ReviewRow } from "@flow/shared";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
@@ -141,11 +141,15 @@ export function ReviewQueue({
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
   const metaLive = !sample && previewWrite == null;
-  // FLOW-315: one read for the whole queue's bank details fills each card's cache, so every next
-  // card's meta line paints with it. The card's own read runs only when that one is not in flight
-  // (it failed, or the card is new to the queue). The details stay supplementary: the card never waits.
-  const metaPage = useLineMetaPageQuery(rows.map((item) => item.transaction_id), metaLive);
-  const lineMeta = useLineMetaQuery(shownId, metaLive && metaPage.fetchStatus !== "fetching");
+  // FLOW-315: one read for the bank details of the cards ahead (and the one on screen) fills each
+  // card's cache, so every next card's meta line paints with it. The card's own read runs only if
+  // that read failed. The details stay supplementary: the card never waits for them.
+  const metaIds = useMemo(() => {
+    const head = rows.slice(0, META_AHEAD).map((item) => item.transaction_id);
+    return shownId == null || head.includes(shownId) ? head : [...head, shownId];
+  }, [rows, shownId]);
+  const metaPage = useLineMetaPageQuery(metaIds, metaLive);
+  const lineMeta = useLineMetaQuery(shownId, metaLive && metaPage.isError);
   const jevUndo = useJevUndo();
   const jev = jevUndo.stateFor(shownId, jevQueue.stateFor(shownId));
   const flagsFor = useReviewFlags(
@@ -622,6 +626,8 @@ function docKindLabel(kind: string | undefined): string {
 
 /** How long after ביטול's reopen lands the queue waits for the line before it drops the hold. */
 const REVIEW_HOLD_SETTLE_MS = 1000;
+/** FLOW-315: how many cards ahead the bank details read covers. */
+const META_AHEAD = 50;
 
 async function reopenReview(
   id: string,

@@ -60,6 +60,8 @@ export const LongMemoOpen: Story = {
   },
 };
 
+export const LongMemoOpenDark: Story = { ...LongMemoOpen, name: "Long memo, open, dark", ...dark };
+
 /** A short memo is plain text: no button, no cue. */
 export const ShortMemo: Story = {
   args: { memo: "Invoice 1042, September lease" },
