@@ -7,7 +7,7 @@ import { ActionBar } from "../ui/action-bar";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
-import { PeopleIcon, PlusIcon } from "../ui/icons";
+import { PeopleIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { PersonRow } from "../ui/person-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -116,7 +116,7 @@ export function TeamList({ team }: { team: Team }) {
       {manage ? (
         <>
           <ActionBar>
-            <Button full icon={<PlusIcon />} buttonRef={inviteButton} onClick={() => { setInviteSheet(true); }}>
+            <Button full buttonRef={inviteButton} onClick={() => { setInviteSheet(true); }}>
               הזמנה
             </Button>
           </ActionBar>

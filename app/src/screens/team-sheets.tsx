@@ -23,7 +23,6 @@ import {
 import { TEAM_KEY } from "../team-queries";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { CloseIcon, LogoutIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { RoleChoice } from "../ui/role-choice";
 import { Sheet } from "../ui/sheet";
@@ -277,7 +276,6 @@ export function MemberSheet({
           <ListRow
             variant="danger"
             title="הסרה מהצוות"
-            icon={<LogoutIcon />}
             buttonRef={removeRef}
             disabled={setRole.isPending}
             onClick={() => { setConfirmOpen(true); }}
@@ -386,7 +384,6 @@ export function PendingInviteSheet({
         <ListRow
           variant="danger"
           title="ביטול ההזמנה"
-          icon={<CloseIcon />}
           busy={cancel.isPending}
           disabled={change.isPending}
           onClick={() => {
