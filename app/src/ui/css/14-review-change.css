@@ -11,14 +11,6 @@
   color: var(--color-on-band);
 }
 
-.ui-progress-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-1);
-  padding-inline: var(--space-side);
-}
-
 .ui-bar-slim {
   height: var(--space-1);
   flex: 1;

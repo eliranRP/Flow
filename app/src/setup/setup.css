@@ -27,6 +27,11 @@
   padding-inline: var(--space-side);
 }
 
+/* Step 0 has no count, but keeps its height (FLOW-356). */
+.ui-setup-meter-slot {
+  visibility: hidden;
+}
+
 .ui-setup-meter .ui-bar-thin,
 .ui-setup-card-meter .ui-bar-thin {
   block-size: var(--space-1);

@@ -3,7 +3,6 @@ import { useWriteGate } from "../use-is-viewer";
 import { keepPreview, usePreviewSearch } from "../preview";
 import { safeAppPath } from "../safe-return";
 import { Button } from "../ui/button";
-import { ProgressBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
 import { useCompanyForm } from "./company-form";
 import { useBlockedPreview } from "./screen-shared";
@@ -27,25 +26,11 @@ export function OnboardingScreen({ initialName }: { initialName?: string } = {})
     },
   });
 
-  const step = 1;
-  const steps = 1;
   if (writeGate === "wait") return null;
   if (writeGate !== "show") return writeGate;
+  // One form, so no step meter (FLOW-356): setup step 0 shows the same form with none.
   return (
     <main className="ui-onboard">
-      <div className="ui-progress-row">
-        <ProgressBar
-          variant="slim"
-          value={step}
-          max={steps}
-          label={`שלב ${String(step)} מתוך ${String(steps)}`}
-          caption={
-            <span className="t-hint">
-              שלב <bdi className="ui-num" dir="ltr">{String(step)}</bdi> מתוך <bdi className="ui-num" dir="ltr">{String(steps)}</bdi>
-            </span>
-          }
-        />
-      </div>
       <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." backTo={returnTo} />
       <form className="ui-page-pad" onSubmit={form.submit}>
         {form.fields}
