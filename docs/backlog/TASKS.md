@@ -86,7 +86,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
-| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | claimed (handed over from UI lane 4, 2026-10-09, flow314; replaces closed draft #279) |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | claimed (UI lane 2, handed over from UI lane 4, 2026-10-09; replaces closed draft #279) |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | done (#253, #248) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
