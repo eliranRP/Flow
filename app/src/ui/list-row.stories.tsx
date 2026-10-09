@@ -171,6 +171,27 @@ function MercuryRows() {
   );
 }
 
+/** A line kept out of profit fades whole, next to one that counts (owner's pick C, 2026-10-09). */
+function SetAsideRows() {
+  return (
+    <List>
+      <ListRow variant="transaction" title="חשמלאי לדוגמה" hint="עבודה · 05/10" agorot={-632_000n} sign="out" source="invoice" href="/transactions/1" realCents />
+      <ListRow variant="transaction" title="החזר ציוד לדוגמה" hint="מחוץ לרווח · ציוד · 02/10" agorot={-150_000n} sign="out" source="invoice" href="/transactions/2" realCents setAside />
+      <ListRow variant="statement" title="ספק לדוגמה" fallback="invoice" details={[{ text: "מחוץ לרווח" }]} agorot={-42_000n} sign="out" href="/transactions/3" realCents setAside />
+    </List>
+  );
+}
+
+export const SetAside: Story = {
+  args: { variant: "transaction", title: "החזר ציוד לדוגמה" },
+  render: () => <SetAsideRows />,
+};
+export const SetAsideDark: Story = {
+  args: { variant: "transaction", title: "החזר ציוד לדוגמה" },
+  globals: { theme: "dark" },
+  render: () => <SetAsideRows />,
+};
+
 export const MercuryLight: Story = {
   args: { variant: "transaction", title: "לקוח לדוגמה" },
   render: () => <MercuryRows />,

@@ -97,11 +97,13 @@ function renderSection(project = parsed(), options: { viewer?: boolean; entry?: 
   return wrap(options.viewer === true ? <ViewerPreview>{section}</ViewerPreview> : section, options.entry);
 }
 
-function renderPage() {
+function renderPage(entry = "/projects/p1") {
   return wrap(
     <Routes>
       <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+      <Route path="/projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
     </Routes>,
+    entry,
   );
 }
 
@@ -172,29 +174,33 @@ describe("the card", () => {
 });
 
 describe("the project page", () => {
-  it("shows the card under the categories from its one get_project read", async () => {
+  it("shows הון נוכחי on the overview row, and the card on its own screen (FLOW-340 C)", async () => {
     rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? payload() : [], error: null });
-    const { container } = renderPage();
+    const overview = renderPage();
+    const row = await screen.findByRole("link", { name: /^השקעה/ });
+    expect(row).toHaveTextContent("הון נוכחי ₪850,000");
+    expect(row).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment\?period=/));
+    overview.unmount();
+    renderPage("/projects/p1/investment");
     expect(await screen.findByText("₪1,250,000")).toBeInTheDocument();
-    const heads = [...container.querySelectorAll("h2")].map((node) => node.textContent);
-    expect(heads.indexOf("השקעה")).toBeGreaterThan(heads.indexOf("הוצאות לפי קטגוריה"));
-    expect(heads.indexOf("השקעה")).toBeLessThan(heads.indexOf("תנועות"));
     const reads = rpc.calls.filter((call) => call.name === "get_project");
     expect(reads.every((call) => basisOf(call) !== "cash")).toBe(true);
   });
 
-  it("shows no card on the overhead project, not even a skeleton", async () => {
+  it("shows no investment row on the overhead project", async () => {
     rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? payload({}, { is_overhead: true }) : [], error: null });
-    const { container } = renderPage();
-    await screen.findByText("הוצאות לפי קטגוריה");
-    expect(container.querySelector(".ui-invest")).toBeNull();
+    renderPage();
+    await screen.findByRole("link", { name: /^הכנסות/ });
+    expect(screen.queryByRole("link", { name: /^השקעה/ })).not.toBeInTheDocument();
   });
 
-  it("parses an older payload with no investment and shows no card", async () => {
+  it("parses an older payload with no investment, hides the row, and keeps the way in under עוד", async () => {
     rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? { ...base, is_overhead: undefined } : [], error: null });
-    const { container } = renderPage();
-    await screen.findByText("הוצאות לפי קטגוריה");
-    expect(container.querySelector(".ui-invest")).toBeNull();
+    renderPage();
+    await screen.findByRole("link", { name: /^הכנסות/ });
+    expect(screen.queryByRole("link", { name: /^השקעה/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    expect(screen.getByRole("link", { name: /נתוני השקעה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
   });
 
   it("shows the new figure after a save", async () => {
@@ -206,7 +212,7 @@ describe("the project page", () => {
       }
       return Promise.resolve({ data: name === "get_project" ? payload({ purchase_minor: purchase }) : [], error: null });
     };
-    renderPage();
+    renderPage("/projects/p1/investment");
     fireEvent.click(await screen.findByRole("button", { name: /מחיר קנייה/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));

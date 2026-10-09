@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { TabBar } from "./tab-bar";
+import { TabBar, TabBarPicture } from "./tab-bar";
 import { expectRtl, expectTarget } from "./test-support";
 
 function accentRule(): string {
@@ -156,5 +156,17 @@ describe("TabBar", () => {
     document.documentElement.dataset.kb = "open";
     expect(getComputedStyle(bar).display).toBe("none");
     delete document.documentElement.dataset.kb;
+  });
+
+  it("draws a picture of the bar with no router, links or names (FLOW-506)", () => {
+    render(<TabBarPicture section="review" reviewCount={120} />);
+    const bar = document.querySelector(".ui-tabbar-picture");
+    expect(bar).toHaveAttribute("aria-hidden", "true");
+    expect(bar?.querySelectorAll(".ui-tab-slot")).toHaveLength(5);
+    expect(bar?.querySelector("a, button")).toBeNull();
+    expect(bar?.querySelector('[aria-current="page"]')).toHaveTextContent("לאישור");
+    expect(bar?.querySelector(".ui-count-badge")).toHaveTextContent("99+");
+    // Toast placement and the action bar look for .ui-tabbar; a picture must not count as the bar.
+    expect(document.querySelector(".ui-tabbar")).toBeNull();
   });
 });

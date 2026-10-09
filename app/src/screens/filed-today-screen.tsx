@@ -94,6 +94,7 @@ export function FiledTodayScreen({
             sign={row.direction === "income" ? "in" : "out"}
             source={rowSource(row.source)}
             tag={row.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
+              setAside={row.kept_out === true}
             href={rowHref ? rowHref(row) : `/transactions/${row.id}${search}`}
             state={rowHref ? undefined : txnListState(rowIds, row.id, `${location.pathname}${location.search}`)}
           />
