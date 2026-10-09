@@ -47,7 +47,8 @@ const dashboard = {
 };
 
 const calls = vi.hoisted(() => ({ rpc: [] as string[], from: [] as string[] }));
-const gate = vi.hoisted(() => ({ ownerId: "user-1" }));
+const auth = vi.hoisted(() => ({ emit: null as ((event: string, next: unknown) => void) | null }));
+const gate = vi.hoisted(() => ({ ownerId: "user-1", setupRow: null as { state: unknown } | null }));
 
 function chain(data: unknown) {
   const result = { data, error: null };
@@ -66,6 +67,7 @@ function chain(data: unknown) {
 const supabase = {
   auth: {
     onAuthStateChange: (callback: (event: string, next: Session | null) => void) => {
+      auth.emit = callback as (event: string, next: unknown) => void;
       callback("INITIAL_SESSION", session);
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
@@ -85,6 +87,17 @@ const supabase = {
     calls.from.push(table);
     if (table === "companies") return chain({ owner_id: gate.ownerId });
     if (table === "review_queue") return chain([]);
+    if (table === "setup_states") {
+      // Answers after the other reads, so a resume that does not wait for it would already have moved.
+      const row = gate.setupRow;
+      const slow = {
+        select: () => slow,
+        eq: () => slow,
+        upsert: () => Promise.resolve({ data: null, error: null }),
+        maybeSingle: () => new Promise((resolve) => setTimeout(() => { resolve({ data: row, error: null }); }, 150)),
+      };
+      return slow;
+    }
     return chain(null);
   },
 };
@@ -129,6 +142,7 @@ describe("setup resume", () => {
     calls.rpc.length = 0;
     calls.from.length = 0;
     gate.ownerId = userId;
+    gate.setupRow = null;
     resetSetupResumeForTests();
     localStorage.clear();
     sessionStorage.clear();
@@ -222,6 +236,43 @@ describe("setup resume", () => {
     await expect(
       waitFor(() => { expect(third.router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
     ).rejects.toThrow();
+  });
+
+  it("a new phone reads the server flags before it decides, and does not restart the run", async () => {
+    gate.setupRow = {
+      state: { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z", run_resumed_at: "2026-10-05T00:00:00.000Z" },
+    };
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(calls.from).toContain("setup_states");
+    });
+    await waitFor(() => {
+      expect(readSetupStore(userId, "company-1").run_resumed_at).toBe("2026-10-05T00:00:00.000Z");
+    });
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
+  });
+
+  it("considers the one resume per user, so another sign-in in the same tab gets its own", async () => {
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    const other = "user-2";
+    writeSetupStore(other, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    gate.ownerId = other;
+    await act(async () => {
+      await router.navigate("/");
+    });
+    await act(async () => {
+      auth.emit?.("SIGNED_IN", { ...session, user: { ...session.user, id: other, email: "other@example.com" } });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    expect(readSetupStore(other, "company-1").run_resumed_at).not.toBeNull();
   });
 
   it("ignores viewers on Home", async () => {
