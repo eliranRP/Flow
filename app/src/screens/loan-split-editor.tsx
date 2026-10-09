@@ -119,8 +119,8 @@ export function LoanSplitEditor({
             ? "חסר סכום."
             : mode === "exact" && exactCheck.leftMinor !== 0n
               ? (exactCheck.leftMinor > 0n
-                ? `החלקים צריכים להסתכם ב־${money(line.lineMinor)}. חסרים ${money(exactCheck.leftMinor)}.`
-                : `עוברים את השורה ב־${money(-exactCheck.leftMinor)}.`)
+                ? `חסרים ${money(exactCheck.leftMinor)} כדי להגיע לסכום השורה.`
+                : `יש ${money(-exactCheck.leftMinor)} יותר מסכום השורה.`)
               : fees > 0n && feesCategoryId == null
                 ? "בחרו לאן נרשמות העמלות."
                 : principal > loan.balanceMinor
@@ -218,7 +218,7 @@ export function LoanSplitEditor({
               enterKeyHint="done"
               onValueChange={setFeesRaw}
             />
-            <div className="ui-loan-parts" aria-label="החלוקה">
+            <div className="ui-loan-parts ui-lsedit-parts" aria-label="החלוקה">
               {LOAN_PART_ORDER.map((part) => {
                 const amount = parts.find((item) => item.part === part)?.amountMinor;
                 if (part === "fees" && (amount ?? 0n) === 0n) return null;
@@ -264,7 +264,7 @@ export function LoanSplitEditor({
         {fees > 0n ? (
           <>
             <SelectField
-              label="עמלות נרשמות ב"
+              label="קטגוריה לעמלות"
               value={feesCategoryId ?? ""}
               disabled={saving || categories == null}
               options={[

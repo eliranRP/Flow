@@ -541,7 +541,7 @@ describe("LoanTransactionSplit", () => {
     fireEvent.change(within(editor).getByLabelText("עמלות"), { target: { value: "1.35" } });
     expect(within(editor).getByText("בחרו לאן נרשמות העמלות.")).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
-    const picker = within(editor).getByLabelText("עמלות נרשמות ב");
+    const picker = within(editor).getByLabelText("קטגוריה לעמלות");
     await waitFor(() => { expect(within(picker).getByRole("option", { name: "עמלות בנק" })).toBeInTheDocument(); });
     fireEvent.change(picker, { target: { value: "cat-bank" } });
     expect(within(editor).getByRole("switch", { name: "לשמור להלוואה הזו" })).toBeChecked();
@@ -564,7 +564,7 @@ describe("LoanTransactionSplit", () => {
     const principal = within(editor).getByLabelText("סכום, קרן");
     expect(principal).toHaveValue("500");
     fireEvent.change(principal, { target: { value: "400" } });
-    expect(within(editor).getByText("החלקים צריכים להסתכם ב־₪1,000. חסרים ₪100.")).toBeInTheDocument();
+    expect(within(editor).getByText("חסרים ₪100 כדי להגיע לסכום השורה.")).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
     fireEvent.change(within(editor).getByLabelText("סכום, ריבית"), { target: { value: "600" } });
     fireEvent.click(within(editor).getByRole("button", { name: "שמירה" }));

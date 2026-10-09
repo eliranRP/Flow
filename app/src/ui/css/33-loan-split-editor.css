@@ -67,6 +67,11 @@
   color: var(--color-text-secondary);
 }
 
+/* One figure leads: the parts in body weight, סה״כ keeps its semibold (design lead). */
+.ui-lsedit-parts .ui-loan-parts-row {
+  font-weight: var(--type-body-weight);
+}
+
 /* "חלוקה אחרת" under the match sheet's loans. */
 .ui-loan-other {
   margin-block-start: var(--space-2);

@@ -76,7 +76,7 @@ export const WithFees: Story = {
   play: async () => {
     const body = sheet();
     await fireEvent.change(await body.findByLabelText("עמלות"), { target: { value: "1.35" } });
-    await fireEvent.change(body.getByLabelText("עמלות נרשמות ב"), { target: { value: "cat-bank" } });
+    await fireEvent.change(body.getByLabelText("קטגוריה לעמלות"), { target: { value: "cat-bank" } });
     await expect(body.getByRole("switch", { name: "לשמור להלוואה הזו" })).toBeChecked();
   },
 };
@@ -123,7 +123,7 @@ export const ExactOver: Story = {
     const body = sheet();
     await fireEvent.click(await body.findByRole("radio", { name: "סכומים מדויקים" }));
     await fireEvent.change(body.getByLabelText("סכום, קרן"), { target: { value: "200" } });
-    await expect(body.getByText(/עוברים את השורה/)).toBeVisible();
+    await expect(body.getByText(/יותר מסכום השורה/)).toBeVisible();
   },
 };
 
