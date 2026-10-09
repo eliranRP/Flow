@@ -12,4 +12,5 @@ sweepControls([
   "/e2e/split",
   "/unpaid?preview=1",
   "/e2e/unpaid?preview=1",
+  "/e2e/missing-bills?preview=1",
 ]);
