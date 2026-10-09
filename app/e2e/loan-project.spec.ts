@@ -72,10 +72,10 @@ test("the new-loan picker swaps in place, and Escape goes back to the form", asy
   await expect(sheet.getByRole("heading", { name: "הלוואה" })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "פרויקט ללא פרויקט" })).toBeFocused();
   await sheet.getByRole("button", { name: "פרויקט ללא פרויקט" }).click();
-  await pickProject(page, "שיפוץ הרצל 12");
+  await pickProject(page, "שיפוץ דוגמה 12");
   await expect(sheet.getByRole("heading", { name: "הלוואה" })).toBeVisible();
   await expect(sheet.getByLabel("מלווה")).toHaveValue("הלוואת דוגמה");
-  await expect(sheet.getByRole("button", { name: "פרויקט שיפוץ הרצל 12" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "פרויקט שיפוץ דוגמה 12" })).toBeVisible();
 });
 
 test("a loan's project is set, changed and cleared, and shows on the project", async ({ page }) => {
