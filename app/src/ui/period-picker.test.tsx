@@ -3,7 +3,8 @@ import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { dayLabel, formatDisplay, inclusiveDays, israelToday, rangeLengthLabel } from "./date-math";
-import { PeriodPicker, RangeSheet } from "./period-picker";
+import { allTime, type PeriodChoice } from "../period";
+import { PeriodPicker, PresetPeriodSheet, RangeSheet } from "./period-picker";
 import { expectRtl, expectTarget } from "./test-support";
 
 function Harness() {
@@ -28,6 +29,24 @@ describe("PeriodPicker", () => {
     fireEvent.click(pill);
     expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
     expectTarget(screen.getByRole("radio", { name: "החודש" }));
+  });
+});
+
+describe("PresetPeriodSheet (FLOW-349)", () => {
+  function Shared({ start }: { start: PeriodChoice }) {
+    const [period, setPeriod] = useState(start);
+    return <PresetPeriodSheet period={period} onChange={setPeriod} open onOpenChange={() => undefined} />;
+  }
+
+  it("lists Home's choices in Home's order, then טווח מותאם, and marks the current one", () => {
+    render(<MemoryRouter><Shared start={allTime()} /></MemoryRouter>);
+    const radios = screen.getAllByRole("radio");
+    const names = radios.map((radio) => radio.querySelector(".ui-row-title")?.textContent ?? radio.textContent);
+    expect(names).toEqual(["חודש", "3 חודשים", "6 חודשים", "שנה", "הכול"]);
+    expect(screen.getByRole("radio", { name: /הכול/ })).toBeChecked();
+    expect(screen.getByRole("button", { name: /טווח מותאם/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /^חודש/ }));
+    expect(screen.getByRole("radio", { name: /^חודש/ })).toBeChecked();
   });
 });
 

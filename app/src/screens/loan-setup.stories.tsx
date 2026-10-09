@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fireEvent, waitFor, within } from "@storybook/test";
-import { LoanSetupForm } from "./loan-setup";
+import { Sheet } from "../ui/sheet";
+import { LoanSaveButton, LoanSetupForm } from "./loan-setup";
 
 const meta = {
   title: "Screens/Loan setup",
@@ -46,6 +47,18 @@ const balloon = {
 };
 
 export const Example: Story = { args: example, ...light390 };
+
+/** FLOW-347: in the sheet, שמירה is pinned in the foot, so a 375x667 phone saves without a scroll. */
+function InSheet() {
+  return (
+    <Sheet open onOpenChange={() => undefined} title="הלוואה" action={<LoanSaveButton formId="story-loan" />}>
+      <LoanSetupForm {...example} formId="story-loan" saveInFoot />
+    </Sheet>
+  );
+}
+const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
+export const ExampleInSheetSe: Story = { args: example, render: () => <InSheet />, ...se };
+export const ExampleInSheetDark320: Story = { args: example, render: () => <InSheet />, ...dark320 };
 export const ExampleDark: Story = { args: example, ...dark390 };
 export const Example320: Story = { args: example, ...light320 };
 export const ExampleDark320: Story = { args: example, ...dark320 };

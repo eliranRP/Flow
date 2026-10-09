@@ -327,7 +327,7 @@ Guide §11.1.
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7 and 8 (2026-10-09). The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8 and 9 (2026-10-09). The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -341,6 +341,8 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7 an
 - A sideways swipe repeats a control already on screen and never replaces it. One set of rules: touch only, 24px edge zones (the 24th px included) left to swipe-back, nothing inside a field, a sheet or a sideways list, decide after 10px and give vertical moves to the page, follow the finger and commit past 30% or a flick, stay put toward an end, swap on release with reduced motion, and no swipe while pinch-zoomed. In RTL a finger moving right goes forward (FLOW-314).
 - One search entry per screen. A filter that misses offers the wider search as a row with the typed text ("חיפוש בתנועות: …"), not an empty state (FLOW-342).
 - A sheet closed with Escape returns focus to its opener with the focus ring showing; closed by touch, focus returns with no ring (FLOW-310).
+- A card opened from a list walks it from a quiet row pinned at the bottom (thumb zone, on the safe area): הקודמת on the start side, הבאה on the end side as accent text links with 44px hit areas and no glyphs, and a muted "N מתוך M" between them. At a list end that word is hidden with `visibility` and keeps its box, so the counter stays centred, and focus waits on the counter. The row is filled with `bg` and shows a top hairline only while content is under it. A card opened from a link shows no row (FLOW-345).
+- Mid-drag, the neighbour's edge peeks in from the side it will enter, with its name when the prefetch holds it. Toward a list end the card gives a quarter of the move, at most 32px, and springs back. Reduced motion: no follow, no peek (FLOW-345).
 
 **Pinned bars, notes and toasts**
 
@@ -373,6 +375,11 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7 an
 - An amount is always shown in its own currency (FLOW-408). A hint says what really decides the number (FLOW-329). A project's split line shows the project's part, with the whole amount in the hint (FLOW-344).
 - An empty state says why it is empty; a missing number is never shown as zero (loans). A skeleton is the height of what replaces it (FLOW-115).
 - A counter whose digits change in place ("N מתוך M") uses tabular digits and reserves the total's digits (FLOW-309).
+- A control's tap area doesn't set the height of the row it sits in (FLOW-334).
+- A percentage shows only the digits it needs, never trailing zeros ("6%", "10.5%") (FLOW-347).
+- An icon that is the same on every row may drop below 360px to give the name its line (FLOW-347).
+- A figure's tax and date ride on its one meta line ("לפני מע״מ · מע״מ ₪1,530 · 21/09/2026"). Status words show only when they change what the number means ("מע״מ משוער") (FLOW-339).
+- At 320 a pill beside an amount wraps under the amount; the amount is never cut or wrapped (FLOW-327).
 
 **Sheets and settings**
 
@@ -389,6 +396,9 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7 an
 - A computed preview shows only for valid input and never keeps a stale result, dimmed or not (FLOW-344).
 - Every empty and error state action is the 44px tint button, never a filled primary, a retry included (FLOW-334).
 - A read-only view shows state, not progress through a task it can't do, and never a warning that asks for a write (FLOW-507).
+- A setup step with two ways in keeps one primary button and puts the other as a full-width secondary under it, never a second primary (FLOW-503).
+- A choice between "all" and "from a date" is a two-option `SegmentedControl` with the date field under it only while the date option is on; the field reserves its message line (FLOW-505).
+- A demo or storyboard draws the shared component, or its presentational picture, never a hand-built copy (FLOW-506).
 
 **Review card and Jev**
 

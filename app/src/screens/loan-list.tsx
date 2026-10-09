@@ -50,14 +50,20 @@ export function groupLoans(rows: readonly LoanListRow[]): { open: LoanListRow[];
  * ממתין לבדיקה. A closed loan says how it ended and when: "נפרעה · 30/11/2025".
  */
 export function loanListHint(row: LoanListRow): string | undefined {
+  const parts = loanListHintParts(row);
+  return parts.length === 0 ? undefined : parts.join(" · ");
+}
+
+/** The same hint as whole parts, so a narrow row drops a part with its "·" instead of wrapping (FLOW-347). */
+export function loanListHintParts(row: LoanListRow): string[] {
   if (isClosed(row) && row.status != null) {
     const label = LOAN_STATUS_LABEL[row.status];
-    return row.closedOn ? `${label} · ${formatDisplay(row.closedOn)}` : label;
+    return row.closedOn ? [label, formatDisplay(row.closedOn)] : [label];
   }
   const kind = row.kind != null && row.kind !== "amortizing" ? LOAN_KIND_LABEL[row.kind] : null;
-  const tail = row.flaggedParts > 0 ? "ממתין לבדיקה" : (row.projectName ?? null);
-  const parts = [kind, tail].filter((part): part is string => part != null && part !== "");
-  return parts.length === 0 ? undefined : parts.join(" · ");
+  // ממתין לבדיקה leads, so a narrow row drops the kind, never the words behind the warning tone.
+  if (row.flaggedParts > 0) return ["ממתין לבדיקה", ...(kind != null ? [kind] : [])];
+  return [kind, row.projectName ?? null].filter((part): part is string => part != null && part !== "");
 }
 
 /** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
@@ -87,12 +93,13 @@ function LoanRows({
     <List className={muted ? "ui-loan-list ui-loan-closed-list" : "ui-loan-list"}>
       {rows.map((row) => {
         const hint = loanListHint(row);
+        const parts = loanListHintParts(row);
         const common = {
           title: row.name,
           icon: <BankIcon />,
           tone: muted ? ("muted" as const) : row.flaggedParts > 0 ? ("warning" as const) : undefined,
           muted,
-          hint,
+          hintParts: parts.length > 0 ? parts : undefined,
           meta: <LoanBalance minor={row.balanceMinor} currency={row.currency} />,
         };
         return onOpen ? (

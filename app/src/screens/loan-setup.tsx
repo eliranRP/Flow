@@ -72,6 +72,8 @@ export function LoanSetupForm({
   keepDraft,
   saveButtonRef,
   project,
+  formId,
+  saveInFoot = false,
 }: {
   companyCurrency: LoanCurrency;
   initial?: LoanSetupInitial;
@@ -84,6 +86,10 @@ export function LoanSetupForm({
   saveButtonRef?: Ref<HTMLButtonElement>;
   /** FLOW-119. The project field. The sheet owns the choice and the picker view. */
   project?: LoanProjectField;
+  /** The form's id, so a שמירה outside it (the sheet's foot) submits it. */
+  formId?: string;
+  /** FLOW-347: the sheet pins שמירה in its foot (`LoanSaveButton`), so the form leaves it out. */
+  saveInFoot?: boolean;
 }) {
   const panelId = useId();
   const dateLabelId = useId();
@@ -184,7 +190,7 @@ export function LoanSetupForm({
   }
 
   return (
-    <form ref={formRef} className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
+    <form ref={formRef} id={formId} className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
       <TextField
         label="מלווה"
         value={name}
@@ -366,9 +372,17 @@ export function LoanSetupForm({
         <p className="ui-field-message" role="alert">{shownError("payment")}</p>
       ) : null}
       {/* FLOW-115: always tappable; a tap shows each field's error, and each says what to type. */}
-      <Button type="submit" buttonRef={saveButtonRef} busy={busy}>שמירה</Button>
+      {saveInFoot ? null : <Button type="submit" buttonRef={saveButtonRef} busy={busy}>שמירה</Button>}
     </form>
   );
+}
+
+/**
+ * FLOW-347: שמירה pinned in the loan sheet's foot, so a long form never needs a scroll to save.
+ * It submits the form by id, so Enter and the form's own checks work as before.
+ */
+export function LoanSaveButton({ formId, busy = false, buttonRef }: { formId: string; busy?: boolean; buttonRef?: Ref<HTMLButtonElement> }) {
+  return <Button type="submit" form={formId} full buttonRef={buttonRef} busy={busy}>שמירה</Button>;
 }
 
 /** Sample balances for stories and preview. Live omits it and reads `loans`. */
@@ -418,6 +432,7 @@ export function LoanSettingsSection({
   const projectFieldRef = useRef<HTMLButtonElement>(null);
   const sheetTitle = useRef<HTMLHeadingElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
+  const loanFormId = useId();
   const posted = useRef(false);
   const draftRef = useRef<LoanSetupInitial | null>(null);
   const keepDraft = useRef(false);
@@ -588,6 +603,9 @@ export function LoanSettingsSection({
         ) : undefined}
         onEscape={picking ? backToForm : undefined}
         onBeforeClose={() => !posted.current}
+        action={currency == null || picking ? undefined : (
+          <LoanSaveButton formId={loanFormId} busy={save.isPending} buttonRef={saveButton} />
+        )}
       >
         {currency == null ? (
           // FLOW-115: the form's shape while the currency read lands, so the sheet does not jump.
@@ -629,7 +647,8 @@ export function LoanSettingsSection({
                 companyCurrency={currency}
                 initial={draftRef.current ?? undefined}
                 busy={save.isPending}
-                saveButtonRef={saveButton}
+                formId={loanFormId}
+                saveInFoot
                 keepDraft={keepDraft}
                 onDraft={(next) => { draftRef.current = next; }}
                 project={{
