@@ -224,12 +224,10 @@ test("home, projects, review, and settings load from list reads", async ({ page 
     await expect(page.getByText("הכל מאושר", { exact: true })).toBeVisible();
   } else {
     const card = reviewRows[0];
+    // The card's own pick (review-queue.tsx): supplier, then customer (a SUMIT income invoice), then description.
+    const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
     const label = isRecord(card)
-      ? (typeof card.supplier_name === "string" && card.supplier_name.length > 0
-        ? card.supplier_name
-        : typeof card.description === "string"
-          ? card.description
-          : "")
+      ? (text(card.supplier_name) ?? text(card.customer_name) ?? text(card.description) ?? "")
       : "";
     expect(label.length).toBeGreaterThan(0);
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
