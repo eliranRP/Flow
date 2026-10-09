@@ -60,7 +60,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | done (#83) |
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | done (#95) |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | done (#86) |
-| 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first, planning claimed |
+| 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (#85) |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | done (#98) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
@@ -97,7 +97,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | done (#199) |
-| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | in progress |
+| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | done (#210) |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | server done |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | done (#165) |
@@ -200,7 +200,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) | — |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE | claimed | dev lane 2 |
 | <a id="flow-312"></a>[FLOW-312](tasks/FLOW-312.md) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133) | — |
-| <a id="flow-301"></a>[FLOW-301](tasks/FLOW-301.md) | Income and expense drill-down from Home | PLAN FIRST | plan-first, planning claimed | — |
+| <a id="flow-301"></a>[FLOW-301](tasks/FLOW-301.md) | Income and expense drill-down from Home | PLAN FIRST | done (#85) | — |
 | <a id="flow-302"></a>[FLOW-302](tasks/FLOW-302.md) | Month dividers in every transaction list | SMALL UI | done (#98) | — |
 | <a id="flow-313"></a>[FLOW-313](tasks/FLOW-313.md) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) | — |
 | <a id="flow-303"></a>[FLOW-303](tasks/FLOW-303.md) | Previous and next on the transaction card | SMALL UI | done (#100) | — |
@@ -216,7 +216,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-320"></a>[FLOW-320](tasks/FLOW-320.md) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) | — |
 | <a id="flow-321"></a>[FLOW-321](tasks/FLOW-321.md) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) | — |
 | <a id="flow-322"></a>[FLOW-322](tasks/FLOW-322.md) | Copy and dead-end fixes from the UX review | SMALL UI | ready | UI lane 2 |
-| <a id="flow-323"></a>[FLOW-323](tasks/FLOW-323.md) | Search and all transactions | PLAN FIRST | in progress | UI lane 1 |
+| <a id="flow-323"></a>[FLOW-323](tasks/FLOW-323.md) | Search and all transactions | PLAN FIRST | done (#210) | — |
 | <a id="flow-324"></a>[FLOW-324](tasks/FLOW-324.md) | Approve all suggestions in the review queue | PLAN FIRST | dropped | — |
 | <a id="flow-325"></a>[FLOW-325](tasks/FLOW-325.md) | Split a refund across projects and categories by percent or amount | MCP | server done | — |
 | <a id="flow-326"></a>[FLOW-326](tasks/FLOW-326.md) | Screen titles and row text on the start side | SMALL UI | done (#165) | — |

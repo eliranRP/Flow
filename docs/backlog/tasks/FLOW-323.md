@@ -1,6 +1,6 @@
 <a id="flow-323"></a>
 # FLOW-323 · Search and all transactions
-- **Type:** PLAN FIRST · **Status:** in progress (PR #343), UI lane 1 (server done in #196, owner chose "server now", 2026-10-08; owner approved mockup A, 2026-10-08) · **Depends on:** FLOW-302
+- **Type:** PLAN FIRST · **Status:** done (#210, with FLOW-402; server in #196; owner approved mockup A, 2026-10-08) · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
 - **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
 - **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
