@@ -481,7 +481,9 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getAllByText("₪1,000 מתפצל שווה בין 3 פרויקטים").length).toBeGreaterThan(0);
+    // FLOW-343: said once, in the pinned footer, not again under the picked choice.
+    expect(screen.getAllByText("₪1,000 מתפצל שווה בין 3 פרויקטים")).toHaveLength(1);
+    expect(screen.getByText("₪1,000 מתפצל שווה בין 3 פרויקטים")).toHaveClass("ui-split-summary");
     expect(screen.queryByText(/לכל אחד מ־3/)).not.toBeInTheDocument();
   });
 

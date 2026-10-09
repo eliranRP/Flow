@@ -348,6 +348,11 @@ export function LineSplitEditor({
   })();
   // FLOW-333 C5: only after the first ✕; the part's own line then drops the same sentence.
   const showHold = holdText != null && warned;
+  const holdOnPart = reason != null && LINE_SPLIT_PLACE[reason] !== "banner"
+    ? reason === "a reversal part needs a project"
+    : check.overMinor === 0n && !restNoCategory && formIssue === "a reversal part needs a project";
+  // Only while a part's red line says it; a server refusal with no such part keeps the sentence visible.
+  const holdShownOnPart = holdOnPart && parts.some((part) => check.parts[part.key] === "a reversal part needs a project");
   const holdIsOver = showHold && (reason == null || LINE_SPLIT_PLACE[reason] === "banner") && check.overMinor > 0n;
   const bannerReason = reason != null && LINE_SPLIT_PLACE[reason] === "banner" ? reason
     : line.amountNet === 0n ? "line amount is zero"
@@ -422,9 +427,9 @@ export function LineSplitEditor({
               const messageId = `lsplit-msg-${part.key}`;
               const message = issue === "same category and project twice"
                 ? lineSplitCopy(issue)
-                : needsProject && warned ? lineSplitCopy("a reversal part needs a project")
-                  : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor })
-                    : undefined;
+                // FLOW-343: a missing refund project is said once, on the part's own red line.
+                : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor })
+                  : undefined;
               return (
                 <div key={part.key} className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
                   <div className="ui-lsplit-text">
@@ -586,7 +591,12 @@ export function LineSplitEditor({
               </span>
             </span>
           </div>
-          {showHold ? <HoldLine onDiscard={discard}>{holdText}</HoldLine> : null}
+          {showHold ? (
+            <HoldLine onDiscard={discard}>
+              {/* The part's red "פרויקט · חובה בהחזר" already says it: here only for screen readers. */}
+              {holdShownOnPart ? <span className="sr-only">{holdText}</span> : holdText}
+            </HoldLine>
+          ) : null}
         </div>
       </form>
       <ChangeAssignment

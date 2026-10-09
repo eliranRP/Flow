@@ -144,9 +144,19 @@ export function LoanSetupForm({
     });
   }, [name, principal, rate, term, startDate, escrow, currency, payment, keepDraft]);
 
+  const formRef = useRef<HTMLFormElement>(null);
   function submit(event: SubmitEvent) {
     event.preventDefault();
     setChecked(true);
+    if (invalid && !busy) {
+      // FLOW-343: focus (and so scroll to) the first field that needs typing, once its error shows.
+      requestAnimationFrame(() => {
+        const first = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+        if (!first) return;
+        first.focus({ preventScroll: true });
+        if (typeof first.scrollIntoView === "function") first.scrollIntoView({ block: "center" });
+      });
+    }
     if (!canSave || busy) return;
     onSave?.(preview.insert);
   }
@@ -171,7 +181,7 @@ export function LoanSetupForm({
   }
 
   return (
-    <form className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
+    <form ref={formRef} className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
       <TextField
         label="מלווה"
         value={name}
