@@ -46,7 +46,7 @@ Every UI PR that changes how something looks or behaves adds **one design log en
 - **Token or component change** (a new token, a new variant, a changed default, a new shared component): the same PR updates the component's story and writes the new rule in the entry's `Rule:` line.
 - **New pattern** (a way of doing something the next screen should copy, such as where a sticky action bar sits): the rule goes in the entry's `Rule:` line.
 - **Lanes don't edit DESIGN-RULES.** The design lead copies each `Rule:` line into DESIGN-RULES (§2 tokens and components, §3 implementation, §5 do and don't) in the cycle's backlog PR. If a rule must land with the PR itself, DESIGN-RULES becomes a whole-file claim for that PR.
-- **Big or lasting choice** (it changes the look across screens, or the owner picked it on a card): a decision record too, as today.
+- **Big or lasting choice** (it changes the look across screens, or the owner picked a change to behaviour or data on a card): a decision record too, as today. An owner pick of copy or a visual option inside one screen needs no record: the log entry's `Source:` line and the task's status line in TASKS.md carry it.
 - **Pure fix to match an existing rule**: the log entry says `Rule: none`.
 
 After each deploy batch the design lead reads the new log entries since the last cycle, checks that DESIGN-RULES says the same thing, and fixes any gap in the cycle's backlog PR. That is how both lanes stay on one design guide.

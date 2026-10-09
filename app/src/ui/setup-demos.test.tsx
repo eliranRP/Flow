@@ -82,7 +82,11 @@ describe("demo timeline", () => {
     expect(css).toContain(".ui-setup-stack > .ui-setup-fade");
     expect(css).toMatch(/\.ui-setup-stack \{[^}]*position: relative/);
     expect(css).toMatch(/\.ui-setup-stack > \.ui-setup-leave,\s*\.ui-setup-stack > \.ui-setup-fade \{[^}]*position: absolute/);
-    expect(css).toContain("animation: none");
+    // The skeleton frame is still: the Skeleton's own still bar, not a rule reaching into it (FLOW-506).
+    expect(source).toMatch(/<Skeleton [^>]*\bstill\b/);
+    expect(css).not.toContain(".ui-skeleton-bar");
+    expect(css).not.toContain(".ui-app-icon");
+    expect(css).not.toMatch(/\.ui-setup-icon span\b/);
     expect(css).not.toMatch(/@keyframes/);
     expect(css).not.toMatch(/\btransition\s*:/);
     expect(source.includes("flow.app")).toBe(false);

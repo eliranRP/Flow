@@ -15,14 +15,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | FLOW-309 and FLOW-704 server follow-ups |
-| Dev lane 2 | FLOW-505 server: `import_from` cutoff in both sync functions, `set_import_from` widening backfill, `import_from` in `sumit_status`, PR #327 | The lane manager's next non-UI item |
+| Dev lane 2 | FLOW-502 server PR 1: push subscriptions and per-user prefs, the send function with the evening reminder and its cron; the void-line insert count in `upsert_connector_lines`, PR #335 | FLOW-502 PR 2 (new-line and Sunday summary sends) |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-505 B: "ייבוא מ" (מההתחלה or מתאריך) in both connect sheets (server merged #327), PR #332; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-334 the sheet head is the title's height (the ✕ lends 8px) | FLOW-503 Mercury in the setup flow, then FLOW-506 demo code items |
+| Backlog bug fixes | FLOW-506 setup demo CSS stops reaching into components | FLOW-503 Mercury in the setup flow (after #332), then the FLOW-506 shared demo card and tab bar |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -52,8 +52,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | done (#118) |
 | 13c | [FLOW-206](#flow-206) | Bulk setup without rate-limit stalls | MCP | done (#119) |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | done (#91) |
-| 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
-| 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
+| 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | done (#322) |
+| 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | done (#322) |
 | 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | done (#83) |
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | done (#95) |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | done (#86) |
@@ -118,7 +118,10 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
-| 71 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | in-progress (#325) |
+| 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
+| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | PLAN FIRST | plan-first (owner card) |
+| 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
+| 74 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -607,7 +610,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
 - [x] From the #300 review: `reopen_review` does not drop the `missing_project` row a category pick queued (as `undo_reassign` now does; no path reaches it today), and a category saved without resolving leaves the row labelled `missing_category` for MCP `list_review`'s reason filter. (Done in #308, migration 20261013030000: `reopen_review` deletes the queued row as `undo_reassign` does; a category set with `p_resolve false` in `set_transaction_category` or `resolve_review` relabels the open income row to `missing_project` when the line still needs a project, sync relabels rows left from before.)
-- [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
+- [ ] A connector invoice and its receipt both land in review. (Ready for a lane: owner picked option A, 2026-10-09: one card per payment. The receipt joins its invoice, the card shows "✓ שולם · קבלה dd/mm" under the amount, and one approval covers both; the receipt never gets a card of its own. Mockup in the project's mockups/plan-first/flow-309-pair/a.png.)
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
 - [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
@@ -893,9 +896,33 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** At a list end a sideways drag doesn't move the card at all (160px drag, transform 0), so the gesture reads as broken, and mid-list a drag shows a blank page behind the card. The visible prev/next controls are vertical ˄ ˅ in the top corner while the swipe is sideways, against §3.7 (a swipe follows the arrows it repeats). Proposal: a resisted drag at the ends and the next card peeking in; the owner picks ‹ › arrows or keeps ˄ ˅.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
+<a id="flow-347"></a>
+### FLOW-347 · Phone polish after the October 9 morning builds (cycle 8)
+- **Type:** SMALL UI · **Status:** ready · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- [ ] (med) Settings → Categories ⋯ with only one category on its side: the sheet still offers "העברה לקטגוריה אחרת", and the picker opens with the hide switch only, no targets and no reason; ✕ is the only exit. Hide the row when there is nowhere to move (§3.7, a sheet lists only actions that work today). Shots probe-categories-menu--se.png, probe-categories-move--se.png.
+- [ ] (med) שויכו היום by project: heads take three shapes. Only a group of 3+ shows its totals; a one-line group shows "תנועה אחת" with no total; "בלי פרויקט" puts its count on the name line. Every head: name, then the count in muted `meta`, then the totals (§3.7, FLOW-334 rule). Shot sb-routes--filed-today-by-project--full.png.
+- [ ] (low) Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
+- [ ] (low) Loan setup at 375x667: the page is 942px and שמירה sits at y≈890, so every save needs a scroll. Move it into an `ActionBar place="edge"` (§3.3, §3.7 FLOW-333). Shot sb-loan-setup--example--full.png.
+- [ ] (low) Breakdown category lines: cost rows have no minus, but a refund ("₪194.00") is green with no sign. Give it "+" (§5, no colour without a sign). Shot sb-breakdown--group-lines--se-light.png.
+- [ ] (low) Loan page rates keep trailing zeros ("6.00%", "10.50%"); show "6%", "10.5%" (§3.5). Shot sb-loan-page--interest-only-rates--full.png.
+- [ ] (low) Search dock chips at 375: "תקופה" shows as a 12px sliver and "לאישור" is off screen (at 320 "קטגוריה" is cut too), with no cue that the row scrolls. Put תקופה first and fade the row's end. Shots sb-search--results--se-light.png, sb-search--all-lines--w320-light.png.
+- **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
+
+<a id="flow-348"></a>
+### FLOW-348 · Jev switched on with no key
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** With Jev on and no key on the server, Connections shows the switch on and a muted "אין מפתח" (#329). Jev labels nothing, and the row doesn't say what to do or who can fix it. The key is a server setting, so the app can't take it. Proposal A (recommended): the switch locks off with one reason, "צריך מפתח Jev, פנו למנהל המערכת", as a switch decided by something else (§3.7). B: the switch stays on and the hint becomes a link that opens a short sheet saying what the key does and who sets it.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+
+<a id="flow-349"></a>
+### FLOW-349 · One set of period choices everywhere
+- **Type:** SMALL UI · **Status:** ready (design lead, 2026-10-09: a consistency fix, no owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** Every "תקופה" sheet uses Home's list, words and order through one shared sheet: חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם, with Home's hints. Search's sheet today says כל התקופה first and "2026" for the year; any other period picker (the breakdown's) follows too. Mockup: the project's mockups/plan-first/flow-349/a.png (today: current.png).
+- **Acceptance:** one shared component and story; Search, breakdown and Home use it; a design log entry.
+
 <a id="flow-346"></a>
 ### FLOW-346 · Split between projects works like the split by categories, in exact amounts
-- **Type:** SMALL UI · **Status:** in-progress (#325) · **Source:** owner's ask in the project thread (2026-10-09): "make it look similar ... clean simple and easy ... remove the features we have today and keep it the same way we did for category"
+- **Type:** SMALL UI · **Status:** done (#325) · **Source:** owner's ask in the project thread (2026-10-09): "make it look similar ... clean simple and easy ... remove the features we have today and keep it the same way we did for category"
 - **What:** The project split takes exact amounts or percents per project with a rest row, in the category editor's layout; the presets and the manual percent list go. `save_split` and MCP `assign_expense_split` take `amount_minor` shares (decision 0164).
 - **Acceptance:** the design lead signs off against DESIGN-RULES; the owner sees 390px screenshots before merge; a design log entry.
 
@@ -994,9 +1021,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-502"></a>
 ### FLOW-502 · Web push notifications
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** ready for a lane (owner picked option A, 2026-10-09: one quiet card on the review screen's empty state, "תזכורת בערב כשיש תנועות לאישור?" with כן / לא עכשיו, asked once; and Settings → התראות with three switches: תנועה חדשה "כשנכנסת תנועה מהבנק" (off by default, the owner's addition), תזכורת ערב, סיכום שבועי "ראשון בבוקר"; mockups in the project's mockups/plan-first/flow-502/) · **Depends on:** —
 - **What:** A pre-permission card after a user gesture (iOS needs the app on the Home Screen first), service-worker push, server send from an edge function, per-user opt-in. Start with the evening review nudge, then the Sunday summary. Add it to setup step 5 once it ships. About 2–3 PRs.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
+- [x] Server part 1 (#335): `push_subscriptions` and per-user `notification_prefs`; `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs`, `answer_push_prompt`; the `push-send` function (Web Push with VAPID, no library) and the `flow-push-evening` cron at 20:00 Israel time for owners with open review lines. Runbook [push.md](../runbooks/push.md).
+- [ ] Owner step: make the VAPID key pair and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` as function secrets and `VITE_VAPID_PUBLIC_KEY` in the app build.
+- [ ] App (UI lane 4): the service worker, the review-screen card asked once, Settings → התראות with three switches.
+- [ ] Server part 2: send תנועה חדשה after a sync and סיכום שבועי on Sunday morning.
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow
@@ -1024,7 +1055,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
 - [ ] Demos use hand-built copies of the review card and tab bar; extract a shared presentational piece (the demo TabBar also writes the shared add-trigger ref and needs a router).
 - [x] (Backlog bug fixes, 2026-10-09: `demoVat` takes the standard rate on the before-VAT amount, and the formatter prints it; the demos still read ₪1,530 and ₪421) Demo VAT amounts are hard-coded strings; derive them from the formatter.
-- [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; demo CSS reaches into component internals; `data-setup-visible` exists only for tests.
+- [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; `data-setup-visible` exists only for tests.
+- [x] (Backlog bug fixes, 2026-10-09: `Skeleton` takes `still` and `AppIcon` takes `size="tile"`; two dead rules (`.ui-review`, `.ui-setup-pressed`) are gone; nothing on screen changes) Demo CSS reaches into component internals.
 - [x] One list row puts the minus after the amount; it should come before the currency sign. (Not reproducible on 2026-10-09: every demo and setup story draws −₪ first; the SUMIT demo rows use the shared transaction row.)
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
@@ -1095,7 +1127,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-601"></a>
 ### FLOW-601 · Team members and several companies per user
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** ready for a lane (owner picked option A, 2026-10-09, with two changes: the צופה hint is "צפייה בלבד", not "לא משנה"; and an invitee sees all their pending invites, each with הצטרפות, דחייה (for good) or left pending to decide later. Settings gets one "צוות · N" row to a team page with "הזמנה"; the invite sheet takes an email and צופה/עורך (צופה by default) and the invitee's name comes from their Google account; a pending invite shows on the team list as "email · הוזמנה · role" with an undo toast; the company name on Home opens a switcher sheet with "+ חברה חדשה" and, under "הזמנות", pending invites; someone with no company sees a full-screen "הזמנות" list after sign-in with "אחר כך". Mockups in the project's mockups/plan-first/flow-601/: a-1-settings, a-1, a-2, a-3, invite-1 to invite-5) · **Depends on:** —
 - **What:** Add members to a company as Viewer (read-only, reuses viewer mode) or Editor; the owner can change a member's role. A user can belong to several companies, each fully separate, with a company switcher. Members get their own focused place; Settings stays minimal. MCP: invite, list, remove and change role.
 - **Acceptance:** plan (data model and RLS, invite flow, roles, switcher) and mockup approved by the owner.
 
@@ -1293,13 +1325,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-901"></a>
 ### FLOW-901 · Deny-list test coverage gaps
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#322) · **Depends on:** —
 - **What:** The fixture deny-list test misses connector rule files, subfolders and non-`.ts` top-level files; entries over 6 words never match; n-grams should cover 4+ words and strip punctuation. Extend it to scan `docs/`, stories and e2e too.
 - **Acceptance:** a planted invented name in each new path fails the test.
 
 <a id="flow-902"></a>
 ### FLOW-902 · Replace the deny-listed supplier word
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#322)
+- **Outcome:** the repo-wide check found no supplier word. Every hit was the owner's first name, which he keeps in the repo, so the check allows it. · **Depends on:** —
 - **What:** One deny-listed supplier word still appears in about 30 places (demo data, docs, e2e). Replace it with invented names and keep the matching test arguments in sync.
 - **Acceptance:** 0 deny-list hits; tests pass.
 

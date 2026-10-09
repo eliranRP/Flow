@@ -474,6 +474,19 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"notification_prefs": {
+                  Row: {
+                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_summary": boolean
+                  }
+                  Insert: {
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_summary"?: boolean
+                  }
+                  Update: {
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_summary"?: boolean
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"overhead": {
                   Row: {
                     "company_id": string,"created_at": string,"id": string,"transaction_id": string,"updated_at": string
@@ -548,6 +561,19 @@ isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     }
+                  ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"id": string,"p256dh": string,"updated_at": string,"user_agent": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"id"?: string,"p256dh": string,"updated_at"?: string,"user_agent"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"id"?: string,"p256dh"?: string,"updated_at"?: string,"user_agent"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"reassign_undo": {
                   Row: {
@@ -856,7 +882,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "approve_review_item":
+            "answer_push_prompt":
+{ Args: { "p_yes": boolean }; Returns: Json
+                           },
+"approve_review_item":
 { Args: { "p_category_id": string,"p_check_shown"?: boolean,"p_id": string,"p_project_id": string,"p_remember"?: boolean,"p_shown_category_id"?: string,"p_shown_project_id"?: string }; Returns: Json
                            },
 "approve_split_review":
@@ -935,6 +964,9 @@ isOneToOne: false
                            },
 "get_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json
+                           },
+"get_notification_prefs":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "get_profit_months":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_project_id"?: string,"p_to"?: string }; Returns: Json
@@ -1173,6 +1205,9 @@ isOneToOne: false
 "note_connector_rejection":
 { Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Json
                            },
+"note_push_results":
+{ Args: { "p_gone": (string)[],"p_reminded": (string)[] }; Returns: undefined
+                           },
 "note_sumit_rejection":
 { Args: { "p_code": string,"p_company": string }; Returns: Json
                            },
@@ -1184,6 +1219,17 @@ isOneToOne: false
                            },
 "project_waiting":
 { Args: { "p_project": string }; Returns: Json
+                           },
+"push_evening_targets":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "auth": string,"endpoint": string,"p256dh": string,"user_id": string,"waiting": number
+            }[]
+                           },
+"push_subscribe":
+{ Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent"?: string }; Returns: undefined
+                           },
+"push_unsubscribe":
+{ Args: { "p_endpoint": string }; Returns: undefined
                            },
 "read_jev_api_key":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -1265,6 +1311,9 @@ isOneToOne: false
                            },
 "set_invoice_paid":
 { Args: { "p_id": string,"p_paid": boolean }; Returns: Json
+                           },
+"set_notification_prefs":
+{ Args: { "p_evening_reminder"?: boolean,"p_new_transaction"?: boolean,"p_weekly_summary"?: boolean }; Returns: Json
                            },
 "set_overhead_project":
 { Args: { "p_project_id": string }; Returns: undefined
