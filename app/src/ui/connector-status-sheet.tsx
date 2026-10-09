@@ -52,7 +52,7 @@ export function ConnectorStatusSheet({
         {failed && held ? <p>הרענון נכשל</p> : null}
         {failed && !held && errorText ? <p>{errorText}</p> : null}
       </div>
-      <List>
+      <List className="ui-connector-sheet-list">
         <ListRow
           variant="button"
           title={busy ? "מרענן…" : "רענון עכשיו"}
@@ -71,7 +71,7 @@ export function ConnectorStatusSheet({
         />
       </List>
       {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
-      <List className="ui-sheet-danger-group">
+      <List className="ui-connector-sheet-list ui-sheet-danger-group">
         <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={disconnectRef} onClick={onDisconnect} />
       </List>
     </Sheet>

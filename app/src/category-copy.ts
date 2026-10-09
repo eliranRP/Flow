@@ -10,7 +10,7 @@ export function pnlFailureText(error: Error): string {
 
 /** merge_category's refusals. */
 /** FLOW-406: delete_category and merge_category refuse a parent that still has sub-categories. */
-export const PARENT_HAS_CHILDREN = "יש לקטגוריה תת-קטגוריות. העבירו אותן קודם.";
+export const PARENT_HAS_CHILDREN = "יש לקטגוריה תת־קטגוריות. העבירו אותן קודם.";
 
 export function mergeFailureText(error: Error): string {
   if (error.message.includes("category_has_children")) return PARENT_HAS_CHILDREN;
