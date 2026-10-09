@@ -295,6 +295,25 @@
   text-underline-offset: 2px;
 }
 
+/* FLOW-502: a link inside a sentence of hint text: the sentence's own size and line height, the
+   link colour, and a 44px tap area that grows into the note's own lines (§3.7) without moving them. */
+.ui-text-link-inline {
+  position: relative;
+  display: inline;
+  min-width: 0;
+  min-height: 0;
+  font-size: inherit;
+  font-weight: var(--type-label-weight);
+  line-height: inherit;
+}
+
+.ui-text-link-inline::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block: calc((var(--touch-min) - 100%) / -2);
+}
+
 .ui-text-link:is(:focus-visible, [data-focus-ring]:focus) {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;

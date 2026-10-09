@@ -13,13 +13,16 @@ type ToggleProps = {
   icon?: ReactNode;
   /** The checkbox. A recovered Jev retry moves focus here. */
   inputRef?: Ref<HTMLInputElement>;
+  /** The id of the line that says why the switch is disabled, when that is not the viewer note. */
+  disabledNoteId?: string;
   onChange: (checked: boolean) => void;
 };
 
 /** A 44px row. The switch is off, on, or disabled with not-allowed. */
-export function Toggle({ label, hint, checked, disabled = false, busy = false, icon, inputRef, onChange }: ToggleProps) {
+export function Toggle({ label, hint, checked, disabled = false, busy = false, icon, inputRef, disabledNoteId, onChange }: ToggleProps) {
   const hintId = useId();
-  const noteId = useViewerNoteId();
+  const viewerNoteId = useViewerNoteId();
+  const noteId = disabledNoteId ?? viewerNoteId;
   const describedIds = [hint != null ? hintId : null, disabled && noteId != null ? noteId : null].filter((id): id is string => id != null);
   const described = describedIds.length > 0 ? describedIds.join(" ") : undefined;
   const row = icon != null;

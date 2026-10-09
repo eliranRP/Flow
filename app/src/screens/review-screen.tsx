@@ -135,7 +135,7 @@ export function ReviewScreen() {
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
     // FLOW-309: הצגת הכול still lists the skipped cards when nothing waits.
     if (listing) return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} />;
-    return <ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} skippedLink />;
+    return <ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} skippedLink pushPrompt />;
   }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;

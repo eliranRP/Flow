@@ -169,3 +169,52 @@ describe("setup SUMIT connect", () => {
     restore();
   });
 });
+
+describe("setup Mercury connect (FLOW-503)", () => {
+  it("connects Mercury from step 1, saves a touched ייבוא מ, and moves on", async () => {
+    const restore = reducedMotion();
+    invoke.mockReset();
+    invoke.mockResolvedValue({ data: {}, error: null });
+    rpc.mockClear();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={vi.fn()} onConnected={onConnected} />);
+    expect(screen.getByRole("button", { name: "חיבור SUMIT" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חיבור Mercury" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור Mercury" });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "mercury-key" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(onConnected).toHaveBeenCalledOnce(); });
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke.mock.calls[0]?.[0]).toBe("mercury-connect");
+    expect(invoke.mock.calls[0]?.[1]).toMatchObject({ body: { apiKey: "mercury-key" } });
+    const saved = rpc.mock.calls.find(([name]) => name === "set_import_from")?.[1] as { p_provider: string } | undefined;
+    expect(saved?.p_provider).toBe("mercury");
+    restore();
+  });
+
+  it("keeps the step open on a failed Mercury connect and clears the key when the sheet closes", async () => {
+    const restore = reducedMotion();
+    invoke.mockReset();
+    invoke.mockResolvedValue({ data: null, error: new Error("connect_failed") });
+    const onSkip = vi.fn();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={onSkip} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור Mercury" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור Mercury" });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "mercury-key" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    expect(await screen.findByText("לא הצלחנו להתחבר. נסו שוב.")).toBeInTheDocument();
+    expect(onConnected).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור Mercury" }));
+    const again = await screen.findByRole("dialog", { name: "חיבור Mercury" });
+    expect(within(again).getByLabelText("מפתח API")).toHaveValue("");
+    fireEvent.click(within(again).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    expect(onSkip).toHaveBeenCalledOnce();
+    restore();
+  });
+});

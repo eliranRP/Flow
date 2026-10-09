@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ChangeAssignment } from "./change-sheet";
+import { placeToast } from "./toast";
 
 const fewCategories = Array.from({ length: 8 }, (_, index) => ({
   id: `c${String(index + 1)}`,
@@ -241,5 +242,95 @@ describe("ChangeAssignment on a matched loan payment (FLOW-114)", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("button", { name: /^פרויקט:/ })).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: /^קטגוריה:/ })).not.toBeInTheDocument();
+  });
+});
+
+/** FLOW-309: the category mark follows the line, and a real open starts with no search text. */
+function SuggestHarness({ categorySuggested }: { categorySuggested: boolean }) {
+  return (
+    <MemoryRouter>
+      <ChangeAssignment
+        host="overlay"
+        open
+        onOpenChange={() => undefined}
+        supplier="ספק דוגמה"
+        amount="₪100"
+        direction="expense"
+        projects={[{ id: "p1", name: "פרויקט א" }]}
+        categories={fewCategories}
+        projectId="p1"
+        categoryId="c1"
+        suggestionCategoryId="c1"
+        categorySuggested={categorySuggested}
+        onProjectId={() => undefined}
+        onCategoryId={() => undefined}
+        onCommitPick={() => Promise.resolve(undefined)}
+        onSplit={() => undefined}
+        onCreateProject={(name) => Promise.resolve({ id: "new", name })}
+      />
+    </MemoryRouter>
+  );
+}
+
+describe("ChangeAssignment follow-ups (FLOW-309)", () => {
+  it("drops the category mark once the line owns its category", async () => {
+    const view = render(<SuggestHarness categorySuggested />);
+    const row = await screen.findByRole("button", { name: "קטגוריה: קטגוריה 1, שינוי" });
+    expect(within(row).getByText("הצעה")).toBeInTheDocument();
+    view.rerender(<SuggestHarness categorySuggested={false} />);
+    await waitFor(() => {
+      expect(within(screen.getByRole("button", { name: "קטגוריה: קטגוריה 1, שינוי" })).queryByText("הצעה")).not.toBeInTheDocument();
+    });
+  });
+
+  it("opens the project picker with an empty search, also after text was typed", async () => {
+    render(<DirectHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "שורת פרויקט" }));
+    const search = await screen.findByLabelText("חיפוש פרויקט");
+    expect(search).toHaveValue("");
+    fireEvent.change(search, { target: { value: "גבעת" } });
+    expect(screen.queryByRole("radio", { name: "בית הכרם" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "שורת פרויקט" }));
+    expect(await screen.findByLabelText("חיפוש פרויקט")).toHaveValue("");
+    expect(screen.getByRole("radio", { name: "בית הכרם" })).toBeInTheDocument();
+  });
+
+  it("pads the project picker under a toast that would cover ✕", async () => {
+    document.documentElement.style.setProperty("--safe-top", "20px");
+    render(<PickerHarness categories={fewCategories} pick="project" />);
+    const dialog = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    const sheet = dialog.closest("[data-vaul-drawer]");
+    if (!(sheet instanceof HTMLElement)) throw new Error("the picker is not a drawer");
+    expect(sheet.classList.contains("ui-sheet-tall")).toBe(true);
+    const surface = sheet.querySelector(".ui-sheet-surface");
+    if (!(surface instanceof HTMLElement)) throw new Error("the picker has no surface");
+    const close = within(dialog).getByRole("button", { name: "סגירה" });
+    const box = (bottom: number, height: number): DOMRect => DOMRect.fromRect({ x: 0, y: bottom - height, width: 120, height });
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.appendChild(host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
+    // Every other control measures zero and is skipped; only ✕ sits under the toast.
+    sheet.getBoundingClientRect = () => box(456, 400);
+    close.getBoundingClientRect = () => {
+      const applied = Number.parseFloat(surface.dataset.toastPad ?? "") || 0;
+      return box(129 + applied, 44);
+    };
+    toast.getBoundingClientRect = () => box(69, 69);
+    try {
+      placeToast(host);
+      expect(host.style.top).toBe("28px");
+      expect(surface.dataset.toastPad).toBe("20");
+      expect(surface.style.getPropertyValue("--toast-pad")).toBe("20px");
+    } finally {
+      host.remove();
+      document.documentElement.style.removeProperty("--safe-top");
+    }
   });
 });
