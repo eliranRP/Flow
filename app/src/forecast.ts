@@ -8,7 +8,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
-import { SEARCH_MAX_LENGTH } from "./search";
+import { searchHref } from "./search";
 import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -39,10 +39,7 @@ export type MissingBillView = {
 
 /** Search with the supplier's name typed and the expense side set, keeping the preview flag. */
 export function missingBillHref(name: string, search: string): string {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  params.set("q", name.slice(0, SEARCH_MAX_LENGTH));
-  params.set("dir", "expense");
-  return `/search?${params.toString()}`;
+  return searchHref(name, search, { dir: "expense" });
 }
 
 export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date()): MissingBillView[] {

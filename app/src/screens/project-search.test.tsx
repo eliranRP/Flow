@@ -92,6 +92,20 @@ describe("project search (FLOW-410)", () => {
     expect(screen.queryByRole("link", { name: rowName("בית אלון") })).not.toBeInTheDocument();
   });
 
+  it("offers the transaction search when no project matches (FLOW-342)", () => {
+    renderProjects();
+    search("חשמל");
+    const row = screen.getByRole("link", { name: /^חיפוש בתנועות: חשמל/ });
+    expect(row).toHaveAttribute("href", `/search?q=${encodeURIComponent("חשמל")}`);
+    expect(screen.queryByRole("link", { name: rowName("בית ארז") })).not.toBeInTheDocument();
+  });
+
+  it("has no header magnifier; the filter is the page's one search (FLOW-342)", () => {
+    renderProjects();
+    expect(screen.queryByRole("link", { name: "חיפוש תנועות" })).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "חיפוש פרויקט" })).toBeInTheDocument();
+  });
+
   it("names a single finished project in the singular", () => {
     renderProjects({ projects: [project("a", "בית ארז"), project("f", "מחסן תמר", "finished")] } as unknown as Dashboard);
     expect(screen.getByRole("button", { name: /שהסתיים/ })).toHaveTextContent("עוד פרויקט אחד שהסתיים");
