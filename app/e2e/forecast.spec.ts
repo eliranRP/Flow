@@ -26,7 +26,7 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
 });
 
 test("Project: a צפוי month opens the sheet of its parties, and the sheet closes", async ({ page }) => {
-  await page.goto("/e2e/project-detail?preview=1");
+  await page.goto("/e2e/project-detail?preview=1&section=expenses");
   const section = page.getByRole("region", { name: "צפוי" });
   await expect(section).toBeVisible();
   await expect(section.getByRole("button")).toHaveCount(3);
@@ -42,7 +42,7 @@ test("Project: a צפוי month opens the sheet of its parties, and the sheet cl
 });
 
 test("Project: with no history the section says so in one line", async ({ page }) => {
-  await page.goto("/e2e/project-detail?preview=1&expected=none");
+  await page.goto("/e2e/project-detail?preview=1&expected=none&section=expenses");
   const section = page.getByRole("region", { name: "צפוי" });
   await expect(section).toContainText("אין עדיין צפי.");
   await expect(section.getByRole("button")).toHaveCount(0);
