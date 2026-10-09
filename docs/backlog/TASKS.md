@@ -1034,7 +1034,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
   - [x] 1a (#354): `parent_id`, the rules, the `group_name` backfill and mirror, `set_category_parent`, refusals on a parent, `list_categories` fields, MCP `set_category_parent` and `parent_id` on the create tools.
   - [x] 1b (#363): roll-up reads: `get_project` `category_rollups*` and `parent_id`, `project_category_months` `parents[]`, `get_breakdown` by parent (MCP `level`), search parent match with `category_exact`.
-- [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
+- [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools. In progress on `claude/project-thread-pz6l1n`.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.
 
