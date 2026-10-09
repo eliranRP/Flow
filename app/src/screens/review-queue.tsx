@@ -14,7 +14,7 @@ import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-mete
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { useJevQueue, useReviewFlags } from "./jev-review-card";
-import { jevFilledOnCard, jevShown, withJev } from "./jev-review";
+import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-review";
 import { useJevUndo } from "./jev-undo";
 import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
@@ -72,10 +72,13 @@ export function ReviewQueue({
   onShared,
   listPlace,
   setupHandoff,
+  sampleJev,
 }: {
   rows: ReviewRow[];
   search: string;
   sample?: boolean;
+  /** FLOW-333 C13: Jev's answers for a sample queue (a story or a preview); the live read never runs there. */
+  sampleJev?: JevQueueData;
   setupHandoff?: { fromCard: boolean };
   /** Injected by the dev and reviewer previews. The hosted queue does not set it. */
   previewWrite?: ReviewPreviewWrite;
@@ -151,7 +154,10 @@ export function ReviewQueue({
   const metaPage = useLineMetaPageQuery(metaIds, metaLive);
   const lineMeta = useLineMetaQuery(shownId, metaLive && metaPage.isError);
   const jevUndo = useJevUndo();
-  const jev = jevUndo.stateFor(shownId, jevQueue.stateFor(shownId));
+  const seededJev = sample && sampleJev != null && shownId != null
+    ? { connectorOn: sampleJev.connectorOn, prefill: sampleJev.byId[shownId] ?? null }
+    : null;
+  const jev = jevUndo.stateFor(shownId, seededJev ?? jevQueue.stateFor(shownId));
   const flagsFor = useReviewFlags(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,

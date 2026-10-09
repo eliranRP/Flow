@@ -1,0 +1,7 @@
+# FLOW-333 C13: the Jev card fits above the action bar at 375x667
+
+- PR: #278
+- Kind: component
+- Changed: `css/06-review-card.css`, the review card's short-phone block (`max-height: 720px`). The document tile is square (`--review-tile-h` takes `--review-tile-w`, 64 to 52px), as tall as the supplier and source lines; the rows' hairline sits closer (`.ui-review-ai` margin 8 to 4px, padding 12 to 8px); the card starts 8px under the slim banner instead of 12px. 24px back in all. At 375x667 a Jev card with the filled line ("✦ מולא ע״י Jev" + בטל), a quiet flag and the slim banner on now ends 16px above the pinned bar (it overlapped by 8px); the reason line in place of the filled line is the same height. Rows keep 44px; 320, 390 and 480 at 844 tall are unchanged. `ReviewQueue` takes `sampleJev`, Jev's answers for a sample queue. Stories: Screens/Routes Review Jev Fit 375 (+ dark), 320 (+ dark), 390 (+ dark), Review Jev Reason 375, Review Jev Fit Loud 375. FLOW-322's detail hint: the "חשבונית ותשלום" row and its hint went in #121; a test now checks that the detail names no invoice number or bank line.
+- Rule: On a short phone (up to 720px tall) the review card's document tile is square and the rows sit 8px under their hairline, so a card with one Jev line and one quiet flag fits above the pinned bar under the slim banner.
+- Source: FLOW-333 C13 (design review of #231); FLOW-322 (UX review, 2026-10-07).
