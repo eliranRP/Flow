@@ -72,3 +72,6 @@ export type { EquityNote, InvestmentField, InvestmentFigures, InvestmentRow, Min
 export { DisclosureGroup } from "./disclosure-group";
 export { LoanPartsSheet, LOAN_PART_LABEL, LOAN_PART_ORDER, loanPartsCount, loanPaymentTitle } from "./loan-parts-sheet";
 export type { LoanPartField, LoanPartKey } from "./loan-parts-sheet";
+export { TxnStepRow } from "./txn-step-row";
+export type { TxnStepRowProps } from "./txn-step-row";
+export { ReviewCount, reviewCountDigits } from "./review-count";

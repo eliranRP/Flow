@@ -1,16 +1,73 @@
-/* FLOW-303: prev and next on the transaction card, before ⋯ in the top bar. */
-.ui-txn-end,
-.ui-txn-nav {
-  display: flex;
-  flex-shrink: 0;
+/*
+  FLOW-345 option D: הקודמת · "3 מתוך 12" · הבאה, a quiet row pinned at the bottom of the screen in the
+  thumb zone. It is filled with the page colour; a hairline shows on top only while card content is
+  scrolled under it, so a card that ends above it stays flat. The words are accent text links with a
+  44px hit area. A word at a list end is hidden (.ui-txn-step-off) and keeps its box, so the counter stays
+  in the middle.
+*/
+.ui-txn-step {
+  position: fixed;
+  z-index: 15;
+  inset-inline: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-1) calc(var(--space-side) - var(--space-2)) calc(var(--safe-bottom) + var(--space-2));
+  /* Transparent until content is under the row, so the hairline never moves the row. */
+  border-top: 1px solid transparent;
+  background: var(--color-bg);
 }
 
-/* An icon button that stays focusable at a list end. The cursor comes from the shared disabled rule. */
-.ui-icon-btn[aria-disabled="true"],
-.ui-icon-btn[aria-disabled="true"]:active {
-  background: transparent;
-  color: var(--color-disabled-text);
+.ui-txn-step[data-under] {
+  border-top-color: var(--color-line);
+}
+
+/* Marks the end of the stepped content: 1px tall, pulled back so it adds no space. */
+.ui-txn-step-end {
+  block-size: 1px;
+  margin-block-start: -1px;
+  pointer-events: none;
+}
+
+.ui-txn-step-btn {
+  padding-inline: var(--space-2);
+}
+
+.ui-txn-step-btn.ui-txn-step-off {
+  visibility: hidden;
+}
+
+.ui-txn-step-btn:first-child {
+  justify-self: start;
+}
+
+.ui-txn-step-btn:last-child {
+  justify-self: end;
+}
+
+.ui-txn-step-count {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+.ui-txn-step-count:focus {
+  outline: none;
+}
+
+/* The card's last row scrolls clear of the step row (its hairline included). With FullScreen's
+   safe-bottom padding this adds up to the row's height, so the row goes flat at the end of the scroll. */
+.ui-txn-stepped {
+  padding-block-end: calc(var(--touch-min) + var(--space-1) + var(--space-2) + 1px);
 }
 
 /* FLOW-117: the other kind's categories under the category picker. */
@@ -129,7 +186,50 @@
   A swiped-to card enters from the side the finger moved away from.
 */
 .ui-cswipe {
+  position: relative;
   overflow-x: clip;
+}
+
+/*
+  FLOW-345: the neighbour waits just outside the frame on the side it enters from (next from the
+  left, previous from the right), a card-coloured panel with its name on the edge nearest the card.
+  A drag moves it with the card, so its edge peeks in instead of a blank page.
+*/
+.ui-cswipe-peek {
+  position: absolute;
+  inset-block: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding-inline: var(--space-side);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  pointer-events: none;
+  /* Hidden at rest; after a release it stays shown until it has slid back out. */
+  visibility: hidden;
+  transition: transform var(--dur-fast) var(--ease-standard), visibility 0s linear var(--dur-fast);
+}
+
+.ui-cswipe-peek.ui-cswipe-drag {
+  visibility: visible;
+  transition: none;
+}
+
+/* Physical sides on purpose: the swipe moves the card physically, whatever the text direction. */
+.ui-cswipe-peek[data-side="next"] {
+  right: calc(100% + var(--space-4));
+}
+
+.ui-cswipe-peek[data-side="prev"] {
+  left: calc(100% + var(--space-4));
+  text-align: end;
+}
+
+.ui-cswipe-peek-name {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ui-cswipe-card {
@@ -164,6 +264,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ui-cswipe-card,
+  .ui-cswipe-peek,
   .ui-cswipe-card[data-enter] {
     transition: none;
     animation: none;

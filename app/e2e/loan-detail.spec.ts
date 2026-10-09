@@ -92,7 +92,7 @@ test("a rate change saves, and undo puts the old rate back", async ({ page }) =>
   await sheet.getByLabel("ריבית שנתית").fill("12");
   await sheet.getByRole("button", { name: "שמירה" }).click();
   await expect(toast(page, "הריבית עודכנה")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^שינוי ריבית מ־01\/09\/2026, 12.00%$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^שינוי ריבית מ־01\/09\/2026, 12%$/ })).toBeVisible();
   await toast(page, "הריבית עודכנה").getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("button", { name: /^שינוי ריבית מ־01\/09\/2026, 11.25%$/ })).toBeVisible();
 });

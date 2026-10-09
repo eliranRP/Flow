@@ -1,11 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { resetScrollToWarning } from "./ui/back";
-import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnNavButtons, txnListState, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "./txn-nav";
+import { transactionQueryOptions } from "./use-books";
+import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnStepNav, txnListState, txnParty, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "./txn-nav";
 
-function Card() {
+const rpc = vi.fn(() => Promise.resolve({ data: null, error: { message: "no read in this test" } }));
+
+vi.mock("./lib/supabase", () => ({
+  getSupabase: () => ({ rpc }),
+}));
+
+function Card({ fieldFirst = false }: { fieldFirst?: boolean }) {
   const { transactionId = "" } = useParams();
   const nav = useTxnNav(transactionId);
   useTxnNavKeys(nav);
@@ -16,8 +24,8 @@ function Card() {
     <div>
       <h1>{transactionId}</h1>
       <p data-testid="path">{`${location.pathname}${location.search}`}</p>
-      {nav ? <TxnNavButtons nav={nav} /> : null}
-      <input aria-label="שדה" />
+      {nav ? <TxnStepNav nav={nav} /> : null}
+      <input aria-label="שדה" autoFocus={fieldFirst} />
       <div contentEditable="true" data-testid="note" />
       <button type="button" onClick={() => { void navigate(-1); }}>back</button>
       {nav ? <button type="button" onClick={() => { nav.move("prev", "swipe"); }}>swipe left</button> : null}
@@ -26,7 +34,13 @@ function Card() {
   );
 }
 
-function renderCard(id: string, state?: unknown, search = "") {
+/** As App.tsx does: a new card per id, so a move remounts the card and its step row. */
+function KeyedCard({ fieldFirst }: { fieldFirst?: boolean }) {
+  const { transactionId = "" } = useParams();
+  return <Card key={transactionId} fieldFirst={fieldFirst} />;
+}
+
+function renderCard(id: string, state?: unknown, search = "", fieldFirst = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -34,7 +48,7 @@ function renderCard(id: string, state?: unknown, search = "") {
         <TxnAnnouncer>
           <Routes>
             <Route path="/list" element={<p data-testid="path">/list</p>} />
-            <Route path="/transactions/:transactionId" element={<Card />} />
+            <Route path="/transactions/:transactionId" element={<KeyedCard fieldFirst={fieldFirst} />} />
           </Routes>
         </TxnAnnouncer>
       </MemoryRouter>
@@ -89,24 +103,79 @@ describe("prev and next on the card", () => {
   });
 
   it("moves down and up the list and keeps focus on the pressed button", () => {
-    renderCard("b", list);
+    renderCard("a", { txnList: { ids: ["a", "b", "c", "d"], from: "/x" } });
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/c");
     expect(screen.getByRole("button", { name: "התנועה הבאה" })).toHaveFocus();
-    expect(screen.getByRole("status")).toHaveTextContent("תנועה 3 מתוך 3. ספק c");
+    expect(screen.getByRole("status")).toHaveTextContent("תנועה 3 מתוך 4. ספק c");
     fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
     fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/a");
   });
 
-  it("marks the ends unavailable and stays put on a tap there", () => {
+  it("hides the word at a list end but keeps its box, so the counter stays centred (FLOW-345)", () => {
     renderCard("c", list);
-    const next = screen.getByRole("button", { name: "התנועה הבאה" });
-    expect(next).toHaveAttribute("aria-disabled", "true");
-    expect(next).toHaveAccessibleDescription("זו התנועה האחרונה ברשימה");
-    fireEvent.click(next);
+    expect(screen.queryByRole("button", { name: "התנועה הבאה" })).not.toBeInTheDocument();
+    const next = screen.getByText("הבאה").closest("button");
+    expect(next).toHaveClass("ui-txn-step-off");
+    expect(next).not.toHaveAttribute("style");
+    expect(next).not.toBeDisabled();
+    expect(next).not.toHaveAttribute("aria-disabled");
+    const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
+    expect(row.children).toHaveLength(3);
+    expect(row.children[0]).not.toHaveClass("ui-txn-step-off");
+    expect(row).toHaveTextContent(/^הקודמת.*3 מתוך 3.*הבאה$/);
+    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).toBeVisible();
+  });
+
+  it("shows the words, not arrows, with the place in the list between them (FLOW-345)", () => {
+    renderCard("b", list);
+    const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
+    expect(row.querySelector("svg")).toBeNull();
+    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).toHaveTextContent(/^הקודמת$/);
+    expect(screen.getByRole("button", { name: "התנועה הבאה" })).toHaveTextContent(/^הבאה$/);
+    expect(within(row).getByText("2 מתוך 3")).toHaveClass("sr-only");
+    // Start of the row (the right in RTL) is הקודמת, the end is הבאה.
+    expect(row.firstElementChild).toHaveTextContent("הקודמת");
+    expect(row.lastElementChild).toHaveTextContent("הבאה");
+  });
+
+  it("at the end it reached, focus waits on the counter instead of a hidden word (FLOW-345)", () => {
+    renderCard("b", list);
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/c");
-    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).not.toHaveAttribute("aria-disabled");
+    expect(document.querySelector(".ui-txn-step-count")).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
+    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
+    expect(screen.getByTestId("path")).toHaveTextContent("/transactions/a");
+    expect(document.querySelector(".ui-txn-step-count")).toHaveFocus();
+  });
+
+  it("leaves focus where it is when it has gone somewhere else, like a field (FLOW-345)", () => {
+    renderCard("b", { ...list, txnVia: "next" }, "", true);
+    expect(screen.getByRole("textbox", { name: "שדה" })).toHaveFocus();
+  });
+
+  it("moves focus to the pressed word from the page itself (FLOW-345)", () => {
+    renderCard("b", { ...list, txnVia: "next" });
+    expect(screen.getByRole("button", { name: "התנועה הבאה" })).toHaveFocus();
+  });
+
+  it("gives the counter a plain name, without the reserved digits (FLOW-345)", () => {
+    const ids = Array.from({ length: 24 }, (_, i) => `t${String(i + 1)}`);
+    renderCard("t12", { txnList: { ids, from: "/x" } });
+    const count = document.querySelector(".ui-txn-step-count");
+    if (!(count instanceof HTMLElement)) throw new Error("no counter");
+    // What a screen reader hears when focus waits on it: the plain place, once.
+    const heard = [...count.querySelectorAll("*")]
+      .filter((node) => node.closest("[aria-hidden='true']") == null && node.children.length === 0)
+      .map((node) => node.textContent)
+      .join("");
+    expect(heard).toBe("12 מתוך 24");
+    // The drawn digits are tabular boxes that reserve the total's width; they stay out of the name.
+    expect(count.querySelector("[aria-hidden='true']")).toHaveTextContent("12 מתוך 24");
   });
 
   it("moves with the arrow keys the right-to-left way", () => {
@@ -218,5 +287,51 @@ describe("a held arrow key", () => {
     fireEvent.keyDown(window, { key: "ArrowLeft" });
     fireEvent.keyDown(window, { key: "ArrowLeft", repeat: true });
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/b");
+  });
+});
+
+describe("the neighbour's name for the swipe peek (FLOW-345)", () => {
+  function wrapper(client: QueryClient) {
+    return function Wrap({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={client}>
+          <MemoryRouter>{children}</MemoryRouter>
+        </QueryClientProvider>
+      );
+    };
+  }
+
+  it("reads the cache only: no rpc for a neighbour, none for a list end, and no entry for an end", async () => {
+    rpc.mockClear();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result, rerender } = renderHook<string | null, { id: string | null }>(({ id }: { id: string | null }) => useNeighbourParty(id), {
+      wrapper: wrapper(client),
+      initialProps: { id: "n1" },
+    });
+    expect(result.current).toBeNull();
+    rerender({ id: null });
+    rerender({ id: "n2" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rpc).not.toHaveBeenCalled();
+    expect(client.getQueryCache().getAll()).toHaveLength(0);
+    // The spy does see a real read, so the silence above means something.
+    await client.query({ ...transactionQueryOptions("off", "n2"), retry: false }).catch(() => undefined);
+    expect(rpc).toHaveBeenCalledWith("get_transaction", { p_id: "n2" });
+  });
+
+  it("shows the name once the prefetch lands", () => {
+    const client = new QueryClient();
+    const { result } = renderHook(() => useNeighbourParty("n1"), { wrapper: wrapper(client) });
+    expect(result.current).toBeNull();
+    act(() => {
+      client.setQueryData(transactionQueryOptions("off", "n1").queryKey, { supplier_name: null, customer_name: "לקוח", description: "תיאור" });
+    });
+    expect(result.current).toBe("לקוח");
+  });
+
+  it("names a row by supplier, then customer, then description", () => {
+    expect(txnParty({ supplier_name: "ספק", customer_name: "לקוח", description: "d" })).toBe("ספק");
+    expect(txnParty({ supplier_name: null, customer_name: "לקוח", description: "d" })).toBe("לקוח");
+    expect(txnParty({ supplier_name: null, customer_name: null, description: "d" })).toBe("d");
   });
 });

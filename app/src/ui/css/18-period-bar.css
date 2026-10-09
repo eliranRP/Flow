@@ -84,6 +84,16 @@
   block-size: var(--touch-min);
 }
 
+/*
+  A step arrow with nowhere to go stays focusable (aria-disabled), so a screen reader can still reach
+  it and hear why. It draws in the disabled colour; the cursor comes from the shared disabled rule.
+*/
+.ui-icon-btn[aria-disabled="true"],
+.ui-icon-btn[aria-disabled="true"]:active {
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
 .ui-pbar-band .ui-icon-btn-on-band[aria-disabled="true"],
 .ui-pbar-band .ui-icon-btn-on-band[aria-disabled="true"]:active {
   background: transparent;
