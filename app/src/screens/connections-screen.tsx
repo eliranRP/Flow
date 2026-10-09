@@ -89,6 +89,15 @@ export function ConnectionsScreen({
   const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
   const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
   const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
+  // "ייבוא מ" (FLOW-505) starts from the stored date each time a connect sheet opens.
+  const [sumitImportFrom, setSumitImportFrom] = useState<string | null>(null);
+  const [mercuryImportFrom, setMercuryImportFrom] = useState<string | null>(null);
+  const [importSeen, setImportSeen] = useState({ sumit: connectOpen, mercury: mercuryConnectOpen });
+  if (importSeen.sumit !== connectOpen || importSeen.mercury !== mercuryConnectOpen) {
+    setImportSeen({ sumit: connectOpen, mercury: mercuryConnectOpen });
+    if (connectOpen && !importSeen.sumit) setSumitImportFrom(null);
+    if (mercuryConnectOpen && !importSeen.mercury) setMercuryImportFrom(mercuryStatus.data?.import_from ?? null);
+  }
   const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
   const [focusMercury, setFocusMercury] = useState(false);
@@ -122,6 +131,8 @@ export function ConnectionsScreen({
     companyId,
     apiKey,
     setApiKey,
+    // Saved only when it changed, so a reconnect never resets a stored date.
+    importFrom: sumitImportFrom ?? undefined,
     onSuccess: () => {
       setConnectSheet(false);
     },
@@ -129,6 +140,7 @@ export function ConnectionsScreen({
   const mercuryConnect = useMercuryConnect({
     apiKey: mercuryApiKey,
     setApiKey: setMercuryApiKey,
+    importFrom: mercuryImportFrom === (mercuryStatus.data?.import_from ?? null) ? undefined : mercuryImportFrom,
     onSuccess: () => {
       setMercuryConnectSheet(false);
     },
@@ -564,6 +576,8 @@ export function ConnectionsScreen({
         setCompanyId={setCompanyId}
         apiKey={apiKey}
         setApiKey={setApiKey}
+        importFrom={sumitImportFrom}
+        setImportFrom={setSumitImportFrom}
         submitLabel={authReconnect ? "חיבור מחדש" : "חיבור"}
         busy={connect.isPending}
         disabled={holdWrites}
@@ -639,6 +653,8 @@ export function ConnectionsScreen({
         authReconnect={mercuryAuthReconnect}
         apiKey={mercuryApiKey}
         setApiKey={setMercuryApiKey}
+        importFrom={mercuryImportFrom}
+        setImportFrom={setMercuryImportFrom}
         submitLabel={mercuryAuthReconnect ? "חיבור מחדש" : "חיבור"}
         busy={mercuryConnect.isPending}
         disabled={holdWrites}

@@ -7,10 +7,12 @@ import { ToastProvider } from "../ui/toast";
 import { StepSumit } from "./steps";
 
 const invoke = vi.hoisted(() => vi.fn());
+const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null, error: null })));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     functions: { invoke },
+    rpc,
   }),
 }));
 
@@ -112,6 +114,25 @@ describe("setup SUMIT connect", () => {
     const again = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
     expect(within(again).getByLabelText("מפתח API")).toHaveValue("");
     expect(within(again).getByLabelText("מספר חברה")).toHaveValue("1001");
+    restore();
+  });
+
+  it("saves ייבוא מ for SUMIT once connected (FLOW-505)", async () => {
+    const restore = reducedMotion();
+    invoke.mockResolvedValue({ data: {}, error: null });
+    rpc.mockClear();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={vi.fn()} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(onConnected).toHaveBeenCalledOnce(); });
+    const saved = rpc.mock.calls.find(([name]) => name === "set_import_from")?.[1] as { p_provider: string; p_from: string } | undefined;
+    expect(saved?.p_provider).toBe("sumit");
+    expect(saved?.p_from).toMatch(/^\d{4}-01-01$/);
     restore();
   });
 });
