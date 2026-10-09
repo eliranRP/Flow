@@ -21,6 +21,8 @@ type RadioRowProps = {
   disabledReason?: string;
   /** The row is writing. A spinner replaces the check, and the cursor is progress. */
   busy?: boolean;
+  /** Set as data-value, so a screen can find the row again (FLOW-115). */
+  value?: string;
   selected: boolean;
   onSelect: () => void;
 };
@@ -37,6 +39,7 @@ export function RadioRow({
   disabled = false,
   disabledReason,
   busy = false,
+  value,
   selected,
   onSelect,
 }: RadioRowProps) {
@@ -71,8 +74,10 @@ export function RadioRow({
       aria-disabled={off || busy || undefined}
       aria-busy={busy || undefined}
       aria-label={label}
+      data-value={value}
       aria-describedby={sub ? descId : undefined}
-      disabled={off || busy}
+      // A busy row keeps focus while it saves (aria-disabled only), so a failure can hand it back (FLOW-115).
+      disabled={off}
       onClick={() => {
         if (!off && !busy) onSelect();
       }}
