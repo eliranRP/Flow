@@ -21,7 +21,7 @@
   background: var(--color-tint-pressed);
 }
 
-.ui-back-labelled:focus-visible {
+.ui-back-labelled:is(:focus-visible, [data-focus-ring]:focus) {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }

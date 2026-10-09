@@ -398,6 +398,19 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
   });
 
+  it("draws the details as whole parts, each carrying its separator, so one that does not fit drops whole (FLOW-339 C6-6)", () => {
+    renderRow({ details: [{ text: "3 באוק׳" }, { text: "ממתינה לאישור", tone: "accent" }, { text: "" }] });
+    const details = screen.getByRole("link").querySelector(".ui-statement-details");
+    expect(details).toHaveClass("ui-hint-parts");
+    const parts = [...(details?.querySelectorAll(".ui-hint-part") ?? [])];
+    expect(parts.map((part) => part.textContent)).toEqual(["3 באוק׳", " · ממתינה לאישור"]);
+    expect(parts.every((part) => part.hasAttribute("data-clip-ok"))).toBe(true);
+    expect(parts[1]?.querySelector(".ui-statement-accent")?.textContent).toBe("ממתינה לאישור");
+    // A state to act on shortens instead of dropping; other parts show whole or not at all.
+    expect(parts[1]).toHaveClass("ui-hint-part-keep");
+    expect(parts[0]).not.toHaveClass("ui-hint-part-keep");
+  });
+
   it("draws a passed method under the amount, isolating a Latin label, and speaks its words", () => {
     renderRow({ method: { icon: null, text: "••4242", spoken: "כרטיס שמסתיים ב־4242", ltr: true } });
     const method = screen.getByRole("link").querySelector(".ui-statement-method");
@@ -445,5 +458,24 @@ describe("ListRow transaction in a cost list (FLOW-339)", () => {
     const refund = screen.getByText("החזר").closest(".ui-row");
     expect(refund?.querySelector(".ui-num")?.textContent).toBe("₪500.00");
     expect(refund?.textContent).toContain("זיכוי");
+  });
+});
+
+describe("ListRow markup (FLOW-310)", () => {
+  it("puts no block element inside a button or a link, and a heading only in a static row", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="button" title="כפתור" hint="רמז" icon={<span />} onClick={() => undefined} meta="מטא" heading />
+        <ListRow variant="danger" title="מחיקה" hint="רמז" onClick={() => undefined} />
+        <ListRow variant="item" title="קישור" hint="רמז" href="/a" chevron heading />
+        <ListRow variant="project" title="פרויקט" hint="רמז" agorot={100_000n} href="/p" />
+        <ListRow variant="transaction" title="תנועה" hint="05/10 · מגדל" agorot={-100_000n} sign="out" source="bank" href="/t" />
+        <ListRow variant="static" title="כותרת" hint="רמז" heading />
+      </MemoryRouter>,
+    );
+    for (const control of document.querySelectorAll("button, a")) {
+      expect(control.querySelector("div, p, h1, h2, h3, h4, h5, h6, ul, section")).toBeNull();
+    }
+    expect(screen.getAllByRole("heading").map((node) => node.textContent)).toEqual(["כותרת"]);
   });
 });
