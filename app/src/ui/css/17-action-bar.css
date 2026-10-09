@@ -83,6 +83,23 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
     white-space: nowrap;
     border: 0;
   }
+
+  /* FLOW-352 1 (cycle 11): beside a הצעה pill only about 52px are left for the value at 320. A value that
+     doesn't fit beside the pill takes the row's width and the pill drops under it, still on the chevron
+     side; the value wraps to a second line before it ends in an ellipsis. */
+  .ui-review-ai .ui-row-title-with-tag {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+
+  .ui-review-ai .ui-row-title-text {
+    flex: 0 1 auto;
+    display: -webkit-box;
+    overflow-wrap: break-word;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 }
 
 /* FLOW-327 1.5: both fields missing; the bar's first button points here. */
@@ -98,6 +115,11 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   margin: 0;
   padding-inline-start: calc(var(--review-label-w) + var(--space-2));
   color: var(--color-text-muted);
+}
+
+/* FLOW-704: the line held while Jev's read waits; it takes the line's height and shows nothing. */
+.ui-review-reason-slot {
+  visibility: hidden;
 }
 
 .ui-review-reason-mark {
@@ -228,4 +250,13 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   display: flex;
   justify-content: center;
   margin-block-start: var(--space-3);
+}
+
+/* FLOW-704: on a phone-width card the ✦ line starts under the labels, not the values, so Jev's longest
+   reason ("כמו ב־10 מתוך 12 הפעמים האחרונות") stays on the one line held while Jev waits. It comes after
+   the base rule, so it wins at equal weight. */
+@container review (inline-size < 25rem) {
+  .ui-review-reason {
+    padding-inline-start: 0;
+  }
 }
