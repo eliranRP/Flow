@@ -23,7 +23,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-310 help backdrop double tap test, FLOW-309 review refresh and toast fade tests | Next small ready item from the lane manager |
+| Backlog bug fixes | FLOW-502 setup step 5 offers the evening reminder once | Next small ready item from the lane manager |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
