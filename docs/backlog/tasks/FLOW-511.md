@@ -1,0 +1,6 @@
+<a id="flow-511"></a>
+# FLOW-511 · Easy opt-out from the Home setup card
+- **Type:** PLAN FIRST · **Status:** done (#95) · **Depends on:** —
+- **What:** A UX review of the setup flow and its Home card ("הגדרה • 4 מתוך 5"). The owner finds it sticky: the only way out is the small quiet הסתרה link, and it's not clear that it stops the card for good. Review the whole flow (setup runner, Home card, the "ההגדרה זמינה בהגדרות." toast, re-entry from Settings, skip flags per [0089](../../decisions/0089-setup-runner.md)) and propose one clear button that opts out of setup in a single tap, with the way back from Settings. Mock up the options with Claude Design for the owner.
+- **Acceptance:** written plan and mockup; owner picks an option and the approval is written here before any build; then one SMALL UI PR with design review and a CONTROLS row.
+- **Approval:** 2026-10-07, under the owner's standing rule for UI tasks, given in the project chat on 2026-10-07 at 16:15 UTC: the next UI tasks run a design session with the design reviewer and build the reviewer's recommended option without waiting for the owner. Option A: a ✕ in the card head that also stops the auto-resume. Decision [0111](../../decisions/0111-setup-card-close.md).

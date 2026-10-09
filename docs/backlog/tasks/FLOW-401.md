@@ -1,0 +1,5 @@
+<a id="flow-401"></a>
+# FLOW-401 · Project view by category
+- **Type:** PLAN FIRST · **Status:** in-progress (UI lane 3; server and MCP done in #233, [0149](../../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08, and approved mockup v5 "clean" at 21:44Z: name and amount only, groups fold in place, an amber up arrow in the month view, "—" for a bill not in yet, a "בד״כ" line on the category page, and קבוצה in the category ⋯ sheet; the project's plans/flow-401-project-categories-light.html) · **Depends on:** —
+- **What:** Per project, expenses broken down by category with every line visible under its category (no extra taps or "show more"), category consolidation (for example all utilities under one group), a monthly expected amount per category from earlier months, and an alert when a month looks off (a new or missing recurring expense, or an amount well above usual). The math is plain SQL (median of the last 3–6 months, threshold rules); Jev only phrases. MCP: tools for the breakdown, the expected amounts and the anomaly list.
+- **Acceptance:** plan and mockup approved.
