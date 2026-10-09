@@ -12,6 +12,7 @@ import {
   demoBeat,
   demoFrame,
   demoHost,
+  demoVat,
   easeExit,
   FirstApprovalDemo,
   IOS_ALT,
@@ -104,6 +105,15 @@ describe("demo timeline", () => {
   });
 });
 
+describe("demoVat (FLOW-506)", () => {
+  it("is the standard rate on the before-VAT amount, half to even", () => {
+    expect(demoVat(850_000n)).toBe(153_000n);
+    expect(demoVat(234_000n)).toBe(42_120n);
+    expect(demoVat(25n)).toBe(4n);
+    expect(demoVat(0n)).toBe(0n);
+  });
+});
+
 describe("setup demos", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -179,6 +189,7 @@ describe("setup demos", () => {
       expect(visibleText()).toContain("הצעה");
       expect(visibleText()).toContain("אבי חשמל");
       expect(visibleText()).toContain("2,340");
+      expect(visibleText()).toContain("₪421");
       expect(visibleText()).toContain("קבלני משנה");
       expect(visibleText()).not.toContain("חומרי בניין הדר בע״מ");
     });

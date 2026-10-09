@@ -169,6 +169,19 @@ The 18:10 IDT pass was read from the dashboard JWT Keys list, before this script
 
 The public anon key is already in `app/.env.production`. Do not add a `service_role` JWT, an `sb_secret_` key, `FLOW_SECRET_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_MCP_SIGNING_KEY`. The access token is still powerful: Edge Function Secrets Read-write can read the keys Supabase injects into the function, and `SUPABASE_DB_URL` in this same environment is the database connection string.
 
+## Storybook preview
+
+`.github/workflows/storybook-preview.yml` (FLOW-809) builds the Storybook of every pull request head that touches the app. It runs on pull requests from this repository only; forks are skipped. The build gets sample Supabase settings from `app/.storybook/main.ts`, never `.env.production`. Before anything is published, `scripts/storybook-preview-keys.mjs` fails the job on the hosted project ref, a JWT, a Supabase API key or a flow-mcp token, and `check-jev-bundle.mjs` runs on the same build.
+
+The workflow deploys to the Cloudflare Pages project `flow-storybook` (created on the first run) under the branch `pr-<number>`, so each pull request keeps one link that follows its newest push. One comment on the pull request, from `github-actions[bot]`, carries the link and the stories the pull request changed; each push updates it.
+
+It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the GitHub environment `storybook-preview`, not from `production`, which stays restricted to `main`. Until the owner adds them, the build and the checks run and the deploy is skipped with a note in the job summary. One-time setup:
+
+1. In Cloudflare, create an API token with Account, Cloudflare Pages, Edit for the Flow account. (Cloudflare can't limit a Pages token to one project, so this token could also deploy `flow-app`. Anyone who can push a branch here can already merge to `main`, which deploys; decision 0079.)
+2. In GitHub, Settings, Environments, `storybook-preview` (the first run creates it): add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Leave deployment branches open, since pull request branches use it.
+
+Old previews stay in the Pages project; delete them there if the list grows.
+
 ## Roll back a Pages deploy
 
 The previous production deployment stays in the Cloudflare Pages project `flow-app`.

@@ -518,7 +518,9 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.getByRole("link", { name: "קטגוריות" }).click();
   await expect(page).toHaveURL(/\/settings\/categories/);
   await page.goto("/e2e/settings?preview=1");
-  await expect(page.getByRole("link", { name: "פרויקטים" })).toHaveCount(0);
+  // The fixture draws the tab bar (FLOW-334): its פרויקטים tab is the only such link.
+  await expect(page.getByRole("link", { name: "פרויקטים" })).toHaveCount(1);
+  await expect(page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: "פרויקטים" })).toHaveCount(1);
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }

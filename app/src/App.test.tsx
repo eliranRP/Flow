@@ -40,7 +40,8 @@ describe("App", () => {
     renderAt("/?preview=error");
     expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill", "ui-btn-retry");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).not.toHaveClass("ui-btn-retry");
     expect(document.querySelector(".ui-band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
@@ -49,7 +50,8 @@ describe("App", () => {
     renderAt("/?preview=error-server");
     expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
     expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill", "ui-btn-retry");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).not.toHaveClass("ui-btn-retry");
     expect(document.querySelector(".ui-band")).toBeNull();
   });
 
