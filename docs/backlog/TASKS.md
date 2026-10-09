@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 C6-6: Search shows only the count under the title, and a row hint shows whole parts (C6-3 merged #292) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-115 loan with no balance row is not paid off; currency empty state | Next small ready bug |
+| Backlog bug fixes | FLOW-408 filed-today and project waiting lines keep their currency | FLOW-329 follow-up: loan-category line with no split |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -952,7 +952,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-408 · Currency alignment in project lists
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** —
 - [ ] In mixed-currency projects, the non-tappable USD category rows sit 32px further out than the tappable ILS rows. Reserve the chevron space so the amount column lines up.
-- [ ] Verify on main: project rows accept a currency in `list-row.tsx` but never use it, and some list rows (project detail, filed today, project waiting, project category) may drop the currency. Fix any that still do.
+- [x] (Backlog bug fixes, 2026-10-09: `list-row.tsx` uses the currency now; project detail and project category passed it; filed today and project waiting dropped it, fixed, the latter with migration `20261013020000`) Verify on main: project rows accept a currency in `list-row.tsx` but never use it, and some list rows (project detail, filed today, project waiting, project category) may drop the currency. Fix any that still do.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(32);
+select plan(34);
 
 do $users$
 begin
@@ -204,6 +204,12 @@ select is(
 select is(
   pg_temp.row_of(public.project_waiting(pg_temp.id('harbor')), 'txn_waiting_out') ->> 'source',
   'manual', 'project_waiting: a waiting row has its source');
+select is(
+  pg_temp.row_of(public.project_waiting(pg_temp.id('harbor')), 'txn_waiting_out') ->> 'currency',
+  'ILS', 'project_waiting: a waiting row has its currency (FLOW-408)');
+select is(
+  pg_temp.row_of(public.project_waiting(pg_temp.id('harbor')), 'txn_guess') ->> 'currency',
+  'ILS', 'project_waiting: a guessed line has its currency (FLOW-408)');
 select is(
   (pg_temp.row_of(public.project_waiting(pg_temp.id('harbor')), 'txn_waiting_out')->>'kept_out')::boolean,
   true, 'project_waiting: a waiting row in a kept-out category is kept out');

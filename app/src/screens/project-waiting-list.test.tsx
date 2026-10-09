@@ -42,4 +42,16 @@ describe("ProjectWaitingList (FLOW-124, FLOW-125)", () => {
     expect(bankIcon).toBeDefined();
     expect(bankIcon).not.toBe(docIcon);
   });
+
+  it("shows a dollar line in dollars (FLOW-408)", () => {
+    render(
+      <MemoryRouter>
+        <ProjectWaitingList search="" rows={[{ ...line, transaction_id: "t-usd", description: "USD line", currency: "USD" }, line]} />
+      </MemoryRouter>,
+    );
+    const usdRow = screen.getByText("USD line").closest("a");
+    expect(usdRow?.textContent).toContain("$");
+    expect(usdRow?.textContent).not.toContain("₪");
+    expect(screen.getByText("חשבונית 2231").closest("a")?.textContent).toContain("₪");
+  });
 });
