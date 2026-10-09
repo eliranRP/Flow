@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hasBankRows, maskLongDigits, methodLabel, parseTxnMeta, parseTxnMetaList, sameParty, splitAccountLast4 } from "./txn-meta";
+import { hasBankRows, maskLongDigits, methodLabel, sameParty, splitAccountLast4 } from "./txn-meta";
+import { parseTxnMeta, parseTxnMetaList } from "./txn-meta-parse";
 
 const empty = {
   transaction_id: "t1",

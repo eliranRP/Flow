@@ -1,20 +1,20 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@flow/shared";
-import { z } from "zod";
-
-const envSchema = z.object({
-  url: z.union([z.url(), z.literal("")]),
-  anonKey: z.string(),
-});
+/** True for an absolute URL with a host. No zod here: this file is on Home's first load (FLOW-804). */
+function isUrl(value: string): boolean {
+  try {
+    return new URL(value).hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 /** A bad URL returns null. Module load must not throw and blank the app. */
 export function readSupabaseEnv(input: { url: unknown; anonKey: unknown }): { url: string; anonKey: string } | null {
-  const parsed = envSchema.safeParse({
-    url: typeof input.url === "string" ? input.url.trim() : "",
-    anonKey: typeof input.anonKey === "string" ? input.anonKey.trim() : "",
-  });
-  if (!parsed.success) return null;
-  return parsed.data;
+  const url = typeof input.url === "string" ? input.url.trim() : "";
+  const anonKey = typeof input.anonKey === "string" ? input.anonKey.trim() : "";
+  if (url !== "" && !isUrl(url)) return null;
+  return { url, anonKey };
 }
 
 const env = readSupabaseEnv({

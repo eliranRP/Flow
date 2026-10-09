@@ -314,7 +314,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) | — |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST | on-hold | — |
 | <a id="flow-802"></a>[FLOW-802](tasks/FLOW-802.md) | Health check and usage monitoring | PLAN FIRST | on-hold | — |
-| <a id="flow-804"></a>[FLOW-804](tasks/FLOW-804.md) | Performance pass | PLAN FIRST | plan in review | dev lane 1 |
+| <a id="flow-804"></a>[FLOW-804](tasks/FLOW-804.md) | Performance pass | PLAN FIRST | building option A, "split, then gate" | dev lane 1 |
 | <a id="flow-807"></a>[FLOW-807](tasks/FLOW-807.md) | Split the big screens file | SMALL CYCLE | done (#219) | — |
 | <a id="flow-808"></a>[FLOW-808](tasks/FLOW-808.md) | Shared test fixtures and pitfalls upkeep | SMALL CYCLE | done (#181) | — |
 | <a id="flow-809"></a>[FLOW-809](tasks/FLOW-809.md) | Public Storybook per PR head for reviewers | PLAN FIRST | done (#313) | — |
