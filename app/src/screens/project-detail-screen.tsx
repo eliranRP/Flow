@@ -232,7 +232,10 @@ export function ProjectDetailScreen({
           kicker={project.name}
           subtitle={periodWords}
           backTo={sectionHref("overview")}
-          below={<TextLink to={`/search${withParams(periodQuery, { project: project.id })}`} tone="quiet">כל התנועות</TextLink>}
+          below={
+            // FLOW-402: every line of the project, in Search with the project chip set.
+            <TextLink to={`/search${withParams(search, { project: project.id })}`} tone="quiet">כל התנועות</TextLink>
+          }
         />
         <ProjectTransactions transactions={project.transactions} search={search} live={sample == null} />
       </div>

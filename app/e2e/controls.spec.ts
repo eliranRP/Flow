@@ -340,6 +340,7 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   // FLOW-411: the lines show on open, with no extra tap and no jump to Settings (FLOW-340 C: on the expenses screen).
   await page.goto("/e2e/project-detail?preview=1&section=expenses");
   await expect(page.getByRole("link", { name: "כל הקטגוריות" })).toHaveCount(0);
+  await page.goto("/e2e/project-detail?preview=1&section=transactions");
   await page.getByRole("link", { name: /^מלט/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t1/);
 
