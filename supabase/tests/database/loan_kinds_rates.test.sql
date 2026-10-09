@@ -448,7 +448,7 @@ reset role;
 -- FLOW-134 item 4: the part-category check runs only when a category changes, so a loan whose
 -- category no longer fits (set before the rule, here forced past the triggers) still renames.
 set local session_replication_role = replica;
-update public.categories set excluded_from_pnl = true where id = pg_temp.id('cat_int2');
+update public.categories set kind = 'income' where id = pg_temp.id('cat_int2');
 set local session_replication_role = origin;
 select is(
   pg_temp.update_loan('f106k-rename', 'demand', '{"name": "Example Partner Renamed"}'::jsonb)->>'ok',
