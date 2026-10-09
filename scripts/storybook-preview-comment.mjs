@@ -75,7 +75,7 @@ export function previewComment({ entries, changed, url, sha }) {
     lines.push("", "Shared styles or the Storybook setup changed, so any story can look different.");
   }
   if (stories.length === 0) {
-    lines.push("", "No story file changed with this pull request.");
+    lines.push("", "No stories file changed, and none sits next to a changed module. Stories that use a changed shared module are not listed.");
   } else {
     lines.push("", `Stories this pull request changed (${String(stories.length)}):`, "");
     for (const story of stories.slice(0, MAX_LINKS)) {

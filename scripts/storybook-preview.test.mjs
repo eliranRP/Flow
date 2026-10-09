@@ -45,7 +45,7 @@ test("the comment carries the marker, the link, and one link per changed story",
   assert.match(body, /Stories this pull request changed \(2\):/);
   assert.match(body, /- \[Screens\/Loans list \/ Grouped\]\(https:\/\/pr-9\.flow-storybook\.pages\.dev\/\?path=\/story\/screens-loans-list--grouped\)/);
   const none = previewComment({ entries, changed: ["docs/x.md"], url: "https://x.pages.dev", sha: "abc" });
-  assert.match(none, /No story file changed/);
+  assert.match(none, /No stories file changed/);
 });
 
 test("the key check fails on the hosted project or a JWT and passes sample data", () => {

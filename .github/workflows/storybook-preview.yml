@@ -68,7 +68,9 @@ jobs:
             echo "The storybook-preview environment has no Cloudflare secrets yet; the deploy is skipped." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          if ! pnpm exec wrangler pages project list | grep -q 'flow-storybook'; then
+          projects="$(mktemp "$RUNNER_TEMP/projects.XXXXXX")"
+          pnpm exec wrangler pages project list > "$projects"
+          if ! grep -qw 'flow-storybook' "$projects"; then
             pnpm exec wrangler pages project create flow-storybook --production-branch=main
           fi
           out="$(mktemp "$RUNNER_TEMP/wrangler.XXXXXX")"
@@ -77,9 +79,11 @@ jobs:
             --branch="pr-$PR_NUMBER" \
             --commit-hash="$HEAD_SHA" \
             --commit-dirty | tee "$out"
-          url="$(grep -Eo "https://pr-$PR_NUMBER\.[A-Za-z0-9.-]+\.pages\.dev" "$out" | head -n 1 || true)"
+          # The branch alias follows the newest push; the per-deploy URL would not.
+          url="$(grep -Eo "https://pr-$PR_NUMBER\.[A-Za-z0-9.-]+\.pages\.dev" "$out" | sed -n 1p || true)"
           if [ -z "$url" ]; then
-            url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' "$out" | tail -n 1)"
+            echo "::error::wrangler printed no pr-$PR_NUMBER alias URL"
+            exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Storybook preview: $url" >> "$GITHUB_STEP_SUMMARY"
@@ -94,7 +98,7 @@ jobs:
           git diff --name-only "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/changed.txt"
           node scripts/storybook-preview-comment.mjs app/storybook-static/index.json "$RUNNER_TEMP/changed.txt" "$PREVIEW_URL" "$HEAD_SHA" > "$RUNNER_TEMP/comment.md"
           id="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- flow-storybook-preview -->"))) | .id' | head -n 1)"
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- flow-storybook-preview -->"))) | .id' | sed -n 1p)"
           if [ -n "$id" ]; then
             gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$RUNNER_TEMP/comment.md" >/dev/null
           else
