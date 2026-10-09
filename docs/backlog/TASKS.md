@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 Search option C (the owner's pick 2026-10-09): one-line rows, no ".00", "נטו" month heads (FLOW-704 app side merged #315) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507 viewer review count without the meter | Next small ready bug |
+| Backlog bug fixes | FLOW-115 the שיוך row keeps its height while loans load | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -383,7 +383,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09: the sheet shows the form's skeleton while the currency loads; New, Incomplete dimmed and Date sheet open stories) Loan setup: a slow currency read opens the sheet on "טוען…" and then jumps; the currency read has no limit; add date-sheet and new-state stories and a loading skeleton.
 - [ ] Loan match: the waiting line should say why and print only the difference; disable the other rows while the correction is busy; its own failure copy; refresh the parts after a failed correction; next step for a currency mismatch; an empty match sheet offers הלוואה חדשה; hide or disable loans in another currency; long loan names need a second line or hint at 320; whole units on the Settings balances; link the "ממתין לבדיקה" row to the waiting line; skeleton rows to stop cold-open shifts.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
-- [ ] The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
+- [x] (Backlog bug fixes, 2026-10-09: the row always has a hint and the placeholder is the hinted row's height, 94.6px; the jump was really 72 → 94.6px in the one-loan case) The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
 - [x] (Backlog bug fixes, 2026-10-09: the sheet says "אין הלוואה בדולר."; a loan with no balance row shows its principal) Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
 
 ## MCP
