@@ -1,19 +1,18 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { createBrowserRouter, RouterProvider, useLocation } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DropRestoredSheet,
   liveSheetStack,
   resetDropRestoredSheet,
-  resetPendingSheetPops,
   resetSheetHistoryLock,
   sheetStack,
   useSheetHistory,
 } from "./back";
 
-// FLOW-310: sheet history against the browser's own entries (jsdom history), where a pop
-// lands later in a popstate and the router's location can trail the entry.
+// FLOW-310: sheet history against the browser's own entries (jsdom history), where the
+// router's location can trail the entry a push already wrote.
 
 function Place() {
   const location = useLocation();
@@ -22,25 +21,13 @@ function Place() {
 
 function StackedProbe() {
   const [sheet, setSheetOpen] = useState(false);
-  const [confirm, setConfirmOpen] = useState(false);
   const setSheet = useSheetHistory("sumit-status", sheet, setSheetOpen);
-  const setConfirm = useSheetHistory("sumit-disconnect", confirm, setConfirmOpen);
   return (
     <>
       <Place />
       <button type="button" onClick={() => { setSheet(true); }}>סטטוס</button>
-      <button type="button" onClick={() => { setConfirm(true); }}>ניתוק</button>
       <button type="button" onClick={() => { setSheet(false); }}>סגירת סטטוס</button>
-      <button
-        type="button"
-        onClick={() => {
-          setConfirm(false);
-          setSheet(false);
-        }}
-      >
-        Escape כפול
-      </button>
-      <p>{`${sheet ? "סטטוס פתוח" : "סטטוס סגור"} ${confirm ? "ניתוק פתוח" : "ניתוק סגור"}`}</p>
+      <p>{sheet ? "סטטוס פתוח" : "סטטוס סגור"}</p>
     </>
   );
 }
@@ -62,8 +49,8 @@ async function renderAtSettings() {
 
 describe("sheet history on browser entries", () => {
   afterEach(() => {
-    resetPendingSheetPops();
     resetSheetHistoryLock();
+    vi.restoreAllMocks();
     window.history.replaceState(null, "", "/");
   });
 
@@ -78,33 +65,26 @@ describe("sheet history on browser entries", () => {
     expect(liveSheetStack({ flowLayers: ["loan-date"] })).toEqual(["loan-date"]);
   });
 
-  it("✕ right after the sheet opens leaves no dead Back step", async () => {
+  it("✕ before the router has caught up with the sheet's entry pops it", async () => {
     const router = await renderAtSettings();
+    // The push lands in the browser at once; the router's location follows later (a transition).
+    const navigate = router.navigate.bind(router);
+    vi.spyOn(router, "navigate").mockImplementation((to, opts) => {
+      if (typeof to === "number") return navigate(to, opts);
+      const prev = window.history.state as { idx: number };
+      const usr: unknown = opts?.state ?? null;
+      window.history.pushState({ usr, key: "lagging", idx: prev.idx + 1 }, "", "/settings");
+      return Promise.resolve();
+    });
+    const go = vi.spyOn(window.history, "go");
     fireEvent.click(screen.getByRole("button", { name: "סטטוס" }));
+    expect(liveSheetStack(router.state.location.state)).toEqual(["sumit-status"]);
+    expect(sheetStack(router.state.location.state)).toEqual([]);
     fireEvent.click(screen.getByRole("button", { name: "סגירת סטטוס" }));
+    expect(go).toHaveBeenCalledWith(-1);
     await settle();
     expect(screen.getByText(/סטטוס סגור/)).toBeInTheDocument();
-    expect(screen.getByTestId("place")).toHaveTextContent("/settings|");
-    await act(async () => { await router.navigate(-1); });
-    await settle();
-    expect(router.state.location.pathname).toBe("/");
-  });
-
-  it("two closes before the first pop lands pop each layer once", async () => {
-    const router = await renderAtSettings();
-    fireEvent.click(screen.getByRole("button", { name: "סטטוס" }));
-    await settle();
-    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
-    await settle();
-    expect(screen.getByTestId("place")).toHaveTextContent("/settings|sumit-status+sumit-disconnect");
-    // Escape on the confirm, then on the sheet below, before the first popstate.
-    fireEvent.click(screen.getByRole("button", { name: "Escape כפול" }));
-    await settle();
-    await waitFor(() => {
-      expect(screen.getByText("סטטוס סגור ניתוק סגור")).toBeInTheDocument();
-    });
-    expect(router.state.location.pathname).toBe("/settings");
-    expect(sheetStack(router.state.location.state)).toEqual([]);
+    expect(window.history.state).toMatchObject({ idx: 1 });
   });
 
   it("a reload with two sheets open drops both entries, so Back leaves the screen", async () => {

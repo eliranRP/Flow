@@ -159,8 +159,18 @@ describe("useKeyboardInset", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
+  function nextFrame() {
+    return act(async () => { await new Promise((resolve) => requestAnimationFrame(() => { resolve(null); })); });
+  }
+
   it("detects the keyboard when the layout viewport shrinks with it", () => {
-    mountWithViewport();
+    mountWithViewport(
+      <>
+        <KeyboardHarness />
+        <input data-testid="shrink-field" />
+      </>,
+    );
+    document.querySelector<HTMLInputElement>("[data-testid=shrink-field]")?.focus();
     // A browser that ignores interactive-widget resizes the layout viewport too.
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 500 });
     viewport.height = 500;
@@ -173,8 +183,22 @@ describe("useKeyboardInset", () => {
     expect(document.documentElement.dataset.kb).toBeUndefined();
   });
 
-  it("takes a new full height after a rotation", () => {
+  it("a shorter window with no field focused is not a keyboard", () => {
     mountWithViewport();
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 500 });
+    viewport.height = 500;
+    act(() => { viewport.emit("resize"); });
+    expect(document.documentElement.dataset.kb).toBeUndefined();
+  });
+
+  it("takes a new full height after a rotation", () => {
+    mountWithViewport(
+      <>
+        <KeyboardHarness />
+        <input data-testid="turn-field" />
+      </>,
+    );
+    document.querySelector<HTMLInputElement>("[data-testid=turn-field]")?.focus();
     const width = window.innerWidth;
     Object.defineProperty(window, "innerWidth", { configurable: true, value: width + 200 });
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
@@ -187,7 +211,7 @@ describe("useKeyboardInset", () => {
     }
   });
 
-  it("drops a drawer lift Vaul left behind once the keyboard has closed in steps", () => {
+  it("drops a drawer lift Vaul writes again after the keyboard has closed", async () => {
     mountWithViewport(
       <>
         <KeyboardHarness />
@@ -195,19 +219,23 @@ describe("useKeyboardInset", () => {
       </>,
     );
     const drawer = document.querySelector<HTMLElement>("[data-testid=drawer]");
+    // Vaul's listener runs after ours and lifts the drawer by the keyboard it last measured.
+    const vaul = () => { if (drawer) drawer.style.bottom = `${String(800 - viewport.height)}px`; };
+    viewport.addEventListener("resize", vaul);
     for (const height of [700, 550, 500]) {
       viewport.height = height;
       act(() => { viewport.emit("resize"); });
     }
     expect(document.documentElement.dataset.kb).toBe("open");
-    if (drawer) drawer.style.bottom = "300px";
-    viewport.height = 640;
-    act(() => { viewport.emit("resize"); });
+    await nextFrame();
     expect(drawer?.style.bottom).toBe("300px");
-    viewport.height = 800;
+    // Closing in steps: at 700 the keyboard reads closed while Vaul still writes 100px.
+    viewport.height = 700;
     act(() => { viewport.emit("resize"); });
     expect(document.documentElement.dataset.kb).toBeUndefined();
+    await nextFrame();
     expect(drawer?.style.bottom).toBe("0px");
+    viewport.removeEventListener("resize", vaul);
   });
 
   it("removes its listeners and resets the root on unmount", () => {

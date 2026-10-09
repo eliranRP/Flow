@@ -1,1 +1,1 @@
-Closing a sheet right after it opens no longer leaves a dead Back step, and closing a stacked confirm and the sheet below it in quick succession pops each once. The keyboard is detected on browsers that shrink the whole page for it, and a sheet no longer stays lifted over an empty gap after the keyboard closes in steps (FLOW-310).
+Closing a sheet right after it opens no longer leaves a dead Back step. The keyboard is detected on browsers that shrink the whole page for it, and a sheet no longer stays lifted over an empty gap after the keyboard closes in steps (FLOW-310).
