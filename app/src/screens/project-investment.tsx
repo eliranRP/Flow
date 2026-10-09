@@ -1,6 +1,7 @@
 import { parseDecimalHalfEven } from "@flow/shared";
 import { useCallback, useEffect, useId, useRef, useState, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
+import { useLocation } from "react-router-dom";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { BigNumber } from "../ui/big-number";
 import { useSheetHistory } from "../ui/back";
@@ -80,6 +81,9 @@ function rehabLinesSearch(search: string): string {
   return `?${params.toString()}`;
 }
 
+/** What the category screen's Back reads when the rehab sheet opened it (FLOW-404). */
+export type CategoryBackState = { back: string };
+
 export function RehabSheet({
   projectId,
   open,
@@ -105,6 +109,9 @@ export function RehabSheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const search = usePreviewSearch();
+  // Back from the lines returns here (the investment screen, on its own period), not to the overview.
+  const location = useLocation();
+  const backState: CategoryBackState = { back: `${location.pathname}${location.search}` };
   const breakdown = categories == null ? null : rehabBreakdown(costs, categories, figures.currency, figures.rehabMinor);
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef}>
@@ -146,6 +153,7 @@ export function RehabSheet({
                     currency={figures.currency}
                     loss={false}
                     href={href}
+                    state={href == null ? undefined : backState}
                     chevron={href != null}
                     chevronSpace={href == null}
                   />

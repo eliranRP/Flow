@@ -159,7 +159,7 @@ export const ProjectRowsLineUp: Story = {
     <List>
       <ListRow variant="project" title="חומרים" agorot={3_000_000n} loss={false} href="/projects/1/categories/c1" chevron />
       <ListRow variant="project" title="בלי קטגוריה" agorot={420_000n} loss={false} chevronSpace />
-      <ListRow variant="project" title="Utilities" agorot={125_000n} currency="USD" loss={false} href="/projects/1/categories/c2?currency=USD" chevron />
+      <ListRow variant="project" title="חשמל ומים לדוגמה" agorot={125_000n} currency="USD" loss={false} href="/projects/1/categories/c2?currency=USD" chevron />
     </List>
   ),
 };

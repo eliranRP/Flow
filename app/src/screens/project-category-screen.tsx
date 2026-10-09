@@ -43,6 +43,16 @@ export function categoryHref(projectId: string, categoryId: string, currency: st
   return `${path}${search}${search === "" ? "?" : "&"}currency=${encodeURIComponent(currency)}`;
 }
 
+/**
+ * Back from the lines. The rehab sheet passes its own screen in the link state (FLOW-404), so Back
+ * returns to the investment screen on its period; otherwise the project page. `search` is the preview flag only.
+ */
+export function categoryBack(projectId: string, search: string, state: unknown): string {
+  const back = (state as { back?: unknown } | null)?.back;
+  if (typeof back === "string" && back.startsWith(`/projects/${projectId}/`)) return back;
+  return `/projects/${projectId}${search}`;
+}
+
 export function ProjectCategoryScreen({
   sample,
   backTo: backOverride,
@@ -68,7 +78,7 @@ export function ProjectCategoryScreen({
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   const heldRows = useHeldOrder(loadedRows, (row) => row.id);
   const liveMarks = useLoanMarks(heldRows.map((row) => row.id), sample == null);
-  const back = `/projects/${projectId}${search}`;
+  const back = categoryBack(projectId, search, location.state);
   if (phase.kind === "loading" || phase.kind === "error") {
     return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
   }

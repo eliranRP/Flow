@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
 import type { UpKind } from "../project-category-months";
-import { ProjectCategoryScreen } from "./project-category-screen";
+import { categoryBack, ProjectCategoryScreen } from "./project-category-screen";
 
 type Call = { name: string; args: unknown };
 const rpc = vi.hoisted(() => ({ calls: [] as Call[] }));
@@ -63,5 +63,20 @@ describe("the project category lines' basis (FLOW-404)", () => {
     const sample = { categoryName: "חומרים", projectName: "בית לדוגמה", rows: [], usual: { expected: 410_000n, up: null as UpKind } };
     open("/projects/p1/categories/c1?period=all", sample);
     expect(screen.getByText(/בד״כ/)).toBeInTheDocument();
+  });
+});
+
+describe("Back from the project category lines", () => {
+  it("returns to the screen the rehab sheet passed", () => {
+    expect(categoryBack("p1", "", { back: "/projects/p1/investment?period=all" })).toBe("/projects/p1/investment?period=all");
+  });
+
+  it("falls back to the project page with the preview flag", () => {
+    expect(categoryBack("p1", "?preview=1", null)).toBe("/projects/p1?preview=1");
+  });
+
+  it("ignores a passed path outside this project", () => {
+    expect(categoryBack("p1", "", { back: "/projects/p2/investment" })).toBe("/projects/p1");
+    expect(categoryBack("p1", "", { back: "https://example.test/" })).toBe("/projects/p1");
   });
 });

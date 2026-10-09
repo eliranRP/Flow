@@ -276,6 +276,8 @@ describe("the project's finish row (FLOW-334)", () => {
     const row = await screen.findByRole("button", { name: "סיום הפרויקט" });
     expect(row).toHaveClass("ui-row");
     fireEvent.click(row);
+    // The menu closes as the confirm opens.
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "עוד" })).not.toBeInTheDocument(); });
     const confirm = await screen.findByRole("dialog", { name: "לסיים את הפרויקט?" });
     const button = within(confirm).getByRole("button", { name: "סיום הפרויקט" });
     expect(button.querySelector("svg")).toBeNull();
@@ -284,6 +286,18 @@ describe("the project's finish row (FLOW-334)", () => {
     await waitFor(() => {
       expect(calls.find((call) => call.name === "upsert_project")?.args).toMatchObject({ p_id: "a", p_status: "finished" });
     });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לסיים את הפרויקט?" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "עוד" })).toHaveFocus(); });
+  });
+
+  it("returns focus to עוד when the confirm is cancelled", async () => {
+    renderProject({ ...projectBase }, "overview");
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(await screen.findByRole("button", { name: "סיום הפרויקט" }));
+    const confirm = await screen.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לסיים את הפרויקט?" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "עוד" })).toHaveFocus(); });
   });
 
   it("offers החזרה לפעיל on a finished project", async () => {
