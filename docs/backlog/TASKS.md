@@ -191,6 +191,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-207"></a>[FLOW-207](tasks/FLOW-207.md) | sync_bank job follow-ups (#75 review) | BACKLOG NIT |
 | <a id="flow-208"></a>[FLOW-208](tasks/FLOW-208.md) | Split and undo follow-ups (#88 review) | BACKLOG NIT |
 | <a id="flow-209"></a>[FLOW-209](tasks/FLOW-209.md) | get_project follow-ups (#90 review) | BACKLOG NIT |
+| <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
 
 ## Transactions and app UX
 
