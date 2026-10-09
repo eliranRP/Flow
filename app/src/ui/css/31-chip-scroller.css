@@ -7,3 +7,8 @@
 .ui-chip-scroller[data-more="end"]:dir(ltr) {
   mask-image: linear-gradient(to left, transparent, #000 calc(var(--space-side) + var(--space-6)));
 }
+
+/* A chip scrolled into view stops clear of the fade, not under it. */
+.ui-chip-scroller {
+  scroll-padding-inline-end: calc(var(--space-side) + var(--space-6));
+}

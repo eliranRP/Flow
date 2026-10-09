@@ -61,8 +61,9 @@ export function loanListHintParts(row: LoanListRow): string[] {
     return row.closedOn ? [label, formatDisplay(row.closedOn)] : [label];
   }
   const kind = row.kind != null && row.kind !== "amortizing" ? LOAN_KIND_LABEL[row.kind] : null;
-  const tail = row.flaggedParts > 0 ? "ממתין לבדיקה" : (row.projectName ?? null);
-  return [kind, tail].filter((part): part is string => part != null && part !== "");
+  // ממתין לבדיקה leads, so a narrow row drops the kind, never the words behind the warning tone.
+  if (row.flaggedParts > 0) return ["ממתין לבדיקה", ...(kind != null ? [kind] : [])];
+  return [kind, row.projectName ?? null].filter((part): part is string => part != null && part !== "");
 }
 
 /** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */

@@ -333,10 +333,11 @@ function SearchChips({
   const finished = projects.filter((project) => project.status === "finished");
   const expense = categories.filter((category) => category.kind === "expense");
   const income = categories.filter((category) => category.kind === "income");
-  // A chip set on arrival (the project from "כל התנועות") is scrolled into the row's view.
+  // A chip set on arrival (the project from "כל התנועות") is scrolled into the row's view. The
+  // last pressed one: תקופה is first and always in view, so it never needs the scroll.
   const chipsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const pressed = chipsRef.current?.querySelector('[aria-pressed="true"]');
+    const pressed = [...(chipsRef.current?.querySelectorAll('[aria-pressed="true"]') ?? [])].at(-1);
     if (pressed instanceof HTMLElement && typeof pressed.scrollIntoView === "function") {
       pressed.scrollIntoView({ block: "nearest", inline: "nearest" });
     }

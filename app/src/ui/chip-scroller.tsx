@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { cx } from "./cx";
 
 /** How far from the row's end a chip still counts as hidden, so a rounding pixel never fades it. */
@@ -22,22 +22,36 @@ export function ChipScroller({
 }) {
   const own = useRef<HTMLDivElement | null>(null);
   const [more, setMore] = useState(false);
+  const measure = useCallback(() => {
+    const row = own.current;
+    if (!row) return;
+    setMore(row.scrollWidth - row.clientWidth - Math.abs(row.scrollLeft) > SLACK);
+  }, []);
+
+  // A chip whose label grows ("פרויקט" to a long name) changes the row's scroll width without
+  // resizing the row, so every render measures again.
+  useLayoutEffect(measure);
 
   useEffect(() => {
     const row = own.current;
     if (!row) return;
-    const measure = () => {
-      setMore(row.scrollWidth - row.clientWidth - Math.abs(row.scrollLeft) > SLACK);
-    };
-    measure();
     row.addEventListener("scroll", measure, { passive: true });
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(row);
+    for (const chip of row.children) observer?.observe(chip);
+    // The web font can land after the first measure and widen every chip.
+    if ("fonts" in document) void document.fonts.ready.then(measure);
     return () => {
       row.removeEventListener("scroll", measure);
       observer?.disconnect();
     };
-  }, []);
+  }, [measure]);
+
+  const setRow = useCallback((node: HTMLDivElement | null) => {
+    own.current = node;
+    if (typeof scrollerRef === "function") scrollerRef(node);
+    else if (scrollerRef) scrollerRef.current = node;
+  }, [scrollerRef]);
 
   return (
     <div
@@ -45,11 +59,7 @@ export function ChipScroller({
       role="group"
       aria-label={label}
       data-more={more ? "end" : undefined}
-      ref={(node) => {
-        own.current = node;
-        if (typeof scrollerRef === "function") scrollerRef(node);
-        else if (scrollerRef) scrollerRef.current = node;
-      }}
+      ref={setRow}
     >
       {children}
     </div>
