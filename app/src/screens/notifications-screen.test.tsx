@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { NO_PREFS, prefsFromData, pushSupport, type NotificationPrefs } from "../push";
 import { ToastProvider } from "../ui/toast";
@@ -28,8 +28,18 @@ describe("push prefs", () => {
     expect(() => prefsFromData(null)).toThrow("validation");
   });
 
-  it("says unsupported without a VAPID key, so no card asks", () => {
-    expect(pushSupport()).toBe("unsupported");
+  it("says not-configured without a VAPID key, so nothing about push shows", () => {
+    expect(pushSupport()).toBe("not-configured");
+    const { unmount } = renderAt(<ReviewPushPrompt sample={NO_PREFS} />, "/review");
+    expect(screen.queryByText(PUSH_QUESTION)).not.toBeInTheDocument();
+    unmount();
+    renderAt(
+      <Routes>
+        <Route path="/settings/notifications" element={<NotificationsScreen />} />
+        <Route path="/settings" element={<p>settings home</p>} />
+      </Routes>,
+    );
+    expect(screen.getByText("settings home")).toBeInTheDocument();
   });
 
   it("names the switches that are on in the Settings hint, or כבוי", () => {
@@ -60,8 +70,11 @@ describe("the review reminder card", () => {
   it("tells an iPhone tab to add Flow to the Home Screen, without recording an answer", () => {
     renderAt(<ReviewPushPrompt sample={NO_PREFS} support="ios-home-screen" />, "/review");
     fireEvent.click(screen.getByRole("button", { name: "כן" }));
-    expect(screen.getByText(IOS_HOME_NOTE)).toHaveAttribute("role", "status");
-    fireEvent.click(screen.getByRole("button", { name: "הבנתי" }));
+    // The note replaces כן, so focus moves to its one button, which the note describes.
+    const dismiss = screen.getByRole("button", { name: "הבנתי" });
+    expect(dismiss).toHaveFocus();
+    expect(dismiss).toHaveAccessibleDescription(IOS_HOME_NOTE);
+    fireEvent.click(dismiss);
     expect(screen.queryByText(PUSH_QUESTION)).not.toBeInTheDocument();
   });
 });
@@ -82,7 +95,9 @@ describe("Settings → התראות", () => {
   it("on an iPhone tab says to add Flow to the Home Screen and keeps off switches off", () => {
     renderAt(<NotificationsScreen sample={{ ...NO_PREFS, weekly_summary: true }} support="ios-home-screen" />);
     expect(screen.getByText(IOS_HOME_NOTE)).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "תנועה חדשה" })).toBeDisabled();
+    const off = screen.getByRole("switch", { name: "תנועה חדשה" });
+    expect(off).toBeDisabled();
+    expect(off).toHaveAccessibleDescription(`כשנכנסת תנועה מהבנק ${IOS_HOME_NOTE}`);
     // A switch that is on can still turn off.
     expect(screen.getByRole("switch", { name: "סיכום שבועי" })).toBeEnabled();
   });

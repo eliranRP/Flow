@@ -28,7 +28,7 @@ import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
 import { Skeleton } from "../ui/skeleton";
 import { useBlockedPreview } from "./screen-shared";
-import { NO_PREFS, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
+import { NO_PREFS, pushConfigured, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
 import { notificationsHint } from "./notifications-screen";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
@@ -162,7 +162,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const jev = useJevIntegrationQuery(liveCompany);
   const assistant = useAssistantStatusQuery(liveCompany);
   const loans = useLoanBalances(liveCompanyId);
-  const notificationsQuery = useNotificationPrefsQuery(sample == null && preview === "off");
+  // FLOW-502: a build without the VAPID key has no התראות row and reads nothing.
+  const pushShown = sample != null || pushConfigured();
+  const notificationsQuery = useNotificationPrefsQuery(sample == null && preview === "off" && pushShown);
   const [renameOpen, setRenameOpen] = useState(false);
   const businessRowRef = useRef<HTMLButtonElement>(null);
   const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
@@ -383,14 +385,16 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
             skeleton={loansLoading}
           />
         )}
-        <SettingsPageRow
-          page="notifications"
-          href={`/settings/notifications${search}`}
-          title="התראות"
-          icon={<BellIcon />}
-          hint={notificationsRowHint}
-          skeleton={notificationsLoading}
-        />
+        {pushShown ? (
+          <SettingsPageRow
+            page="notifications"
+            href={`/settings/notifications${search}`}
+            title="התראות"
+            icon={<BellIcon />}
+            hint={notificationsRowHint}
+            skeleton={notificationsLoading}
+          />
+        ) : null}
       </List>
       {noCompany ? null : (
         <>

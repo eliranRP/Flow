@@ -13,7 +13,7 @@ export function PromptCard({
   busy = false,
   note,
   noteDismissLabel = "הבנתי",
-  yesRef,
+  dismissRef,
   onYes,
   onNo,
   onNoteDismiss,
@@ -24,25 +24,27 @@ export function PromptCard({
   busy?: boolean;
   note?: string;
   noteDismissLabel?: string;
-  yesRef?: Ref<HTMLButtonElement>;
+  /** The note's dismiss button: the caller moves focus here when the note replaces כן. */
+  dismissRef?: Ref<HTMLButtonElement>;
   onYes: () => void;
   onNo: () => void;
   onNoteDismiss?: () => void;
 }) {
   const questionId = useId();
+  const noteId = useId();
   return (
     <section className="ui-prompt-card" aria-labelledby={questionId}>
       <p className="ui-prompt-question" id={questionId} dir="rtl">{question}</p>
       {note != null ? (
         <>
-          <p className="ui-prompt-note t-hint" dir="rtl" role="status">{note}</p>
+          <p className="ui-prompt-note t-hint" id={noteId} dir="rtl">{note}</p>
           <div className="ui-prompt-actions">
-            <Button variant="ghost" onClick={onNoteDismiss ?? onNo}>{noteDismissLabel}</Button>
+            <Button variant="ghost" buttonRef={dismissRef} aria-describedby={noteId} onClick={onNoteDismiss ?? onNo}>{noteDismissLabel}</Button>
           </div>
         </>
       ) : (
         <div className="ui-prompt-actions">
-          <Button variant="pill" busy={busy} buttonRef={yesRef} onClick={() => { if (!busy) onYes(); }}>{yesLabel}</Button>
+          <Button variant="pill" busy={busy} onClick={() => { if (!busy) onYes(); }}>{yesLabel}</Button>
           <Button variant="ghost" disabled={busy} onClick={onNo}>{noLabel}</Button>
         </div>
       )}

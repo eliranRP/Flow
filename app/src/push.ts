@@ -27,8 +27,11 @@ export const NO_PREFS: NotificationPrefs = {
   has_subscription: false,
 };
 
-/** ok: this browser can subscribe. ios-home-screen: an iPhone or iPad tab, which must be installed first. */
-export type PushSupport = "ok" | "ios-home-screen" | "unsupported";
+/**
+ * ok: this browser can subscribe. ios-home-screen: an iPhone or iPad tab, which must be installed
+ * first. not-configured: this build has no VAPID key, so nothing about push shows at all.
+ */
+export type PushSupport = "ok" | "ios-home-screen" | "unsupported" | "not-configured";
 
 export const PUSH_PREFS_KEY = ["notification-prefs"] as const;
 
@@ -36,17 +39,24 @@ function vapidKey(): string {
   return (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim() ?? "";
 }
 
+/** False until the build carries the public VAPID key: the row, the page and the card stay hidden. */
+export function pushConfigured(): boolean {
+  return vapidKey() !== "";
+}
+
 export function pushSupport(): PushSupport {
+  if (!pushConfigured()) return "not-configured";
   if (typeof window === "undefined" || typeof navigator === "undefined") return "unsupported";
   const mode = detectInstallMode();
   const ios = mode === "iphone" || mode === "iphone-other" || mode === "ipad";
   if (ios && !isStandalone()) return "ios-home-screen";
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "unsupported";
-  if (vapidKey() === "") return "unsupported";
   return "ok";
 }
 
 // The push RPCs land with the FLOW-502 server PR; until the generated types carry them, call them untyped.
+// Before this merges, each call names its function literally on supabase.rpc so scripts/smoke-allow-rpcs.test.mjs
+// sees it (the migrations must define the functions first).
 type UntypedRpc = (name: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
 
 async function rpc(name: string, args?: Record<string, unknown>): Promise<unknown> {
@@ -89,8 +99,8 @@ export async function saveNotificationPrefs(change: Partial<Record<NotificationP
 }
 
 /** Records the review card's answer, so it is asked once. Yes also turns on the evening reminder. */
-export async function answerPushPrompt(yes: boolean): Promise<void> {
-  await rpc("answer_push_prompt", { p_yes: yes });
+export async function answerPushPrompt(yes: boolean): Promise<NotificationPrefs> {
+  return prefsFromData(await rpc("answer_push_prompt", { p_yes: yes }));
 }
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
@@ -101,9 +111,12 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/** The registered worker, or null when none becomes ready within a few seconds (dev, or blocked). */
+/**
+ * The registered worker, or null when none becomes ready (dev, or blocked). A first visit on a slow
+ * phone is still precaching the app shell, so this waits well past a normal install.
+ */
 async function readyWorker(): Promise<ServiceWorkerRegistration | null> {
-  const timeout = new Promise<null>((resolve) => { window.setTimeout(() => { resolve(null); }, 4000); });
+  const timeout = new Promise<null>((resolve) => { window.setTimeout(() => { resolve(null); }, 15000); });
   return Promise.race([navigator.serviceWorker.ready, timeout]);
 }
 
@@ -125,8 +138,14 @@ export async function subscribeThisDevice(): Promise<SubscribeResult> {
   try {
     const registration = await readyWorker();
     if (!registration) return "failed";
-    const subscription = (await registration.pushManager.getSubscription())
-      ?? (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapidKey()) }));
+    const key = keyBytes(vapidKey());
+    let subscription = await registration.pushManager.getSubscription();
+    // A subscription made with an older key can no longer be sent to: replace it.
+    if (subscription != null && !sameKey(subscription.options.applicationServerKey, key)) {
+      await subscription.unsubscribe();
+      subscription = null;
+    }
+    subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
     const json = subscription.toJSON();
     const p256dh = json.keys?.p256dh;
     const auth = json.keys?.auth;
@@ -138,10 +157,23 @@ export async function subscribeThisDevice(): Promise<SubscribeResult> {
   }
 }
 
-/** True when this browser already allows notifications and holds a subscription. */
-export async function thisDeviceSubscribed(): Promise<boolean> {
-  if (pushSupport() !== "ok" || Notification.permission !== "granted") return false;
-  const registration = await readyWorker();
-  if (!registration) return false;
-  return (await registration.pushManager.getSubscription()) != null;
+function sameKey(current: ArrayBuffer | null, wanted: Uint8Array): boolean {
+  if (current == null) return true;
+  const bytes = new Uint8Array(current);
+  return bytes.length === wanted.length && bytes.every((byte, index) => byte === wanted[index]);
+}
+
+/**
+ * Drops this browser's subscription when its user signs out or another signs in, so the previous
+ * user's reminders stop on a shared phone. The server deletes the endpoint on its next send (410).
+ */
+export async function forgetThisDevice(): Promise<void> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    await subscription?.unsubscribe();
+  } catch {
+    // Nothing to drop, or the browser refused: the server still drops a dead endpoint.
+  }
 }

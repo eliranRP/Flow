@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
   NO_PREFS,
@@ -42,15 +43,19 @@ export function notificationsHint(prefs: NotificationPrefs): string {
 export function NotificationsScreen({ sample, support }: { sample?: NotificationPrefs; support?: PushSupport } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const live = sample == null && preview === "off";
+  const [can] = useState<PushSupport>(() => support ?? pushSupport());
+  const live = sample == null && preview === "off" && can !== "not-configured";
   const query = useNotificationPrefsQuery(live);
   const client = useQueryClient();
   const toast = useToast();
-  const [can] = useState<PushSupport>(() => support ?? pushSupport());
   const [local, setLocal] = useState<NotificationPrefs>(sample ?? NO_PREFS);
   const [busy, setBusy] = useState<NotificationPrefKey | null>(null);
   const [subscribedHere, setSubscribedHere] = useState(false);
   const backTo = `/settings${search}`;
+  const noteId = useId();
+
+  // A build without the VAPID key shows nothing about push; an old link lands on Settings.
+  if (can === "not-configured" && sample == null) return <Navigate to={backTo} replace />;
 
   if (live && (query.isPending || query.isError)) {
     return (
@@ -102,7 +107,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
   return (
     <div>
       <ScreenHeader title="התראות" kicker="הגדרות" backTo={backTo} />
-      {note != null ? <p className="ui-page-pad t-hint" data-push-note="">{note}</p> : null}
+      {note != null ? <p className="ui-page-pad t-hint" id={noteId} data-push-note="">{note}</p> : null}
       <List>
         {SWITCHES.map((item) => (
           <Toggle
@@ -111,8 +116,10 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
             hint={item.hint}
             checked={prefs[item.key]}
             busy={busy === item.key}
-            // Off stays reachable on any device; on needs a browser that can subscribe.
-            disabled={can !== "ok" && !prefs[item.key]}
+            // Off stays reachable on any device; on needs a browser that can subscribe. While one
+            // switch saves, the others wait.
+            disabled={(can !== "ok" && !prefs[item.key]) || (busy != null && busy !== item.key)}
+            disabledNoteId={note != null && can !== "ok" && !prefs[item.key] ? noteId : undefined}
             onChange={(checked) => { void change(item.key, checked); }}
           />
         ))}
