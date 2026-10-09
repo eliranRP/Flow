@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { execute, reportsClip } from "../../scripts/clip-check.mjs";
+import { execute, FROZEN_NOW, reportsClip } from "../../scripts/clip-check.mjs";
 
 function staticSite(html: string, entries: Record<string, { type: string; id: string; title: string; name: string; tags?: string[] }> = { a: { type: "story", id: "a", title: "A", name: "A" } }): string {
   const dir = mkdtempSync(join(tmpdir(), "clip-check-"));
@@ -212,7 +212,7 @@ test("one story that measures nothing exits 2 even when another story fits", asy
   }
 });
 
-test("a bare span and a tab label are measured, and a no-text story is skipped", async () => {
+test("a bare span and a tab label are measured, and a no-text story that measures nothing passes", async () => {
   const dir = staticSite(`<div id="storybook-root">
       <span style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</span>
       <span class="ui-tab-label" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</span>
@@ -238,14 +238,14 @@ test("a bare span and a tab label are measured, and a no-text story is skipped",
     })).toBe(1);
     expect(errors.join("\n")).toMatch(/1 story view that clips|1 story view clips/);
     const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
-      skipped: string[];
+      noText: string[];
       zeroMeasured: string[];
       views: { storyId: string; status: string; elements: { className: string }[] }[];
     };
     const measured = report.views.find((view) => view.storyId === "text");
     expect(measured?.elements.map((element) => element.className).sort()).toEqual(["", "ui-tab-label"]);
-    expect(report.skipped).toContain("quiet");
-    expect(report.views.find((view) => view.storyId === "quiet")?.status).toBe("skipped");
+    expect(report.noText).toContain("quiet");
+    expect(report.views.find((view) => view.storyId === "quiet")?.status).toBe("no-text");
     expect(report.zeroMeasured).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -286,7 +286,7 @@ test("an inline bdi is measured on the block that clips", async () => {
   }
 });
 
-test("a passing run mentions skipped stories", async () => {
+test("a passing run names the stories without text", async () => {
   const dir = staticSite(`<div id="storybook-root"><p class="t-hint">שלום</p></div>
     <script>
       const id = new URLSearchParams(location.search).get("id");
@@ -307,7 +307,7 @@ test("a passing run mentions skipped stories", async () => {
       reportDir: dir,
       log: (line) => { lines.push(line); },
     })).toBe(0);
-    expect(lines.join("\n")).toContain("2 stories, 1 skipped,");
+    expect(lines.join("\n")).toContain("2 stories, 1 without text,");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -323,6 +323,110 @@ test("a story that never renders exits 2", async () => {
       reportDir: dir,
       readyTimeout: 400,
     })).toBe(2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// FLOW-810: a no-text story is still measured; only measuring nothing is waived.
+test("a clip-no-text story whose text clips still fails", async () => {
+  const dir = staticSite(`<div id="storybook-root"><p class="t-hint" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>`, {
+    quiet: { type: "story", id: "quiet", title: "Quiet", name: "Quiet", tags: ["clip-no-text"] },
+  });
+  try {
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// FLOW-810: text inside a screen-reader-only element is skipped, nested blocks included.
+test("screen-reader-only text is not measured, down to its nested blocks", async () => {
+  const wide = "מילהארוכהמאודשלאנכנסתבשורהאחת";
+  const dir = staticSite(`<style>
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; white-space: nowrap; }
+      .clipped { position: absolute; clip: rect(0, 0, 0, 0); white-space: nowrap; width: 40px; }
+      .inset { clip-path: inset(50%); white-space: nowrap; width: 40px; }
+      .wide { display: block; white-space: nowrap; width: 40px; }
+    </style>
+    <div id="storybook-root">
+      <p class="t-hint">שלום</p>
+      <div class="sr-only"><span class="wide">${wide}</span></div>
+      <div class="clipped"><span class="wide">${wide}</span></div>
+      <div class="inset"><span class="wide">${wide}</span></div>
+    </div>`);
+  try {
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(0);
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      views: { elements: { className: string }[] }[];
+    };
+    expect(report.views[0]?.elements.map((element) => element.className)).toEqual(["t-hint"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// FLOW-810: a block reports only its own text, so a clipped nested block is one line, not two.
+test("a clipped nested block is reported once, not again by its parent", async () => {
+  const dir = staticSite(`<div id="storybook-root">
+      <div class="outer" style="width:200px">Title<p class="inner" style="width:20px;white-space:nowrap">averyverylongword</p></div>
+    </div>`);
+  try {
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(1);
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      failures: string[];
+      views: { elements: { className: string; clipped: boolean; label: string }[] }[];
+    };
+    expect(report.failures).toHaveLength(1);
+    expect(report.failures[0]).toContain("inner");
+    const outer = report.views[0]?.elements.find((element) => element.className === "outer");
+    expect(outer?.clipped).toBe(false);
+    expect(outer?.label).toContain("Title");
+    expect(outer?.label).not.toContain("averyverylongword");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// FLOW-810: every story sees the same date, so date-relative copy measures the same each run.
+test("stories see the frozen date", async () => {
+  const dir = staticSite(`<div id="storybook-root"></div>
+    <script>
+      const node = document.createElement("p");
+      node.className = "t-hint";
+      node.textContent = new Date().toISOString().slice(0, 10);
+      document.getElementById("storybook-root").appendChild(node);
+    </script>`);
+  try {
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(0);
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      views: { elements: { label: string }[] }[];
+    };
+    expect(report.views[0]?.elements[0]?.label).toContain(FROZEN_NOW.slice(0, 10));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// FLOW-810: a story that misses its first render gets one more try.
+test("a story that renders on its second load passes after a retry", async () => {
+  const dir = staticSite(`<div id="storybook-root"></div>
+    <script>
+      const tries = Number(sessionStorage.getItem("tries") ?? "0") + 1;
+      sessionStorage.setItem("tries", String(tries));
+      if (tries > 1) document.getElementById("storybook-root").innerHTML = '<p class="t-hint">שלום</p>';
+    </script>`);
+  const lines: string[] = [];
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      readyTimeout: 400,
+      log: (line) => { lines.push(line); },
+    })).toBe(0);
+    expect(lines.join("\n")).toContain("did not render, trying again");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

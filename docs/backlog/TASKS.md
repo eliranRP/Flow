@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-810: clip check follow-ups (the checker, frozen dates, retry; the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
+| Dev lane 1 | Free: FLOW-810 clip check follow-ups in review (the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
 | Dev lane 2 | FLOW-811: CI and deploy follow-ups (row-hash baseline script, composite foreign key indexes) | FLOW-812 faster CI (claim looks stale), more Flow MCP agent requests |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
@@ -1153,13 +1153,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-810"></a>
 ### FLOW-810 · Clip check follow-ups and 320px clipping
-- **Type:** BACKLOG NIT · **Status:** in progress (dev lane 1) · **Depends on:** —
-- [ ] Re-run the real clip check on main and record the exit code and per-class table; fix the remaining clipped stories at 320.
-- [ ] Skip hidden or screen-reader-only text when measuring, including descendants; widen the 1×1 check (`clip: rect(0…)`, `clip-path: inset(50%)`, `.sr-only`).
-- [ ] De-duplicate nested-block lines; measure `clip-no-text` stories but waive only the zero rule.
-- [ ] Freeze the date in date-relative stories so clip results don't drift.
-- [ ] Long supplier names need `overflow-wrap: anywhere` on the review supplier line; older truncations in the project picker, unpaid hints and the add-sheet hint; a stress story with a 3-line supplier.
-- [ ] A per-story retry; a story whose sample totals don't add up.
+- **Type:** BACKLOG NIT · **Status:** done (this PR) except the UI items, left to the UI lanes · **Depends on:** —
+- [x] Re-run the real clip check on main and record the exit code and per-class table; fix the remaining clipped stories at 320. (Main at 596c409, 2026-10-09: exit 1, 24 story views clip, 4 stories at every width and theme: `ui-row-missing t-amount` "— עוד לא הגיע" +82px in the three project-categories group-open stories (18 views), and a bare span ", הוצאות −$40" +11px in MonthList two-currencies (6 views). Both are screen-reader-only text (`sr-only` inside the row; the month bar's spoken total), not visible clips. With this PR the check passes at 320 in light and dark: 1000 stories, 27,328 elements, 13 without text. Nothing to fix at 320.)
+- [x] Skip hidden or screen-reader-only text when measuring, including descendants; widen the 1×1 check (`clip: rect(0…)`, `clip-path: inset(50%)`, `.sr-only`). (A block is skipped when it or any element around it is `.sr-only` or `.visually-hidden`, has a zero `clip` rect, a 50% `clip-path` inset, or is a 1×1 box that hides overflow.)
+- [x] De-duplicate nested-block lines; measure `clip-no-text` stories but waive only the zero rule. (Each block measures only its own text, so a clipped nested block is one line. A `clip-no-text` story is measured like the rest; measuring nothing is not a failure for it.)
+- [x] Freeze the date in date-relative stories so clip results don't drift. (Every story sees 2026-10-15 09:00 Israel time, `FROZEN_NOW`.)
+- [ ] Long supplier names need `overflow-wrap: anywhere` on the review supplier line; older truncations in the project picker, unpaid hints and the add-sheet hint; a stress story with a 3-line supplier. (Left to the UI lanes: UI lane 2 owns the review card, and dev lanes don't open UI PRs.)
+- [x] A per-story retry. (A story that does not render gets one more load before it counts.)
+- [ ] A story whose sample totals don't add up. (The item doesn't name the story, and the clip check measures widths, not sums; left for whoever filed it to name.)
 
 <a id="flow-811"></a>
 ### FLOW-811 · CI and deploy follow-ups

@@ -11,6 +11,8 @@ export type ClipSample = {
 
 export function reportsClip(input: ClipSample): boolean;
 
+export const FROZEN_NOW: string;
+
 export function execute(options?: {
   staticDir?: string;
   widths?: number[];
