@@ -156,6 +156,24 @@ describe("setup SUMIT connect", () => {
     restore();
   });
 
+  it("says the date was not saved when the SUMIT connect function reports it failed", async () => {
+    const restore = reducedMotion();
+    invoke.mockResolvedValue({ data: { connected: true, import_from_saved: false }, error: null });
+    rpc.mockClear();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={vi.fn()} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(onConnected).toHaveBeenCalledOnce(); });
+    expect(await screen.findByText("SUMIT מחובר, אבל תאריך הייבוא לא נשמר.")).toBeInTheDocument();
+    expect(rpc.mock.calls.map(([name]) => name)).not.toContain("set_import_from");
+    restore();
+  });
+
   it("leaves ייבוא מ alone in setup when it was not touched", async () => {
     const restore = reducedMotion();
     invoke.mockResolvedValue({ data: {}, error: null });
