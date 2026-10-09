@@ -249,9 +249,14 @@ begin
   end if;
 
   -- Rule 2 needs a filed invoice on one project or on none: a category, and a project unless
-  -- the category keeps the line out of the P&L. A shared or overhead invoice is left alone.
+  -- the category keeps the line out of the P&L. A shared or overhead invoice, or one split by
+  -- category, is left alone.
   filed := inv.category_id is not null
     and coalesce(inv.pnl_role, 'project') = 'project'
+    and not exists (
+      select 1 from public.line_splits sp
+      where sp.transaction_id = inv.id and sp.company_id = inv.company_id
+    )
     and (
       inv.project_id is not null
       or private.line_category_out(inv.excluded_from_pnl, inv.category_suggested, inv.loan_part)

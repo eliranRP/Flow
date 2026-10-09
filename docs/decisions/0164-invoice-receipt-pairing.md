@@ -34,5 +34,5 @@ Two triggers apply the rules, so every write path follows them without its own c
 
 - On deploy, a receipt already waiting for review (or still unfiled) joins its invoice, or takes the invoice's filing when the invoice is already filed. A receipt already filed is not touched.
 - The receipt's approved row means a late receipt filed this way does not show on "filed automatically today" (owner rows are left out there since FLOW-309).
-- An invoice that is shared or overhead does not move its receipts.
+- An invoice that is shared, overhead or split by category does not move its receipts; a receipt that followed it before keeps that filing.
 - The review card UI (the "✓ שולם" line) is UI lane 2's, on these fields.
