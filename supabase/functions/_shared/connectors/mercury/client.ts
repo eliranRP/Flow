@@ -563,6 +563,17 @@ export async function fetchMercurySince(
   session: ConnectorSession,
   input: FetchSinceInput,
 ): Promise<FetchSinceResult> {
+  const result = await fetchMercuryPages(session, input);
+  if (result.complete || !input.importFrom) return result;
+  // FLOW-505: a run that stops at the page cap keeps the import start too.
+  const lines = result.lines.filter((row) => withinImport(row, input.importFrom));
+  return { ...result, lines, removedIds: removedFrom(lines) };
+}
+
+async function fetchMercuryPages(
+  session: ConnectorSession,
+  input: FetchSinceInput,
+): Promise<FetchSinceResult> {
   const state = stateOf(session);
   const decoded = decodeMercuryCursor(input.cursor);
   const at = decoded.at ?? state.now().toISOString();

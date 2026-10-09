@@ -104,7 +104,7 @@ function useJevConnectorScope(): {
 
 /**
  * FLOW-706: the queue read while Jev is off. Only the fills that still stand, so the card keeps
- * בטל (decision 0145); no suggestion and no Jev value. A failed read throws: the card shows no label.
+ * ביטול (decision 0145); no suggestion and no Jev value. A failed read throws: the card shows no label.
  */
 export async function loadJevFillsOff(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
@@ -160,7 +160,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       JEV_QUEUE_STALLED,
     ),
   });
-  // FLOW-706: with Jev off, a fill that still stands keeps its label and בטל.
+  // FLOW-706: with Jev off, a fill that still stands keeps its label and ביטול.
   const knownOff = confirmed && !connector.data;
   const offFills = useQuery({
     queryKey: jevFillsOffQueryKey(transactionIds),

@@ -445,7 +445,7 @@ describe("Jev auto fills (FLOW-702)", () => {
     const queue = await loadJevSuggestions(["t1", "t2", "t3"]);
     expect(queue.byId.t1?.auto).toEqual({ state: "filled", projectId: "p1", categoryId: "c1" });
     expect(queue.byId.t2?.auto?.state).toBe("undone");
-    // The category fill was taken back, the older project fill still stands: בטל takes that one next.
+    // The category fill was taken back, the older project fill still stands: ביטול takes that one next.
     expect(queue.byId.t3?.auto).toEqual({ state: "filled", projectId: "p1", categoryId: null });
     connectorDb.fills = [];
   });

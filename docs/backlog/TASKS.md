@@ -15,14 +15,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-704 Jev flag-read stall (app logic, no visual change) and its tests; FLOW-309 project-picker tests | The next non-UI item |
-| Dev lane 2 | FLOW-704 server: `jev_key_status` RPC for the Jev Settings "no key" row; FLOW-509 follow-ups (runbook, read-only scope note, surviving mutations), PR #321 | The lane manager's next non-UI item |
+| Dev lane 2 | FLOW-505 server: `import_from` cutoff in both sync functions, `set_import_from` widening backfill, `import_from` in `sumit_status`, PR #327 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-339 Search option C (the owner's pick 2026-10-09): one-line rows, no ".00", "נטו" month heads (FLOW-704 app side merged #315) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-506 setup demo VAT from the formatter, dead setup CSS | Next small ready bug |
+| Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -708,6 +708,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (cycle 3, deploy a77efd8) The skip-undo toast sits at the top (y≈102–149) and covers the counter; show it just above the action bar, near the thumb (owner chose this 2026-10-08; supersedes the toast position in decision 0069, so the build adds a decision record). The DevReview fixture also lacks the ביטול action, so add it there for screenshots.
 - [x] (cycle 4, deploy 6b3a05e, high) Regression from #165: a review queue with Back (filtered to a project, opened from הצג הכול, the sample reviewer queue) now gets the stacked header, so the card and buttons drop 50–76px; with the banner and a shared-cost card at 375x667, שינוי (y≈582–661) and דלג sit on the tab bar. Give those headers `layout="inline"` (`flow-screens.tsx` ReviewQueue ~1656, ~1866, `setup/sample-review.tsx:55`); the counter says where you are. Add "filtered queue + banner + shared cost at 375x667" to this task's stories. Done in #175 r1: `layout="inline"` on every review header with Back; story `ReviewFilteredBarSharedBanner375`.
 - [x] (cycle 4) "הצג הכול" is a 58x44 link in the top-left corner, the farthest point from a right thumb; on a card opened from the list it and Back both go to `/review/all`. Hide it when `from=all`, and put it on the start side of the counter row (or in the pinned bar as a secondary action). Done in #175 r1: on the start side of the counter row, hidden on a card opened from the list.
+- [x] (UI lane 2, #333: owner chose option A 2026-10-09) The amount-spike flag (0131) said "פי X מהרגיל לספק" as a line at the bottom of the card, far from the amount it describes. A "↑ N%" pill in the warning tone now sits right after the amount (it drops under it at 320 when short), with "בדרך כלל ₪X" under the amount; the bottom line is gone, and the card draws no flag row beside a pill (a loud spike with no ratio keeps its title row).
 - **Acceptance:** אישור at the same position on every card state at 375, 393, 412; nothing under the tab bar at 375x667; stories for plain, banner, shared-cost, disabled and Jev-filled cards; design review.
 
 <a id="flow-328"></a>
@@ -855,7 +856,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
 - [x] (UI lane 3, 2026-10-09: ✕ is centred on the title row in every sheet) Add sheet (+ tab): it has both ✕ and a "ביטול" link, and ✕ sits about 8px below the title baseline. Drop ביטול (it belongs on confirm sheets) and align ✕ with the title.
 - [ ] Project page, overhead switch: the hint "כבוי · מציג רווח לפני כלליות" repeats the switch state. Label "אחרי כלליות" with no hint, as Settings does.
-- [ ] (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
+- [x] (UI lane 2, #333: owner chose A 2026-10-09) (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
 - **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
 
 <a id="flow-340"></a>
@@ -1013,6 +1014,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
+- [x] Server side (#327): `set_import_from(provider, date | null)` stores the start (it existed since the connector engine); `sumit_status()` returns `import_from`, and Mercury's is on `connector_connection_status`. `upsert_connector_lines` does not add a line dated before it, for both connectors, and keeps the rows already stored, which still take updates so a pending line can settle (the SUMIT sweep already spared them); a run whose lines are all older is not an empty sweep. A Mercury run that stops at the page cap also drops older lines. A wider range clears Mercury's cursor so the next sync reads from the new start; SUMIT reads every document each run. A Mercury run already in flight when the range widens ends with `sync_cursor_conflict`; the next run starts from the new date, and the error shows on the sheet until a run completes.
+- [ ] App: the ייבוא מ control (option B) in the SUMIT and Mercury sheets (UI lane 3).
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups
@@ -1065,10 +1068,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The whole treasury history is re-read every sync; the stored-treasury read throws past 20k rows. (FLOW-509 PR: a later sync stops paging the ledger 60 days before the window start (a backdated cancel keeps its original's day); the first sync still reads it all. The stored read takes the cancellable kinds of the last 366 days, at most 2,000 rows, and does not throw. The old-line recheck skips treasury kinds, which `/transaction/{id}` does not serve.)
 - [x] The cron URL is built by replacing a path in the shared sync URL secret; read its own value. (FLOW-509 PR: the drain reads Vault `flow_mercury_sync_url` and falls back to the swapped path until it is set; setting it in production is an owner step, see the SUMIT runbook.)
 - [x] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id (moot: `transactions_external_uidx` is unique, and #91 removed that read); test stored-line selects against the local DB. (FLOW-509 PR: stored treasury lines carry `provider_meta.account_id`; the session counts the treasury accounts it listed. Both sync functions use `createClient<Database>`. The wildcards take one `[A-Za-z0-9_-]{1,128}` segment and the literal templates are refused. The remaining `maybeSingle()` reads are keyed by the `(company_id, provider)` primary key or `limit(1)`. The stored-line selects are not run against the local DB: the PostgREST filters need the edge runtime, left as a follow-up. With two or more treasury accounts, a line stored before it carried `account_id` can no longer be voided by a cancel: accepted.)
-- [ ] Show "N new lines" after a manual refresh (the counts are returned now).
+- [x] (Backlog bug fixes, 2026-10-09: the toast says "N תנועות חדשות" after a run that read everything; `mercury-sync` now returns `complete`, and a run that stops early keeps "הרענון הסתיים.") Show "N new lines" after a manual refresh (the counts are returned now).
 - [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
 - [x] Six surviving mutations in the client resume and own-account paths. (#321: `resume_own_account_test.ts` covers the cursor field checks, the treasury resume reaching only the resumed account, and the card, missing-account and overlong-id checks. A rerun kills 14 of 15 mutants; the survivor swaps the bad-JSON fallback for `timestampFromCursor`, which already returns null for anything starting with `{`.)
 - [x] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy. (#321: `docs/runbooks/mercury-sync.md`.)
+- [ ] (#331 review) `upsert_connector_lines` counts a first-seen line that arrives already void (inserted with `removed_at`) in `inserted`, so the refresh toast can say "תנועה חדשה אחת" for a failed or cancelled Mercury transaction that never shows. Count only live inserts.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
 - [x] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it. (#321: "The token's scope" in `docs/runbooks/mercury-sync.md`.)
 
@@ -1161,14 +1165,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready (the flag-read stall and the tests done in #330; the note height and the "no key" row stay with the UI lanes) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (the flag-read stall and the tests done in #330; the note height stays with the UI lanes) · **Depends on:** —
 - [x] If the flag read stalls past 1s while Jev is on, the card swaps back and writes the flag off; a flag that's off while Jev is on leaves one approvable read on the next launch; the 5-minute flag cache delays a server-side change; each next card waits about 0.8s again during a long stall. (Dev lane 1, #330: a stall writes nothing and is not cached as off, so the next open of the review screen asks again; the flag cache is one minute; after a stalled suggestion read the next card does not wait. The card still shows without Jev during a stall, since it can't know the answer; a fill that lands later still shows.)
 - [ ] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden.
 - [x] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render. (The scoped key takes this session's live answer; the binding runs in a layout effect; test in `jev-review-open.test.tsx`.)
 - [x] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads. The two tests: #330, `jev-review-open.test.tsx`.)
 - [x] Delete the old shared connector key once per launch, not on every read.
 - [x] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות.
-- [ ] Jev Settings row: a "no key" status once a key-status RPC exists. (Server part in #321: `public.jev_key_status()` returns `ok` or `missing`; the app row is UI lane 4's.)
+- [x] Jev Settings row: a "no key" status once a key-status RPC exists. (Server part #321: `public.jev_key_status()` returns `ok` or `missing`. App part UI lane 4, PR #329: switched on with no key says "אין מפתח"; an unknown read keeps the usual word.)
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 - [x] The review card marks a project or category Jev filled with "✦ הצעת Jev" (the shared `JevTag`) instead of הצעה (2026-10-08, #141).
 - [x] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill. (שינוי שיוך and its picker say "✦ הצעת Jev"; a review list row reads "✦ Jev · project · category", and only "✦" when בהמתנה leaves no room.)
