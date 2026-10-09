@@ -2,8 +2,9 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { preloadScreens } from "./screen-loaders";
 
 const auth = vi.hoisted(() => {
   const handlers: Array<(event: string, session: Session | null) => void> = [];
@@ -97,15 +98,27 @@ function emit(event: string, next: Session | null) {
   for (const handler of auth.handlers) handler(event, next);
 }
 
-function renderAt(path: string) {
+// FLOW-804: screens load on demand. With every screen (and the dev fixtures) fetched first, a
+// few ticks settle a route.
+beforeAll(async () => {
+  await Promise.all([preloadScreens(), import("./dev-routes")]);
+}, 60_000);
+
+async function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <App />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  await settle();
+  return view;
+}
+
+async function settle(): Promise<void> {
+  for (let tick = 0; tick < 3; tick += 1) await act(async () => {});
 }
 
 afterEach(() => {
@@ -114,66 +127,74 @@ afterEach(() => {
 });
 
 describe("auth guard when Supabase is configured", () => {
-  it("shows a skeleton and does not redirect while the session is pending", () => {
-    renderAt("/");
+  it("shows a skeleton and does not redirect while the session is pending", async () => {
+    await renderAt("/");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "כניסה או הרשמה" })).not.toBeInTheDocument();
   });
 
-  it("sends a signed-out session to sign-in with the Google button enabled", () => {
-    renderAt("/");
+  it("sends a signed-out session to sign-in with the Google button enabled", async () => {
+    await renderAt("/");
     act(() => {
       emit("INITIAL_SESSION", null);
     });
+    await settle();
     expect(screen.getByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "המשך עם Google" })).toBeEnabled();
   });
 
   it("shows Home after a session, then sign-in after SIGNED_OUT", async () => {
-    renderAt("/");
+    await renderAt("/");
     act(() => {
       emit("INITIAL_SESSION", session);
     });
+    await settle();
     expect(await screen.findByRole("heading", { name: "פרטי העסק" })).toBeInTheDocument();
     expect(screen.queryByText("שלום, דנה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     act(() => {
       emit("SIGNED_OUT", null);
     });
+    await settle();
     expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
   });
 
   it("shows the offline screen when the home query is paused", async () => {
     onlineManager.setOnline(false);
-    renderAt("/");
+    await renderAt("/");
     act(() => {
       emit("INITIAL_SESSION", session);
     });
+    await settle();
     expect(await screen.findByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expect(screen.queryByText("עוד אין נתונים")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "העלאת דוח בנק" })).not.toBeInTheDocument();
   });
 
   it("keeps a listed deep link through sign-in and drops an off-list one", async () => {
-    const first = renderAt("/review");
+    const first = await renderAt("/review");
     act(() => {
       emit("INITIAL_SESSION", null);
     });
+    await settle();
     expect(screen.getByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
     act(() => {
       emit("SIGNED_IN", session);
     });
+    await settle();
     expect(await screen.findByRole("heading", { name: "לאישור" })).toBeInTheDocument();
     first.unmount();
     auth.handlers.length = 0;
 
-    renderAt("/install");
+    await renderAt("/install");
     act(() => {
       emit("INITIAL_SESSION", null);
     });
+    await settle();
     act(() => {
       emit("SIGNED_IN", session);
     });
+    await settle();
     expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "לאישור" })).not.toBeInTheDocument();
   });

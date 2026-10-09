@@ -1,42 +1,29 @@
-import {
-  breakdownLinesSchema,
-  breakdownSchema,
-  categoryRowSchema,
-  dashboardSchema,
-  projectCategorySchema,
-  projectDetailSchema,
-  projectWaitingSchema,
-  profitMonthsSchema,
-  filedTodaySchema,
-  reviewRowSchema,
-  sumitStatusSchema,
-  mercuryStatusSchema,
-  transactionDetailSchema,
-  unpaidRowSchema,
-  type Breakdown,
-  type BreakdownDirection,
-  type BreakdownGroupBy,
-  type BreakdownLinesPage,
-  type CategoryRow,
-  type Dashboard,
-  type FiledTodayRow,
-  type ProjectCategoryPage,
-  type ProjectDetail,
-  type ProjectWaitingRow,
-  type ProfitMonths,
-  type ReviewRow,
-  type SumitStatus,
-  type MercuryStatus,
-  type TransactionDetail,
-  type UnpaidRow,
+import type {
+  Breakdown,
+  BreakdownDirection,
+  BreakdownGroupBy,
+  BreakdownLinesPage,
+  CategoryRow,
+  Dashboard,
+  FiledTodayRow,
+  ProjectCategoryPage,
+  ProjectDetail,
+  ProjectWaitingRow,
+  ProfitMonths,
+  ReviewRow,
+  SumitStatus,
+  MercuryStatus,
+  TransactionDetail,
+  UnpaidRow,
 } from "@flow/shared";
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
+import { loadReadSchemas } from "./load-read-schemas";
 import { waitForAccessToken } from "./wait-for-session";
 import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
-import { parseTxnMetaList, type TxnMeta } from "./txn-meta";
+import { type TxnMeta } from "./txn-meta";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,
@@ -70,6 +57,10 @@ export function BooksProvider({ children }: { children: ReactNode }) {
     setPeriodState(next);
   }, []);
   const [overheadOn, setOverheadOn] = useState(false);
+  useEffect(() => {
+    // Fetch the schemas while the first reads are on the wire. A read retries the fetch if this fails.
+    void loadReadSchemas().catch(() => undefined);
+  }, []);
   const value = useMemo(
     () => ({ period, setPeriod, overheadOn, setOverheadOn }),
     [period, overheadOn, setPeriod],
@@ -117,7 +108,7 @@ export function useDashboardQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_dashboard", rpcArgs(period));
       if (error) throw error;
-      return dashboardSchema.parse(data);
+      return (await loadReadSchemas()).dashboardSchema.parse(data);
     },
   });
 }
@@ -133,7 +124,7 @@ export function useUnpaidQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_unpaid");
       if (error) throw error;
-      return unpaidRowSchema.array().parse(data);
+      return (await loadReadSchemas()).unpaidRowSchema.array().parse(data);
     },
   });
 }
@@ -149,7 +140,7 @@ export function useFiledTodayQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_auto_assigned_today");
       if (error) throw error;
-      return filedTodaySchema.array().parse(data);
+      return (await loadReadSchemas()).filedTodaySchema.array().parse(data);
     },
   });
 }
@@ -201,7 +192,7 @@ async function settleReviewJevScope(
     const result = await listed;
     if (result.error == null) {
       payloadCompany = companyIdFromReviewPayload(result.data);
-      ids = reviewRowSchema.array().parse(result.data).map((row) => row.transaction_id);
+      ids = (await loadReadSchemas()).reviewRowSchema.array().parse(result.data).map((row) => row.transaction_id);
     }
   } catch {
     payloadCompany = null;
@@ -253,7 +244,7 @@ export function useReviewQuery(active = true) {
       }
       const { data, error } = await listed;
       if (error) throw error;
-      return reviewRowSchema.array().parse(data);
+      return (await loadReadSchemas()).reviewRowSchema.array().parse(data);
     },
   });
 }
@@ -269,7 +260,7 @@ export function useCategoriesQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_categories");
       if (error) throw error;
-      return categoryRowSchema.array().parse(data);
+      return (await loadReadSchemas()).categoryRowSchema.array().parse(data);
     },
   });
 }
@@ -301,7 +292,7 @@ export function useSumitStatusQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("sumit_status");
       if (error) throw error;
-      return sumitStatusSchema.parse(data);
+      return (await loadReadSchemas()).sumitStatusSchema.parse(data);
     },
     refetchInterval: syncPollInterval,
     // Another tab may have started a run: re-read the claim when this tab is shown again.
@@ -337,7 +328,7 @@ export function useMercuryStatusQuery(active = true) {
         .maybeSingle();
       if (error) throw error;
       if (data == null) return mercuryDisconnected;
-      const parsed = mercuryStatusSchema.parse({
+      const parsed = (await loadReadSchemas()).mercuryStatusSchema.parse({
         ...data,
         connected: data.connected === true,
         syncing: data.syncing === true,
@@ -365,7 +356,7 @@ export function useProjectQuery(projectId: string, period: PeriodChoice | null =
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: BOOKS_BASIS, ...(range ?? {}) });
       if (error) throw error;
-      return projectDetailSchema.parse(data);
+      return (await loadReadSchemas()).projectDetailSchema.parse(data);
     },
   });
 }
@@ -397,7 +388,7 @@ export function useProjectCategoryQuery(projectId: string, categoryId: string, c
         ...(range ?? {}),
       });
       if (error) throw error;
-      return projectCategorySchema.parse(data);
+      return (await loadReadSchemas()).projectCategorySchema.parse(data);
     },
     getNextPageParam: (page) => page?.next_offset ?? undefined,
   });
@@ -422,7 +413,7 @@ export function useBreakdownQuery(direction: BreakdownDirection, groupBy: Breakd
         p_group_by: groupBy,
       });
       if (error) throw error;
-      return breakdownSchema.parse(data);
+      return (await loadReadSchemas()).breakdownSchema.parse(data);
     },
   });
 }
@@ -459,7 +450,7 @@ export function useBreakdownLinesQuery(
         p_offset: pageParam,
       });
       if (error) throw error;
-      return breakdownLinesSchema.parse(data);
+      return (await loadReadSchemas()).breakdownLinesSchema.parse(data);
     },
     getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * BREAKDOWN_PAGE : undefined),
   });
@@ -482,7 +473,7 @@ export function useProfitMonthsQuery(projectId: string, period: PeriodChoice) {
         ...(range ?? {}),
       });
       if (error) throw error;
-      return profitMonthsSchema.parse(data);
+      return (await loadReadSchemas()).profitMonthsSchema.parse(data);
     },
   });
 }
@@ -498,7 +489,7 @@ export function useProjectWaitingQuery(projectId: string) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("project_waiting", { p_project: projectId });
       if (error) throw error;
-      return projectWaitingSchema.parse(data);
+      return (await loadReadSchemas()).projectWaitingSchema.parse(data);
     },
   });
 }
@@ -513,7 +504,7 @@ export function transactionQueryOptions(preview: HomePreview, transactionId: str
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_transaction", { p_id: transactionId });
       if (error) throw error;
-      return transactionDetailSchema.parse(data);
+      return (await loadReadSchemas()).transactionDetailSchema.parse(data);
     },
   };
 }
@@ -548,7 +539,7 @@ export function useLineMetaQuery(transactionId: string | null | undefined, enabl
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_line_meta", { p_ids: [id] });
       if (error) throw error;
-      return parseTxnMetaList(data).find((row) => row.transaction_id === id) ?? null;
+      return (await loadReadSchemas()).parseTxnMetaList(data).find((row) => row.transaction_id === id) ?? null;
     },
   });
 }
@@ -601,7 +592,7 @@ export async function readLineMetaPage(client: QueryClient, preview: string, ids
   for (const { error } of results) if (error) throw error;
   const asked = new Set(missing);
   for (const { data } of results) {
-    for (const row of parseTxnMetaList(data)) if (asked.has(row.transaction_id)) out.set(row.transaction_id, row);
+    for (const row of (await loadReadSchemas()).parseTxnMetaList(data)) if (asked.has(row.transaction_id)) out.set(row.transaction_id, row);
   }
   for (const id of missing) client.setQueryData(lineMetaQueryKey(preview, id), out.get(id) ?? null);
   return out;

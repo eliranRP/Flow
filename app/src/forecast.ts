@@ -1,12 +1,7 @@
-import {
-  expectedMonthsSchema,
-  missingBillsSchema,
-  type ExpectedMonths,
-  type ExpectedParty,
-  type MissingBill,
-} from "@flow/shared";
+import type { ExpectedMonths, ExpectedParty, MissingBill } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
+import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import { searchHref } from "./search";
 import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
@@ -140,7 +135,7 @@ export function useMissingBillsQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("missing_bills", {});
       if (error) throw error;
-      return missingBillsSchema.parse(data);
+      return (await loadReadSchemas()).missingBillsSchema.parse(data);
     },
   });
 }
@@ -156,7 +151,7 @@ export function useExpectedMonthsQuery(projectId: string, months = EXPECTED_MONT
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("expected_months", { p_months: months, p_project_id: projectId });
       if (error) throw error;
-      return expectedMonthsSchema.parse(data);
+      return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
     },
   });
 }
