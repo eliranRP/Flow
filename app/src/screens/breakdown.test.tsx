@@ -118,6 +118,9 @@ describe("Breakdown screen", () => {
     expect(waiting).toHaveAttribute("href", "/review");
     expect(within(waiting).queryByText(/₪/)).not.toBeInTheDocument();
     expect(within(waiting).getByText("כבר כלולים בסכום")).toBeInTheDocument();
+    // FLOW-356: it reads as Home's review row (inbox icon, tint), not as a muted category.
+    expect(waiting).toHaveClass("ui-row-pending");
+    expect(waiting.closest(".ui-breakdown-quiet")).toBeNull();
     expect(screen.getByRole("heading", { name: "לא נכלל בסכום" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /לא נספר ברווח/ })).toHaveAttribute("href", "/flow/expense/excluded/ILS");
   });
