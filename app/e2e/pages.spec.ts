@@ -13,7 +13,6 @@ const pages: Array<[string, string]> = [
   ["/settings/loans", "הלוואות"],
   ["/onboarding", "פרטי העסק"],
   ["/install", "התקנת Flow"],
-  ["/notifications", "התראות"],
   ["/transactions/1", "פרטי תנועה"],
   ["/transactions/1/split", "פיצול"],
 ];

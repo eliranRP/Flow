@@ -19,9 +19,8 @@ import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevSwitchOn, useJevIntegrationQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
-import { EmptyState } from "../ui/empty-state";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BellIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
+import { AlertIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -537,13 +536,3 @@ export function LoansScreen({ sample }: { sample?: SettingsSample } = {}) {
   );
 }
 
-export function NotificationsScreen() {
-  const search = usePreviewSearch();
-  return (
-    <div>
-      <ScreenHeader title="התראות" kicker="הגדרות" backTo={`/settings${search}`} />
-      {/* FLOW-328: the shared empty state, Hebrew only. */}
-      <EmptyState icon={<BellIcon />} title="אין עדיין התראות" body="בשלב הזה ההודעות לא נשלחות." />
-    </div>
-  );
-}
