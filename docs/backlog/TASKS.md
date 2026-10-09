@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
+| Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
 | Dev lane 2 | FLOW-811: CI and deploy follow-ups (row-hash baseline script, composite foreign key indexes) | FLOW-812 faster CI (claim looks stale), more Flow MCP agent requests |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
@@ -1186,7 +1186,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Follow-up (e2e for the touched screens):** the default run now also runs the e2e specs that reach the files changed since the last commit whose specs passed in this clone (or since main). `app/e2e/spec-sources.json` maps each spec to the screens it opens; `scripts/e2e-specs.mjs` follows their imports (the screens barrel by name, `@flow/shared` too), and `App.tsx`, `dev-routes.tsx`, CSS and the e2e config run every spec. A test fails when a new spec is not in the map. It needs Docker: local Supabase starts (or resets) in the background while lint runs; without Docker the run names the specs it left to main. Specs run with `--fully-parallel` on Playwright's default workers (on every core a toast timing spec timed out). A run without Docker does not move the next run's base, so the skipped specs come back.
 - **Measured (4 cores, 2 workers):** all 22 specs 5.6 min (gate 619s); a copy change in one screen (`jev-settings.tsx`) picks 9 specs, 3.6 min, and the whole gate takes 391s; server, docs and test-only pushes pick none. **Trade-off:** a screen change now costs about 3.5 more minutes, over the 4-minute budget, because `controls.spec.ts` (70 tests, 285s of test time) opens nearly every screen. Splitting it by screen is the next saving.
 - **Controls split:** the no-op sweep (41 routes, about 207s of the 285s in `controls.spec.ts`) moved into four specs by screen sharing `app/e2e/control-sweep.ts`, so a screen change runs one sweep file, not all of them. The functional controls tests stay in `controls.spec.ts`.
-- **Next:** lint (48s, type-aware) bounds the fast path; a shared green cache (`FLOW_LOCAL_CI_CACHE`) would let one lane's pass count for another.
+- **Shared green cache:** green marks name git trees instead of commits, and also go to `FLOW_LOCAL_CI_SHARED_CACHE`, a folder every lane's container mounts (`/mnt/project-files/ci/local-ci-cache` when it is writable; empty keeps marks local). A part another lane already passed on the same inputs is skipped, and a squash merge whose tree a lane passed counts as a green base. Lint (48s, type-aware) is skipped when its inputs (the TypeScript, JavaScript and JSON sources outside `docs`, `design` and `supabase`, `_shared`, which linted tests import, and the lockfile) already passed, so a docs, SQL or shell push no longer waits on it.
 
 ## Data hygiene (public repo)
 
