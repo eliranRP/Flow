@@ -1069,6 +1069,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
 - [x] Six surviving mutations in the client resume and own-account paths. (#321: `resume_own_account_test.ts` covers the cursor field checks, the treasury resume reaching only the resumed account, and the card, missing-account and overlong-id checks. A rerun kills 14 of 15 mutants; the survivor swaps the bad-JSON fallback for `timestampFromCursor`, which already returns null for anything starting with `{`.)
 - [x] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy. (#321: `docs/runbooks/mercury-sync.md`.)
+- [ ] (#331 review) `upsert_connector_lines` counts a first-seen line that arrives already void (inserted with `removed_at`) in `inserted`, so the refresh toast can say "תנועה חדשה אחת" for a failed or cancelled Mercury transaction that never shows. Count only live inserts.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
 - [x] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it. (#321: "The token's scope" in `docs/runbooks/mercury-sync.md`.)
 
