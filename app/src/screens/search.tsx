@@ -27,7 +27,6 @@ import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { Chip } from "../ui/chip";
-import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { DocumentIcon, SearchIcon } from "../ui/icons";
@@ -225,13 +224,15 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
           amountOf={searchRowAmount}
           complete={complete}
           cents
+          net
           renderRow={(row) => (
             <ListRow
               variant="statement"
               title={searchRowTitle(row)}
               fallback="invoice"
               match={typed}
-              details={searchRowDetails(row, active)}
+              details={searchRowDetails(row)}
+              realCents
               pending={row.line_status === "pending"}
               agorot={row.amount_net}
               currency={row.currency}
@@ -294,25 +295,14 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 }
 
 /**
- * Line 2 of a result: "מחוץ לרווח" leads on a kept-out line (decision 0141 log), then the date,
- * then "ממתינה לאישור" in the accent, or the project and category; a split line says its parts.
+ * Line 2 of a result holds a status only (FLOW-339 option C): "מחוץ לרווח" on a kept-out line
+ * (decision 0141 log), "ממתינה לאישור" on a line waiting for review. No date, project, category or
+ * split: the month head dates the row, and the row's own screen shows the rest. בהמתנה is the chip.
  */
-export function searchRowDetails(
-  row: SearchRow,
-  chips: Pick<SearchFilters, "project" | "category"> = { project: null, category: null },
-  now = new Date(),
-): StatementDetail[] {
+export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "waiting_review">): StatementDetail[] {
   const details: StatementDetail[] = [];
   if (row.kept_out) details.push({ text: "מחוץ לרווח" });
-  details.push({ text: formatDayMonth(row.doc_date, now) });
-  if (row.waiting_review) {
-    details.push({ text: "ממתינה לאישור", tone: "accent" });
-    return details;
-  }
-  // A project or category the chip already names is not repeated on every row (FLOW-402).
-  if (row.project_name && chips.project == null) details.push({ text: row.project_name });
-  if (row.split_parts > 0) details.push({ text: `פוצלה ל־${String(row.split_parts)}` });
-  else if (row.category_name && chips.category == null) details.push({ text: row.category_name });
+  if (row.waiting_review) details.push({ text: "ממתינה לאישור", keep: true });
   return details;
 }
 
