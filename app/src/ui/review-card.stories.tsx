@@ -261,7 +261,7 @@ const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<Rev
   transaction_id: "t1", kind, jev_score: score, ...extra,
 });
 export const FlagDuplicateLoud: Story = { name: "Flag: duplicate, loud", args: { ...jevCard, flags: [flag("duplicate", 0.86, { other_doc_date: "2026-10-03" })] } };
-/** 2026-10-09 option A: "↑ 240%" right after the amount and "בדרך כלל ₪2,500" under it; the loud row keeps its title. */
+/** 2026-10-09 option A: "↑ 240%" right after the amount and "בדרך כלל ₪2,500" under it; no flag row beside the pill. */
 export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
 export const FlagSpikeLoud320: Story = { ...narrow, name: "Flag: amount spike, loud, 320", args: FlagSpikeLoud.args };
 export const FlagSpikeLoudDark: Story = { ...dark, name: "Flag: amount spike, loud, dark", args: FlagSpikeLoud.args };
@@ -282,15 +282,20 @@ export const FlagSpikeLong320: Story = {
     await expect(pill).not.toBeNull();
     await document.fonts.ready;
     const amountBox = (amount as HTMLElement).getBoundingClientRect();
-    const card = (canvasElement.querySelector(".ui-review") as HTMLElement).getBoundingClientRect();
+    const cardEl = canvasElement.querySelector(".ui-review") as HTMLElement;
+    const outer = cardEl.getBoundingClientRect();
+    const style = getComputedStyle(cardEl);
+    // The card's content box: an amount spilling into the padding counts as cut.
+    const card = { left: outer.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth), right: outer.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth) };
     const pillBox = (pill as HTMLElement).getBoundingClientRect();
     // The amount is never cut, and the pill stays inside the card: beside the amount when it fits, else under it.
-    await expect(amountBox.left).toBeGreaterThanOrEqual(card.left);
-    await expect(amountBox.right).toBeLessThanOrEqual(card.right);
-    await expect(pillBox.left).toBeGreaterThanOrEqual(card.left);
-    await expect(pillBox.right).toBeLessThanOrEqual(card.right);
+    await expect(amountBox.left).toBeGreaterThanOrEqual(card.left - 0.5);
+    await expect(amountBox.right).toBeLessThanOrEqual(card.right + 0.5);
+    await expect(pillBox.left).toBeGreaterThanOrEqual(card.left - 0.5);
+    await expect(pillBox.right).toBeLessThanOrEqual(card.right + 0.5);
     const beside = pillBox.top < amountBox.bottom - 1;
     if (beside) await expect(pillBox.right <= amountBox.left || pillBox.left >= amountBox.right).toBe(true);
+    else await expect(pillBox.top).toBeGreaterThanOrEqual(amountBox.bottom - 1);
   },
 };
 export const FlagNewPartyLoudIncome: Story = { name: "Flag: new party, loud, income", args: { ...jevCard, direction: "income", netAgorot: "4800000", flags: [flag("new_party_large", 0.9)] } };

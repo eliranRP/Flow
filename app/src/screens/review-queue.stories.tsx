@@ -76,9 +76,9 @@ const loudSpike: ReviewFlagsData = {
   }],
 };
 /**
- * FLOW-327: a loud flag as the card's last block, the bar still clear of the tab bar at 375x667.
- * 2026-10-09 option A: "↑ 240%" after the amount, "בדרך כלל ₪2,500" under it, the loud row title only.
- * `banner` adds the filed-today banner, where a short phone keeps the loud row to one line (#296).
+ * FLOW-327: a loud amount spike, the bar still clear of the tab bar at 375x667.
+ * 2026-10-09 option A: "↑ 240%" after the amount, "בדרך כלל ₪2,500" under it, and no flag row beside the pill.
+ * `banner` adds the filed-today banner. The one-line loud row under the banner (#296) is in ReviewJevFitLoud*.
  */
 function ReviewQueueFlagStory({ banner = false }: { banner?: boolean }) {
   const row = banner ? sampleReview : flagRow;

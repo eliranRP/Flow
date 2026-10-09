@@ -52,7 +52,7 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     if (dupQuiet?.tone !== "quiet") throw new Error("quiet");
     expect(copyText(dupQuiet.line)).toBe("שורה באותו סכום ב־03/10");
 
-    // 2026-10-09 option A: the spike sits by the amount. The loud row keeps its title only.
+    // 2026-10-09 option A: the spike sits by the amount. The view keeps the loud title for a spike with no ratio; beside a pill the card draws no row.
     const spikeLoud = reviewFlagView([flag("amount_spike", 0.7, { ratio: 4.2, typical_amount_minor: 120_000 })]);
     if (spikeLoud?.tone !== "loud") throw new Error("loud");
     expect(copyText(spikeLoud.title)).toBe("סכום גבוה מהרגיל");
