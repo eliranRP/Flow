@@ -459,6 +459,17 @@ describe("Jev auto fills (FLOW-702)", () => {
       prefill: { suggestionId: "", transactionId: "t1", project: null, category: null, auto: { state: "undone", projectId: "p1", categoryId: "c1" } },
     };
     expect(jevFilledOnCard(filledRow, undone)).toBe(false);
+    // A field the fill left empty is not a fill, even when the row's field is empty too.
+    const categoryOnly: JevReviewState = {
+      connectorOn: false,
+      prefill: { suggestionId: "", transactionId: "t1", project: null, category: null, auto: { state: "filled", projectId: null, categoryId: "c1" } },
+    };
+    expect(jevFilledOnCard({ ...filledRow, project_id: null, category_id: "c2" }, categoryOnly)).toBe(false);
+    const projectOnly: JevReviewState = {
+      connectorOn: false,
+      prefill: { suggestionId: "", transactionId: "t1", project: null, category: null, auto: { state: "filled", projectId: "p1", categoryId: null } },
+    };
+    expect(jevFilledOnCard({ ...filledRow, project_id: "p2", category_id: null }, projectOnly)).toBe(false);
     // Off shows no Jev value on the row.
     expect(jevShown(filledRow, off)).toEqual({ project: false, category: false });
   });

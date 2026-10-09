@@ -164,7 +164,8 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
   function stateFor(transactionId: string | null): JevReviewState {
-    if (knownOff && !scopePending && !awaitingLive && !waiting && transactionId != null && offFills.data != null && !offFills.isError) {
+    // knownOff already means a settled connector read from this session (no live wait, no remembered on).
+    if (knownOff && !scopePending && transactionId != null && offFills.data != null && !offFills.isError) {
       const prefill = offFills.data.byId[transactionId] ?? null;
       return prefill == null ? JEV_REVIEW_OFF : { connectorOn: false, prefill };
     }

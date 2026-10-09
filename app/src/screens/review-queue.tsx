@@ -419,7 +419,7 @@ export function ReviewQueue({
   const jevFilled = !jevLoading && card.transaction_id && jevFilledOnCard(card, jev) ? {
     busy: jevUndo.pendingFor(card.transaction_id),
     // FLOW-706: with Jev off the card has no הצעת Jev pill, and the fill stays undoable.
-    alone: !jev.connectorOn,
+    alone: true,
     ...(holdWrites || leaving ? {} : {
       onUndo: () => {
         if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
