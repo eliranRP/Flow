@@ -39,14 +39,20 @@ vi.mock("../lib/supabase", () => ({
       from: (table: string) => {
         if (table === "loans") {
           return {
-            insert: (row: Record<string, unknown>) => {
-              db.inserts.push(row);
-              const finish = () => ({ data: null, error: db.insertError });
-              if (db.hold) return db.hold.then(() => finish());
-              return Promise.resolve(finish());
-            },
+            insert: (row: Record<string, unknown>) => ({
+              select: () => ({
+                single: () => {
+                  db.inserts.push(row);
+                  const finish = () => ({ data: db.insertError ? null : { id: `new-${String(db.inserts.length)}` }, error: db.insertError });
+                  if (db.hold) return db.hold.then(() => finish());
+                  return Promise.resolve(finish());
+                },
+              }),
+            }),
             select: () => ({
-              eq: () => Promise.resolve({ data: db.loans, error: null }),
+              eq: () => ({
+                order: () => Promise.resolve({ data: db.loans.map((loan) => ({ kind: "amortizing", status: "open", closed_on: null, ...loan })), error: null }),
+              }),
             }),
             update: (row: Record<string, unknown>) => ({
               eq: (_column: string, id: string) => ({
