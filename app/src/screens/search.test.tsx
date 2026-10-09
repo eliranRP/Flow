@@ -275,19 +275,9 @@ describe("Search screen (FLOW-323)", () => {
 });
 
 describe("searchRowDetails", () => {
-  const base = { ...line("x"), amount_net: -1n, vat_agorot: null, amount_original: null } as never;
-  const now = new Date("2026-10-08T09:00:00Z");
-
-  it("reads date, project and category, and leaves out what a chip already names", () => {
-    const row = { ...(base as object), category_name: "חומרים" } as Parameters<typeof searchRowDetails>[0];
-    expect(searchRowDetails(row, undefined, now).map((d) => d.text)).toEqual(["02/10", "שיפוץ לדוגמה", "חומרים"]);
-    expect(searchRowDetails(row, { project: PROJECT, category: null }, now).map((d) => d.text)).toEqual(["02/10", "חומרים"]);
-  });
-
-  it("leads with מחוץ לרווח, says the split, and puts ממתינה לאישור in the accent", () => {
-    const kept = { ...(base as object), kept_out: true, split_parts: 3 } as Parameters<typeof searchRowDetails>[0];
-    expect(searchRowDetails(kept, undefined, now).map((d) => d.text)).toEqual(["מחוץ לרווח", "02/10", "שיפוץ לדוגמה", "פוצלה ל־3"]);
-    const waiting = { ...(base as object), waiting_review: true } as Parameters<typeof searchRowDetails>[0];
-    expect(searchRowDetails(waiting, undefined, now)).toEqual([{ text: "02/10" }, { text: "ממתינה לאישור", tone: "accent" }]);
+  it("holds a status only: no date, project, category or split (FLOW-339 option C)", () => {
+    expect(searchRowDetails({ kept_out: false, waiting_review: false })).toEqual([]);
+    expect(searchRowDetails({ kept_out: true, waiting_review: false })).toEqual([{ text: "מחוץ לרווח" }]);
+    expect(searchRowDetails({ kept_out: false, waiting_review: true })).toEqual([{ text: "ממתינה לאישור" }]);
   });
 });

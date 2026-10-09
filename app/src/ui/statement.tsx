@@ -76,10 +76,12 @@ export function statementRowLabel(input: {
   inWord?: string;
   pending?: boolean;
   details?: readonly StatementDetail[];
+  realCents?: boolean;
 }): string {
   const abs = input.agorot < 0n ? -input.agorot : input.agorot;
   const income = input.sign === "in" && input.agorot >= 0n;
-  const amount = withCents(formatAmountText(abs, input.currency ?? "ILS", { detail: true, direction: income ? "income" : "expense" }));
+  const text = formatAmountText(abs, input.currency ?? "ILS", { detail: true, direction: income ? "income" : "expense" });
+  const amount = input.realCents === true ? text : withCents(text);
   const word = input.sign === "in" ? input.inWord ?? "הכנסה" : "הוצאה";
   const parts = [
     input.title,

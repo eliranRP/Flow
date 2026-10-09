@@ -112,6 +112,8 @@ export type StatementRowProps = {
   match?: string;
   /** Muted facts on line 2 after the suggestion, joined with " · " (date, project, state). FLOW-323. */
   details?: StatementDetail[];
+  /** Real agorot only, no ".00" (Search, FLOW-339 option C). */
+  realCents?: boolean;
 };
 
 export function ListRow(props: ListRowProps) {
@@ -375,7 +377,7 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string; realCents?: boolean }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
   const cost = props.sign === "cost";
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
@@ -390,7 +392,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
         currency={props.currency}
         direction={income ? "income" : cost ? undefined : "expense"}
         income={income}
-        cents="always"
+        {...(props.realCents === true ? { presentation: "detail" as const } : { cents: "always" as const })}
       />
     </span>
   );
@@ -448,7 +450,7 @@ function StatementRow(props: StatementRowProps) {
         </span>
       </span>
       <span className="ui-statement-end">
-        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />
+        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} realCents={props.realCents} />
         {props.method != null ? (
           <span className="ui-statement-method t-meta">
             <span className="ui-statement-method-icon" aria-hidden="true">{props.method.icon}</span>

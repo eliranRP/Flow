@@ -239,3 +239,39 @@ describe("MonthList in a cost list (FLOW-339)", () => {
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪350");
   });
 });
+
+describe("MonthList net heads (FLOW-339 option C)", () => {
+  function renderNet(rows: Row[]) {
+    return render(
+      <MonthList
+        rows={rows}
+        keyOf={(r) => r.id}
+        dateOf={dateOf}
+        amountOf={amountOf}
+        cents
+        net
+        renderRow={(r) => <div key={r.id}>{r.id}</div>}
+      />,
+    );
+  }
+
+  it("shows one labeled net per month, with − only when negative, and other currencies on a muted line", () => {
+    const { container } = renderNet([
+      ...NEWEST_FIRST,
+      row("g", "2026-08-02", 50_000n, "expense", "USD"),
+    ]);
+    const heads = [...container.querySelectorAll(".ui-month-head")];
+    expect(heads[0]?.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪8,500");
+    expect(heads[0]?.querySelector(".ui-month-more")).toBeNull();
+    expect(heads[1]?.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪5,800");
+    expect(heads[1]?.querySelector(".ui-month-more")?.textContent).toBe("ועוד $600 בדולר");
+  });
+
+  it("keeps real agorot and a minus on a negative net", () => {
+    const { container } = renderNet([
+      row("a", "2026-09-14", 12_345n, "expense"),
+      row("b", "2026-08-10", 100n, "income"),
+    ]);
+    expect(container.querySelector(".ui-month-totals")?.textContent).toBe("נטו −₪123.45");
+  });
+});
