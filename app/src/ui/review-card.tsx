@@ -95,6 +95,8 @@ type ReviewCardProps = {
    * card shows the stored values without the pill, and the fill stays undoable).
    */
   jevFilled?: { onUndo?: () => void; busy?: boolean; alone?: boolean } | null;
+  /** A storyboard frame (the setup demos, FLOW-506): pending rows hold a still skeleton, no shine. */
+  still?: boolean;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -118,6 +120,7 @@ export function ReviewCard({
   flag,
   missingBoth = false,
   jevFilled,
+  still = false,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
   const memo = meta?.memo ?? null;
@@ -222,7 +225,7 @@ export function ReviewCard({
             <span className="ui-row-main">
               <span className="ui-row-text">
                 <span className="ui-row-hint">{line.label}</span>
-                <span className="ui-row-title"><Skeleton width="md" /></span>
+                <span className="ui-row-title"><Skeleton width="md" still={still} /></span>
               </span>
             </span>
           </div>

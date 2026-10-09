@@ -1,0 +1,1 @@
+The setup demos now show the real review card and the real tab bar, so what you see while setting up matches the app: the Jev and approval demos draw the same card as the review queue, and the SUMIT demo ends on the five-tab bar with its add button.

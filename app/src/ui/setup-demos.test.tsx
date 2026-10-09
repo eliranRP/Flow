@@ -156,6 +156,9 @@ describe("setup demos", () => {
         expect(visibleText()).toContain("הכנסה ·");
         expect(document.querySelector(".ui-setup-lead")).toBeInTheDocument();
         expect(document.querySelector(".ui-setup-stat")).toBeInTheDocument();
+        // FLOW-506: the shared tab bar picture, never live links.
+        expect(document.querySelector(".ui-tabbar-picture")).toBeInTheDocument();
+        expect(document.querySelector(".ui-tabbar-picture a")).not.toBeInTheDocument();
         expect(document.querySelector(".ui-tabbar")).not.toBeInTheDocument();
       },
     );
@@ -163,7 +166,7 @@ describe("setup demos", () => {
       expect(screen.getByText(JEV_ALT)).toBeInTheDocument();
       expect(frame()).toBe("4");
       expect(demoText()).toContain("לאישור");
-      expect(demoText()).toContain("הצעה");
+      expect(demoText()).toContain("הצעת Jev");
       expect(demoText()).toContain("חומרי בניין הדר בע״מ");
       expect(demoText()).toContain("וילה רעננה");
       expect(demoText()).toContain("חומרים");
@@ -172,7 +175,9 @@ describe("setup demos", () => {
       expect(demoText()).toContain("1,530");
       expect(demoText()).toContain("תיוג חכם");
       expect(document.querySelector(".ui-setup-jev .ui-row-chevron")).not.toBeInTheDocument();
-      expect(document.querySelector(".ui-setup-pill")).toBeInTheDocument();
+      // FLOW-506: the real review card, with its הצעת Jev tags.
+      expect(document.querySelector(".ui-setup-jev .ui-review")).toBeInTheDocument();
+      expect(document.querySelector(".ui-setup-jev .ui-suggest-tag-jev")).toBeInTheDocument();
     });
     check(<ProjectsDemo />, () => {
       expect(screen.getByText(PROJECTS_ALT)).toBeInTheDocument();
@@ -261,7 +266,7 @@ describe("setup demos", () => {
       vi.advanceTimersByTime(1900);
     });
     expect(frame()).toBe("3");
-    expect(demoText()).toContain("הצעה");
+    expect(document.querySelector(".ui-setup-jev .ui-skeleton-bar-still")).toBeInTheDocument();
     expect(demoText()).not.toContain("וילה רעננה");
     act(() => {
       vi.advanceTimersByTime(JEV_DEMO_MS);
