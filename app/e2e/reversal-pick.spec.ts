@@ -145,9 +145,9 @@ async function pickReversal(page: import("@playwright/test").Page, line: Line) {
 }
 
 test("an outflow can be filed under an income category from the review card", async ({ page }) => {
-  await pickReversal(page, { direction: "expense", ownName: "חומרים", otherName: "הכנסה אחרת", heading: "הכנסה שהוחזרה" });
+  await pickReversal(page, { direction: "expense", ownName: "חומרים", otherName: "הכנסה אחרת", heading: "החזר ללקוח" });
 });
 
 test("an inflow can be filed under an expense category from the review card", async ({ page }) => {
-  await pickReversal(page, { direction: "income", ownName: "תקבול מלקוח", otherName: "הובלה", heading: "הוצאה שהוחזרה" });
+  await pickReversal(page, { direction: "income", ownName: "תקבול מלקוח", otherName: "הובלה", heading: "החזר מספק" });
 });

@@ -47,7 +47,7 @@ export function projectLineRow(txn: ProjectLine): { agorot: bigint; sign: "in" |
   return { agorot: part.minor, sign: part.direction === "income" ? "in" : "out", whole: `מתוך ${formatAmountText(whole, currency)}` };
 }
 
-/** "מחוץ לרווח · מתוך $3,170 · category · date". The marker leads, so a kept-out line reads as one at a glance. */
+/** "לא נספר ברווח · מתוך $3,170 · category · date". The marker leads, so a kept-out line reads as one at a glance. */
 function projectLineHint(txn: ProjectLine, whole: string | null): string {
   return [txn.kept_out === true ? KEPT_OUT_SHORT : null, whole, txn.category, formatDayMonth(txn.doc_date)]
     .filter((part): part is string => part != null && part !== "")

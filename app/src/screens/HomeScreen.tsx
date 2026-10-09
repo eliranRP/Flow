@@ -372,9 +372,9 @@ export function attentionRows({
       id: "unpaid",
       to: `/unpaid${search}`,
       icon: <DocumentIcon size={24} stroke={1.9} />,
-      title: unpaidCount === 1 ? "חשבונית אחת לא שולמה" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות לא שולמו</>,
+      title: unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
       hint: unpaidOther.length === 0 ? (
-        <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · טרם נגבה</>
+        <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · לגבייה</>
       ) : (
         <>
           {[
@@ -383,7 +383,7 @@ export function attentionRows({
           ].map((text) => (
             <span key={text}><bdi dir="ltr">{text}</bdi> · </span>
           ))}
-          טרם נגבה
+          לגבייה
         </>
       ),
     });

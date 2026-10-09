@@ -405,8 +405,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           <List>
             <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" icon={<TagIcon />} chevron />
             <Toggle
-              label="רווח אחרי כלליות"
-              hint="חלק מהכלליות נכנס לכל פרויקט"
+              label="רווח אחרי הוצאות כלליות"
+              hint="חלק מההוצאות הכלליות נכנס לכל פרויקט"
               icon={<SplitIcon />}
               checked={overheadOn}
               disabled={holdWrites}
