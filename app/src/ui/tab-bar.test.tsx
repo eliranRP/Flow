@@ -118,6 +118,16 @@ describe("TabBar", () => {
     }
   });
 
+  it("lights the tab a dev fixture names, where the path names none (FLOW-334)", () => {
+    render(
+      <MemoryRouter initialEntries={["/e2e/review"]}>
+        <TabBar section="review" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: /^לאישור/ })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
+  });
+
   it("highlights no tab on add and closes the sheet from +", async () => {
     render(
       <MemoryRouter initialEntries={["/add"]}>

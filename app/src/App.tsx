@@ -5,7 +5,7 @@ import { homeSummarySchema } from "@flow/shared";
 import { useAuth } from "./auth";
 import { SessionProviders } from "./session-providers";
 import { HomeSkeleton } from "./screens/home-skeleton";
-import { TabBar } from "./ui/tab-bar";
+import { TabBar, type TabSection } from "./ui/tab-bar";
 import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
 import { getSupabase } from "./lib/supabase";
@@ -46,6 +46,7 @@ import { SearchScreen } from "./screens/search";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
 import { LineSplitScreen } from "./screens/line-split";
 import { DevLineSplit } from "./dev/line-split-e2e";
+import { DevBreakdownGate, DevBreakdownLinesGate } from "./dev/breakdown-sample";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
 import { LoanDetailScreen } from "./screens/loan-detail-screen";
@@ -120,25 +121,34 @@ function AppRoutes() {
             <>
               <Route path="/e2e/project" element={<DevProject />} />
               <Route path="/e2e/expense" element={<DevExpense />} />
-              <Route path="/e2e/review" element={<DevReview />} />
-              <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
-              <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
-              <Route path="/e2e/filed" element={<DevFiled />} />
-              <Route path="/e2e/txn-list" element={<DevTxnList />} />
-              <Route path="/e2e/home" element={<DevHome />} />
-              <Route path="/e2e/projects" element={<DevProjects />} />
-              <Route path="/e2e/settings" element={<DevSettings />} />
-              <Route path="/e2e/connections" element={<DevConnections />} />
-              <Route path="/e2e/loans" element={<DevLoans />} />
-              <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
-              <Route path="/e2e/categories" element={<DevCategories />} />
-              <Route path="/e2e/unpaid" element={<DevUnpaid />} />
-              <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
+              {/* FLOW-334: a fixture of a screen that has the tab bar draws it, on that screen's tab. */}
+              <Route element={<DevShell section="review" />}>
+                <Route path="/e2e/review" element={<DevReview />} />
+                <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
+                <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
+                <Route path="/e2e/filed" element={<DevFiled />} />
+                <Route path="/e2e/txn-list" element={<DevTxnList />} />
+                <Route path="/e2e/change" element={<DevChange />} />
+              </Route>
+              <Route element={<DevShell section="home" />}>
+                <Route path="/e2e/home" element={<DevHome />} />
+                <Route path="/e2e/unpaid" element={<DevUnpaid />} />
+                <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
+              </Route>
+              <Route element={<DevShell section="projects" />}>
+                <Route path="/e2e/projects" element={<DevProjects />} />
+                <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
+                <Route path="/e2e/project-category" element={<DevProjectCategory />} />
+                <Route path="/e2e/project-months" element={<DevProjectMonths />} />
+              </Route>
+              <Route element={<DevShell section="settings" />}>
+                <Route path="/e2e/settings" element={<DevSettings />} />
+                <Route path="/e2e/connections" element={<DevConnections />} />
+                <Route path="/e2e/loans" element={<DevLoans />} />
+                <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
+                <Route path="/e2e/categories" element={<DevCategories />} />
+              </Route>
               <Route path="/e2e/txn" element={<DevTransaction />} />
-              <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
-              <Route path="/e2e/project-category" element={<DevProjectCategory />} />
-              <Route path="/e2e/project-months" element={<DevProjectMonths />} />
-              <Route path="/e2e/change" element={<DevChange />} />
               <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
               <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
               <Route path="/e2e/split" element={<DevSplit />} />
@@ -168,9 +178,10 @@ function AppRoutes() {
               <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
               <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
               <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
-              <Route path="flow/:direction" element={<BreakdownScreen />} />
-              <Route path="flow/:direction/excluded/:currency" element={<BreakdownLinesScreen excluded />} />
-              <Route path="flow/:direction/:groupBy/:currency/:groupKey" element={<BreakdownLinesScreen />} />
+              {/* FLOW-334: on the dev server ?preview=1 shows sample figures here; a build keeps the screen. */}
+              <Route path="flow/:direction" element={import.meta.env.DEV ? <DevBreakdownGate /> : <BreakdownScreen />} />
+              <Route path="flow/:direction/excluded/:currency" element={import.meta.env.DEV ? <DevBreakdownLinesGate excluded /> : <BreakdownLinesScreen excluded />} />
+              <Route path="flow/:direction/:groupBy/:currency/:groupKey" element={import.meta.env.DEV ? <DevBreakdownLinesGate /> : <BreakdownLinesScreen />} />
               <Route element={<ReviewWithSheet />}>
                 <Route path="review" element={null} />
                 <Route path="review/all" element={null} />
@@ -283,6 +294,18 @@ function Shell() {
         <Outlet />
       </div>
       <TabBar allowAdd={allowAdd} />
+    </div>
+  );
+}
+
+/** Dev only (FLOW-334): the Shell's tab bar for an /e2e/ fixture, on the tab its real screen belongs to. */
+function DevShell({ section }: { section: TabSection }) {
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">
+        <Outlet />
+      </div>
+      <TabBar section={section} />
     </div>
   );
 }

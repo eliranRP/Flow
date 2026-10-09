@@ -2,11 +2,6 @@
   text-wrap: pretty;
 }
 
-/* FLOW-115: the kept preview while a field is incomplete or wrong. */
-.ui-loan-preview-stale {
-  color: var(--color-text-muted);
-}
-
 /* FLOW-115: the amount and its currency are one field: the control sits --space-2 under the input. */
 .ui-loan-amount-field {
   display: flex;
@@ -32,8 +27,14 @@
   color: var(--color-warning);
 }
 
+/* FLOW-115: the שיוך row's height while the loans load: the eyebrow, the title and the hint the row
+   always has, so nothing moves when the read lands. */
 .ui-loan-skel .ui-row {
-  min-height: calc(var(--touch-min) + 28px);
+  min-height: calc(
+    2 * var(--row-pad)
+    + 2 * var(--type-meta-size) * var(--type-meta-line)
+    + var(--type-title-3-size) * var(--type-title-3-line)
+  );
 }
 
 /* A loan's balance in a row's meta slot: the list amount size, not the hint size the slot sets,

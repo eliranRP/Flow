@@ -412,7 +412,7 @@ export function ReviewQueue({
   const mismatch = card.reason === "split_mismatch";
   const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, reviewHasParty(card));
   const flag = reviewFlagView(flagsFor(card.transaction_id), { direction: card.direction, currency: card.currency });
-  // FLOW-702: the auto job's fill still stands on the stored row; בטל takes it back (a viewer reads it only).
+  // FLOW-702: the auto job's fill still stands on the stored row; ביטול takes it back (a viewer reads it only).
   const jevFilled = !jevLoading && card.transaction_id && jevFilledOnCard(card, jev) ? {
     busy: jevUndo.pendingFor(card.transaction_id),
     // FLOW-706: with Jev off the card has no הצעת Jev pill, and the fill stays undoable.
@@ -492,7 +492,7 @@ export function ReviewQueue({
           {/* FLOW-327 r1: on the start side, near the thumb. A card opened from the list leaves it
               out: Back already goes to the list. */}
           {changeTo == null && listPlace == null ? (
-            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצגת הכול</TextLink>
           ) : null}
           {/* FLOW-507: a viewer doesn't work through the queue, so no visit meter. */}
           {listPlace == null && !holdWrites ? (

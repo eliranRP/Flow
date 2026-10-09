@@ -9,7 +9,10 @@ import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { EmptyState } from "../ui/empty-state";
 import { ReviewIcon } from "../ui/icons";
-import { List, ListRow } from "../ui/list-row";
+import { ListRow } from "../ui/list-row";
+import { GroupList } from "../ui/month-list";
+import { groupByKey } from "../ui/month-groups";
+import { lineCountHint } from "../breakdown";
 import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
@@ -27,6 +30,19 @@ function devFiledFixture(sampleFlag: string | null): FiledTodayRow[] | undefined
     project_name: "שיפוץ הרצל 12",
     category_name: "חומרים",
   }];
+}
+
+/** No project is its own group, named as the breakdown names it. */
+export const FILED_NO_PROJECT = "בלי פרויקט";
+
+function filedGroup(row: FiledTodayRow): { key: string; title: string } {
+  const name = row.project_name?.trim() ?? "";
+  return name === "" ? { key: "", title: FILED_NO_PROJECT } : { key: `p:${name}`, title: name };
+}
+
+/** The list has no currency: its rows show shekels, so the head adds them as shekels. */
+function filedAmount(row: FiledTodayRow) {
+  return { minor: row.amount_net, currency: "ILS", direction: row.direction };
 }
 
 export function FiledTodayScreen({
@@ -47,7 +63,10 @@ export function FiledTodayScreen({
   const shown = sample ?? fixture;
   const filed = useFiledTodayQuery(shown == null);
   const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
-  const rows = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
+  const held = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
+  // FLOW-334: under one head per project, with its count and total; the row keeps only the category.
+  const groups = groupByKey(held, filedGroup, filedAmount, true);
+  const rows = groups.flatMap((group) => group.rows);
   const location = useLocation();
   const rowIds = rows.map((row) => row.id);
   const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
@@ -59,13 +78,17 @@ export function FiledTodayScreen({
       onRetry={() => { void filed.refetch(); }}
       empty={<EmptyState icon={<ReviewIcon />} title={FILED_TODAY_EMPTY_TITLE} body={FILED_TODAY_EMPTY_BODY} />}
     >
-      <List>
-        {rows.map((row) => (
+      <GroupList
+        groups={groups}
+        keyOf={(row) => row.id}
+        dateOf={(row) => row.doc_date}
+        countOf={(count) => lineCountHint(count, false)}
+        cents
+        renderRow={(row) => (
           <ListRow
-            key={row.id}
             variant="transaction"
             title={row.supplier_name ?? row.description}
-            {...loanRowProps(filedMarks.get(row.id), [row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · "))}
+            {...loanRowProps(filedMarks.get(row.id), row.category_name ?? "")}
             agorot={row.amount_net}
             currency={row.currency}
             sign={row.direction === "income" ? "in" : "out"}
@@ -74,8 +97,8 @@ export function FiledTodayScreen({
             href={rowHref ? rowHref(row) : `/transactions/${row.id}${search}`}
             state={rowHref ? undefined : txnListState(rowIds, row.id, `${location.pathname}${location.search}`)}
           />
-        ))}
-      </List>
+        )}
+      />
     </ScreenState>
   );
 }

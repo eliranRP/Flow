@@ -14,15 +14,15 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-404 `rehab_by_category` from the rehab CTE; FLOW-309 `reopen_review` and the stale `missing_category` label (#300 review) (#308, in review); first the red-main fix (storybook: loans list bigint args, project row focus outline) | The next non-UI item |
-| Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
-| UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
-| UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
+| Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | FLOW-309 and FLOW-704 server follow-ups |
+| Dev lane 2 | FLOW-505 server: `import_from` cutoff in both sync functions, `set_import_from` widening backfill, `import_from` in `sumit_status`, PR #327 | The lane manager's next non-UI item |
+| UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
+| UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-704 app side: the Jev Settings row, Jev marks on שינוי שיוך and the review list, the Jev scope read (FLOW-343 merged #306) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507 viewer review count without the meter | Next small ready bug |
+| Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -114,9 +114,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
-| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
+| 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | in progress (owner picked A; #314) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
-| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
+| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -383,7 +383,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09: the sheet shows the form's skeleton while the currency loads; New, Incomplete dimmed and Date sheet open stories) Loan setup: a slow currency read opens the sheet on "טוען…" and then jumps; the currency read has no limit; add date-sheet and new-state stories and a loading skeleton.
 - [ ] Loan match: the waiting line should say why and print only the difference; disable the other rows while the correction is busy; its own failure copy; refresh the parts after a failed correction; next step for a currency mismatch; an empty match sheet offers הלוואה חדשה; hide or disable loans in another currency; long loan names need a second line or hint at 320; whole units on the Settings balances; link the "ממתין לבדיקה" row to the waiting line; skeleton rows to stop cold-open shifts.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
-- [ ] The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
+- [x] (Backlog bug fixes, 2026-10-09: the row always has a hint and the placeholder is the hinted row's height, 94.6px; the jump was really 72 → 94.6px in the one-loan case) The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
 - [x] (Backlog bug fixes, 2026-10-09: the sheet says "אין הלוואה בדולר."; a loan with no balance row shows its principal) Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
 
 ## MCP
@@ -689,7 +689,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (#135 review) A reversal part in a kept-out category still needs a project; 0103 lets a kept-out whole line skip it. (No project needed: migration `20261010220000`.)
 - [x] (#135 review) A part with no project and one naming the line's own project are different pairs, so the same category and project can appear twice. (The server now treats no project as the line's project: migration `20261010220000`.)
 - [x] App screen, first PR (PR #150): the "פיצול" section on the transaction detail with a read view of the parts, the full-screen editor (parts, % / ₪ with the server preview's cents, the live rest row, the sticky totals), refund reversals that need a project, save on leave with the hold line, clearing with a confirm, undo from the toast, and the detail's category and project rows saying the line is split.
-- [ ] App screen follow-ups (plan §10): swipe to delete a part, splitting from the review card, "N חלקים" on the transaction lists.
+- [ ] App screen follow-ups (plan §10): swipe to delete a part, splitting from the review card, "N חלקים" on the transaction lists. Splitting from the review card (UI lane 2, #310): not built. The plan names no entry, and `save_line_split` refuses a line with an open review ("אשרו את התנועה בתור לאישור, ואז פצלו."), so it is PLAN FIRST: a card to the owner (queued after FLOW-341 and FLOW-345) with three options. A (recommended): a "פיצול לפי קטגוריות" link in the שינוי sheet under "פיצול בין פרויקטים", opening the existing editor; saving resolves the review (server: `save_line_split` accepts the open review and resolves it, undo restores both). B: "אישור ופיצול", approve then open the editor; no server change, one more action on the pinned bar. C: keep splitting on the transaction detail only and drop the item.
 - [x] (#286) (#189 review, UI lane) The parts editor (`app/src/line-split.ts`) still asks for a project on a kept-out reversal part; allow none, as the server does unless the line is in the P&L (0138). Give copy to the `a reversal part needs a project` refusal from `set_transaction_pnl` on the transaction screen.
 - [x] (#189 review, server) MCP undo of `line_split` puts old parts back without the 0138 check, so a kept-out reversal part with no project can come back on a line the owner since put in the P&L. Run the same check after the insert (a shared private helper with `set_transaction_pnl`) and answer `conflict`. (Migration `20261010230000`.)
 
@@ -708,6 +708,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (cycle 3, deploy a77efd8) The skip-undo toast sits at the top (y≈102–149) and covers the counter; show it just above the action bar, near the thumb (owner chose this 2026-10-08; supersedes the toast position in decision 0069, so the build adds a decision record). The DevReview fixture also lacks the ביטול action, so add it there for screenshots.
 - [x] (cycle 4, deploy 6b3a05e, high) Regression from #165: a review queue with Back (filtered to a project, opened from הצג הכול, the sample reviewer queue) now gets the stacked header, so the card and buttons drop 50–76px; with the banner and a shared-cost card at 375x667, שינוי (y≈582–661) and דלג sit on the tab bar. Give those headers `layout="inline"` (`flow-screens.tsx` ReviewQueue ~1656, ~1866, `setup/sample-review.tsx:55`); the counter says where you are. Add "filtered queue + banner + shared cost at 375x667" to this task's stories. Done in #175 r1: `layout="inline"` on every review header with Back; story `ReviewFilteredBarSharedBanner375`.
 - [x] (cycle 4) "הצג הכול" is a 58x44 link in the top-left corner, the farthest point from a right thumb; on a card opened from the list it and Back both go to `/review/all`. Hide it when `from=all`, and put it on the start side of the counter row (or in the pinned bar as a secondary action). Done in #175 r1: on the start side of the counter row, hidden on a card opened from the list.
+- [x] (UI lane 2, #333: owner chose option A 2026-10-09) The amount-spike flag (0131) said "פי X מהרגיל לספק" as a line at the bottom of the card, far from the amount it describes. A "↑ N%" pill in the warning tone now sits right after the amount (it drops under it at 320 when short), with "בדרך כלל ₪X" under the amount; the bottom line is gone, and the card draws no flag row beside a pill (a loud spike with no ratio keeps its title row).
 - **Acceptance:** אישור at the same position on every card state at 375, 393, 412; nothing under the tab bar at 375x667; stories for plain, banner, shared-cost, disabled and Jev-filled cards; design review.
 
 <a id="flow-328"></a>
@@ -785,6 +786,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09, decision 0156: with Back and a kicker, the kicker is Back's label, cut at 16 characters) H2 (owner chose the labelled Back, 2026-10-08) Back is a lone 44x44 icon at the top start corner (y≈16–60), about 520px above the thumb, and the kicker under it ("הגדרות") repeats where it goes. Build: a labelled Back ("‹ הגדרות", "‹ שיפוץ הרצל 12", cut at about 16 characters) that replaces the kicker; about 3x the target and 22px back on every settings sub-screen. This changes the mockups 07/14 header rule, so the PR adds a decision record and a design log rule.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
 - [x] (#286) Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
+- [ ] (from #310 review) `.ui-btn-retry` (filled) is still used by `loan-detail-screen.tsx` and `loan-setup.tsx`; switch both to the tint retry and delete the class. At 320 the first שויכו היום group head sits about 8px under the title; give it a little more air. The heads show cents inline while rows show them small.
 - [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
 - [x] (#286) Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
 - [x] (#286) Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
@@ -796,9 +798,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09: the count waits for the last page; no lines, no figures) Project category lines: add the total and count to the subtitle ("שיפוץ הרצל 12 · ₪4 · תנועה אחת").
 - [ ] Project detail: the "ממתינה לאישור" row inside "הוצאות לפי קטגוריה" looks like a category; give it the review icon and tint like Home's review row. Move "סיום פרויקט" from the unlabelled ⋯ (its only action) to a row at the bottom.
 - [ ] (design lead, 2026-10-09, FLOW-334 leftovers review) Transaction rows show ".00" on whole amounts ("−₪85,000.00", `SignedAmount` in `ui/list-row.tsx`), which group rows and the breakdown don't; drop the decimals for whole shekels on every transaction list. Shared row, so the lane that owns the transaction row takes it.
-- [ ] שויכו היום: group rows under project headers with a count and total, keeping only the category in each row's hint.
-- [ ] Empty and error actions: Home empty uses the tint button (177x44) and the Review error the filled primary (140x44); both use the tint style per DESIGN-RULES §2.8.
-- [ ] Review-cycle fixtures: the breakdown route shows empty Home in preview, `/reviewer/transaction/1` misses its sample row, and the e2e routes have no tab bar; fix so the next cycle can shoot them.
+- [x] (UI lane 2, #310: `GroupList` and `groupByKey` in `ui/month-list.tsx` and `ui/month-groups.ts`, the month head's shape with the line count before the figures; a line with no project goes under "בלי פרויקט") שויכו היום: group rows under project headers with a count and total, keeping only the category in each row's hint.
+- [x] (UI lane 2, #310: `ErrorState` drops the filled `.ui-btn-retry`, so every error and empty action is the 44px tint button; the loan setup and loan page retries keep it, in files other lanes own) Empty and error actions: Home empty uses the tint button (177x44) and the Review error the filled primary (140x44); both use the tint style per DESIGN-RULES §2.8.
+- [x] (UI lane 2, #310: on the dev server `/flow/expense?preview=1`, `/flow/income?preview=1` and their lines show invented figures (`dev/breakdown-sample.tsx`); `/reviewer/transaction/1` opens the first sample row; the `/e2e/*` fixtures of tab screens draw the tab bar on their own tab) Review-cycle fixtures: the breakdown route shows empty Home in preview, `/reviewer/transaction/1` misses its sample row, and the e2e routes have no tab bar; fix so the next cycle can shoot them.
 - **Acceptance:** shared components (`screen-header.tsx`, `ui.css`, `hero.tsx`) and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
 
 <a id="flow-335"></a>
@@ -849,11 +851,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 4, #299: the subtitle says only "N תנועות", the month heads keep their totals; line 2 shows whole parts as many as fit, never a one-letter cut, and "ממתינה לאישור" shortens instead of dropping. At 320 most rows then show only the date; moving the date under the amount is on the owner's card) (med) Search: the subtitle carries three figures and month heads up to two unlabelled totals, about 11 figures a screen. Keep only the count in the subtitle. A row hint that does not fit shows the project or the category whole, not a one-letter cut (the meta rule in DESIGN-RULES §3.7).
 - [x] Settings → Loans: balances are 13px with 7.8px agorot (`.ui-loan-amount` inherits the hint size). Use the amount size and the shared agorot class, as other lists do. (Also the ".00" fell to its own line: the loan form's wrapper shared the class, now `.ui-loan-amount-field`; #293.)
 - [x] (UI lane 3, 2026-10-09: Back's label, and the cost rows and subtitle drop the minus; the ".00" half stays open below) Project category lines: Back is a bare icon with the project name as the subtitle. Use the project name as Back's label (FLOW-334 H2) and drop the subtitle.
+- [x] (UI lane 4, PR #320: the owner picked option C on 2026-10-09 06:58Z, replacing A (#299) and B) Search: one-line rows (party and amount; a muted second line only for a status), no ".00" on whole amounts, and one labeled figure per month head, "נטו ₪x", with another currency's net on a muted line under it ("ועוד −$x בדולר").
 - [ ] Transaction rows show ".00" on whole amounts, but DESIGN-RULES §3.5 says agorot show only when non-zero. Decision 0120 option C (the owner's) keeps ".00" on transaction rows, like Mercury, so this needs the owner's call before any change.
 - [ ] Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
 - [x] (UI lane 3, 2026-10-09: ✕ is centred on the title row in every sheet) Add sheet (+ tab): it has both ✕ and a "ביטול" link, and ✕ sits about 8px below the title baseline. Drop ביטול (it belongs on confirm sheets) and align ✕ with the title.
 - [ ] Project page, overhead switch: the hint "כבוי · מציג רווח לפני כלליות" repeats the switch state. Label "אחרי כלליות" with no hint, as Settings does.
-- [ ] (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
+- [x] (UI lane 2, #333: owner chose A 2026-10-09) (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
 - **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
 
 <a id="flow-340"></a>
@@ -870,7 +873,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-342"></a>
 ### FLOW-342 · Two magnifiers on the Projects tab
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** in progress (owner picked A on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The Projects tab shows two identical magnifiers about 100px apart: the header icon opens transaction search and the field below filters projects. Options: (A) the field alone, and a project-name miss offers "חיפוש בתנועות"; (B) keep both and label the header icon.
 - **Acceptance:** owner's choice on a card; a design log entry.
 
@@ -885,7 +888,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-344"></a>
 ### FLOW-344 · Loan setup preview while the form is incomplete
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **Type:** PLAN FIRST · **Status:** in progress (owner picked B, hide, on 2026-10-09; UI lane 1, #314) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
 - **What:** With the amount cleared, the preview keeps the last result (₪599.55 a month) and only turns muted, so it still reads as this loan's payment. Options: (A) "—" in place of the figure until the form is valid; (B) hide the preview until then.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
@@ -1011,12 +1014,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
+- [x] Server side (#327): `set_import_from(provider, date | null)` stores the start (it existed since the connector engine); `sumit_status()` returns `import_from`, and Mercury's is on `connector_connection_status`. `upsert_connector_lines` does not add a line dated before it, for both connectors, and keeps the rows already stored, which still take updates so a pending line can settle (the SUMIT sweep already spared them); a run whose lines are all older is not an empty sweep. A Mercury run that stops at the page cap also drops older lines. A wider range clears Mercury's cursor so the next sync reads from the new start; SUMIT reads every document each run. A Mercury run already in flight when the range widens ends with `sync_cursor_conflict`; the next run starts from the new date, and the error shows on the sheet until a run completes.
+- [ ] App: the ייבוא מ control (option B) in the SUMIT and Mercury sheets (UI lane 3).
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
 - [ ] Demos use hand-built copies of the review card and tab bar; extract a shared presentational piece (the demo TabBar also writes the shared add-trigger ref and needs a router).
-- [ ] Demo VAT amounts are hard-coded strings; derive them from the formatter.
+- [x] (Backlog bug fixes, 2026-10-09: `demoVat` takes the standard rate on the before-VAT amount, and the formatter prints it; the demos still read ₪1,530 and ₪421) Demo VAT amounts are hard-coded strings; derive them from the formatter.
 - [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; demo CSS reaches into component internals; `data-setup-visible` exists only for tests.
 - [x] One list row puts the minus after the amount; it should come before the currency sign. (Not reproducible on 2026-10-09: every demo and setup story draws −₪ first; the SUMIT demo rows use the shared transaction row.)
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
@@ -1024,7 +1029,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
 - [ ] Tests for the Settings write block; a hold-writes check on the first step's submit.
 - [ ] Spec drift: demo timing, the SUMIT sheet sizes at 320, hiding vs focusing שוב during a replay; step 3 scrolls a little longer than designed.
-- [ ] Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`); the banner's tone-bad icon; note inset vs frame.
+- [x] (Backlog bug fixes, 2026-10-09: removed, with their 320 overrides) Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`).
+- [ ] The banner's tone-bad icon; note inset vs frame.
 - [ ] Release check on a real iOS device for the Hebrew Safari labels.
 
 <a id="flow-507"></a>
@@ -1062,12 +1068,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The whole treasury history is re-read every sync; the stored-treasury read throws past 20k rows. (FLOW-509 PR: a later sync stops paging the ledger 60 days before the window start (a backdated cancel keeps its original's day); the first sync still reads it all. The stored read takes the cancellable kinds of the last 366 days, at most 2,000 rows, and does not throw. The old-line recheck skips treasury kinds, which `/transaction/{id}` does not serve.)
 - [x] The cron URL is built by replacing a path in the shared sync URL secret; read its own value. (FLOW-509 PR: the drain reads Vault `flow_mercury_sync_url` and falls back to the swapped path until it is set; setting it in production is an owner step, see the SUMIT runbook.)
 - [x] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id (moot: `transactions_external_uidx` is unique, and #91 removed that read); test stored-line selects against the local DB. (FLOW-509 PR: stored treasury lines carry `provider_meta.account_id`; the session counts the treasury accounts it listed. Both sync functions use `createClient<Database>`. The wildcards take one `[A-Za-z0-9_-]{1,128}` segment and the literal templates are refused. The remaining `maybeSingle()` reads are keyed by the `(company_id, provider)` primary key or `limit(1)`. The stored-line selects are not run against the local DB: the PostgREST filters need the edge runtime, left as a follow-up. With two or more treasury accounts, a line stored before it carried `account_id` can no longer be voided by a cancel: accepted.)
-- [ ] Show "N new lines" after a manual refresh (the counts are returned now).
+- [x] (Backlog bug fixes, 2026-10-09: the toast says "N תנועות חדשות" after a run that read everything; `mercury-sync` now returns `complete`, and a run that stops early keeps "הרענון הסתיים.") Show "N new lines" after a manual refresh (the counts are returned now).
 - [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
-- [ ] Six surviving mutations in the client resume and own-account paths.
-- [ ] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy.
+- [x] Six surviving mutations in the client resume and own-account paths. (#321: `resume_own_account_test.ts` covers the cursor field checks, the treasury resume reaching only the resumed account, and the card, missing-account and overlong-id checks. A rerun kills 14 of 15 mutants; the survivor swaps the bad-JSON fallback for `timestampFromCursor`, which already returns null for anything starting with `{`.)
+- [x] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy. (#321: `docs/runbooks/mercury-sync.md`.)
+- [ ] (#331 review) `upsert_connector_lines` counts a first-seen line that arrives already void (inserted with `removed_at`) in `inserted`, so the refresh toast can say "תנועה חדשה אחת" for a failed or cancelled Mercury transaction that never shows. Count only live inserts.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
-- [ ] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it.
+- [x] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it. (#321: "The token's scope" in `docs/runbooks/mercury-sync.md`.)
 
 <a id="flow-511"></a>
 ### FLOW-511 · Easy opt-out from the Home setup card
@@ -1165,7 +1172,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
 - [x] Delete the old shared connector key once per launch, not on every read.
 - [x] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות.
-- [ ] Jev Settings row: a "no key" status once a key-status RPC exists.
+- [x] Jev Settings row: a "no key" status once a key-status RPC exists. (Server part #321: `public.jev_key_status()` returns `ok` or `missing`. App part UI lane 4, PR #329: switched on with no key says "אין מפתח"; an unknown read keeps the usual word.)
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 - [x] The review card marks a project or category Jev filled with "✦ הצעת Jev" (the shared `JevTag`) instead of הצעה (2026-10-08, #141).
 - [x] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill. (שינוי שיוך and its picker say "✦ הצעת Jev"; a review list row reads "✦ Jev · project · category", and only "✦" when בהמתנה leaves no room.)
@@ -1236,9 +1243,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-809"></a>
 ### FLOW-809 · Public Storybook per PR head for reviewers
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#313) except the owner's secrets; hosting approved by the owner 2026-10-09 · **Depends on:** —
 - **What:** Reviewers can't download CI artifacts without a login. Publish the built Storybook (sample data only) per PR head, so design re-reviews cover only the changed stories.
 - **Acceptance:** owner approves the hosting; no real data or hosted keys in the published build.
+- [x] Workflow `storybook-preview.yml`: builds each same-repo PR head, checks the build for hosted keys and the Jev secret, deploys to Cloudflare Pages project `flow-storybook` as `pr-<n>`, and keeps one PR comment with the link and the changed stories. Storybook uses sample Supabase settings. (Dev lane 1, #313.)
+- [ ] Owner: add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the GitHub environment `storybook-preview` (runbook ci-cd, "Storybook preview"). Until then the deploy is skipped.
 
 <a id="flow-810"></a>
 ### FLOW-810 · Clip check follow-ups and 320px clipping

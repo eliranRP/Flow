@@ -333,19 +333,22 @@ export function ProjectDetailScreen({
           dateOf={(txn) => txn.doc_date}
           amountOf={projectMonthAmount}
           complete={heldTransactions.length < PROJECT_RECENT_CAP}
-          renderRow={(txn) => (
+          renderRow={(txn) => {
+            const shown = projectLineRow(txn);
+            return (
             <ListRow
               variant="transaction"
               title={txn.description}
-              {...loanRowProps(projectMarks.get(txn.id), projectLineHint(txn))}
-              agorot={txn.amount_net}
-              sign={txn.direction === "income" ? "in" : "out"}
+              {...loanRowProps(projectMarks.get(txn.id), projectLineHint(txn, shown.whole))}
+              agorot={shown.agorot}
+              sign={shown.sign}
               currency={txn.currency ?? "ILS"}
               source={rowSource(txn.source)}
               href={`/transactions/${txn.id}${search}`}
               state={txnListState(heldIds, txn.id, listFrom)}
             />
-          )}
+            );
+          }}
         />
       )}
     </div>
@@ -379,9 +382,22 @@ export function projectMonthAmount(txn: ProjectLine): { minor: bigint; currency:
   return { minor: txn.amount_net, currency, direction };
 }
 
-/** "מחוץ לרווח · category · date". The marker leads, so a kept-out line reads as one at a glance. */
-function projectLineHint(txn: ProjectLine): string {
-  return [txn.kept_out === true ? KEPT_OUT_SHORT : null, txn.category, formatDayMonth(txn.doc_date)]
+/**
+ * The row's amount: a split line leads with this project's part, and its hint says "מתוך" the whole
+ * line, so a $250 part of a $3,170 payment never reads as $3,170 landing here (owner, 2026-10-09).
+ */
+export function projectLineRow(txn: ProjectLine): { agorot: bigint; sign: "in" | "out"; whole: string | null } {
+  if (txn.parts_minor == null || txn.kept_out === true) {
+    return { agorot: txn.amount_net, sign: txn.direction === "income" ? "in" : "out", whole: null };
+  }
+  const part = projectMonthAmount(txn);
+  const whole = txn.amount_net < 0n ? -txn.amount_net : txn.amount_net;
+  return { agorot: part.minor, sign: part.direction === "income" ? "in" : "out", whole: `מתוך ${formatAmountText(whole, txn.currency ?? "ILS")}` };
+}
+
+/** "מחוץ לרווח · מתוך $3,170 · category · date". The marker leads, so a kept-out line reads as one at a glance. */
+function projectLineHint(txn: ProjectLine, whole: string | null): string {
+  return [txn.kept_out === true ? KEPT_OUT_SHORT : null, whole, txn.category, formatDayMonth(txn.doc_date)]
     .filter((part): part is string => part != null && part !== "")
     .join(" · ");
 }

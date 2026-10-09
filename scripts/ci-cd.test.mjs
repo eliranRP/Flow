@@ -606,7 +606,10 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   // The fast gate stamps after the Storybook tests; --full stamps only after e2e.
   const stamps = [...local.matchAll(/echo "\$head" >/g)].map((m) => m.index);
   assert.equal(stamps.length, 2);
-  assert.ok(stamps[0] > local.indexOf("pnpm test:storybook\n") && stamps[0] < local.indexOf("pnpm test:storybook:smoke"));
+  // The fast gate stamps after the scoped Storybook smoke; --full runs the whole smoke after it.
+  const scoped = local.indexOf('FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story"');
+  assert.ok(scoped > local.indexOf("pnpm test:storybook\n") && stamps[0] > scoped);
+  assert.ok(stamps[0] < local.indexOf("pnpm test:storybook:smoke\n"));
   assert.ok(local.indexOf("if (( ! full )); then") < stamps[0]);
   assert.ok(stamps[1] > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
   // FLOW-813: the fast gate runs the e2e specs that reach the change before it stamps.

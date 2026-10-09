@@ -6,7 +6,7 @@ const queue = "/review?preview=1&e2e=list";
 
 test("the list opens a card and Back returns to that row", async ({ page }) => {
   await page.goto(queue);
-  await page.getByRole("link", { name: "הצג הכול" }).click();
+  await page.getByRole("link", { name: "הצגת הכול" }).click();
   await expect(page).toHaveURL(/\/review\/all\?/);
   await page.getByRole("link", { name: /עגורני החוף/ }).click();
   await expect(page.getByRole("heading", { name: "עגורני החוף" })).toBeVisible();
@@ -20,7 +20,7 @@ test("the list opens a card and Back returns to that row", async ({ page }) => {
 
 test("Back after a refresh returns to the list", async ({ page }) => {
   await page.goto(queue);
-  await page.getByRole("link", { name: "הצג הכול" }).click();
+  await page.getByRole("link", { name: "הצגת הכול" }).click();
   await page.getByRole("link", { name: /ברזל הדרום/ }).click();
   await expect(page.getByRole("heading", { name: "ברזל הדרום" })).toBeVisible();
   await page.reload();
@@ -55,7 +55,7 @@ test("a category picker opened from the card closes back to that card", async ({
 
 test("three approvals from a list card stay in list order", async ({ page }) => {
   await page.goto(queue);
-  await page.getByRole("link", { name: "הצג הכול" }).click();
+  await page.getByRole("link", { name: "הצגת הכול" }).click();
   await page.getByRole("link", { name: /ברזל הדרום/ }).click();
   await expect(page.getByRole("heading", { name: "ברזל הדרום" })).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();

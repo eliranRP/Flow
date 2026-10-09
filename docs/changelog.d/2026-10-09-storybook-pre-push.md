@@ -1,0 +1,1 @@
+The pre-push gate now runs the built-Storybook checks (the layout, clip and secret specs, and the every-story test for the stories a change reaches) when a push changes the app, so a story that breaks main's `check (storybook)` or `check (stories)` jobs is stopped before it merges.
