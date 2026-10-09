@@ -91,6 +91,40 @@ describe("ReviewCard FLOW-327 additions", () => {
     expect(container.querySelector(".ui-review-flag")).toBeNull();
   });
 
+  it("puts an amount spike beside the amount: a hidden ↑ N% pill, a spoken sentence, and the usual amount above VAT", () => {
+    const quiet = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: 0.4, ratio: 3.4, typical_amount_minor: 250_000 }]);
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-850_000n} vatLine="לפני מע״מ" flag={quiet} />);
+    const row = container.querySelector(".ui-review-amount");
+    const pill = row?.querySelector(".ui-review-spike");
+    expect(pill).toHaveClass("ui-status");
+    expect(pill).toHaveAttribute("aria-hidden", "true");
+    expect(pill?.textContent).toBe("↑ 240%");
+    expect(row?.querySelector(".t-display")?.nextElementSibling).toBe(pill);
+    expect(row?.querySelector(".sr-only")?.textContent).toBe("גבוה ב־240% מהרגיל לספק");
+    const usual = container.querySelector(".ui-review-usual");
+    expect(usual?.textContent).toBe("בדרך כלל ₪2,500");
+    expect(row?.nextElementSibling).toBe(usual);
+    expect(usual?.nextElementSibling?.textContent).toBe("לפני מע״מ");
+    // The old bottom line is gone: no "פי X מהרגיל", and no quiet flag block at all.
+    expect(container.querySelector(".ui-review-flag-quiet")).toBeNull();
+    expect(container.textContent).not.toContain("פי ");
+
+    const loud = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: 0.9, ratio: 3.4, typical_amount_minor: 250_000 }], { direction: "income" });
+    rerender(<ReviewCard supplier="לקוח" sourceLine="הכנסה" netAgorot={850_000n} direction="income" flag={loud} />);
+    expect(container.querySelector(".ui-review-amount .sr-only")?.textContent).toBe("גבוה ב־240% מהרגיל ללקוח");
+    const flagRow = container.querySelector(".ui-review-flag");
+    expect(flagRow?.querySelector(".ui-row-title")?.textContent).toBe("לבדיקה: סכום גבוה מהרגיל");
+    expect(flagRow?.querySelector(".ui-row-hint")).toBeNull();
+    expect(container.querySelector(".ui-review")?.lastElementChild).toBe(flagRow);
+
+    // No ratio: the amount stands alone and the quiet line stays, with the usual amount under the amount.
+    const noRatio = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: null, typical_amount_minor: 250_000 }]);
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-850_000n} flag={noRatio} />);
+    expect(container.querySelector(".ui-review-amount")).toBeNull();
+    expect(container.querySelector(".ui-review-usual")?.textContent).toBe("בדרך כלל ₪2,500");
+    expect(container.querySelector(".ui-review-flag-quiet")?.textContent).toBe("לבדיקה: גבוה מהרגיל לספק");
+  });
+
   it("shows Jev's no-project answer on the empty project row with הצעת Jev (FLOW-703)", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "חומרים", projectNoneJev: true }} onProject={() => undefined} onCategory={() => undefined} />);
     const row = screen.getByRole("button", { name: `פרויקט: ${JEV_NO_PROJECT}, הצעת Jev` });

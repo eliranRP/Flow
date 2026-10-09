@@ -428,8 +428,11 @@ describe("Jev review one tap", () => {
     db.flags = [{ transaction_id: "t1", kind: "amount_spike", ratio: 3, typical_amount_minor: 100000, jev_score: null }];
     renderQueue([stored]);
     await waitFor(() => {
-      expect(document.querySelector(".ui-review-flag-quiet")?.textContent).toBe("לבדיקה: פי 3 מהרגיל לספק");
+      expect(document.querySelector(".ui-review-spike")?.textContent).toBe("↑ 200%");
     });
+    expect(document.querySelector(".ui-review-amount .sr-only")?.textContent).toBe("גבוה ב־200% מהרגיל לספק");
+    expect(document.querySelector(".ui-review-usual")?.textContent).toBe("בדרך כלל ₪1,000");
+    expect(document.querySelector(".ui-review-flag-quiet")).toBeNull();
     expect(document.querySelector(".ui-review-reason")).toBeNull();
     expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
   });

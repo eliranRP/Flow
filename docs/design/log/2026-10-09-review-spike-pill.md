@@ -1,0 +1,8 @@
+# FLOW-327: The amount spike sits by the amount (option A)
+
+- PR: #TBD
+- Kind: screen
+- Changed: `review-card.tsx`, `review-copy.ts`, `css/06-review-card.css` (`.ui-review-amount`, `.ui-review-spike`). The review card's amount-spike flag (decision 0131, FLOW-327). The quiet flag was a muted ⓘ line at the bottom of the card, "פי 3.4 מהרגיל לספק", and the loud row's hint repeated it with the usual amount. Option A (owner, 2026-10-09; mockups `a-390`, `a-320`, `a-390-dark`): right after the amount, on its row, a "↑ 240%" pill (N = round((ratio − 1) × 100)) in the status-pill shape, `--color-warning` text on a 16% warning tint; directly under the amount a muted "בדרך כלל ₪2,500" when the usual amount is known, above the VAT line. The quiet bottom line is gone; the loud warning row keeps its title "סכום גבוה מהרגיל" with no hint. Readers hear "גבוה ב־240% מהרגיל לספק" (ללקוח on income) in place of the hidden pill. With no ratio there is no pill and the quiet line stays as "גבוה מהרגיל לספק". Duplicate and new-party flags are unchanged. Stories: Components/ReviewCard Flag: amount spike, quiet and loud at 390, 320 and dark, plus a long amount at 320; Screens/Routes ReviewQueueFlag390, 320 and dark (loud, with the filed-today banner) and ReviewJevFit (quiet).
+- Rule: a figure's comparison to its usual sits beside the figure as a "↑ N%" warning pill, with the usual amount on one muted line under it, never as a separate line at the end of the card.
+- Rule: at 320 a pill beside an amount wraps under the amount when short; the amount is never cut or wrapped.
+- Source: design lead's option A, approved by the owner 2026-10-09 07:02Z.

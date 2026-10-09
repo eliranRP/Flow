@@ -261,7 +261,31 @@ const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<Rev
   transaction_id: "t1", kind, jev_score: score, ...extra,
 });
 export const FlagDuplicateLoud: Story = { name: "Flag: duplicate, loud", args: { ...jevCard, flags: [flag("duplicate", 0.86, { other_doc_date: "2026-10-03" })] } };
-export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 4.2, typical_amount_minor: 120_000 })] } };
+/** 2026-10-09 option A: "↑ 240%" right after the amount and "בדרך כלל ₪2,500" under it; the loud row keeps its title. */
+export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
+export const FlagSpikeLoud320: Story = { ...narrow, name: "Flag: amount spike, loud, 320", args: FlagSpikeLoud.args };
+export const FlagSpikeLoudDark: Story = { ...dark, name: "Flag: amount spike, loud, dark", args: FlagSpikeLoud.args };
+export const FlagSpikeQuiet: Story = { name: "Flag: amount spike, quiet", args: { ...jevCard, flags: [flag("amount_spike", 0.4, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
+export const FlagSpikeQuiet320: Story = { ...narrow, name: "Flag: amount spike, quiet, 320", args: FlagSpikeQuiet.args };
+export const FlagSpikeQuietDark: Story = { ...dark, name: "Flag: amount spike, quiet, dark", args: FlagSpikeQuiet.args };
+/** With no ratio there is no pill: the quiet line stays, and the usual amount still sits under the amount. */
+export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ratio", args: { ...jevCard, flags: [flag("amount_spike", null, { typical_amount_minor: 250_000 })] } };
+/** At 320 a long amount leaves no room: the pill drops under it, and the amount is never cut. */
+export const FlagSpikeLong320: Story = {
+  ...narrow,
+  name: "Flag: amount spike, long amount, 320",
+  args: { ...jevCard, netAgorot: "-123456700", flags: [flag("amount_spike", 0.4, { ratio: 12.5, typical_amount_minor: 9_876_500 })] },
+  play: async ({ canvasElement }) => {
+    const amount = canvasElement.querySelector<HTMLElement>(".ui-review-amount > .t-display");
+    const pill = canvasElement.querySelector<HTMLElement>(".ui-review-spike");
+    await expect(amount).not.toBeNull();
+    await expect(pill).not.toBeNull();
+    const amountBox = (amount as HTMLElement).getBoundingClientRect();
+    const card = (canvasElement.querySelector(".ui-review") as HTMLElement).getBoundingClientRect();
+    await expect(amountBox.left).toBeGreaterThanOrEqual(card.left);
+    await expect((pill as HTMLElement).getBoundingClientRect().top).toBeGreaterThanOrEqual(amountBox.bottom - 1);
+  },
+};
 export const FlagNewPartyLoudIncome: Story = { name: "Flag: new party, loud, income", args: { ...jevCard, direction: "income", netAgorot: "4800000", flags: [flag("new_party_large", 0.9)] } };
 export const FlagDuplicateQuiet: Story = { name: "Flag: duplicate, quiet", args: { ...jevCard, flags: [flag("duplicate", 0.4, { other_doc_date: "2026-10-03" })] } };
 export const FlagSpikeQuietIncome: Story = { name: "Flag: amount spike, quiet, income", args: { ...jevCard, direction: "income", flags: [flag("amount_spike", 0.5, { ratio: 3 })] } };

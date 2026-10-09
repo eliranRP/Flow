@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyText, flagTone, jevReasonText, REVIEW_FLAG_LOUD, reviewFlagView, type ReviewFlag } from "./review-copy";
+import { copyText, flagTone, jevReasonText, REVIEW_FLAG_LOUD, reviewFlagView, spikePercentText, type ReviewFlag } from "./review-copy";
 
 const info = (reason: "same_as_last" | "usual_for_party" | "new_party" | "model_only", partyFilings = 5, matchingFilings = 3) => ({
   reason,
@@ -52,16 +52,24 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     if (dupQuiet?.tone !== "quiet") throw new Error("quiet");
     expect(copyText(dupQuiet.line)).toBe("שורה באותו סכום ב־03/10");
 
+    // 2026-10-09 option A: the spike sits by the amount. The loud row keeps its title only.
     const spikeLoud = reviewFlagView([flag("amount_spike", 0.7, { ratio: 4.2, typical_amount_minor: 120_000 })]);
     if (spikeLoud?.tone !== "loud") throw new Error("loud");
     expect(copyText(spikeLoud.title)).toBe("סכום גבוה מהרגיל");
-    expect(copyText(spikeLoud.hint ?? [])).toBe("פי 4.2 מהרגיל · בדרך כלל ₪1,200");
+    expect(spikeLoud.hint).toBeUndefined();
+    expect(spikeLoud.spike?.pill).toBe("↑ 320%");
+    expect(spikeLoud.spike?.spoken).toBe("גבוה ב־320% מהרגיל לספק");
+    expect(copyText(spikeLoud.spike?.usual ?? [])).toBe("בדרך כלל ₪1,200");
+    // A quiet spike with a ratio has no line of its own: no "פי X מהרגיל" anywhere.
     const spikeQuiet = reviewFlagView([flag("amount_spike", 0.69, { ratio: 3 })], { direction: "income" });
     if (spikeQuiet?.tone !== "quiet") throw new Error("quiet");
-    expect(copyText(spikeQuiet.line)).toBe("פי 3 מהרגיל ללקוח");
-    const spikeExpense = reviewFlagView([flag("amount_spike", null, { ratio: 3 })]);
+    expect(spikeQuiet.line).toEqual([]);
+    expect(spikeQuiet.spike).toEqual({ pill: "↑ 200%", spoken: "גבוה ב־200% מהרגיל ללקוח", usual: null });
+    const spikeExpense = reviewFlagView([flag("amount_spike", null, { ratio: 3.4, typical_amount_minor: 250_000 })]);
     if (spikeExpense?.tone !== "quiet") throw new Error("quiet");
-    expect(copyText(spikeExpense.line)).toBe("פי 3 מהרגיל לספק");
+    expect(spikeExpense.line).toEqual([]);
+    expect(spikeExpense.spike?.spoken).toBe("גבוה ב־240% מהרגיל לספק");
+    expect(spikeExpense.spike?.usual).toEqual(["בדרך כלל ", { num: "₪2,500" }]);
 
     const newLoud = reviewFlagView([flag("new_party_large", 0.95)], { direction: "income" });
     if (newLoud?.tone !== "loud") throw new Error("loud");
@@ -84,10 +92,32 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     expect(copyText(dup.line)).toBe("שורה באותו סכום");
     const spike = reviewFlagView([flag("amount_spike", 0.9)]);
     if (spike?.tone !== "loud") throw new Error("loud");
-    // The title already says it is high: no ratio and no usual amount leaves no hint.
+    // The title already says it is high: no ratio and no usual amount leaves no pill and no hint.
     expect(spike.hint).toBeUndefined();
+    expect(spike.spike).toEqual({ pill: null, spoken: null, usual: null });
     const usual = reviewFlagView([flag("amount_spike", 0.9, { typical_amount_minor: 120_000 })]);
     if (usual?.tone !== "loud") throw new Error("loud");
-    expect(copyText(usual.hint ?? [])).toBe("בדרך כלל ₪1,200");
+    expect(usual.spike?.pill).toBeNull();
+    expect(copyText(usual.spike?.usual ?? [])).toBe("בדרך כלל ₪1,200");
+    // A quiet spike with no ratio keeps its line, with no number, since there is no pill to carry it.
+    const quiet = reviewFlagView([flag("amount_spike", 0.2, { typical_amount_minor: 120_000 })], { direction: "income" });
+    if (quiet?.tone !== "quiet") throw new Error("quiet");
+    expect(copyText(quiet.line)).toBe("גבוה מהרגיל ללקוח");
+    expect(copyText(quiet.spike?.usual ?? [])).toBe("בדרך כלל ₪1,200");
+  });
+
+  it("rounds the spike to whole percent above the usual amount, and drops it when not above", () => {
+    expect(spikePercentText(3.4)).toBe("240%");
+    expect(spikePercentText(1.236)).toBe("24%");
+    expect(spikePercentText(12.5)).toBe("1,150%");
+    expect(spikePercentText(1.004)).toBeNull();
+    expect(spikePercentText(0.5)).toBeNull();
+    expect(spikePercentText(null)).toBeNull();
+    expect(spikePercentText(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it("leaves other kinds as they were, with no spike", () => {
+    expect(reviewFlagView([flag("duplicate", 0.9)])?.spike).toBeUndefined();
+    expect(reviewFlagView([flag("new_party_large", 0.1)])?.spike).toBeUndefined();
   });
 });

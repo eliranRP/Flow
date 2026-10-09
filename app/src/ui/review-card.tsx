@@ -164,6 +164,7 @@ export function ReviewCard({
   const mismatch = reason === "split_mismatch";
   const jevOnCard = !pending && lines.some((line) => line.jev);
   const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
+  const spike = flag?.spike ?? null;
   const filled = jevFilled != null && !pending && (jevOnCard || jevFilled.alone === true) ? jevFilled : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
@@ -191,9 +192,22 @@ export function ReviewCard({
           ) : null}
         </div>
       </div>
-      <p className="t-display">
-        <bdi dir="ltr">{amountText}</bdi>
-      </p>
+      {spike?.pill ? (
+        <div className="ui-review-amount">
+          <p className="t-display">
+            <bdi dir="ltr">{amountText}</bdi>
+          </p>
+          <span className="ui-status ui-review-spike" aria-hidden="true">
+            <bdi className="ui-num" dir="ltr">{spike.pill}</bdi>
+          </span>
+          <span className="sr-only">{spike.spoken}</span>
+        </div>
+      ) : (
+        <p className="t-display">
+          <bdi dir="ltr">{amountText}</bdi>
+        </p>
+      )}
+      {spike?.usual ? <p className="t-hint ui-review-usual"><CopyLine parts={spike.usual} /></p> : null}
       {vatLine ? <p className="t-hint">{vatLine}</p> : null}
       {memo ? <ReviewMemo memo={memo} /> : null}
       <div className="ui-review-ai">
@@ -272,7 +286,7 @@ export function ReviewCard({
           <p className="t-hint ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
         ) : null}
       </div>
-      {flag ? <ReviewFlagBlock flag={flag} /> : null}
+      {flag && (flag.tone === "loud" || flag.line.length > 0) ? <ReviewFlagBlock flag={flag} /> : null}
     </article>
   );
 }
@@ -292,6 +306,7 @@ function SplitPartsTitle({ count }: { count: number }) {
 /**
  * Loud: a warning row with the icon, the title in the text colour and the hint in warning.
  * Quiet: one muted hint line. Both start with a hidden "לבדיקה:". Never a control.
+ * An amount spike's "↑ N%" and usual amount sit by the amount instead (2026-10-09).
  */
 function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
   if (flag.tone === "loud") {
