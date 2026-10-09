@@ -129,8 +129,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 79 | [FLOW-353](#flow-353) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI | ready |
 | 80 | [FLOW-354](#flow-354) | The default income category in the money terms word | PLAN FIRST | owner approved 2026-10-09 13:44Z (money terms glossary); built in #385 |
-| 81 | [FLOW-355](#flow-355) | A project row on Home's first screen at 375x667 | PLAN FIRST | waiting on the owner |
-| 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST | waiting on the owner |
+| 81 | [FLOW-355](#flow-355) | A project row on Home's first screen at 375x667 | PLAN FIRST | owner picked "Both changes" (2026-10-09 18:53Z); UI lane 1 after the feature freeze |
+| 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST | owner picked "Hide" (2026-10-09 18:49Z); UI lane 4, with FLOW-115 |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -1002,13 +1002,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-355"></a>
 ### FLOW-355 · A project row on Home's first screen at 375x667
-- **Type:** PLAN FIRST · **Status:** waiting on the owner · **Source:** cycle 12, the FLOW-334 Home item
+- **Type:** PLAN FIRST · **Status:** owner picked "Both changes" (2026-10-09 18:53Z): the band keeps the profit and one period pill (no period tabs, stepper or explanation line), and the review and invoices box moves under the first two projects. UI lane 1 builds it after the feature freeze; real-app shots go to the design lead, then the owner, before merge · **Source:** cycle 12, the FLOW-334 Home item
 - **What:** At 375x667 the band is 336px, the attention banners 175px, and the first project row starts 158px under the tab bar. Without banners, FLOW-334's tighter income and expenses pair plus a 24px head gap bring it to the bar's edge. #386 already moved the income and expenses pair to a 52px pitch. With banners, a row shows only if the band gets shorter or the banners move under the first project rows. Mockups at 390, one option per frame.
 - **Acceptance:** owner's pick on a card, then real-app shots.
 
 <a id="flow-138"></a>
 ### FLOW-138 · A paid-off loan's leftover balance has no word
-- **Type:** PLAN FIRST · **Status:** waiting on the owner · **Source:** cycle 12 (loans at 320)
+- **Type:** PLAN FIRST · **Status:** owner picked "Hide" (2026-10-09 18:49Z): a paid-off loan shows only נפרעה and its date; a closed loan hides a zero balance. UI lane 4, with FLOW-115 · **Source:** cycle 12 (loans at 320)
 - **What:** A loan marked נפרעה still shows a balance ($1,240) beside the word, with nothing saying what the money is (screens/loan-list.tsx:59-61, :103). Either the balance is a leftover the books haven't closed and needs a word, or a paid-off loan should show no balance.
 - **Acceptance:** owner's pick on a card.
 
