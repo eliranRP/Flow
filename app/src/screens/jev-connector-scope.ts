@@ -1,4 +1,5 @@
 /** The Jev connector flag and the user and company it is scoped to. Re-exported by jev-review.ts. */
+import type { QueryClient } from "@tanstack/react-query";
 
 /** Separate from the suggestion read, and scoped so the next user does not reuse this one's on. */
 export function jevConnectorQueryKey(scope: JevConnectorScope | null = boundJevConnectorScope()) {
@@ -20,6 +21,9 @@ export function jevConnectorStorageKey(scope: JevConnectorScope): string {
 }
 
 let activeScope: JevConnectorScope | null = null;
+
+/** The old key is deleted once per launch, not on every read (FLOW-704). */
+let legacyKeyDropped = false;
 
 /** `undefined` until auth has reported. Null is a reported sign-out. */
 let notedAuthUser: string | null | undefined;
@@ -126,6 +130,7 @@ export function resetJevScopeMemory(): void {
   followsLive = false;
   scopeGeneration += 1;
   scopePhase = "off";
+  legacyKeyDropped = false;
   emitScope();
 }
 
@@ -139,7 +144,8 @@ export function boundJevConnectorScope(): JevConnectorScope | null {
 
 /** The pre-scope device-wide key. It is deleted and never read as the flag. */
 export function dropLegacyJevConnectorKey(): void {
-  if (typeof localStorage === "undefined") return;
+  if (legacyKeyDropped || typeof localStorage === "undefined") return;
+  legacyKeyDropped = true;
   try {
     localStorage.removeItem(JEV_CONNECTOR_FLAG);
   } catch {
@@ -181,6 +187,25 @@ export function userRememberedJevOn(userId: string): boolean {
 /** The live read when the company is not known yet. Not the unscoped connector key. */
 export function jevConnectorLiveKey(userId: string | null): readonly ["jev-connector", string, "session"] {
   return ["jev-connector", userId != null && userId !== "" ? userId : "session", "session"];
+}
+
+/**
+ * FLOW-704: when the scope binds after this session's live read said on, the scoped key takes that
+ * answer (and its time), so the connector is not read a second time. Off is not carried over: a
+ * read past its deadline also returns off, and that must not stand as a known off.
+ */
+export function jevLiveOn(client: QueryClient, userId: string | null): number | null {
+  const live = client.getQueryState<boolean>(jevConnectorLiveKey(userId));
+  return live?.status === "success" && live.data === true ? live.dataUpdatedAt : null;
+}
+
+export function seedJevConnectorFromLive(client: QueryClient, scope: JevConnectorScope): void {
+  const key = jevConnectorQueryKey(scope);
+  if (client.getQueryData(key) !== undefined) return;
+  const at = jevLiveOn(client, scope.userId);
+  if (at == null) return;
+  client.setQueryData(key, true, { updatedAt: at });
+  writeJevConnectorFlag(true, scope);
 }
 
 export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefined {

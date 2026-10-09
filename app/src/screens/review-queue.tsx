@@ -494,7 +494,8 @@ export function ReviewQueue({
           {changeTo == null && listPlace == null ? (
             <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
           ) : null}
-          {listPlace == null ? (
+          {/* FLOW-507: a viewer doesn't work through the queue, so no visit meter. */}
+          {listPlace == null && !holdWrites ? (
             <ProgressBar
               variant="thin"
               label="התקדמות התור"
@@ -505,7 +506,10 @@ export function ReviewQueue({
           {holdWrites ? null : <span className="sr-only">פריט </span>}
           <span className="t-hint ui-review-counter">
             {holdWrites ? (
-              <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
+              <>
+                <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
+                {total === 1 ? " ממתינה" : " ממתינות"}
+              </>
             ) : (
               <>
                 <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />

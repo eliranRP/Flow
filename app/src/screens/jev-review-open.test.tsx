@@ -59,6 +59,7 @@ const db = vi.hoisted(() => ({
   holdCompany: null as Promise<void> | null,
   holdIntegration: null as Promise<void> | null,
   companyReads: 0,
+  integrationReads: 0,
   reviewReads: 0,
   companyId: "company-1",
   omitCompany: false,
@@ -129,6 +130,7 @@ const supabase = {
     }
     if (name === "company_integrations") {
       return chain(() => {
+        db.integrationReads += 1;
         const result = { data: db.integration, error: null };
         return db.holdIntegration == null ? Promise.resolve(result) : db.holdIntegration.then(() => result);
       });
@@ -169,6 +171,7 @@ describe("cold review scope", () => {
     db.holdCompany = null;
     db.holdIntegration = null;
     db.companyReads = 0;
+    db.integrationReads = 0;
     db.reviewReads = 0;
     db.companyId = scope.companyId;
     db.omitCompany = false;
@@ -423,6 +426,32 @@ describe("cold review scope", () => {
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
     window.clearTimeout(releaseAt);
+  });
+
+  it("reads the connector once when the company binds after a live read said on (FLOW-704)", async () => {
+    db.restoreSession = true;
+    let releaseCompany: () => void = () => undefined;
+    db.holdCompany = new Promise<void>((resolve) => {
+      releaseCompany = resolve;
+    });
+    db.integration = { enabled: true, mode: "shadow" };
+    db.review = [stored];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    await waitFor(() => {
+      expect(db.integrationReads).toBe(1);
+    });
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(jevScopeFollowsLive()).toBe(false);
+    releaseCompany();
+    await waitFor(() => {
+      expect(boundJevConnectorScope()).toEqual(scope);
+    });
+    await waitFor(() => {
+      expect(client.getQueryData(jevConnectorQueryKey(scope))).toBe(true);
+    });
+    expect(db.integrationReads).toBe(1);
+    expect(readJevConnectorFlag(scope)).toBe(true);
   });
 
   it("does not list review while getSession has not answered", async () => {
