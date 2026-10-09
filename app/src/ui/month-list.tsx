@@ -91,6 +91,48 @@ export function MonthList<T>({
   );
 }
 
+/**
+ * A transaction list under one sticky head per group (FLOW-334: שויכו היום by project). The head is
+ * the month head's shape: the group's name, then its line count and its income and expenses per
+ * currency. The caller groups (`groupByKey`), so it can step through the rows in the order drawn.
+ */
+export function GroupList<T>({
+  groups,
+  keyOf,
+  dateOf,
+  renderRow,
+  countOf,
+  cents = false,
+}: {
+  groups: readonly MonthGroup<T>[];
+  keyOf: (row: T) => string;
+  dateOf: (row: T) => string;
+  renderRow: (row: T) => ReactNode;
+  /** The group's line count in words ("3 תנועות"). */
+  countOf: (count: number) => string;
+  cents?: boolean;
+}) {
+  const baseId = useId();
+  return (
+    <List>
+      {groups.map((group, index) => (
+        <MonthSection
+          key={group.key}
+          id={`${baseId}-${String(index)}`}
+          group={group}
+          count={countOf(group.rows.length)}
+          showTotals
+          keyOf={keyOf}
+          dateOf={dateOf}
+          renderRow={renderRow}
+          days={false}
+          cents={cents}
+        />
+      ))}
+    </List>
+  );
+}
+
 /** The month a row belongs to, as groupByMonth keys it; "" when the date can't be read. */
 function monthKey(date: string): string {
   return /^\d{4}-\d{2}/.exec(date)?.[0] ?? "";
@@ -100,6 +142,7 @@ function MonthSection<T>({
   id,
   group,
   head = true,
+  count,
   showTotals,
   keyOf,
   dateOf,
@@ -113,6 +156,8 @@ function MonthSection<T>({
   group: MonthGroup<T>;
   /** False for the flat list: no month name or totals, and no group role. */
   head?: boolean;
+  /** A group head (GroupList) leads its figures with the line count, and its name may wrap. */
+  count?: string;
   showTotals: boolean;
   keyOf: (row: T) => string;
   dateOf: (row: T) => string;
@@ -127,12 +172,16 @@ function MonthSection<T>({
   return (
     <div className="ui-month" role={head ? "group" : undefined} aria-labelledby={head ? id : undefined}>
       {head ? (
-        <div className="ui-month-head">
-          <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
+        <div className={count == null ? "ui-month-head" : "ui-month-head ui-group-head"}>
+          <h2 className={count == null ? "ui-month-title t-heading" : "ui-month-title ui-group-title t-heading"} id={id}>{group.title}</h2>
           {showTotals && net && shown.length > 0 ? <MonthNet totals={shown} /> : null}
           {showTotals && !net ? (
             <p className="ui-month-totals t-label">
-              {shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0} />)}
+              {count != null ? <span className="ui-group-count">{count}</span> : null}
+              {/* A one-line group's total is its row's amount: the head says the count only. */}
+              {count != null && group.rows.length === 1
+                ? null
+                : shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0 && count == null} />)}
             </p>
           ) : null}
         </div>

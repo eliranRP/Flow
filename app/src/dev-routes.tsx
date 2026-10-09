@@ -226,19 +226,16 @@ export function DevReviewBanner() {
   );
 }
 
+/** Two projects and a line with none, so the list shows its project heads (FLOW-334). */
 export function DevFiled() {
   return (
     <FiledTodayScreen
-      sample={[{
-        id: "t-filed",
-        description: "מלט",
-        doc_date: "2026-09-29",
-        amount_net: -350_000n,
-        direction: "expense",
-        supplier_name: "מנופי המרכז בע״מ",
-        project_name: "שיפוץ הרצל 12",
-        category_name: "חומרים",
-      }]}
+      sample={[
+        { id: "t-filed", description: "מלט", doc_date: "2026-09-29", amount_net: -350_000n, direction: "expense", supplier_name: "מנופי המרכז בע״מ", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
+        { id: "t-filed-2", description: "הובלה", doc_date: "2026-09-29", amount_net: -120_000n, direction: "expense", supplier_name: "הובלות הגליל", project_name: "וילה רעננה", category_name: "הובלה" },
+        { id: "t-filed-3", description: "צבע", doc_date: "2026-09-29", amount_net: -84_050n, direction: "expense", supplier_name: "צבעי השרון", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
+        { id: "t-filed-4", description: "עמלה", doc_date: "2026-09-29", amount_net: -2_500n, direction: "expense", supplier_name: "עמלת בנק", project_name: null, category_name: "עמלות" },
+      ]}
     />
   );
 }

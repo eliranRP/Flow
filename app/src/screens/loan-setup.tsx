@@ -332,9 +332,11 @@ export function LoanSetupForm({
           />
         </div>
       ) : null}
-      {shown ? (
-        // FLOW-115: the kept preview dims while a field is incomplete or wrong, so it doesn't read as the new loan.
-        <div aria-live="polite" className={ready && !invalid ? undefined : "ui-loan-preview-stale"}>
+      {/* FLOW-344 (B): the preview shows only while every field is valid, so it never reads as another loan's payment. */}
+      {/* Empty, the region leaves the layout, so the gap above שמירה is the usual one between fields. */}
+      <div aria-live="polite" className={canSave && shown ? undefined : "sr-only"}>
+        {canSave && shown ? (
+          <>
           <p>
             תשלום חודשי{" "}
             <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
@@ -356,12 +358,12 @@ export function LoanSetupForm({
               <bdi className="ui-num" dir="ltr">{formatLoanMoney(finalLine.amountMinor, currency)}</bdi>
             </p>
           ) : null}
-        </div>
-      ) : null}
-      {!advanced ? (
-        <p className="ui-field-message ui-field-message-slot" role={shownError("payment") ? "alert" : undefined}>
-          {shownError("payment") ?? ""}
-        </p>
+          </>
+        ) : null}
+      </div>
+      {/* FLOW-344: the payment error takes a line only when there is one; the preview above no longer jumps. */}
+      {!advanced && shownError("payment") != null ? (
+        <p className="ui-field-message" role="alert">{shownError("payment")}</p>
       ) : null}
       {/* FLOW-115: always tappable; a tap shows each field's error, and each says what to type. */}
       <Button type="submit" buttonRef={saveButtonRef} busy={busy}>שמירה</Button>

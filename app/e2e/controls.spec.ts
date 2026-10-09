@@ -294,7 +294,9 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
 test("projects search, expand, open, and the new-project sheet", async ({ page }) => {
   await page.goto("/e2e/projects?preview=1");
   await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("אין כזה");
-  await page.getByRole("button", { name: "ניקוי החיפוש" }).click();
+  // FLOW-342: a miss offers the transaction search; the field's ✕ clears it.
+  await expect(page.getByRole("link", { name: /^חיפוש בתנועות: אין כזה/ })).toBeVisible();
+  await page.getByRole("button", { name: "ניקוי", exact: true }).click();
   await expect(page.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveValue("");
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toHaveCount(0);
   await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("ישן");
@@ -519,7 +521,9 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.getByRole("link", { name: "קטגוריות" }).click();
   await expect(page).toHaveURL(/\/settings\/categories/);
   await page.goto("/e2e/settings?preview=1");
-  await expect(page.getByRole("link", { name: "פרויקטים" })).toHaveCount(0);
+  // The fixture draws the tab bar (FLOW-334): its פרויקטים tab is the only such link.
+  await expect(page.getByRole("link", { name: "פרויקטים" })).toHaveCount(1);
+  await expect(page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: "פרויקטים" })).toHaveCount(1);
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }

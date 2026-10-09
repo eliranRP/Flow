@@ -290,19 +290,20 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("כתבו בין 1 ל־600 חודשים.")).toBeInTheDocument();
   });
 
-  it("keeps the last preview while a field is incomplete", () => {
+  it("hides the preview while a field is incomplete and brings it back once valid (FLOW-344)", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "6." } });
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("6.");
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
+    expect(screen.queryByText("₪599.55")).not.toBeInTheDocument();
     // FLOW-115: שמירה stays tappable; a tap shows what to type.
     expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
     expect(screen.queryByText("כתבו ריבית עד 100%.")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "6" } });
+    expect(screen.getByText("₪599.55")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "" } });
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
+    expect(screen.queryByText("₪599.55")).not.toBeInTheDocument();
     expect(screen.queryByText("הסכום צריך להיות גדול מ־0.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(screen.getByText("כתבו את הסכום המקורי.")).toBeInTheDocument();
@@ -320,12 +321,12 @@ describe("LoanSetupForm", () => {
     await waitFor(() => { expect(screen.getByLabelText("סכום מקורי")).toHaveFocus(); });
   });
 
-  it("dims the kept preview while a field is incomplete, and says 0 is too small (FLOW-115)", () => {
+  it("hides the preview while a field is incomplete, and says 0 is too small (FLOW-344, FLOW-115)", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
-    const preview = screen.getByText("₪599.55").closest("[aria-live]");
-    expect(preview).not.toHaveClass("ui-loan-preview-stale");
+    expect(screen.getByText("₪599.55")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
-    expect(screen.getByText("₪599.55").closest("[aria-live]")).toHaveClass("ui-loan-preview-stale");
+    expect(screen.queryByText("₪599.55")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ריבית כוללת/)).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "0" } });
     fireEvent.blur(screen.getByLabelText("סכום מקורי"));
     expect(screen.getByText("הסכום צריך להיות גדול מ־0.")).toBeInTheDocument();

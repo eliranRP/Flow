@@ -69,7 +69,8 @@ function sameUrl(href: string, current: string) {
 
 
 /** These routes open a sheet on load, so controls under the scrim are covered. */
-const sheetOnLoad = new Set(["/add?preview=1", "/review/change?preview=1"]);
+// The change fixture draws the tab bar under its sheet like the real route (FLOW-334), so its tabs are covered too.
+const sheetOnLoad = new Set(["/add?preview=1", "/review/change?preview=1", "/e2e/change?preview=1"]);
 
 /**
  * Registers one test per route: every enabled link, button and field on it must do something when
