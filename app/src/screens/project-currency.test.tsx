@@ -73,9 +73,9 @@ describe("ProjectDetailScreen currency", () => {
     // FLOW-340 C: the lines are their own screen, where the transaction row keeps its minus.
     renderProject(usdProject(), "transactions");
     const txnAmount = screen.getByText("Sample vendor").closest(".ui-row")?.querySelector(".ui-num");
-    // Transaction rows show cents like Mercury, ".00" included, drawn small (decision 0120, option C).
-    expect(txnAmount?.textContent).toBe("−$1,250.00");
-    expect(txnAmount?.querySelector(".ui-num-cents")?.textContent).toBe(".00");
+    // The project's lines show real agorot only, no ".00", as Search does (FLOW-340 C, FLOW-339 C).
+    expect(txnAmount?.textContent).toBe("−$1,250");
+    expect(txnAmount?.querySelector(".ui-num-cents")).toBeNull();
     expect(screen.queryByRole("link", { name: /categories/ })).not.toBeInTheDocument();
   });
 

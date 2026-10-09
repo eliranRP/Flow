@@ -90,6 +90,7 @@ export function ProjectTransactions({
                 agorot={row.agorot}
                 sign={row.sign}
                 currency={txn.currency ?? "ILS"}
+                realCents
                 source={rowSource(txn.source)}
                 href={`/transactions/${txn.id}${search}`}
                 state={txnListState(heldIds, txn.id, listFrom)}

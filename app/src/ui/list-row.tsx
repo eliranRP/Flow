@@ -72,6 +72,8 @@ export type ListRowProps =
     currency?: string;
     /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */
     inWord?: string;
+    /** Real agorot only, no ".00" (the project's transactions, FLOW-340 C, as Search does). */
+    realCents?: boolean;
   })
   | StatementRowProps
   | (Common & { variant: "item"; plain?: boolean })
@@ -464,7 +466,7 @@ function StatementRow(props: StatementRowProps) {
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} realCents={props.realCents} />;
   }
   if (props.missing != null) {
     return (
