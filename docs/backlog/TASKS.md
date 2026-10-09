@@ -4,7 +4,7 @@ Open tasks only. How to claim and finish a task is in the [backlog guide](README
 
 Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI change, design review), `PLAN FIRST` (plan and mockup, owner approval before any build), `BUG`, `MCP` (flow-mcp work), `BACKLOG NIT` (reviewer follow-ups, batch several per PR).
 
-Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `blocked`, `done`.
+Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
 Last full sync: 2026-10-07.
 
@@ -18,17 +18,17 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | FLOW-505 server: `import_from` cutoff in both sync functions, `set_import_from` widening backfill, `import_from` in `sumit_status`, PR #327 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-505 B: "ייבוא מ" (מההתחלה or מתאריך) in both connect sheets (server merged #327), PR #332; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
+| Backlog bug fixes | FLOW-334 the sheet head is the title's height (the ✕ lends 8px) | FLOW-503 Mercury in the setup flow, then FLOW-506 demo code items |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake.
+Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id | Title | Type | Status |
 | --- | --- | --- | --- | --- |
@@ -579,12 +579,6 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** Rows grouped by day headers (today, yesterday, date), a round initials avatar, the counterparty in bold with the payment method under it, the amount at the end with small cents, income in green, a pending chip, dense rows without card borders.
 - **Acceptance:** mockup approved; design review.
 
-<a id="flow-306"></a>
-### FLOW-306 · Invoice photo capture
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
-- **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
-- **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
-
 <a id="flow-307"></a>
 ### FLOW-307 · Large amounts on the transaction detail at 320px
 - **Type:** SMALL UI · **Status:** done (#111; design reviewer's option A, stepped fit for display amounts) · **Depends on:** —
@@ -788,7 +782,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
 - [x] (#286) Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
 - [ ] (from #310 review) `.ui-btn-retry` (filled) is still used by `loan-detail-screen.tsx` and `loan-setup.tsx`; switch both to the tint retry and delete the class. At 320 the first שויכו היום group head sits about 8px under the title; give it a little more air. The heads show cents inline while rows show them small.
-- [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
+- [x] (Backlog bug fixes, 2026-10-09, #334, approved by the design lead (2026-10-09): the ✕ in every sheet head lends 8px above and below, so the head is 33.7px, the title's height, not 48px; on the change sheet the amount line now sits 4px under the title's box, not 11px) Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
 - [x] (#286) Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
 - [x] (#286) Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
 - [x] (UI lane 3, 2026-10-09: `margin-top: var(--space-5)` on the form) Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
@@ -1018,11 +1012,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-505"></a>
 ### FLOW-505 · Import-range picker for connectors
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (option B: server #327, app #332; one follow-up below) · **Depends on:** —
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
 - [x] Server side (#327): `set_import_from(provider, date | null)` stores the start (it existed since the connector engine); `sumit_status()` returns `import_from`, and Mercury's is on `connector_connection_status`. `upsert_connector_lines` does not add a line dated before it, for both connectors, and keeps the rows already stored, which still take updates so a pending line can settle (the SUMIT sweep already spared them); a run whose lines are all older is not an empty sweep. A Mercury run that stops at the page cap also drops older lines. A wider range clears Mercury's cursor so the next sync reads from the new start; SUMIT reads every document each run. A Mercury run already in flight when the range widens ends with `sync_cursor_conflict`; the next run starts from the new date, and the error shows on the sheet until a run completes.
-- [ ] App: the ייבוא מ control (option B) in the SUMIT and Mercury sheets (UI lane 3).
+- [x] (UI lane 3, 2026-10-09, option B) App: `ImportFromField` (app/src/ui) in the SUMIT and Mercury connect sheets, in Settings and in setup; `set_import_from` runs once the connection exists, only when the choice changed; a reconnect opens on the stored date (#332).
+- [ ] (lane 2's #332 review) The connection row exists before `set_import_from` runs, so a sync tick in that window imports from the start once (the rows stay after narrowing). Pass `importFrom` to the `mercury-connect` and `sumit-connect` edge functions so the first sync already honours it.
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups
@@ -1336,6 +1331,20 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** MCP · **Status:** blocked on the owner's approval · **Depends on:** FLOW-101 (done, #70)
 - **What:** Data work for the MCP/data agent, no code: re-check company totals after FLOW-101; hide default loan categories a company doesn't use (the interest category is the target for split interest, so check after PR B); move deposit and closing returns filed as refunds into a kept-out category if the owner approves.
 - **Acceptance:** the data agent reports before and after totals to the coordinator.
+
+## Future features
+
+Features the owner parked for later. Nobody claims, plans, or builds them, and the lane manager doesn't schedule them, until the owner brings one back; then it moves to its area and the priority queue with a new status.
+
+| Id | Title | Parked |
+| --- | --- | --- |
+| [FLOW-306](#flow-306) | Invoice photo capture | 2026-10-09 |
+
+<a id="flow-306"></a>
+### FLOW-306 · Invoice photo capture
+- **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09; the A/B mockup card waits until the owner brings it back) · **Depends on:** —
+- **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
+- **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
 
 ## Done
 

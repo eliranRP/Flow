@@ -236,6 +236,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   padding: var(--space-1) var(--space-side) 0;
 }
 
+/* FLOW-334: the ✕ keeps its 44px target but lends 8px above and below, so the head is the
+   title's height and the line under it sits close (mockup 06), not 44px down. */
+.ui-sheet-head > .ui-icon-btn {
+  margin-block: calc(-1 * var(--space-2));
+}
+
 .ui-band-hero .t-title-2,
 .ui-band-hero .t-band-title,
 .ui-notice-title {
