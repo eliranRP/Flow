@@ -381,8 +381,9 @@ $$;
 
 -- The lines behind one month's נכנס ('in'), יצא ('out') or what the view leaves out
 -- ('excluded'), newest first, in get_breakdown_lines' row shape. A line split's parts on the
--- same side show as one row; a loan payment shows a row per part (principal, interest, escrow). amount_minor is positive money in on 'in', positive money out on 'out',
--- and on 'excluded' positive on the row's side ('in' or 'out').
+-- same side show as one row; a loan payment shows a row per part (principal, interest,
+-- escrow). amount_minor is positive money in on 'in', positive money out on 'out', and on
+-- 'excluded' positive on the row's side ('in' or 'out').
 create or replace function public.cash_month_lines(
   p_month date,
   p_side text,

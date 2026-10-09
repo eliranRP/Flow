@@ -376,10 +376,17 @@ update public.companies set is_demo = true where name = 'Example Demo LLC';
 insert into cfm (label, id) select 'demo', id from public.companies where name = 'Example Demo LLC';
 insert into public.company_viewers (user_id, company_id)
 values (tests.get_supabase_uid('cfm_viewer'), pg_temp.id('demo'));
+insert into cfm (label, id) values
+  ('demo_rent', tests.fixture_line(pg_temp.id('demo'), 'cfm:demo-rent', 300000, 'income', null, null,
+    '2026-06-04', p_pnl_role => null, p_doc_kind => 'invoice_receipt'));
 
 select tests.authenticate_as('cfm_viewer');
 select is(public.cash_months(1, '2026-06-15') ->> 'basis', 'paid', 'a viewer reads the cash view');
-select is(public.cash_month_lines('2026-06-01', 'in') -> 'rows', '[]'::jsonb, 'and its lists');
+select is(
+  (select jsonb_agg(r ->> 'transaction_id') from jsonb_array_elements(public.cash_month_lines('2026-06-01', 'in') -> 'rows') r),
+  jsonb_build_array(pg_temp.id('demo_rent')::text),
+  'and its lists, with the demo company''s own lines only'
+);
 select throws_ok(
   $$select public.set_transaction_cash(pg_temp.id('rent'), false)$$, '42501', 'forbidden',
   'a viewer cannot switch a line'
