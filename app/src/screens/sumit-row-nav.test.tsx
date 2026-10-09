@@ -292,6 +292,8 @@ describe("SUMIT status row", () => {
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       if (name === "sumit_status") return Promise.resolve({ data: sumit({}), error: null });
+      // create_company answers the new company's id, as the RPC does.
+      if (name === "create_company") return Promise.resolve({ data: "company-1", error: null });
       return Promise.resolve({ data: null, error: null });
     };
     window.history.replaceState({ idx: 0 }, "");

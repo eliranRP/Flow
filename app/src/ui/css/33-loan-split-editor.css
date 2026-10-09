@@ -67,9 +67,9 @@
   color: var(--color-text-secondary);
 }
 
-/* One figure leads: the parts in body weight, סה״כ keeps its semibold (design lead). */
-.ui-lsedit-parts .ui-loan-parts-row {
-  font-weight: var(--type-body-weight);
+/* One figure leads: the part amounts in regular weight, סה״כ keeps its semibold (design lead). */
+.ui-lsedit-parts .ui-loan-parts-row > .ui-num {
+  font-weight: var(--type-amount-weight);
 }
 
 /* "חלוקה אחרת" under the match sheet's loans. */
