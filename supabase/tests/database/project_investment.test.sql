@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(68);
+select plan(73);
 
 do $users$
 begin
@@ -135,6 +135,29 @@ select is(pg_temp.inv()->>'forced_equity_minor', null, 'forced equity waits for 
 select is(pg_temp.inv()->>'current_equity_minor', null, 'current equity waits for the value');
 select is((pg_temp.inv('barn')->>'rehab_minor')::bigint, 30000::bigint, 'the other project gets its share of the shared line');
 
+-- rehab_by_category comes from the same lines, so it adds up to rehab_minor (FLOW-404).
+create or replace function pg_temp.rehab_rows(p_project text default 'house')
+returns jsonb
+language sql
+as $$
+  select coalesce(jsonb_agg(jsonb_build_array(e->>'name', (e->>'amount_minor')::bigint) order by e->>'name' nulls last), '[]'::jsonb)
+  from jsonb_array_elements(pg_temp.inv(p_project)->'rehab_by_category') e;
+$$;
+grant execute on function pg_temp.rehab_rows(text) to authenticated, service_role;
+create or replace function pg_temp.rehab_rows_sum(p_project text default 'house')
+returns bigint
+language sql
+as $$
+  select coalesce(sum((e->>'amount_minor')::bigint), 0)::bigint
+  from jsonb_array_elements(pg_temp.inv(p_project)->'rehab_by_category') e;
+$$;
+grant execute on function pg_temp.rehab_rows_sum(text) to authenticated, service_role;
+select is(pg_temp.rehab_rows(), '[["Materials", 110000], [null, 20000]]'::jsonb,
+  'rehab by category: materials direct and shared, and the line with no category as a null row');
+select is(pg_temp.rehab_rows_sum(), (pg_temp.inv()->>'rehab_minor')::bigint, 'the rows add up to rehab_minor');
+select is(pg_temp.rehab_rows('barn'), '[["Materials", 30000]]'::jsonb,
+  'a cost in another currency is not a row; the shared share is');
+
 -- The owner sets the figures.
 insert into pin_out (label, body)
 select 'set', public.set_project_investment(pg_temp.id('house'),
@@ -207,6 +230,9 @@ select public.set_category_rehab(pg_temp.id('interest'), null);
 select public.set_category_rehab(pg_temp.id('materials'), true);
 select is((pg_temp.inv()->>'rehab_minor')::bigint, 140000::bigint,
   'switched on, a category also takes the fees part filed in it');
+select is(pg_temp.rehab_rows(), '[["Materials", 120000], [null, 20000]]'::jsonb,
+  'and the fees part shows in that category''s row');
+select is(pg_temp.rehab_rows_sum(), 140000::bigint, 'so the rows still add up');
 select public.set_category_rehab(pg_temp.id('materials'), null);
 select is((pg_temp.inv()->>'rehab_minor')::bigint, 130000::bigint, 'null goes back to the default');
 select throws_ok($$select public.set_category_rehab(pg_temp.id('other_cat'), true)$$,
