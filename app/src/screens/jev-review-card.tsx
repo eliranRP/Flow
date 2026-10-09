@@ -35,6 +35,7 @@ import {
   withJevDeadline,
   type JevConnectorScope,
   type JevPrefill,
+  JEV_QUEUE_STALLED,
   type JevQueueData,
   type JevReviewState,
 } from "./jev-review";
@@ -46,8 +47,6 @@ export const JEV_REVIEW_SAMPLE: JevPrefill = {
   project: { id: "p-villa", name: "וילה רעננה" },
   category: { id: "c-materials", name: "חומרים" },
 };
-
-const JEV_QUEUE_OFF: JevQueueData = { connectorOn: false, byId: {} };
 
 export function useJevReview(transactionId: string | null, live: boolean): JevReviewState & { loading: boolean } {
   const query = useQuery({
@@ -158,7 +157,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
     queryFn: ({ signal }) => withJevDeadline(
       signal,
       (linked) => loadJevSuggestions(transactionIds, linked),
-      JEV_QUEUE_OFF,
+      JEV_QUEUE_STALLED,
     ),
   });
   // FLOW-706: with Jev off, a fill that still stands keeps its label and ביטול.
@@ -171,7 +170,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
     queryFn: ({ signal }) => withJevDeadline(
       signal,
       (linked) => loadJevFillsOff(transactionIds, linked),
-      JEV_QUEUE_OFF,
+      JEV_QUEUE_STALLED,
     ),
   });
   function loadingFor(transactionId: string | null): boolean {
@@ -179,6 +178,9 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
     if (waiting) return true;
     if (connector.isError || !knownOn || suggestions.isError) return false;
     if (suggestions.isPending || transactionId == null) return suggestions.isPending;
+    // FLOW-704: the last read stalled, so this one likely will too. The card shows without Jev
+    // rather than wait out the deadline again; an answer that lands later still fills it.
+    if (suggestions.data === JEV_QUEUE_STALLED) return false;
     return suggestions.isFetching
       && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
