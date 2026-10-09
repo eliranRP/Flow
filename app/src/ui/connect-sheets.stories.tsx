@@ -92,3 +92,30 @@ export const SumitImportFromToggle: Story = {
     await expect(within(dialog).getByRole("button", { name: /^תאריך ייבוא: 01\/01\/\d{4}$/ })).toBeInTheDocument();
   },
 };
+
+/** FLOW-350: with מתאריך on, חיבור stays pinned in the sheet's foot and in view at 320 and 375x667. */
+const pinnedPlay: Story["play"] = async ({ canvasElement }) => {
+  const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור SUMIT" });
+  const submit = within(dialog).getByRole("button", { name: "חיבור" });
+  await expect(submit.closest(".ui-sheet-foot")).not.toBeNull();
+  const box = submit.getBoundingClientRect();
+  await expect(box.bottom).toBeLessThanOrEqual(canvasElement.ownerDocument.documentElement.clientHeight);
+};
+
+export const SumitImportFromDate320: Story = {
+  render: () => <SumitDemo initialFrom="2026-01-01" />,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  play: pinnedPlay,
+};
+
+export const SumitImportFromDateSe: Story = {
+  render: () => <SumitDemo initialFrom="2026-01-01" />,
+  parameters: { viewport: { defaultViewport: "flow375-se" } },
+  play: pinnedPlay,
+};
+
+export const SumitImportFromDateDark320: Story = {
+  render: () => <SumitDemo initialFrom="2026-01-01" />,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  globals: { theme: "dark" },
+};

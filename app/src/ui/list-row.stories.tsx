@@ -337,8 +337,8 @@ export const LoanBalance320: Story = {
 function StatementSearchRows() {
   return (
     <List>
-      <ListRow variant="statement" title="חומרי בניין השרון" fallback="invoice" match="חומרי" details={[{ text: "08/10" }, { text: "שיפוץ לדוגמה" }, { text: "חומרים" }]} agorot={-124_000n} sign="out" href="/transactions/s1" />
-      <ListRow variant="statement" title="חומרי בניין השרון" fallback="invoice" match="חומרי" details={[{ text: "02/10" }, { text: "ממתינה לאישור", tone: "accent" }]} agorot={-38_600n} sign="out" href="/transactions/s2" />
+      <ListRow variant="statement" title="חומרי בניין לדוגמה" fallback="invoice" match="חומרי" details={[{ text: "08/10" }, { text: "שיפוץ לדוגמה" }, { text: "חומרים" }]} agorot={-124_000n} sign="out" href="/transactions/s1" />
+      <ListRow variant="statement" title="חומרי בניין לדוגמה" fallback="invoice" match="חומרי" details={[{ text: "02/10" }, { text: "ממתינה לאישור", tone: "accent" }]} agorot={-38_600n} sign="out" href="/transactions/s2" />
       <ListRow variant="statement" title="החזר חומרי גמר" fallback="invoice" match="חומרי" details={[{ text: "21/09" }, { text: "וילה לדוגמה" }, { text: "פוצלה ל־2" }]} agorot={31_000n} sign="in" inWord="זיכוי" href="/transactions/s3" />
       <ListRow variant="statement" title="Contoso Building Supplies International" fallback="bank" match="supplies" details={[{ text: "מחוץ לרווח" }, { text: "14/09" }, { text: longHebrew }]} agorot={-999_999_999n} currency="USD" sign="out" href="/transactions/s4" />
     </List>

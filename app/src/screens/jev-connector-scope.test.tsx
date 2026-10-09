@@ -106,7 +106,7 @@ const open: ReviewRow = {
   reason: null,
   project_id: null,
   category_id: null,
-  supplier_name: "חומרי בניין השרון בע״מ",
+  supplier_name: "חומרי בניין לדוגמה בע״מ",
   project_name: null,
   category_name: null,
   project_suggested: false,

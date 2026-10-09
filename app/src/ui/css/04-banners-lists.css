@@ -189,12 +189,13 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* FLOW-350: the picked day and today are circles (mockup 15b), never wider than their cell at 320. */
 .ui-day b {
   display: grid;
-  inline-size: var(--day-mark);
-  block-size: var(--day-mark);
+  inline-size: min(var(--day-mark), 100%);
+  aspect-ratio: 1;
   place-items: center;
-  border-radius: var(--radius-chip);
+  border-radius: 50%;
   font-weight: var(--type-body-weight);
 }
 

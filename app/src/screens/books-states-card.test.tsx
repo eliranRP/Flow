@@ -326,8 +326,8 @@ describe("rejected writes", () => {
       project_name: "שיפוץ הרצל 12",
       category_name: "חומרים",
     });
-    const first = row("a", "חומרי בניין השרון");
-    const second = row("b", "הובלות הגליל");
+    const first = row("a", "חומרי בניין לדוגמה");
+    const second = row("b", "הובלות לדוגמה");
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     function queue(rows: ReviewRow[], onDone: (id: string) => void) {
       return (
@@ -357,7 +357,7 @@ describe("rejected writes", () => {
     rerender(queue([second], () => undefined));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
-    expect(await screen.findByRole("heading", { name: "הובלות הגליל" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "הובלות לדוגמה" })).toBeInTheDocument();
   });
 
   it("grows the visit total by one when an approved card comes back", async () => {

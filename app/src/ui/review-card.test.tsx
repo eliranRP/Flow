@@ -265,7 +265,7 @@ describe("ReviewCard הצעת Jev", () => {
   function jevCard(suggestion: ReviewSuggestion, buttons = true) {
     return (
       <ReviewCard
-        supplier="חומרי בניין השרון בע״מ"
+        supplier="חומרי בניין לדוגמה בע״מ"
         sourceLine="הוצאה · 12/04/2026"
         netAgorot={-2_200_000n}
         suggestion={suggestion}

@@ -80,14 +80,14 @@ export function DevExpense() {
 const devReviewItems = [
   {
     id: "1",
-    supplier: "חומרי בניין השרון בע״מ",
+    supplier: "חומרי בניין לדוגמה בע״מ",
     project: "שיפוץ הרצל 12",
     category: "חומרים",
     netAgorot: -1_600_000n,
   },
   {
     id: "2",
-    supplier: "הובלות הגליל",
+    supplier: "הובלות לדוגמה",
     project: "וילה רעננה",
     category: "הובלה",
     netAgorot: -400_000n,
@@ -221,7 +221,7 @@ export function DevReviewBanner() {
         reason: "missing_category",
         project_id: "p1",
         category_id: "c1",
-        supplier_name: "מנופי המרכז בע״מ",
+        supplier_name: "מנופים לדוגמה בע״מ",
         project_name: "שיפוץ הרצל 12",
         category_name: "חומרים",
         auto_approved_today: 39,
@@ -235,9 +235,9 @@ export function DevFiled() {
   return (
     <FiledTodayScreen
       sample={[
-        { id: "t-filed", description: "מלט", doc_date: "2026-09-29", amount_net: -350_000n, direction: "expense", supplier_name: "מנופי המרכז בע״מ", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
-        { id: "t-filed-2", description: "הובלה", doc_date: "2026-09-29", amount_net: -120_000n, direction: "expense", supplier_name: "הובלות הגליל", project_name: "וילה רעננה", category_name: "הובלה" },
-        { id: "t-filed-3", description: "צבע", doc_date: "2026-09-29", amount_net: -84_050n, direction: "expense", supplier_name: "צבעי השרון", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
+        { id: "t-filed", description: "מלט", doc_date: "2026-09-29", amount_net: -350_000n, direction: "expense", supplier_name: "מנופים לדוגמה בע״מ", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
+        { id: "t-filed-2", description: "הובלה", doc_date: "2026-09-29", amount_net: -120_000n, direction: "expense", supplier_name: "הובלות לדוגמה", project_name: "וילה רעננה", category_name: "הובלה" },
+        { id: "t-filed-3", description: "צבע", doc_date: "2026-09-29", amount_net: -84_050n, direction: "expense", supplier_name: "צבעים לדוגמה", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
         { id: "t-filed-4", description: "עמלה", doc_date: "2026-09-29", amount_net: -2_500n, direction: "expense", supplier_name: "עמלת בנק", project_name: null, category_name: "עמלות" },
       ]}
     />
@@ -616,7 +616,7 @@ export function DevChange() {
     <ChangeAssignment
       host="route"
       closeTo="/review?preview=1"
-      supplier="מנופי המרכז בע״מ"
+      supplier="מנופים לדוגמה בע״מ"
       amount="₪3,500"
       direction="expense"
       projects={projects}

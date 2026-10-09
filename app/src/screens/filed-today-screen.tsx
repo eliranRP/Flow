@@ -26,7 +26,7 @@ function devFiledFixture(sampleFlag: string | null): FiledTodayRow[] | undefined
     doc_date: "2026-09-29",
     amount_net: -350_000n,
     direction: "expense",
-    supplier_name: "מנופי המרכז בע״מ",
+    supplier_name: "מנופים לדוגמה בע״מ",
     project_name: "שיפוץ הרצל 12",
     category_name: "חומרים",
   }];
