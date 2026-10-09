@@ -48,6 +48,19 @@ function readEnter(state: unknown): "next" | "prev" | null {
   return state.txnEnter === "next" || state.txnEnter === "prev" ? state.txnEnter : null;
 }
 
+/**
+ * FLOW-314: a swiped-to card slides in once. The browser entry drops `txnEnter` after
+ * that, so Back from a pushed screen or a reload shows the card in place. The router's
+ * in-memory location keeps it, which is fine: a re-render does not restart the animation
+ * (a remount of the card on the same entry would, and none does today).
+ */
+export function dropTxnEnter(): void {
+  const state: unknown = window.history.state;
+  if (!isRecord(state) || !isRecord(state.usr) || !("txnEnter" in state.usr)) return;
+  const { txnEnter: _played, ...usr } = state.usr;
+  window.history.replaceState({ ...state, usr }, "");
+}
+
 export type TxnNav = {
   list: TxnList;
   index: number;
@@ -85,8 +98,12 @@ export function useTxnNav(transactionId: string): TxnNav | null {
     });
     scrollPageToTop();
   }, [list, next, prev, navigate, location.search, transactionId]);
+  const enter = readEnter(location.state);
+  useEffect(() => {
+    if (enter != null) dropTxnEnter();
+  }, [enter, location.key]);
   if (list == null || index < 0 || list.ids.length < 2) return null;
-  return { list, index, total: list.ids.length, prev, next, via: readVia(location.state), enter: readEnter(location.state), move };
+  return { list, index, total: list.ids.length, prev, next, via: readVia(location.state), enter, move };
 }
 
 /** Warm the neighbours' reads once the card is ready. */

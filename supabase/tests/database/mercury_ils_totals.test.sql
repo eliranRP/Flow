@@ -414,7 +414,7 @@ select is(
       and t.external_id = 'usd-posts'
       and q.status = 'open'
   ),
-  'missing_project',
+  'missing_category',
   'a posted line trades the pending income label for a real reason (FLOW-309)'
 );
 

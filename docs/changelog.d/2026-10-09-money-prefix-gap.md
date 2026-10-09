@@ -1,0 +1,1 @@
+In a money field, the gap between the ₪ or $ and the digits grew with every comma and the dot, from about 7px for "5" to 36px for "1,234,567.89". The prefix now sits beside a hidden copy of the digits in the field's own font, so the gap stays 0.35em at any length.

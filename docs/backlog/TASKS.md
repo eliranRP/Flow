@@ -14,15 +14,15 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free: FLOW-810 clip check follow-ups in review (the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
+| Dev lane 1 | FLOW-114 server follow-ups (`save_loan_split` category on every part; the loan line backfill checked and logged, no migration), FLOW-133 dblink undo tests, FLOW-309 income `missing_category` reason | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
-| UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
+| UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
-| UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
+| UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-339 Settings → Loans balance at the list amount size, cents on one line (#293) | Next small ready bug |
+| Backlog bug fixes | FLOW-310 money field: the prefix keeps one gap to the digits (#297) | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -86,7 +86,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
-| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | claimed (UI lane 2, handed over from UI lane 4, 2026-10-09; replaces closed draft #279) |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | done (#291, UI lane 2) |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | done (#253, #248) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
@@ -115,6 +115,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
+| 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | ready |
+| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
+| 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -366,8 +369,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
-- [ ] Backfill existing loan lines into `loans` / `loan_splits`.
-- [ ] Server follow-up from #252: `save_loan_split` takes `category_id` only on the fees part, so an edit of a split, or the undo of an unmatch, files interest, escrow and principal under the loan's categories or the keyed defaults again. Let it accept `category_id` on every part (checked by `private.loan_part_category_ok`, decision 0128), so a part the owner moved to another fitting category keeps it.
+- [ ] Backfill existing loan lines into `loans` / `loan_splits`. (Checked 2026-10-09, dev lane 1: not a plain migration. A line has no link to a loan except a `loan_splits` row, so a backfill must pick the loan for each line by amount, date and currency, and split a payment that differs from the schedule; both need judgment per line. Left for the owner or the Flow MCP agent through `attach_loan_payment` or the app's loan match, line by line; no migration.)
+- [x] Server follow-up from #252: `save_loan_split` takes `category_id` only on the fees part, so an edit of a split, or the undo of an unmatch, files interest, escrow and principal under the loan's categories or the keyed defaults again. Let it accept `category_id` on every part (checked by `private.loan_part_category_ok`, decision 0128), so a part the owner moved to another fitting category keeps it. (Migration `20261013000000`; the app sends each stored part's category on an edit and on the undo of an unmatch.)
 - [x] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow. (Obsolete: the default parts resolve by `categories.loan_part`, not by name or visibility.)
 - [x] Date formatting for years below 1000. (Four digits, and real leap years for years 0 to 99.)
 - [x] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view. (Server done: `save_loan_split` writes the split and checks the balance (20261010120000); `clear_loan_split` and MCP `detach_loan_payment` unmatch, and `get_transaction` returns `loan_split` (#184, [0136](../decisions/0136-loan-unmatch.md)). Left for a UI lane: write through `save_loan_split`, an unmatch button through `clear_loan_split`, the P&L cache keys after a match or unmatch, the category picker locked on a matched payment, and reading `loan_split` from the transaction instead of `get_loan_split`.) UI done in #252 (option B, the owner's pick 2026-10-08): the matched payment is one row in the category slot that opens the split sheet; `save_loan_split` for a match, an edit and the undo of an unmatch; `clear_loan_split` for ביטול השיוך with an undo toast; the category locked while matched; the P&L, loan and card keys refreshed after each write; `loan_split` read from `get_transaction`; the balance check's refusal as a toast.
@@ -489,7 +492,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `undo_batch` undoes a `line_split` (an `assign_expenses` `parts[]` row) or `line_pnl` (`set_lines_pnl`) row through `mcp_undo(kind, transaction_id)`, which picks the newest live write on that line, not the batch's own. A later `split_line` / `set_line_pnl` on the same line is undone instead and the row reads ok. Return the `private.mcp_writes` id from `mcp_split_line` and `mcp_set_line_pnl`, store it in `row_writes`, and make the batch row `conflict` when a newer live write of that kind exists on the line.
 - [x] `mcp_undo('line_split')` and `private.line_split_parts` drop `percent` and `is_rest` (added in `20261008140000`), so an undone split comes back without its percent and rest markers.
 - [x] An `assign_expenses` `parts[]` row returns no stored parts; consider returning the cents as `split_line` does.
-- [ ] From the #155 review: no dblink test for `undo_batch` and `undo` on the same line at once (the lock order), and none for a newer `split_line` on the line by another user or token.
+- [x] From the #155 review: no dblink test for `undo_batch` and `undo` on the same line at once (the lock order), and none for a newer `split_line` on the line by another user or token. (`flow_133_undo_race.test.sql`: both orders wait and end in `not_found` without a deadlock; another token's uncommitted split makes `undo_batch` wait, then `conflict`.)
 
 <a id="flow-137"></a>
 ### FLOW-137 · Prime-linked loan rates (Flow MCP agent request)
@@ -542,15 +545,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-314"></a>
 ### FLOW-314 · Swipe between transactions on the card
-- **Type:** SMALL UI · **Status:** claimed (handed over from UI lane 4, 2026-10-09, flow314; replaces closed draft #279; the follow-ups below stay open) · **Depends on:** FLOW-303 (#100)
+- **Type:** SMALL UI · **Status:** done (#291, UI lane 2, built by UI lane 4; the follow-ups below stay open) · **Depends on:** FLOW-303 (#100)
 - **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
 - **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.
 - Follow-ups, open (not in this PR):
   - [ ] From #100's design session: add the project's waiting list (card rows only) to the walk.
   - [ ] ˅ at the last loaded category row loads the next page.
   - [ ] From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
-  - [ ] From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
-  - [ ] From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
+  - [x] (#296) From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
+  - [x] (#296) From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
@@ -606,7 +609,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
 - [ ] Tests: the project-picker toast pad path; click through from 'בחירת קטגוריה' to the picker; assert `open.search` is empty; a test that fails if the effect deps revert.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
-- [ ] Income always reports `missing_project` even when the category is missing too. (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
+- [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
+- [ ] From the #300 review: `reopen_review` does not drop the `missing_project` row a category pick queued (as `undo_reassign` now does; no path reaches it today), and a category saved without resolving leaves the row labelled `missing_category` for MCP `list_review`'s reason filter.
 - [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
@@ -621,7 +625,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row.
 - [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
 - [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung.
-- [ ] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length.
+- [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
@@ -769,7 +773,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
 - [x] C9 The line's own project appears twice in a part's project picker. (C1, C3a–C3c, C4, C5, C7, C9: #261)
 - [x] (UI lane 2, #278: 24px back on short phones, a square tile and a closer hairline; the card ends 16px above the bar) C13 (from #231 design review) A Jev card at 375x667 no longer fits above the action bar with the slim banner on: main already misses by about 10px with a reason line, and the filled line ("✦ מולא ע״י Jev" + בטל, one line since #245) adds about 19px; a quiet or loud flag adds more. Add a Screens/Routes story at 375x667 with a Jev card (filled line, a quiet flag, the slim banner on), which needs Jev suggestions and fills in the sample queue, then win back about 20–30px so it fits.
-- [ ] C14 (follow-up from #278) At 375x667 a card with a loud flag (54px warning row) still runs about 19px under the action bar; at 320x667 the slim banner wraps and the quiet-flag card runs about 8px under. Make the loud flag one line on short phones, or accept the scroll.
+- [x] (UI lane 2, #296: the loud flag is one 44px line on short phones and the slim banner 8px shorter; 375x667 loud ends 7px above the bar, 320x667 quiet 8px above. The loud card at 320x667 with the wrapped banner still runs 10px under and scrolls, accepted) C14 (follow-up from #278) At 375x667 a card with a loud flag (54px warning row) still runs about 19px under the action bar; at 320x667 the slim banner wraps and the quiet-flag card runs about 8px under. Make the loud flag one line on short phones, or accept the scroll.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
 <a id="flow-334"></a>
@@ -868,6 +872,27 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The Projects tab shows two identical magnifiers about 100px apart: the header icon opens transaction search and the field below filters projects. Options: (A) the field alone, and a project-name miss offers "חיפוש בתנועות"; (B) keep both and label the header icon.
 - **Acceptance:** owner's choice on a card; a design log entry.
+
+<a id="flow-343"></a>
+### FLOW-343 · Phone polish after the October 9 builds (cycle 7)
+- **Type:** SMALL UI · **Status:** ready · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- [ ] (high) Loan setup: a tap on שמירה with empty fields keeps focus on the button with the page scrolled down, so at 375 two of three errors sit above the fold. Move focus (and scroll) to the first empty field, as §2.8 says. Add a story and a test.
+- [ ] Split by categories, refund part with no project: the same missing project is said three times ("פרויקט · חובה בהחזר", "חלק החזר צריך פרויקט." and the footer). Keep it once, on the part's own line as the tap target (§3.7, a warning shows in one place only).
+- [ ] Split between projects, "שאבחר": the picked choice's hint and the pinned footer repeat "₪500 לכל אחד מ־2 פרויקטים". Show it once, in the footer.
+- [ ] Transaction card, the refusal for a kept-out refund part with no project (#286): shorten to "לחלק ההחזר אין פרויקט." with a "לפיצול" action on the toast.
+- **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
+
+<a id="flow-344"></a>
+### FLOW-344 · Loan setup preview while the form is incomplete
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **What:** With the amount cleared, the preview keeps the last result (₪599.55 a month) and only turns muted, so it still reads as this loan's payment. Options: (A) "—" in place of the figure until the form is valid; (B) hide the preview until then.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+
+<a id="flow-345"></a>
+### FLOW-345 · Card swipe: a cue at the list ends and arrows that match
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-314 (#291) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **What:** At a list end a sideways drag doesn't move the card at all (160px drag, transform 0), so the gesture reads as broken, and mid-list a drag shows a blank page behind the card. The visible prev/next controls are vertical ˄ ˅ in the top corner while the swipe is sideways, against §3.7 (a swipe follows the arrows it repeats). Proposal: a resisted drag at the ends and the next card peeking in; the owner picks ‹ › arrows or keeps ˄ ˅.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
 ## Projects and reports
 

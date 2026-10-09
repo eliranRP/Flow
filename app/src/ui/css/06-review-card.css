@@ -285,6 +285,48 @@
   .ui-review-queue:has(> .ui-banner) > .ui-page > p {
     display: none;
   }
+
+  /* FLOW-333 C14: לרשימה keeps its 44px target, but 8px of it overlaps the title line and the
+     banner's edge, so the slim banner is 44px tall (was 52), and 61px when it wraps at 320 (was 77). */
+  .ui-review-queue .ui-banner.ui-banner-slim .ui-row-hint {
+    margin-block: calc(-1 * var(--space-2));
+  }
+
+  /* FLOW-333 C14: under the filed-today banner, a loud flag is one 44px line: the title, 8px, then
+     the hint in warning, cut at its end when it doesn't fit. The row's own air stands in for the card's
+     bottom padding. Readers still hear both. Without the banner the card fits with two lines. */
+  .ui-review-queue:has(> .ui-banner) .ui-review:has(> .ui-review-flag.ui-row:last-child) {
+    padding-block-end: 0;
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-main {
+    gap: var(--space-2);
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-text {
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row :is(.ui-row-title, .ui-row-hint) {
+    overflow: hidden;
+    min-inline-size: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The title stays whole and the hint gives way; a title too long for the line leaves the hint
+     about four letters and its ellipsis. */
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-title {
+    flex: none;
+    max-inline-size: calc(100% - 4em - var(--space-2));
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-hint {
+    flex: 0 1 auto;
+  }
 }
 
 .ui-viewer-note {
