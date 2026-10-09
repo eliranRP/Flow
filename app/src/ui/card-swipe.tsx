@@ -1,19 +1,21 @@
-import { useRef, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 import { cx } from "./cx";
-import { blocksEdgeBack } from "./edge-back";
-import { inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
+import { blocksEdgeBack, EDGE_PX } from "./edge-back";
+import { swipeAxis, swipeStep } from "./period-swipe";
 
 /**
  * FLOW-314: a sideways swipe on the card does what ˄ ˅ do. The finger moving right opens the
  * next card, which enters from the left like a screen push; moving left opens the previous one.
  * The rules are the ones the band figure's swipe shares (period-swipe.tsx):
  * - touch only, one finger;
- * - a start within 24px of either screen edge is left to the edge swipe-back;
+ * - a start within 24px of either screen edge is left to the edge swipe-back, the 24th px
+ *   included, as swipe-back takes it;
  * - a start inside a field, a sheet or a sideways list, or while a sheet is open, is left alone;
  * - nothing is decided until the finger moved 10px; a mostly vertical move goes to the page scroll;
  * - the card follows the finger and commits past 30% of its width, or on a flick;
  * - at a list end the card does not move;
- * - with reduced motion the card stays put and swaps on release.
+ * - with reduced motion the card stays put and swaps on release;
+ * - while the page is pinch-zoomed the card does not swipe, so a sideways pan moves the zoomed view.
  */
 export type CardStep = "next" | "prev";
 
@@ -21,6 +23,33 @@ type Track = { x: number; y: number; at: number; axis: "x" | "y" | null };
 
 function reducedMotion(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Swipe-back starts at 24px or closer to the start edge, so the card leaves that px to it too. */
+export function nearScreenEdge(x: number, viewportWidth: number): boolean {
+  return x <= EDGE_PX || x >= viewportWidth - EDGE_PX;
+}
+
+function zoomedIn(): boolean {
+  const scale = window.visualViewport?.scale ?? 1;
+  return scale > 1.01;
+}
+
+/** Pinch-zoom is on: the card gives up `touch-action: pan-y` so the zoomed view pans sideways. */
+function useZoomedIn(): boolean {
+  const [zoomed, setZoomed] = useState(zoomedIn);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    function onResize() {
+      setZoomed(zoomedIn());
+    }
+    viewport.addEventListener("resize", onResize);
+    return () => {
+      viewport.removeEventListener("resize", onResize);
+    };
+  }, []);
+  return zoomed;
 }
 
 /** The step a horizontal move asks for: right is next, left is previous. */
@@ -46,7 +75,8 @@ export function CardSwipe({
 }) {
   const box = useRef<HTMLDivElement>(null);
   const track = useRef<Track | null>(null);
-  const on = canNext || canPrev;
+  const zoomed = useZoomedIn();
+  const on = (canNext || canPrev) && !zoomed;
 
   function settle() {
     const node = box.current;
@@ -60,10 +90,12 @@ export function CardSwipe({
   }
 
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
+    // A second finger ends a swipe in progress, and the card goes back in place.
+    if (track.current != null) settle();
     track.current = null;
-    if (!on || event.touches.length !== 1) return;
+    if (!on || event.touches.length !== 1 || zoomedIn()) return;
     const touch = event.touches[0];
-    if (!touch || inEdgeZone(touch.clientX, window.innerWidth)) return;
+    if (!touch || nearScreenEdge(touch.clientX, window.innerWidth)) return;
     if (blocksEdgeBack(event.target)) return;
     track.current = { x: touch.clientX, y: touch.clientY, at: event.timeStamp, axis: null };
   }

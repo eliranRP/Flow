@@ -50,9 +50,32 @@ test("a short move, a vertical move and the first card's previous side stay put"
   await expect(page).toHaveURL(/\/transactions\/t-step-1\?preview=1$/);
 });
 
-test("a swipe from the screen edge is left to swipe-back", async ({ page }) => {
+test("a swipe from the start (right) edge is swipe-back's, and one from the end edge does nothing", async ({ page }) => {
   await openFromList(page, "ספק 5");
+  // From the end (left) edge toward the middle: the card leaves it alone, and swipe-back starts on the other side.
   await swipe(page, 160, 10);
+  await expect(page).toHaveURL(/\/transactions\/t-step-5\?preview=1$/);
+  // The installed app has swipe-back (FLOW-332); the parser replaces <html>, so opt in once the page is up.
+  await page.evaluate(() => {
+    document.documentElement.dataset.edgeBack = "on";
+  });
+  // From the 24th px of the start edge, moving left: Back to the list, not the card's previous one.
+  await swipe(page, -160, 390 - 24);
+  await expect(page).toHaveURL(/\/e2e\/txn-list\?preview=1$/);
+  // Forward is still ספק 5: the card did not also replace itself with ספק 4 on the way out.
+  await page.goForward();
+  await expect(page).toHaveURL(/\/transactions\/t-step-5\?preview=1$/);
+});
+
+test("the last card's next side stays put, and a card opened from a link does not swipe", async ({ page }) => {
+  await openFromList(page, "ספק 24");
+  await swipe(page, 160, 110);
+  await expect(page).toHaveURL(/\/transactions\/t-step-24\?preview=1$/);
+  await page.goto("/transactions/t-step-5?preview=1");
+  await expect(page.getByText("ספק 5", { exact: true })).toBeVisible();
+  await expect(page.locator(".ui-cswipe-on")).toHaveCount(0);
+  await swipe(page, 160, 110);
+  await swipe(page, -160, 280);
   await expect(page).toHaveURL(/\/transactions\/t-step-5\?preview=1$/);
 });
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CardSwipe, cardStep, type CardStep } from "./card-swipe";
 
@@ -108,6 +108,61 @@ describe("CardSwipe", () => {
     document.body.append(sheet);
     swipe(box(), { x: 100, y: 300 }, { x: 260, y: 300 });
     expect(onStep).not.toHaveBeenCalled();
+  });
+
+  it("leaves the 24th px from either edge to swipe-back too, as swipe-back takes it", () => {
+    setReducedMotion(false);
+    const onStep = vi.fn();
+    render(<Card onStep={onStep} />);
+    swipe(box(), { x: window.innerWidth - 24, y: 300 }, { x: window.innerWidth - 224, y: 300 });
+    swipe(box(), { x: 24, y: 300 }, { x: 224, y: 300 });
+    expect(onStep).not.toHaveBeenCalled();
+    swipe(box(), { x: 25, y: 300 }, { x: 225, y: 300 });
+    expect(onStep.mock.calls).toEqual([["next"]]);
+  });
+
+  it("a second finger ends the swipe and puts the card back", () => {
+    setReducedMotion(false);
+    const onStep = vi.fn();
+    render(<Card onStep={onStep} />);
+    const node = box();
+    fireEvent.touchStart(node, { touches: [{ clientX: 100, clientY: 300 }] });
+    fireEvent.touchMove(node, { touches: [{ clientX: 180, clientY: 300 }] });
+    expect(node.style.transform).toBe("translateX(80px)");
+    fireEvent.touchStart(node, { touches: [{ clientX: 180, clientY: 300 }, { clientX: 240, clientY: 380 }] });
+    expect(node.style.transform).toBe("");
+    fireEvent.touchMove(node, { touches: [{ clientX: 260, clientY: 300 }, { clientX: 300, clientY: 380 }] });
+    fireEvent.touchEnd(node, { touches: [], changedTouches: [{ clientX: 260, clientY: 300 }] });
+    expect(onStep).not.toHaveBeenCalled();
+  });
+
+  it("does not swipe while the page is pinch-zoomed, so a sideways pan moves the zoomed view", () => {
+    setReducedMotion(false);
+    let onResize: (() => void) | null = null;
+    const viewport = {
+      scale: 1,
+      addEventListener: (_type: string, listener: () => void) => { onResize = listener; },
+      removeEventListener: () => undefined,
+    };
+    Object.defineProperty(window, "visualViewport", { configurable: true, value: viewport });
+    try {
+      const onStep = vi.fn();
+      render(<Card onStep={onStep} />);
+      expect(document.querySelector(".ui-cswipe")).toHaveClass("ui-cswipe-on");
+      // Zoomed before the resize event lands: the touch itself checks.
+      viewport.scale = 2;
+      swipe(box(), { x: 100, y: 300 }, { x: 260, y: 300 });
+      expect(onStep).not.toHaveBeenCalled();
+      // Once it lands, the card gives up pan-y, so the browser pans the zoomed view sideways.
+      act(() => { onResize?.(); });
+      expect(document.querySelector(".ui-cswipe")).not.toHaveClass("ui-cswipe-on");
+      viewport.scale = 1;
+      act(() => { onResize?.(); });
+      swipe(box(), { x: 100, y: 300 }, { x: 260, y: 300 });
+      expect(onStep.mock.calls).toEqual([["next"]]);
+    } finally {
+      Reflect.deleteProperty(window, "visualViewport");
+    }
   });
 
   it("with reduced motion the card stays put and swaps on release", () => {
