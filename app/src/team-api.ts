@@ -2,7 +2,7 @@ import { createContext, createElement, useContext, type ReactNode } from "react"
 import { getSupabase } from "./lib/supabase";
 import { ROLE_CHOICE_LABEL } from "./ui/role-choice";
 import { assertNoError, isTransientWriteError, type WriteFailure } from "./use-write";
-import type { AcceptResult, InviteResult, MyCompanies, MyInvite, Team } from "./team-schemas";
+import type { AcceptResult, InviteResult, MyCompanies, MyInvite, Team, TeamMember } from "./team-schemas";
 
 /**
  * FLOW-601 (decision 0167): the team and company RPCs the app calls, their payloads, and the

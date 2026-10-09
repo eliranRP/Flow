@@ -66,7 +66,7 @@ describe("Settings by role (FLOW-601)", () => {
 
   it("lets an editor change the view switch", async () => {
     renderAs("editor", <SettingsScreen sample={business} />, "/settings");
-    expect(await screen.findByRole("switch", { name: /רווח אחרי כלליות/ })).toBeEnabled();
+    expect(await screen.findByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).toBeEnabled();
   });
 });
 
