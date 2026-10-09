@@ -62,7 +62,10 @@ function parseTargets(data: unknown): EveningTarget[] {
 
 /** Sends at once, at most this many. Each send has its own timeout (webpush.ts). */
 export const PUSH_CONCURRENCY = 8;
-/** No new send starts after this, so the results are recorded inside the function's time limit. */
+/**
+ * No new send starts after this, so the results are recorded inside the function's time limit.
+ * This plus one send's timeout (10s in webpush.ts) must stay well under that limit.
+ */
 export const PUSH_BUDGET_MS = 90_000;
 
 /**
