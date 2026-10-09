@@ -155,6 +155,17 @@ export function profitInCurrency(project: ProjectRow, currency: string): bigint 
   return currency === "ILS" ? project.profit_agorot : 0n;
 }
 
+/**
+ * FLOW-339: what a band's label calls its figures. A loss in one currency and a profit in another
+ * is "mixed", so the label can name both instead of reading רווח over a loss.
+ */
+export function profitSign(profits: readonly bigint[]): "profit" | "loss" | "mixed" {
+  const loss = profits.some((profit) => profit < 0n);
+  const gain = profits.some((profit) => profit > 0n);
+  if (loss && gain) return "mixed";
+  return loss ? "loss" : "profit";
+}
+
 export function heroLabelProfit(figures: { agorot: bigint }[]): bigint {
   if (figures.length === 0) return 0n;
   const allNonNegative = figures.every((figure) => figure.agorot >= 0n);
