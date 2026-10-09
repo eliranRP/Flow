@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, dark, ExampleBar, exampleOnBand, periodMonths } from "../ui/screen-stories-support";
+import { at320, dark, ExampleBar, exampleOnBand } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -186,7 +186,7 @@ export const ProjectPeriod: Story = {
   name: "Project, own period, summary first",
   render: () => (
     <StoryRoute entry="/projects/p-a" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sampleMonths={periodMonths} />
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} />
     </StoryRoute>
   ),
 };
@@ -207,7 +207,7 @@ export const ProjectFromStart: Story = {
   name: "Project, from the start",
   render: () => (
     <StoryRoute entry="/projects/p-a?period=all" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sampleMonths={periodMonths} />
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} />
     </StoryRoute>
   ),
 };
@@ -242,3 +242,68 @@ export const ProjectInvestment: Story = {
     </StoryRoute>
   ),
 };
+
+/** FLOW-340 C. The short project page: profit on the band, then one row per section. */
+const overviewProject: NonNullable<ProjectDetailData> = {
+  ...periodProject,
+  loans: [
+    { id: "l1", name: "הלוואת גישור לדוגמה", currency: "ILS", balance_minor: 80_000_000n, status: "open" },
+    { id: "l2", name: "משכנתא לדוגמה", currency: "ILS", balance_minor: 40_000_000n, status: "open" },
+  ],
+};
+const sectionTo = (target: string) => (target === "overview" ? "/projects/p-a" : `/projects/p-a/${target}`);
+const filledInvestment = { isOverhead: false, figures: FILLED, categories: [], loans: [] };
+
+export const ProjectOverview: Story = {
+  name: "Project, short page (FLOW-340 C)",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+export const ProjectOverviewDark: Story = { ...ProjectOverview, name: "Project, short page, dark", ...dark };
+export const ProjectOverview320: Story = { ...ProjectOverview, name: "Project, short page, 320", ...at320 };
+export const ProjectOverviewDark320: Story = { ...ProjectOverview, name: "Project, short page, dark, 320", ...dark, ...at320 };
+
+export const ProjectExpenses: Story = {
+  name: "Project, expenses section",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/expenses" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} section="expenses" sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+export const ProjectExpensesDark: Story = { ...ProjectExpenses, name: "Project, expenses section, dark", ...dark };
+export const ProjectExpenses320: Story = { ...ProjectExpenses, name: "Project, expenses section, 320", ...at320 };
+
+export const ProjectTransactionsSection: Story = {
+  name: "Project, transactions section",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/transactions" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} section="transactions" sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+export const ProjectTransactionsSectionDark: Story = { ...ProjectTransactionsSection, name: "Project, transactions section, dark", ...dark };
+export const ProjectTransactionsSection320: Story = { ...ProjectTransactionsSection, name: "Project, transactions section, 320", ...at320 };
+
+export const ProjectLoansSection: Story = {
+  name: "Project, loans section",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/loans" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} section="loans" sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+export const ProjectLoansSection320: Story = { ...ProjectLoansSection, name: "Project, loans section, 320", ...at320 };
+
+export const ProjectInvestmentScreen: Story = {
+  name: "Project, investment section",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/investment" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} section="investment" sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+export const ProjectInvestmentScreen320: Story = { ...ProjectInvestmentScreen, name: "Project, investment section, 320", ...at320 };

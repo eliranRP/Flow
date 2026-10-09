@@ -118,6 +118,7 @@ export function ProjectCategoryScreen({
               inWord="זיכוי"
               source={rowSource(txn.source)}
               tag={txn.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
+              setAside={txn.kept_out === true}
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
               state={rowHref ? undefined : txnListState(rowIds, txn.id, `${location.pathname}${location.search}`)}
             />

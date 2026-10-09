@@ -42,6 +42,8 @@ type Common = {
   className?: string;
   /** Warning paints the hint and the icon. Muted paints the icon like the hint. */
   tone?: "warning" | "muted";
+  /** A line kept out of profit: the whole row fades, so it reads as set aside (owner's pick C, 2026-10-09). */
+  setAside?: boolean;
   /** The hint slot holds a skeleton bar, at the real hint line height. */
   skelHint?: boolean;
   /** The hint is a polite status, so a failure is announced. */
@@ -72,6 +74,8 @@ export type ListRowProps =
     currency?: string;
     /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */
     inWord?: string;
+    /** Real agorot only, no ".00" (the project's transactions, FLOW-340 C, as Search does). */
+    realCents?: boolean;
   })
   | StatementRowProps
   | (Common & { variant: "item"; plain?: boolean })
@@ -114,6 +118,8 @@ export type StatementRowProps = {
   details?: StatementDetail[];
   /** Real agorot only, no ".00" (Search, FLOW-339 option C). */
   realCents?: boolean;
+  /** A line kept out of profit: the whole row fades (owner's pick C, 2026-10-09). */
+  setAside?: boolean;
 };
 
 export function ListRow(props: ListRowProps) {
@@ -285,6 +291,7 @@ export function ListRow(props: ListRowProps) {
         ? "ui-row"
         : "ui-row ui-hit",
     toneClass,
+    props.setAside === true && "ui-row-set-aside",
   );
   const row = props.href && props.external === true ? (
     <a
@@ -404,7 +411,7 @@ function StatementRow(props: StatementRowProps) {
   const details = (props.details ?? []).filter((detail) => detail.text !== "");
   const line2 = props.pending === true || (props.suggestion != null && props.suggestion !== "") || details.length > 0;
   return (
-    <Link to={props.href} state={props.state} className="ui-row ui-hit ui-row-statement" aria-label={label}>
+    <Link to={props.href} state={props.state} className={cx("ui-row ui-hit ui-row-statement", props.setAside === true && "ui-row-set-aside")} aria-label={label}>
       <span className="ui-row-main">
         <Avatar name={props.title} fallback={props.fallback} />
         <span className="ui-row-text">
@@ -464,7 +471,7 @@ function StatementRow(props: StatementRowProps) {
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} realCents={props.realCents} />;
   }
   if (props.missing != null) {
     return (

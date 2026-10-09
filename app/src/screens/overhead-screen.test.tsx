@@ -41,7 +41,7 @@ function renderProject(sample: NonNullable<ProjectDetail>) {
       <ToastProvider>
         <MemoryRouter initialEntries={["/projects/a"]}>
           <Routes>
-            <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={sample} />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailScreen section="expenses" sample={sample} />} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>
@@ -109,6 +109,7 @@ describe("project category breakdown", () => {
                 path="/projects/:projectId"
                 element={
                   <ProjectDetailScreen
+                    section="expenses"
                     sample={{
                       ...projectBase,
                       categories: [{ id: "m", name: "חומרים", amount_agorot: 2_000n, has_shared_share: false }],
@@ -178,6 +179,8 @@ describe("project overhead hero", () => {
     expect(screen.queryByText("−₪100,000")).not.toBeInTheDocument();
     expect(screen.getByText("₪60,000")).toBeInTheDocument();
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
+    // FLOW-340 C: the switch lives in the ⋯ menu.
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     expect(screen.getByText("דלוק · החלק בכלליות הוא ₪40,000")).toBeInTheDocument();
   });
 
@@ -209,6 +212,9 @@ describe("project overhead hero", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
+    // The loading screen has its own עוד; wait for the page's rows first.
+    await screen.findByRole("link", { name: /^הכנסות/ });
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     const toggle = await screen.findByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
     expect(toggle).not.toBeChecked();
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();
@@ -241,6 +247,9 @@ describe("project overhead hero", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
+    // The loading screen has its own עוד; wait for the page's rows first.
+    await screen.findByRole("link", { name: /^הכנסות/ });
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     const toggle = await screen.findByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
     fireEvent.click(toggle);
     await waitFor(() => {
