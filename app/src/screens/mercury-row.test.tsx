@@ -259,7 +259,7 @@ describe("Mercury status row", () => {
     renderSettings();
     fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "Mercury" })).getByRole("button", { name: "רענון עכשיו" }));
-    await waitFor(() => { expect(screen.getByText("הרענון הסתיים. 3 תנועות חדשות.")).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByText("3 תנועות חדשות")).toBeInTheDocument(); });
   });
 
   it("sends one refresh when רענון עכשיו is tapped twice", async () => {

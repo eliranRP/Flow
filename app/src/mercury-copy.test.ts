@@ -3,9 +3,9 @@ import { mercuryRefreshDone } from "./mercury-copy";
 
 describe("mercuryRefreshDone (FLOW-509)", () => {
   it("counts the new lines after a run that read everything", () => {
-    expect(mercuryRefreshDone({ complete: true, inserted: 0 })).toBe("הרענון הסתיים. אין תנועות חדשות.");
-    expect(mercuryRefreshDone({ complete: true, inserted: 1 })).toBe("הרענון הסתיים. תנועה חדשה אחת.");
-    expect(mercuryRefreshDone({ complete: true, inserted: 12 })).toBe("הרענון הסתיים. 12 תנועות חדשות.");
+    expect(mercuryRefreshDone({ complete: true, inserted: 0 })).toBe("אין תנועות חדשות");
+    expect(mercuryRefreshDone({ complete: true, inserted: 1 })).toBe("תנועה חדשה אחת");
+    expect(mercuryRefreshDone({ complete: true, inserted: 12 })).toBe("12 תנועות חדשות");
   });
 
   it("keeps the plain sentence when the run stopped early or sent no count", () => {

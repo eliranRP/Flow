@@ -36,7 +36,8 @@ export function mercuryRefreshDone(result: unknown): string {
   if (result == null || typeof result !== "object") return done;
   const { complete, inserted } = result as { complete?: unknown; inserted?: unknown };
   if (complete !== true || typeof inserted !== "number" || !Number.isInteger(inserted) || inserted < 0) return done;
-  if (inserted === 0) return `${done} אין תנועות חדשות.`;
-  if (inserted === 1) return `${done} תנועה חדשה אחת.`;
-  return `${done} ${String(inserted)} תנועות חדשות.`;
+  // The count alone says the refresh finished (design lead, FLOW-509).
+  if (inserted === 0) return "אין תנועות חדשות";
+  if (inserted === 1) return "תנועה חדשה אחת";
+  return `${String(inserted)} תנועות חדשות`;
 }
