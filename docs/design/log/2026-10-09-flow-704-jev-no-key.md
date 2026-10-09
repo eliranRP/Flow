@@ -1,6 +1,6 @@
 # 2026-10-09 · FLOW-704 Jev Settings "no key" status
 
-- PR: #TBD (UI lane 4)
+- PR: #329 (UI lane 4)
 - What changed:
   - The תיוג חכם (Jev) row on Connections says "פעיל · אין מפתח" when Jev is switched on and the server holds no Jev key (`jev_key_status()` says `missing`, #321). Without a key a switched-on Jev labels nothing, so the row says so instead of "פעיל · הצעות בלבד".
   - Off still says כבוי: a missing key does not matter while Jev is off. A key read that is pending or fails keeps the usual word, so the row never says אין מפתח on a guess.
