@@ -1,10 +1,10 @@
 import { useLayoutEffect, useState, type Ref } from "react";
 import { formatAmountText } from "@flow/shared";
 import { lineSplitPartsLabel } from "../line-split-copy";
-import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView } from "../review-copy";
+import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewPaidView } from "../review-copy";
 import { methodLabel, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
-import { AlertIcon, ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
+import { AlertIcon, CheckIcon, ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
 import { TextLink } from "./text-link";
@@ -97,6 +97,11 @@ type ReviewCardProps = {
   jevFilled?: { onUndo?: () => void; busy?: boolean; alone?: boolean } | null;
   /** A storyboard frame (the setup demos, FLOW-506): pending rows hold a still skeleton, no shine. */
   still?: boolean;
+  /**
+   * FLOW-309 (decision 0165): a connector invoice with its receipts. One muted line under the amount
+   * (and the VAT line): "✓ שולם · קבלה dd/mm", or "שולם חלקית · קבלה dd/mm" with no ✓. `reviewPaidView`.
+   */
+  paid?: ReviewPaidView | null;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -121,6 +126,7 @@ export function ReviewCard({
   missingBoth = false,
   jevFilled,
   still = false,
+  paid,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
   const memo = meta?.memo ?? null;
@@ -212,6 +218,7 @@ export function ReviewCard({
       )}
       {spike?.usual ? <p className="t-hint ui-review-usual"><CopyLine parts={spike.usual} /></p> : null}
       {vatLine ? <p className="t-hint">{vatLine}</p> : null}
+      {paid ? <ReviewPaidLine paid={paid} /> : null}
       {memo ? <ReviewMemo memo={memo} /> : null}
       <div className="ui-review-ai">
         {mismatch ? (
@@ -292,6 +299,23 @@ export function ReviewCard({
       {/* A spike pill is the whole warning: no row at the end repeats it (design lead, 2026-10-09). */}
       {flag && spike?.pill == null && (flag.tone === "loud" || flag.line.length > 0) ? <ReviewFlagBlock flag={flag} /> : null}
     </article>
+  );
+}
+
+/** FLOW-309: the paid line. Readers hear "שולם, קבלה מ־12/10" instead of the ✓ and the "·". */
+function ReviewPaidLine({ paid }: { paid: ReviewPaidView }) {
+  return (
+    <p className="t-hint ui-review-paid">
+      {paid.check ? (
+        <span className="ui-review-paid-icon" aria-hidden="true">
+          <CheckIcon size={16} />
+        </span>
+      ) : null}
+      <span className="ui-review-paid-text" aria-hidden="true">
+        <CopyLine parts={paid.line} />
+      </span>
+      <span className="sr-only">{paid.spoken}</span>
+    </p>
   );
 }
 

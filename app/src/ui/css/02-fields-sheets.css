@@ -152,6 +152,17 @@
   white-space: normal;
 }
 
+/* A list whose row names are their identity (a customer or a supplier): the name wraps up to two
+   lines, then ends in an ellipsis (DESIGN-RULES: names wrap before they truncate). */
+.ui-list-wrap-title .ui-row-title {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 /* A transaction row's secondary line: one line, cut at its end (design lead, FLOW-125 review). */
 .ui-row-hint-line {
   overflow: hidden;
