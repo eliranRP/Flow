@@ -25,7 +25,7 @@ const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
 const LIST_DOCUMENTS = "https://api.sumit.co.il/accounting/documents/list/";
 const PAGE_CAP = 20;
-const CLAIM_MS = 15 * 60 * 1000;
+const CLAIM_MS = 10 * 60 * 1000;
 const te = new TextEncoder();
 
 class SyncHold extends Error {
