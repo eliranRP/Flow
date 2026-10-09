@@ -90,6 +90,10 @@ export const ResultsDark: Story = { ...dark, render: () => <Search entry="/searc
 export const Results320: Story = { ...narrow, render: () => <Search entry="/search?q=חומרי" /> };
 export const Results320Dark: Story = { ...dark, ...narrow, render: () => <Search entry="/search?q=חומרי" /> };
 
+/** FLOW-351: a picked period names the chip with the shared sheet's own row (3 חודשים). */
+export const PeriodChip320: Story = { ...narrow, render: () => <Search entry="/search?period=months3" /> };
+export const PeriodChip320Dark: Story = { ...dark, ...narrow, render: () => <Search entry="/search?period=months3" /> };
+
 /** FLOW-402: opened from a project's "כל התנועות", with the project chip set. */
 export const ProjectChip: Story = { render: () => <Search entry="/search?project=p2" /> };
 export const ProjectChipDark: Story = { ...dark, render: () => <Search entry="/search?project=p2" /> };

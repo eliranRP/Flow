@@ -69,7 +69,7 @@ describe("ReviewCard FLOW-327 additions", () => {
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ ...jev, projectJev: false, categoryJev: false }} jevWhy={why} onProject={() => undefined} onCategory={() => undefined} />);
     expect(container.querySelector(".ui-review-reason")).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={why} pending onProject={() => undefined} onCategory={() => undefined} />);
-    expect(container.querySelector(".ui-review-reason")).toBeNull();
+    expect(container.querySelector(".ui-review-reason:not(.ui-review-reason-slot)")).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={null} onProject={() => undefined} onCategory={() => undefined} />);
     expect(container.querySelector(".ui-review-reason")).toBeNull();
   });
@@ -347,6 +347,31 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} המילוי של Jev` }));
     expect(onUndo).toHaveBeenCalledTimes(1);
+  });
+
+  it("holds the ✦ line, hidden, while a row Jev may fill waits (FLOW-704)", () => {
+    const waiting = { project: "וילה", projectSuggested: true, category: "חומרים", categorySuggested: true };
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={waiting} pending />);
+    const slot = container.querySelector(".ui-review-reason-slot");
+    expect(slot).not.toBeNull();
+    expect(slot?.getAttribute("aria-hidden")).toBe("true");
+    expect(slot?.classList.contains("ui-review-reason")).toBe(true);
+    // An empty row waits on Jev too.
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ project: "פרויקט שמור" }} pending onCategory={() => undefined} />);
+    expect(container.querySelector(".ui-review-reason-slot")).not.toBeNull();
+    // Stored rows: Jev fills nothing, so nothing is held.
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ project: "פרויקט שמור", category: "קטגוריה שמורה" }} pending />);
+    expect(container.querySelector(".ui-review-reason-slot")).toBeNull();
+    // A shared cost: Jev fills no project there, so an empty project row holds nothing.
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "קטגוריה שמורה" }} reason="unallocated_shared" pending onProject={() => undefined} />);
+    expect(container.querySelector(".ui-review-reason-slot")).toBeNull();
+    // A split_mismatch card shows one split row, never Jev's.
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={waiting} reason="split_mismatch" splitParts={2} pending />);
+    expect(container.querySelector(".ui-review-reason-slot")).toBeNull();
+    // Settled: the slot goes, and the real line takes its place.
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} />);
+    expect(container.querySelector(".ui-review-reason-slot")).toBeNull();
+    expect(container.querySelectorAll(".ui-review-reason")).toHaveLength(1);
   });
 
   it("shows the label alone for a viewer, and nothing without a הצעת Jev pill or while pending", () => {
