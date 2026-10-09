@@ -16,6 +16,9 @@ import { SAMPLE_TOAST } from "../setup/copy";
 import { useJevQueue, useReviewFlags } from "./jev-review-card";
 import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-review";
 import { useJevUndo } from "./jev-undo";
+import { useReviewSwap } from "./review-swap";
+import { focusReviewEmptyAction, handReviewFocus, takeReviewFocus } from "./review-focus";
+import { ReviewCount, reviewCountDigits } from "./review-count";
 import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
@@ -39,26 +42,6 @@ export type ReviewPreviewWrite = {
   onUndo: (id: string) => void;
 };
 
-function reviewFlagKey(value: boolean | undefined): string {
-  if (value === true) return "1";
-  if (value === false) return "0";
-  return "";
-}
-
-function reviewMotionKey(row: ReviewRow | null): string {
-  if (row == null) return "";
-  return [
-    row.id,
-    row.category_id ?? "",
-    row.category_name ?? "",
-    reviewFlagKey(row.category_suggested),
-    reviewFlagKey(row.project_suggested),
-    row.project_name ?? "",
-    String(row.share_count ?? ""),
-    String(row.auto_approved_today ?? ""),
-  ].join("\u0000");
-}
-
 export function ReviewQueue({
   rows: incoming,
   search,
@@ -77,7 +60,7 @@ export function ReviewQueue({
   rows: ReviewRow[];
   search: string;
   sample?: boolean;
-  /** FLOW-333 C13: Jev's answers for a sample queue (a story or a preview); the live read never runs there. */
+  /** FLOW-333 C13: Jev's answers for a sample queue (a story or an e2e preview); the live read never runs there. */
   sampleJev?: JevQueueData;
   setupHandoff?: { fromCard: boolean };
   /** Injected by the dev and reviewer previews. The hosted queue does not set it. */
@@ -110,13 +93,17 @@ export function ReviewQueue({
   // queue can't swap another line under אישור. A card opened from the list keeps its focus.
   const rows = fromList ? held : pinReviewHead(held, reviewPin());
   const [hideAuto, setHideAuto] = useState(false);
-  const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
+  const { shown, motion } = useReviewSwap(rows[0] ?? null);
   useEffect(() => {
     // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
     if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
   }, [fromList, shown]);
   const shownRef = useRef(shown);
-  shownRef.current = shown;
+  const rowsRef = useRef(rows);
+  useLayoutEffect(() => {
+    shownRef.current = shown;
+    rowsRef.current = rows;
+  });
   // A hold names a line this queue was bringing back; it does not outlive the queue. (Under
   // StrictMode in dev, the mount-cleanup-mount cycle drops a hold set before mount; prod is not affected.)
   useEffect(() => () => { releaseReviewHold(reviewHold()); }, []);
@@ -127,8 +114,6 @@ export function ReviewQueue({
   }, [fromList]);
   // ביטול's reopen landed. If the line is still not in the queue a moment later (approved again
   // elsewhere, or hidden by a filter), the hold would outlive its use and freeze the pin.
-  const rowsRef = useRef(rows);
-  rowsRef.current = rows;
   const undoSettled = useCallback((line: string | null) => {
     window.setTimeout(() => {
       if (line == null || reviewHold() !== line) return;
@@ -154,7 +139,7 @@ export function ReviewQueue({
   const metaPage = useLineMetaPageQuery(metaIds, metaLive);
   const lineMeta = useLineMetaQuery(shownId, metaLive && metaPage.isError);
   const jevUndo = useJevUndo();
-  const seededJev = sample && sampleJev != null && shownId != null
+  const seededJev = sampleJev != null && shownId != null
     ? { connectorOn: sampleJev.connectorOn, prefill: sampleJev.byId[shownId] ?? null }
     : null;
   const jev = jevUndo.stateFor(shownId, seededJev ?? jevQueue.stateFor(shownId));
@@ -162,13 +147,30 @@ export function ReviewQueue({
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
   );
-  const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
   const approvedId = useRef<string | null>(null);
   const approvedLine = useRef<string | null>(null);
   const skippedId = useRef<string | null>(null);
   const skippedLine = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
+  const queueRoot = useRef<HTMLDivElement>(null);
+  /** Focus was last in the action bar (a keyboard, or a tap that focuses on Android). */
+  const barFocus = useRef(false);
+  /** FLOW-309: ביטול pressed with focus on the toast brings focus back to the returning card's bar. */
+  const keepToastFocus = () => {
+    if (document.activeElement?.closest(".ui-toast") == null) return;
+    barFocus.current = true;
+    handReviewFocus();
+  };
+  // The screen swaps this queue for its empty state when the last card leaves: hand focus over.
+  useEffect(() => {
+    if (takeReviewFocus()) barFocus.current = true;
+    const path = window.location.pathname;
+    return () => {
+      // Still on this screen: the queue went empty. Leaving for another screen hands nothing over.
+      if (barFocus.current && window.location.pathname === path) handReviewFocus();
+    };
+  }, []);
   const approveGuard = useRef(false);
   const setupHandoffShown = useRef(false);
   const [, bumpVisit] = useState(0);
@@ -180,46 +182,6 @@ export function ReviewQueue({
     bumpVisit((value) => value + 1);
   }
   const leaving = motion === "out";
-  const nextCard = rows[0] ?? null;
-  const nextCardRef = useRef(nextCard);
-  nextCardRef.current = nextCard;
-  // The head's identity is the swap. A fresh array for the same item must not
-  // cancel the card that is already on its way in.
-  const motionKey = reviewMotionKey(nextCard);
-  useEffect(() => {
-    const next = nextCardRef.current;
-    if (next?.id === shown?.id) {
-      if (
-        next != null
-        && shown != null
-        && (next.category_name !== shown.category_name
-          || next.category_id !== shown.category_id
-          || next.category_suggested !== shown.category_suggested
-          || next.project_suggested !== shown.project_suggested
-          || next.project_name !== shown.project_name
-          || next.share_count !== shown.share_count
-          || next.auto_approved_today !== shown.auto_approved_today)
-      ) {
-        setShown(next);
-      }
-      return;
-    }
-    if (!shown) {
-      setShown(next);
-      setMotion("still");
-      return;
-    }
-    setMotion("out");
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(() => {
-      const landed = nextCardRef.current;
-      setShown(landed);
-      setMotion(landed ? "in" : "still");
-    }, reduce ? 0 : 200);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [motionKey, shown]);
   const approve = useWrite({
     failure: (error) => {
       if (previewWrite) return changeSaveFailure(error);
@@ -288,6 +250,7 @@ export function ReviewQueue({
           action: "ביטול",
           place: "bar",
           onAction: () => {
+            keepToastFocus();
             pinReviewLine(line, { hold: true });
             previewWrite.onUndo(id);
           },
@@ -311,6 +274,7 @@ export function ReviewQueue({
         action: "ביטול",
         place: "bar",
         onAction: () => {
+          keepToastFocus();
           pinReviewLine(line, { hold: true });
           void reopenReview(id, invalidate, toast, undefined, { line, failed: undoFailed, settled: undoSettled });
         },
@@ -351,6 +315,7 @@ export function ReviewQueue({
         action: "ביטול",
         place: "bar",
         onAction: () => {
+          keepToastFocus();
           pinReviewLine(line, { hold: true });
           if (previewWrite) {
             previewWrite.onUndo(id);
@@ -366,15 +331,25 @@ export function ReviewQueue({
   // Focus that was in the bar must not fall to the page: the buttons go disabled while a card
   // leaves (and remount when the next card switches between normal and split_mismatch). Once the
   // next card has settled, focus moves to the bar's first button.
-  const queueRoot = useRef<HTMLDivElement>(null);
-  const barFocus = useRef(false);
   const barKind = shown?.reason === "split_mismatch";
-  useLayoutEffect(() => {
+  // A passive effect, so it runs after the header's own title focus when the queue comes back from
+  // empty (FLOW-309); that title is not a place the owner chose.
+  useEffect(() => {
     if (!barFocus.current) return;
     const active = document.activeElement;
-    if (active != null && active !== document.body && queueRoot.current?.contains(active)) return;
-    queueRoot.current?.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]")?.focus({ preventScroll: true });
+    if (active != null && active !== document.body && !active.matches(".ui-focus-title") && queueRoot.current?.contains(active)) return;
+    const target = queueRoot.current?.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]");
+    if (target == null) return;
+    target.focus({ preventScroll: true });
+    takeReviewFocus();
   }, [barKind, shown?.id, leaving, jevLoading]);
+  // FLOW-309: the last card left with focus in the bar, and this queue shows the empty state itself
+  // (a sample, a project's queue). Its action takes focus after the title's own (a parent's effect
+  // runs after its children's).
+  const emptied = shown == null;
+  useEffect(() => {
+    if (emptied && barFocus.current) focusReviewEmptyAction();
+  }, [emptied]);
   const splitRead = useLineSplitQuery(mismatchLine, mismatchLine !== "" && !sample && previewWrite == null);
   const splitParts: number | "loading" | undefined = splitRead.data != null
     ? splitRead.data.parts.length
@@ -488,6 +463,8 @@ export function ReviewQueue({
       data-bar={holdWrites ? undefined : ""}
       ref={queueRoot}
       onFocusCapture={(event) => {
+        // The header's title focuses itself on mount; that is not where the owner went.
+        if (event.target instanceof Element && event.target.matches(".ui-focus-title")) return;
         barFocus.current = event.target instanceof Element && event.target.closest(".ui-action-bar") != null;
       }}
     >
@@ -510,12 +487,12 @@ export function ReviewQueue({
           {holdWrites ? null : <span className="sr-only">פריט </span>}
           <span className="t-hint ui-review-counter">
             {holdWrites ? (
-              <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+              <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
             ) : (
               <>
-                <bdi className="ui-num ui-review-count" dir="ltr">{String(index)}</bdi>
+                <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />
                 {" מתוך "}
-                <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+                <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
               </>
             )}
           </span>
