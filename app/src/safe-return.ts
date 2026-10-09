@@ -59,7 +59,6 @@ const SIGN_IN_RETURNS: ReadonlyMap<string, string> = new Map([
   ["/review/all", "לאישור"],
   ["/review/filed", "לתנועות ששויכו היום"],
   ["/unpaid", "לחשבוניות שלא שולמו"],
-  ["/notifications", "להתראות"],
   ["/projects", "לפרויקטים"],
   [SETTINGS, "להגדרות"],
   ["/settings/categories", "לקטגוריות"],

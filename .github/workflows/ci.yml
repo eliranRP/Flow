@@ -86,6 +86,8 @@ jobs:
           fi
       - name: Migrations do not commit early
         run: node scripts/check-migration-transaction.mjs
+      - name: No file over the size limit
+        run: node scripts/check-file-size.mjs
       - run: pnpm install --frozen-lockfile
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:

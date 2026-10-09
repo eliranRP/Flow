@@ -28,7 +28,7 @@ export function tabSection(pathname: string): Section | null {
   if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/review")) return "review";
-  if (pathname.startsWith("/settings") || pathname.startsWith("/notifications")) return "settings";
+  if (pathname.startsWith("/settings")) return "settings";
   return null;
 }
 
