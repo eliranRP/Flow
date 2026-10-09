@@ -636,7 +636,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** each string in a test; no empty state is a dead end; a category row opens its lines; design review.
 - [x] (UI lane 3, 2026-10-09) The group-lines screen takes the period pill and its empty state offers "בחירת תקופה"; one waiting line on the breakdown reads "תנועה אחת ממתינה לאישור"; the review queue subtitle is "תנועות שמחכות לשיוך"; a category row in Settings opens that category's lines in search.
 - [ ] `/notifications`, which nothing links to: remove it after #245 merges (it changes flow-screens.tsx and the pages and controls e2e specs).
-- [ ] The transaction detail's document-row hint (UI lane 2).
+- [x] (UI lane 2, #278) The transaction detail's document-row hint: the "חשבונית ותשלום" row and its hint ("מע״מ, מספר חשבונית, שורת הבנק") went in #121, and the VAT shows as a plain line; a test now checks that the detail names no invoice number or bank line.
 
 <a id="flow-323"></a>
 ### FLOW-323 · Search and all transactions
@@ -750,7 +750,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] C7 The ₪/% segment buttons are 34px wide; `min-inline-size: var(--touch-min)` on `.ui-seg-btn`.
 - [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
 - [x] C9 The line's own project appears twice in a part's project picker. (C1, C3a–C3c, C4, C5, C7, C9: #261)
-- [ ] C13 (from #231 design review) A Jev card at 375x667 no longer fits above the action bar with the slim banner on: main already misses by about 10px with a reason line, and the filled line ("✦ מולא ע״י Jev" + בטל, one line since #245) adds about 19px; a quiet or loud flag adds more. Add a Screens/Routes story at 375x667 with a Jev card (filled line, a quiet flag, the slim banner on), which needs Jev suggestions and fills in the sample queue, then win back about 20–30px so it fits.
+- [x] (UI lane 2, #278: 24px back on short phones, a square tile and a closer hairline; the card ends 16px above the bar) C13 (from #231 design review) A Jev card at 375x667 no longer fits above the action bar with the slim banner on: main already misses by about 10px with a reason line, and the filled line ("✦ מולא ע״י Jev" + בטל, one line since #245) adds about 19px; a quiet or loud flag adds more. Add a Screens/Routes story at 375x667 with a Jev card (filled line, a quiet flag, the slim banner on), which needs Jev suggestions and fills in the sample queue, then win back about 20–30px so it fits.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
 <a id="flow-334"></a>

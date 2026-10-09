@@ -939,3 +939,39 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();
   });
 });
+
+describe("sample queue with Jev's answers (FLOW-333 C13)", () => {
+  it("shows the filled line from sampleJev and reads nothing", () => {
+    db.seenIds = [];
+    const filled: ReviewRow = { ...stored, project_suggested: true, category_suggested: true };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue
+              rows={[filled]}
+              search=""
+              sample
+              sampleJev={{
+                connectorOn: true,
+                byId: {
+                  t1: {
+                    suggestionId: "s1",
+                    transactionId: "t1",
+                    project: { id: "p-stored", name: "פרויקט שמור" },
+                    category: { id: "c-stored", name: "קטגוריה שמורה" },
+                    auto: { state: "filled", projectId: "p-stored", categoryId: "c-stored" },
+                  },
+                },
+              }}
+            />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("מולא ע״י Jev")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בטל את המילוי של Jev" })).toBeInTheDocument();
+    expect(db.seenIds).toEqual([]);
+  });
+});
