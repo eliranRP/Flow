@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
-| Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
+| Dev lane 3 | FLOW-413 + FLOW-103 server PR 1 (plan in the project's plans/flow-413-cash-flow-plan.md): `categories.in_cash`, `transactions.in_cash_override`, `companies.cash_basis`, `cash_months`, `cash_month_lines`, the setters, seed and backfill; FLOW-309 server merged #350 | FLOW-413 server PR 2: the MCP cash tools and the FLOW-103 defaults |
 | UI lane 1 | FLOW-340 option C (owner's pick 2026-10-09), PR #338 on `claude/project-thread-0wt3o6`: the short project page (profit on the band, one row per section, each its own screen); merges after the owner's yes on shots (FLOW-342 + FLOW-344 merged #314) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-325 §10 option A (the פיצול לפי קטגוריות link in שינוי: `ui/change-picker.tsx`, `ui/change-sheet.tsx`, `screens/change-form.tsx`, `approve-review.ts`) + FLOW-347 שויכו היום heads (`ui/month-list.tsx`, `css/11-month-lists.css` `.ui-group-*`) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
@@ -1056,7 +1056,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-413"></a>
 ### FLOW-413 · Monthly cash-flow view (תזרים חודשי)
-- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); dev lane 2 writes the data plan with FLOW-103, then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
+- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); data plan written (dev lane 2, the project's plans/flow-413-cash-flow-plan.md); server PR 1 in-progress (dev lane 3), then server PR 2 (MCP), then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
 - **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out, and made it the main monthly view on Home. Today the profit view leaves the loan out, so rent alone looks positive.
   - Money out: the full monthly loan payment (principal, interest and escrow), holding costs and utilities, purchase and renovation money.
   - Money in: loan money received is left out by default, with a switch to count it.
