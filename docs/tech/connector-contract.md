@@ -439,7 +439,7 @@ Also service role only, same revoke and `auth.role()` check:
 | `public.stamp_connector_sync(p_company uuid, p_provider public.connector_provider)` | `void` |
 | `private.schedule_connector_jobs()` | `void` |
 
-`private.schedule_connector_jobs` is revoked from `public`, `anon`, and `authenticated`, and granted to `service_role`. It unschedules `flow-sumit-daily` and `flow-sumit-drain`, then schedules `flow-connector-daily` (`0 3 * * *`) and `flow-connector-drain` (`*/5 * * * *`). The drain reads Vault `flow_sync_url` and does not fall back to Kong. The secret value is not written into the command. A SUMIT row is posted to that URL. A Mercury row is posted to the same URL with `/sumit-sync` replaced by `/mercury-sync`. `MERCURY_KEK` is an Edge Function env var, the same pattern as `SUMIT_KEK`. It is not a Vault secret. Vault holds `cron_secret` and `flow_sync_url` for the drain only.
+`private.schedule_connector_jobs` is revoked from `public`, `anon`, and `authenticated`, and granted to `service_role`. It unschedules `flow-sumit-daily` and `flow-sumit-drain`, then schedules `flow-connector-daily` (`0 3 * * *`) and `flow-connector-drain` (`*/5 * * * *`). The drain reads Vault `flow_sync_url` and does not fall back to Kong. The secret value is not written into the command. A SUMIT row is posted to that URL. A Mercury row is posted to Vault `flow_mercury_sync_url` when it is set (FLOW-509, `20261013030000_mercury_sync_atomic.sql`); until then it goes to the same URL with `/sumit-sync` replaced by `/mercury-sync`. `MERCURY_KEK` is an Edge Function env var, the same pattern as `SUMIT_KEK`. It is not a Vault secret. Vault holds `cron_secret`, `flow_sync_url` and the optional `flow_mercury_sync_url` for the drain only.
 
 The daily command text, pinned, including the leading spaces:
 
@@ -461,7 +461,15 @@ The drain command text, pinned:
       select net.http_post(
         url := (
           select case p.provider
-            when 'mercury' then replace(decrypted_secret, '/sumit-sync', '/mercury-sync')
+            when 'mercury' then coalesce(
+              (
+                select nullif(btrim(m.decrypted_secret), '')
+                from vault.decrypted_secrets m
+                where m.name = 'flow_mercury_sync_url'
+                limit 1
+              ),
+              replace(decrypted_secret, '/sumit-sync', '/mercury-sync')
+            )
             else decrypted_secret
           end
           from vault.decrypted_secrets

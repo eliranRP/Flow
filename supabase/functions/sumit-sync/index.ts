@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "../../../packages/shared/src/database.types.ts";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import {
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const kekSecret = Deno.env.get("SUMIT_KEK") ?? "";
   if (!url || !anon || !service || !kekSecret) return json({ error: "server is missing a secret" }, 500);
-  const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+  const admin = createClient<Database>(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
 
   try {
     const cron = req.headers.get("x-flow-cron");
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     const header = req.headers.get("Authorization") ?? "";
-    const userClient = createClient(url, anon, {
+    const userClient = createClient<Database>(url, anon, {
       global: { headers: { Authorization: header } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
@@ -119,7 +120,7 @@ function constantTimeEqual(left: string, right: string): boolean {
 }
 
 async function syncCompany(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   companyId: string,
   kek: Uint8Array,
   force: boolean,
@@ -173,7 +174,7 @@ async function syncCompany(
 }
 
 async function runSync(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   companyId: string,
   kek: Uint8Array,
   row: Record<string, unknown>,
@@ -229,7 +230,7 @@ async function runSync(
  * Wait 15 minutes after sync_failed, sync_page_cap or sync_schema_drift so a stuck page cannot
  * fill the drain.
  */
-async function noteSyncFailure(admin: SupabaseClient, companyId: string, code: string): Promise<void> {
+async function noteSyncFailure(admin: SupabaseClient<Database>, companyId: string, code: string): Promise<void> {
   const noted = await admin.rpc("note_sync_failure", { p_company: companyId, p_code: code });
   if (noted.error) {
     await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", companyId);
@@ -375,7 +376,7 @@ function checkDrift(tally: CrmTally): void {
 }
 
 /** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */
-async function linkedInvoices(admin: SupabaseClient, companyId: string): Promise<Set<string>> {
+async function linkedInvoices(admin: SupabaseClient<Database>, companyId: string): Promise<Set<string>> {
   const linked = await admin
     .from("transactions")
     .select("external_id")
@@ -448,7 +449,7 @@ function docKind(kind: SumitDoc["kind"]): string {
 }
 
 async function writeLedger(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   companyId: string,
   docs: SumitDoc[],
   urls: Map<number, string>,

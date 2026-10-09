@@ -11,11 +11,11 @@ const dailySchedule = new URL("../supabase/migrations/20261003140000_sumit_daily
 const drainUrl = new URL("../supabase/migrations/20261003160000_sumit_drain_url.sql", import.meta.url);
 const engine = new URL("../supabase/migrations/20261003210000_connector_engine.sql", import.meta.url);
 const totals = new URL("../supabase/migrations/20261004130000_mercury_ils_totals.sql", import.meta.url);
+const mercuryUrl = new URL("../supabase/migrations/20261013030000_mercury_sync_atomic.sql", import.meta.url);
 const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
 const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 
-function dollarBlocks(sql) {
-  const marker = "$cron$";
+function dollarBlocks(sql, marker = "$cron$") {
   const blocks = [];
   let from = 0;
   while (from < sql.length) {
@@ -53,7 +53,13 @@ test("the connector daily and drain commands match across the migration, pgTAP, 
   const tap = readFileSync(pgtap, "utf8");
   const check = readFileSync(checkSql, "utf8");
   const daily = dollarBlocks(migration)[0];
-  const drain = dollarBlocks(readFileSync(totals, "utf8"))[1];
+  // FLOW-509 patches the Mercury URL line in place: anchor ($a$) to replacement ($n$), second pair.
+  const patch = readFileSync(mercuryUrl, "utf8");
+  const anchor = dollarBlocks(patch, "$a$")[1];
+  const replacement = dollarBlocks(patch, "$n$")[1];
+  const original = dollarBlocks(readFileSync(totals, "utf8"))[1];
+  assert.equal(original.split(anchor).length, 2);
+  const drain = original.replace(anchor, replacement);
   assert.match(daily, /insert into public\.connector_refresh_requests/);
   assert.equal(dollarCron(tap), daily);
   assert.equal(dollarBlocks(check)[0], daily);
@@ -64,6 +70,7 @@ test("the connector daily and drain commands match across the migration, pgTAP, 
   assert.match(check, /flow-connector-drain/);
   assert.match(drain, /where name = 'flow_sync_url'/);
   assert.match(drain, /where name = 'cron_secret'/);
+  assert.match(drain, /where m\.name = 'flow_mercury_sync_url'/);
   assert.match(drain, /last_error is distinct from 'auth'/);
   assert.equal(drain.includes("http://kong:8000"), false);
   assert.equal(/x-flow-cron',\s*'/.test(drain), false);
