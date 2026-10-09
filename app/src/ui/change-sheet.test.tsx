@@ -334,3 +334,68 @@ describe("ChangeAssignment follow-ups (FLOW-309)", () => {
     }
   });
 });
+
+describe("ChangeAssignment split by categories link (FLOW-325 §10)", () => {
+  function SplitHarness({ onSplitCategory, busy = false }: {
+    onSplitCategory?: (leave: (to: string) => void) => void;
+    busy?: boolean;
+  }) {
+    return (
+      <MemoryRouter initialEntries={["/review/change?item=r1&pick=project"]}>
+        <Routes>
+          <Route
+            path="/review/change"
+            element={(
+              <ChangeAssignment
+                host="route"
+                closeTo="/review"
+                supplier="ספק"
+                amount="₪1"
+                direction="expense"
+                projects={[{ id: "p1", name: "פרויקט" }]}
+                categories={fewCategories}
+                projectId="p1"
+                categoryId="c1"
+                onProjectId={() => undefined}
+                onCategoryId={() => undefined}
+                onSplit={() => undefined}
+                onCreateProject={(name) => Promise.resolve({ id: "new", name })}
+                {...(onSplitCategory ? { onSplitCategory, splitCategoryBusy: busy } : {})}
+              />
+            )}
+          />
+          <Route path="/transactions/:id/split-category" element={<h1>עורך</h1>} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  it("shows no link without a handler", async () => {
+    render(<SplitHarness />);
+    await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    expect(screen.getByRole("button", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "פיצול לפי קטגוריות" })).not.toBeInTheDocument();
+  });
+
+  it("hands the press a leave that opens the editor", async () => {
+    const handler = vi.fn((leave: (to: string) => void) => {
+      leave("/transactions/t1/split-category");
+    });
+    render(<SplitHarness onSplitCategory={handler} />);
+    fireEvent.click(await screen.findByRole("button", { name: "פיצול לפי קטגוריות" }));
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("heading", { name: "עורך" })).toBeInTheDocument();
+  });
+
+  it("does nothing on a press while busy, and the rows wait", async () => {
+    const handler = vi.fn();
+    render(<SplitHarness onSplitCategory={handler} busy />);
+    const link = await screen.findByRole("button", { name: "פיצול לפי קטגוריות" });
+    expect(link).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(link);
+    expect(handler).not.toHaveBeenCalled();
+    expect(screen.getByRole("radio", { name: "פרויקט" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "פרויקט חדש" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "פיצול בין פרויקטים" })).toBeDisabled();
+  });
+});

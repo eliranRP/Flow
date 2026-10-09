@@ -1,0 +1,1 @@
+The review card's שינוי sheet can split a line by categories: on the project list, "פיצול לפי קטגוריות" approves the line with the shown project and category, then opens the split editor. If the approve fails, the sheet stays open and says "לא הצלחנו לאשר.".

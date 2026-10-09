@@ -19,6 +19,9 @@ export { CHANGE_SAVE_FAILURE, CHANGE_SAVE_REFUSAL, SHARED_SPLIT_FAILURE, ONE_PRO
 
 type ChangeView = "summary" | "project" | "category" | "new";
 
+/** No row's id: while the split link's approve runs, every row in the list waits and none spins. */
+const SPLIT_CATEGORY_SAVING = "split-category:approve";
+
 type Shared = {
   supplier: string;
   amount: string;
@@ -78,6 +81,14 @@ type Shared = {
   /** Throw away an incomplete edit. The sheet then closes. */
   onDiscard?: () => void;
   onSplit: () => void;
+  /**
+   * FLOW-325 §10 (option A): "פיצול לפי קטגוריות" on the project list. The screen approves the
+   * line, then calls leave with the parts editor's path; leave pops the picker's history step
+   * first. Omitted where the link must not show (a viewer, a shared cost, a split line).
+   */
+  onSplitCategory?: (leave: (to: string) => void) => void;
+  /** The approve behind onSplitCategory is running: the list's rows wait, the link shows busy. */
+  splitCategoryBusy?: boolean;
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
   initialQuery?: string;
@@ -629,7 +640,7 @@ export function ChangeAssignment(props: Props) {
           selectedId={pickerKind === "project" ? props.projectId : props.categoryId}
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId}
           suggestionJev={pickerKind === "project" ? props.suggestionProjectJev === true : props.suggestionCategoryJev === true}
-          savingId={savingId}
+          savingId={savingId ?? (props.splitCategoryBusy === true ? SPLIT_CATEGORY_SAVING : null)}
           note={pickerKind === "project" ? props.projectNote : undefined}
           noneLabel={pickerKind === "project" ? props.noProjectLabel : undefined}
           reversal={pickerKind === "category" && reversalOptions.length > 0 ? {
@@ -652,6 +663,18 @@ export function ChangeAssignment(props: Props) {
           } : undefined}
           onSplit={pickerKind === "project" && props.hideSplitLink !== true ? () => {
             afterHistory(props.onSplit);
+          } : undefined}
+          splitCategory={pickerKind === "project" && props.onSplitCategory != null ? {
+            busy: props.splitCategoryBusy === true,
+            onPress: () => {
+              // A pick or the approve is still writing: the press does nothing.
+              if (savingId != null || props.splitCategoryBusy === true) return;
+              props.onSplitCategory?.((to) => {
+                afterHistory(() => {
+                  void navigate(to, { replace: true });
+                });
+              });
+            },
           } : undefined}
         />
       ) : null}
