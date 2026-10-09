@@ -86,10 +86,11 @@ mark_green() {
 ancestors() {
   git log --max-count=200 --format='%H %T' HEAD
 }
-# What eslint reads: the TypeScript, JavaScript and JSON sources outside the folders it ignores, and
-# the lockfile (the plugin and type versions).
-lint_key="lint-$(git ls-tree -r HEAD | grep -E $'\t(.*\\.([cm]?[jt]s|tsx|json)|pnpm-lock\\.yaml)$' \
-  | grep -vE $'\t(docs|design|supabase)/' | sha256sum | cut -c1-40)"
+# What eslint reads: the TypeScript, JavaScript and JSON sources outside the folders it ignores, the
+# lockfile (the plugin and type versions), and _shared, which linted tests import (the type-aware
+# rules read its types).
+lint_key="lint-$({ git ls-tree -r HEAD | grep -vE $'\t(docs|design|supabase)/'; git ls-tree -r HEAD -- supabase/functions/_shared; } \
+  | grep -E $'\t(.*\\.([cm]?[jt]s|tsx|json)|pnpm-lock\\.yaml)$' | sha256sum | cut -c1-40)"
 # The newest ancestor of HEAD (within 200 commits) where a test project last passed in full or in
 # part, when every file changed since then is an app, shared or _shared .ts/.tsx source or a
 # migration (a test globs them): the vitest module graph finds the tests those reach. Anything else
