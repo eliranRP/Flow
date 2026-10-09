@@ -188,6 +188,9 @@ describe("reviewRowSchema receipts (FLOW-309)", () => {
     });
     expect(parsed.receipts?.[0]?.amount_gross).toBe(1416000n);
     expect(parsed.paid).toBe(true);
+    // list_review's jsonb sends bigint agorot as a JSON number.
+    const fromSql = reviewRowSchema.parse({ ...row, receipts: [{ transaction_id: "rc", doc_date: "2026-10-12", amount_gross: 1416000, currency: "ILS" }] });
+    expect(fromSql.receipts?.[0]?.amount_gross).toBe(1416000n);
     expect(parsed.paid_on).toBe("2026-10-12");
   });
 

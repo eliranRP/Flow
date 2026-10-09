@@ -390,7 +390,7 @@ export const PairReceiptOnly: Story = {
 export const PairReceiptOnly320: Story = { ...narrow, name: "Pair: receipt only, 320", args: PairReceiptOnly.args };
 export const PairReceiptOnlyDark320: Story = { ...darkNarrow, name: "Pair: receipt only, dark, 320", args: PairReceiptOnly.args };
 
-/** Stress: a supplier name that takes three lines at 320 wraps whole, with no ellipsis. */
+/** Stress: a supplier name that takes three lines at 320 wraps whole; a fourth line would end in an ellipsis. */
 export const SupplierThreeLines320: Story = {
   ...narrow,
   name: "Stress: supplier on three lines, 320",

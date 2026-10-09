@@ -186,6 +186,14 @@
   white-space: normal;
 }
 
+/* Long supplier names: a name wraps up to three lines on the card, then ends in an ellipsis. */
+.ui-review-supplier {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .ui-review-doc {
   gap: var(--review-gap);
   align-items: flex-start;
@@ -431,12 +439,4 @@
 .ui-review-paid-text {
   min-inline-size: 0;
   overflow-wrap: anywhere;
-}
-
-/* Long supplier names: a name wraps up to three lines on the card, then ends in an ellipsis. */
-.ui-review-supplier {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
