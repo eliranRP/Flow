@@ -15,14 +15,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
-| Dev lane 2 | FLOW-811: CI and deploy follow-ups (row-hash baseline script, composite foreign key indexes) | FLOW-812 faster CI (claim looks stale), more Flow MCP agent requests |
+| Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
-| UI lane 3 | FLOW-322 `/notifications` removal and FLOW-334 leftovers (period pill under the title, category lines total, onboarding gap), PR #272 (FLOW-334 H1/H2 merged #259) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-115 loan setup follow-ups (errors say what to type, dimmed kept preview, close waits for save, loading skeleton, always-enabled save) (FLOW-322 `/notifications` and FLOW-334 leftovers merged #272) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-333 split editor C1, C3a, C3b, C3c, C4, C5, C7, C9 (#261) | toast e2e settle-wait flake (lane manager), then next small ready bug |
+| Backlog bug fixes | FLOW-325 kept-out reversal part (picker and the P&L refusal copy) + FLOW-334 split items (hint word, footer gutter, card inset) | Next small ready bug |
 | File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (#277), then the pgTAP file `mcp_cycle3a.test.sql` into `mcp_cycle3a`, `mcp_cycle3a_gates` and `mcp_cycle3a_sync` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | Guard: `scripts/check-file-size.mjs` fails local CI and CI when a file goes over the limits, with `scripts/file-size-allow.txt` for exceptions |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -369,8 +369,8 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-115"></a>
 ### FLOW-115 · Loan screens UI follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Loan setup: dim the kept preview when inputs are invalid; a year jump in the date sheet for old start dates; date sheet details per mockup 15b; lock ✕ while saving; error copy that says what to do (and 0 shouldn't read as a missing amount).
-- [ ] Loan setup: a slow currency read opens the sheet on "טוען…" and then jumps; the currency read has no limit; add date-sheet and new-state stories and a loading skeleton.
+- [x] (UI lane 3, 2026-10-09: the kept preview dims; ✕, Escape and Back wait for a save; each error says what to type, and 0 reads "הסכום צריך להיות גדול מ־0."; the year jump and mockup 15b date details stay open, they are shared DateSheet work) Loan setup: dim the kept preview when inputs are invalid; a year jump in the date sheet for old start dates; date sheet details per mockup 15b; lock ✕ while saving; error copy that says what to do (and 0 shouldn't read as a missing amount).
+- [x] (UI lane 3, 2026-10-09: the sheet shows the form's skeleton while the currency loads; New, Incomplete dimmed and Date sheet open stories) Loan setup: a slow currency read opens the sheet on "טוען…" and then jumps; the currency read has no limit; add date-sheet and new-state stories and a loading skeleton.
 - [ ] Loan match: the waiting line should say why and print only the difference; disable the other rows while the correction is busy; its own failure copy; refresh the parts after a failed correction; next step for a currency mismatch; an empty match sheet offers הלוואה חדשה; hide or disable loans in another currency; long loan names need a second line or hint at 320; whole units on the Settings balances; link the "ממתין לבדיקה" row to the waiting line; skeleton rows to stop cold-open shifts.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
 - [ ] The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
@@ -673,7 +673,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (#135 review) A part with no project and one naming the line's own project are different pairs, so the same category and project can appear twice. (The server now treats no project as the line's project: migration `20261010220000`.)
 - [x] App screen, first PR (PR #150): the "פיצול" section on the transaction detail with a read view of the parts, the full-screen editor (parts, % / ₪ with the server preview's cents, the live rest row, the sticky totals), refund reversals that need a project, save on leave with the hold line, clearing with a confirm, undo from the toast, and the detail's category and project rows saying the line is split.
 - [ ] App screen follow-ups (plan §10): swipe to delete a part, splitting from the review card, "N חלקים" on the transaction lists.
-- [ ] (#189 review, UI lane) The parts editor (`app/src/line-split.ts`) still asks for a project on a kept-out reversal part; allow none, as the server does unless the line is in the P&L (0138). Give copy to the `a reversal part needs a project` refusal from `set_transaction_pnl` on the transaction screen.
+- [x] (#286) (#189 review, UI lane) The parts editor (`app/src/line-split.ts`) still asks for a project on a kept-out reversal part; allow none, as the server does unless the line is in the P&L (0138). Give copy to the `a reversal part needs a project` refusal from `set_transaction_pnl` on the transaction screen.
 - [x] (#189 review, server) MCP undo of `line_split` puts old parts back without the 0138 check, so a kept-out reversal part with no project can come back on a line the owner since put in the P&L. Run the same check after the insert (a shared private helper with `set_transaction_pnl`) and answer `conflict`. (Migration `20261010230000`.)
 
 <a id="flow-326"></a>
@@ -766,10 +766,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09, decision 0156: `ScreenHeader` pins a 44px compact bar with Back and the title once a stacked page's title scrolls off; month heads pin under it) H1 (owner chose the sticky bar, 2026-10-08) Long pushed lists lose Back: `header.ui-page` is static, so on שויכו היום (2.8–4.3 screens), the breakdown lines, the category lines and the review list Back scrolls off with no way out but scrolling up. Build: a compact sticky bar (Back + small title, 44px) appears once the large title scrolls off, like iOS large titles. A new header pattern, so the PR adds a design log rule.
 - [x] (UI lane 3, 2026-10-09, decision 0156: with Back and a kicker, the kicker is Back's label, cut at 16 characters) H2 (owner chose the labelled Back, 2026-10-08) Back is a lone 44x44 icon at the top start corner (y≈16–60), about 520px above the thumb, and the kicker under it ("הגדרות") repeats where it goes. Build: a labelled Back ("‹ הגדרות", "‹ שיפוץ הרצל 12", cut at about 16 characters) that replaces the kicker; about 3x the target and 22px back on every settings sub-screen. This changes the mockups 07/14 header rule, so the PR adds a decision record and a design log rule.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
-- [ ] Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
+- [x] (#286) Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
 - [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
-- [ ] Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
-- [ ] Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
+- [x] (#286) Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
+- [x] (#286) Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
 - [x] (UI lane 3, 2026-10-09: `margin-top: var(--space-5)` on the form) Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
 - [x] (UI lane 3, 2026-10-09: Back labelled הגדרות) Notifications has the same Back to Settings but no "הגדרות" kicker (`settings-screen.tsx` `NotificationsScreen`); H2's labelled Back covers it.
 - [x] (already done by FLOW-335 in #239: `.ui-band-hero-project` starts `--space-2` under the Back bar) Project band: 47px from Back to the title against 26px on other stacked headers (`.ui-band-hero` `padding-top`, `css/07-band-home.css`); `--space-2` when the band has a Back bar.
@@ -1036,9 +1036,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, #156) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (item 1 #156, item 2 this PR) · **Depends on:** —
 - [x] The cron path doesn't take the connector claim, so cron and manual runs can overlap; the Mercury cron path doesn't release its claim when it skips. (Both cron paths claim; a skip or a throw releases it, `_shared/cron_claim.ts`; a SUMIT request that finds a manual run busy goes back to the queue.)
-- [ ] From the original plan: a schema-drift check on the SUMIT payload with a fallback and alert, and an optional debounced webhook behind a flag.
+- [x] From the original plan: a schema-drift check on the SUMIT payload with a fallback and alert, and an optional debounced webhook behind a flag. (Drift check: more than 1 in 20 rows that do not map, or a page without its data or row list, stops the sync before it writes; the last good ledger stays, `sumit_status` shows `sync_schema_drift`, the log names the fields; decision [0161](../decisions/0161-sumit-schema-drift.md). Not built: a `documents/list` second source, whose amount and VAT fields no real response has shown, and the webhook, which needs a new public function, SUMIT triggers on the customer's plan and a flag. Follow-up for a UI lane: a Hebrew line for `sync_schema_drift` in `app/src/sumit-copy.ts`.)
 
 ## Multi-company and team
 

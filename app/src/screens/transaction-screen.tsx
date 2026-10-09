@@ -189,7 +189,10 @@ export function TransactionScreen({
   // FLOW-108. A sample card keeps its override locally; a live card reads it back from the server.
   const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
   const pnlLine = useWrite<LinePnlChange>({
-    failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
+    failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה."
+      // 0138: in the P&L, a kept-out reversal part counts, so it needs its own project.
+      : error.message.includes("a reversal part needs a project") ? "לחלק החזר בפיצול אין פרויקט. בחרו לו פרויקט בפיצול, ואז נסו שוב."
+        : "לא הצלחנו לעדכן את השורה."),
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
       toast.show({

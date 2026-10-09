@@ -134,6 +134,21 @@ describe("split by category editor (FLOW-325)", () => {
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
 
+  it("a reversal part in a kept-out category may keep the line's project (FLOW-325, 0138)", async () => {
+    showEditor({
+      line: SAMPLE_REFUND_LINE,
+      categories: [...SAMPLE_SPLIT_CATEGORIES, { id: "c-owner", name: "משיכות בעלים", kind: "expense", hidden: false, excluded_from_pnl: true }],
+      parts: [{ key: "a", categoryId: "c-owner", projectId: null, unit: "percent", value: "40" }],
+    });
+    expect(screen.getByRole("button", { name: /^משיכות בעלים, החזר, משרד · פרויקט השורה/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^משיכות בעלים, החזר/ }));
+    // The part's own kept-out category is listed, so picking it again moves on to the project.
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "בחירת קטגוריה" })).getByRole("radio", { name: "משיכות בעלים" }));
+    const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    expect(within(projects).getByRole("radio", { name: "משרד · פרויקט השורה" })).toBeInTheDocument();
+    expect(within(projects).queryByText("חלק החזר צריך פרויקט.")).toBeNull();
+  });
+
   it("shows the over amount in the footer and on the part edited last, once (FLOW-333 C5)", async () => {
     showEditor({
       parts: [

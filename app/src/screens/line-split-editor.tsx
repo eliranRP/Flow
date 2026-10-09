@@ -283,13 +283,16 @@ export function LineSplitEditor({
   const targetPart = target?.kind === "part" ? parts.find((part) => part.key === target.key) : undefined;
   const pickerCategory = target?.kind === "rest" ? (rest.categoryId ?? line.categoryId ?? "") : (targetPart?.categoryId ?? "");
   const pickerProject = target?.kind === "rest" ? (rest.projectId ?? "") : (targetPart?.projectId ?? "");
-  const pickerReversal = target?.kind === "part" && targetPart != null && targetPart.categoryId !== "" && partIsReversal(targetPart.categoryId);
+  // A reversal part needs its own project unless its category is kept out of the P&L on a line
+  // not forced in (0138); only then is the "no project" row withheld (FLOW-325, #189 review).
+  const pickerReversal = target?.kind === "part" && targetPart != null && targetPart.categoryId !== "" && reversalNeedsProject(targetPart.categoryId, ctx);
   const ownCategories: ChangeChoice[] = categories
     .filter((category) => category.kind != null && (line.direction === "income" ? category.kind === "income" : category.kind !== "income"))
     .filter((category) => category.hidden !== true || category.id === line.categoryId)
     .map((category) => ({ id: category.id, name: category.name }));
-  const reversals: ChangeChoice[] = target?.kind === "rest" ? [] : reversalChoices(categories, line.direction, line.categoryId);
-  // FLOW-333 C9: outside a reversal part, the top row already stands for the line's project.
+  // A part's own category stays listed even when kept out, so its project can be changed without losing it.
+  const reversals: ChangeChoice[] = target?.kind === "rest" ? [] : reversalChoices(categories, line.direction, targetPart?.categoryId || line.categoryId);
+  // FLOW-333 C9: unless a project is required, the top row already stands for the line's project.
   const pickerProjects = pickerReversal || line.projectId == null ? projects : projects.filter((project) => project.id !== line.projectId);
   const pickerProjectId = !pickerReversal && pickerProject === line.projectId ? "" : pickerProject;
 
