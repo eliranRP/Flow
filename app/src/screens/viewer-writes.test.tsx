@@ -77,6 +77,17 @@ describe("viewer write controls", () => {
     expect(screen.getByText("פרויקט א")).toBeInTheDocument();
   });
 
+  it("shows a viewer the waiting count with no visit meter (FLOW-507)", () => {
+    renderScreen(
+      <ViewerPreview>
+        <ReviewQueue rows={[reviewRow]} search="" sample />
+      </ViewerPreview>,
+    );
+    expect(document.querySelector(".ui-review-counter")?.textContent).toBe("1 ממתינה");
+    expect(screen.queryByRole("meter", { name: "התקדמות התור" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/מתוך/)).not.toBeInTheDocument();
+  });
+
   it("hides a new category and the row menu", () => {
     renderScreen(
       <ViewerPreview>
