@@ -18,7 +18,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-310 clip-check review of whitelisted ellipsis (FLOW-310 focus merged #298); FLOW-341 card with the owner (sent 06:00Z) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-343: cycle 7 phone polish (loan setup focus, split copy said once, the card's refund refusal) (FLOW-339 Search merged #299) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -113,7 +113,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
-| 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
+| 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
@@ -864,7 +864,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-341"></a>
 ### FLOW-341 · A shorter ⋯ sheet in Settings → Categories
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-405 (#217) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** in-progress (owner picked option A on 2026-10-09: one move row, a hide switch in the picker) · **Depends on:** FLOW-405 (#217) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The category ⋯ sheet lists 8 actions, 4 with sentence hints; at 375x667 מחיקה sits below the fold, and "העברת כל התנועות" and "מיזוג" read as the same job. Proposal: move the consequences onto the confirm and picker sheets, merge move and merge into one row, and keep מחיקה in view.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
