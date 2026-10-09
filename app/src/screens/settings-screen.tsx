@@ -16,7 +16,7 @@ import { CompanyCurrencySheet } from "./company-currency-sheet";
 import { useCompanyCurrencyQuery } from "../company-currency";
 import { currencyChoiceLabel } from "../ui/currency-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
-import { JEV_DEFAULT, jevSwitchOn, useJevIntegrationQuery, type JevCardState } from "./jev-settings";
+import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
@@ -160,6 +160,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const sumit = useSumitStatusQuery(sample == null && (preview !== "off" || signedInCompanyId != null));
   const mercury = useMercuryStatusQuery(sample == null && (preview !== "off" || signedInCompanyId != null));
   const jev = useJevIntegrationQuery(liveCompany);
+  // FLOW-348 A: with no key on the server the switch is locked off, so the tally says off too.
+  const jevOn = jev.data != null && jevSwitchOn({ ...jev.data, status: "ready" });
+  const jevKeyMissing = useJevKeyStatusQuery(liveCompany && jevOn).data === "missing";
   const assistant = useAssistantStatusQuery(liveCompany);
   const loans = useLoanBalances(liveCompanyId);
   // FLOW-502: a build without the VAPID key has no התראות row and reads nothing.
@@ -245,14 +248,14 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
       { name: "תיוג חכם", state: (() => {
         const state = sample.jev ?? JEV_DEFAULT;
         if (state.status === "loading" || state.status === "error") return state.status;
-        return jevSwitchOn(state) ? "active" : "off";
+        return jevSwitchOn(state) && !jevLocked(state) ? "active" : "off";
       })() },
       { name: "עוזר AI", state: assistantTally(sample.assistant ?? { state: "empty" }) },
     ]
     : [
       queryTally("SUMIT", sumit, () => (sumit.data?.last_error === "sumit_auth" ? "reconnect" : sumit.data?.connected === true ? "active" : "off")),
       queryTally("Mercury", mercury, () => (mercury.data?.last_error === "auth" ? "reconnect" : mercury.data?.connected === true ? "active" : "off")),
-      queryTally("תיוג חכם", jev, () => (jev.data != null && jevSwitchOn({ ...jev.data, status: "ready" }) ? "active" : "off")),
+      queryTally("תיוג חכם", jev, () => (jevOn && !jevKeyMissing ? "active" : "off")),
       queryTally("עוזר AI", assistant, () => {
         const state = assistant.data?.state;
         return state === "connected" ? "active" : state === "expired" ? "reconnect" : "off";

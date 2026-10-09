@@ -234,7 +234,8 @@ export function JevSettingsCard({
       icon={<TagIcon size={24} />}
       checked={shownOn}
       busy={busy}
-      disabled={readOnly || locked}
+      disabled={readOnly}
+      locked={locked}
       inputRef={switchRef}
       onChange={(checked) => {
         if (busy || readOnly || locked) return;
