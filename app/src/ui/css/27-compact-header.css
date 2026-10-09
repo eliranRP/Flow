@@ -120,3 +120,11 @@ html[data-compact-bar]:has(.ui-month-head) {
 .ui-row-side > :last-child {
   flex: none;
 }
+
+/* FLOW-334: a stacked page's own control under the title, on the start side, nearer the thumb than
+   the top corner (the breakdown's period pill). */
+.ui-page-below {
+  display: flex;
+  justify-content: flex-start;
+  margin-block-start: var(--space-2);
+}

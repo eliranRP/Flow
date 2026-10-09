@@ -112,7 +112,6 @@ function BreakdownBody({
   search: string;
 }) {
   const preview = useHomePreview();
-  const books = useBooks();
   const [groupBy, setGroupBy] = useState<BreakdownGroupBy>(() => sampleGroupBy ?? readGroupBy());
   const query = useBreakdownQuery(direction, groupBy, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
@@ -126,7 +125,7 @@ function BreakdownBody({
   const period = <PeriodControl sheet={sheet} setSheet={setSheet} />;
 
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState stacked title={title} backTo={back} trailing={period} phase={phase} onRetry={() => { void query.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} below={period} phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
 
   const empty = data == null || (data.totals.length === 0 && data.groups.length === 0 && data.excluded.length === 0);
@@ -136,9 +135,9 @@ function BreakdownBody({
 
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} trailing={period} />
+      <ScreenHeader layout="stacked" title={title} backTo={back} below={period} />
       <Totals direction={direction} totals={data?.totals ?? []} />
-      {count > 0 ? <p className="ui-breakdown-hint ui-page-pad t-hint">{lineCountHint(count, false)} · {periodLabel(books.period)}</p> : null}
+      {count > 0 ? <p className="ui-breakdown-hint ui-page-pad t-hint">{lineCountHint(count, false)}</p> : null}
       {empty ? (
         <EmptyState
           icon={<ChartIcon />}
@@ -263,7 +262,6 @@ function LinesBody({
   sample?: LinesSample;
 }) {
   const preview = useHomePreview();
-  const { period } = useBooks();
   const [sheet, setSheet] = useState(false);
   const summary = useBreakdownQuery(direction, groupBy, sample == null);
   const lines = useBreakdownLinesQuery(direction, groupBy, groupKey, currency, excluded, sample == null);
@@ -285,18 +283,19 @@ function LinesBody({
   const periodControl = <PeriodControl sheet={sheet} setSheet={setSheet} />;
 
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState stacked title={title} backTo={back} trailing={periodControl} phase={phase} onRetry={() => { void lines.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} below={periodControl} phase={phase} onRetry={() => { void lines.refetch(); }} />;
   }
 
   const more = sample ? false : lines.hasNextPage;
   // The header comes from the same lines as the list: no lines is "—" and no count (design lead, #259).
   const none = rows.length === 0 && !more;
-  const subtitleParts: string[] = [directionLabel(direction), periodLabel(period)];
+  // The period is the pill under the title (FLOW-334), so the subtitle doesn't repeat it.
+  const subtitleParts: string[] = [directionLabel(direction)];
   if (sum && !none) subtitleParts.push(lineCountHint(sum.count, false));
 
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} trailing={periodControl} />
+      <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} below={periodControl} />
       {none ? (
         <p className="ui-breakdown-total ui-page-pad">
           <span className="ui-breakdown-total-line t-display text-text-secondary">—</span>

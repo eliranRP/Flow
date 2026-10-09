@@ -19,6 +19,7 @@ export function ScreenState({
   children,
   stacked = false,
   trailing,
+  below,
 }: {
   title: string;
   subtitle?: string;
@@ -34,6 +35,8 @@ export function ScreenState({
   stacked?: boolean;
   /** Known chrome that stays real while the data loads, e.g. a period pill. */
   trailing?: ReactNode;
+  /** A control under the title that stays real while the data loads (ScreenHeader `below`). */
+  below?: ReactNode;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -51,7 +54,7 @@ export function ScreenState({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} trailing={trailing ?? action} kicker={kicker} />
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} trailing={trailing ?? action} kicker={kicker} below={below} />
       ) : (
         <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
       )}

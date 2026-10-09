@@ -762,12 +762,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
 - [ ] Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
 - [ ] Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
-- [ ] Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
+- [x] (UI lane 3, 2026-10-09: `margin-top: var(--space-5)` on the form) Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
 - [x] (UI lane 3, 2026-10-09: Back labelled הגדרות) Notifications has the same Back to Settings but no "הגדרות" kicker (`settings-screen.tsx` `NotificationsScreen`); H2's labelled Back covers it.
-- [ ] Project band: 47px from Back to the title against 26px on other stacked headers (`.ui-band-hero` `padding-top`, `css/07-band-home.css`); `--space-2` when the band has a Back bar.
+- [x] (already done by FLOW-335 in #239: `.ui-band-hero-project` starts `--space-2` under the Back bar) Project band: 47px from Back to the title against 26px on other stacked headers (`.ui-band-hero` `padding-top`, `css/07-band-home.css`); `--space-2` when the band has a Back bar.
 - [ ] Home at 375x667: the first "פרויקטים מובילים" row shows only 22px above the tab bar; tighten the נכנס / יצא rows from a 76px to about a 52px pitch. Cycle 5: since the period bar (#199) no project row shows above the fold at all (the "פרויקטים" head sits at y≈640), so this also needs FLOW-335's band trims.
-- [ ] Breakdown: the period chip moved to the top-left corner (Back took the start side), the hardest reach and a different corner than Home; put it under the title on the start side.
-- [ ] Project category lines: add the total and count to the subtitle ("שיפוץ הרצל 12 · ₪4 · תנועה אחת").
+- [x] (UI lane 3, 2026-10-09: `ScreenHeader` `below` slot; the subtitle and hint no longer repeat the period) Breakdown: the period chip moved to the top-left corner (Back took the start side), the hardest reach and a different corner than Home; put it under the title on the start side.
+- [x] (UI lane 3, 2026-10-09: the count waits for the last page; no lines, no figures) Project category lines: add the total and count to the subtitle ("שיפוץ הרצל 12 · ₪4 · תנועה אחת").
 - [ ] Project detail: the "ממתינה לאישור" row inside "הוצאות לפי קטגוריה" looks like a category; give it the review icon and tint like Home's review row. Move "סיום פרויקט" from the unlabelled ⋯ (its only action) to a row at the bottom.
 - [ ] שויכו היום: group rows under project headers with a count and total, keeping only the category in each row's hint.
 - [ ] Empty and error actions: Home empty uses the tint button (177x44) and the Review error the filled primary (140x44); both use the tint style per DESIGN-RULES §2.8.
