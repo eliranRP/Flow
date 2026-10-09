@@ -998,7 +998,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
 - [x] Option A approved by the owner (#324): one quiet card on the review empty state, Settings → התראות with three switches (תנועה חדשה, off by default; תזכורת ערב; סיכום שבועי, ראשון בבוקר).
 - [ ] Server (dev lane 2): `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs` (null leaves a switch), `answer_push_prompt`, and the send function. The worker reads a `{ title, body, url, tag }` JSON payload. The VAPID public key is `VITE_VAPID_PUBLIC_KEY` at build time.
-- [ ] App (UI lane 4, PR #TBD): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`. It merges after the server PR.
+- [ ] App (UI lane 4, PR #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`. It merges after the server PR.
 - [ ] Setup step 5 offers it once it ships.
 
 <a id="flow-503"></a>
