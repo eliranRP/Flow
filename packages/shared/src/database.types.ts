@@ -1457,7 +1457,7 @@ isOneToOne: false
 { Args: { "p_company": string }; Returns: undefined
                            },
 "store_mcp_credential":
-{ Args: { "p_expires_at": string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
+{ Args: { "p_expires_at": string,"p_hint"?: string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
                            },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json

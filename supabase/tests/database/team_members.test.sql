@@ -15,6 +15,13 @@ begin
 end
 $users$;
 
+-- Invitees sign in with Google with the invited address (decision 0167).
+insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+select u.id::text, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
+  'google', now(), now(), now()
+from auth.users u
+where u.email in ('TM-Editor@example.com', 'tm-viewer@example.com', 'tm-other@example.com', 'tm-unconfirmed@example.com');
+
 update auth.users set email_confirmed_at = null where email = 'tm-unconfirmed@example.com';
 update auth.users set raw_user_meta_data = raw_user_meta_data || '{"full_name": "Dana Example"}'::jsonb
 where email = 'tm-owner@example.com';

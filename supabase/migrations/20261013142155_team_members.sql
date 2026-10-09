@@ -387,12 +387,21 @@ begin
   end if;
   execute replace(def, 'where c.owner_id = (select auth.uid())', 'where c.id = private.owner_company_id()');
 
-  -- The MCP credential is for the owner's open company.
+  -- The MCP credential is for the company the app shows when the key is made (its x-flow-company
+  -- header, passed by flow-mcp's mint as p_hint), else the one the owner last switched to; never
+  -- a company they only edit or view.
   def := pg_get_functiondef('public.store_mcp_credential(uuid,text,text[],timestamp with time zone,text)'::regprocedure);
-  if pg_temp.anchor_count(def, 'where owner_id = p_user;') <> 1 then
+  if pg_temp.anchor_count(def, 'where owner_id = p_user;') <> 1
+    or pg_temp.anchor_count(def, 'p_pepper_kid text)') <> 1
+  then
     raise exception 'store_mcp_credential is not the expected definition';
   end if;
-  execute replace(def, 'where owner_id = p_user;', 'where id = public.owner_company_for(p_user, null);');
+  def := replace(def, 'where owner_id = p_user;', 'where id = public.owner_company_for(p_user, p_hint);');
+  def := replace(def, 'p_pepper_kid text)', 'p_pepper_kid text, p_hint uuid DEFAULT NULL::uuid)');
+  drop function public.store_mcp_credential(uuid, text, text[], timestamptz, text);
+  execute def;
+  revoke all on function public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid) from public, anon, authenticated;
+  grant execute on function public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid) to service_role;
 end
 $owner_only$;
 
@@ -465,7 +474,9 @@ $$;
 
 revoke all on function private.user_display_name(uuid) from public, anon, authenticated;
 
--- The signed-in user's confirmed email, lower case.
+-- The signed-in user's confirmed email, lower case, when their Google sign-in has that same
+-- verified address. auth.users.email alone is not proof: a user can change it (updateUser), and
+-- whether that waits for the new address to confirm is a project setting this repo does not pin.
 create or replace function private.my_confirmed_email()
 returns text
 language sql
@@ -477,7 +488,14 @@ as $$
   from auth.users u
   where u.id = (select auth.uid())
     and u.email_confirmed_at is not null
-    and u.email is not null;
+    and u.email is not null
+    and exists (
+      select 1 from auth.identities i
+      where i.user_id = u.id
+        and i.provider = 'google'
+        and i.email = lower(u.email)
+        and i.identity_data->>'email_verified' = 'true'
+    );
 $$;
 
 revoke all on function private.my_confirmed_email() from public, anon, authenticated;
@@ -922,6 +940,7 @@ $$;
 revoke all on function public.decline_invite(uuid) from public, anon;
 grant execute on function public.decline_invite(uuid) to authenticated, service_role;
 
+-- The toast's ביטול after a decline, within 10 minutes of it.
 create or replace function public.reopen_invite(p_invite_id uuid)
 returns jsonb
 language plpgsql
@@ -932,7 +951,11 @@ declare
   inv public.company_invites%rowtype;
 begin
   inv := private.my_invite_for_update(p_invite_id);
-  if inv.status <> 'declined' or inv.decided_by is distinct from auth.uid() then
+  -- Only as the toast's undo: the owner neither sees nor can cancel a declined invite, so a decline
+  -- taken back later would let the invitee join long after the owner saw it declined.
+  if inv.status <> 'declined' or inv.decided_by is distinct from auth.uid()
+    or inv.decided_at < now() - interval '10 minutes'
+  then
     raise exception 'invite is not declined';
   end if;
   if exists (
@@ -1140,6 +1163,25 @@ $$;
 
 revoke all on function public.mcp_remove_member(text, uuid) from public, anon;
 grant execute on function public.mcp_remove_member(text, uuid) to authenticated, service_role;
+
+-- The team refusals MCP names (docs/mcp/TOOLS.md). Anything else stays "The write was refused.".
+do $refused$
+declare
+  def text;
+  anchor text := $a$'no linked loan is open on this date'$a$;
+begin
+  def := pg_get_functiondef('private.mcp_refused(text)'::regprocedure);
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'mcp_refused is not the expected definition';
+  end if;
+  execute replace(def, anchor, anchor || $n$,
+        -- FLOW-601 (decision 0167).
+        'already a member',
+        'invalid email',
+        'too many invites',
+        'member not found'$n$);
+end
+$refused$;
 
 -- The three undo kinds on mcp_writes and mcp_undo. p_id is the invite id, or the member's user id.
 do $undo$

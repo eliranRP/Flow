@@ -21,6 +21,11 @@ Deno.test("list_team passes the team through and refuses a failed read or a writ
   assertEquals(calls, [{ name: "list_team", body: {} }]);
   const failed = await callTool("list_team", {}, ["read"], () => Promise.resolve({ status: 400, json: null }));
   assertEquals(failed.isError, true);
+  // Each guard on its own: an error status with a body, an empty body, and a list.
+  for (const answer of [{ status: 400, json: { message: "no company" } }, { status: 200, json: null }, { status: 200, json: [team] }]) {
+    const refused = await callTool("list_team", {}, ["read"], () => Promise.resolve(answer));
+    assertEquals(refused.isError, true);
+  }
   const extra = await callTool("list_team", { company_id: PROJECT }, ["read"], rpc);
   assertEquals(extra.isError, true);
   const writeOnly = await callTool("list_team", {}, ["write"], rpc);
