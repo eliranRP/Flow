@@ -17,7 +17,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | Free: FLOW-810 clip check follow-ups in review (the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
-| UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
+| UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
@@ -86,7 +86,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
-| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | claimed (UI lane 2, handed over from UI lane 4, 2026-10-09; replaces closed draft #279) |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | done (#291, UI lane 2) |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | done (#253, #248) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
@@ -535,15 +535,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-314"></a>
 ### FLOW-314 · Swipe between transactions on the card
-- **Type:** SMALL UI · **Status:** claimed (handed over from UI lane 4, 2026-10-09, flow314; replaces closed draft #279; the follow-ups below stay open) · **Depends on:** FLOW-303 (#100)
+- **Type:** SMALL UI · **Status:** done (#291, UI lane 2, built by UI lane 4; the follow-ups below stay open) · **Depends on:** FLOW-303 (#100)
 - **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
 - **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.
 - Follow-ups, open (not in this PR):
   - [ ] From #100's design session: add the project's waiting list (card rows only) to the walk.
   - [ ] ˅ at the last loaded category row loads the next page.
   - [ ] From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
-  - [ ] From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
-  - [ ] From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
+  - [x] (#296) From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
+  - [x] (#296) From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
@@ -762,7 +762,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
 - [x] C9 The line's own project appears twice in a part's project picker. (C1, C3a–C3c, C4, C5, C7, C9: #261)
 - [x] (UI lane 2, #278: 24px back on short phones, a square tile and a closer hairline; the card ends 16px above the bar) C13 (from #231 design review) A Jev card at 375x667 no longer fits above the action bar with the slim banner on: main already misses by about 10px with a reason line, and the filled line ("✦ מולא ע״י Jev" + בטל, one line since #245) adds about 19px; a quiet or loud flag adds more. Add a Screens/Routes story at 375x667 with a Jev card (filled line, a quiet flag, the slim banner on), which needs Jev suggestions and fills in the sample queue, then win back about 20–30px so it fits.
-- [ ] C14 (follow-up from #278) At 375x667 a card with a loud flag (54px warning row) still runs about 19px under the action bar; at 320x667 the slim banner wraps and the quiet-flag card runs about 8px under. Make the loud flag one line on short phones, or accept the scroll.
+- [x] (UI lane 2, #296: the loud flag is one 44px line on short phones and the slim banner 8px shorter; 375x667 loud ends 7px above the bar, 320x667 quiet 8px above. The loud card at 320x667 with the wrapped banner still runs 10px under and scrolls, accepted) C14 (follow-up from #278) At 375x667 a card with a loud flag (54px warning row) still runs about 19px under the action bar; at 320x667 the slim banner wraps and the quiet-flag card runs about 8px under. Make the loud flag one line on short phones, or accept the scroll.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
 <a id="flow-334"></a>
