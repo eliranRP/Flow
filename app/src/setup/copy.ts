@@ -1,3 +1,5 @@
+import type { StarterSetKey } from "@flow/shared";
+
 /** Hebrew for the first-run setup. Strings match the design copy. Notifications are not a step. */
 
 export const SETUP_TOTAL = 5;
@@ -33,6 +35,17 @@ export const DEFAULT_CATEGORY_NAMES = [
   "הכנסה מלקוחות",
   "הכנסה אחרת",
 ] as const;
+
+/** FLOW-406: the starter pick right after the company step (mockup "setup"). */
+export const STARTER_TITLE = "קטגוריות לפתיחה";
+export const STARTER_LINE = "אפשר לשנות אחר כך.";
+
+/** A few of each set's top-level names, from private.starter_categories (FLOW-406 server 3). */
+export const STARTER_HINT: Record<StarterSetKey, string> = {
+  rentals: "אחזקה ותיקונים, חשבונות, ניהול נכס",
+  renovation: "חומרים, קבלני משנה, היתרים ואגרות",
+  general: "חומרים, עבודה, ציוד והשכרה",
+};
 
 export const STEP_TITLE: Record<number, string> = {
   0: "פרטי העסק",

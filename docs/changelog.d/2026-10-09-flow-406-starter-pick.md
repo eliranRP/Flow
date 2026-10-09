@@ -1,1 +1,1 @@
-Setup: right after the company is created, a "קטגוריות לפתיחה" screen picks a starter set of categories (השכרת נכסים, שיפוצים ופליפים or כללי) (FLOW-406).
+Setup: right after the company is created, "קטגוריות לפתיחה" picks a starter set of categories (השכרת נכסים, שיפוצים ופליפים or כללי, picked on arrival). If the books already have lines, setup moves on and keeps the default list (FLOW-406).

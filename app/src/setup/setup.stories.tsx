@@ -6,7 +6,7 @@ import { longHebrew } from "../ui/story-support";
 import { SetupCard } from "./card";
 import { JEV_HINT } from "./copy";
 import { SetupStep } from "./shell";
-import { StepBusiness, StepInstall, StepSumit } from "./steps";
+import { StepBusiness, StepInstall, StepStarter, StepSumit } from "./steps";
 import { StoryRoute } from "../ui/story-route";
 import { NO_PREFS } from "../push";
 
@@ -68,6 +68,25 @@ export const BusinessNameErrorDark: Story = {
 export const BusinessNameError320: Story = {
   ...businessNameError,
   name: "Business step, name error, 320",
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
+};
+
+/** FLOW-406: the starter pick right after the company step, כללי picked on arrival. */
+const starterStep = {
+  args: SmartTag.args,
+  parameters: { flowRouter: false },
+  render: () => (
+    <StoryRoute entry="/setup/0">
+      <StepStarter onDone={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const StarterStep: Story = { ...starterStep, name: "Starter categories" };
+export const StarterStepDark: Story = { ...starterStep, name: "Starter categories, dark", globals: { theme: "dark" } };
+export const StarterStep320: Story = {
+  ...starterStep,
+  name: "Starter categories, 320",
   parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };
 
