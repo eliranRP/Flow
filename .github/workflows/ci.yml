@@ -176,6 +176,11 @@ jobs:
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
+      # FLOW-804: Home ready within 2 s on a throttled mid-range phone, on the hosted build.
+      - name: Home speed test
+        run: |
+          pnpm build
+          pnpm --filter @flow/app test:perf
       - run: pnpm test:storybook
       - run: pnpm build-storybook
       - name: Storybook smoke without the every-story test

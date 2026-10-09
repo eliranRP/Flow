@@ -341,15 +341,11 @@ export function useMercuryStatusQuery(active = true) {
   });
 }
 
-/** The project's own period (decision 0129): every P&L field, the categories and the lines follow it. */
-export function useProjectQuery(projectId: string, period: PeriodChoice | null = null) {
-  const preview = useHomePreview();
+/** The read behind the project page. Shared by the page and the prefetch (FLOW-804). */
+export function projectQueryOptions(preview: HomePreview, projectId: string, period: PeriodChoice | null) {
   const range = period ? rangeOf(period) : null;
-  return useQuery({
-    queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null],
-    enabled: preview === "off" && projectId !== "",
-    // A new period keeps the screen and its period bar; the figures follow the new read.
-    placeholderData: keepPreviousData,
+  return {
+    queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null] as const,
     queryFn: async (): Promise<ProjectDetail> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -358,6 +354,19 @@ export function useProjectQuery(projectId: string, period: PeriodChoice | null =
       if (error) throw error;
       return (await loadReadSchemas()).projectDetailSchema.parse(data);
     },
+  };
+}
+
+/** The project's own period (decision 0129): every P&L field, the categories and the lines follow it. */
+export function useProjectQuery(projectId: string, period: PeriodChoice | null = null) {
+  const preview = useHomePreview();
+  return useQuery({
+    ...projectQueryOptions(preview, projectId, period),
+    enabled: preview === "off" && projectId !== "",
+    // A read from the last seconds (the prefetch on the row's touch) is not read again (FLOW-804).
+    staleTime: 10_000,
+    // A new period keeps the screen and its period bar; the figures follow the new read.
+    placeholderData: keepPreviousData,
   });
 }
 
