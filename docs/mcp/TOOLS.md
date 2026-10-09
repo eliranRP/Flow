@@ -796,7 +796,7 @@ Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_
 
 ## Team · FLOW-601
 
-A company has an owner and members, each an editor or a viewer ([0166](../decisions/0166-team-members.md)). An editor's token could do every bookkeeping write here; the team, the company's name and currency, connectors and Jev settings stay the owner's. A token is for the owner's company it was made in.
+A company has an owner and members, each an editor or a viewer ([0167](../decisions/0167-team-members.md)). An editor's token could do every bookkeeping write here; the team, the company's name and currency, connectors and Jev settings stay the owner's. A token is for the owner's company it was made in.
 
 ### list_team
 

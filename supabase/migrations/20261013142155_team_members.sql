@@ -1,5 +1,5 @@
 -- FLOW-601 (option A, the owner's pick 2026-10-09): team members, invites, and several companies
--- per user. Decision 0166.
+-- per user. Decision 0167.
 -- 1. companies.owner_id is no longer unique: a user can own several companies.
 -- 2. company_members: an editor or a viewer of a company. The owner stays companies.owner_id and
 --    is never a member row.

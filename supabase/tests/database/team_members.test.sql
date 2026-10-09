@@ -1,4 +1,4 @@
--- FLOW-601 (decision 0166). Team members, invites, several companies per user, and which company
+-- FLOW-601 (decision 0167). Team members, invites, several companies per user, and which company
 -- a request opens. Invented names and @example.com emails only.
 
 begin;
