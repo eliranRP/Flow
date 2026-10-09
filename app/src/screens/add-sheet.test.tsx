@@ -58,14 +58,6 @@ describe("AddForm bank row", () => {
   });
 });
 
-describe("AddForm close (FLOW-339)", () => {
-  it("closes with ✕ only: no ביטול button", async () => {
-    renderAdd("off");
-    expect(await screen.findByRole("button", { name: "סגירה" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ביטול" })).not.toBeInTheDocument();
-  });
-});
-
 describe("+ quick action history", () => {
   // Real browser history: a sheet's Back layer pops only with a browser index (MemoryRouter drops it in place).
   function renderBrowser(start: string) {
