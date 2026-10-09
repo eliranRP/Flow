@@ -100,6 +100,8 @@ export function LineSplitEditor({
   const [confirmClear, setConfirmClear] = useState(false);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const [lastEdited, setLastEdited] = useState<string | null>(null);
+  /** FLOW-333 C3b: a new part takes the unit of the last part typed. */
+  const [typedUnit, setTypedUnit] = useState<PartDraft["unit"]>(() => initial.parts.at(-1)?.unit ?? "amount");
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [serverError, setServerError] = useState<{ reason: LineSplitRefusal; key: string | null } | null>(
     initialError ? { reason: initialError, key: null } : null,
@@ -287,6 +289,9 @@ export function LineSplitEditor({
     .filter((category) => category.hidden !== true || category.id === line.categoryId)
     .map((category) => ({ id: category.id, name: category.name }));
   const reversals: ChangeChoice[] = target?.kind === "rest" ? [] : reversalChoices(categories, line.direction, line.categoryId);
+  // FLOW-333 C9: outside a reversal part, the top row already stands for the line's project.
+  const pickerProjects = pickerReversal || line.projectId == null ? projects : projects.filter((project) => project.id !== line.projectId);
+  const pickerProjectId = !pickerReversal && pickerProject === line.projectId ? "" : pickerProject;
 
   function openPicker(next: PickTarget, start: "category" | "project", opener: HTMLElement | null) {
     if (busy || blocked) return;
@@ -298,7 +303,7 @@ export function LineSplitEditor({
   function pickCategory(id: string) {
     if (target?.kind === "new") {
       const key = newPartKey();
-      setParts((list) => [...list, { key, categoryId: id, projectId: null, unit: "amount", value: "" }]);
+      setParts((list) => [...list, { key, categoryId: id, projectId: null, unit: typedUnit, value: "" }]);
       setLastEdited(key);
       setTarget({ kind: "part", key });
       return;
@@ -308,6 +313,16 @@ export function LineSplitEditor({
       return;
     }
     if (target?.kind === "part") update(target.key, { categoryId: id });
+  }
+
+  /** FLOW-333 C3a: a part's picker hands focus to its value field, so the next tap types. */
+  function closePicker() {
+    if (target?.kind === "part") {
+      const part = parts.find((item) => item.key === target.key);
+      const field = part ? document.getElementById(`lsplit-${part.unit === "percent" ? "pct" : "amt"}-${part.key}`) : null;
+      if (field) pickerOpener.current = field;
+    }
+    setTarget(null);
   }
 
   function pickProject(id: string) {
@@ -328,7 +343,9 @@ export function LineSplitEditor({
     if (formIssue != null) return localIssueCopy(formIssue, { currency, overMinor: check.overMinor });
     return null;
   })();
-  const showHold = holdText != null && (warned || (dirty && formIssue !== "incomplete" && formIssue !== "too few parts"));
+  // FLOW-333 C5: only after the first ✕; the part's own line then drops the same sentence.
+  const showHold = holdText != null && warned;
+  const holdIsOver = showHold && (reason == null || LINE_SPLIT_PLACE[reason] === "banner") && check.overMinor > 0n;
   const bannerReason = reason != null && LINE_SPLIT_PLACE[reason] === "banner" ? reason
     : line.amountNet === 0n ? "line amount is zero"
       : line.loanSplit ? "line has a loan split"
@@ -398,7 +415,7 @@ export function LineSplitEditor({
               const amount = part.unit === "amount" ? amountOf(part.value) : null;
               const cents = resolved?.parts[part.key];
               const fieldError = issue === "percent over" ? localIssueCopy("percent over") : undefined;
-              const over = check.overMinor > 0n && (lastEdited === part.key || (lastEdited == null && index === parts.length - 1));
+              const over = check.overMinor > 0n && !holdIsOver && (lastEdited === part.key || (lastEdited == null && index === parts.length - 1));
               const messageId = `lsplit-msg-${part.key}`;
               const message = issue === "same category and project twice"
                 ? lineSplitCopy(issue)
@@ -429,7 +446,7 @@ export function LineSplitEditor({
                       <CloseIcon size={18} />
                     </IconButton>
                   </div>
-                  <div className="ui-lsplit-end">
+                  <div className="ui-lsplit-end ui-lsplit-end-entry">
                     <div className="ui-lsplit-entry">
                       <SegmentedControl
                         label={`יחידה, ${name}`}
@@ -446,6 +463,7 @@ export function LineSplitEditor({
                             ? (cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "")
                             : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
                           update(part.key, { unit, value });
+                          setTypedUnit(unit);
                         }}
                       />
                       {part.unit === "percent" ? (
@@ -459,7 +477,10 @@ export function LineSplitEditor({
                           error={fieldError}
                           describedBy={message ? messageId : undefined}
                           enterKeyHint={index === parts.length - 1 ? "done" : "next"}
-                          onValueChange={(value) => { update(part.key, { value }); }}
+                          onValueChange={(value) => {
+                            update(part.key, { value });
+                            setTypedUnit(part.unit);
+                          }}
                         />
                       ) : (
                         <MoneyField
@@ -471,7 +492,10 @@ export function LineSplitEditor({
                           disabled={busy || blocked}
                           describedBy={message ? messageId : undefined}
                           enterKeyHint={index === parts.length - 1 ? "done" : "next"}
-                          onValueChange={(value) => { update(part.key, { value }); }}
+                          onValueChange={(value) => {
+                            update(part.key, { value });
+                            setTypedUnit(part.unit);
+                          }}
                         />
                       )}
                     </div>
@@ -517,17 +541,6 @@ export function LineSplitEditor({
             {/* Outside the button, whose label would hide it; tied back by aria-describedby. */}
             {restMessage != null ? <p id={restMessageId} className="ui-lsplit-msg ui-lsplit-rest-msg" role="status">{restMessage}</p> : null}
             {parts.length === 0 ? <p className="t-hint ui-lsplit-empty">הוסיפו חלק כדי לפצל. מה שלא פוצל נשאר בשורה.</p> : null}
-            <p className="ui-lsplit-add">
-              <TextLink
-                buttonRef={addRef}
-                chevron={false}
-                icon={<PlusIcon size={18} />}
-                disabled={busy || blocked || parts.length >= LINE_SPLIT_MAX_PARTS}
-                onClick={() => { openPicker({ kind: "new" }, "category", null); }}
-              >
-                הוספת חלק
-              </TextLink>
-            </p>
           </div>
         </fieldset>
         {/* Outside the fieldset: the server clears a line it would not split (a loan split, an open review). */}
@@ -538,21 +551,34 @@ export function LineSplitEditor({
         ) : null}
         <div className="ui-split-cta ui-lsplit-foot" aria-busy={busy || undefined}>
           <div className="ui-lsplit-totals">
-            <span className="ui-lsplit-total">
-              <span className="t-hint">פוצלו</span>
-              <span className="t-body">
-                {busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
-                {check.overMinor > 0n
-                  ? <Amount minor={lineMinor + check.overMinor} currency={currency} />
-                  : splitMinor != null ? <Amount minor={splitMinor} currency={currency} /> : parts.length === 0 ? <Amount minor={0n} currency={currency} /> : "…"}
-              </span>
+            <span className="ui-lsplit-add">
+              <TextLink
+                buttonRef={addRef}
+                chevron={false}
+                icon={<PlusIcon size={18} />}
+                disabled={busy || blocked || parts.length >= LINE_SPLIT_MAX_PARTS}
+                onClick={() => { openPicker({ kind: "new" }, "category", null); }}
+              >
+                הוספת חלק
+              </TextLink>
             </span>
-            <span className="ui-lsplit-total ui-lsplit-total-end">
-              <span className="t-hint">{check.overMinor > 0n ? "עוברים את השורה" : "נשאר לשורה"}</span>
-              <span className={check.overMinor > 0n ? "t-body ui-split-bad" : "t-body"}>
-                {check.overMinor > 0n
-                  ? <Amount minor={-check.overMinor} currency={currency} />
-                  : restMinor != null ? <Amount minor={restMinor} currency={currency} /> : parts.length === 0 ? <Amount minor={lineMinor} currency={currency} /> : "…"}
+            <span className="ui-lsplit-sums">
+              <span className="ui-lsplit-total">
+                <span className="t-hint">פוצלו</span>
+                <span className="t-body">
+                  {busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
+                  {check.overMinor > 0n
+                    ? <Amount minor={lineMinor + check.overMinor} currency={currency} />
+                    : splitMinor != null ? <Amount minor={splitMinor} currency={currency} /> : parts.length === 0 ? <Amount minor={0n} currency={currency} /> : "…"}
+                </span>
+              </span>
+              <span className="ui-lsplit-total ui-lsplit-total-end">
+                <span className="t-hint">{check.overMinor > 0n ? "עוברים את השורה" : "נשאר לשורה"}</span>
+                <span className={check.overMinor > 0n ? "t-body ui-split-bad" : "t-body"}>
+                  {check.overMinor > 0n
+                    ? <Amount minor={-check.overMinor} currency={currency} />
+                    : restMinor != null ? <Amount minor={restMinor} currency={currency} /> : parts.length === 0 ? <Amount minor={lineMinor} currency={currency} /> : "…"}
+                </span>
               </span>
             </span>
           </div>
@@ -562,16 +588,17 @@ export function LineSplitEditor({
       <ChangeAssignment
         host="overlay"
         open={target != null}
-        onOpenChange={(open) => { if (!open) setTarget(null); }}
+        onOpenChange={(open) => { if (!open) closePicker(); }}
         contained
         start={pickerStart}
         supplier={line.supplier}
         amount={money(lineMinor, currency)}
         direction={line.direction}
-        projects={projects}
+        projects={pickerProjects}
         categories={ownCategories}
         reversals={reversals}
-        projectId={pickerProject}
+        reversalsOpen={line.direction === "income"}
+        projectId={pickerProjectId}
         categoryId={pickerCategory}
         onProjectId={pickProject}
         onCategoryId={pickCategory}

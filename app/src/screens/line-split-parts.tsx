@@ -46,8 +46,11 @@ export function Amount({ minor, currency, className }: { minor: bigint; currency
   return <bdi className={className ? `ui-num ${className}` : "ui-num"} dir="ltr">{money(minor, currency)}</bdi>;
 }
 
+const PERCENT_SHOWN = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
+/** A share as shown: "25,720.16%". percentText stays bare, as it fills the % field. */
 export function Percent({ value }: { value: number }) {
-  return <bdi className="ui-num" dir="ltr">{`${percentText(value)}%`}</bdi>;
+  return <bdi className="ui-num" dir="ltr">{`${PERCENT_SHOWN.format(Number(percentText(value)))}%`}</bdi>;
 }
 
 export function partProjectLabel(projectName: string | null | undefined, lineProject: string | null): string {

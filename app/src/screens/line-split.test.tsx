@@ -126,14 +126,15 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ line: SAMPLE_REFUND_LINE });
     fireEvent.click(screen.getByRole("button", { name: "הוספת חלק" }));
     const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "הוצאה שהוחזרה" }));
+    // FLOW-333 C3c: on a refund line the reversal section starts open.
+    expect(within(sheet).getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
     const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
 
-  it("shows the over amount in the footer and on the part edited last", () => {
+  it("shows the over amount in the footer and on the part edited last, once (FLOW-333 C5)", async () => {
     showEditor({
       parts: [
         { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "70" },
@@ -141,10 +142,36 @@ describe("split by category editor (FLOW-325)", () => {
       ],
     });
     expect(screen.getByText("עוברים את השורה")).toBeInTheDocument();
-    // One sentence, under the part edited last and on the hold line.
-    expect(screen.getAllByText("החלקים עוברים את השורה ב־₪560. הקטינו חלק.")).toHaveLength(2);
+    // Before any ✕ the sentence sits under the part edited last, with no hold line.
+    const sentence = "החלקים עוברים את השורה ב־₪560. הקטינו חלק.";
+    expect(screen.getAllByText(sentence)).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "ביטול השינוי" })).toBeNull();
     expect(screen.queryByText(/גבוהים מהשורה/)).toBeNull();
     expect(restRow()).toHaveTextContent("לא נשאר");
+    // After the first ✕ it moves to the hold line, still once.
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toBeInTheDocument();
+    expect(screen.getAllByText(sentence)).toHaveLength(1);
+  });
+
+  it("reads a share past 1,000% with separators (FLOW-333 C1)", () => {
+    showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "1234567.89" }] });
+    expect(screen.getByText("25,720.16%")).toBeInTheDocument();
+  });
+
+  it("a picked part hands focus to its value field, in the unit last typed, and lists the line's project once (FLOW-333 C3a, C3b, C9)", async () => {
+    showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "" }] });
+    fireEvent.change(screen.getByLabelText("אחוז, חשמל"), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "הוספת חלק" }));
+    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(within(categorySheet).getByRole("radio", { name: "ביטוח" }));
+    const projectSheet = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
+    expect(within(projectSheet).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
+    fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
+    const field = screen.getByLabelText("אחוז, ביטוח");
+    await waitFor(() => { expect(field).toHaveFocus(); });
   });
 
   it("maps a server refusal to a banner and keeps the screen open", async () => {
