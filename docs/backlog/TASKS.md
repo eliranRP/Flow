@@ -119,7 +119,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
-| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | PLAN FIRST | plan-first (owner card) |
+| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -909,9 +909,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-348"></a>
 ### FLOW-348 · Jev switched on with no key
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
-- **What:** With Jev on and no key on the server, Connections shows the switch on and a muted "אין מפתח" (#329). Jev labels nothing, and the row doesn't say what to do or who can fix it. The key is a server setting, so the app can't take it. Proposal A (recommended): the switch locks off with one reason, "צריך מפתח Jev, פנו למנהל המערכת", as a switch decided by something else (§3.7). B: the switch stays on and the hint becomes a link that opens a short sheet saying what the key does and who sets it.
-- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+- **Type:** SMALL UI · **Status:** ready (owner picked option A, 2026-10-09) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** When the server holds no Jev key (`jev_key_status()` says `missing`), the "תיוג חכם (Jev)" switch on Connections locks off (the disabled switch look, not tappable) with one muted line under the title: "צריך מפתח Jev. פונים למנהל המערכת." No "אפשרויות" link while it is locked. A pending or failed key read keeps today's row, so it never locks on a guess. Replaces the "אין מפתח" hint from #329. Mockup: the project's mockups/plan-first/flow-348/a.png.
+- **Acceptance:** stories at 390, 320 and dark 320; a design log entry; design lead sign-off.
 
 <a id="flow-349"></a>
 ### FLOW-349 · One set of period choices everywhere
