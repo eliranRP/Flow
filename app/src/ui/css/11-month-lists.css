@@ -286,3 +286,10 @@ html:has(.ui-split) {
   --split-foot: calc(1px + var(--space-4) + var(--type-body-size) * var(--type-body-line) + var(--space-3) + var(--control-height) + var(--space-4) + var(--safe-bottom));
   scroll-padding-bottom: calc(var(--split-foot) + var(--space-2));
 }
+
+/* FLOW-339 option C: another currency's net under the month head, muted, on its own line. */
+.ui-month-more {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
