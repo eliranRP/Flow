@@ -8,7 +8,7 @@
 }
 
 /* FLOW-115: the amount and its currency are one field: the control sits --space-2 under the input. */
-.ui-loan-amount {
+.ui-loan-amount-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -36,8 +36,13 @@
   min-height: calc(var(--touch-min) + 28px);
 }
 
+/* A loan's balance in a row's meta slot: the list amount size, not the hint size the slot sets,
+   so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
 .ui-loan-amount {
   color: var(--color-text);
+  font-size: var(--type-amount-size);
+  line-height: var(--type-amount-line);
+  font-weight: var(--type-amount-weight);
   white-space: nowrap;
 }
 
