@@ -18,6 +18,9 @@ import { inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
 
 type Track = { x: number; y: number; at: number; axis: "x" | "y" | null };
 
+/** A click this soon after a drag is the drag's own, not a tap. */
+const CLICK_AFTER_DRAG_MS = 400;
+
 /** How far the row gives toward the end side: a quarter of the move, at most 32px. */
 const END_GIVE_PX = 32;
 
@@ -53,10 +56,13 @@ export function SwipeRemove({
   const row = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const track = useRef<Track | null>(null);
-  // A drag can end in a click on whatever the finger started on; that click is not a tap. The
-  // next touch clears the mark, so a drag that ended with no click never eats a later tap.
-  const dragged = useRef(false);
+  // A drag can end in a click on whatever the finger started on; that click is not a tap. Only a
+  // click right after the drag is dropped, so a later keyboard or mouse press always goes through.
+  const dragEnd = useRef<number | null>(null);
   const leaving = useRef<number | null>(null);
+  // The removal lands a moment after the release; a save that started meanwhile keeps the part.
+  const off = useRef(disabled);
+  off.current = disabled;
 
   useEffect(() => () => {
     if (leaving.current != null) window.clearTimeout(leaving.current);
@@ -78,7 +84,7 @@ export function SwipeRemove({
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
     if (track.current != null) place(null);
     track.current = null;
-    dragged.current = false;
+    dragEnd.current = null;
     if (disabled || leaving.current != null || event.touches.length !== 1) return;
     if ((window.visualViewport?.scale ?? 1) > 1.01) return;
     const touch = event.touches[0];
@@ -104,7 +110,6 @@ export function SwipeRemove({
         return;
       }
       if (start.axis == null) return;
-      dragged.current = true;
     }
     if (reducedMotion()) return;
     // Toward the end side there is nothing to reveal: the row only gives a little.
@@ -115,6 +120,7 @@ export function SwipeRemove({
   function onTouchEnd(event: TouchEvent<HTMLDivElement>) {
     const start = track.current;
     track.current = null;
+    if (start?.axis === "x") dragEnd.current = Date.now();
     if (start?.axis !== "x" || event.touches.length > 0) {
       place(null);
       return;
@@ -137,13 +143,19 @@ export function SwipeRemove({
     place(dx > 0 ? width : -width);
     leaving.current = window.setTimeout(() => {
       leaving.current = null;
+      if (off.current) {
+        frame.current?.removeAttribute("data-leaving");
+        place(null);
+        return;
+      }
       onRemove();
     }, 150);
   }
 
   function onClickCapture(event: MouseEvent<HTMLDivElement>) {
-    if (!dragged.current) return;
-    dragged.current = false;
+    const ended = dragEnd.current;
+    dragEnd.current = null;
+    if (ended == null || Date.now() - ended > CLICK_AFTER_DRAG_MS) return;
     event.preventDefault();
     event.stopPropagation();
   }

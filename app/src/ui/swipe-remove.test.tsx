@@ -142,7 +142,8 @@ describe("SwipeRemove", () => {
     const onPick = vi.fn();
     render(<Part onRemove={vi.fn()} onPick={onPick} />);
     const pick = screen.getByRole("button", { name: "חומרים" });
-    swipe(pick, { x: 100, y: 130 }, { x: 140, y: 131 });
+    // 20px decides the drag but is under a flick, so the row stays whatever the timing.
+    swipe(pick, { x: 100, y: 130 }, { x: 120, y: 131 });
     fireEvent.click(pick);
     expect(onPick).not.toHaveBeenCalled();
     fireEvent.touchStart(pick, { touches: [{ clientX: 100, clientY: 130 }] });
@@ -151,8 +152,32 @@ describe("SwipeRemove", () => {
     expect(onPick).toHaveBeenCalledTimes(1);
   });
 
+  it("lets a keyboard or mouse press through once the drag is past", () => {
+    setReducedMotion(false);
+    vi.useFakeTimers();
+    const onPick = vi.fn();
+    render(<Part onRemove={vi.fn()} onPick={onPick} />);
+    const pick = screen.getByRole("button", { name: "חומרים" });
+    swipe(pick, { x: 100, y: 130 }, { x: 120, y: 131 });
+    vi.advanceTimersByTime(1000);
+    fireEvent.click(pick);
+    expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the part when the editor turns busy before it slides out", () => {
+    setReducedMotion(false);
+    vi.useFakeTimers();
+    const onRemove = vi.fn();
+    const { rerender } = render(<Part onRemove={onRemove} />);
+    swipe(frame(), { x: 100, y: 130 }, { x: 260, y: 134 });
+    rerender(<Part onRemove={onRemove} disabled />);
+    vi.advanceTimersByTime(150);
+    expect(onRemove).not.toHaveBeenCalled();
+    expect(row().style.transform).toBe("");
+  });
+
   it("keeps the delete mark out of the accessibility tree", () => {
     render(<Part onRemove={vi.fn()} />);
-    expect(screen.queryByText("הסרה")?.closest("[aria-hidden='true']")).not.toBeNull();
+    expect(screen.getByText("הסרה").closest("[aria-hidden='true']")).not.toBeNull();
   });
 });
