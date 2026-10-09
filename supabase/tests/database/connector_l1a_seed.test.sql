@@ -20,8 +20,8 @@ select is(
     where company_id = (select id from public.companies where name = 'זרע')
       and excluded_from_pnl
   ),
-  3::bigint,
-  'a new company gets the three off-P&L categories'
+  4::bigint,
+  'a new company gets the four off-P&L categories (loan money too, FLOW-413)'
 );
 
 select is(
@@ -81,7 +81,7 @@ select is(
     where company_id = (select id from public.companies where name = 'זרע')
       and excluded_from_pnl
   ),
-  3::bigint,
+  4::bigint,
   'on conflict does not add a second copy'
 );
 

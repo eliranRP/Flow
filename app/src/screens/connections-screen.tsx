@@ -24,13 +24,13 @@ import { JEV_DEFAULT, JevSettings } from "./jev-settings";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { historyIndex, popSheetLayers, sheetStack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
-import { BankIcon, DocumentIcon, LogoutIcon, RefreshIcon } from "../ui/icons";
+import { BankIcon, DocumentIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
-import { List, ListRow } from "../ui/list-row";
+import { List } from "../ui/list-row";
 import { ConnectorRow } from "../ui/connector-row";
+import { ConnectorStatusSheet } from "../ui/connector-status-sheet";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { Sheet } from "../ui/sheet";
 import { TextLink } from "../ui/text-link";
 import { useBlockedPreview } from "./screen-shared";
 import { connectorWord, MERCURY_REFRESH_KEYS, onboardingFromSettings, sumitKind } from "./connections-status";
@@ -598,40 +598,25 @@ export function ConnectionsScreen({
         } : undefined}
         disconnectRef={sumitDisconnectRef}
       />
-      <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT" returnFocusRef={sumitRowRef}>
-        <div className="ui-stack">
-          <p>
-            מחובר
-            {sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
-            {syncPhrase != null ? <><br /><span className="ui-nowrap">{syncPhrase}</span></> : null}
-          </p>
-          {refreshHeld && rawError != null && rawError !== "sumit_auth" ? <p>הרענון נכשל</p> : null}
-          {!refreshHeld && rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}
-        </div>
-        <List>
-          <ListRow
-            variant="button"
-            title={sumitRefreshBusy ? "מרענן…" : "רענון עכשיו"}
-            hint={refreshHint}
-            icon={<RefreshIcon />}
-            chevron
-            clearHint={retry != null}
-            describeHint={refreshHint != null}
-            wrapHint
-            busy={sumitRefreshBusy}
-            disabled={refreshHeld}
-            onClick={() => {
-              if (holdWrites || refreshHeld || sumitRefreshBusy) return;
-              if (blocked()) return;
-              refresh.mutate();
-            }}
-          />
-        </List>
-        {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
-        <List className="ui-sheet-danger-group">
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
-        </List>
-      </Sheet>
+      <ConnectorStatusSheet
+        open={statusOpen}
+        onOpenChange={setStatusSheet}
+        title="SUMIT"
+        returnFocusRef={sumitRowRef}
+        detail={sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
+        syncPhrase={syncPhrase}
+        failed={rawError != null && rawError !== "sumit_auth"}
+        held={refreshHeld}
+        errorText={lastError}
+        refreshHint={refreshHint}
+        busy={sumitRefreshBusy}
+        onRefresh={() => {
+          if (holdWrites || blocked()) return;
+          refresh.mutate();
+        }}
+        onDisconnect={() => { if (holdWrites) return; setDisconnectSheet(true); }}
+        disconnectRef={sumitDisconnectRef}
+      />
       <ConfirmSheet
         open={disconnectOpen}
         onOpenChange={setDisconnectSheet}
@@ -675,39 +660,24 @@ export function ConnectionsScreen({
         } : undefined}
         disconnectRef={mercuryDisconnectRef}
       />
-      <Sheet open={mercuryStatusOpen} onOpenChange={setMercuryStatusSheet} title="Mercury" returnFocusRef={mercuryRowRef}>
-        <div className="ui-stack">
-          <p>
-            מחובר
-            {mercurySyncPhrase != null ? <><br /><span className="ui-nowrap">{mercurySyncPhrase}</span></> : null}
-          </p>
-          {mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" ? <p>הרענון נכשל</p> : null}
-          {!mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" && mercuryLastError ? <p>{mercuryLastError}</p> : null}
-        </div>
-        <List>
-          <ListRow
-            variant="button"
-            title={mercuryRefreshBusy ? "מרענן…" : "רענון עכשיו"}
-            hint={mercuryRefreshHint}
-            icon={<RefreshIcon />}
-            chevron
-            clearHint={mercuryRetry != null}
-            describeHint={mercuryRefreshHint != null}
-            wrapHint
-            busy={mercuryRefreshBusy}
-            disabled={mercuryRefreshHeld}
-            onClick={() => {
-              if (holdWrites || mercuryRefreshHeld || mercuryRefreshBusy) return;
-              if (blocked()) return;
-              mercuryRefresh.mutate();
-            }}
-          />
-        </List>
-        {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
-        <List className="ui-sheet-danger-group">
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={mercuryDisconnectRef} onClick={() => { if (holdWrites) return; setMercuryDisconnectSheet(true); }} />
-        </List>
-      </Sheet>
+      <ConnectorStatusSheet
+        open={mercuryStatusOpen}
+        onOpenChange={setMercuryStatusSheet}
+        title="Mercury"
+        returnFocusRef={mercuryRowRef}
+        syncPhrase={mercurySyncPhrase}
+        failed={mercuryRawError != null && mercuryRawError !== "auth"}
+        held={mercuryRefreshHeld}
+        errorText={mercuryLastError}
+        refreshHint={mercuryRefreshHint}
+        busy={mercuryRefreshBusy}
+        onRefresh={() => {
+          if (holdWrites || blocked()) return;
+          mercuryRefresh.mutate();
+        }}
+        onDisconnect={() => { if (holdWrites) return; setMercuryDisconnectSheet(true); }}
+        disconnectRef={mercuryDisconnectRef}
+      />
       <ConfirmSheet
         open={mercuryDisconnectOpen}
         onOpenChange={setMercuryDisconnectSheet}

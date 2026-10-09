@@ -127,6 +127,10 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
+| 79 | [FLOW-353](#flow-353) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI | ready |
+| 80 | [FLOW-354](#flow-354) | The default income category in the money terms word | PLAN FIRST | owner approved 2026-10-09 13:44Z (money terms glossary); built in #385 |
+| 81 | [FLOW-355](#flow-355) | A project row on Home's first screen at 375x667 | PLAN FIRST | owner picked "Both changes" (2026-10-09 18:53Z); UI lane 1 after the feature freeze |
+| 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST | owner picked "Hide" (2026-10-09 18:49Z); UI lane 4, with FLOW-115 |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -255,7 +259,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals
-- **Type:** PLAN FIRST · **Status:** plan-first (owner, 2026-10-09: the user chooses whether the תזרים counts by invoice date or by payment date; the MCP totals default to the same choice, so the app and the tools never disagree; needs a plan and 390px mockups for the owner's card) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** plan-first; the setting itself is in-progress with FLOW-413 (`companies.cash_basis`, `set_cash_basis`, #370; MCP defaults in FLOW-413's server PR 2) (owner, 2026-10-09: the user chooses whether the תזרים counts by invoice date or by payment date; the MCP totals default to the same choice, so the app and the tools never disagree; needs a plan and 390px mockups for the owner's card) · **Depends on:** —
 - **What:** The app shows the invoiced basis ([0060](../decisions/0060-library-review-calls.md)) while MCP `get_totals`, `list_projects` and `get_project` default to cash. The owner's answer (2026-10-09): the user chooses the basis, invoice date or payment date, and the MCP defaults follow the same choice, so the app and the tools never disagree. It changes behaviour for existing MCP clients. Also decide what to do with `get_home` (cash, only used at sign-in): align it or remove it.
 - **Acceptance:** plan and 390px mockups approved by the owner; then the basis choice, MCP defaults that follow it, tools that echo the basis, TOOLS.md updated.
 
@@ -363,7 +367,7 @@ Everything else follows by area, roughly in priority order inside each area.
   - [x] (UI lane 1, 2026-10-09) The match sheet says what one tap writes on each loan: "לפי הלוח · $x", "N תשלומים לפי הלוח · $x" when the line equals 2 to 12 unpaid rows to the cent (that tap writes them together), and demand loans with "ריבית צבורה $x · השאר לקרן". A loan that cannot take the line shows off with its reason (closed or paid off before the line's date, before a demand loan's start, a later demand payment attached, above the balance). The match already saves through `save_loan_split`.
   - [x] (UI lane 1, 2026-10-09) The split editor "חלוקת התשלום", opened from "חלוקה אחרת" under the match sheet: by the schedule over 1 to 12 installments with fees off the top (demand loans: the accrued interest), or the lender's exact parts; fees name their category and can keep it on the loan.
   - [ ] Open the same editor from "עריכת החלוקה" on a matched line.
-  - [ ] The kind field on the new-loan form (the kind is set on the loan page for now).
+  - [x] (UI lane 1, 2026-10-09, #382) The kind field on the new-loan form: "סוג" first, רגילה by default, picked in a view inside the sheet like פרויקט. Interest-only adds "חודשי ריבית בלבד" and names the payment after them; balloon adds "פריסה בחודשים" and the balloon line; demand drops the term, escrow and עוד, the date reads "תאריך התחלה", and it saves with no term or payment.
   - [ ] The locked line in Categories for a category a loan uses (categories-screen is in #259).
 
 <a id="flow-110"></a>
@@ -803,14 +807,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09, decision 0156: with Back and a kicker, the kicker is Back's label, cut at 16 characters) H2 (owner chose the labelled Back, 2026-10-08) Back is a lone 44x44 icon at the top start corner (y≈16–60), about 520px above the thumb, and the kicker under it ("הגדרות") repeats where it goes. Build: a labelled Back ("‹ הגדרות", "‹ שיפוץ הרצל 12", cut at about 16 characters) that replaces the kicker; about 3x the target and 22px back on every settings sub-screen. This changes the mockups 07/14 header rule, so the PR adds a decision record and a design log rule.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
 - [x] (#286) Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
-- [ ] (from #310 review) `.ui-btn-retry` (filled) is still used by `loan-detail-screen.tsx` and `loan-setup.tsx`; switch both to the tint retry and delete the class. (Backlog bug fixes, 2026-10-09: the loan page's retry is the tint button now; loan setup's and the class deletion wait for UI lane 4's #345, which owns `loan-setup.tsx`.) At 320 the first שויכו היום group head sits about 8px under the title; give it a little more air. The heads show cents inline while rows show them small.
+- [x] (from #310 review; UI lane 1, #382) `.ui-btn-retry` (filled) is gone: the loan page's retry was already the tint button, loan setup's is now too, and the class is deleted from css/01-base.css.
+- [ ] At 320 the first שויכו היום group head sits about 8px under the title; give it a little more air. The heads show cents inline while rows show them small.
 - [x] (Backlog bug fixes, 2026-10-09, #334, approved by the design lead (2026-10-09): the ✕ in every sheet head lends 8px above and below, so the head is 33.7px, the title's height, not 48px; on the change sheet the amount line now sits 4px under the title's box, not 11px) Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
 - [x] (#286) Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
 - [x] (#286) Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
 - [x] (UI lane 3, 2026-10-09: `margin-top: var(--space-5)` on the form) Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
 - [x] (UI lane 3, 2026-10-09: Back labelled הגדרות) Notifications has the same Back to Settings but no "הגדרות" kicker (`settings-screen.tsx` `NotificationsScreen`); H2's labelled Back covers it.
 - [x] (already done by FLOW-335 in #239: `.ui-band-hero-project` starts `--space-2` under the Back bar) Project band: 47px from Back to the title against 26px on other stacked headers (`.ui-band-hero` `padding-top`, `css/07-band-home.css`); `--space-2` when the band has a Back bar.
-- [ ] Home at 375x667: the first "פרויקטים מובילים" row shows only 22px above the tab bar; tighten the נכנס / יצא rows from a 76px to about a 52px pitch. Cycle 5: since the period bar (#199) no project row shows above the fold at all (the "פרויקטים" head sits at y≈640), so this also needs FLOW-335's band trims.
+- [x] Home at 375x667: the first "פרויקטים מובילים" row shows only 22px above the tab bar; tighten the נכנס / יצא rows from a 76px to about a 52px pitch. (Backlog bug fixes: `.ui-flow` gap is `--space-2`, so the rows sit on a 52px pitch; at 375x667 the waiting-review card now starts above the tab bar, and the "פרויקטים" head moves from y≈759 to 735.) Cycle 5: since the period bar (#199) no project row shows above the fold at all (the "פרויקטים" head sits at y≈640), so this also needs FLOW-335's band trims.
+- [ ] Home at 375x667: no project row shows above the tab bar (the "פרויקטים" head at y≈735 against the bar at 607, with the period bar, the change line and the waiting card above it). Bringing one up needs a band or layout call from the design lead, not spacing.
 - [x] (UI lane 3, 2026-10-09: `ScreenHeader` `below` slot; the subtitle and hint no longer repeat the period) Breakdown: the period chip moved to the top-left corner (Back took the start side), the hardest reach and a different corner than Home; put it under the title on the start side.
 - [x] (UI lane 3, 2026-10-09: the count waits for the last page; no lines, no figures) Project category lines: add the total and count to the subtitle ("שיפוץ הרצל 12 · ₪4 · תנועה אחת").
 - [x] (UI lane 3, 2026-10-09: the waiting row carries the inbox icon and Home's tint; on FLOW-340 C the ⋯ menu stays, and "סיום הפרויקט" / "החזרה לפעיל" is a row in it with a neutral confirm) Project detail: the "ממתינה לאישור" row inside "הוצאות לפי קטגוריה" looks like a category; give it the review icon and tint like Home's review row. Move "סיום פרויקט" from the unlabelled ⋯ (its only action) to a row at the bottom.
@@ -929,7 +935,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** done in part (UI lane 4, #345: the loans list at 320, loan setup שמירה, Search dock chips; UI lane 3, #359: the Categories move row; UI lane 2, #355: the שויכו היום heads; the rest stays ready) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
 - [x] (UI lane 3, 2026-10-09: the move row shows only when the category has a visible category of its kind to move to, the same list the picker offers) (med) Settings → Categories ⋯ with only one category on its side: the sheet still offers "העברה לקטגוריה אחרת", and the picker opens with the hide switch only, no targets and no reason; ✕ is the only exit. Hide the row when there is nowhere to move (§3.7, a sheet lists only actions that work today). Shots probe-categories-menu--se.png, probe-categories-move--se.png.
 - [x] (UI lane 2, #355: every head is the name, then the muted count and the totals under it; a one-line group shows its total) (med) שויכו היום by project: heads take three shapes. Only a group of 3+ shows its totals; a one-line group shows "תנועה אחת" with no total; "בלי פרויקט" puts its count on the name line. Every head: name, then the count in muted `meta`, then the totals (§3.7, FLOW-334 rule). Shot sb-routes--filed-today-by-project--full.png.
-- [ ] (low) Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
+- [x] (low; already done in #345, checked 2026-10-09 by Backlog bug fixes: all six rows of `Screens/Loans list` closed-open 320 are 73.6px, the names stay on one line and the meta line drops a part with its "·") Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
 - [ ] (low) Loan setup at 375x667: the page is 942px and שמירה sits at y≈890, so every save needs a scroll. Move it into an `ActionBar place="edge"` (§3.3, §3.7 FLOW-333). Shot sb-loan-setup--example--full.png.
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible; the refund row already reads "זיכוי ₪194.00", the word that §5 uses as its sign under יצא, as `breakdown.test.tsx` checks) (low) Breakdown category lines: cost rows have no minus, but a refund ("₪194.00") is green with no sign. Give it "+" (§5, no colour without a sign). Shot sb-breakdown--group-lines--se-light.png.
 - [x] (Backlog bug fixes, 2026-10-09: `formatRatePpm` drops every trailing zero, so "6%", "10.5%", "11.25%"; the rate field opens on "6") (low) Loan page rates keep trailing zeros ("6.00%", "10.50%"); show "6%", "10.5%" (§3.5). Shot sb-loan-page--interest-only-rates--full.png.
@@ -978,6 +984,35 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 1, with the FLOW-106 split editor PR) Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
 - [x] Kept-out rows fade at 50% opacity, which drops the "מחוץ לרווח" line to about 2.1:1 and the name to 3.4:1 in light mode. Fade the icon, name and amount to about 0.6 and keep the hint at full muted grey (about 5.8:1) (css/02-fields-sheets.css:197-199). Design lead's call within the owner's pick C; the rows still read as faded.
 - **Acceptance:** shots at 320 and 390, light and dark; design lead sign-off.
+
+<a id="flow-353"></a>
+### FLOW-353 · Phone polish after the October 9 night deploy (cycle 12)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 12 phone review of main at ac10960 (deploy f0b2d62 and later merges), 2026-10-09. Shots and findings in the project files under `reviews/ui-ux-cycle-12/`.
+- [ ] Split editor "חלוקת התשלום", exact parts: when the parts go over the line, the summary still reads "נשאר $0" and only a red line under it says they are over. At 375x667 and 320 that line sits half under the sheet's foot, above the disabled שמירה. Let the summary row carry the state ("חסרים $x" / "עודף $x"), as the line-split editor does (line-split-editor.tsx:585), and drop the separate line (screens/loan-split-editor.tsx:259-260, :281).
+- [ ] Setup step 5: on arrival the reminder card's כן / לא עכשיו sit under the pinned סיום, so only the question shows (48px of scroll at 390x844, 200px at 375x667). Put the card above the numbered install steps, or shorten the install demo (setup/steps.tsx:378).
+- [ ] Open invoices: the row hint breaks inside "לפני / 37 ימים" at 320, and the code can print "לפני 0 ימים" and "לפני 1 ימים". Pass the parts as `hintParts` so each stays whole, and say היום / אתמול / לפני יומיים (screens/unpaid-screen.tsx:31-35, :138-139).
+- [ ] Investment card at 320: "עודכן 01/10/2026" breaks between the word and the date. Keep it whole (ui/investment-card.tsx:315-319).
+- [ ] Docs: the implementation guide still requires "רווח נקי בספטמבר" (design/system/implementation-guide.md:458), and the design boards still say רווח נקי and לא שולמו (design/src/01-home-*, 12-unpaid-*, flow.py, ds.py, states.py). Move them to the §3.6 words so a reviewer doesn't flag the new copy.
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
+<a id="flow-354"></a>
+### FLOW-354 · The default income category in the money terms word
+- **Type:** PLAN FIRST · **Status:** owner approved the rename on the money terms glossary (2026-10-09 13:44Z); built in #385, renamed categories untouched · **Source:** cycle 12 (§3.6 check)
+- **What:** The default income category is still "תקבול מלקוח", while §3.6 says "הכנסה מלקוחות" (packages/shared/src/categories.ts:16, setup/copy.ts:33, demo/model.ts:186 and the first seed). New companies get the new word either way. The owner decides whether existing companies' category is renamed by a migration, or keeps the name they have.
+- **Acceptance:** owner's pick on a card.
+
+<a id="flow-355"></a>
+### FLOW-355 · A project row on Home's first screen at 375x667
+- **Type:** PLAN FIRST · **Status:** owner picked "Both changes" (2026-10-09 18:53Z): the band keeps the profit and one period pill (no period tabs, stepper or explanation line), and the review and invoices box moves under the first two projects. UI lane 1 builds it after the feature freeze; real-app shots go to the design lead, then the owner, before merge · **Source:** cycle 12, the FLOW-334 Home item
+- **What:** At 375x667 the band is 336px, the attention banners 175px, and the first project row starts 158px under the tab bar. Without banners, FLOW-334's tighter income and expenses pair plus a 24px head gap bring it to the bar's edge. #386 already moved the income and expenses pair to a 52px pitch. With banners, a row shows only if the band gets shorter or the banners move under the first project rows. Mockups at 390, one option per frame.
+- **Acceptance:** owner's pick on a card, then real-app shots.
+
+<a id="flow-138"></a>
+### FLOW-138 · A paid-off loan's leftover balance has no word
+- **Type:** PLAN FIRST · **Status:** owner picked "Hide" (2026-10-09 18:49Z): a paid-off loan shows only נפרעה and its date; a closed loan hides a zero balance. UI lane 4, with FLOW-115 · **Source:** cycle 12 (loans at 320)
+- **What:** A loan marked נפרעה still shows a balance ($1,240) beside the word, with nothing saying what the money is (screens/loan-list.tsx:59-61, :103). Either the balance is a leftover the books haven't closed and needs a word, or a paid-off loan should show no balance.
+- **Acceptance:** owner's pick on a card.
 
 <a id="flow-346"></a>
 ### FLOW-346 · Split between projects works like the split by categories, in exact amounts
@@ -1082,7 +1117,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-413"></a>
 ### FLOW-413 · Monthly cash-flow view (תזרים חודשי)
-- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); dev lane 2 writes the data plan with FLOW-103, then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
+- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); data plan written (dev lane 2, the project's plans/flow-413-cash-flow-plan.md); server PR 1 in-progress (dev lane 3, #370, decision [0168](../decisions/0168-cash-flow-view.md): the cash flags, the basis, `cash_months`, `cash_month_lines`, the setters), then server PR 2 (MCP), then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
 - **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out, and made it the main monthly view on Home. Today the profit view leaves the loan out, so rent alone looks positive.
   - Money out: the full monthly loan payment (principal, interest and escrow), holding costs and utilities, purchase and renovation money.
   - Money in: loan money received is left out by default, with a switch to count it.
@@ -1157,7 +1192,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (Backlog bug fixes, 2026-10-09: "N ממתינות", "1 ממתינה", no meter) The viewer's review count is a bare number and the visit meter still shows; show a count with "ממתינים" and no meter.
 - [x] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row. (Mercury too.)
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
-- [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
+- [x] (Backlog bug fixes, 2026-10-09: already done in #85; the disabled-on track is a 75% accent mix, css/10-settings-onboarding.css, and `toggle.test.tsx` keeps it off the off-track colours) The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [x] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: keep it.)
 - [x] (Backlog bug fixes, 2026-10-09: `viewer-role-flip.test.tsx` opens each sheet or form as the owner, turns the role to viewer or unknown, then submits: the new project form, SUMIT and Mercury connect, SUMIT refresh, ניתוק and its question, the category menu (מחוץ לרווח והפסד, נספרת בשיפוץ) and new category, and the + sheet, which leaves for Home. Each case has an owner control that writes, and removing any of these checks fails its case. The category screen had no check inside its sheets; its writes now check the role again. Jev and the overhead switch lock on the change, so a tap reaches no handler.) Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
@@ -1170,7 +1205,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The busy refresh row shows no spinner; keep the token field read-only while connect is busy. (The row already has `busy`; the key fields are read-only while connecting.)
 - [x] A reloaded tab gets no message when a run fails; show the stored last error in the sheet. (Already: the status sheet shows the stored `last_error`.)
 - [x] Refresh completion is announced only by the toast; add a status text update. (The sheet's "מחובר · עודכן …" line updates from `last_sync_at` after the refetch; the toast is `role="status"`.)
-- [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
+- [x] (Backlog bug fixes, 2026-10-09: `ui/connector-status-sheet.tsx` is the one status sheet for both, pixel-identical in Storybook) Share one Settings block for Mercury and SUMIT.
+- [ ] The Mercury status schema (`mercuryStatusSchema`, packages/shared/src/dashboard.ts) duplicates the DB view's row type; derive it or check it against `database.types.ts`. (Not in that PR: both files are claimed by open PRs.)
 - [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
 - [x] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`). (10 minutes: an edge function stops at 400 seconds at most, so no live run outlives it. `CLAIM_MS`, the status view, `sumit_status` and both claim overloads, `20261013020100_sync_claim_window.sql`.)
 - [x] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320. (The sync time now has its own line in the SUMIT and Mercury sheets, so no line starts with "·"; checked at 320. The retry time shows under רענון עכשיו while held; the last use and the sync time share the today / yesterday / D.M rules.)

@@ -1,0 +1,1 @@
+- FLOW-334: on Home, the הכנסות and הוצאות rows sit closer together, on a 52px pitch instead of 76px. FLOW-347: the 320 loans list item is closed, since #345 already fixed it.
