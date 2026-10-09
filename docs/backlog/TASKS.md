@@ -15,14 +15,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
-| Dev lane 2 | FLOW-502 server PR 1: push subscriptions and per-user prefs, the send function with the evening reminder and its cron; the void-line insert count in `upsert_connector_lines`, PR #335 | FLOW-502 PR 2 (new-line and Sunday summary sends) |
+| Dev lane 2 | FLOW-502 server PR 2: the תנועה חדשה push after a sync and the סיכום שבועי push on Sunday morning, PR #343 (server PR 1 merged #335) | FLOW-406 data and MCP plan (docs), then FLOW-309 invoice and receipt pairing, server side |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-345 option D on the transaction card (PR #336: `txn-nav.tsx`, `ui/card-swipe.tsx`, `screens/transaction-screen.tsx`, `css/16-transaction.css` `.ui-txn-*` and `.ui-cswipe*` blocks); FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-505 B: "ייבוא מ" (מההתחלה or מתאריך) in both connect sheets (server merged #327), PR #332; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-347 Search and loans items (Search dock chips, loans list at 320, loan setup שמירה pinned) + FLOW-349, PR #345 one shared תקופה sheet (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 3 | FLOW-505 follow-up: "ייבוא מ" sent with the connect call to both connect functions; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-334 tint retry on the loan page | The FLOW-339 transaction VAT line and the FLOW-506 shared demo card, once #336 merges |
+| Backlog bug fixes | FLOW-339 VAT on the transaction amount's line | The FLOW-506 shared demo card |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -62,7 +62,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | MCP side done (#132 #151 #157 #162); screens in progress (PR #TBD) |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | MCP side done (#132 #151 #157 #162); screens in progress (PR #343) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | done (parts 1-4: #137, #143, #149, #160) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -341,7 +341,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** MCP side done (#132 #151 #157 #162); screens in progress (PR #TBD, layout B, owner's pick 2026-10-09) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
+- **Type:** PLAN FIRST · **Status:** MCP side done (#132 #151 #157 #162); screens in progress (PR #343, layout B, owner's pick 2026-10-09) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
 - **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
   1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.
@@ -349,7 +349,7 @@ Everything else follows by area, roughly in priority order inside each area.
   3. (c) A fourth part `fees`; `attach_loan_payment` takes `installments` (1 to 12) or exact `parts` that add up to the line.
   4. (a) `loans.kind` (`amortizing`, `interest_only`, `balloon`, `demand`), a `loan_rates` table and `set_loan_rate`. Demand interest is daily on actual/365; rates are entered by hand. Loan draws are out of scope.
 - **Acceptance:** plan approved, then one PR per item with schedule tests at the boundaries.
-- [ ] Screens (the project's plans/flow-106-loan-screens.md, layout B; PR #TBD):
+- [ ] Screens (the project's plans/flow-106-loan-screens.md, layout B; PR #343):
   - [x] Copy for every loan refusal (`loan-copy.ts`, checked against the migrations).
   - [x] The loan page `/settings/loans/:id`: balance and status, סוג, ריבית and שינויי ריבית, פרויקט (moved from the list), מצב with the close date from the last payment, קטגוריות לחלקים.
   - [x] The list: open loans, then paid-off and closed under a collapsed "נסגרו (N)"; a row opens the loan page; the new-loan toast has פתיחה.
@@ -359,12 +359,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-110"></a>
 ### FLOW-110 · Loans list and detail
-- **Type:** PLAN FIRST · **Status:** server done (#197, owner chose "unmatch with undo", 2026-10-08); screens in progress (PR #TBD, with the FLOW-106 screens) · **Depends on:** FLOW-501 (where loans live)
+- **Type:** PLAN FIRST · **Status:** server done (#197, owner chose "unmatch with undo", 2026-10-08); screens in progress (PR #343, with the FLOW-106 screens) · **Depends on:** FLOW-501 (where loans live)
 - **What:** (1) Reorder loans (persisted order; dropped by the owner, 2026-10-08). (2) Edit and delete on each loan, with a confirm for delete. (3) A loan detail page with its attached payments (principal, interest, escrow, fees) linked to the bank rows. MCP: `reorder_loan`, `delete_loan` (update and list exist).
 - **Acceptance:** mockup approved; MCP tools with undo.
 - [x] Server and MCP: `delete_loan` with `restore_loan` and MCP undo `loan_delete` (payments unmatch, the owner's choice), `reorder_loans` with MCP undo `loan_order`, `list_loans` in the saved order (migration `20261011030000`, decision [0142](../decisions/0142-loan-delete-and-order.md)). Plan: the project's plans/flow-110-loans-server.md.
 - Owner, 2026-10-08: loan reordering is dropped. Loans stay alphabetical; delete with undo and the payments section stay. The server's `reorder_loans` stays unused by the app.
-- [x] Screens (PR #TBD): delete on the loan page with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section (`mcp_loan_payments`: the last 3, then כל התשלומים). No reorder (dropped above); `sort_order` and `reorder_loans` stay for MCP.
+- [x] Screens (PR #343): delete on the loan page with a confirm that names how many payments go back and a toast with ביטול (`restore_loan`), and the payments section (`mcp_loan_payments`: the last 3, then כל התשלומים). No reorder (dropped above); `sort_order` and `reorder_loans` stay for MCP.
 
 <a id="flow-114"></a>
 ### FLOW-114 · Loans server follow-ups
@@ -660,13 +660,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-323"></a>
 ### FLOW-323 · Search and all transactions
-- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD), UI lane 1 (server done in #196, owner chose "server now", 2026-10-08; owner approved mockup A, 2026-10-08) · **Depends on:** FLOW-302
+- **Type:** PLAN FIRST · **Status:** in progress (PR #343), UI lane 1 (server done in #196, owner chose "server now", 2026-10-08; owner approved mockup A, 2026-10-08) · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
 - **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
 - **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
 - [x] Server and MCP: `search_transactions` and `search_expenses` filter by date, direction, project and category (with `none`), take a `pending` scope, match the customer, and return currency, review, kept-out and split state; tenant isolation test (migration `20261011010000`, decision [0140](../decisions/0140-search-filters.md)). Plan: the project's plans/flow-323-search.md.
 - [x] Mockup in the design thread, owner approval on a card (2026-10-08). **Owner picked A:** a search icon on the Home and Projects bars opens the screen; the search field and filter chips sit at the bottom, just above the keyboard, and the results list fills the space above them. The icon is a plain thin-stroke outline magnifier (no emoji, no filled glyph), like a bank app's search. Chevrons are SVG icons so right-to-left text never flips them: Back points right, "more" points left. Rows reuse the review list's statement rows with month dividers, tint the matched text, and say when a line waits for review, is split or is kept out of the P&L; a count line totals what is shown. FLOW-402 is this screen opened from the project page's "כל התנועות" with the project chip set. Mockup: the project's plans/flow-323-search-mockup.html.
-- [ ] Screen in a UI lane, reading `search_transactions` (PR #TBD, decision [0146](../decisions/0146-search-screen.md)).
+- [ ] Screen in a UI lane, reading `search_transactions` (PR #343, decision [0146](../decisions/0146-search-screen.md)).
 
 <a id="flow-324"></a>
 ### FLOW-324 · Approve all suggestions in the review queue
@@ -850,7 +850,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (UI lane 3, 2026-10-09: Back's label, and the cost rows and subtitle drop the minus; the ".00" half stays open below) Project category lines: Back is a bare icon with the project name as the subtitle. Use the project name as Back's label (FLOW-334 H2) and drop the subtitle.
 - [x] (UI lane 4, PR #320: the owner picked option C on 2026-10-09 06:58Z, replacing A (#299) and B) Search: one-line rows (party and amount; a muted second line only for a status), no ".00" on whole amounts, and one labeled figure per month head, "נטו ₪x", with another currency's net on a muted line under it ("ועוד −$x בדולר").
 - [ ] Transaction rows show ".00" on whole amounts, but DESIGN-RULES §3.5 says agorot show only when non-zero. Decision 0120 option C (the owner's) keeps ".00" on transaction rows, like Mercury, so this needs the owner's call before any change.
-- [ ] Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
+- [x] (Backlog bug fixes, 2026-10-09: the amount's line reads "לפני מע״מ · מע״מ ₪1,530 · 21/09/2026"; a guessed rate says "מע״מ משוער"; the floating line and `vatStatusLabel` are gone) Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
 - [x] (UI lane 3, 2026-10-09: ✕ is centred on the title row in every sheet) Add sheet (+ tab): it has both ✕ and a "ביטול" link, and ✕ sits about 8px below the title baseline. Drop ביטול (it belongs on confirm sheets) and align ✕ with the title.
 - [ ] Project page, overhead switch: the hint "כבוי · מציג רווח לפני כלליות" repeats the switch state. Label "אחרי כלליות" with no hint, as Settings does.
 - [x] (UI lane 2, #333: owner chose A 2026-10-09) (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
@@ -1021,9 +1021,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
 - [x] Option A approved by the owner (#324): one quiet card on the review empty state, Settings → התראות with three switches (תנועה חדשה, off by default; תזכורת ערב; סיכום שבועי, ראשון בבוקר).
 - [x] Server part 1 (#335): `push_subscriptions` and per-user `notification_prefs`; `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs`, `answer_push_prompt`; the `push-send` function (Web Push with VAPID, no library) and the `flow-push-evening` cron at 20:00 Israel time for owners with open review lines. Runbook [push.md](../runbooks/push.md).
-- [ ] Owner step: make the VAPID key pair and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` as function secrets and `VITE_VAPID_PUBLIC_KEY` in the app build.
-- [ ] App (UI lane 4, PR #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`. It merges after the server PR (#335).
-- [ ] Server part 2: send תנועה חדשה after a sync and סיכום שבועי on Sunday morning.
+- [x] Owner step (2026-10-09): the VAPID key pair is made and kept; `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` are function secrets and `VITE_VAPID_PUBLIC_KEY` is in `app/.env.production`. Never make a new pair: it drops every saved device.
+- [ ] App (UI lane 4, PR #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`.
+- [x] Server part 2 (PR #343): תנועה חדשה within 5 minutes of a sync bringing bank or SUMIT lines (`flow-push-new`), and סיכום שבועי on Sunday at 08:00 Israel time (`flow-push-weekly`), with counts only and no amounts (the owner's pick, 2026-10-09).
 - [ ] Setup step 5 offers it once it ships.
 
 <a id="flow-503"></a>
@@ -1045,7 +1045,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** mockup approved.
 - [x] Server side (#327): `set_import_from(provider, date | null)` stores the start (it existed since the connector engine); `sumit_status()` returns `import_from`, and Mercury's is on `connector_connection_status`. `upsert_connector_lines` does not add a line dated before it, for both connectors, and keeps the rows already stored, which still take updates so a pending line can settle (the SUMIT sweep already spared them); a run whose lines are all older is not an empty sweep. A Mercury run that stops at the page cap also drops older lines. A wider range clears Mercury's cursor so the next sync reads from the new start; SUMIT reads every document each run. A Mercury run already in flight when the range widens ends with `sync_cursor_conflict`; the next run starts from the new date, and the error shows on the sheet until a run completes.
 - [x] (UI lane 3, 2026-10-09, option B) App: `ImportFromField` (app/src/ui) in the SUMIT and Mercury connect sheets, in Settings and in setup; `set_import_from` runs once the connection exists, only when the choice changed; a reconnect opens on the stored date (#332).
-- [ ] (lane 2's #332 review) The connection row exists before `set_import_from` runs, so a sync tick in that window imports from the start once (the rows stay after narrowing). Pass `importFrom` to the `mercury-connect` and `sumit-connect` edge functions so the first sync already honours it.
+- [x] (UI lane 3, 2026-10-09: both connect functions take `importFrom` and run `set_import_from` as the signed-in user right after storing the key, and answer `import_from_saved`; the window is now the one round trip between those two writes. The app sends the date with the connect call and saves it itself only when an older function does not answer) (lane 2's #332 review) The connection row exists before `set_import_from` runs, so a sync tick in that window imports from the start once (the rows stay after narrowing). Pass `importFrom` to the `mercury-connect` and `sumit-connect` edge functions so the first sync already honours it.
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups

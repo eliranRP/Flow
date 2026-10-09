@@ -1,0 +1,1 @@
+Web push, server part 2 (FLOW-502). With תנועה חדשה on, a push comes within 5 minutes of a sync that brings new bank or SUMIT lines ("נכנסו 3 תנועות חדשות"). With סיכום שבועי on, a push comes on Sunday at 08:00 Israel time with the week's new lines and what waits in לאישור. Counts come from SQL and no message names an amount.

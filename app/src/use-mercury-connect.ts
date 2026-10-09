@@ -1,6 +1,6 @@
 import { hebrewMercuryError } from "./mercury-copy";
 import { invokeEdge } from "./edge";
-import { IMPORT_FROM_FAILED, saveImportFrom } from "./import-from";
+import { IMPORT_FROM_FAILED, importFromAfterConnect } from "./import-from";
 import { useRef } from "react";
 import { useToast } from "./ui/toast";
 import { useWrite } from "./use-write";
@@ -14,7 +14,7 @@ export function useMercuryConnect({
   apiKey: string;
   setApiKey: (value: string) => void;
   onSuccess?: () => void;
-  /** "ייבוא מ" (FLOW-505), saved once the connection exists. Undefined leaves it as it is. */
+  /** "ייבוא מ" (FLOW-505), sent with the connect call. Undefined leaves it as it is. */
   importFrom?: string | null;
 }) {
   const toast = useToast();
@@ -34,13 +34,13 @@ export function useMercuryConnect({
       onSuccess?.();
     },
     run: async () => {
+      let response: unknown;
       try {
-        await invokeEdge("mercury-connect", { apiKey: apiKey.trim() });
+        response = await invokeEdge("mercury-connect", { apiKey: apiKey.trim(), importFrom });
       } finally {
         setApiKey("");
       }
-      dateFailed.current = false;
-      if (importFrom !== undefined) await saveImportFrom("mercury", importFrom).catch(() => { dateFailed.current = true; });
+      dateFailed.current = !(await importFromAfterConnect("mercury", importFrom, response));
     },
   });
 }
