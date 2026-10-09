@@ -117,6 +117,8 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     expect(within(confirm).getByText("חומרים ← קבלנים")).toBeInTheDocument();
     expect(within(confirm).getByText("התנועות עוברות אל היעד, וחומרים מוסתרת. אי אפשר להפריד אחר כך.")).toBeInTheDocument();
     expect(calls("move_category_lines")).toEqual([]);
+    // A merge is not a delete: no bin on its button.
+    expect(within(confirm).getByRole("button", { name: "מיזוג" }).querySelector("svg")).toBeNull();
     fireEvent.click(within(confirm).getByRole("button", { name: "מיזוג" }));
     await waitFor(() => { expect(calls("merge_category")).toEqual([{ p_from: "c1", p_into: "c2" }]); });
   });

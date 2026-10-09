@@ -346,6 +346,7 @@ export function CategoriesScreen({
         consequence={`התנועות עוברות אל היעד, ו${fromName} מוסתרת. אי אפשר להפריד אחר כך.`}
         confirmLabel="מיזוג"
         destructive
+        icon={null}
         busy={merge.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {
