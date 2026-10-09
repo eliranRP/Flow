@@ -118,6 +118,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | in progress (owner picked B; #314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
+| 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
+| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | PLAN FIRST | plan-first (owner card) |
+| 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | PLAN FIRST | plan-first (owner card) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -891,6 +894,30 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-314 (#291) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
 - **What:** At a list end a sideways drag doesn't move the card at all (160px drag, transform 0), so the gesture reads as broken, and mid-list a drag shows a blank page behind the card. The visible prev/next controls are vertical ˄ ˅ in the top corner while the swipe is sideways, against §3.7 (a swipe follows the arrows it repeats). Proposal: a resisted drag at the ends and the next card peeking in; the owner picks ‹ › arrows or keeps ˄ ˅.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+
+<a id="flow-347"></a>
+### FLOW-347 · Phone polish after the October 9 morning builds (cycle 8)
+- **Type:** SMALL UI · **Status:** ready · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- [ ] (med) Settings → Categories ⋯ with only one category on its side: the sheet still offers "העברה לקטגוריה אחרת", and the picker opens with the hide switch only, no targets and no reason; ✕ is the only exit. Hide the row when there is nowhere to move (§3.7, a sheet lists only actions that work today). Shots probe-categories-menu--se.png, probe-categories-move--se.png.
+- [ ] (med) שויכו היום by project: heads take three shapes. Only a group of 3+ shows its totals; a one-line group shows "תנועה אחת" with no total; "בלי פרויקט" puts its count on the name line. Every head: name, then the count in muted `meta`, then the totals (§3.7, FLOW-334 rule). Shot sb-routes--filed-today-by-project--full.png.
+- [ ] (low) Loans list at 320: 4 of 6 rows are 95–98px (74 on one line). "משכנתא דוגמה" wraps and a meta line ends on "נפרעה ·". The meta line is one line and drops a part with its "·" (§3.7). Shot sb-loans-list--closed-open--w320-light.png.
+- [ ] (low) Loan setup at 375x667: the page is 942px and שמירה sits at y≈890, so every save needs a scroll. Move it into an `ActionBar place="edge"` (§3.3, §3.7 FLOW-333). Shot sb-loan-setup--example--full.png.
+- [ ] (low) Breakdown category lines: cost rows have no minus, but a refund ("₪194.00") is green with no sign. Give it "+" (§5, no colour without a sign). Shot sb-breakdown--group-lines--se-light.png.
+- [ ] (low) Loan page rates keep trailing zeros ("6.00%", "10.50%"); show "6%", "10.5%" (§3.5). Shot sb-loan-page--interest-only-rates--full.png.
+- [ ] (low) Search dock chips at 375: "תקופה" shows as a 12px sliver and "לאישור" is off screen (at 320 "קטגוריה" is cut too), with no cue that the row scrolls. Put תקופה first and fade the row's end. Shots sb-search--results--se-light.png, sb-search--all-lines--w320-light.png.
+- **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
+
+<a id="flow-348"></a>
+### FLOW-348 · Jev switched on with no key
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** With Jev on and no key on the server, Connections shows the switch on and a muted "אין מפתח" (#329). Jev labels nothing, and the row doesn't say what to do or who can fix it. The key is a server setting, so the app can't take it. Proposal A (recommended): the switch locks off with one reason, "צריך מפתח Jev, פנו למנהל המערכת", as a switch decided by something else (§3.7). B: the switch stays on and the hint becomes a link that opens a short sheet saying what the key does and who sets it.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+
+<a id="flow-349"></a>
+### FLOW-349 · One set of period choices everywhere
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** Two period sheets share the title "תקופה" with different choices. Home and the project page offer חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם. Search and the breakdown (PeriodPicker) offer החודש / חודש קודם / מתחילת השנה / כל התקופה / טווח מותאם. "שנה" and "מתחילת השנה" are different ranges, and Search can't pick 3 months. Proposal A (recommended): one list everywhere, Home's, through one shared sheet. B: keep both and name the Search one differently.
+- **Acceptance:** owner's choice on a card with 390px PNGs; one shared component and story; a design log entry.
 
 ## Projects and reports
 
