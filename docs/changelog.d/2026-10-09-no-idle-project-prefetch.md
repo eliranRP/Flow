@@ -1,0 +1,1 @@
+Home no longer reads the first three projects while the phone is idle (FLOW-804). Those three project reads ran at once, past the server's statement timeout, and retried, which slowed Home and Review for live users and turned the deploy's read-only smoke red. A project is still read the moment a finger lands on its row, now once and without retries.
