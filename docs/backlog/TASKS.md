@@ -128,7 +128,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 79 | [FLOW-353](#flow-353) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI | ready |
-| 80 | [FLOW-354](#flow-354) | The default income category in the money terms word | PLAN FIRST | waiting on the owner |
+| 80 | [FLOW-354](#flow-354) | The default income category in the money terms word | PLAN FIRST | owner approved 2026-10-09 13:44Z (money terms glossary); built in #385 |
 | 81 | [FLOW-355](#flow-355) | A project row on Home's first screen at 375x667 | PLAN FIRST | waiting on the owner |
 | 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST | waiting on the owner |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
@@ -996,14 +996,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-354"></a>
 ### FLOW-354 · The default income category in the money terms word
-- **Type:** PLAN FIRST · **Status:** waiting on the owner · **Source:** cycle 12 (§3.6 check)
+- **Type:** PLAN FIRST · **Status:** owner approved the rename on the money terms glossary (2026-10-09 13:44Z); built in #385, renamed categories untouched · **Source:** cycle 12 (§3.6 check)
 - **What:** The default income category is still "תקבול מלקוח", while §3.6 says "הכנסה מלקוחות" (packages/shared/src/categories.ts:16, setup/copy.ts:33, demo/model.ts:186 and the first seed). New companies get the new word either way. The owner decides whether existing companies' category is renamed by a migration, or keeps the name they have.
 - **Acceptance:** owner's pick on a card.
 
 <a id="flow-355"></a>
 ### FLOW-355 · A project row on Home's first screen at 375x667
 - **Type:** PLAN FIRST · **Status:** waiting on the owner · **Source:** cycle 12, the FLOW-334 Home item
-- **What:** At 375x667 the band is 336px, the attention banners 175px, and the first project row starts 158px under the tab bar. Without banners, FLOW-334's tighter income and expenses pair plus a 24px head gap bring it to the bar's edge. With banners, a row shows only if the band gets shorter or the banners move under the first project rows. Mockups at 390, one option per frame.
+- **What:** At 375x667 the band is 336px, the attention banners 175px, and the first project row starts 158px under the tab bar. Without banners, FLOW-334's tighter income and expenses pair plus a 24px head gap bring it to the bar's edge. #386 already moved the income and expenses pair to a 52px pitch. With banners, a row shows only if the band gets shorter or the banners move under the first project rows. Mockups at 390, one option per frame.
 - **Acceptance:** owner's pick on a card, then real-app shots.
 
 <a id="flow-138"></a>
