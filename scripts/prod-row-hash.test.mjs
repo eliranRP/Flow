@@ -53,6 +53,8 @@ test("the hash query only reads and never prints row values", () => {
   assert.equal(/\b(insert|update|delete|truncate|create|drop|alter)\b/i.test(sql.replace(/^--.*$/gm, "")), false);
   const shell = readFileSync(script, "utf8");
   assert.match(shell, /SET TRANSACTION READ ONLY/);
+  assert.match(shell, /SET LOCAL timezone = 'UTC'/);
+  assert.match(shell, /SET LOCAL datestyle = 'ISO, YMD'/);
 });
 
 test("without a baseline it prints the current hashes", () => {
@@ -94,6 +96,16 @@ test("a missing url, an unreadable baseline or a failed query stop with exit 1",
     env: { ...process.env, SUPABASE_DB_URL: "postgresql://x" },
   });
   assert.equal(noFile.status, 1);
+  const dir = mkdtempSync(join(tmpdir(), "row-hash-empty-"));
+  const empty = join(dir, "empty.tsv");
+  writeFileSync(empty, "");
+  const emptyBaseline = spawnSync("bash", [script.pathname, empty], {
+    encoding: "utf8",
+    env: { ...process.env, SUPABASE_DB_URL: "postgresql://x" },
+  });
+  rmSync(dir, { recursive: true, force: true });
+  assert.equal(emptyBaseline.status, 1);
+  assert.match(emptyBaseline.stderr, /missing or empty/);
   const failed = run({ fail: true });
   assert.equal(failed.status, 1);
   assert.match(failed.stderr, /the hash query failed/);

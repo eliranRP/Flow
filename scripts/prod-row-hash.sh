@@ -6,7 +6,8 @@
 # The first form prints one line per table in public and private: schema.table, row count,
 # md5 of its rows. The second recomputes it and prints only the tables whose count or hash
 # differ from the baseline file (exit 2), or "Row hashes match the baseline." (exit 0).
-# No row values are printed. Keep baseline files out of the repo: they describe real data.
+# Dates, times and floats are printed with fixed settings, so the client's time zone or date
+# style does not change a hash. No row values are printed. Keep baseline files out of the repo: they describe real data.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,13 +18,17 @@ if [[ -z "${SUPABASE_DB_URL:-}" ]]; then
 fi
 
 baseline="${1:-}"
-if [[ -n "$baseline" && ! -r "$baseline" ]]; then
-  echo "prod-row-hash: cannot read the baseline file $baseline." >&2
+if [[ -n "$baseline" && ! -s "$baseline" ]]; then
+  echo "prod-row-hash: the baseline file $baseline is missing or empty." >&2
   exit 1
 fi
 
 if ! current="$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At --single-transaction \
   -c "SET TRANSACTION READ ONLY" \
+  -c "SET LOCAL timezone = 'UTC'" \
+  -c "SET LOCAL datestyle = 'ISO, YMD'" \
+  -c "SET LOCAL intervalstyle = 'postgres'" \
+  -c "SET LOCAL extra_float_digits = 1" \
   -f "$root/scripts/prod-row-hash.sql")"; then
   echo "prod-row-hash: the hash query failed. Nothing was compared." >&2
   exit 1
