@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(17);
+select plan(18);
 
 do $users$
 begin
@@ -112,6 +112,12 @@ select public.upsert_sumit_documents(
 select is(pg_temp.has_doc('doc-after'), true, 'a SUMIT document on or after the start is written');
 select is(pg_temp.has_doc('doc-before'), false, 'a SUMIT document before the start is not written');
 select is(pg_temp.has_doc('doc-stored-old'), true, 'a SUMIT row stored before the start stays');
+select is(
+  (select description from public.transactions
+   where company_id = (select id from ir where label = 'a') and external_id = 'doc-stored-old'),
+  'Example document',
+  'a stored row before the start still takes its update'
+);
 
 -- SUMIT returns only documents before the start: not an empty sweep, and nothing is removed.
 select public.upsert_sumit_documents(

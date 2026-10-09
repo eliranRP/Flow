@@ -1,8 +1,8 @@
 -- FLOW-505: the import range for SUMIT and Mercury, database side (the owner picked option B).
 -- 1. sumit_status() returns import_from, so the SUMIT sheet can show the current choice. Mercury
 --    already returns it through connector_connection_status.
--- 2. upsert_connector_lines() does not write a line dated before the connector's import start,
---    for both providers; the rows already stored stay. SUMIT sends every document, so the sweep
+-- 2. upsert_connector_lines() does not add a line dated before the connector's import start,
+--    for both providers; the rows already stored stay and still take updates. SUMIT sends every document, so the sweep
 --    still sees them. A run whose lines are all before the start is not an empty sweep.
 -- 3. set_import_from() clears Mercury's sync cursor when the range widens (an earlier date, or
 --    back to "from the start"), so the next sync reads from the new start. Narrowing keeps the
@@ -57,8 +57,14 @@ begin
   def := replace(def, declared, declared || $n$
   before_start integer := 0;$n$);
   def := replace(def, missing_id, missing_id || $n$
-    -- FLOW-505: a line dated before the import start is not written; stored rows stay.
-    if import_from is not null and (line->>'doc_date')::date < import_from then
+    -- FLOW-505: a new line dated before the import start is not written. A row already stored
+    -- still takes its update, so a pending line can settle.
+    if import_from is not null
+       and (line->>'doc_date')::date < import_from
+       and not exists (
+         select 1 from public.transactions t
+         where t.company_id = p_company and t.source = source_value and t.external_id = ext
+       ) then
       before_start := before_start + 1;
       continue;
     end if;$n$);
