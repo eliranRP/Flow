@@ -6,6 +6,7 @@ const on: JevCardState = { ...JEV_DEFAULT, enabled: true, status: "ready" };
 const auto: JevCardState = { ...JEV_DEFAULT, enabled: true, mode: "auto", status: "ready" };
 const autoOdd: JevCardState = { ...auto, threshold: 0.92 };
 const failed: JevCardState = { ...JEV_DEFAULT, status: "error" };
+const loading: JevCardState = { ...JEV_DEFAULT, status: "loading" };
 
 const meta = {
   title: "Screens/Jev settings",
@@ -42,3 +43,9 @@ export const Error: Story = { args: { state: failed }, ...light390 };
 export const ErrorDark: Story = { args: { state: failed }, ...dark390 };
 export const Error320: Story = { args: { state: failed }, ...light320 };
 export const ErrorDark320: Story = { args: { state: failed }, ...dark320 };
+
+/** FLOW-704: the אפשרויות line is held while loading only when Jev was last known on. */
+export const LoadingLastOn320: Story = { args: { state: loading, reserveOptions: true }, ...light320 };
+export const LoadingLastOnDark320: Story = { args: { state: loading, reserveOptions: true }, ...dark320 };
+export const LoadingLastOff320: Story = { args: { state: loading }, ...light320 };
+export const LoadingLastOffDark320: Story = { args: { state: loading }, ...dark320 };

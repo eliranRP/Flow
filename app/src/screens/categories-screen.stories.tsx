@@ -30,6 +30,16 @@ export const CategoriesList: Story = {
   ),
 };
 
+/** FLOW-507: a viewer's rows have no ⋯ and keep the owner's row height. */
+export const CategoriesViewer: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs viewer>
+      <ExampleBar />
+      <CategoriesScreen sample={sampleCategories} />
+    </StoryRoute>
+  ),
+};
+
 export const CategoriesHiddenCollapsed: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories" tabs>

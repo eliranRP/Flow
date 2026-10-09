@@ -286,13 +286,18 @@ function explicitCancelId(raw: Record<string, unknown>): string | null {
 
 /**
  * Ids a treasury cancel voids. An explicit id wins. Otherwise the match is
- * the same account, the original type, and the same absolute cents. The
- * same canonical day wins over any other day. A refetched original and the
- * stored copy are one candidate. Several remaining ids void nothing.
+ * the original type and the same absolute cents, on the cancel's account:
+ * lines on that exact account first. A line or cancel with no account counts
+ * only when the company has exactly one treasury account (FLOW-509), so with
+ * two accounts an unlabeled line is never voided by the other account's
+ * cancel. `treasuryAccounts` is that count, or null when it is not known.
+ * The same canonical day wins over any other day. A refetched original and
+ * the stored copy are one candidate. Several remaining ids void nothing.
  */
 export function treasuryVoidIds(
   rawLines: readonly unknown[],
   stored: readonly TreasuryStoredLine[],
+  treasuryAccounts: number | null = null,
 ): string[] {
   const batch: TreasuryStoredLine[] = [];
   for (const raw of rawLines) {
@@ -335,12 +340,20 @@ export function treasuryVoidIds(
     for (const row of stored) {
       if (!byId.has(row.externalId)) byId.set(row.externalId, row);
     }
-    const pool = [...byId.values()].filter((row) =>
+    const same = [...byId.values()].filter((row) =>
       row.kind === originalKind &&
       row.amountCents === amount &&
-      (accountId == null || row.accountId == null || row.accountId === accountId) &&
       !voids.has(row.externalId)
     );
+    const exact = accountId == null ? [] : same.filter((row) => row.accountId === accountId);
+    const onlyOne = treasuryAccounts === 1;
+    const pool = exact.length > 0
+      ? exact
+      : !onlyOne
+      ? []
+      : accountId == null
+      ? same
+      : same.filter((row) => row.accountId == null);
     const sameDay = pool.filter((row) => row.docDate === day);
     const chosen = sameDay.length > 0 ? sameDay : pool;
     if (chosen.length !== 1) continue;

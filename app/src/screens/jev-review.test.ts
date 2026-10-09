@@ -250,6 +250,16 @@ describe("Jev review prefill", () => {
     expect(localStorage.getItem("flow.jev-connector")).toBeNull();
   });
 
+  it("drops the old shared key once per launch, not on every read (FLOW-704)", () => {
+    resetJevScopeMemory();
+    localStorage.setItem("flow.jev-connector", "1");
+    readJevConnectorFlag(scope);
+    expect(localStorage.getItem("flow.jev-connector")).toBeNull();
+    localStorage.setItem("flow.jev-connector", "1");
+    readJevConnectorFlag(scope);
+    expect(localStorage.getItem("flow.jev-connector")).toBe("1");
+  });
+
   it("remembers the connector flag for that user and company", () => {
     expect(readJevConnectorFlag(scope)).toBeUndefined();
     writeJevConnectorFlag(true, scope);
