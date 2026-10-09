@@ -329,8 +329,8 @@ export function CategoriesScreen({
         title={hideTarget?.hidden ? "להחזיר את הקטגוריה לרשימה?" : "להסתיר את הקטגוריה?"}
         item={hideTarget?.name}
         consequence={hideTarget?.hidden ? "הקטגוריה תופיע שוב ברשימה." : "הקטגוריה לא נמחקת. אפשר להחזיר אותה מ״מוסתרות״."}
+        // FLOW-341: hiding can be undone, so its button is neutral; the bin stays on real deletes.
         confirmLabel={hideTarget?.hidden ? "החזרה לרשימה" : "הסתרה"}
-        destructive={hideTarget?.hidden !== true}
         busy={hide.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {

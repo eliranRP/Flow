@@ -123,6 +123,15 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     await waitFor(() => { expect(calls("merge_category")).toEqual([{ p_from: "c1", p_into: "c2" }]); });
   });
 
+  it("confirms a hide with a neutral button, since a hide can be undone (FLOW-341)", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: "הסתרה" }));
+    const confirm = await screen.findByRole("dialog", { name: "להסתיר את הקטגוריה?" });
+    const button = within(confirm).getByRole("button", { name: "הסתרה" });
+    expect(button.querySelector("svg")).toBeNull();
+    expect(button.className).not.toMatch(/danger/);
+  });
+
   it("an empty category can only merge, with no switch", async () => {
     const sheet = await openSheet("אחר");
     fireEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
