@@ -152,7 +152,7 @@ Deno.test("each user's token signs that user's row, and cannot read the other co
   assertEquals(dashboardCalls[0]?.company, companyA, "pass company is user A");
   assertEquals(dashboardCalls[0]?.scope, ["read"], "pass scope is the token scope");
   assertEquals(dashboardCalls[0]?.sub === "not-a-user", false, "the signing key has no user");
-  assertEquals(dashboardCalls[0]?.body, { p_from: null, p_to: null, p_basis: "cash" }, "no company argument");
+  assertEquals(dashboardCalls[0]?.body, { p_from: null, p_to: null, p_basis: "invoiced" }, "no company argument");
   assertEquals(dashboardCalls[0]?.apikey, "publishable-key", "publishable key");
 
   const second = await totals(tokenB);
@@ -380,8 +380,8 @@ Deno.test("get_project reads only the token company's project", async () => {
   const ownA = await call(tokenA, { id: projectA });
   assertEquals(ownA.isError, false, "user A reads their own project");
   assertEquals(ownA.structuredContent.data.name, "Example Alpha", "user A project");
-  assertEquals(ownA.structuredContent.data.basis, "cash", "default basis");
-  const ownB = await call(tokenB, { id: projectB, basis: "invoiced" });
+  assertEquals(ownA.structuredContent.data.basis, "invoiced", "default basis");
+  const ownB = await call(tokenB, { id: projectB, basis: "cash" });
   assertEquals(ownB.isError, false, "user B reads their own project");
   assertEquals(ownB.structuredContent.data.name, "Example Beta", "user B project");
 
@@ -391,7 +391,7 @@ Deno.test("get_project reads only the token company's project", async () => {
   assertEquals(crossed.structuredContent.data, undefined, "no data");
   const crossedCall = seen[seen.length - 1];
   assertEquals(crossedCall?.sub, userA, "signed as user A, not the project owner");
-  assertEquals(crossedCall?.body, { p_id: projectB, p_basis: "cash" }, "no company argument");
+  assertEquals(crossedCall?.body, { p_id: projectB, p_basis: "invoiced" }, "no company argument");
 
   const before = seen.length;
   const forged = await call(tokenA, { id: projectB, company_id: companyB });

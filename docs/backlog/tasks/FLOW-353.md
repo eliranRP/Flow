@@ -6,5 +6,5 @@
 - [ ] Setup step 5: on arrival the reminder card's כן / לא עכשיו sit under the pinned סיום, so only the question shows (48px of scroll at 390x844, 200px at 375x667). Put the card above the numbered install steps, or shorten the install demo (setup/steps.tsx:378).
 - [ ] Open invoices: the row hint breaks inside "לפני / 37 ימים" at 320, and the code can print "לפני 0 ימים" and "לפני 1 ימים". Pass the parts as `hintParts` so each stays whole, and say היום / אתמול / לפני יומיים (screens/unpaid-screen.tsx:31-35, :138-139).
 - [ ] Investment card at 320: "עודכן 01/10/2026" breaks between the word and the date. Keep it whole (ui/investment-card.tsx:315-319).
-- [ ] Docs: the implementation guide still requires "רווח נקי בספטמבר" (design/system/implementation-guide.md:458), and the design boards still say רווח נקי and לא שולמו (design/src/01-home-*, 12-unpaid-*, flow.py, ds.py, states.py). Move them to the §3.6 words so a reviewer doesn't flag the new copy.
+- [x] Docs (done in #385): the implementation guide still requires "רווח נקי בספטמבר" (design/system/implementation-guide.md:458), and the design boards still say רווח נקי and לא שולמו (design/src/01-home-*, 12-unpaid-*, flow.py, ds.py, states.py). Move them to the §3.6 words so a reviewer doesn't flag the new copy.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.

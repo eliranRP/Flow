@@ -15,7 +15,8 @@
 #   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
 #     merge of main that leaves the patch unchanged; lint and the file-size check only when the
 #     branch changes only docs/ or Markdown (a claim commit). Each run appends a line to
-#     gate-times.log beside the shared cache: time, branch, mode, seconds, result, parts.
+#     gate-times.log beside the shared cache: time, branch, mode, diff kind, seconds, result, and
+#     each phase's seconds (node scripts/gate-times.mjs sums it up).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
@@ -43,11 +44,26 @@ cd "$root"
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
 
+# Each phase's start (seconds into the run) and its short name, for gate-times.log.
 ran=()
+phase_key() {
+  case "$1" in
+    "docs only"*) echo lint ;;
+    "lint and check"*) echo lint-build ;;
+    "check: app unit tests"* | "check: unit and connector tests"*) echo units ;;
+    "check: Storybook smoke"*) echo storybook-smoke ;;
+    "check: Storybook"*) echo storybook ;;
+    "Docker and local Supabase"* | "e2e: waiting for local Supabase"*) echo supabase ;;
+    "database:"* | "e2e: database checks"*) echo pgtap ;;
+    "e2e:"*) echo e2e ;;
+    "passed"*) echo end ;;
+    *) echo other ;;
+  esac
+}
 phase() {
   echo
   echo "== local-ci: $1 ($(( $(date +%s) - started ))s)"
-  ran+=("$(( $(date +%s) - started ))s ${1%%:*}")
+  ran+=("$(( $(date +%s) - started )) $(phase_key "$1")")
 }
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
@@ -68,16 +84,26 @@ fi
 shared="${FLOW_LOCAL_CI_SHARED_CACHE:-}"
 if [[ -n "$shared" ]] && mkdir -p "$shared" 2>/dev/null; then caches+=("$shared"); fi
 head_tree="$(git rev-parse 'HEAD^{tree}')"
-# One line per run in gate-times.log, next to the shared cache when there is one: time, branch, mode,
-# seconds, result, and when each part started. The lane manager reads it to see which part is slow.
+# One line per run in gate-times.log, next to the shared cache when there is one, tab-separated: time,
+# branch, mode, diff kind, seconds, result, and the seconds of each phase ("lint=40 units=95").
+# scripts/gate-times.mjs sums it up against the targets; the lane manager posts that every hour.
 mode="$( (( full )) && echo full || echo default)"
+kind="unknown"
 times_log="$cache/gate-times.log"
 [[ -z "$shared" ]] || times_log="$(dirname "$shared")/gate-times.log"
 log_time() {
-  local rc=$? parts
-  parts="$(IFS=','; echo "${ran[*]}")"
-  printf '%s\t%s\t%s\t%ss\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse --abbrev-ref HEAD)" "$mode" \
-    "$(( $(date +%s) - started ))" "$( (( rc == 0 )) && echo pass || echo "fail $rc")" "$parts" >>"$times_log" 2>/dev/null || true
+  local rc=$? total i start key next phases=""
+  total="$(( $(date +%s) - started ))"
+  for (( i = 0; i < ${#ran[@]}; i++ )); do
+    start="${ran[i]%% *}"
+    key="${ran[i]#* }"
+    [[ "$key" != end ]] || continue
+    next="$total"
+    (( i + 1 >= ${#ran[@]} )) || next="${ran[i + 1]%% *}"
+    phases+="${phases:+ }$key=$(( next - start ))"
+  done
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse --abbrev-ref HEAD)" "$mode" \
+    "$kind" "$total" "$( (( rc == 0 )) && echo pass || echo "fail $rc")" "$phases" >>"$times_log" 2>/dev/null || true
 }
 trap log_time EXIT
 skips=1
@@ -104,8 +130,8 @@ green() {
 # Marks a pass here and in the shared cache (a shared folder that can't be written is skipped).
 mark_green() {
   local dir
-  touch "$cache/$1"
-  for dir in "${caches[@]:1}"; do touch "$dir/$1" 2>/dev/null || true; done
+  printf '%s' "${2:-}" >"$cache/$1"
+  for dir in "${caches[@]:1}"; do printf '%s' "${2:-}" >"$dir/$1" 2>/dev/null || true; done
 }
 # Each ancestor of HEAD (within 200 commits) as "commit tree", newest first.
 ancestors() {
@@ -125,19 +151,42 @@ if [[ -z "$pr_fork" ]] && (( ! full )); then
 fi
 pr_files=""
 [[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
-# The branch's own patch against main. A run that passes marks it, so a merge of main that leaves the
-# patch unchanged (main's CI covers main) needs no second run.
+# The diff kind gate-times.log groups by: migration, server (other supabase/), ui (app, packages,
+# design), docs (docs/ or Markdown only), else scripts.
+if grep -q '^supabase/migrations/' <<<"$pr_files"; then kind=migration
+elif grep -q '^supabase/' <<<"$pr_files"; then kind=server
+elif grep -qE '^(app|packages|design)/' <<<"$pr_files"; then kind=ui
+elif [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then kind=docs
+else kind=scripts
+fi
+# The branch's own patch against main. A run that passes marks it with the main commit it forked
+# from, so a merge of main that leaves the patch unchanged needs no second run, unless main changed a
+# migration, flow-mcp, packages/shared or the seed since that fork (scripts/gate-base-risk.mjs): the
+# same patch can break on a new main there (#364's viewer checks under #383's RPCs).
 patch_id=""
 [[ -z "$pr_fork" ]] || patch_id="$(git diff "$pr_fork" HEAD | git patch-id --stable | cut -d' ' -f1)"
 passed() {
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id"
+  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id" "$pr_fork"
 }
+# The fork a patch mark was written on (empty for a mark from before the fork was stored).
+mark_fork() {
+  local dir fork
+  for dir in "${caches[@]}"; do
+    fork="$(head -c 40 "$dir/$1" 2>/dev/null || true)"
+    [[ -z "$fork" ]] || { echo "$fork"; return; }
+  done
+}
+base_risk=0
 if (( skips )) && [[ -n "$patch_id" ]] && has_mark "patch-$patch_id"; then
-  mode="same patch"
-  echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
-  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  exit 0
+  if node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork"; then
+    mode="same patch"
+    echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
+    echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+    exit 0
+  fi
+  base_risk=1
+  echo "local-ci: the same patch passed on an older main, but main changed the database surface since; running the gate, with every pgTAP file."
 fi
 # Only docs or Markdown against main: lint and the file-size check, nothing else.
 if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
@@ -220,6 +269,7 @@ if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.to
   db_change=1
   db_list="$(node scripts/pgtap-specs.mjs <<<"$pr_files")"
   [[ -z "$db_list" ]] || mapfile -t db_specs <<<"$db_list"
+  (( ! base_risk )) || db_specs=(supabase/tests/database)
 fi
 
 supabase_exit=""

@@ -24,7 +24,7 @@ insert into r5 (label, id) select 'beta', id from public.projects where name = '
 insert into r5 (label, id)
 select 'materials', id from public.categories where name = 'חומרים' and kind = 'expense';
 insert into r5 (label, id)
-select 'income_cat', id from public.categories where name = 'תקבול מלקוח' and kind = 'income';
+select 'income_cat', id from public.categories where name = 'הכנסה מלקוחות' and kind = 'income';
 insert into r5 (label, id)
 select 'gear', id from public.categories where name = 'ציוד והשכרה' and kind = 'expense';
 
