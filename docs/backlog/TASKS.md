@@ -18,7 +18,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-310 clip-check review of whitelisted ellipsis (FLOW-310 focus merged #298); FLOW-341 card with the owner (sent 06:00Z) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-704 app side: the Jev Settings row, Jev marks on שינוי שיוך and the review list, the Jev scope read (FLOW-343 merged #306) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -113,7 +113,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292; Search item: #299) |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
-| 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
+| 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | in-progress (option A) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
@@ -864,7 +864,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-341"></a>
 ### FLOW-341 · A shorter ⋯ sheet in Settings → Categories
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-405 (#217) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** PLAN FIRST · **Status:** in-progress (owner picked option A on 2026-10-09: one move row, a hide switch in the picker) · **Depends on:** FLOW-405 (#217) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The category ⋯ sheet lists 8 actions, 4 with sentence hints; at 375x667 מחיקה sits below the fold, and "העברת כל התנועות" and "מיזוג" read as the same job. Proposal: move the consequences onto the confirm and picker sheets, merge move and merge into one row, and keep מחיקה in view.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
@@ -1056,12 +1056,12 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-509 · Mercury connector hardening
 - **Type:** BACKLOG NIT · **Status:** done (#91) · **Depends on:** —
 - [x] After a 429 the sync keeps calling; back off and stop. (#91: a 429 on a recheck stops the rechecks and holds the next run until Retry-After, else 15 minutes.)
-- [ ] Skip records aren't written atomically with the lines and duplicate on partial runs; writes after the import aren't atomic with it; the checked-at stamp is still one write per row (#91 made it one read for all rows; full atomicity needs an RPC).
+- [x] Skip records aren't written atomically with the lines and duplicate on partial runs; writes after the import aren't atomic with it; the checked-at stamp is still one write per row (#91 made it one read for all rows; full atomicity needs an RPC). (FLOW-509 PR: `upsert_connector_lines` takes `skips` and `checked`, writes them in the lines' transaction, adds only skips not recorded yet, and stamps every rechecked line in one statement. Still separate writes: the account labels and settings, the 429 hold and the sync stamp. A complete run still replaces all skips, so after a resumed chain the count holds only the last run's skips.)
 - [x] Reconnecting keeps the old cursor when the token or account changes. (#91: a reconnect to a different set of accounts clears the cursor; a new token for the same accounts keeps it, since the cursor is still valid.)
 - [ ] Non-USD Mercury lines are skipped instead of imported in their own currency.
-- [ ] The whole treasury history is re-read every sync; the stored-treasury read throws past 20k rows.
-- [ ] The cron URL is built by replacing a path in the shared sync URL secret; read its own value.
-- [ ] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id (moot: `transactions_external_uidx` is unique, and #91 removed that read); test stored-line selects against the local DB.
+- [x] The whole treasury history is re-read every sync; the stored-treasury read throws past 20k rows. (FLOW-509 PR: a later sync stops paging the ledger 60 days before the window start (a backdated cancel keeps its original's day); the first sync still reads it all. The stored read takes the cancellable kinds of the last 366 days, at most 2,000 rows, and does not throw. The old-line recheck skips treasury kinds, which `/transaction/{id}` does not serve.)
+- [x] The cron URL is built by replacing a path in the shared sync URL secret; read its own value. (FLOW-509 PR: the drain reads Vault `flow_mercury_sync_url` and falls back to the swapped path until it is set; setting it in production is an owner step, see the SUMIT runbook.)
+- [x] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id (moot: `transactions_external_uidx` is unique, and #91 removed that read); test stored-line selects against the local DB. (FLOW-509 PR: stored treasury lines carry `provider_meta.account_id`; the session counts the treasury accounts it listed. Both sync functions use `createClient<Database>`. The wildcards take one `[A-Za-z0-9_-]{1,128}` segment and the literal templates are refused. The remaining `maybeSingle()` reads are keyed by the `(company_id, provider)` primary key or `limit(1)`. The stored-line selects are not run against the local DB: the PostgREST filters need the edge runtime, left as a follow-up. With two or more treasury accounts, a line stored before it carried `account_id` can no longer be voided by a cancel: accepted.)
 - [ ] Show "N new lines" after a manual refresh (the counts are returned now).
 - [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
 - [ ] Six surviving mutations in the client resume and own-account paths.

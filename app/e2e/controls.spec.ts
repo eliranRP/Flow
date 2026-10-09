@@ -603,8 +603,8 @@ test("categories filter, hide, merge, and create", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" })).toBeVisible();
   await page.getByRole("button", { name: "ביטול" }).click();
   await page.getByRole("button", { name: "עוד, חומרים" }).click();
-  await page.getByRole("button", { name: "מיזוג" }).click();
-  await expect(page.getByRole("dialog", { name: "מיזוג אל" })).toBeVisible();
+  await page.getByRole("button", { name: "העברה לקטגוריה אחרת" }).click();
+  await expect(page.getByRole("switch", { name: "להסתיר את חומרים" })).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();
   await page.getByRole("button", { name: "קטגוריה חדשה" }).click();
   await page.getByRole("button", { name: "שמירה" }).click();

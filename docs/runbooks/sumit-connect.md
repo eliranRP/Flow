@@ -141,6 +141,8 @@ Use that same `CRON_SECRET` shell value in the SQL editor. Do not print it. If a
 ```sql
 select vault.create_secret('<the CRON_SECRET value>', 'cron_secret', 'flow drain');
 select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/sumit-sync', 'flow_sync_url', 'flow drain url');
+-- Optional (FLOW-509): Mercury's own drain URL. Without it the drain swaps /sumit-sync for /mercury-sync.
+select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/mercury-sync', 'flow_mercury_sync_url', 'flow mercury drain url');
 select private.schedule_drain();
 ```
 
