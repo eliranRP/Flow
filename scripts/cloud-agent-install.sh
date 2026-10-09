@@ -82,6 +82,9 @@ pnpm install --frozen-lockfile
 pnpm --filter @flow/app exec playwright install --with-deps chromium
 # Pull requests have no GitHub CI: the pre-push hook runs scripts/local-ci.sh.
 git config core.hooksPath .githooks
+# A container restart empties the edge runtime's cache and stops it; the push gate's flow-mcp smoke
+# needs both back (local-ci seeds again after a fresh supabase start).
+bash scripts/seed-edge-cache.sh || echo "cloud agent install: could not seed the edge runtime cache" >&2
 
 echo "cloud agent install ready: pnpm $(pnpm --version), $(deno --version | head -n 1), supabase $(supabase --version)"
 pnpm --filter @flow/app exec playwright --version
