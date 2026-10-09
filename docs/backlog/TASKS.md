@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | FLOW-309 and FLOW-704 server follow-ups |
-| Dev lane 2 | FLOW-704 server: `jev_key_status` RPC for the Jev Settings "no key" row; FLOW-509 follow-ups (runbook, read-only scope note, surviving mutations), PR #321 | The lane manager's next non-UI item |
+| Dev lane 2 | FLOW-505 server: `import_from` cutoff in both sync functions, `set_import_from` widening backfill, `import_from` in `sumit_status`, PR #327 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
@@ -1013,6 +1013,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
+- [x] Server side (#327): `set_import_from(provider, date | null)` stores the start (it existed since the connector engine); `sumit_status()` returns `import_from`, and Mercury's is on `connector_connection_status`. `upsert_connector_lines` does not add a line dated before it, for both connectors, and keeps the rows already stored, which still take updates so a pending line can settle (the SUMIT sweep already spared them); a run whose lines are all older is not an empty sweep. A Mercury run that stops at the page cap also drops older lines. A wider range clears Mercury's cursor so the next sync reads from the new start; SUMIT reads every document each run. A Mercury run already in flight when the range widens ends with `sync_cursor_conflict`; the next run starts from the new date, and the error shows on the sheet until a run completes.
+- [ ] App: the ייבוא מ control (option B) in the SUMIT and Mercury sheets (UI lane 3).
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups
