@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 C6-6: Search shows only the count under the title, and a row hint shows whole parts (C6-3 merged #292) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507 a viewer's expired SUMIT and Mercury rows read neutral (#301) | Next small ready bug |
+| Backlog bug fixes | FLOW-115 loan with no balance row is not paid off; currency empty state | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -377,7 +377,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Loan match: the waiting line should say why and print only the difference; disable the other rows while the correction is busy; its own failure copy; refresh the parts after a failed correction; next step for a currency mismatch; an empty match sheet offers הלוואה חדשה; hide or disable loans in another currency; long loan names need a second line or hint at 320; whole units on the Settings balances; link the "ממתין לבדיקה" row to the waiting line; skeleton rows to stop cold-open shifts.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
 - [ ] The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
-- [ ] Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
+- [x] (Backlog bug fixes, 2026-10-09: the sheet says "אין הלוואה בדולר."; a loan with no balance row shows its principal) Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
 
 ## MCP
 

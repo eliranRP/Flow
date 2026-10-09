@@ -19,7 +19,8 @@ const db = vi.hoisted(() => ({
   offline: false,
   selects: 0,
   balanceError: null as { message: string } | null,
-  loans: [] as Array<{ id: string; name: string; currency: string; project_id: string | null }>,
+  noBalanceRow: [] as string[],
+  loans: [] as Array<{ id: string; name: string; currency: string; project_id: string | null; principal_minor?: number }>,
   projects: [] as Array<{ id: string; name: string }>,
   updates: [] as Array<{ row: Record<string, unknown>; id: string }>,
   updateRows: 1,
@@ -74,9 +75,13 @@ vi.mock("../lib/supabase", () => ({
         }
         if (table === "loan_balances") {
           return {
-            select: () => Promise.resolve({
-              data: db.balanceError ? null : db.loans.map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
-              error: db.balanceError,
+            select: () => ({
+              eq: () => Promise.resolve({
+                data: db.balanceError ? null : db.loans
+                  .filter((loan) => !db.noBalanceRow.includes(loan.id))
+                  .map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
+                error: db.balanceError,
+              }),
             }),
           };
         }
@@ -87,6 +92,7 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 beforeEach(() => {
+  db.noBalanceRow = [];
   db.inserts = [];
   db.insertError = null;
   db.hold = null;
@@ -601,6 +607,15 @@ describe("FLOW-119 loan project", () => {
     );
     expect(await screen.findByText("פרויקט א")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /הלוואת דוגמה/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the principal, not נפרעה, for a loan with no balance row yet (FLOW-115)", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: null, principal_minor: 12_345_600 }];
+    db.noBalanceRow = ["l-1"];
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    const row = await screen.findByRole("button", { name: /הלוואת דוגמה/ });
+    expect(row).toHaveAccessibleName(/123,456/);
+    expect(screen.queryByText("נפרעה")).not.toBeInTheDocument();
   });
 
   it("keeps a finished current project, marked הסתיים, and closes without a write on the checked row", async () => {
