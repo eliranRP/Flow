@@ -1,7 +1,7 @@
 import type { ReactNode, RefObject } from "react";
 import { BigNumber } from "./big-number";
 import { cx } from "./cx";
-import { formatDisplay } from "./date-math";
+import { formatDayMonth } from "./date-math";
 import { AlertIcon } from "./icons";
 import { SectionHead } from "./layout";
 import { List, ListRow } from "./list-row";
@@ -313,10 +313,10 @@ export function InvestmentCard({
           <FigureRow
             title={INVESTMENT_LABELS.value}
             hint={figures.valueMinor != null && figures.valueDate != null ? (
-              // FLOW-353: the word and its date stay on one line at 320.
+              // FLOW-353: the word and its date stay on one line at 320; this year's date drops its year.
               <span className="ui-nowrap">
                 {"עודכן\u00A0"}
-                <bdi dir="ltr" className="ui-num">{formatDisplay(figures.valueDate)}</bdi>
+                <bdi dir="ltr" className="ui-num">{formatDayMonth(figures.valueDate)}</bdi>
               </span>
             ) : undefined}
             value={<FigureValue minor={figures.valueMinor} currency={currency} readOnly={readOnly} />}
