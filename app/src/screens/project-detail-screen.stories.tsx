@@ -165,7 +165,7 @@ export const ProjectMixedSigns: Story = {
       <ProjectDetailScreen
         sample={{
           id: "mix2",
-          name: "Harbor Sample",
+          name: "נמל לדוגמה",
           status: "active",
           state_label: "פעיל",
           budget_agorot: null,
@@ -178,12 +178,17 @@ export const ProjectMixedSigns: Story = {
             { currency: "USD", income_minor: 50_000n, direct_minor: 175_000n, shared_minor: 0n, profit_minor: -125_000n },
           ],
           categories_by_currency: [
-            { currency: "ILS", id: "i1", name: "Materials", amount_minor: 40_000n },
-            { currency: "USD", id: "u1", name: "Freight", amount_minor: 175_000n },
+            { currency: "ILS", id: "i1", name: "חומרים", amount_minor: 40_000n },
+            { currency: "USD", id: "u1", name: "הובלה", amount_minor: 175_000n },
           ],
           categories: [],
           pending_count: 0,
-          transactions: [],
+          transactions: [
+            { id: "ms1", description: "תשלום לקוח לדוגמה", doc_date: "2026-10-04", amount_net: 100_000n, direction: "income", category: null },
+            { id: "ms2", description: "ספק חומרים לדוגמה", doc_date: "2026-09-22", amount_net: -40_000n, direction: "expense", category: "חומרים" },
+            { id: "ms3", description: "לקוח חו״ל לדוגמה", doc_date: "2026-09-12", amount_net: 50_000n, currency: "USD", direction: "income", category: null },
+            { id: "ms4", description: "חברת הובלה לדוגמה", doc_date: "2026-08-28", amount_net: -175_000n, currency: "USD", direction: "expense", category: "הובלה" },
+          ],
         }}
         example={exampleOnBand}
       />
