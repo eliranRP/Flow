@@ -1,0 +1,30 @@
+/* FLOW-502: one quiet yes/no question, e.g. the evening reminder under the review empty state. */
+.ui-prompt-card {
+  width: 100%;
+  max-inline-size: var(--empty-measure);
+  margin: var(--space-6) auto 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: start;
+}
+
+.ui-prompt-question {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ui-prompt-note {
+  margin: var(--label-gap) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}

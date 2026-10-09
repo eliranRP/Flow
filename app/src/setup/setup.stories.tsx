@@ -6,7 +6,7 @@ import { longHebrew } from "../ui/story-support";
 import { SetupCard } from "./card";
 import { JEV_HINT } from "./copy";
 import { SetupStep } from "./shell";
-import { StepBusiness } from "./steps";
+import { StepBusiness, StepSumit } from "./steps";
 import { StoryRoute } from "../ui/story-route";
 
 const meta = {
@@ -67,5 +67,23 @@ export const BusinessNameErrorDark: Story = {
 export const BusinessNameError320: Story = {
   ...businessNameError,
   name: "Business step, name error, 320",
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
+};
+
+/** FLOW-503: SUMIT and Mercury side by side on step 1, each opening its shared connect sheet. */
+const connectStep = {
+  args: SmartTag.args,
+  parameters: { flowRouter: false },
+  render: () => (
+    <StoryRoute entry="/setup/1">
+      <StepSumit onBack={() => undefined} onSkip={() => undefined} onConnected={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const ConnectStep: Story = { ...connectStep, name: "Connect step, SUMIT or Mercury" };
+export const ConnectStep320: Story = {
+  ...connectStep,
+  name: "Connect step, SUMIT or Mercury, 320",
   parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };

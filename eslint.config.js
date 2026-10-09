@@ -18,6 +18,8 @@ export default defineConfig(
       "packages/shared/src/database.types.ts",
       "playwright-report/**",
       "test-results/**",
+      // FLOW-502: a plain worker script that workbox imports; it runs in the service-worker scope.
+      "app/public/push-sw.js",
     ],
   },
   js.configs.recommended,

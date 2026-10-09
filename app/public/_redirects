@@ -47,6 +47,8 @@
 /settings/categories/ /settings/categories 301
 /settings/connections /app-shell 200
 /settings/connections/ /settings/connections 301
+/settings/notifications /app-shell 200
+/settings/notifications/ /settings/notifications 301
 /settings/loans /app-shell 200
 /settings/loans/ /settings/loans 301
 /settings/loans/:loanId /app-shell 200
