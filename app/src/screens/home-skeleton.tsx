@@ -59,6 +59,13 @@ export function HomeSkeleton({
           <Skeleton className="ui-skel-figure" />
         </span>
       </div>
+      <SectionHead title="פרויקטים" />
+      <div className="ui-project-list">
+        {rowKeys.slice(0, 2).map((key) => (
+          <ListRow variant="skeleton" key={key} />
+        ))}
+      </div>
+      {/* FLOW-355: the attention card loads where it lands, under the first two projects. */}
       <div className="ui-skel-card">
         <Skeleton className="ui-skel-dot" />
         <span className="ui-skel-copy">
@@ -66,9 +73,8 @@ export function HomeSkeleton({
           <Skeleton width="md" />
         </span>
       </div>
-      <SectionHead title="פרויקטים" />
       <div className="ui-project-list">
-        {rowKeys.map((key) => (
+        {rowKeys.slice(2).map((key) => (
           <ListRow variant="skeleton" key={key} />
         ))}
       </div>

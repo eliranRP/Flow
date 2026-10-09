@@ -18,7 +18,12 @@ describe("HomeSkeleton", () => {
     expect(document.querySelector(".ui-skel-pill")).toBeNull();
     expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
     expect(document.querySelector(".ui-skel-explain")).toBeNull();
-    expect(document.querySelector(".ui-skel-card")).not.toBeNull();
+    // FLOW-355: the attention card placeholder sits under the first two project rows, as the loaded page does.
+    const card = document.querySelector(".ui-skel-card");
+    const lists = document.querySelectorAll(".ui-project-list");
+    expect(lists).toHaveLength(2);
+    expect(Boolean((lists[0] as Element).compareDocumentPosition(card as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean((card as Element).compareDocumentPosition(lists[1] as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(document.querySelector(".ui-band .ui-hero")).not.toBeNull();
     expect(document.querySelector(".ui-flow")).not.toBeNull();
     expect(document.querySelectorAll(".ui-skel-figure")).toHaveLength(2);
