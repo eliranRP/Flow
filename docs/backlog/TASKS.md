@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-114 server follow-ups (`save_loan_split` category on every part; the loan line backfill checked and logged, no migration), FLOW-133 dblink undo tests, FLOW-309 income `missing_category` reason | The next non-UI item |
+| Dev lane 1 | FLOW-310 logic items: sheet history (✕ at mount, Escape on a stacked confirm, reload) and keyboard (layout-viewport fallback, Vaul keyboard state on multi-step resizes); tests over visuals | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
