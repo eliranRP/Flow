@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-502 web push, app side (option A): the review reminder card, Settings → התראות, the push worker (FLOW-704 "no key" merged #329) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-506 setup demo CSS stops reaching into components | FLOW-503 Mercury in the setup flow (after #332), then the FLOW-506 shared demo card and tab bar |
+| Backlog bug fixes | FLOW-503 Mercury in the setup flow | The FLOW-506 shared demo card and tab bar |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -1026,7 +1026,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#342), approved by the design lead (2026-10-09) · **Depends on:** —
 - **What:** Setup hid Mercury until its import was live. It is live now: add it as a connector option next to SUMIT, reusing the shared connect sheet.
 - **Acceptance:** setup step works with Mercury connected or skipped; CONTROLS row; design review.
 
