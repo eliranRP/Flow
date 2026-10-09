@@ -111,12 +111,17 @@ begin
     delete from public.categories c
     where c.company_id = company
       and c.loan_part is null
-      and not c.excluded_from_pnl
       and c.parent_id is not null;
+    -- A default the owner moved out of the P&L by hand goes too when the set uses its name.
     delete from public.categories c
     where c.company_id = company
       and c.loan_part is null
-      and not c.excluded_from_pnl;
+      and (
+        not c.excluded_from_pnl
+        or exists (
+          select 1 from private.starter_categories(p_set) s where s.kind = c.kind and s.name = c.name
+        )
+      );
   exception when foreign_key_violation then
     -- Something else already points at a default (a loan, a remembered supplier's split rule):
     -- the books have started, so the seed stays.

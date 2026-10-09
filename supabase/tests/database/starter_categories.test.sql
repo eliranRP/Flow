@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(24);
+select plan(25);
 
 do $users$
 begin
@@ -218,12 +218,21 @@ select throws_ok(
   'a viewer cannot either'
 );
 select tests.authenticate_as('sc_other');
+do $k$ begin
+  perform public.set_category_excluded_from_pnl(pg_temp.category_id(pg_temp.id('other'), 'expense', 'אחר'), true);
+end $k$;
 select is(
   public.apply_starter_categories('general'),
   jsonb_build_object('set', 'general', 'categories', 9),
   'another owner applies to their own company'
 );
 reset role;
+select is(
+  (select c.excluded_from_pnl from public.categories c
+   where c.id = pg_temp.category_id(pg_temp.id('other'), 'expense', 'אחר')),
+  false,
+  'a default moved out of the P&L by hand is replaced when the set uses its name'
+);
 select is(
   (select count(*)::int from public.categories c
    where c.company_id = pg_temp.id('co') and c.name = 'הכנסה ממכירה'),
