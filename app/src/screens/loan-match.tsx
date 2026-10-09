@@ -167,7 +167,7 @@ export function LoanBalanceList({
 }) {
   if (rows.length === 0) return null;
   return (
-    <List>
+    <List className="ui-loan-list">
       {rows.map((row) => {
         const common = {
           title: row.name,
@@ -202,7 +202,7 @@ export function ProjectLoanList({
 }) {
   if (rows.length === 0) return null;
   return (
-    <List>
+    <List className="ui-loan-list">
       {rows.map((row) => (
         <ListRow
           key={row.id}

@@ -46,6 +46,17 @@
   white-space: nowrap;
 }
 
+/* A loan's name is the row's identity: at 320 it wraps to two lines instead of losing the name
+   to an ellipsis; the hint keeps two lines too (FLOW-339, design lead). */
+.ui-loan-list .ui-row-title,
+.ui-loan-list .ui-row-hint {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+}
+
 /* FLOW-107. A part kept out of the profit: icon and words, muted, never only colour. */
 .ui-loan-out {
   display: inline-flex;
