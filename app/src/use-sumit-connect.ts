@@ -29,7 +29,7 @@ export function useSumitConnect({
     },
     keys: ["sumit", "dashboard"],
     onSuccess: () => {
-      toast.show({ message: dateFailed.current ? IMPORT_FROM_FAILED("SUMIT") : "SUMIT מחובר. המפתח נשאר בשרת." });
+      toast.show(dateFailed.current ? { message: IMPORT_FROM_FAILED("SUMIT"), tone: "info" } : { message: "SUMIT מחובר. המפתח נשאר בשרת." });
       setApiKey("");
       onSuccess?.();
     },

@@ -29,7 +29,7 @@ export function useMercuryConnect({
     },
     keys: ["mercury", "dashboard"],
     onSuccess: () => {
-      toast.show({ message: dateFailed.current ? IMPORT_FROM_FAILED("Mercury") : "Mercury מחובר. המפתח נשאר בשרת." });
+      toast.show(dateFailed.current ? { message: IMPORT_FROM_FAILED("Mercury"), tone: "info" } : { message: "Mercury מחובר. המפתח נשאר בשרת." });
       setApiKey("");
       onSuccess?.();
     },
