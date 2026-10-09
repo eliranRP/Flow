@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-115 loan setup follow-ups (errors say what to type, dimmed kept preview, close waits for save, loading skeleton, always-enabled save) (FLOW-322 `/notifications` and FLOW-334 leftovers merged #272) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
+| UI lane 4 | FLOW-315: bank details follow-ups (one read for the review queue's details, the detail memo's expand cue) (FLOW-706 merged #270) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-338 a loss on the band drawn white, project page and Home hero (#290) | Next small ready bug |
@@ -109,7 +109,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
 | 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | done (#239; owner chose the swipe, 2026-10-08) |
 | 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
-| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | claimed (UI lane 4, 2026-10-09) |
+| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) |
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
@@ -548,13 +548,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-315"></a>
 ### FLOW-315 · Bank details follow-ups (#107 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-304 (#107)
-- [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
-- [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
+- **Type:** BACKLOG NIT · **Status:** done (#283), except the account label's last 4, which waits on the owner · **Depends on:** FLOW-304 (#107)
+- [x] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list. (#283: one read for the next 50 cards, in chunks of 200 ids, the server cap; the card does not wait for it, since the details are supplementary. אישור itself no longer moves: the bar is pinned since FLOW-327.)
+- [x] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾). (#283)
 - [x] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
 - [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filtered on `owner_id`, so a viewer's project page was empty: fixed in `20261010190000_viewer_project_page.sql` with the drill-down, category totals and filed-today helpers.)
 - [ ] Stored Mercury account labels lose their digits at import, so the account row never shows a last 4. Keep the label's last 4 at import if the owner wants it.
-- [ ] The review queue warms the first other row's details, not the next card's.
+- [x] The review queue warms the first other row's details, not the next card's. (#283: the one read covers every card in the queue.)
 
 <a id="flow-305"></a>
 ### FLOW-305 · Review list in a bank-statement style
@@ -1140,7 +1140,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-706"></a>
 ### FLOW-706 · Jev fills can't be undone from the app while Jev is off
-- **Type:** BUG · **Status:** claimed (UI lane 4, 2026-10-09) · **Depends on:** — · **Source:** #231 code review
+- **Type:** BUG · **Status:** done (#270) · **Depends on:** — · **Source:** #231 code review
 - **What:** Decision 0145 says fills already made stay undoable after the owner turns Jev off. The app reads `jev_prefills` only inside the Jev suggestion read, which runs only while the connector is on, so with Jev off a filled line shows no "✦ מולא ע״י Jev" and no בטל (MCP `undo_jev_prefill` still works). App only, no server change: read the newest standing fill per open line even when the connector is off, show the label with בטל, and keep the stored values (no visual fill).
 - **Acceptance:** a queue test with the connector off and a standing fill shows the label and בטל calls `undo_jev_prefill`; design review.
 
