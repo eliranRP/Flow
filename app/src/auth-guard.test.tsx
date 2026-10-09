@@ -117,6 +117,9 @@ async function renderAt(path: string) {
   return view;
 }
 
+/** How long a step waits for the screen it expects. */
+const SCREEN_WAIT = { timeout: 15_000 };
+
 async function settle(): Promise<void> {
   for (let tick = 0; tick < 3; tick += 1) await act(async () => {});
 }
@@ -171,18 +174,18 @@ describe("auth guard when Supabase is configured", () => {
     expect(screen.queryByRole("link", { name: "העלאת דוח בנק" })).not.toBeInTheDocument();
   });
 
+  // A loaded CI runner can take over a second from sign-in to the lazy screen, so each step waits
+  // for the screen it expects (up to SCREEN_WAIT), not for a fixed number of ticks.
   it("keeps a listed deep link through sign-in and drops an off-list one", async () => {
     const first = await renderAt("/review");
     act(() => {
       emit("INITIAL_SESSION", null);
     });
-    await settle();
-    expect(screen.getByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" }, SCREEN_WAIT)).toBeInTheDocument();
     act(() => {
       emit("SIGNED_IN", session);
     });
-    await settle();
-    expect(await screen.findByRole("heading", { name: "לאישור" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "לאישור" }, SCREEN_WAIT)).toBeInTheDocument();
     first.unmount();
     auth.handlers.length = 0;
 
@@ -190,12 +193,11 @@ describe("auth guard when Supabase is configured", () => {
     act(() => {
       emit("INITIAL_SESSION", null);
     });
-    await settle();
+    expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" }, SCREEN_WAIT)).toBeInTheDocument();
     act(() => {
       emit("SIGNED_IN", session);
     });
-    await settle();
-    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח של העסק" }, SCREEN_WAIT)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "לאישור" })).not.toBeInTheDocument();
-  });
+  }, 60_000);
 });
