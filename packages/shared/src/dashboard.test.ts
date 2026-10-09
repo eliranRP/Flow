@@ -258,7 +258,7 @@ describe("project groups (FLOW-406)", () => {
 
   it("parses a payload from before groups", () => {
     const parsed = dashboardSchema.parse({ ...dashboard, projects: [{ ...row, group_id: undefined }] });
-    expect(parsed.groups).toEqual([]);
+    expect(parsed.groups).toBeUndefined();
     expect(parsed.projects[0]?.group_id).toBeUndefined();
   });
 

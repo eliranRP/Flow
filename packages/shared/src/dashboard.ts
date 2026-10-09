@@ -99,7 +99,7 @@ export const dashboardSchema = z.object({
   review_count: z.number(),
   projects: z.array(projectRowSchema),
   /** FLOW-406 (0164). Every project group, an empty one too. Older payloads omit it. */
-  groups: z.array(projectGroupRowSchema).optional().default([]),
+  groups: z.array(projectGroupRowSchema).optional(),
   after_overhead: z.boolean().optional(),
   excluded_income_agorot: agorotSchema.optional(),
   excluded_expense_agorot: agorotSchema.optional(),
