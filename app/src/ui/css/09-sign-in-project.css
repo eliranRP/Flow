@@ -125,6 +125,12 @@
   background: linear-gradient(90deg, transparent, var(--color-skeleton-band-shine), transparent);
 }
 
+/* A still bar (FLOW-506): the setup demos draw a skeleton frame, not a load. */
+.ui-skeleton-bar-still::after {
+  animation: none;
+  opacity: 0;
+}
+
 @keyframes flow-shimmer {
   from {
     transform: translateX(100%);
