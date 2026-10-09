@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(26);
+select plan(27);
 
 select tests.create_supabase_user('mi_a', 'mi-a@example.com');
 select tests.create_supabase_user('mi_b', 'mi-b@example.com');
@@ -166,6 +166,21 @@ select is(
    from public.transactions t join public.categories c on c.id = t.category_id where t.external_id = 'mi-uncat'),
   true,
   'the relabel gives the uncategorized line the default as a suggestion, not an assignment'
+);
+
+do $$ begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform public.sync_review_queue((select id from mi_ref where label = 'a'));
+  perform set_config('request.jwt.claims', null, true);
+  perform set_config('request.jwt.claim.role', null, true);
+end $$;
+select is(
+  (select string_agg(q.status::text || ':' || q.reason::text, ',') from public.review_queue q
+   join public.transactions t on t.id = q.transaction_id where t.external_id = 'mi-uncat'),
+  'open:missing_category',
+  'review asks about the suggested category on a line with no project'
 );
 
 select ok(not has_function_privilege('anon', 'private.relabel_mercury_income()', 'execute'), 'anon cannot run the relabel');
