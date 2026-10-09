@@ -274,4 +274,13 @@ describe("MonthList net heads (FLOW-339 option C)", () => {
     ]);
     expect(container.querySelector(".ui-month-totals")?.textContent).toBe("נטו −₪123.45");
   });
+
+  it("counts an income credit as money out, as its row draws it (decision 0120)", () => {
+    const { container } = renderNet([
+      row("a", "2026-09-14", 50_000n, "income"),
+      row("b", "2026-09-10", -10_000n, "income"),
+      row("c", "2026-08-10", 100n, "income"),
+    ]);
+    expect(container.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪400");
+  });
 });

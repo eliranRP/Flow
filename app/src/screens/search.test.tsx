@@ -278,6 +278,6 @@ describe("searchRowDetails", () => {
   it("holds a status only: no date, project, category or split (FLOW-339 option C)", () => {
     expect(searchRowDetails({ kept_out: false, waiting_review: false })).toEqual([]);
     expect(searchRowDetails({ kept_out: true, waiting_review: false })).toEqual([{ text: "מחוץ לרווח" }]);
-    expect(searchRowDetails({ kept_out: false, waiting_review: true })).toEqual([{ text: "ממתינה לאישור" }]);
+    expect(searchRowDetails({ kept_out: false, waiting_review: true })).toEqual([{ text: "ממתינה לאישור", keep: true }]);
   });
 });

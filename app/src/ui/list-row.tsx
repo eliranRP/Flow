@@ -110,7 +110,7 @@ export type StatementRowProps = {
   label?: string;
   /** Typed search text: its first match in the name is tinted (FLOW-323). */
   match?: string;
-  /** Muted facts on line 2 after the suggestion, joined with " · " (date, project, state). FLOW-323. */
+  /** Muted facts on line 2 after the suggestion, joined with " · " (Search: statuses only, FLOW-339 option C). FLOW-323. */
   details?: StatementDetail[];
   /** Real agorot only, no ".00" (Search, FLOW-339 option C). */
   realCents?: boolean;
@@ -436,7 +436,7 @@ function StatementRow(props: StatementRowProps) {
                   {details.map((detail, index) => (
                     <span
                       key={`${String(index)}:${detail.text}`}
-                      className={detail.tone === "accent" ? "ui-hint-part ui-hint-part-keep" : "ui-hint-part"}
+                      className={detail.tone === "accent" || detail.keep === true ? "ui-hint-part ui-hint-part-keep" : "ui-hint-part"}
                       data-clip-ok=""
                     >
                       {index > 0 ? HINT_SEPARATOR : null}

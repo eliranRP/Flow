@@ -302,7 +302,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "waiting_review">): StatementDetail[] {
   const details: StatementDetail[] = [];
   if (row.kept_out) details.push({ text: "מחוץ לרווח" });
-  if (row.waiting_review) details.push({ text: "ממתינה לאישור" });
+  if (row.waiting_review) details.push({ text: "ממתינה לאישור", keep: true });
   return details;
 }
 

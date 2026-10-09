@@ -12,7 +12,8 @@ import { BankIcon, CameraIcon, CardIcon, DocumentIcon, TransferIcon } from "./ic
 export type StatementMethod = { icon: ReactNode; text: string; spoken?: string; ltr?: boolean };
 
 /** One muted fact on a statement row's second line. Accent marks a state to act on ("ממתינה לאישור"). */
-export type StatementDetail = { text: string; tone?: "accent" };
+/** `keep`: a state to act on that never drops off line 2; it shortens instead. `accent` also keeps it. */
+export type StatementDetail = { text: string; tone?: "accent"; keep?: boolean };
 
 export type StatementSource = "sumit" | "mercury" | "manual" | "photo";
 
