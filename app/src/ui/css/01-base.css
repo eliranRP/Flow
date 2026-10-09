@@ -308,6 +308,12 @@ a.ui-row,
   color: var(--color-bad);
 }
 
+/* On the violet band a loss stays the on-band white; the label names it (DESIGN-RULES 3.5,
+   FLOW-338). Red on violet is about 1.6:1. */
+.ui-band .ui-loss {
+  color: var(--color-on-band);
+}
+
 /* Money in: income rows, income totals, Home נכנס, an income detail. Only on a figure with no
    minus, never on the band, and always with words beside it (decision 0120). */
 .ui-income {
