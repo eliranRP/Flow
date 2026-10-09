@@ -1,3 +1,4 @@
+import { divHalfEven, STANDARD_VAT_RATE_BP } from "@flow/shared";
 import { type CSSProperties, type ReactNode } from "react";
 import { formatAmount } from "./big-number";
 import { Button } from "./button";
@@ -279,7 +280,6 @@ function JevScene({ pointer }: SceneProps) {
         supplier="חומרי בניין הדר בע״מ"
         date="21/09/2026"
         agorot={850_000n}
-        vat="₪1,530"
         spark={spark}
         project={project > 0 ? "וילה רעננה" : undefined}
         projectAmount={project}
@@ -393,10 +393,10 @@ function ApprovalScene({ pointer }: SceneProps) {
       </div>
       <div className="ui-setup-stack">
         <div className="ui-setup-leave" data-setup-visible={leave < 1 ? "true" : "false"} style={styleOf({ "--setup-leave": leave })}>
-          <ApprovalCard supplier="חומרי בניין הדר בע״מ" agorot={850_000n} vat="₪1,530" project="וילה רעננה" category="חומרים" tap="approve" />
+          <ApprovalCard supplier="חומרי בניין הדר בע״מ" agorot={850_000n} project="וילה רעננה" category="חומרים" tap="approve" />
         </div>
         <div className="ui-setup-fade" data-setup-visible={next >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": next })}>
-          <ApprovalCard supplier="אבי חשמל" agorot={234_000n} vat="₪421" project="וילה רעננה" category="קבלני משנה" />
+          <ApprovalCard supplier="אבי חשמל" agorot={234_000n} project="וילה רעננה" category="קבלני משנה" />
         </div>
       </div>
       <DemoPointer elapsedMs={elapsed} timeline={APPROVAL_POINTER} variant={pointer} />
@@ -404,10 +404,10 @@ function ApprovalScene({ pointer }: SceneProps) {
   );
 }
 
-function ApprovalCard({ supplier, agorot, vat, project, category, tap }: { supplier: string; agorot: bigint; vat: string; project: string; category: string; tap?: string }) {
+function ApprovalCard({ supplier, agorot, project, category, tap }: { supplier: string; agorot: bigint; project: string; category: string; tap?: string }) {
   return (
     <div className="ui-setup-card">
-      <DemoFact supplier={supplier} date="21/09/2026" agorot={agorot} vat={vat} spark={1} project={project} projectAmount={1} category={category} categoryAmount={1} />
+      <DemoFact supplier={supplier} date="21/09/2026" agorot={agorot} spark={1} project={project} projectAmount={1} category={category} categoryAmount={1} />
       <div className="ui-setup-hit">
         <Button full icon={<CheckIcon />} data-tap={tap}>
           אישור
@@ -417,11 +417,15 @@ function ApprovalCard({ supplier, agorot, vat, project, category, tap }: { suppl
   );
 }
 
+/** The demo amounts are before VAT; the VAT line is the standard rate on them. */
+export function demoVat(netAgorot: bigint): bigint {
+  return divHalfEven(netAgorot * BigInt(STANDARD_VAT_RATE_BP), 10_000n);
+}
+
 function DemoFact({
   supplier,
   date,
   agorot,
-  vat,
   spark,
   project,
   projectAmount,
@@ -431,7 +435,6 @@ function DemoFact({
   supplier: string;
   date: string;
   agorot: bigint;
-  vat: string;
   spark: number;
   project?: string;
   projectAmount: number;
@@ -448,7 +451,7 @@ function DemoFact({
         <bdi dir="ltr">{formatAmount(agorot, "detail")}</bdi>
       </p>
       <p className="t-hint">
-        לפני מע״מ · מע״מ <bdi dir="ltr">{vat}</bdi>
+        לפני מע״מ · מע״מ <bdi dir="ltr">{formatAmount(demoVat(agorot))}</bdi>
       </p>
       <p className="ui-setup-offer ui-setup-fade" data-setup-visible={spark >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": spark })}>
         <SparkIcon size={16} /> הצעה
