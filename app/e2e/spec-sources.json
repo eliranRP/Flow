@@ -43,6 +43,21 @@
       "screens/categories-screen.tsx",
       "screens/connections-screen.tsx"
     ],
+    "forecast.spec.ts": [
+      "screens/HomeScreen.tsx",
+      "screens/missing-bills-screen.tsx",
+      "screens/project-detail-screen.tsx",
+      "screens/project-expected-months.tsx",
+      "screens/search.tsx",
+      "forecast.ts",
+      "forecast-sample.ts",
+      "ui/banner.tsx",
+      "ui/missing-bill-list.tsx",
+      "ui/expected-months.tsx",
+      "ui/expected-month-sheet.tsx",
+      "ui/approx-amount.tsx",
+      "ui/sheet.tsx"
+    ],
     "jev-review-open.spec.ts": [
       "screens/review-screen.tsx",
       "screens/review-queue.tsx",
