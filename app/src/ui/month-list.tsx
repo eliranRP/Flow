@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { Fragment, useId, type ReactNode } from "react";
-import { withCents } from "./big-number";
+import { splitCents, withCents } from "./big-number";
 import { List } from "./list-row";
 import { groupByDay, groupByMonth, type MonthAmount, type MonthGroup, type MonthTotal } from "./month-groups";
 
@@ -258,18 +258,23 @@ function MonthTotalLine({ total, cents, cost, first }: { total: MonthTotal; cent
   const income = total.incomeMinor > 0n ? text(total.incomeMinor, "income") : null;
   const expense = total.expenseMinor > 0n ? text(total.expenseMinor, "expense") : null;
   if (income == null && expense == null) return null;
+  // With cents, the agorot are drawn small and raised, as on the rows under the head (FLOW-334).
+  const figure = (formatted: string): ReactNode => {
+    const { whole, cents: tail } = splitCents(formatted, cents ? "detail" : "summary");
+    return tail == null ? formatted : <>{whole}<span className="ui-num-cents">{tail}</span></>;
+  };
   return (
     <span className="ui-month-line">
       {income != null ? (
         <span>
           <span className="sr-only">{first ? "" : ", "}הכנסות </span>
-          <bdi dir="ltr" className="ui-num ui-income">{income}</bdi>
+          <bdi dir="ltr" className="ui-num ui-income">{figure(income)}</bdi>
         </span>
       ) : null}
       {expense != null ? (
         <span>
           <span className="sr-only">{first && income == null ? "" : ", "}הוצאות </span>
-          <bdi dir="ltr" className="ui-num">{expense}</bdi>
+          <bdi dir="ltr" className="ui-num">{figure(expense)}</bdi>
         </span>
       ) : null}
     </span>
