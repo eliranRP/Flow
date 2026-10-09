@@ -233,18 +233,28 @@ describe("category drill-down months", () => {
 
   it("hides the last month's total while עוד תנועות can still load rows", () => {
     wrap(<ProjectCategoryScreen sample={sample} backTo="/projects/a" />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪1,000");
+    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות ₪1,000");
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
   it("shows a USD drill-down in dollars", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, currency: "USD", pageSize: undefined }} backTo="/projects/a" />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −$5,000");
-    expect(screen.getByText("Line 1").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("−$1,000.00");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות $5,000");
+    expect(screen.getByText("Line 1").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("$1,000.00"); // FLOW-339: a cost list carries no minus
   });
 
   it("totals the last month once every row is shown", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, pageSize: undefined }} backTo="/projects/a" />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות ₪5,000");
+  });
+
+  it("puts the lines' total in the subtitle, and the count once every row is shown (FLOW-334)", () => {
+    const { unmount } = wrap(<ProjectCategoryScreen sample={sample} backTo="/projects/a" />);
+    const subtitle = () => document.querySelector("header p.t-label")?.textContent ?? "";
+    expect(subtitle()).toContain("₪");
+    expect(subtitle()).not.toMatch(/תנועות|תנועה אחת/);
+    unmount();
+    wrap(<ProjectCategoryScreen sample={{ ...sample, pageSize: undefined }} backTo="/projects/a" />);
+    expect(subtitle()).toMatch(new RegExp(`· ${String(sample.rows.length)} תנועות$`));
   });
 });

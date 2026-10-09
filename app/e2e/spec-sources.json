@@ -46,7 +46,8 @@
       "screens/profit-months.tsx",
       "screens/transaction-screen.tsx",
       "screens/split-screen.tsx",
-      "screens/unpaid-screen.tsx"
+      "screens/unpaid-screen.tsx",
+      "screens/missing-bills-screen.tsx"
     ],
     "controls-sweep-review.spec.ts": [
       "screens/review-screen.tsx",
@@ -74,6 +75,21 @@
       "screens/settings-screen.tsx",
       "screens/categories-screen.tsx",
       "screens/connections-screen.tsx"
+    ],
+    "forecast.spec.ts": [
+      "screens/HomeScreen.tsx",
+      "screens/missing-bills-screen.tsx",
+      "screens/project-detail-screen.tsx",
+      "screens/project-expected-months.tsx",
+      "screens/search.tsx",
+      "forecast.ts",
+      "forecast-sample.ts",
+      "ui/banner.tsx",
+      "ui/missing-bill-list.tsx",
+      "ui/expected-months.tsx",
+      "ui/expected-month-sheet.tsx",
+      "ui/approx-amount.tsx",
+      "ui/sheet.tsx"
     ],
     "jev-review-open.spec.ts": [
       "screens/review-screen.tsx",
@@ -164,6 +180,11 @@
     "txn-step.spec.ts": [
       "screens/transaction-screen.tsx",
       "screens/filed-today-screen.tsx"
+    ],
+    "txn-swipe.spec.ts": [
+      "ui/card-swipe.tsx",
+      "txn-nav.tsx",
+      "screens/transaction-screen.tsx"
     ]
   }
 }

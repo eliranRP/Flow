@@ -104,8 +104,10 @@ describe("Breakdown screen", () => {
     expect(call?.args).toHaveProperty("p_from");
     expect(screen.getByText("בלי קטגוריה")).toBeInTheDocument();
     expect(screen.getByText("12 תנועות · כולל חלק משותף")).toBeInTheDocument();
-    expect(screen.getByText("−₪48,320")).toBeInTheDocument();
-    expect(screen.getAllByText("−$1,200")).toHaveLength(2);
+    // FLOW-339: a cost under "יצא" is already named, so no minus on the header or the groups.
+    expect(screen.getByText("₪48,320")).toBeInTheDocument();
+    expect(screen.getAllByText("$1,200")).toHaveLength(2);
+    expect(screen.queryByText(/^−/)).toBeNull();
     // Every currency's group opens its lines.
     expect(screen.getByRole("link", { name: /תוכנה לדוגמה/ })).toHaveAttribute("href", "/flow/expense/category/USD/c2");
   });
@@ -284,6 +286,9 @@ describe("Breakdown lines screen", () => {
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "get_breakdown_lines" && !("p_from" in (c.args as object)))).toBe(true);
     });
-    expect(screen.getByRole("button", { name: periodLabel(allTime()) })).toBeInTheDocument();
+    // FLOW-334: the pill sits under the title on the start side, not in the top corner.
+    const pill = screen.getByRole("button", { name: periodLabel(allTime()) });
+    expect(pill.closest(".ui-page-below")).not.toBeNull();
+    expect(pill.closest(".ui-page-title-row")).toBeNull();
   });
 });

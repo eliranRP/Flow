@@ -117,11 +117,15 @@ describe("one line out of the P&L", () => {
 
   it("locks a line with a loan split as a loan line, not as a split by category", () => {
     const client = new QueryClient();
-    client.setQueryData(["loan-split", "t-1"], { splits: [{}, {}, {}] });
+    const part = (id: string, name: "principal" | "interest" | "escrow") => ({ id, part: name, amountMinor: 1n, scheduledMinor: 1n, needsReview: false, loanId: "loan-1" });
+    client.setQueryData(["loan-split", "t-1"], {
+      companyId: "c-1", lineMinor: 3n, currency: "ILS", byParts: true, loans: [], categoryIds: {},
+      splits: [part("s-1", "principal"), part("s-2", "interest"), part("s-3", "escrow")],
+    });
     show({ ...base, pnl_state: "mixed" }, client);
     expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
     expect(screen.queryByRole("link", { name: /לפי הקטגוריות בפיצול/ })).toBeNull();
-    expect(screen.getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
+    expect(screen.getByText("לפי חלקי ההלוואה")).toBeTruthy();
     expect(screen.queryByText("חלקית ברווח")).toBeNull();
   });
 

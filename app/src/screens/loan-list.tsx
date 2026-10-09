@@ -84,7 +84,7 @@ function LoanRows({
 }) {
   if (rows.length === 0) return null;
   return (
-    <List className={muted ? "ui-loan-closed-list" : undefined}>
+    <List className={muted ? "ui-loan-list ui-loan-closed-list" : "ui-loan-list"}>
       {rows.map((row) => {
         const hint = loanListHint(row);
         const common = {

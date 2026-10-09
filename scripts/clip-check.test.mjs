@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { CLIP_OK_SELECTOR, isClipped, passLine, reportsClip, storySkipsText, storyViewPhrase, THEMES, WIDTHS } from "./clip-check.mjs";
+import { CLIP_OK_SELECTOR, isClipped, passLine, reportsClip, storyAllowsNoText, storyViewPhrase, THEMES, WIDTHS } from "./clip-check.mjs";
 
 const playwrightSkip = (() => {
   try {
@@ -50,19 +50,19 @@ test("the clip check covers 320, 360, and 390 in light and dark", () => {
   assert.doesNotMatch(CLIP_OK_SELECTOR, /ui-row-hint/);
 });
 
-test("only the clip-no-text tag skips a story", () => {
-  assert.equal(storySkipsText({ tags: ["clip-no-text"] }), true);
-  assert.equal(storySkipsText({ tags: ["clip-no-text"], parameters: { clipCheck: { noText: true } } }), true);
-  assert.equal(storySkipsText({ parameters: { clipCheck: { noText: true } } }), false);
-  assert.equal(storySkipsText({ tags: [] }), false);
-  assert.equal(storySkipsText({}), false);
+test("only the clip-no-text tag waives measuring nothing", () => {
+  assert.equal(storyAllowsNoText({ tags: ["clip-no-text"] }), true);
+  assert.equal(storyAllowsNoText({ tags: ["clip-no-text"], parameters: { clipCheck: { noText: true } } }), true);
+  assert.equal(storyAllowsNoText({ parameters: { clipCheck: { noText: true } } }), false);
+  assert.equal(storyAllowsNoText({ tags: [] }), false);
+  assert.equal(storyAllowsNoText({}), false);
 });
 
-test("one view is singular and a pass names skipped stories", () => {
+test("one view is singular and a pass names the stories without text", () => {
   assert.equal(storyViewPhrase(1), "1 story view");
   assert.equal(storyViewPhrase(2), "2 story views");
-  assert.equal(passLine({ stories: 12, skipped: 2, measured: 40, themes: ["light", "dark"], widths: [320, 360, 390] }),
-    "clip-check passed. 12 stories, 2 skipped, 40 elements, light/dark at 320/360/390.");
+  assert.equal(passLine({ stories: 12, noText: 2, measured: 40, themes: ["light", "dark"], widths: [320, 360, 390] }),
+    "clip-check passed. 12 stories, 2 without text, 40 elements, light/dark at 320/360/390.");
 });
 
 test("pnpm clip-check runs the script", () => {

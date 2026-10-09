@@ -4,6 +4,7 @@
 // change the database). scripts/smoke-allow-rpcs.test.mjs fails when the app calls a stable RPC that is
 // missing here, or when a volatile one is listed, so a new screen read cannot turn the smoke red.
 export const readRpcs = new Set([
+  "expected_months",
   "get_breakdown",
   "get_breakdown_lines",
   "get_dashboard",
@@ -23,6 +24,7 @@ export const readRpcs = new Set([
   "list_unpaid",
   "mcp_company_loan_currency",
   "mcp_loan_payments",
+  "missing_bills",
   "project_category_months",
   "project_waiting",
   "review_anomalies",

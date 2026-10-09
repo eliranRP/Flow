@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import type { TransactionDetail } from "@flow/shared";
 import { userEvent, within } from "@storybook/test";
+import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";

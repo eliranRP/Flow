@@ -7,6 +7,7 @@ import { IconButton } from "../ui/icon-button";
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
+import { Skeleton } from "../ui/skeleton";
 import { DateSheet } from "../ui/date-sheet";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
@@ -206,13 +207,14 @@ export function LoanSetupForm({
           <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
         </div>
       ) : null}
+      {/* FLOW-115: the currency belongs to the amount, --space-2 under it; a message-height slot keeps the field rhythm. */}
+      <div className="ui-loan-amount-field">
       <MoneyField
         label="סכום מקורי"
         value={principal}
         prefix={mark}
         disabled={busy}
         keepMinus
-        reserveMessage
         enterKeyHint="next"
         error={shownError("principal")}
         onBlur={() => { touch("principal"); }}
@@ -226,6 +228,8 @@ export function LoanSetupForm({
         disabled={busy}
         onChange={setCurrency}
       />
+      <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
+      </div>
       <PercentField
         label="ריבית שנתית"
         value={rate}
@@ -264,6 +268,8 @@ export function LoanSetupForm({
           <bdi className="ui-num" dir="ltr">{formatDisplay(startDate)}</bdi>
           <CalendarIcon size={20} />
         </button>
+        {/* Same rhythm as the fields around it, which reserve their message line. */}
+        <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
       </div>
       <DateSheet
         open={dateOpen}
@@ -317,7 +323,8 @@ export function LoanSetupForm({
         </div>
       ) : null}
       {shown ? (
-        <div aria-live="polite">
+        // FLOW-115: the kept preview dims while a field is incomplete or wrong, so it doesn't read as the new loan.
+        <div aria-live="polite" className={ready && !invalid ? undefined : "ui-loan-preview-stale"}>
           <p>
             תשלום חודשי{" "}
             <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
@@ -346,7 +353,8 @@ export function LoanSetupForm({
           {shownError("payment") ?? ""}
         </p>
       ) : null}
-      <Button type="submit" buttonRef={saveButtonRef} busy={busy} disabled={!ready && !invalid}>שמירה</Button>
+      {/* FLOW-115: always tappable; a tap shows each field's error, and each says what to type. */}
+      <Button type="submit" buttonRef={saveButtonRef} busy={busy}>שמירה</Button>
     </form>
   );
 }
@@ -414,6 +422,8 @@ export function LoanSettingsSection({
   // Back in the picker view returns to the form, like Escape and חזרה.
   const adoptNew = useRef(false);
   const setSheet = useSheetHistory("loan-new", open, setOpen, () => {
+    // FLOW-115: Back during a save waits for it, like ✕ and Escape (0075).
+    if (posted.current) return false;
     if (view !== "project") return true;
     backToForm();
     return false;
@@ -439,6 +449,7 @@ export function LoanSettingsSection({
     },
     keys: ["loans", "project"],
     onSuccess: () => {
+      posted.current = false;
       clearDraft();
       setSheet(false);
       const id = savedId.current;
@@ -564,9 +575,29 @@ export function LoanSettingsSection({
           </IconButton>
         ) : undefined}
         onEscape={picking ? backToForm : undefined}
+        onBeforeClose={() => !posted.current}
       >
         {currency == null ? (
-          <p role="status">טוען…</p>
+          // FLOW-115: the form's shape while the currency read lands, so the sheet does not jump.
+          <div className="ui-stack ui-loan-skeleton" aria-busy="true">
+            <p className="sr-only" role="status">טוען…</p>
+            <div className="ui-loan-skel-field" key="a">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+            <div className="ui-loan-skel-field" key="b">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+            <div className="ui-loan-skel-field" key="c">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+            <div className="ui-loan-skel-field" key="d">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+          </div>
         ) : (
           <>
             {picking ? (

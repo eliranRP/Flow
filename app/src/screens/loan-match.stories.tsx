@@ -1,43 +1,55 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentProps } from "react";
-import { useRef, useState } from "react";
-import { LoanSplitPanel } from "./loan-match";
+import { useState } from "react";
+import { LoanMatchOffer } from "./loan-match";
 
-/** FLOW-107. Invented amounts: a 2,450.00 payment split 1,050 / 400 / 1,000. */
-const PARTS = [
-  { id: "a", part: "interest", amountMinor: 105_000n, scheduledMinor: 105_000n, needsReview: false, loanId: "loan-1", inPnl: true },
-  { id: "b", part: "escrow", amountMinor: 40_000n, scheduledMinor: 40_000n, needsReview: false, loanId: "loan-1", inPnl: true },
-  { id: "c", part: "principal", amountMinor: 100_000n, scheduledMinor: 100_000n, needsReview: false, loanId: "loan-1", inPnl: false },
+/**
+ * FLOW-114 option B. An unmatched loan payment offers "שיוך להלוואה" under the category row;
+ * a matched one is the category row itself (Screens/Routes, "Loan payment matched").
+ * Invented loans and amounts.
+ */
+const LOANS = [
+  {
+    id: "loan-1",
+    name: "משכנתא לדוגמה",
+    currency: "USD",
+    principalMinor: 10_000_000,
+    annualRatePpm: 60_000,
+    termMonths: 360,
+    startDate: "2026-02-01",
+    paymentMinor: 59_955,
+    escrowMinor: 0,
+    balanceMinor: 9_000_000n,
+  },
+  {
+    id: "loan-2",
+    name: "הלוואה שנפרעה",
+    currency: "USD",
+    principalMinor: 1_000_000,
+    annualRatePpm: 60_000,
+    termMonths: 12,
+    startDate: "2025-02-01",
+    paymentMinor: 86_066,
+    escrowMinor: 0,
+    balanceMinor: 0n,
+  },
 ] as const;
 
-const WHOLE_LINE = PARTS.map((part) => ({ ...part, inPnl: null }));
-const FLAGGED = PARTS.map((part) => ({ ...part, inPnl: null, needsReview: true }));
+/** Args stay plain JSON: Storybook cannot serialise bigint amounts, so stories pick loans by count. */
+type OfferArgs = Partial<Omit<ComponentProps<typeof LoanMatchOffer>, "loans">> & { loanCount?: 1 | 2; open?: boolean };
 
-/** Args stay plain JSON: Storybook cannot serialise bigint amounts, so stories pick parts by name. */
-type PanelArgs = Partial<Omit<ComponentProps<typeof LoanSplitPanel>, "parts">> & { split?: "parts" | "whole" | "flagged" };
-
-const SPLITS = { parts: PARTS, whole: WHOLE_LINE, flagged: FLAGGED };
-
-function Panel({ split = "parts", ...props }: PanelArgs) {
-  const [open, setOpen] = useState(false);
-  const splitSectionRef = useRef<HTMLHeadingElement>(null);
+function Offer({ loanCount = 1, open: startOpen = false, ...props }: OfferArgs) {
+  const [open, setOpen] = useState(startOpen);
   return (
     <div>
-      <LoanSplitPanel
-        offerMatch={false}
+      <LoanMatchOffer
         lineCurrency="USD"
-        displayCurrency="USD"
-        parts={SPLITS[split]}
-        byParts
-        loans={[]}
-        needsReview={false}
-        currencyMismatch={false}
+        loans={LOANS.slice(0, loanCount)}
         busy={false}
+        matchHint={loanCount === 1 ? LOANS[0].name : undefined}
         sheetOpen={open}
         onSheetOpenChange={setOpen}
-        splitSectionRef={splitSectionRef}
         onMatch={() => undefined}
-        onCorrect={() => undefined}
         {...props}
       />
     </div>
@@ -45,45 +57,19 @@ function Panel({ split = "parts", ...props }: PanelArgs) {
 }
 
 const meta = {
-  title: "Screens/Loan split",
-  component: Panel,
-} satisfies Meta<typeof Panel>;
+  title: "Screens/Loan match",
+  component: Offer,
+} satisfies Meta<typeof Offer>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const light390 = { parameters: { viewport: { defaultViewport: "flow390" } } };
-const dark390 = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow390" } } };
+const dark390 = { globals: { theme: "dark" } };
 const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-const dark320 = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
 
-export const ByParts: Story = { ...light390 };
-export const ByPartsDark: Story = { ...dark390 };
-export const ByParts320: Story = { ...light320 };
-export const ByPartsDark320: Story = { ...dark320 };
-
-/** A shekel loan: agorot hide when they are zero. */
-export const Shekels: Story = { args: { lineCurrency: "ILS", displayCurrency: "ILS" }, ...light390 };
-
-/**
- * A part waits for review, so the whole line counts and the correction shows, with the
- * FLOW-131 hint that the loan may have been busy when the line posted.
- */
-export const NeedsReview: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...light390 };
-export const NeedsReviewDark: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...dark390 };
-export const NeedsReview320: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...light320 };
-export const NeedsReviewDark320: Story = { args: { split: "flagged", byParts: false, needsReview: true }, ...dark320 };
-
-/** A line with VAT keeps its parts on screen but counts as one line. */
-export const WholeLine: Story = { args: { split: "whole", byParts: false }, ...light390 };
-
-export const CurrencyMismatch: Story = {
-  args: { split: "flagged", byParts: false, needsReview: true, currencyMismatch: true },
-  ...light390,
-};
-
-export const Viewer: Story = { args: { readOnly: true }, ...light390 };
-export const ViewerNeedsReview: Story = {
-  args: { split: "flagged", byParts: false, needsReview: true, readOnly: true },
-  ...light390,
-};
+export const MatchRow: Story = {};
+export const MatchRowDark: Story = { ...dark390 };
+export const MatchRow320: Story = { ...light320 };
+/** Two loans: the picker lists both; the paid-off one is off with its reason. */
+export const Picker: Story = { args: { loanCount: 2, open: true } };
+export const PickerSaving: Story = { args: { loanCount: 2, open: true, savingId: "loan-1" } };

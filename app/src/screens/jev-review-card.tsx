@@ -22,6 +22,8 @@ import {
   jevScopeFollowsLive,
   jevScopePhase,
   loadJevReview,
+  jevQueueKey,
+  loadJevFills,
   loadJevSuggestions,
   loadReviewFlags,
   reviewFlagsQueryKey,
@@ -90,6 +92,25 @@ function useJevConnectorScope(): {
 }
 
 /**
+ * FLOW-706: the queue read while Jev is off. Only the fills that still stand, so the card keeps
+ * בטל (decision 0145); no suggestion and no Jev value. A failed read throws: the card shows no label.
+ */
+export async function loadJevFillsOff(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
+  const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
+  const fills = await loadJevFills(ids, signal);
+  const byId: Record<string, JevPrefill | null> = {};
+  for (const [id, fill] of fills) {
+    if (fill.state === "filled") byId[id] = { suggestionId: "", transactionId: id, project: null, category: null, auto: fill };
+  }
+  return { connectorOn: false, byId };
+}
+
+/** Under the queue's key prefix, so an undo's refetch reaches it too. */
+export function jevFillsOffQueryKey(transactionIds: readonly string[]) {
+  return ["jev-review-queue", "off", jevQueueKey(transactionIds)] as const;
+}
+
+/**
  * One read for every open line. A remembered on only waits. The prefill applies
  * after a connector read from this session, and a failed read is off.
  */
@@ -121,6 +142,19 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       JEV_QUEUE_OFF,
     ),
   });
+  // FLOW-706: with Jev off, a fill that still stands keeps its label and בטל.
+  const knownOff = confirmed && !connector.data;
+  const offFills = useQuery({
+    queryKey: jevFillsOffQueryKey(transactionIds),
+    enabled: readable && knownOff,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) => withJevDeadline(
+      signal,
+      (linked) => loadJevFillsOff(transactionIds, linked),
+      JEV_QUEUE_OFF,
+    ),
+  });
   function loadingFor(transactionId: string | null): boolean {
     if (scopePending || awaitingLive) return true;
     if (waiting) return true;
@@ -130,6 +164,11 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
   function stateFor(transactionId: string | null): JevReviewState {
+    // knownOff already means a settled connector read from this session (no live wait, no remembered on).
+    if (knownOff && !scopePending && transactionId != null && offFills.data != null && !offFills.isError) {
+      const prefill = offFills.data.byId[transactionId] ?? null;
+      return prefill == null ? JEV_REVIEW_OFF : { connectorOn: false, prefill };
+    }
     if (scopePending || awaitingLive || waiting || connector.isError || !knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) {
       return JEV_REVIEW_OFF;
     }

@@ -126,4 +126,12 @@ describe("one line out of the P&L, live", () => {
     fireEvent.click(await pnlSwitch());
     expect(await screen.findByText("אין הרשאה לעדכן את השורה.")).toBeTruthy();
   });
+
+  it("says which part blocks putting the line in the P&L (0138)", async () => {
+    rpc.excluded = true;
+    rpc.fail = { message: "a reversal part needs a project", code: "P0001" };
+    showLive();
+    fireEvent.click(await pnlSwitch());
+    expect(await screen.findByText("לחלק החזר בפיצול אין פרויקט. בחרו לו פרויקט בפיצול, ואז נסו שוב.")).toBeTruthy();
+  });
 });

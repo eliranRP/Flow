@@ -13,6 +13,8 @@ export const LEDGER_FOCUS_KEYS = [
   "txn",
   "breakdown",
   "breakdown-lines",
+  "missing-bills",
+  "expected-months",
 ] as const;
 
 export function refreshLedger(client: { invalidateQueries: (filters: { queryKey: readonly string[] }) => Promise<unknown> }): void {

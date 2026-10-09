@@ -170,6 +170,9 @@ button.ui-tab-slot {
   max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap));
   margin-inline: auto;
   overflow: hidden;
+  /* The body scrolls, never the panel: clip stops a click's scroll-into-view or scroll anchoring
+     from scrolling the panel mid tall-to-short change, which hid the header's padding. */
+  overflow: clip;
   padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
@@ -223,9 +226,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   background: var(--color-control-off);
 }
 
+/* The ✕ is a 44px target; centring it on the one-line title puts its glyph on the title's line (FLOW-339). */
 .ui-sheet-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   min-width: 0;

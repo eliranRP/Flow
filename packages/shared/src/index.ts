@@ -82,6 +82,7 @@ export type {
   SumitStatus,
   MercuryStatus,
   TransactionDetail,
+  TransactionLoanSplit,
   UnpaidRow,
 } from "./dashboard.ts";
 export {
@@ -129,3 +130,5 @@ export type { Initials } from "./initials.ts";
 export type { AttachedLoanPayment, LoanSplitAmount, LoanSplitPart, LoanStatus, ScheduledSum } from "./loan-split.ts";
 export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";
+export { expectedMonthsSchema, expectedPartySchema, missingBillSchema, missingBillsSchema } from "./forecast.ts";
+export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill } from "./forecast.ts";

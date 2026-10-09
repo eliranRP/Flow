@@ -51,6 +51,19 @@ export const UnpaidList: Story = {
   ),
 };
 
+// FLOW-335: a row with SUMIT's document link opens it in a new tab (chevron); the others stay still.
+export const UnpaidWithDocument: Story = {
+  name: "Unpaid, document link",
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={sampleUnpaid.map((row, index) => (index === 0 ? { ...row, document_url: "https://pay.sumit.co.il/example/doc-1" } : row))} />
+    </StoryRoute>
+  ),
+};
+export const UnpaidWithDocumentDark: Story = { ...UnpaidWithDocument, name: "Unpaid, document link, dark", ...dark };
+export const UnpaidWithDocument320: Story = { ...UnpaidWithDocument, name: "Unpaid, document link, 320", ...at320 };
+
 export const UnpaidEmpty: Story = {
   render: () => (
     <StoryRoute entry="/unpaid?preview=empty" tabs>

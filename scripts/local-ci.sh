@@ -13,8 +13,11 @@
 # inputs (the git tree of app, packages, design, _shared and the root configs) already passed here,
 # and runs only the app tests related to the files changed since the last green commit when only
 # .ts/.tsx sources changed. --full, or FLOW_LOCAL_CI_NO_SKIP=1, runs everything. The cache of green
-# runs is $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache. Without Docker the default run leaves the
-# e2e specs to main and says which.
+# runs is $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a
+# folder every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable;
+# set it empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
+# commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run leaves
+# the e2e specs to main and says which.
 set -euo pipefail
 
 full=0
@@ -45,6 +48,13 @@ git fetch -q origin main || true
 # FLOW-813. A part whose inputs (git trees) passed before is skipped in the default run.
 cache="${FLOW_LOCAL_CI_CACHE:-$(git rev-parse --git-common-dir)/flow-local-ci-cache}"
 mkdir -p "$cache"
+caches=("$cache")
+if [[ -z "${FLOW_LOCAL_CI_SHARED_CACHE+set}" && -w /mnt/project-files/ci ]]; then
+  FLOW_LOCAL_CI_SHARED_CACHE=/mnt/project-files/ci/local-ci-cache
+fi
+shared="${FLOW_LOCAL_CI_SHARED_CACHE:-}"
+if [[ -n "$shared" ]] && mkdir -p "$shared" 2>/dev/null; then caches+=("$shared"); fi
+head_tree="$(git rev-parse 'HEAD^{tree}')"
 skips=1
 if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi
 # What the app reads: its sources, the shared packages, the design tokens, _shared and the
@@ -58,22 +68,39 @@ inputs_hash() {
 app_key="$(inputs_hash "${app_inputs[@]}")"
 typecheck_key="typecheck-$app_key"
 build_key="build-$app_key"
+has_mark() {
+  local dir
+  for dir in "${caches[@]}"; do [[ -f "$dir/$1" ]] && return 0; done
+  return 1
+}
 green() {
-  (( skips )) && [[ -f "$cache/$1" ]]
+  (( skips )) && has_mark "$1"
 }
+# Marks a pass here and in the shared cache (a shared folder that can't be written is skipped).
 mark_green() {
+  local dir
   touch "$cache/$1"
+  for dir in "${caches[@]:1}"; do touch "$dir/$1" 2>/dev/null || true; done
 }
+# Each ancestor of HEAD (within 200 commits) as "commit tree", newest first.
+ancestors() {
+  git log --max-count=200 --format='%H %T' HEAD
+}
+# What eslint reads: the TypeScript, JavaScript and JSON sources outside the folders it ignores, the
+# lockfile (the plugin and type versions), and _shared, which linted tests import (the type-aware
+# rules read its types).
+lint_key="lint-$({ git ls-tree -r HEAD | grep -vE $'\t(docs|design|supabase)/'; git ls-tree -r HEAD -- supabase/functions/_shared; } \
+  | grep -E $'\t(.*\\.([cm]?[jt]s|tsx|json)|pnpm-lock\\.yaml)$' | sha256sum | cut -c1-40)"
 # The newest ancestor of HEAD (within 200 commits) where a test project last passed in full or in
 # part, when every file changed since then is an app, shared or _shared .ts/.tsx source or a
 # migration (a test globs them): the vitest module graph finds the tests those reach. Anything else
 # (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
 changed_base() {
-  local project="$1" commit
+  local project="$1" commit tree
   (( skips )) || return 1
   local changed removed
-  for commit in $(git rev-list --max-count=200 HEAD); do
-    if [[ -f "$cache/commit-$project-$commit" ]]; then
+  while read -r commit tree; do
+    if has_mark "tree-$project-$tree"; then
       # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
       # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
       changed="$(git diff --name-only "$commit" HEAD -- "${app_inputs[@]}")"
@@ -85,7 +112,7 @@ changed_base() {
       echo "$commit"
       return 0
     fi
-  done
+  done < <(ancestors)
   return 1
 }
 
@@ -97,9 +124,9 @@ e2e_left=0
 if (( ! full )); then
   e2e_base=""
   if (( skips )); then
-    for commit in $(git rev-list --max-count=200 HEAD); do
-      if [[ -f "$cache/commit-e2e-$commit" ]]; then e2e_base="$commit"; break; fi
-    done
+    while read -r commit tree; do
+      if has_mark "tree-e2e-$tree"; then e2e_base="$commit"; break; fi
+    done < <(ancestors)
   fi
   [[ -n "$e2e_base" ]] || e2e_base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
   if [[ -z "$e2e_base" ]]; then
@@ -175,6 +202,7 @@ static_part() {
     node scripts/check-migration-order.mjs
   fi
   node scripts/check-migration-transaction.mjs
+  node scripts/check-file-size.mjs
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }
@@ -235,7 +263,7 @@ app_tests() {
     pnpm test:storybook
   fi
   mark_green "$project-$app_key"
-  touch "$cache/commit-$project-$head"
+  mark_green "tree-$project-$head_tree"
 }
 # Runs the named parts at the same time and prints the log of each one that fails. A part named
 # with key=part is skipped when that key passed before, and records it when it passes.
@@ -267,13 +295,13 @@ run_parts() {
 }
 if (( skips )); then
   # The server tests are short and run beside the static checks.
-  run_parts lint static unit "$typecheck_key=typecheck" "$build_key=build"
+  run_parts "$lint_key=lint" static unit "$typecheck_key=typecheck" "$build_key=build"
   rm -rf "$logs"
   # The app unit tests run alone: next to the builds, slow renders miss Testing Library's 1-second wait.
   phase "check: app unit tests"
   app_tests unit
 else
-  run_parts lint static "$typecheck_key=typecheck" "$build_key=build"
+  run_parts "$lint_key=lint" static "$typecheck_key=typecheck" "$build_key=build"
   # pnpm test:unit includes the app unit tests, so it runs alone (see above).
   phase "check: unit and connector tests"
   run_parts unit
@@ -298,7 +326,7 @@ if (( ! full )); then
     pnpm --filter @flow/app exec playwright test --fully-parallel "${e2e_specs[@]}"
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
-  (( e2e_left )) || touch "$cache/commit-e2e-$head"
+  (( e2e_left )) || mark_green "tree-e2e-$head_tree"
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
   phase "passed on ${head:0:7} (main runs the every-story smoke and all e2e before each deploy)"
   exit 0
@@ -322,6 +350,6 @@ phase "e2e: main Playwright suite"
 eval "$(bash scripts/ci-local-supabase-env.sh)"
 pnpm test:e2e
 
-touch "$cache/commit-e2e-$head"
+mark_green "tree-e2e-$head_tree"
 echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
 phase "passed on ${head:0:7}"

@@ -14,6 +14,8 @@ describe("smoke write guard", () => {
     expect(isReadRequest("GET", `${supabase}/auth/v1/user`, supabase)).toBe(true);
     expect(isReadRequest("POST", `${supabase}/functions/v1/flow-mcp/status`, supabase)).toBe(true);
     expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/list_review`, supabase)).toBe(true);
+    expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/missing_bills`, supabase)).toBe(true);
+    expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/expected_months`, supabase)).toBe(true);
     const other = "https://evil.example";
     expect(isReadRequest("POST", `${other}/auth/v1/token`, supabase)).toBe(false);
     expect(isReadRequest("GET", `${other}/auth/v1/user`, supabase)).toBe(false);

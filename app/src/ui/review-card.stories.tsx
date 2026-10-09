@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ReviewCard } from "./review-card";
 import { jevReasonText, reviewFlagView, type JevReasonKind, type ReviewFlag } from "../review-copy";
-import { userEvent, within } from "@storybook/test";
+import { expect, userEvent, within } from "@storybook/test";
 import type { TxnMeta } from "../txn-meta";
 import { padded, storyMeta } from "./story-support";
 
@@ -33,7 +33,7 @@ type CardArgs = {
   /** FLOW-703: Jev answered "no project". */
   projectNoneJev?: boolean;
   /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no בטל. */
-  filled?: "undo" | "label" | "busy";
+  filled?: "undo" | "label" | "busy" | "off";
 };
 
 function CardView({
@@ -64,14 +64,14 @@ function CardView({
       reason={reason}
       meta={meta}
       currency={currency}
-      onProject={projectJev || categoryJev ? () => undefined : undefined}
-      onCategory={projectJev || categoryJev ? () => undefined : undefined}
+      onProject={projectJev || categoryJev || filled != null ? () => undefined : undefined}
+      onCategory={projectJev || categoryJev || filled != null ? () => undefined : undefined}
       splitParts={splitParts}
       jevWhy={jevWhy}
       flag={reviewFlagView(flags, { direction, currency })}
       direction={direction}
       missingBoth={missingBoth}
-      jevFilled={filled == null ? null : filled === "label" ? {} : { busy: filled === "busy", onUndo: () => undefined }}
+      jevFilled={filled == null ? null : filled === "label" ? {} : { busy: filled === "busy", alone: filled === "off", onUndo: () => undefined }}
     />
   );
 }
@@ -273,9 +273,30 @@ export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: 
 export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };
 
 // FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with בטל at the end, one line, no reason.
-export const JevFilled: Story = { name: "Jev filled: undo", args: { ...jevBoth, why: "usual_for_party", filled: "undo" } };
-export const JevFilledDark: Story = { ...dark, name: "Jev filled: undo, dark", args: JevFilled.args };
-export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", args: JevFilled.args };
+/**
+ * FLOW-339 C6-3: בטל's 44px hit area grows down and sideways from the filled line, never up into the
+ * category row, so a tap at the row's bottom edge opens the row and never undoes the fill.
+ */
+export const JevFilled: Story = {
+  name: "Jev filled: undo",
+  args: { ...jevBoth, why: "usual_for_party", filled: "undo" },
+  play: async ({ canvasElement }) => {
+    const undo = canvasElement.querySelector<HTMLElement>(".ui-review-filled-undo");
+    await expect(undo).not.toBeNull();
+    const box = (undo as HTMLElement).getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    for (const dy of [1, 4, 8, 13]) {
+      await expect(document.elementFromPoint(x, box.top - dy)?.closest(".ui-review-filled-undo")).toBeNull();
+    }
+    await expect(document.elementFromPoint(x, box.bottom + 10)?.closest(".ui-review-filled-undo")).not.toBeNull();
+  },
+};
+export const JevFilledDark: Story = { ...dark, name: "Jev filled: undo, dark", args: JevFilled.args, play: JevFilled.play };
+export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", args: JevFilled.args, play: JevFilled.play };
 export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
 export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
 export const JevFilledFlag320: Story = { ...narrow, name: "Jev filled: with quiet flag, 320", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };
+// FLOW-706: Jev is off. The stored values with הצעה, no הצעת Jev pill, and the fill still undoable.
+export const JevFilledOff: Story = { name: "Jev filled: Jev off", args: { ...jevCard, filled: "off" } };
+export const JevFilledOff320: Story = { ...narrow, name: "Jev filled: Jev off, 320", args: JevFilledOff.args };
+export const JevFilledOffDark: Story = { ...dark, name: "Jev filled: Jev off, dark", args: JevFilledOff.args };

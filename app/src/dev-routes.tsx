@@ -32,6 +32,8 @@ import { ProfitMonthsScreen } from "./screens/profit-months";
 import { LoanDetailScreen } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
+import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS } from "./forecast-sample";
 
 const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
@@ -41,7 +43,6 @@ const devLinks: Array<[string, string]> = [
   ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
   ["/settings/connections?preview=1", "חיבורים לדוגמה"],
   ["/settings/loans?preview=1", "הלוואות לדוגמה"],
-  ["/notifications?preview=1", "התראות לדוגמה"],
   ["/unpaid?preview=1", "חשבוניות לדוגמה"],
   ["/onboarding?preview=1", "הצטרפות לדוגמה"],
   ["/install?preview=1", "התקנה לדוגמה"],
@@ -278,6 +279,8 @@ export function DevHome() {
       search="?preview=1"
       unpaidGross={50_000n}
       unpaidCount={1}
+      missingCount={SAMPLE_MISSING_BILLS.length}
+      missingTo="/e2e/missing-bills"
       period={period}
       onPeriod={setPeriod}
     />
@@ -386,6 +389,8 @@ export function DevCategories() {
 export function DevUnpaid() {
   const [params] = useSearchParams();
   const marked = params.get("marked") === "1";
+  // FLOW-335: `?doc=1` gives the first row SUMIT's document link (an invented path).
+  const doc = params.get("doc") === "1" ? { document_url: "https://pay.sumit.co.il/example/doc-1" } : {};
   return (
     <UnpaidScreen
       sample={[{
@@ -396,6 +401,7 @@ export function DevUnpaid() {
         project_name: "שיפוץ הרצל 12",
         open_gross_agorot: 50_000n,
         open_net_agorot: 40_000n,
+        ...doc,
       }, ...(marked ? [{
         id: "u2",
         description: "חשבונית שסומנה",
@@ -408,6 +414,12 @@ export function DevUnpaid() {
       }] : [])]}
     />
   );
+}
+
+/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
+export function DevMissingBills() {
+  const [params] = useSearchParams();
+  return <MissingBillsScreen sample={params.get("empty") === "1" ? [] : SAMPLE_MISSING_BILLS} />;
 }
 
 export function DevTransactionGate() {
@@ -467,8 +479,10 @@ function DevStepTransaction({ n }: { n: number }) {
 }
 
 export function DevProjectDetail() {
+  const [params] = useSearchParams();
   return (
     <ProjectDetailScreen
+      sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       sample={{
         id: "p1",
         name: "שיפוץ הרצל 12",

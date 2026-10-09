@@ -29,11 +29,12 @@ const db = vi.hoisted(() => ({
   flags: [] as unknown[],
   failReopen: false,
   fills: [] as unknown[],
+  failFills: false,
   undoError: null as string | null,
 }));
 
-function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
-  const failed = options?.hold === "integration" ? db.integrationError : Boolean(options?.fail && db.failSuggestions);
+function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean; failNow?: boolean }) {
+  const failed = options?.hold === "integration" ? db.integrationError : Boolean(options?.fail && db.failSuggestions) || options?.failNow === true;
   const result = {
     data: failed ? null : data,
     error: failed ? { message: "jev down" } : null,
@@ -74,7 +75,7 @@ vi.mock("../lib/supabase", () => ({
       if (name === "company_integrations") return table(db.integration, { hold: "integration" });
       if (name === "tag_suggestions") return table(db.suggestions, { hold: "suggestions", fail: true });
       if (name === "projects") return table([{ id: "p1", name: "וילה רעננה", status: "active" }]);
-      if (name === "jev_prefills") return table(db.fills);
+      if (name === "jev_prefills") return table(db.fills, { failNow: db.failFills });
       return table([{ id: "c1", name: "חומרים", hidden: false }]);
     },
     rpc: (name: string, args?: Record<string, unknown>) => {
@@ -174,6 +175,7 @@ describe("Jev review one tap", () => {
     db.failReopen = false;
     db.flags = [];
     db.fills = [];
+    db.failFills = false;
     db.undoError = null;
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
@@ -242,6 +244,80 @@ describe("Jev review one tap", () => {
     expect(await screen.findByText("המילוי של Jev בוטל.")).toBeInTheDocument();
     expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
     expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+  });
+
+  it("with Jev off, labels a fill that still stands and takes it back with בטל (FLOW-706)", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 }, category: { choice: "c1", confidence: 0.95 } } }];
+    db.fills = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null }];
+    const filled = { ...open, project_id: "p1", category_id: "c1", project_name: "וילה רעננה", category_name: "חומרים", project_suggested: true, category_suggested: true };
+    renderQueue([filled]);
+    fireEvent.click(await screen.findByRole("button", { name: "בטל את המילוי של Jev" }, { timeout: 3000 }));
+    // Off: the stored values, no הצעת Jev pill, no reason.
+    expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעת Jev")).toBeNull();
+    expect(document.querySelectorAll(".ui-review-reason")).toHaveLength(1);
+    await waitFor(() => {
+      expect(db.writes.find((call) => call.name === "undo_jev_prefill")?.args).toEqual({ p_transaction_id: "t1" });
+    });
+    expect(await screen.findByText("המילוי של Jev בוטל.")).toBeInTheDocument();
+    expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
+  });
+
+  it("with Jev off, בטל refetches the standing fills (FLOW-706)", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.fills = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null }];
+    renderQueue([{ ...open, project_id: "p1", category_id: "c1", project_name: "וילה רעננה", category_name: "חומרים", project_suggested: true, category_suggested: true }]);
+    fireEvent.click(await screen.findByRole("button", { name: "בטל את המילוי של Jev" }, { timeout: 3000 }));
+    const reads = db.seenIds.length;
+    expect(await screen.findByText("המילוי של Jev בוטל.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(db.seenIds.length).toBeGreaterThan(reads);
+    });
+  });
+
+  it("with Jev off, a fill read that fails on refetch drops the label (FLOW-706)", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.fills = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null }];
+    let client: QueryClient | null = null;
+    renderQueue([{ ...open, project_id: "p1", category_id: "c1", project_name: "וילה רעננה", category_name: "חומרים", project_suggested: true, category_suggested: true }], (next) => {
+      client = next;
+    });
+    expect(await screen.findByText("מולא ע״י Jev", undefined, { timeout: 3000 })).toBeInTheDocument();
+    db.failFills = true;
+    await act(async () => {
+      await client?.invalidateQueries({ queryKey: ["jev-review-queue"] });
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
+    });
+  });
+
+  it("turning Jev on replaces the off label with the suggestion (FLOW-706)", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 }, category: { choice: "c1", confidence: 0.95 } } }];
+    db.fills = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null }];
+    let client: QueryClient | null = null;
+    renderQueue([{ ...open, project_id: "p1", category_id: "c1", project_name: "וילה רעננה", category_name: "חומרים", project_suggested: true, category_suggested: true }], (next) => {
+      client = next;
+    });
+    expect(await screen.findByText("מולא ע״י Jev", undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByText("הצעת Jev")).toBeNull();
+    db.integration = { enabled: true, mode: "auto" };
+    await act(async () => {
+      await client?.invalidateQueries();
+    });
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText("מולא ע״י Jev")).toBeInTheDocument();
+  });
+
+  it("with Jev off, shows no label when the stored row no longer holds the fill (FLOW-706)", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.fills = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null }];
+    renderQueue([{ ...open, project_id: "p2", category_id: "c2", project_name: "פרויקט שמור", category_name: "אחר", project_suggested: true, category_suggested: true }]);
+    expect(await screen.findByRole("button", { name: "פרויקט: פרויקט שמור, הצעה" })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText("מולא ע״י Jev")).toBeNull();
   });
 
   it("shows an older fill that still stands after בטל takes back the newest (#231 r1)", async () => {
@@ -561,7 +637,10 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(db.integrationReads).toBeGreaterThan(0);
     });
-    expect(db.seenIds).toEqual([]);
+    // FLOW-706: off reads only the standing fills (one jev_prefills read), never the suggestions.
+    await waitFor(() => {
+      expect(db.seenIds).toEqual([["t1"]]);
+    });
     expect(document.querySelector("[data-jev-pending]")).toBeNull();
     expect(approve).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
@@ -937,5 +1016,41 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
     view.rerender(queue([other], client));
     expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();
+  });
+});
+
+describe("sample queue with Jev's answers (FLOW-333 C13)", () => {
+  it("shows the filled line from sampleJev and reads nothing", () => {
+    db.seenIds = [];
+    const filled: ReviewRow = { ...stored, project_suggested: true, category_suggested: true };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue
+              rows={[filled]}
+              search=""
+              sample
+              sampleJev={{
+                connectorOn: true,
+                byId: {
+                  t1: {
+                    suggestionId: "s1",
+                    transactionId: "t1",
+                    project: { id: "p-stored", name: "פרויקט שמור" },
+                    category: { id: "c-stored", name: "קטגוריה שמורה" },
+                    auto: { state: "filled", projectId: "p-stored", categoryId: "c-stored" },
+                  },
+                },
+              }}
+            />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("מולא ע״י Jev")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בטל את המילוי של Jev" })).toBeInTheDocument();
+    expect(db.seenIds).toEqual([]);
   });
 });
