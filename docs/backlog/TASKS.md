@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-339 Search option C (the owner's pick 2026-10-09): one-line rows, no ".00", "נטו" month heads (FLOW-704 app side merged #315) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
@@ -1169,7 +1169,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
 - [x] Delete the old shared connector key once per launch, not on every read.
 - [x] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות.
-- [ ] Jev Settings row: a "no key" status once a key-status RPC exists. (Server part in #321: `public.jev_key_status()` returns `ok` or `missing`; the app row is UI lane 4's.)
+- [x] Jev Settings row: a "no key" status once a key-status RPC exists. (Server part #321: `public.jev_key_status()` returns `ok` or `missing`. App part UI lane 4, PR #329: switched on with no key says "אין מפתח"; an unknown read keeps the usual word.)
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 - [x] The review card marks a project or category Jev filled with "✦ הצעת Jev" (the shared `JevTag`) instead of הצעה (2026-10-08, #141).
 - [x] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill. (שינוי שיוך and its picker say "✦ הצעת Jev"; a review list row reads "✦ Jev · project · category", and only "✦" when בהמתנה leaves no room.)
