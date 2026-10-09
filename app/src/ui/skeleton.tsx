@@ -8,11 +8,14 @@ export function Skeleton({
   width = "md",
   tone = "surface",
   hero = false,
+  still = false,
   className,
 }: {
   width?: SkeletonWidth;
   tone?: "surface" | "band";
   hero?: boolean;
+  /** No shine: for a storyboard frame, not a load (FLOW-506). */
+  still?: boolean;
   className?: string;
 }) {
   return (
@@ -21,6 +24,7 @@ export function Skeleton({
       className={cx(
         "ui-skeleton-bar",
         tone === "band" && "ui-skeleton-bar-band",
+        still && "ui-skeleton-bar-still",
         className ? null : hero ? "ui-skeleton-hero" : `ui-skeleton-w-${width}`,
         className,
       )}
