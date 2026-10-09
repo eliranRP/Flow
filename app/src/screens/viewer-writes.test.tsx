@@ -341,17 +341,14 @@ describe("viewer gates", () => {
       expect(screen.queryByText("צריך לחבר מחדש")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /עוזר AI/ })).not.toBeInTheDocument();
     }],
-    ["V30", "a category row drops the pointer", () => {
+    ["V30", "a category row only opens its lines (a read, FLOW-322), with no ⋯", () => {
       viewer(
         <CategoriesScreen
           sample={[{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, count: 1 }]}
         />,
       );
-      const row = screen.getByText("חומרים").closest(".ui-row");
-      expect(row).toBeInstanceOf(HTMLElement);
-      if (!(row instanceof HTMLElement)) return;
-      expect(row.classList.contains("ui-hit")).toBe(false);
-      expect(getComputedStyle(row).cursor).not.toBe("pointer");
+      expect(screen.getByRole("link", { name: /חומרים/ })).toHaveAttribute("href", "/search?dir=expense&category=c1");
+      expect(screen.queryByRole("button", { name: "עוד, חומרים" })).not.toBeInTheDocument();
     }],
     ["V31", "the project menu stays off", () => {
       viewer(

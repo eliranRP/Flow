@@ -29,7 +29,7 @@ function BelowHeader(props: { children: string; action: string; tone?: "ok" | "b
     <div className="relative min-h-dvh">
       <header className="ui-page">
         <h1 className="t-title-1">לאישור</h1>
-        <p className="t-label mt-4 text-text-secondary">מסמכים שמחכים לשיוך</p>
+        <p className="t-label mt-4 text-text-secondary">תנועות שמחכות לשיוך</p>
       </header>
       <div className="ui-toast-slot" />
       <ActionBar>
