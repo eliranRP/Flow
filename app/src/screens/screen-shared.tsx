@@ -65,13 +65,6 @@ export function invoiceDate(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-export function vatStatusLabel(status: string): string {
-  if (status === "source") return "לפי המסמך";
-  if (status === "derived") return "חושב";
-  if (status === "assumed") return "מע״מ משוער 18%";
-  return "לא ידוע";
-}
-
 export function withChoice(options: ChangeChoice[], id: string, name: string | null | undefined): ChangeChoice[] {
   if (id === "" || name == null || name === "" || options.some((option) => option.id === id)) return options;
   return [{ id, name }, ...options];
