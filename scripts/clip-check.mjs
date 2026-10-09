@@ -17,7 +17,7 @@ export const CLIP_NO_TEXT_TAG = "clip-no-text";
  * widths on every run (FLOW-810).
  */
 export const FROZEN_NOW = "2026-10-15T09:00:00+03:00";
-/** A story that fails to render or load gets one more try before it counts (FLOW-810). */
+/** A story that does not render in time gets one more load before it counts (FLOW-810). */
 export const STORY_TRIES = 2;
 export const WIDTHS = [320, 360, 390];
 export const THEMES = ["light", "dark"];
