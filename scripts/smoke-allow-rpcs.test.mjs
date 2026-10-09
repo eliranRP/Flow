@@ -40,16 +40,17 @@ function appRpcs() {
 }
 
 /**
- * Each public function's volatility as the migrations leave it, read in order: the last
- * `create function` header (before `as`) or `alter function` that names one wins. Postgres
- * defaults to volatile.
+ * Each public function's volatility as the migrations leave it, read in order: per signature, the
+ * last `create function` header (before `as`, without comments or quoted text) or `alter function`
+ * that names it wins; Postgres defaults to volatile. A name with any volatile overload is volatile.
  */
 export function volatilities(files) {
-  const found = new Map();
+  const bySignature = new Map();
   for (const text of files) {
-    const statements = /(create\s+(?:or\s+replace\s+)?function|alter\s+function)\s+public\.([a-z0-9_]+)\s*\(([\s\S]*?)(?:\bas\s+[$']|;)/gi;
+    const statements =
+      /(create\s+(?:or\s+replace\s+)?function|alter\s+function)\s+"?public"?\."?([a-z0-9_]+)"?\s*\(([^)]*)\)([\s\S]*?)(?:\bas\s+[$']|;)/gi;
     for (const match of text.matchAll(statements)) {
-      const words = match[3].toLowerCase();
+      const words = match[4].replace(/--[^\n]*/g, " ").replace(/'(?:[^']|'')*'/g, " ").toLowerCase();
       const kind = /\bimmutable\b/.test(words)
         ? "immutable"
         : /\bstable\b/.test(words)
@@ -57,8 +58,17 @@ export function volatilities(files) {
           : /\bvolatile\b/.test(words) || match[1].toLowerCase().startsWith("create")
             ? "volatile"
             : null;
-      if (kind != null) found.set(match[2], kind);
+      const types = match[3]
+        .split(",")
+        .map((arg) => arg.replace(/\bdefault\b[\s\S]*$|=[\s\S]*$/i, "").trim().split(/\s+/).pop() ?? "")
+        .join(",");
+      if (kind != null) bySignature.set(`${match[2]}(${types.toLowerCase()})`, kind);
     }
+  }
+  const found = new Map();
+  for (const [signature, kind] of bySignature) {
+    const name = signature.slice(0, signature.indexOf("("));
+    if (found.get(name) !== "volatile") found.set(name, kind === "volatile" ? "volatile" : found.get(name) ?? kind);
   }
   return found;
 }
@@ -83,8 +93,14 @@ test("the volatility parser reads headers, the last definition, and alter functi
     "create function public.b(p uuid) returns void language plpgsql as $$ begin perform 1; end $$;",
     "create function public.c() returns int language sql stable as $$ select 1 $$;",
     "create or replace function public.c() returns int language sql as $$ select 1 $$;",
-    "alter function public.b(uuid) stable;",
+    "alter function public.b(p uuid) stable;",
+    "create function public.d(p text default 'stable') returns void language plpgsql -- was stable\nas $$ begin end $$;",
+    "create function public.e(p int) returns int language sql stable as $$ select 1 $$;",
+    "create function public.e(p int, q int) returns int language plpgsql as $$ begin return 1; end $$;",
+    "create or replace function public.e(p int) returns int language sql stable as $$ select 2 $$;",
   ]);
+  assert.equal(found.get("d"), "volatile");
+  assert.equal(found.get("e"), "volatile");
   assert.equal(found.get("a"), "stable");
   assert.equal(found.get("b"), "stable");
   assert.equal(found.get("c"), "volatile");
