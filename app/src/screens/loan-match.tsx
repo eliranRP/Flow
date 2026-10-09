@@ -22,6 +22,7 @@ import {
   type LoanChoice,
 } from "./loan-match-api";
 import { loanOffer, sortedOffers, type LoanOffer } from "./loan-match-offer";
+import { LoanSplitEditor, type LoanSplitSave } from "./loan-split-editor";
 
 export type LoanBalanceRow = {
   id: string;
@@ -75,6 +76,7 @@ export function LoanMatchOffer({
   returnFocus = true,
   offers,
   onMatch,
+  onOther,
 }: {
   lineCurrency: string;
   loans: readonly LoanChoice[];
@@ -91,6 +93,8 @@ export function LoanMatchOffer({
   /** FLOW-106 §3.4: what one tap writes per loan, or why the loan cannot take the line. */
   offers?: readonly LoanOffer[];
   onMatch: (loanId: string) => void;
+  /** FLOW-106: "חלוקה אחרת" (fees, several installments, exact parts) opens the split editor. */
+  onOther?: () => void;
 }) {
   const setSheet = onSheetOpenChange;
   const localRowRef = useRef<HTMLButtonElement>(null);
@@ -137,6 +141,17 @@ export function LoanMatchOffer({
             ))}
           </div>
         )}
+        {onOther != null && (offers ?? []).some((offer) => offer.parts != null) ? (
+          <TextLink
+            className="ui-loan-other"
+            tone="quiet"
+            chevron={false}
+            disabled={savingId != null}
+            onClick={onOther}
+          >
+            חלוקה אחרת
+          </TextLink>
+        ) : null}
       </Sheet>
     </>
   );
@@ -326,7 +341,30 @@ export function LoanTransactionSplit({
   const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
   const matchRowRef = useRef<HTMLButtonElement>(null);
   const [handedOff, setHandedOff] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const setEditor = useSheetHistory("loan-split-editor", editorOpen, setEditorOpen);
   const query = useLoanMatchRead(transactionId, split, on && !writesHeld);
+  const categories = useQuery({
+    queryKey: ["categories", "loan-parts"],
+    enabled: editorOpen && api.readCategories != null,
+    retry: false,
+    queryFn: () => (api.readCategories ?? (() => Promise.resolve([])))(),
+  });
+  const other = useWrite<LoanSplitSave>({
+    failure: failureText,
+    success: "התשלום שויך להלוואה",
+    keys: [...LOAN_WRITE_KEYS, "categories"],
+    onSuccess: () => {
+      setHandedOff(true);
+      setEditor(false);
+      focusLoanRow();
+    },
+    run: async ({ loanId, parts, keepFeesCategoryId }) => {
+      if (writesHeld) throw new Error("preview");
+      if (keepFeesCategoryId != null) await api.setFeesCategory?.(loanId, keepFeesCategoryId);
+      await api.save(transactionId, loanId, parts);
+    },
+  });
   const match = useWrite<string>({
     failure: failureText,
     success: "התשלום שויך להלוואה",
@@ -379,7 +417,10 @@ export function LoanTransactionSplit({
     .map((item) => offerFor(loaded, item, transactionId, docDate));
   const matchHint = loanMatchHint(offered, lineCurrency);
   const savingId = match.isPending ? match.variables : null;
+  const pickable = offers.filter((offer) => offer.parts != null)
+    .flatMap((offer) => loaded.loans.filter((item) => item.id === offer.loanId));
   return (
+    <>
     <LoanMatchOffer
       lineCurrency={lineCurrency}
       loans={offered}
@@ -394,6 +435,10 @@ export function LoanTransactionSplit({
       returnFocus={!handedOff}
       matchButtonRef={matchRowRef}
       offers={offers}
+      onOther={() => {
+        setSheet(false);
+        setEditor(true);
+      }}
       onMatch={(loanId) => {
         if (match.isPending) return;
         match.mutate(loanId, {
@@ -404,6 +449,20 @@ export function LoanTransactionSplit({
         });
       }}
     />
+    <LoanSplitEditor
+      open={editorOpen}
+      onOpenChange={setEditor}
+      loans={pickable}
+      payments={loaded.payments ?? {}}
+      line={{ transactionId, docDate, lineMinor: loaded.lineMinor, currency: lineCurrency }}
+      categories={categories.data}
+      saving={other.isPending}
+      returnFocusRef={handedOff ? undefined : matchRowRef}
+      onSave={(save) => {
+        if (!other.isPending) other.mutate(save);
+      }}
+    />
+    </>
   );
 }
 

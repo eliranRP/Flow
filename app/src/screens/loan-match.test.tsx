@@ -22,6 +22,12 @@ const db = vi.hoisted(() => ({
   rpcs: [] as Array<{ name: string; args: unknown }>,
   /** mcp_loan_payments rows by loan id (FLOW-106). */
   payments: new Map<string, unknown[]>(),
+  /** Every category, for the split editor's fees picker (FLOW-106). */
+  allCategories: [
+    { id: "cat-i", name: "ריבית", kind: "expense", loan_part: "interest", excluded_from_pnl: false, hidden: false },
+    { id: "cat-bank", name: "עמלות בנק", kind: "expense", loan_part: null, excluded_from_pnl: false, hidden: false },
+  ],
+  loanUpdates: [] as Array<{ values: unknown; id: unknown }>,
   saveError: null as { message: string; code?: string } | null,
   saveHold: null as Promise<void> | null,
   readError: null as { message: string } | null,
@@ -69,6 +75,7 @@ function held<T>(finish: () => T): Promise<T> {
 
 vi.mock("../use-is-viewer", () => ({
   useHoldWrites: () => false,
+  useViewerNoteId: () => undefined,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -88,11 +95,22 @@ vi.mock("../lib/supabase", () => ({
         return { select: () => ({ eq: () => held(() => ({ data: db.splits, error: null })) }) };
       }
       if (table === "loans") {
-        return { select: () => ({ eq: () => held(() => ({ data: db.loans, error: null })) }) };
+        return {
+          select: () => ({ eq: () => held(() => ({ data: db.loans, error: null })) }),
+          update: (values: unknown) => ({
+            eq: (_column: string, id: unknown) => {
+              db.loanUpdates.push({ values, id });
+              return Promise.resolve({ data: null, error: null });
+            },
+          }),
+        };
       }
       if (table === "categories") {
         return {
-          select: () => ({ eq: () => ({ eq: () => ({ not: () => held(() => ({ data: db.categories, error: null })) }) }) }),
+          select: () => ({
+            eq: () => ({ eq: () => ({ not: () => held(() => ({ data: db.categories, error: null })) }) }),
+            order: () => Promise.resolve({ data: db.allCategories, error: null }),
+          }),
         };
       }
       if (table === "loan_balances") {
@@ -167,6 +185,7 @@ beforeEach(() => {
   db.reads = [];
   db.rpcs = [];
   db.payments = new Map();
+  db.loanUpdates = [];
   db.saveError = null;
   db.saveHold = null;
   db.readError = null;
@@ -374,7 +393,7 @@ describe("LoanTransactionSplit", () => {
     const other = renderSplit({ loanPart: null, categoryId: "cat-other" });
     // Wait for this instance's read to land: a line on another category renders nothing while it loads too.
     await waitFor(() => { expect(other.client.isFetching()).toBe(0); });
-    await waitFor(() => { expect(other.client.getQueryCache().getAll().every((query) => query.state.status === "success")).toBe(true); });
+    await waitFor(() => { expect(other.client.getQueryCache().getAll().every((query) => query.state.status === "success" || query.isDisabled())).toBe(true); });
     expect(within(other.container).queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
@@ -510,6 +529,48 @@ describe("LoanTransactionSplit", () => {
     const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
     expect(radio).toBeDisabled();
     expect(within(radio).getByText("יש תשלום מאוחר יותר")).toBeInTheDocument();
+  });
+
+  it("opens the split editor from חלוקה אחרת and saves fees with their category, kept on the loan (FLOW-106)", async () => {
+    db.txn = { ...db.txn, amount_original: 60_090 };
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("button", { name: "חלוקה אחרת" }));
+    const editor = await screen.findByRole("dialog", { name: "חלוקת התשלום" });
+    fireEvent.change(within(editor).getByLabelText("עמלות"), { target: { value: "1.35" } });
+    expect(within(editor).getByText("בחרו לאן נרשמות העמלות.")).toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
+    const picker = within(editor).getByLabelText("עמלות נרשמות ב");
+    await waitFor(() => { expect(within(picker).getByRole("option", { name: "עמלות בנק" })).toBeInTheDocument(); });
+    fireEvent.change(picker, { target: { value: "cat-bank" } });
+    expect(within(editor).getByRole("switch", { name: "לשמור להלוואה הזו" })).toBeChecked();
+    fireEvent.click(within(editor).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    expect(db.loanUpdates).toEqual([{ values: { fees_category_id: "cat-bank" }, id: "loan-1" }]);
+    const parts = saves()[0]?.p_parts ?? [];
+    expect(parts.map((part) => part.part)).toEqual(["interest", "escrow", "principal", "fees"]);
+    expect(parts[3]).toEqual({ part: "fees", amount_minor: 135, scheduled_minor: 135, category_id: "cat-bank" });
+    expect(parts.reduce((sum, part) => sum + Number(part.amount_minor), 0)).toBe(60_090);
+  });
+
+  it("takes the lender's exact parts and holds the save until they add up to the line (FLOW-106)", async () => {
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("button", { name: "חלוקה אחרת" }));
+    const editor = await screen.findByRole("dialog", { name: "חלוקת התשלום" });
+    fireEvent.click(within(editor).getByRole("radio", { name: "סכומים מדויקים" }));
+    const principal = within(editor).getByLabelText("סכום, קרן");
+    expect(principal).toHaveValue("500");
+    fireEvent.change(principal, { target: { value: "400" } });
+    expect(within(editor).getByText("החלקים צריכים להסתכם ב־₪1,000. חסרים ₪100.")).toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
+    fireEvent.change(within(editor).getByLabelText("סכום, ריבית"), { target: { value: "600" } });
+    fireEvent.click(within(editor).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    expect((saves()[0]?.p_parts ?? []).map((part) => [part.part, part.amount_minor])).toEqual([["interest", 60_000], ["escrow", 0], ["principal", 40_000]]);
+    expect(db.loanUpdates).toEqual([]);
   });
 
   it("splits an interest-only payment by its schedule and rate rows", async () => {
