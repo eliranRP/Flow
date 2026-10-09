@@ -9,7 +9,7 @@ export function evenSentence(parts: AllocatedPart[], total: bigint): string {
   if (parts.length === 1) return `${formatShare(first.agorot)} לפרויקט אחד`;
   const same = parts.every((part) => part.agorot === first.agorot);
   if (same) return `${formatShare(first.agorot)} לכל אחד מ־${String(parts.length)} פרויקטים`;
-  return `${formatShare(total)} מתחלק שווה בין ${String(parts.length)} פרויקטים`;
+  return `${formatShare(total)} מתפצל שווה בין ${String(parts.length)} פרויקטים`;
 }
 
 export function percentWords(bp: number): string {

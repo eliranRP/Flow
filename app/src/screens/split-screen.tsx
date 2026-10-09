@@ -494,7 +494,7 @@ export function SplitScreen({
   }
   const meta = sampleMeta ?? [txn.data?.supplier_name, txn.data?.doc_date ? formatDisplay(txn.data.doc_date) : ""].filter(Boolean).join(" · ");
   const allLine = evenSentence(evenParts, amount);
-  const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתחלק שווה" : evenSentence(chosenParts, amount);
+  const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתפצל שווה" : evenSentence(chosenParts, amount);
   const manualLeft = 10000 - manualUsed;
   const manualStatus = manualLeft > 0
     ? `נשארו ${percentWords(manualLeft)}% לפצל`

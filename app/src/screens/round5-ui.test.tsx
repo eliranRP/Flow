@@ -479,7 +479,7 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getAllByText("₪1,000 מתחלק שווה בין 3 פרויקטים").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("₪1,000 מתפצל שווה בין 3 פרויקטים").length).toBeGreaterThan(0);
     expect(screen.queryByText(/לכל אחד מ־3/)).not.toBeInTheDocument();
   });
 
