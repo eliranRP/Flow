@@ -151,6 +151,8 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await expect(page.getByRole("button", { name: /^פרויקט ללא פרויקט/ })).toBeVisible();
 
   await page.goto(`/projects/${projectB}`);
-  await expect(page.getByRole("heading", { name: "הוצאות לפי קטגוריה" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "הלוואות" })).toHaveCount(0);
+  // The short project page (FLOW-340 C): "הוצאות לפי קטגוריה" is only in its skeleton now, so wait
+  // for the loaded rows, then check the loan row is gone.
+  await expect(page.getByRole("link", { name: /^תנועות/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^הלוואות/ })).toHaveCount(0);
 });
