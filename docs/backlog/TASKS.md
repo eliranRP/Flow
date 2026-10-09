@@ -621,7 +621,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
 - [x] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment. (Already true on main: the toast waits for the sheet pad before it shows. The committed e2e/toast.spec.ts samples every frame at 320×693 and 390×844 with `--safe-top` 0, 20 and 47 and fails if the toast covers ✕; 31/31 pass, #298.)
-- [x] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it. (#305: measured every story at 320, 360 and 390. Tightened: the period bar's presets size to their words and switch to "3 ח׳" below 390, since "3 חוד…" showed at 360 to 390; sheet titles wrap to two lines before an ellipsis. Kept: chips, pills, switch labels and the status pill, reasons in the design log.)
+- [x] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it. (#309: measured every story at 320, 360 and 390. Tightened: the period bar's presets size to their words and switch to "3 ח׳" below 390, since "3 חוד…" showed at 360 to 390; sheet titles wrap to two lines before an ellipsis. Kept: chips, pills, switch labels and the status pill, reasons in the design log.)
 
 <a id="flow-319"></a>
 ### FLOW-319 · Type sizes, headers and text colours, income in green

@@ -1,6 +1,6 @@
 # FLOW-310: the clip check's ellipsis whitelist, reviewed
 
-- PR: #PRNUM
+- PR: #309
 - Kind: component
 - Changed: a one-off sweep of all 930 stories at 320, 360 and 390 listed every whitelisted label (`data-clip-ok`) that actually ended in an ellipsis.
   - **Tightened: segment labels in the period bar.** "3 חודשים" and "6 חודשים" showed as "3 חוד…" on the page bar at 360, 375 and 390, and on the band at 360 and 375, while "שנה" and "הכול" had room to spare. The presets now size to their words (`flex: 1 1 auto`, as the band already did), and the short labels ("3 ח׳") take over below 390 instead of below 360. No period bar label is cut at any width (`css/18-period-bar.css`). Other segmented controls (הוצאות/הכנסות) keep equal halves.
