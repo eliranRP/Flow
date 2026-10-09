@@ -60,9 +60,7 @@ export function InstallScreen({
             {android ? "נפתח כמו אפליקציה, ישר ממסך הבית." : iosInstallLead(ios)}
           </p>
         </header>
-        {mode === "android-prompt" ? <BenefitList /> : null}
-        {mode === "android-steps" ? <StepList steps={ANDROID_INSTALL_STEPS} /> : null}
-        {mode === "iphone" || mode === "ipad" || mode === "iphone-other" ? <StepList steps={iosInstallSteps(ios)} /> : null}
+        {mode === "android-prompt" ? <BenefitList /> : <InstallSteps mode={mode} browser={ios} />}
       </div>
       <div className="ui-install-cta">
         {mode === "android-prompt" ? (
@@ -88,9 +86,21 @@ function BenefitList() {
   );
 }
 
-function StepList({ steps }: { steps: readonly InstallStepCopy[] }) {
+/**
+ * The numbered install steps for a mode, shared by this screen and setup step 5 (FLOW-506).
+ * The Android prompt has no steps: one button installs.
+ */
+export function InstallSteps({ mode, browser, className }: { mode: InstallMode; browser?: IosBrowser; className?: string }) {
+  if (mode === "android-prompt") return null;
+  const steps = mode === "android-steps"
+    ? ANDROID_INSTALL_STEPS
+    : iosInstallSteps(mode === "iphone-other" ? (browser ?? iosBrowser()) : "safari");
+  return <StepList steps={steps} className={className} />;
+}
+
+function StepList({ steps, className }: { steps: readonly InstallStepCopy[]; className?: string }) {
   return (
-    <ol className="ui-install-steps">
+    <ol className={className == null ? "ui-install-steps" : `ui-install-steps ${className}`}>
       {steps.map((step, index) => (
         <li className="ui-install-step" key={step.id}>
           <span className="ui-install-num" aria-hidden="true">{String(index + 1)}</span>

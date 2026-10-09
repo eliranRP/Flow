@@ -5,6 +5,7 @@ import { isCurrentPeriod, type PeriodChoice } from "../period";
 import { categoryEntries, missingRows, useProjectCategoryMonthsQuery, type CategoryItem, type CategoryLine } from "../project-category-months";
 import { useCategoriesQuery } from "../use-books";
 import { CategoryGroupRow, UpMark } from "../ui/category-group-row";
+import { InboxIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { categoryHref } from "./project-category-screen";
 
@@ -108,6 +109,7 @@ export function ProjectCategories({
         mark={item.up != null ? <UpMark kind={item.up} /> : undefined}
         missing={item.missing ? NOT_IN_YET : undefined}
         chevron={href != null}
+        chevronSpace={href == null}
         href={href}
         wrapHint={line.has_shared_share === true}
         hint={line.has_shared_share === true ? (
@@ -118,6 +120,7 @@ export function ProjectCategories({
   }
 
   // The section is titled הוצאות, so the figures carry no minus (FLOW-328).
+  // FLOW-334: the waiting rows carry Home's review icon and tint, so they don't read as categories.
   return (
     <List>
       {currencies.flatMap((currency) => categoryEntries(currency, grouped.get(currency) ?? [], groupOf, monthRows).map((entry) => {
@@ -153,6 +156,8 @@ export function ProjectCategories({
           agorot={absAgorot(project.pending_agorot ?? 0n)}
           currency="ILS"
           loss={false}
+          icon={<InboxIcon />}
+          className="ui-row-pending"
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
         />
@@ -165,6 +170,8 @@ export function ProjectCategories({
           agorot={absAgorot(bucket.expense_minor)}
           currency={bucket.currency}
           loss={false}
+          icon={<InboxIcon />}
+          className="ui-row-pending"
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
         />

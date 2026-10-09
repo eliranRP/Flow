@@ -1,9 +1,10 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
+import { userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, dark, ExampleBar, exampleOnBand } from "../ui/screen-stories-support";
+import { at320, dark, ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -308,6 +309,48 @@ export const ProjectOverviewDark: Story = { ...ProjectOverview, name: "Project, 
 export const ProjectOverview320: Story = { ...ProjectOverview, name: "Project, short page, 320", ...at320 };
 export const ProjectOverviewDark320: Story = { ...ProjectOverview, name: "Project, short page, dark, 320", ...dark, ...at320 };
 
+/** FLOW-334: the ⋯ menu, the overhead switch then "סיום הפרויקט" as a row. */
+export const ProjectMenu: Story = {
+  name: "Project, ⋯ menu",
+  render: ProjectOverview.render,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
+  },
+};
+export const ProjectMenuDark: Story = { ...ProjectMenu, name: "Project, ⋯ menu, dark", ...dark };
+export const ProjectMenu320: Story = { ...ProjectMenu, name: "Project, ⋯ menu, 320", ...at320 };
+
+/** A finished project offers "החזרה לפעיל" in the same place. */
+export const ProjectMenuFinished: Story = {
+  name: "Project, ⋯ menu, finished",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={{ ...overviewProject, status: "finished", state_label: "הסתיים" }}
+        sampleInvestment={filledInvestment}
+        sectionTo={sectionTo}
+      />
+    </StoryRoute>
+  ),
+  play: ProjectMenu.play,
+};
+
+/** The neutral confirm: the button repeats the action, with no red and no bin. */
+export const ProjectFinishConfirm: Story = {
+  name: "Project, finish confirm",
+  render: ProjectOverview.render,
+  play: async (context) => {
+    await ProjectMenu.play?.(context);
+    const body = storyBody(context.canvasElement);
+    await userEvent.click(await body.findByRole("button", { name: "סיום הפרויקט" }));
+    await body.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+  },
+};
+export const ProjectFinishConfirmDark: Story = { ...ProjectFinishConfirm, name: "Project, finish confirm, dark", ...dark };
+export const ProjectFinishConfirm320: Story = { ...ProjectFinishConfirm, name: "Project, finish confirm, 320", ...at320 };
+
 export const ProjectExpenses: Story = {
   name: "Project, expenses section",
   render: () => (
@@ -318,6 +361,23 @@ export const ProjectExpenses: Story = {
 };
 export const ProjectExpensesDark: Story = { ...ProjectExpenses, name: "Project, expenses section, dark", ...dark };
 export const ProjectExpenses320: Story = { ...ProjectExpenses, name: "Project, expenses section, 320", ...at320 };
+
+/** FLOW-334: the waiting row reads as Home's review row (inbox icon, tint), not a category. */
+export const ProjectExpensesWaiting: Story = {
+  name: "Project, expenses section, waiting row",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/expenses" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={{ ...overviewProject, pending_count: 2, pending_agorot: 1_250_000n }}
+        section="expenses"
+        sectionTo={sectionTo}
+      />
+    </StoryRoute>
+  ),
+};
+export const ProjectExpensesWaitingDark: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, dark", ...dark };
+export const ProjectExpensesWaiting320: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, 320", ...at320 };
 
 export const ProjectTransactionsSection: Story = {
   name: "Project, transactions section",
