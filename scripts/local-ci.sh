@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
 # The pull-request gate. Pull requests have no GitHub CI: the pre-push hook (.githooks/pre-push) runs
 # this script, and main runs the full suite on GitHub before each batch deploy.
-#   default (about 4 minutes cold, under 2 when the app is unchanged): lint, the migration checks,
-#     Deno, typecheck, unit and connector tests,
-#     both dist builds, the Storybook tests, the built-Storybook layout specs and the every-story
-#     check for the stories the change reaches (when the app changed, about 3.5 minutes), and the
-#     e2e specs that reach the changed files (needs
-#     Docker for local Supabase; about 3.5 more minutes for a screen change, see FLOW-813 in TASKS).
-#   --full (about 12 minutes): adds the every-story smoke, local Supabase (pgTAP, db types, deploy
+#   default (under 3 minutes for a UI push, about 5 for a migration): lint, the migration checks,
+#     Deno, typecheck, unit and connector tests, both dist builds, and the parts scoped to what the
+#     branch changes against main (git diff origin/main...HEAD), so a merge of main re-runs nothing
+#     for main's own changes:
+#     - the app unit and Storybook vitest tests those files reach;
+#     - up to FLOW_E2E_MAX (6) e2e specs that reach them, the branch's own specs first (Docker);
+#     - the Storybook build with its layout, clip and secret specs, only when a story spec or the
+#       Storybook setup changes;
+#     - for a migration or pgTAP change: a fresh local database (every migration applied), the
+#       flow-mcp smoke, the db types check, and the pgTAP files that name what changed
+#       (scripts/pgtap-specs.mjs).
+#   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
 # On success it writes .git/flow-local-ci with the commit it passed on, so the hook can skip a repeat.
 # FLOW-813: the default run skips the app parts (typecheck, builds, app unit tests, Storybook) whose
-# inputs (the git tree of app, packages, design, _shared and the root configs) already passed here,
-# and runs only the app tests related to the files changed since the last green commit when only
-# .ts/.tsx sources changed. --full, or FLOW_LOCAL_CI_NO_SKIP=1, runs everything. The cache of green
-# runs is $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a
-# folder every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable;
-# set it empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
-# commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run leaves
-# the e2e specs to main and says which.
-# The e2e specs and the Storybook smoke look only at files this branch changes against main
-# (git diff origin/main...HEAD), so a merge of main re-runs nothing for main's own changes, and a
-# merge that brings in only docs runs no e2e spec and builds no Storybook.
+# inputs (the git tree of app, packages, design, _shared and the root configs) already passed here.
+# --full, or FLOW_LOCAL_CI_NO_SKIP=1, runs everything. The cache of green runs is
+# $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a folder
+# every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable; set it
+# empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
+# commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run
+# leaves the e2e specs to main and says which; a database change needs Docker.
 set -euo pipefail
 
 full=0
@@ -96,31 +97,6 @@ ancestors() {
 # rules read its types).
 lint_key="lint-$({ git ls-tree -r HEAD | grep -vE $'\t(docs|design|supabase)/'; git ls-tree -r HEAD -- supabase/functions/_shared; } \
   | grep -E $'\t(.*\\.([cm]?[jt]s|tsx|json)|pnpm-lock\\.yaml)$' | sha256sum | cut -c1-40)"
-# The newest ancestor of HEAD (within 200 commits) where a test project last passed in full or in
-# part, when every file changed since then is an app, shared or _shared .ts/.tsx source or a
-# migration (a test globs them): the vitest module graph finds the tests those reach. Anything else
-# (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
-changed_base() {
-  local project="$1" commit tree
-  (( skips )) || return 1
-  local changed removed
-  while read -r commit tree; do
-    if has_mark "tree-$project-$tree"; then
-      # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
-      # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
-      changed="$(git diff --name-only "$commit" HEAD -- "${app_inputs[@]}")"
-      removed="$(git diff --name-only --diff-filter=DR "$commit" HEAD -- "${app_inputs[@]}")"
-      if [[ -n "$removed" ]] || grep -qx 'app/src/test-setup.ts' <<<"$changed" \
-        || [[ -n "$(grep -vE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^supabase/migrations/[^/]+\.sql$' <<<"$changed" || true)" ]]; then
-        return 1
-      fi
-      echo "$commit"
-      return 0
-    fi
-  done < <(ancestors)
-  return 1
-}
-
 # The files this branch changes against main (git diff origin/main...HEAD). Main's own changes, which
 # a merge of main brings in, already passed on main, so the default run never re-checks them.
 pr_fork="$(git merge-base HEAD origin/main 2>/dev/null || true)"
@@ -136,6 +112,24 @@ branch_changes() {
   fi
   [[ -n "$since" && -n "$pr_files" ]] || return 0
   grep -Fxf <(printf '%s\n' "$pr_files") <<<"$since" || true
+}
+
+# Where this branch left main, when every app input the branch changes is an app, shared or _shared
+# .ts/.tsx source or a migration (a test globs them): the vitest module graph finds the tests those
+# reach. Anything else (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
+changed_base() {
+  (( skips )) || return 1
+  [[ -n "$pr_fork" ]] || return 1
+  local changed removed
+  # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
+  # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
+  changed="$(git diff --name-only "$pr_fork" HEAD -- "${app_inputs[@]}")"
+  removed="$(git diff --name-only --diff-filter=DR "$pr_fork" HEAD -- "${app_inputs[@]}")"
+  if [[ -n "$removed" ]] || grep -qx 'app/src/test-setup.ts' <<<"$changed" \
+    || [[ -n "$(grep -vE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^supabase/migrations/[^/]+\.sql$' <<<"$changed" || true)" ]]; then
+    return 1
+  fi
+  echo "$pr_fork"
 }
 
 # FLOW-813: the e2e specs that reach the files changed since the last commit whose specs passed here
@@ -157,11 +151,32 @@ if (( ! full )); then
   else
     e2e_list="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs)"
     [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
+    # At most FLOW_E2E_MAX specs (default 6), the branch's own changed specs first; main runs the rest.
+    if (( ${#e2e_specs[@]} > ${FLOW_E2E_MAX:-6} )); then
+      mapfile -t e2e_specs < <(
+        printf '%s\n' "${e2e_specs[@]}" | grep -Fxf <(sed -n 's|^app/||p' <<<"$pr_files") || true
+        printf '%s\n' "${e2e_specs[@]}" | grep -vFxf <(sed -n 's|^app/||p' <<<"$pr_files") || true
+      )
+      echo "local-ci: ${#e2e_specs[@]} e2e specs reach this change; running ${FLOW_E2E_MAX:-6}, main runs the rest: ${e2e_specs[*]:${FLOW_E2E_MAX:-6}}"
+      e2e_specs=("${e2e_specs[@]:0:${FLOW_E2E_MAX:-6}}")
+      e2e_left=1
+    fi
   fi
 fi
 
+# FLOW-813: a branch that changes a migration or a pgTAP file gets a fresh local database (every
+# migration applied by the reset), the flow-mcp smoke, the db types check, and the pgTAP files that
+# name what it changed (scripts/pgtap-specs.mjs). Main runs every pgTAP file.
+db_specs=()
+db_change=0
+if (( ! full )) && grep -qE '^supabase/(migrations|tests/database)/' <<<"$pr_files"; then
+  db_change=1
+  db_list="$(node scripts/pgtap-specs.mjs <<<"$pr_files")"
+  [[ -z "$db_list" ]] || mapfile -t db_specs <<<"$db_list"
+fi
+
 supabase_exit=""
-if (( full || ${#e2e_specs[@]} > 0 )); then
+if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
   phase "Docker and local Supabase"
   if ! docker info >/dev/null 2>&1; then
     (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
@@ -170,6 +185,10 @@ if (( full || ${#e2e_specs[@]} > 0 )); then
   if ! docker info >/dev/null 2>&1; then
     if (( full )); then
       echo "local-ci: Docker is not running and could not be started." >&2
+      exit 1
+    fi
+    if (( db_change )); then
+      echo "local-ci: Docker is not running, and this change touches the database. Start Docker and push again." >&2
       exit 1
     fi
     echo "local-ci: Docker is not running, so the e2e specs for this change are left to main: ${e2e_specs[*]}" >&2
@@ -358,8 +377,10 @@ storybook_smoke() {
   [[ -n "$base" ]] || base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
   if [[ -n "$base" ]]; then
     changed="$(branch_changes "$base")"
-    if ! grep -qE '^(app|packages|design|supabase/functions/_shared)/|^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json)$|^scripts/(storybook-stories|e2e-specs|check-prod-bundle|hosted-env)\.mjs$' <<<"$changed"; then
-      echo "local-ci: Storybook smoke skipped: no app change since ${base:0:7}."
+    # The vitest Storybook project above already ran the stories the change reaches. The build and
+    # its layout, clip and secret specs run when a story spec or the Storybook setup changes.
+    if ! grep -qE '^app/e2e/storybook-[^/]+\.spec\.ts$|^app/\.storybook/|^app/playwright\.storybook\.config\.ts$|^scripts/storybook-stories\.mjs$|^(package\.json|pnpm-lock\.yaml)$' <<<"$changed"; then
+      echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
     fi
@@ -397,8 +418,15 @@ storybook_smoke() {
 if (( ! full )); then
   phase "check: Storybook smoke (layout specs and the stories this change reaches)"
   storybook_smoke
-  if (( ${#e2e_specs[@]} > 0 )); then
+  if (( db_change )); then
     wait_supabase
+    phase "database: the flow-mcp smoke, db types, and ${#db_specs[@]} pgTAP files that name the change"
+    bash scripts/mcp-function-smoke.sh
+    (( ${#db_specs[@]} == 0 )) || supabase test db "${db_specs[@]}"
+    bash scripts/check-db-types.sh
+  fi
+  if (( ${#e2e_specs[@]} > 0 )); then
+    (( db_change )) || wait_supabase
     phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
     eval "$(bash scripts/ci-local-supabase-env.sh)"
     pnpm --filter @flow/app exec playwright install chromium
