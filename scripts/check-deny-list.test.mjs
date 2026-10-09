@@ -5,12 +5,13 @@ import path from "node:path";
 import { test } from "node:test";
 import { deniedLines, denyEntries, denyListRequired, scanFiles, words } from "./check-deny-list.mjs";
 
-// Invented names only.
+// Invented names only, plus the owner's allowed first name.
 const entries = denyEntries([
   "Zorbel Quint",
   "  Pavlo   Ostrander Tiling & Stone  ",
   "one two three four five six seven eight",
   "",
+  " Eliran ",
 ].join("\n"));
 
 test("entries are normalised word lists, blank lines dropped", () => {

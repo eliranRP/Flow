@@ -20,12 +20,18 @@ export function words(text) {
   return stripped.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 0);
 }
 
+/**
+ * The owner's first name is on the list but may appear in the repo (owner's call, 2026-10-09):
+ * approval notes in docs and comments name him.
+ */
+export const allowedEntries = new Set(["eliran"]);
+
 /** @param {string | undefined} raw */
 export function denyEntries(raw) {
   const entries = new Map();
   for (const line of (raw ?? "").split(/\r?\n/)) {
     const entry = words(line);
-    if (entry.length > 0) entries.set(entry.join(" "), entry);
+    if (entry.length > 0 && !allowedEntries.has(entry.join(" "))) entries.set(entry.join(" "), entry);
   }
   return [...entries.values()];
 }
