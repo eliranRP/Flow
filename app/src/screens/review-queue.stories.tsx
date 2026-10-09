@@ -136,6 +136,7 @@ export const ReviewJevFit390: Story = { parameters: { viewport: { defaultViewpor
 export const ReviewJevFit390Dark: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, ...darkTheme, render: () => <ReviewJevFitStory /> };
 export const ReviewJevReason375: Story = { ...se, render: () => <ReviewJevFitStory jev={jevSuggested} /> };
 export const ReviewJevFitLoud375: Story = { ...se, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
+export const ReviewJevFitLoud375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 /** FLOW-333 C14: the loud flag is one line on a short phone (up to 720px tall) and two at 844. */
 export const ReviewJevFitLoud320: Story = { ...narrowView, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 export const ReviewJevFitLoud390: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };

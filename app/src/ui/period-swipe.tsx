@@ -1,6 +1,7 @@
 import { useRef, type ReactNode, type TouchEvent } from "react";
 import { canStep, stepPeriod, type PeriodChoice } from "../period";
 import { cx } from "./cx";
+// The same edge zone as swipe-back (FLOW-332) and the card swipe (FLOW-314).
 import { EDGE_PX } from "./edge-back";
 
 /**
@@ -18,8 +19,6 @@ import { EDGE_PX } from "./edge-back";
  * earlier, so a finger moving right, toward that arrow, goes earlier; moving left goes later. The
  * later step stops at the current window, like the disabled later arrow.
  */
-// The same edge zone as swipe-back (FLOW-332) and the card swipe (FLOW-314).
-export { EDGE_PX };
 export const DECIDE_PX = 10;
 export const COMMIT_RATIO = 0.3;
 /** A flick: at least this fast (px per ms) over at least FLICK_MIN_PX. */

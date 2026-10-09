@@ -51,7 +51,8 @@ function readEnter(state: unknown): "next" | "prev" | null {
 /**
  * FLOW-314: a swiped-to card slides in once. The browser entry drops `txnEnter` after
  * that, so Back from a pushed screen or a reload shows the card in place. The router's
- * in-memory location keeps it, which is fine: a re-render does not restart the animation.
+ * in-memory location keeps it, which is fine: a re-render does not restart the animation
+ * (a remount of the card on the same entry would, and none does today).
  */
 export function dropTxnEnter(): void {
   const state: unknown = window.history.state;
