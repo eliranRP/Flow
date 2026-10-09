@@ -1,0 +1,1 @@
+- When there is no loan to link a payment to, the "שיוך להלוואה" sheet now says why and offers to add a new loan. A long loan name on a linked payment wraps to a second line on small phones. (FLOW-115)

@@ -98,14 +98,14 @@ function loanStoryApi({ currency = "ILS", saveFails = false }: { currency?: stri
   };
 }
 
-function LoanMatchStory({ currency = "ILS", saveFails = false, viewer = false }: { currency?: string; saveFails?: boolean; viewer?: boolean }) {
+function LoanMatchStory({ currency = "ILS", saveFails = false, viewer = false, loanName = "משכנתא לדוגמה" }: { currency?: string; saveFails?: boolean; viewer?: boolean; loanName?: string }) {
   const [api] = useState(() => loanStoryApi({ currency, saveFails }));
   return (
     <StoryRoute entry="/transactions/t-loan" viewer={viewer}>
       <ExampleBar />
-      <LoanMatchSampleProvider api={api} initial={LOAN_SPLIT} loanNames={{ "loan-gefen": "משכנתא לדוגמה" }}>
+      <LoanMatchSampleProvider api={api} initial={{ ...LOAN_SPLIT, loan_name: loanName }} loanNames={{ "loan-gefen": loanName }}>
         <TransactionScreen
-          sample={{ ...LOAN_TXN, currency, loan_split: LOAN_SPLIT }}
+          sample={{ ...LOAN_TXN, currency, loan_split: { ...LOAN_SPLIT, loan_name: loanName } }}
           sampleProjects={[{ id: "gefen", name: "הגפן 12" }]}
           sampleCategories={[{ id: "c-loan", name: "תשלום הלוואה" }]}
         />
@@ -195,4 +195,17 @@ export const TransactionLoanUsd: Story = {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
   },
+};
+
+/** FLOW-115: a long loan name wraps to a second line at 320 instead of losing the name. */
+const LONG_LOAN = "משכנתא לדוגמה על בניין המגורים ברחוב הארוך";
+export const TransactionLoanLongName320: Story = {
+  name: "Loan payment, long loan name, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <LoanMatchStory loanName={LONG_LOAN} />,
+};
+export const TransactionLoanLongNameDark320: Story = {
+  ...TransactionLoanLongName320,
+  name: "Loan payment, long loan name, dark 320",
+  globals: { theme: "dark" },
 };

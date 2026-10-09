@@ -12,6 +12,7 @@ import { useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
 import { useHoldWrites } from "../use-is-viewer";
+import { quickNewPath } from "../open-from-query";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import {
   LOAN_WRITE_KEYS,
@@ -129,7 +130,13 @@ export function LoanMatchOffer({
       </List>
       <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={returnFocus ? rowRef : undefined}>
         {selectableLoans.length === 0 ? (
-          <p className="t-hint">{`${loanEmptyLine(loans, lineCurrency)}.`}</p>
+          // FLOW-115: no loan to pick is not a dead end. The sheet says why and offers the next
+          // step, a new loan in Settings → הלוואות (the + sheet's quick action, FLOW-331).
+          <div className="ui-loan-empty">
+            <p className="t-hint">{`${loanEmptyLine(loans, lineCurrency)}.`}</p>
+            <p className="t-hint">{loanEmptyNextStep(loans, lineCurrency)}</p>
+            <TextLink to={quickNewPath("/settings/loans", "", "loan")}>הלוואה חדשה</TextLink>
+          </div>
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
             {selectableLoans.map((loan) => (
@@ -503,6 +510,13 @@ export function LoanMatchSkeleton() {
  * FLOW-115: why the match sheet has no loan to pick, in the same words on the row's hint and in the
  * sheet: none offered at all, or none in the line's currency.
  */
+/** FLOW-115: what to do when no loan fits: add one, in the line's currency when others exist. */
+export function loanEmptyNextStep(offered: ReadonlyArray<{ currency: string }>, lineCurrency: string): string {
+  return offered.length === 0
+    ? "אפשר להוסיף הלוואה, ואז לשייך אליה את התשלום."
+    : `אפשר להוסיף הלוואה ${currencyWord(lineCurrency)}, ואז לשייך אליה את התשלום.`;
+}
+
 export function loanEmptyLine(offered: ReadonlyArray<{ currency: string }>, lineCurrency: string): string {
   return offered.length === 0 ? "אין עדיין הלוואה" : `אין הלוואה ${currencyWord(lineCurrency)}`;
 }

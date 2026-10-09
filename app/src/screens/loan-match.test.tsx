@@ -222,6 +222,9 @@ describe("LoanMatchOffer", () => {
     fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
     expect(screen.getByText("אין הלוואה בדולר.")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    // FLOW-115: the next step, a new loan in the line's currency.
+    expect(screen.getByText("אפשר להוסיף הלוואה בדולר, ואז לשייך אליה את התשלום.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "הלוואה חדשה" })).toHaveAttribute("href", "/settings/loans?new=loan");
   });
 
   it("hides matching for a viewer", () => {
