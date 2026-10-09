@@ -508,7 +508,7 @@ export function ReviewQueue({
             {holdWrites ? (
               <>
                 <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
-                {total === 1 ? " ממתינה" : " ממתינים"}
+                {total === 1 ? " ממתינה" : " ממתינות"}
               </>
             ) : (
               <>

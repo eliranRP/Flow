@@ -1030,7 +1030,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-507"></a>
 ### FLOW-507 · Viewer mode follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [x] (Backlog bug fixes, 2026-10-09: "N ממתינים", "1 ממתינה", no meter) The viewer's review count is a bare number and the visit meter still shows; show a count with "ממתינים" and no meter.
+- [x] (Backlog bug fixes, 2026-10-09: "N ממתינות", "1 ממתינה", no meter) The viewer's review count is a bare number and the visit meter still shows; show a count with "ממתינים" and no meter.
 - [x] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row. (Mercury too.)
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
