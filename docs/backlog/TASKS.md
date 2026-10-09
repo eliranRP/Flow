@@ -23,7 +23,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507/506 write-gate tests: inner gates after a role change, Settings switches, setup first step hold (Mercury follow-ups merged #365) | FLOW-506 setup business step and install rows unify, after #358 |
+| Backlog bug fixes | FLOW-506 one company form and one install steps list (write-gate tests merged #366) | Next small ready item from the lane manager |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -1124,7 +1124,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; `data-setup-visible` exists only for tests.
 - [x] (Backlog bug fixes, 2026-10-09: `Skeleton` takes `still` and `AppIcon` takes `size="tile"`; two dead rules (`.ui-review`, `.ui-setup-pressed`) are gone; nothing on screen changes) Demo CSS reaches into component internals.
 - [x] One list row puts the minus after the amount; it should come before the currency sign. (Not reproducible on 2026-10-09: every demo and setup story draws −₪ first; the SUMIT demo rows use the shared transaction row.)
-- [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
+- [x] (Backlog bug fixes, 2026-10-09: both use `useCompanyForm` in `screens/company-form.tsx`, and step 5 draws the install screen's `InstallSteps`; this fixed onboarding's VAT hint, which stayed on מורשה when פטור was picked, and step 5's unstyled numbers) The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
 - [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
 - [x] (Backlog bug fixes, 2026-10-09: the business step's submit returns while writes are held, and `viewer-role-flip.test.tsx` covers it for viewer and unknown with an owner control; the Settings switches lock when the role turns viewer, in the same file, beside `viewer-writes.test.tsx`.) Tests for the Settings write block; a hold-writes check on the first step's submit.
