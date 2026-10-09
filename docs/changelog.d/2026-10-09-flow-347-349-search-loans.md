@@ -1,0 +1,1 @@
+- Every "תקופה" sheet now shows Home's list (חודש, 3 חודשים, 6 חודשים, שנה, הכול, טווח מותאם). Search's filter row starts with תקופה and fades at its end when more chips wait. Loan rows fit one line of details at 320, and the new-loan sheet keeps שמירה pinned at the bottom. (FLOW-347, FLOW-349)
