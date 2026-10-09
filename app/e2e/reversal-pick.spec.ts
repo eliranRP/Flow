@@ -149,5 +149,5 @@ test("an outflow can be filed under an income category from the review card", as
 });
 
 test("an inflow can be filed under an expense category from the review card", async ({ page }) => {
-  await pickReversal(page, { direction: "income", ownName: "תקבול מלקוח", otherName: "הובלה", heading: "החזר מספק" });
+  await pickReversal(page, { direction: "income", ownName: "הכנסה מלקוחות", otherName: "הובלה", heading: "החזר מספק" });
 });

@@ -20,7 +20,7 @@ insert into inc_ref (label, id) select 'company', id from public.companies where
 select lives_ok($$select public.upsert_project(null, 'אתר', null, 'active')$$, 'owner opens a project');
 insert into inc_ref (label, id) select 'project', id from public.projects where name = 'אתר';
 insert into inc_ref (label, id)
-select 'income_cat', id from public.categories where name = 'תקבול מלקוח' and kind = 'income';
+select 'income_cat', id from public.categories where name = 'הכנסה מלקוחות' and kind = 'income';
 insert into inc_ref (label, id)
 select 'off_pnl', id from public.categories where name = 'העברות' and kind = 'income';
 

@@ -183,7 +183,7 @@ export function demoCategories(): CategoryRow[] {
     ["הובלה", "expense"],
     ["ביטוח", "expense"],
     ["אחר", "expense"],
-    ["תקבול מלקוח", "income"],
+    ["הכנסה מלקוחות", "income"],
     ["הכנסה אחרת", "income"],
   ];
   return names.map(([name, kind], index) => ({
