@@ -17,7 +17,10 @@ type MonthGridProps = {
   onPick: (iso: string) => void;
 };
 
-/** One month. RangeSheet tints a span. A single chosen day uses the same grid. */
+/**
+ * One month. RangeSheet tints a span with square ends. A single chosen day uses the same grid and
+ * shows as a filled circle (mockup 15b, FLOW-350).
+ */
 export function MonthGrid({ label, year, month, today, value, range, allowFuture = false, min = null, max = null, onPick }: MonthGridProps) {
   const cells = monthCells(year, month);
   const monthKey = String(month + 1).padStart(2, "0");
@@ -36,14 +39,15 @@ export function MonthGrid({ label, year, month, today, value, range, allowFuture
             if (iso.slice(5, 7) !== monthKey) return <span key={iso} className="ui-day" />;
             const future = (!allowFuture && iso > today) || (min != null && iso < min) || (max != null && iso > max);
             const inRange = range != null && iso >= range.from && iso <= range.to;
-            const edge = value === iso || (range != null && (iso === range.from || iso === range.to));
+            const edge = range != null && (iso === range.from || iso === range.to);
+            const picked = value === iso || edge;
             return (
               <button
                 key={iso}
                 type="button"
                 className={cx("ui-day", inRange && "ui-day-range", edge && "ui-day-edge")}
                 aria-label={dayLabel(iso)}
-                aria-selected={edge}
+                aria-selected={picked}
                 aria-current={iso === today ? "date" : undefined}
                 disabled={future}
                 onClick={() => {

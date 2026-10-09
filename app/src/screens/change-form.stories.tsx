@@ -57,7 +57,7 @@ function ChangeStory({
   categoryId = "c1",
   suggestionId = "holon",
   suggestionCategoryId = "c1",
-  supplier = "חומרי בניין השרון",
+  supplier = "חומרי בניין לדוגמה",
   projects = changeProjects,
   categories = changeCategories,
   initialQuery,
@@ -250,7 +250,7 @@ export const ChangeLongHebrew: Story = {
   parameters: { viewport: { defaultViewport: "flow320" } },
   render: () => (
     <ChangeStory
-      supplier="חומרי בניין השרון בע״מ סניף פתח תקווה"
+      supplier="חומרי בניין לדוגמה בע״מ סניף גבעת הדוגמה"
       projectId="long"
       suggestionId="long"
       categoryId="long-cat"
