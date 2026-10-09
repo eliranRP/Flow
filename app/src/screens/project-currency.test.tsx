@@ -181,7 +181,7 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.getByText("$2,000")).toBeInTheDocument();
     expect(screen.getByText("₪800")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByText("החלק בכלליות $750")).toBeInTheDocument();
+    expect(screen.getByText("החלק בהוצאות כלליות $750")).toBeInTheDocument();
   });
 
   it("leaves the USD row alone when the share is off or unknown (0147)", () => {
