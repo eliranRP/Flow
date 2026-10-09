@@ -445,7 +445,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A second hide returns the generic refusal; if the app unhides a category the MCP hid, the MCP can neither re-hide nor undo. (A re-hide keeps the one open undo; undo of a hide the app reversed succeeds: migration `20261010130000`.)
 - [x] TOOLS.md conflict wording, and document the `sync_bank` errors.
 - [x] `mercury-sync` `deno check` doesn't resolve imports (also on main). (It needs the function's own `--config`; `scripts/check-edge-functions.sh` checks every function that way in local CI and CI, and found a null check in `sumit-connect`.)
-- [x] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token. (Handed to the Production QA deploy check, 2026-10-09: `sync_bank` with the Flow QA key, then `get_sync_status`; flow-mcp's session-less JWT takes the same owner fallback, and a break shows as `unauthorized`. Needs a live MCP token for the sandbox company Flow QA, so it belongs with the Production QA thread's deploy check.)
+- [x] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token. (Production QA, 2026-10-09: `sync_bank` with the Flow QA key, then `get_sync_status`, passed on live 23d1fd5 (done in 17 s, no 401) and runs in the hourly deploy check; flow-mcp's session-less JWT takes the same owner fallback, so a break shows as `unauthorized`. Needs a live MCP token for the sandbox company Flow QA, so it belongs with the Production QA thread's deploy check.)
 - [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
 - [x] A race test (dblink pgTAP or e2e) for the undo row lock. (`mcp_undo_race.test.sql`.)
 - [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
@@ -1093,7 +1093,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] App (UI lane 4, #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`.
 - [x] App follow-up (Production QA, 2026-10-09; UI lane 4, #358): the "הוספה למסך הבית" screen showed Safari's steps in every iPhone browser. Chrome (CriOS) now shows its share button in the address bar, Firefox (FxiOS) its ☰ menu, any other iPhone browser its share button; Safari and iPad keep •••. Read from the user agent (`iosBrowser`).
 - [x] Server part 2 (PR #343): תנועה חדשה within 5 minutes of a sync bringing bank or SUMIT lines (`flow-push-new`), and סיכום שבועי on Sunday at 08:00 Israel time (`flow-push-weekly`), with counts only and no amounts (the owner's pick, 2026-10-09).
-- [ ] Setup step 5 offers it once it ships.
+- [x] Setup step 5 offers it once it ships. (Backlog bug fixes: the same card under the install steps, sharing the review card's asked-once answer; an iPhone tab is not asked there, since the step already teaches the Home Screen.)
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow
