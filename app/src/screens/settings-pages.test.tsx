@@ -232,7 +232,7 @@ describe("Loans page", () => {
     expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
   });
 
-  it("lets a viewer read the balances, with no new loan and no chevrons", () => {
+  it("lets a viewer read the balances and open a loan's page, with no new loan (FLOW-106 B)", () => {
     renderAt(
       <ViewerPreview>
         <LoansScreen sample={{ ...business, loans: twoLoans }} />
@@ -241,9 +241,9 @@ describe("Loans page", () => {
     );
     expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
     expect(screen.getByText("הלוואת ציוד")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /משכנתא אלון/ })).not.toBeInTheDocument();
+    // The loan page reads as static rows for a viewer, so the list row still opens it.
+    expect(screen.getByRole("button", { name: /^משכנתא אלון, / })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
-    expect(document.querySelector(".ui-row-chevron")).toBeNull();
   });
 
   it("shows the empty state, and the viewer's has no button", () => {

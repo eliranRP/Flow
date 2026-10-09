@@ -428,8 +428,8 @@ export function ConnectionsScreen({
           title="SUMIT"
           icon={<DocumentIcon size={24} />}
           state={kind === "loading" ? "loading" : kind === "error" ? "error" : "ready"}
-          hint={connectorWord(kind)}
-          warning={kind === "reconnect"}
+          hint={connectorWord(kind, holdWrites, viewer)}
+          warning={kind === "reconnect" && !holdWrites}
           rowRef={sumitRowRef}
           onOpen={holdWrites ? undefined : () => {
             if (kind === "connected") setStatusSheet(true);
@@ -472,8 +472,8 @@ export function ConnectionsScreen({
           title="Mercury"
           icon={<BankIcon size={24} />}
           state={mercuryKind === "loading" ? "loading" : mercuryKind === "error" ? "error" : "ready"}
-          hint={connectorWord(mercuryKind)}
-          warning={mercuryKind === "reconnect"}
+          hint={connectorWord(mercuryKind, holdWrites, viewer)}
+          warning={mercuryKind === "reconnect" && !holdWrites}
           rowRef={mercuryRowRef}
           onOpen={holdWrites ? undefined : () => {
             if (mercuryKind === "connected") setMercuryStatusSheet(true);
