@@ -72,25 +72,35 @@ function SeedFlags({ ids, flags }: { ids: string[]; flags: ReviewFlagsData }) {
 const flagRow: ReviewRow = { ...plainRow };
 const loudSpike: ReviewFlagsData = {
   [flagRow.transaction_id]: [{
-    transaction_id: flagRow.transaction_id, kind: "amount_spike", jev_score: 0.82, other_doc_date: null, typical_amount_minor: 120_000, ratio: 3.4,
+    transaction_id: flagRow.transaction_id, kind: "amount_spike", jev_score: 0.82, other_doc_date: null, typical_amount_minor: 250_000, ratio: 3.4,
   }],
 };
-/** FLOW-327: a loud flag as the card's last block, the bar still clear of the tab bar at 375x667. */
-function ReviewQueueFlagStory() {
+/**
+ * FLOW-327: a loud amount spike, the bar still clear of the tab bar at 375x667.
+ * 2026-10-09 option A: "↑ 240%" after the amount, "בדרך כלל ₪2,500" under it, and no flag row beside the pill.
+ * `banner` adds the filed-today banner. The one-line loud row under the banner (#296) is in ReviewJevFitLoud*.
+ */
+function ReviewQueueFlagStory({ banner = false }: { banner?: boolean }) {
+  const row = banner ? sampleReview : flagRow;
   return (
     <StoryRoute entry="/review" tabs reviewCount={4}>
-      <SeedFlags ids={[flagRow.transaction_id]} flags={loudSpike} />
-      <ReviewQueue rows={[flagRow]} search="" sample />
+      <SeedFlags ids={[row.transaction_id]} flags={{ [row.transaction_id]: loudSpike[flagRow.transaction_id] ?? [] }} />
+      <ReviewQueue rows={[row]} search="" sample />
     </StoryRoute>
   );
 }
+const view390 = { parameters: { viewport: { defaultViewport: "flow390" } } };
 export const ReviewQueueFlag375se: Story = { ...se, render: () => <ReviewQueueFlagStory /> };
 export const ReviewQueueFlag375seDark: Story = { ...se, ...darkTheme, render: () => <ReviewQueueFlagStory /> };
+export const ReviewQueueFlag390: Story = { ...view390, render: () => <ReviewQueueFlagStory banner /> };
+export const ReviewQueueFlag390Dark: Story = { ...view390, ...darkTheme, render: () => <ReviewQueueFlagStory banner /> };
+export const ReviewQueueFlag320: Story = { ...narrowView, render: () => <ReviewQueueFlagStory banner /> };
+export const ReviewQueueFlag320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewQueueFlagStory banner /> };
 
 /**
- * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + בטל),
- * a quiet flag ends the card, and the slim filed-today banner is on. The card must end above the pinned bar.
- * Invented data.
+ * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + ביטול),
+ * a quiet amount spike ("↑ 240%" after the amount, "בדרך כלל ₪2,500" under it; option A, 2026-10-09), and
+ * the slim filed-today banner is on. The card must end above the pinned bar. Invented data.
  */
 const jevRow: ReviewRow = { ...sampleReview, project_suggested: true, category_suggested: true };
 const jevFilled: JevQueueData = {
@@ -223,7 +233,7 @@ const unpin: NonNullable<Story["loaders"]> = [() => {
 export const ReviewCounter10At320: Story = { ...narrowView, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
-/** FLOW-309: the skipped cards at the end of הצג הכול. Invented data. */
+/** FLOW-309: the skipped cards at the end of הצגת הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [
   {
     id: "k1", transaction_id: "tk1", description: "ברזל הצפון", doc_date: "2026-09-28", doc_kind: "invoice",

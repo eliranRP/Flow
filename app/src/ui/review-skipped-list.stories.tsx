@@ -5,7 +5,7 @@ import { ReviewIcon } from "./icons";
 import { ReviewSkippedLink, ReviewSkippedList, type SkippedRowView } from "./review-skipped-list";
 import { statementMethodOf } from "./statement";
 
-/** FLOW-309: the דולגו block at the end of הצג הכול. Invented data. */
+/** FLOW-309: the דולגו block at the end of הצגת הכול. Invented data. */
 const rows: SkippedRowView[] = [
   {
     id: "r1",

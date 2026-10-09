@@ -91,6 +91,46 @@ describe("ReviewCard FLOW-327 additions", () => {
     expect(container.querySelector(".ui-review-flag")).toBeNull();
   });
 
+  it("puts an amount spike beside the amount: a hidden ↑ N% pill, a spoken sentence, and the usual amount above VAT", () => {
+    const quiet = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: 0.4, ratio: 3.4, typical_amount_minor: 250_000 }]);
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-850_000n} vatLine="לפני מע״מ" flag={quiet} />);
+    const row = container.querySelector(".ui-review-amount");
+    const pill = row?.querySelector(".ui-review-spike");
+    expect(pill).toHaveClass("ui-status");
+    expect(pill).toHaveAttribute("aria-hidden", "true");
+    expect(pill?.textContent).toBe("↑ 240%");
+    expect(row?.querySelector(".t-display")?.nextElementSibling).toBe(pill);
+    expect(row?.querySelector(".sr-only")?.textContent).toBe("גבוה ב־240% מהרגיל לספק");
+    const usual = container.querySelector(".ui-review-usual");
+    expect(usual?.textContent).toBe("בדרך כלל ₪2,500");
+    expect(row?.nextElementSibling).toBe(usual);
+    expect(usual?.nextElementSibling?.textContent).toBe("לפני מע״מ");
+    // The old bottom line is gone: no "פי X מהרגיל", and no quiet flag block at all.
+    expect(container.querySelector(".ui-review-flag-quiet")).toBeNull();
+    expect(container.textContent).not.toContain("פי ");
+
+    const loud = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: 0.9, ratio: 3.4, typical_amount_minor: 250_000 }], { direction: "income" });
+    rerender(<ReviewCard supplier="לקוח" sourceLine="הכנסה" netAgorot={850_000n} direction="income" flag={loud} />);
+    expect(container.querySelector(".ui-review-amount .sr-only")?.textContent).toBe("לבדיקה: גבוה ב־240% מהרגיל ללקוח");
+    // The pill is the whole warning: no loud row at the end repeats it.
+    expect(container.querySelector(".ui-review-flag")).toBeNull();
+
+    // Loud with no ratio: no pill, so the loud row keeps its title, with no hint, as the last block.
+    const loudNoRatio = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: 0.9, typical_amount_minor: 250_000 }]);
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-850_000n} flag={loudNoRatio} />);
+    const flagRow = container.querySelector(".ui-review-flag");
+    expect(flagRow?.querySelector(".ui-row-title")?.textContent).toBe("לבדיקה: סכום גבוה מהרגיל");
+    expect(flagRow?.querySelector(".ui-row-hint")).toBeNull();
+    expect(container.querySelector(".ui-review")?.lastElementChild).toBe(flagRow);
+
+    // No ratio: the amount stands alone and the quiet line stays, with the usual amount under the amount.
+    const noRatio = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: null, typical_amount_minor: 250_000 }]);
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-850_000n} flag={noRatio} />);
+    expect(container.querySelector(".ui-review-amount")).toBeNull();
+    expect(container.querySelector(".ui-review-usual")?.textContent).toBe("בדרך כלל ₪2,500");
+    expect(container.querySelector(".ui-review-flag-quiet")?.textContent).toBe("לבדיקה: גבוה מהרגיל לספק");
+  });
+
   it("shows Jev's no-project answer on the empty project row with הצעת Jev (FLOW-703)", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "חומרים", projectNoneJev: true }} onProject={() => undefined} onCategory={() => undefined} />);
     const row = screen.getByRole("button", { name: `פרויקט: ${JEV_NO_PROJECT}, הצעת Jev` });
@@ -301,18 +341,18 @@ describe("ReviewCard הצעת Jev", () => {
 describe("ReviewCard Jev fill label (FLOW-702)", () => {
   const jev: ReviewSuggestion = { project: "וילה רעננה", category: "חומרים", projectSuggested: true, categorySuggested: true, projectJev: true, categoryJev: true };
 
-  it("says מולא ע״י Jev with בטל, which calls back", () => {
+  it("says מולא ע״י Jev with ביטול, which calls back", () => {
     const onUndo = vi.fn();
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo }} onProject={() => undefined} onCategory={() => undefined} />);
     expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} את המילוי של Jev` }));
+    fireEvent.click(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} המילוי של Jev` }));
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
 
   it("shows the label alone for a viewer, and nothing without a הצעת Jev pill or while pending", () => {
     const { rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} />);
     expect(screen.getByText(JEV_FILLED)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /בטל/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /ביטול/ })).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ ...jev, projectJev: false, categoryJev: false }} jevFilled={{}} />);
     expect(screen.queryByText(JEV_FILLED)).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{}} pending />);
@@ -331,15 +371,15 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     const plain = { ...jev, projectJev: false, categoryJev: false };
     const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} jevFilled={{ onUndo: () => undefined, alone: true }} />);
     expect(container.querySelector(".ui-review-filled .ui-review-reason-text")?.textContent).toBe(JEV_FILLED);
-    expect(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} את המילוי של Jev` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} המילוי של Jev` })).toBeInTheDocument();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} jevFilled={{ onUndo: () => undefined }} />);
     expect(container.querySelector(".ui-review-filled")).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} pending jevFilled={{ onUndo: () => undefined, alone: true }} />);
     expect(container.querySelector(".ui-review-filled")).toBeNull();
   });
 
-  it("marks בטל busy while the undo runs", () => {
+  it("marks ביטול busy while the undo runs", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
-    expect(screen.getByRole("button", { name: /בטל/ })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: /ביטול/ })).toHaveAttribute("aria-busy", "true");
   });
 });

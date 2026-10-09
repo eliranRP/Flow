@@ -204,6 +204,8 @@ export const sumitStatusSchema = z.object({
   last_error: z.string().nullable(),
   next_attempt_at: z.string().nullable().optional(),
   syncing: z.boolean().optional(),
+  /** FLOW-505: the import start, or null for every document. */
+  import_from: z.string().nullable().optional(),
 });
 
 export const mercuryStatusSchema = z.object({

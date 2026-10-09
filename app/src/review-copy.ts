@@ -69,9 +69,23 @@ export const REVIEW_FLAG_LOUD = 0.7;
 
 const KIND_ORDER: Record<ReviewFlagKind, number> = { duplicate: 0, amount_spike: 1, new_party_large: 2 };
 
+/**
+ * An amount spike beside the amount (2026-10-09, option A): a "↑ N%" pill right after it and
+ * "בדרך כלל ₪X" under it. Readers hear `spoken` instead of the pill.
+ */
+export type ReviewSpikeView = {
+  /** "↑ 240%", or null when there is no usable ratio. */
+  pill: string | null;
+  /** "גבוה ב־240% מהרגיל לספק", or null with the pill. */
+  spoken: string | null;
+  /** "בדרך כלל ₪2,500", or null when the usual amount is unknown. */
+  usual: CopyPart[] | null;
+};
+
+/** A quiet `line` may be empty: an amount spike with a ratio says it all beside the amount. */
 export type ReviewFlagView =
-  | { tone: "loud"; kind: ReviewFlagKind; title: CopyPart[]; hint?: CopyPart[] }
-  | { tone: "quiet"; kind: ReviewFlagKind; line: CopyPart[] };
+  | { tone: "loud"; kind: ReviewFlagKind; title: CopyPart[]; hint?: CopyPart[]; spike?: ReviewSpikeView }
+  | { tone: "quiet"; kind: ReviewFlagKind; line: CopyPart[]; spike?: ReviewSpikeView };
 
 export function flagTone(score: number | null | undefined): "loud" | "quiet" {
   return typeof score === "number" && Number.isFinite(score) && score >= REVIEW_FLAG_LOUD ? "loud" : "quiet";
@@ -85,9 +99,24 @@ function dayMonth(iso: string | null | undefined): string | null {
   return `${day}/${month}`;
 }
 
-function ratioText(ratio: number | null | undefined): string | null {
-  if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio <= 0) return null;
-  return String(Math.round(ratio * 10) / 10);
+/** "240%" for a ratio of 3.4: how much above the usual amount, rounded. Null when it is not above. */
+export function spikePercentText(ratio: number | null | undefined): string | null {
+  if (typeof ratio !== "number" || !Number.isFinite(ratio)) return null;
+  const percent = Math.round((ratio - 1) * 100);
+  return percent > 0 ? `${percent.toLocaleString("en-US")}%` : null;
+}
+
+function spikeView(flag: ReviewFlag, party: string, currency: string, loud: boolean): ReviewSpikeView {
+  const percent = spikePercentText(flag.ratio);
+  const typical = typeof flag.typical_amount_minor === "number" && Number.isFinite(flag.typical_amount_minor)
+    ? formatAmountText(BigInt(Math.abs(Math.trunc(flag.typical_amount_minor))), currency)
+    : null;
+  return {
+    pill: percent == null ? null : `↑ ${percent}`,
+    // A loud spike looks like a quiet one; readers still hear it first, as the flag rows do.
+    spoken: percent == null ? null : `${loud ? `${REVIEW_FLAG_PREFIX} ` : ""}גבוה ב־${percent} מהרגיל ל${party}`,
+    usual: typical == null ? null : ["בדרך כלל ", { num: typical }],
+  };
 }
 
 /**
@@ -118,24 +147,11 @@ export function reviewFlagView(
       return { tone, kind: flag.kind, line: ["שורה באותו סכום", ...when] };
     }
     case "amount_spike": {
-      const ratio = ratioText(flag.ratio);
-      const times: CopyPart[] = ratio == null ? ["גבוה מהרגיל"] : ["פי ", { num: ratio }, " מהרגיל"];
-      if (tone === "loud") {
-        const typical = typeof flag.typical_amount_minor === "number" && Number.isFinite(flag.typical_amount_minor)
-          ? formatAmountText(BigInt(Math.abs(Math.trunc(flag.typical_amount_minor))), context.currency ?? "ILS")
-          : null;
-        // With no ratio the title already says it is high: the hint is the usual amount, or nothing.
-        const hint: CopyPart[] = ratio == null
-          ? typical == null ? [] : ["בדרך כלל ", { num: typical }]
-          : typical == null ? times : [...times, " · בדרך כלל ", { num: typical }];
-        return {
-          tone,
-          kind: flag.kind,
-          title: ["סכום גבוה מהרגיל"],
-          ...(hint.length === 0 ? {} : { hint }),
-        };
-      }
-      return { tone, kind: flag.kind, line: [...times, ` ל${party}`] };
+      // The pill and the usual amount sit by the amount, and the card draws no flag row beside a
+      // pill. With no ratio there is no pill: the loud title or the quiet line stays.
+      const spike = spikeView(flag, party, context.currency ?? "ILS", tone === "loud");
+      if (tone === "loud") return { tone, kind: flag.kind, title: ["סכום גבוה מהרגיל"], spike };
+      return { tone, kind: flag.kind, line: spike.pill == null ? [`גבוה מהרגיל ל${party}`] : [], spike };
     }
     case "new_party_large":
       if (tone === "loud") {
