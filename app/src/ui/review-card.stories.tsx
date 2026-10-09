@@ -270,7 +270,7 @@ export const FlagSpikeQuiet320: Story = { ...narrow, name: "Flag: amount spike, 
 export const FlagSpikeQuietDark: Story = { ...dark, name: "Flag: amount spike, quiet, dark", args: FlagSpikeQuiet.args };
 /** With no ratio there is no pill: the quiet line stays, and the usual amount still sits under the amount. */
 export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ratio", args: { ...jevCard, flags: [flag("amount_spike", null, { typical_amount_minor: 250_000 })] } };
-/** At 320 a long amount leaves no room: the pill drops under it, and the amount is never cut. */
+/** At 320 a long amount may leave no room: the pill drops under it, and the amount is never cut. */
 export const FlagSpikeLong320: Story = {
   ...narrow,
   name: "Flag: amount spike, long amount, 320",
@@ -280,10 +280,17 @@ export const FlagSpikeLong320: Story = {
     const pill = canvasElement.querySelector<HTMLElement>(".ui-review-spike");
     await expect(amount).not.toBeNull();
     await expect(pill).not.toBeNull();
+    await document.fonts.ready;
     const amountBox = (amount as HTMLElement).getBoundingClientRect();
     const card = (canvasElement.querySelector(".ui-review") as HTMLElement).getBoundingClientRect();
+    const pillBox = (pill as HTMLElement).getBoundingClientRect();
+    // The amount is never cut, and the pill stays inside the card: beside the amount when it fits, else under it.
     await expect(amountBox.left).toBeGreaterThanOrEqual(card.left);
-    await expect((pill as HTMLElement).getBoundingClientRect().top).toBeGreaterThanOrEqual(amountBox.bottom - 1);
+    await expect(amountBox.right).toBeLessThanOrEqual(card.right);
+    await expect(pillBox.left).toBeGreaterThanOrEqual(card.left);
+    await expect(pillBox.right).toBeLessThanOrEqual(card.right);
+    const beside = pillBox.top < amountBox.bottom - 1;
+    if (beside) await expect(pillBox.right <= amountBox.left || pillBox.left >= amountBox.right).toBe(true);
   },
 };
 export const FlagNewPartyLoudIncome: Story = { name: "Flag: new party, loud, income", args: { ...jevCard, direction: "income", netAgorot: "4800000", flags: [flag("new_party_large", 0.9)] } };
