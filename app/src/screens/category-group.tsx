@@ -35,7 +35,7 @@ export function groupFailureText(error: Error): string {
   if (error.message.includes("already")) return RENAME_CATEGORY_TAKEN;
   if (error.message.includes("category not found")) return "הקטגוריה לא נמצאה.";
   if (error.message.includes("parent not found")) return "קטגוריית האב לא נמצאה.";
-  if (error.message.includes("category_parent_nested")) return "לקטגוריה הזו יש תת-קטגוריות, אז אין לה קטגוריית אב.";
+  if (error.message.includes("category_parent_nested")) return "לקטגוריה הזו יש תת־קטגוריות, אז אין לה קטגוריית אב.";
   if (error.message.includes("category_parent_loan_part")) return "לקטגוריה של הלוואה אין קטגוריית אב.";
   if (error.message.includes("category_parent_kind")) return "קטגוריית האב מסוג אחר.";
   if (error.message.includes("validation") || (error as Error & { code?: string }).code === "23514") return "שם הקטגוריה לא תקין.";
