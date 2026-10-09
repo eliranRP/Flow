@@ -111,7 +111,7 @@ describe("ReviewCard FLOW-327 additions", () => {
 
     const loud = reviewFlagView([{ transaction_id: "t", kind: "amount_spike", jev_score: 0.9, ratio: 3.4, typical_amount_minor: 250_000 }], { direction: "income" });
     rerender(<ReviewCard supplier="לקוח" sourceLine="הכנסה" netAgorot={850_000n} direction="income" flag={loud} />);
-    expect(container.querySelector(".ui-review-amount .sr-only")?.textContent).toBe("גבוה ב־240% מהרגיל ללקוח");
+    expect(container.querySelector(".ui-review-amount .sr-only")?.textContent).toBe("לבדיקה: גבוה ב־240% מהרגיל ללקוח");
     // The pill is the whole warning: no loud row at the end repeats it.
     expect(container.querySelector(".ui-review-flag")).toBeNull();
 

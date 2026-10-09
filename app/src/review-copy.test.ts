@@ -58,7 +58,7 @@ describe("reviewFlagView (FLOW-327, decision 0131)", () => {
     expect(copyText(spikeLoud.title)).toBe("סכום גבוה מהרגיל");
     expect(spikeLoud.hint).toBeUndefined();
     expect(spikeLoud.spike?.pill).toBe("↑ 320%");
-    expect(spikeLoud.spike?.spoken).toBe("גבוה ב־320% מהרגיל לספק");
+    expect(spikeLoud.spike?.spoken).toBe("לבדיקה: גבוה ב־320% מהרגיל לספק");
     expect(copyText(spikeLoud.spike?.usual ?? [])).toBe("בדרך כלל ₪1,200");
     // A quiet spike with a ratio has no line of its own: no "פי X מהרגיל" anywhere.
     const spikeQuiet = reviewFlagView([flag("amount_spike", 0.69, { ratio: 3 })], { direction: "income" });

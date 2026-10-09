@@ -106,14 +106,15 @@ export function spikePercentText(ratio: number | null | undefined): string | nul
   return percent > 0 ? `${percent.toLocaleString("en-US")}%` : null;
 }
 
-function spikeView(flag: ReviewFlag, party: string, currency: string): ReviewSpikeView {
+function spikeView(flag: ReviewFlag, party: string, currency: string, loud: boolean): ReviewSpikeView {
   const percent = spikePercentText(flag.ratio);
   const typical = typeof flag.typical_amount_minor === "number" && Number.isFinite(flag.typical_amount_minor)
     ? formatAmountText(BigInt(Math.abs(Math.trunc(flag.typical_amount_minor))), currency)
     : null;
   return {
     pill: percent == null ? null : `↑ ${percent}`,
-    spoken: percent == null ? null : `גבוה ב־${percent} מהרגיל ל${party}`,
+    // A loud spike looks like a quiet one; readers still hear it first, as the flag rows do.
+    spoken: percent == null ? null : `${loud ? `${REVIEW_FLAG_PREFIX} ` : ""}גבוה ב־${percent} מהרגיל ל${party}`,
     usual: typical == null ? null : ["בדרך כלל ", { num: typical }],
   };
 }
@@ -148,7 +149,7 @@ export function reviewFlagView(
     case "amount_spike": {
       // The pill and the usual amount sit by the amount, and the card draws no flag row beside a
       // pill. With no ratio there is no pill: the loud title or the quiet line stays.
-      const spike = spikeView(flag, party, context.currency ?? "ILS");
+      const spike = spikeView(flag, party, context.currency ?? "ILS", tone === "loud");
       if (tone === "loud") return { tone, kind: flag.kind, title: ["סכום גבוה מהרגיל"], spike };
       return { tone, kind: flag.kind, line: spike.pill == null ? [`גבוה מהרגיל ל${party}`] : [], spike };
     }
