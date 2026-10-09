@@ -1,6 +1,14 @@
 // FLOW-502: Web Push encryption, VAPID signing and the push-send function, with keys made here.
 import { base64UrlDecode, base64UrlEncode, encryptPush, sendPush, vapidAuthorization, type VapidKeys } from "./webpush.ts";
-import { eveningMessage, handlePushSend, readVapid, remindEvening, type EveningTarget } from "./push_send.ts";
+import {
+  eveningMessage,
+  handlePushSend,
+  newLinesMessage,
+  readVapid,
+  remindEvening,
+  weeklyMessage,
+  type EveningTarget,
+} from "./push_send.ts";
 
 function assertEquals(actual: unknown, expected: unknown): void {
   const a = JSON.stringify(actual);
@@ -276,4 +284,75 @@ Deno.test("no send starts after the budget, and sends run side by side", async (
   assertEquals(started.length < 12, true);
   assertEquals(result.report.sent + result.report.failed, 12);
   assertEquals(result.report.sent, started.length);
+});
+
+Deno.test("the new-lines and weekly lines name their counts and no amount", () => {
+  assertEquals(newLinesMessage(1, 0), { title: "תנועה חדשה", body: "נכנסה תנועה חדשה", url: "/", tag: "new-lines" });
+  assertEquals(newLinesMessage(4, 2), { title: "תנועות חדשות", body: "נכנסו 4 תנועות חדשות", url: "/review", tag: "new-lines" });
+  assertEquals(weeklyMessage(12, 3), { title: "סיכום שבועי", body: "12 תנועות נכנסו השבוע · 3 מחכות לאישור", url: "/review", tag: "weekly-summary" });
+  assertEquals(weeklyMessage(1, 1).body, "תנועה אחת נכנסה השבוע · אחת מחכה לאישור");
+  assertEquals(weeklyMessage(0, 0).body, "לא נכנסו תנועות השבוע · הכול מאושר");
+  assertEquals(weeklyMessage(5, 0).url, "/");
+});
+
+async function runKind(body: string, rows: unknown[]) {
+  const keys = await vapidKeys();
+  const receiver = await browser();
+  const rpcs: { name: string; body: unknown }[] = [];
+  const pushed: string[] = [];
+  const fakeFetch: typeof fetch = async (input, init) => {
+    const request = new Request(input, init);
+    const match = request.url.match(/\/rest\/v1\/rpc\/(\w+)$/);
+    if (match) {
+      rpcs.push({ name: match[1] ?? "", body: await request.json() });
+      const filled = rows.map((row) => ({ ...(row as object), p256dh: receiver.p256dh, auth: receiver.authText }));
+      return match[1] === "note_push_results" ? new Response(null, { status: 204 }) : new Response(JSON.stringify(filled), { status: 200 });
+    }
+    pushed.push(request.url);
+    return new Response(null, { status: request.url.includes("apple") ? 410 : 201 });
+  };
+  const response = await handlePushSend(
+    new Request("https://example.supabase.co/functions/v1/push-send", { method: "POST", headers: { "x-flow-cron": "cron-test" }, body }),
+    {
+      fetch: fakeFetch,
+      now: () => NOW,
+      env: env({
+        CRON_SECRET: "cron-test",
+        SUPABASE_URL: "https://example.supabase.co",
+        SUPABASE_SECRET_KEYS: '{"default":"service-test"}',
+        VAPID_PUBLIC_KEY: keys.publicKey,
+        VAPID_PRIVATE_KEY: keys.privateKey,
+        VAPID_SUBJECT: keys.subject,
+      }),
+    },
+  );
+  return { status: response.status, json: await response.json(), rpcs, pushed };
+}
+
+Deno.test("push-send claims the new-lines targets and stamps no evening reminder", async () => {
+  const result = await runKind('{"kind":"new"}', [
+    { user_id: "u1", endpoint: ENDPOINT, fresh: 2, waiting: 1 },
+    { user_id: "u2", endpoint: "https://web.push.apple.com/example-device-2", fresh: 1, waiting: 0 },
+    { user_id: "u3", endpoint: ENDPOINT, fresh: 0, waiting: 0 },
+  ]);
+  assertEquals(result.status, 200);
+  assertEquals(result.json, { users: 2, sent: 1, gone: 1, failed: 0 });
+  assertEquals(result.rpcs, [
+    { name: "push_claim_targets", body: { p_kind: "new" } },
+    { name: "note_push_results", body: { p_reminded: [], p_gone: ["https://web.push.apple.com/example-device-2"] } },
+  ]);
+});
+
+Deno.test("push-send sends the weekly summary and skips the note when nothing is gone", async () => {
+  const result = await runKind('{"kind":"weekly"}', [{ user_id: "u1", endpoint: ENDPOINT, fresh: 0, waiting: 4 }]);
+  assertEquals(result.json, { users: 1, sent: 1, gone: 0, failed: 0 });
+  assertEquals(result.rpcs, [{ name: "push_claim_targets", body: { p_kind: "weekly" } }]);
+  assertEquals(result.pushed, [ENDPOINT]);
+});
+
+Deno.test("push-send refuses an unknown kind before it reads any target", async () => {
+  for (const body of ['{"kind":"monthly"}', "not json"]) {
+    const result = await runKind(body, []);
+    assertEquals([result.status, result.json, result.rpcs.length], [400, { error: "kind" }, 0]);
+  }
 });
