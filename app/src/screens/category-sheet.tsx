@@ -78,8 +78,8 @@ export function CategoryMenuSheet({
   const mergeOnly = moveFrom != null && (moveFrom.loan_part != null || moveFrom.hidden || moveFrom.lines === 0);
   const targets = moveFrom == null
     ? []
-    // Same kind and visible. Only a loan category's merge lists the built-in loan categories: those take only loan payment parts.
-    : rows.filter((row) => row.id !== moveFrom.id && row.kind === moveFrom.kind && !row.hidden && (mergeOnly || row.loan_part == null));
+    // Same kind and visible. Only a loan category lists the built-in loan categories: those take only loan payment parts.
+    : rows.filter((row) => row.id !== moveFrom.id && row.kind === moveFrom.kind && !row.hidden && (moveFrom.loan_part != null || row.loan_part == null));
 
   function openMove(from: ManagedCategory) {
     onClose();

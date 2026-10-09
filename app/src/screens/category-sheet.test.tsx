@@ -137,6 +137,8 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     fireEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
     const picker = await screen.findByRole("dialog", { name: "מיזוג אל" });
     expect(within(picker).queryByRole("switch")).not.toBeInTheDocument();
+    // Only a loan category's picker lists the built-in loan categories.
+    expect(within(picker).queryByRole("button", { name: /תשלומי הלוואה/ })).not.toBeInTheDocument();
     fireEvent.click(within(picker).getByRole("button", { name: /קבלנים/ }));
     expect(await screen.findByRole("dialog", { name: "למזג את הקטגוריה?" })).toBeInTheDocument();
   });
