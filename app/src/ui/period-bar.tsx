@@ -2,13 +2,10 @@ import { useId, useState } from "react";
 import {
   PRESET_KINDS,
   canStep,
-  customRange,
   isCurrentPeriod,
-  periodHint,
   presetLabel,
   presetPeriod,
   presetShortLabel,
-  samePeriod,
   stepPeriod,
   windowLabel,
   windowToDate,
@@ -19,7 +16,7 @@ import {
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { ChevronDownIcon } from "./icons";
-import { PeriodSheet, RangeSheet } from "./period-picker";
+import { PresetPeriodSheet } from "./period-picker";
 import { SegmentedControl } from "./segmented-control";
 
 type PeriodBarProps = {
@@ -45,7 +42,6 @@ type PeriodBarProps = {
  */
 export function PeriodBar({ period, onChange, tone = "band", scope = "company", toDateHint = true }: PeriodBarProps) {
   const [sheet, setSheet] = useState(false);
-  const [range, setRange] = useState(false);
   const currentId = useId();
   const onBand = tone === "band";
   const earlier = stepPeriod(period, -1);
@@ -127,31 +123,7 @@ export function PeriodBar({ period, onChange, tone = "band", scope = "company", 
           <span className="ui-pbar-arrow-slot" aria-hidden="true" />
         )}
       </div>
-      <PeriodSheet
-        open={sheet}
-        onOpenChange={setSheet}
-        onCustom={() => {
-          setRange(true);
-        }}
-        options={PRESET_KINDS.map((kind) => {
-          const choice = presetPeriod(kind);
-          return {
-            label: presetLabel(kind),
-            hint: kind === "all" && scope === "project" ? "מתחילת הפרויקט" : periodHint(choice),
-            selected: samePeriod(choice, period),
-            onSelect: () => {
-              onChange(choice);
-            },
-          };
-        })}
-      />
-      <RangeSheet
-        open={range}
-        onOpenChange={setRange}
-        onApply={(from, to) => {
-          onChange(customRange(from, to));
-        }}
-      />
+      <PresetPeriodSheet period={period} onChange={onChange} open={sheet} onOpenChange={setSheet} scope={scope} />
     </div>
   );
 }

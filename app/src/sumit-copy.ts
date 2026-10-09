@@ -2,6 +2,7 @@ const SUMIT_ERRORS: Record<string, string> = {
   unauthorized: "אין הפעלה מחוברת.",
   "no company": "עדיין אין עסק על החשבון.",
   "company id and api key are required": "צריך מזהה חברה ומפתח.",
+  "import date is invalid": "תאריך הייבוא לא תקין. בחרו תאריך אחר.",
   "could not store the connection": "לא הצלחנו לשמור את החיבור.",
   "SUMIT is not connected": "SUMIT לא מחובר.",
   sync_failed: "הרענון נכשל. נסו שוב.",

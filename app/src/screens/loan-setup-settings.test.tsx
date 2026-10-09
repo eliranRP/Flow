@@ -244,7 +244,11 @@ describe("LoanSettingsSection", () => {
     openLoan();
     fillSavable();
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("11.2042");
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    // FLOW-347: שמירה is pinned in the sheet's foot, outside the scrolling form, and still submits it.
+    const save = screen.getByRole("button", { name: "שמירה" });
+    expect(save.closest(".ui-sheet-foot")).not.toBeNull();
+    expect(save.closest("form")).toBeNull();
+    fireEvent.click(save);
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     const payment = contractualPaymentMinor({
       principalMinor: 10_000_000n,

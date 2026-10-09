@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { connectValidated } from "../_shared/connect-order.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
+import { parseImportFrom, saveImportFrom } from "../_shared/import-from.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -26,12 +27,14 @@ Deno.serve(async (req) => {
     const user = await userClient.auth.getUser();
     if (user.error || !user.data.user) return json({ error: "unauthorized" }, 401);
 
-    const body = (await req.json()) as { companyId?: unknown; apiKey?: unknown };
+    const body = (await req.json()) as { companyId?: unknown; apiKey?: unknown; importFrom?: unknown };
     const companyId = typeof body.companyId === "number" ? body.companyId : Number(body.companyId);
     const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
     if (!Number.isInteger(companyId) || companyId <= 0 || apiKey.length < 8) {
       return json({ error: "company id and api key are required" }, 400);
     }
+    const importFrom = parseImportFrom(body.importFrom);
+    if (importFrom === false) return json({ error: "import date is invalid" }, 400);
 
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
@@ -59,7 +62,9 @@ Deno.serve(async (req) => {
       },
     });
     if (saved.error) return json({ error: "could not store the connection" }, 500);
-    return json({ connected: true, sumit_company_id: companyId, sumit_reads: 1 });
+    // Before the first sync tick reads it. The connection stands even if only the date fails.
+    const importSaved = await saveImportFrom(userClient, "sumit", importFrom);
+    return json({ connected: true, sumit_company_id: companyId, sumit_reads: 1, import_from_saved: importSaved });
   } catch (error) {
     const message = error instanceof Error ? error.message : "connect failed";
     console.error("sumit-connect", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));

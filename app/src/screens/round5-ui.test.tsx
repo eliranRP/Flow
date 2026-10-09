@@ -203,17 +203,24 @@ describe("transaction status chips", () => {
     expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
   });
 
-  it("shows the VAT as a plain line, with no empty invoice row", () => {
+  it("puts the VAT on the amount's line with no minus, and no empty invoice row (FLOW-339)", () => {
     renderTxn(expense);
-    expect(screen.getByText(/^מע״מ /)).toHaveTextContent("מע״מ −₪1,800 · מע״מ משוער 18%");
+    expect(screen.getByText(/^לפני מע״מ ·/)).toHaveTextContent("לפני מע״מ · מע״מ משוער ₪1,800 · 12/09/2026");
+    expect(screen.queryByText(/−₪1,800/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
     // FLOW-322: no document row or hint promises what the detail does not show (an invoice number, the bank line).
     expect(screen.queryByText(/מספר חשבונית|שורת הבנק/)).not.toBeInTheDocument();
   });
 
-  it("hides the VAT line when a shekel line has no VAT", () => {
+  it("names a document's VAT without a status word", () => {
+    renderTxn({ ...expense, vat_status: "source" });
+    expect(screen.getByText(/^לפני מע״מ ·/)).toHaveTextContent("לפני מע״מ · מע״מ ₪1,800 · 12/09/2026");
+    expect(screen.queryByText(/לפי המסמך/)).not.toBeInTheDocument();
+  });
+
+  it("hides the VAT amount when a shekel line has no VAT", () => {
     renderTxn({ ...expense, amount_gross: -1_000_000n, vat_amount: 0n, vat_status: "source" });
-    expect(screen.queryByText(/^מע״מ /)).not.toBeInTheDocument();
+    expect(screen.getByText(/^לפני מע״מ ·/)).toHaveTextContent("לפני מע״מ · 12/09/2026");
   });
 
   it("hides VAT and invoice rows for a USD expense", () => {
