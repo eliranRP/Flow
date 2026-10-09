@@ -5,8 +5,10 @@ import { CardSwipe, type CardStep } from "./card-swipe";
 import { List, ListRow } from "./list-row";
 
 /**
- * FLOW-314: on a touch screen, a sideways swipe on the transaction card does what ˄ ˅ do. A finger
- * moving right opens the next card, which enters from the left; moving left opens the previous one.
+ * FLOW-314: on a touch screen, a sideways swipe on the transaction card does what הבאה and הקודמת do. A
+ * finger moving right opens the next card, which enters from the left; moving left opens the previous one.
+ * FLOW-345: mid-drag the neighbour's edge peeks in with its name; toward a list end the card gives a
+ * little (at most 32px) and springs back.
  */
 const rows = ["ספק 1", "ספק 2", "ספק 3"];
 
@@ -19,6 +21,8 @@ function Demo({ start }: { start: number }) {
       canNext={at < rows.length - 1}
       canPrev={at > 0}
       enter={enter}
+      peekNext={rows[at + 1] ?? null}
+      peekPrev={rows[at - 1] ?? null}
       onStep={(step) => {
         setEnter(step);
         setAt((index) => index + (step === "next" ? 1 : -1));
@@ -59,5 +63,5 @@ export const Middle: Story = {
 };
 export const MiddleDark: Story = { ...Middle, name: "Middle, dark", ...dark };
 export const Middle320: Story = { ...Middle, name: "Middle, 320", ...at320 };
-/** The last card: a swipe right does not move it. */
+/** The last card: a swipe right gives a little and springs back, with nothing peeking in. */
 export const Last: Story = { args: { start: 2 } };

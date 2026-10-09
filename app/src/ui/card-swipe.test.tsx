@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CardSwipe, cardStep, type CardStep } from "./card-swipe";
+import { CardSwipe, cardStep, endGive, type CardStep } from "./card-swipe";
 
 function box(): HTMLElement {
   const node = document.querySelector<HTMLElement>(".ui-cswipe-card");
@@ -36,9 +36,13 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function Card({ onStep, canNext = true, canPrev = true, enter = null }: { onStep: (step: CardStep) => void; canNext?: boolean; canPrev?: boolean; enter?: CardStep | null }) {
+function peek(side: CardStep): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`.ui-cswipe-peek[data-side="${side}"]`);
+}
+
+function Card({ onStep, canNext = true, canPrev = true, enter = null, peekNext = null }: { onStep: (step: CardStep) => void; canNext?: boolean; canPrev?: boolean; enter?: CardStep | null; peekNext?: string | null }) {
   return (
-    <CardSwipe canNext={canNext} canPrev={canPrev} onStep={onStep} enter={enter}>
+    <CardSwipe canNext={canNext} canPrev={canPrev} onStep={onStep} enter={enter} peekNext={peekNext}>
       <p>ספק 5</p>
       <input aria-label="שדה" />
     </CardSwipe>
@@ -76,16 +80,52 @@ describe("CardSwipe", () => {
     expect(node).not.toHaveClass("ui-cswipe-drag");
   });
 
-  it("does not move or step toward a list end", () => {
+  it("gives a little toward a list end, springs back, and does not step (FLOW-345)", () => {
     setReducedMotion(false);
     const onStep = vi.fn();
     render(<Card onStep={onStep} canNext={false} />);
     const node = box();
     fireEvent.touchStart(node, { touches: [{ clientX: 100, clientY: 300 }] });
-    fireEvent.touchMove(node, { touches: [{ clientX: 200, clientY: 300 }] });
-    expect(node.style.transform).toBe("translateX(0px)");
-    fireEvent.touchEnd(node, { touches: [], changedTouches: [{ clientX: 260, clientY: 300 }] });
+    fireEvent.touchMove(node, { touches: [{ clientX: 160, clientY: 300 }] });
+    // A quarter of the move...
+    expect(node.style.transform).toBe("translateX(15px)");
+    fireEvent.touchMove(node, { touches: [{ clientX: 300, clientY: 300 }] });
+    // ...at most 32px, and nothing peeks in from the side with no card.
+    expect(node.style.transform).toBe("translateX(32px)");
+    expect(peek("next")).toBeNull();
+    fireEvent.touchEnd(node, { touches: [], changedTouches: [{ clientX: 300, clientY: 300 }] });
+    expect(node.style.transform).toBe("");
     expect(onStep).not.toHaveBeenCalled();
+  });
+
+  it("endGive is a quarter of the move, capped at 32px either way", () => {
+    expect(endGive(40)).toBe(10);
+    expect(endGive(-40)).toBe(-10);
+    expect(endGive(500)).toBe(32);
+    expect(endGive(-500)).toBe(-32);
+  });
+
+  it("the neighbour's edge peeks in with the card, from the side it will enter (FLOW-345)", () => {
+    setReducedMotion(false);
+    render(<Card onStep={vi.fn()} peekNext="ספק 6" />);
+    const node = box();
+    const next = peek("next");
+    const prev = peek("prev");
+    expect(next).toHaveAttribute("aria-hidden", "true");
+    expect(next).toHaveTextContent("ספק 6");
+    // The previous card's name is not in the cache: a plain card edge.
+    expect(prev).toBeEmptyDOMElement();
+    fireEvent.touchStart(node, { touches: [{ clientX: 100, clientY: 300 }] });
+    fireEvent.touchMove(node, { touches: [{ clientX: 170, clientY: 302 }] });
+    expect(next?.style.transform).toBe("translateX(70px)");
+    expect(prev?.style.transform).toBe("");
+    // Back across the start: the other neighbour takes over.
+    fireEvent.touchMove(node, { touches: [{ clientX: 40, clientY: 302 }] });
+    expect(prev?.style.transform).toBe("translateX(-60px)");
+    expect(next?.style.transform).toBe("");
+    fireEvent.touchEnd(node, { touches: [], changedTouches: [{ clientX: 40, clientY: 302 }] });
+    expect(prev?.style.transform).toBe("");
+    expect(prev).not.toHaveClass("ui-cswipe-drag");
   });
 
   it("hands a mostly vertical move to the page scroll", () => {
@@ -178,14 +218,15 @@ describe("CardSwipe", () => {
     }
   });
 
-  it("with reduced motion the card stays put and swaps on release", () => {
+  it("with reduced motion the card stays put, nothing peeks, and it swaps on release", () => {
     setReducedMotion(true);
     const onStep = vi.fn();
-    render(<Card onStep={onStep} />);
+    render(<Card onStep={onStep} peekNext="ספק 6" />);
     const node = box();
     fireEvent.touchStart(node, { touches: [{ clientX: 100, clientY: 300 }] });
     fireEvent.touchMove(node, { touches: [{ clientX: 200, clientY: 300 }] });
     expect(node.style.transform).toBe("");
+    expect(peek("next")?.style.transform).toBe("");
     fireEvent.touchEnd(node, { touches: [], changedTouches: [{ clientX: 260, clientY: 300 }] });
     expect(onStep).toHaveBeenCalledWith("next");
   });

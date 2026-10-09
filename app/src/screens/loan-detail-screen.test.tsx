@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { sampleLoanStore } from "../dev/loan-detail-sample";
+import { oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { ViewerPreview } from "../use-is-viewer";
@@ -115,6 +115,13 @@ describe("loan page: states and the viewer", () => {
     expect(screen.queryByRole("button", { name: /^פרויקט/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "מחיקת ההלוואה" })).not.toBeInTheDocument();
+  });
+
+  it("offers the tint ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
+    renderLoan(oneLoanStore("loan-mortgage", { phase: "error" }), "loan-mortgage");
+    const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
+    expect(retry).toHaveClass("ui-btn-pill");
+    expect(retry).not.toHaveClass("ui-btn-retry");
   });
 
   it("shows not found with a way back to the list", () => {

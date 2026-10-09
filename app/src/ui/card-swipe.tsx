@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref, type TouchEvent } from "react";
 import { cx } from "./cx";
 import { blocksEdgeBack, EDGE_PX } from "./edge-back";
 import { swipeAxis, swipeStep } from "./period-swipe";
 
 /**
- * FLOW-314: a sideways swipe on the card does what ˄ ˅ do. The finger moving right opens the
+ * FLOW-314: a sideways swipe on the card does what הבאה and הקודמת do. The finger moving right opens the
  * next card, which enters from the left like a screen push; moving left opens the previous one.
  * The rules are the ones the band figure's swipe shares (period-swipe.tsx):
  * - touch only, one finger;
@@ -13,8 +13,9 @@ import { swipeAxis, swipeStep } from "./period-swipe";
  * - a start inside a field, a sheet or a sideways list, or while a sheet is open, is left alone;
  * - nothing is decided until the finger moved 10px; a mostly vertical move goes to the page scroll;
  * - the card follows the finger and commits past 30% of its width, or on a flick;
- * - at a list end the card does not move;
- * - with reduced motion the card stays put and swaps on release;
+ * - FLOW-345: mid-drag the neighbour's edge peeks in from the side it will enter (`peekNext`, `peekPrev`);
+ * - FLOW-345: toward a list end the card gives a little (a quarter of the move, at most 32px) and springs back;
+ * - with reduced motion the card stays put, nothing peeks, and it swaps on release;
  * - while the page is pinch-zoomed the card does not swipe, so a sideways pan moves the zoomed view.
  */
 export type CardStep = "next" | "prev";
@@ -52,6 +53,14 @@ function useZoomedIn(): boolean {
   return zoomed;
 }
 
+/** FLOW-345: how far the card gives toward a list end: a quarter of the move, at most 32px. */
+export const END_GIVE_PX = 32;
+
+export function endGive(dx: number): number {
+  const give = Math.min(Math.abs(dx) / 4, END_GIVE_PX);
+  return dx < 0 ? -give : give;
+}
+
 /** The step a horizontal move asks for: right is next, left is previous. */
 export function cardStep(dx: number, elapsedMs: number, width: number): CardStep | null {
   const step = swipeStep(dx, elapsedMs, width);
@@ -64,6 +73,8 @@ export function CardSwipe({
   canPrev,
   onStep,
   enter = null,
+  peekNext = null,
+  peekPrev = null,
   children,
 }: {
   canNext: boolean;
@@ -71,18 +82,38 @@ export function CardSwipe({
   onStep: (step: CardStep) => void;
   /** How this card was reached by a swipe: it slides in from that side. */
   enter?: CardStep | null;
+  /** FLOW-345: the neighbour's name on the edge a drag pulls in; with none the edge is a plain card. */
+  peekNext?: string | null;
+  peekPrev?: string | null;
   children: ReactNode;
 }) {
   const box = useRef<HTMLDivElement>(null);
+  const nextEdge = useRef<HTMLDivElement>(null);
+  const prevEdge = useRef<HTMLDivElement>(null);
   const track = useRef<Track | null>(null);
   const zoomed = useZoomedIn();
   const on = (canNext || canPrev) && !zoomed;
 
   function settle() {
-    const node = box.current;
-    if (!node) return;
-    node.classList.remove("ui-cswipe-drag");
-    node.style.transform = "";
+    for (const node of [box.current, nextEdge.current, prevEdge.current]) {
+      if (!node) continue;
+      node.classList.remove("ui-cswipe-drag");
+      node.style.transform = "";
+    }
+  }
+
+  /** Moves the card, and the neighbour on the side the finger opens, by the same amount. */
+  function drag(shift: number, edge: HTMLDivElement | null) {
+    const other = edge === nextEdge.current ? prevEdge.current : nextEdge.current;
+    if (other) {
+      other.classList.remove("ui-cswipe-drag");
+      other.style.transform = "";
+    }
+    for (const node of [box.current, edge]) {
+      if (!node) continue;
+      node.classList.add("ui-cswipe-drag");
+      node.style.transform = `translateX(${String(Math.round(shift))}px)`;
+    }
   }
 
   function open(step: CardStep): boolean {
@@ -118,12 +149,14 @@ export function CardSwipe({
       }
       if (start.axis == null) return;
     }
-    const node = box.current;
-    if (!node || reducedMotion()) return;
-    // No movement toward a side with no card.
-    const shift = open(dx > 0 ? "next" : "prev") ? dx : 0;
-    node.classList.add("ui-cswipe-drag");
-    node.style.transform = `translateX(${String(Math.round(shift))}px)`;
+    if (!box.current || reducedMotion()) return;
+    const side = dx > 0 ? "next" : "prev";
+    // Toward a side with no card the card only gives a little, and nothing peeks in.
+    if (!open(side)) {
+      drag(endGive(dx), null);
+      return;
+    }
+    drag(dx, side === "next" ? nextEdge.current : prevEdge.current);
   }
 
   function onTouchEnd(event: TouchEvent<HTMLDivElement>) {
@@ -153,9 +186,21 @@ export function CardSwipe({
         settle();
       }}
     >
+      {/* The neighbours wait just outside the frame, which clips them; a drag pulls one in. */}
+      {canNext ? <PeekEdge ref={nextEdge} side="next" name={peekNext} /> : null}
+      {canPrev ? <PeekEdge ref={prevEdge} side="prev" name={peekPrev} /> : null}
       <div ref={box} className="ui-cswipe-card" data-enter={enter ?? undefined}>
         {children}
       </div>
+    </div>
+  );
+}
+
+/** A lightweight stand-in for the neighbour: a card-coloured panel, with its name when the cache has it. */
+function PeekEdge({ ref, side, name }: { ref: Ref<HTMLDivElement>; side: CardStep; name: string | null }) {
+  return (
+    <div ref={ref} className="ui-cswipe-peek" data-side={side} aria-hidden="true">
+      {name ? <p className="t-title-3 ui-cswipe-peek-name" data-clip-ok="">{name}</p> : null}
     </div>
   );
 }

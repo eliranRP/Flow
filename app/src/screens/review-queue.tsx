@@ -18,7 +18,7 @@ import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-rev
 import { useJevUndo } from "./jev-undo";
 import { useReviewSwap } from "./review-swap";
 import { focusReviewEmptyAction, handReviewFocus, takeReviewFocus } from "./review-focus";
-import { ReviewCount, reviewCountDigits } from "./review-count";
+import { ReviewCount, reviewCountDigits } from "../ui/review-count";
 import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
