@@ -166,7 +166,7 @@ describe("change sheet discard", () => {
 });
 
 describe("split discard", () => {
-  function renderSplit(onSave?: () => Promise<undefined | boolean>) {
+  function renderSplit(onSave?: () => Promise<undefined | boolean>, rest: string | null = "p1") {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
       <QueryClientProvider client={client}>
@@ -180,9 +180,11 @@ describe("split discard", () => {
                     <SplitScreen
                       sampleAmount={100_000n}
                       sampleProjects={[
-                        { id: "p1", name: "בית הספר אלון", incomeAgorot: 1n },
-                        { id: "p2", name: "מחסן הנמל", incomeAgorot: 1n },
+                        { id: "p1", name: "בית הספר אלון" },
+                        { id: "p2", name: "מחסן הנמל" },
                       ]}
+                      sampleParts={[{ projectId: "p2", value: "250" }]}
+                      sampleRestProject={rest}
                       backTo="/review"
                       onSave={onSave}
                     />
@@ -198,11 +200,11 @@ describe("split discard", () => {
   }
 
   it("discards an incomplete split from ביטול השינוי", async () => {
-    renderSplit();
-    fireEvent.click(await screen.findByRole("radio", { name: "שווה בין פרויקטים שאבחר" }));
+    renderSplit(undefined, null);
+    fireEvent.click(await screen.findByRole("button", { name: "סגירה" }));
     const cancel = await screen.findByRole("button", { name: "ביטול השינוי" });
     expect(cancel).toHaveClass("ui-text-link-quiet");
-    expect(screen.getByText("בחרו לפחות 2 פרויקטים")).toHaveClass("t-hint");
+    expect(screen.getAllByText("בחרו פרויקט לשאר.").length).toBeGreaterThan(0);
     fireEvent.click(cancel);
     expect(await screen.findByRole("heading", { name: "התור" })).toBeInTheDocument();
   });
@@ -213,21 +215,13 @@ describe("split discard", () => {
       finish = () => { resolve(undefined); };
     }));
     renderSplit(onSave);
-    fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, מחסן הנמל" }), { target: { value: "300" } });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(onSave).toHaveBeenCalledOnce();
-    const others = [
-      screen.getByRole("radio", { name: "שווה בין פרויקטים שאבחר" }),
-      screen.getByRole("radio", { name: "לפי הכנסות" }),
-      screen.getByRole("radio", { name: "לפרויקט אחד" }),
-    ];
-    for (const row of others) {
-      expect(row).toBeDisabled();
-      expect(row).toHaveAttribute("aria-disabled", "true");
-    }
-    expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("textbox", { name: "סכום, מחסן הנמל" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(screen.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
     await act(() => {
       finish?.();
       return Promise.resolve();

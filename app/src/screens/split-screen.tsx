@@ -1,64 +1,75 @@
-import { formatIls } from "@flow/shared";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
-import { useWriteGate } from "../use-is-viewer";
+import { amountOf, amountText, percentOf, percentText, shareOfLine, type PartUnit } from "../line-split";
+import { LINE_HAS_CATEGORY_SPLIT, LINE_SPLIT_SAVE_FAILURE, hasCategorySplit, lineSplitCopy } from "../line-split-copy";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { screenPhase } from "../query-phase";
 import {
-  activeProjects,
-  allocate,
-  basisToPercents,
-  evenBasis,
-  formatShare,
-  incomeBasis,
-  percentToBp,
-  sharesForSave,
-  splitIsValid,
-  type SplitMethod,
-  type SplitProject,
-} from "../split-math";
+  checkProjectSplit,
+  newProjectPartKey,
+  percentPartsMinor,
+  projectDraftFrom,
+  sharesKey,
+  type ProjectPart,
+  type ProjectShare,
+} from "../project-split";
+import { screenPhase } from "../query-phase";
 import { useDashboardQuery, useInvalidateBooks, useTransactionQuery } from "../use-books";
-import { assertNoError, useWrite } from "../use-write";
+import { useWriteGate } from "../use-is-viewer";
+import { assertNoError } from "../use-write";
+import { useGoBack } from "../ui/back";
 import { BigNumber } from "../ui/big-number";
-import { CheckRow } from "../ui/check-row";
+import { ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
 import { formatDisplay } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { HoldLine } from "../ui/hold-line";
-import { useGoBack } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
-import { CloseIcon, ProjectsIcon } from "../ui/icons";
-import { ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
-import { PercentField } from "../ui/money-field";
-import { RadioRow } from "../ui/radio-row";
+import { CloseIcon, PlusIcon, ProjectsIcon } from "../ui/icons";
+import { MoneyField, PercentField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
+import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
-import { hasCategorySplit, LINE_HAS_CATEGORY_SPLIT, projectSplitFailure } from "../line-split-copy";
-import { collapseSplit, combinePhase, saveNewProject, useBlockedPreview } from "./screen-shared";
-import { clearSplitDraft, evenSentence, percentWords, readSplitDraft, sameBasis, writeSplitDraft } from "./split-screen-draft";
+import { Amount, LINE_SPLIT_MAX_PARTS, money, Percent } from "./line-split-parts";
+import { combinePhase, saveNewProject, useBlockedPreview } from "./screen-shared";
 
-type SplitPop = (event: PopStateEvent) => void;
-let splitPop: SplitPop | null = null;
-if (typeof window !== "undefined" && !(window as Window & { __flowSplitPop?: boolean }).__flowSplitPop) {
-  (window as Window & { __flowSplitPop?: boolean }).__flowSplitPop = true;
-  window.addEventListener("popstate", (event) => {
-    splitPop?.(event);
-  }, true);
-}
+/** The keys a project split write refreshes. */
+const PROJECT_SPLIT_KEYS = ["dashboard", "txn", "project", "project-category", "project-waiting", "home", "breakdown", "breakdown-lines", "review"];
 
+/** A project the split can use. Missing status counts as active. */
+export type SplitProject = { id: string; name: string; status?: "active" | "finished" };
+
+/** One saved row: a project and its exact part of the line, in minor units. */
+export type SplitSaveRow = ProjectShare;
+
+/** false keeps the screen; "left" means the caller already moved on, so the screen does not go back. */
+type SaveOutcome = undefined | boolean | "left";
+
+type PickTarget = { kind: "new" } | { kind: "part"; key: string } | { kind: "rest" };
+
+const COPY = {
+  missing: "השלימו סכום לכל חלק.",
+  twice: "הפרויקט הזה כבר בפיצול.",
+  restProject: "בחרו פרויקט לשאר.",
+} as const;
+
+/**
+ * `/transactions/:id/split` (FLOW-346): the split between projects, laid out like the split by
+ * categories. Parts are projects with an exact amount or a percent; the rest stays on one
+ * project. ✕ and browser back save a valid change; an invalid one holds once, then discards.
+ */
 export function SplitScreen({
   sampleProjects,
   sampleAmount,
   sampleMeta,
-  sampleMethod,
-  sampleShares,
-  sampleChosen,
+  sampleCurrency,
+  sampleParts,
+  sampleRestProject,
   sampleSaving = false,
+  sampleWarned = false,
   onSave,
-  onOneProject,
   example,
   backTo,
 }: {
@@ -66,16 +77,16 @@ export function SplitScreen({
   sampleAmount?: bigint;
   /** Supplier · date under the amount. Stories pass the spec line. */
   sampleMeta?: string;
-  sampleMethod?: SplitMethod | null;
-  /** Manual percents, as typed. One decimal. */
-  sampleShares?: Record<string, string>;
-  /** Projects already ticked for the chosen-projects choice. */
-  sampleChosen?: string[];
-  /** The saving story. Rows, fields, the link, and ✕ stay disabled. */
+  sampleCurrency?: string;
+  /** Rows to open on. Stories set the state here, not in a play. */
+  sampleParts?: Array<{ projectId: string; unit?: PartUnit; value: string }>;
+  /** The project that keeps the rest. Null for a line with no project yet. */
+  sampleRestProject?: string | null;
+  /** The saving story. Fields, links, and ✕ stay disabled. */
   sampleSaving?: boolean;
-  onSave?: (rows: Array<{ project_id: string; share_bp: number }>) => undefined | boolean | Promise<undefined | boolean>;
-  /** One project. "left" means the caller already moved on, so this screen does not toast or go back. */
-  onOneProject?: (projectId: string) => undefined | boolean | "left" | Promise<undefined | boolean | "left">;
+  /** The hold line is already showing, as after a first ✕. */
+  sampleWarned?: boolean;
+  onSave?: (rows: SplitSaveRow[]) => SaveOutcome | Promise<SaveOutcome>;
   example?: ReactNode;
   /** Where back goes when this screen was opened directly. */
   backTo?: string;
@@ -84,629 +95,548 @@ export function SplitScreen({
   const writeGate = useWriteGate(`/transactions/${transactionId}`);
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const location = useLocation();
-  const toast = useToast();
-  const blocked = useBlockedPreview();
-  const invalidate = useInvalidateBooks();
-  const goBack = useGoBack();
-  const hereRef = useRef("");
-  hereRef.current = `${location.pathname}${location.search}${location.hash}`;
-  const dashboard = useDashboardQuery(sampleProjects == null);
-  const txn = useTransactionQuery(sampleProjects ? "" : transactionId);
-  const phase = sampleProjects ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, txn));
-  const projects: SplitProject[] = sampleProjects ?? (dashboard.data?.projects ?? []).map((project) => ({
-    id: project.id,
-    name: project.name,
-    incomeAgorot: project.income_agorot,
-    status: project.status,
-  }));
-  const active = activeProjects(projects);
-  const draftId = sampleProjects != null ? `sample${location.search}` : transactionId;
-  const restored = sampleMethod === undefined && sampleShares == null ? readSplitDraft(draftId) : null;
-  const [method, setMethod] = useState<SplitMethod | null>(restored ? restored.method : (sampleMethod === undefined ? null : sampleMethod));
-  const [oneProject, setOneProject] = useState(restored?.oneProject ?? "");
-  const [oneOpen, setOneOpen] = useState(false);
-  const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
-  const oneSaved = useRef("");
-  const collapseTarget = useRef("");
-  const oneUndoId = useRef<string | null>(null);
-  const [chosen, setChosen] = useState<string[]>(restored?.chosen ?? sampleChosen ?? []);
-  const [manual, setManual] = useState<Record<string, string>>(restored?.manual ?? sampleShares ?? {});
-  const [detail, setDetail] = useState(false);
-  const [seeded, setSeeded] = useState(restored != null);
-  const manualEdited = useRef(sampleShares != null || restored?.method === "manual");
-  const priorMethod = useRef<SplitMethod | null>(sampleMethod === "manual" ? null : (sampleMethod ?? null));
-  const rowsRef = useRef<Array<{ project_id: string; share_bp: number }>>([]);
+  const sample = sampleProjects != null;
+  const dashboard = useDashboardQuery(!sample);
+  const txn = useTransactionQuery(sample ? "" : transactionId);
+  const phase = sample ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, txn));
   const fallback = backTo ?? `/transactions/${transactionId}${search}`;
-  const activeKey = active.map((project) => `${project.id}:${String(project.incomeAgorot ?? 0n)}`).join("|");
-  const activeRef = useRef(active);
-  activeRef.current = active;
-  useEffect(() => {
-    const active = activeRef.current;
-    if (seeded || sampleProjects || !txn.data?.allocations?.length || active.length === 0) return;
-    const saved: Record<string, number> = {};
-    for (const row of txn.data.allocations) saved[row.project_id] = row.share_bp;
-    const ids = active.map((project) => project.id);
-    if (sameBasis(saved, evenBasis(ids))) {
-      setMethod("equal");
-      setSeeded(true);
-      return;
-    }
-    if (active.some((project) => (project.incomeAgorot ?? 0n) > 0n) && sameBasis(saved, incomeBasis(active))) {
-      setMethod("income");
-      setSeeded(true);
-      return;
-    }
-    const picked = ids.filter((id) => (saved[id] ?? 0) > 0);
-    if (picked.length >= 2 && picked.length < ids.length && sameBasis(saved, evenBasis(picked))) {
-      setChosen(picked);
-      setMethod("chosen");
-      setSeeded(true);
-      return;
-    }
-    setManual(basisToPercents(ids, saved));
-    setMethod("manual");
-    manualEdited.current = true;
-    setSeeded(true);
-  }, [seeded, sampleProjects, txn.data, activeKey]);
-  const amount = sampleAmount ?? absAgorot(txn.data?.amount_net ?? 0n);
-  const hasIncome = active.some((project) => (project.incomeAgorot ?? 0n) > 0n);
-  const evenParts = allocate(amount, active.map((project) => ({ id: project.id, bp: evenBasis(active.map((item) => item.id))[project.id] ?? 0 })));
-  const picked = active.filter((project) => chosen.includes(project.id));
-  const chosenParts = allocate(amount, picked.map((project) => ({ id: project.id, bp: evenBasis(picked.map((item) => item.id))[project.id] ?? 0 })));
-  const incomeParts = allocate(amount, active.map((project) => ({ id: project.id, bp: incomeBasis(active)[project.id] ?? 0 })));
-  const manualBasis = Object.fromEntries(active.map((project) => [project.id, percentToBp(manual[project.id] ?? "")]));
-  const manualParts = allocate(amount, active.map((project) => ({ id: project.id, bp: manualBasis[project.id] ?? 0 })));
-  const manualUsed = active.reduce((sum, project) => sum + (manualBasis[project.id] ?? 0), 0);
-  const parts = method === "equal" ? evenParts : method === "chosen" ? chosenParts : method === "income" ? incomeParts : method === "manual" ? manualParts : [];
-  const partById = new Map(parts.map((part) => [part.id, part]));
-  const overRange = method === "manual" && active.some((project) => percentToBp(manual[project.id] ?? "") > 10000);
-  const valid = method === "equal"
-    ? evenParts.length > 0 && splitIsValid(evenParts)
-    : method === "chosen"
-      ? picked.length >= 2 && splitIsValid(chosenParts)
-      : method === "income"
-        ? hasIncome && splitIsValid(incomeParts)
-        : method === "manual"
-          ? !overRange && splitIsValid(manualParts)
-          : method === "one"
-            ? oneProject !== ""
-            : false;
-  rowsRef.current = sharesForSave(method === "one" ? [] : (valid ? parts : []));
-  const baseline = useRef<string | null>(sampleProjects ? "[]" : null);
-  if (seeded && baseline.current == null) baseline.current = JSON.stringify(rowsRef.current);
-  const dirty = method === "one"
-    ? oneProject !== "" && oneSaved.current !== oneProject
-    : method != null && (!valid || JSON.stringify(rowsRef.current) !== (baseline.current ?? "[]"));
-  const popLeave = useRef(false);
-  const save = useWrite({
-    failure: projectSplitFailure,
-    success: "הפיצול נשמר",
-    keys: ["dashboard", "txn", "project"],
-    onSuccess: () => {
-      clearSplitDraft(draftId);
-      if (popLeave.current) return;
-      goBack(fallback);
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("save_split", { p_transaction_id: transactionId, p_shares: rowsRef.current }));
-    },
-  });
-  const collapseOne = useWrite({
-    failure: changeSaveFailure,
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      oneSaved.current = collapseTarget.current;
-      setOneProject(collapseTarget.current);
-      const id = oneUndoId.current;
-      clearSplitDraft(draftId);
-      toast.show({
-        message: "השיוך נשמר",
-        ...(id ? { action: "ביטול", onAction: () => { void undoOne(id); } } : {}),
-      });
-      if (popLeave.current) return;
-      goBack(fallback);
-    },
-    run: async () => {
-      oneUndoId.current = await collapseSplit(transactionId, collapseTarget.current);
-    },
-  });
-  const [saving, setSaving] = useState(false);
-  const busy = sampleSaving || saving || save.isPending || collapseOne.isPending;
-  const oneProjectRef = useRef(oneProject);
-  oneProjectRef.current = oneProject;
-  const gate = useRef({ method, valid, dirty, oneProject, manual, chosen });
-  gate.current = { method, valid, dirty, oneProject, manual, chosen };
-  const warned = useRef(false);
-  const discardClose = useRef(false);
-  const releasePop = useRef(false);
-  const inflight = useRef<Promise<unknown> | null>(null);
-  function rememberDraft() {
-    const now = gate.current;
-    writeSplitDraft(draftId, {
-      method: now.method,
-      manual: now.manual,
-      chosen: now.chosen,
-      oneProject: now.oneProject,
-    });
+  if (!sample) {
+    if (writeGate === "wait") return null;
+    if (writeGate !== "show") return writeGate;
   }
-  function blockedChoice(): boolean {
-    const now = gate.current;
-    if (now.method == null) return false;
-    if (now.method === "one") return now.oneProject === "";
-    return !now.valid;
-  }
-  async function undoOne(id: string) {
-    const supabase = getSupabase();
-    if (!supabase) {
-      toast.show({ tone: "bad", message: "לא הצלחנו לבטל את השיוך." });
-      return;
-    }
-    const saved = await supabase.rpc("undo_reassign", { p_id: id });
-    if (saved.error) {
-      toast.show({ tone: "bad", message: "לא הצלחנו לבטל את השיוך." });
-      return;
-    }
-    await invalidate(["txn", "dashboard", "project", "project-category", "project-waiting", "review"]);
-    toast.show({ message: "השיוך הקודם חזר" });
-  }
-  async function collapseNow(projectId: string): Promise<undefined | "left"> {
-    if (projectId === "") throw new Error("supabase");
-    if (onOneProject) {
-      const outcome = await onOneProject(projectId);
-      if (outcome === false) throw new Error("save");
-      oneSaved.current = projectId;
-      setOneProject(projectId);
-      return outcome === "left" ? "left" : undefined;
-    }
-    if (sampleProjects) {
-      oneSaved.current = projectId;
-      setOneProject(projectId);
-      toast.show({
-        message: "השיוך נשמר",
-        action: "ביטול",
-        onAction: () => {
-          oneSaved.current = "";
-          setOneProject("");
-          setMethod(null);
-        },
-      });
-      return undefined;
-    }
-    if (blocked()) throw new Error("preview");
-    collapseTarget.current = projectId;
-    await collapseOne.mutateAsync();
-    return "left";
-  }
-  function abandon() {
-    discardClose.current = true;
-    clearSplitDraft(draftId);
-    goBack(fallback);
-  }
-  async function leave() {
-    if (sampleSaving) return;
-    if (inflight.current) {
-      try {
-        await inflight.current;
-      } catch {
-        // The failure toast is already up. The dismiss still closes.
-      }
-      if (!discardClose.current) goBack(fallback);
-      return;
-    }
-    if (!blockedChoice()) warned.current = false;
-    if (blockedChoice()) {
-      if (!warned.current) {
-        warned.current = true;
-        return;
-      }
-      abandon();
-      return;
-    }
-    if (gate.current.method === "one") {
-      if (oneSaved.current === gate.current.oneProject) {
-        clearSplitDraft(draftId);
-        goBack(fallback);
-        return;
-      }
-      rememberDraft();
-      try {
-        const work = collapseNow(gate.current.oneProject);
-        inflight.current = work;
-        const outcome = await work;
-        if (outcome !== "left" && oneSaved.current === gate.current.oneProject) {
-          clearSplitDraft(draftId);
-          goBack(fallback);
-        }
-      } catch {
-        return;
-      } finally {
-        inflight.current = null;
-      }
-      return;
-    }
-    if (gate.current.dirty && gate.current.valid) {
-      rememberDraft();
-      if (onSave) {
-        setSaving(true);
-        try {
-          const work = Promise.resolve(onSave(rowsRef.current));
-          inflight.current = work;
-          const saved = await work;
-          if (saved === false) return;
-        } catch (error) {
-          if (hasCategorySplit(error)) {
-            toast.show({ tone: "bad", message: LINE_HAS_CATEGORY_SPLIT });
-            return;
-          }
-          toast.show({ tone: "bad", message: "הפיצול לא נשמר", action: "ניסיון חוזר", onAction: () => { void leave(); } });
-          return;
-        } finally {
-          inflight.current = null;
-          setSaving(false);
-        }
-        clearSplitDraft(draftId);
-        baseline.current = JSON.stringify(rowsRef.current);
-        gate.current = { ...gate.current, valid: true, dirty: false };
-        return;
-      }
-      if (blocked()) return;
-      if (sampleProjects) {
-        clearSplitDraft(draftId);
-        goBack(fallback);
-        return;
-      }
-      try {
-        const work = save.mutateAsync();
-        inflight.current = work;
-        await work;
-      } catch {
-        return;
-      } finally {
-        inflight.current = null;
-      }
-      return;
-    }
-    clearSplitDraft(draftId);
-    goBack(fallback);
-  }
-  const popApi = useRef({
-    blocked,
-    draftId,
-    onSave,
-    sampleProjects,
-    save,
-    collapseNow,
-    toast,
-    rememberDraft,
-    blockedChoice,
-  });
-  popApi.current = {
-    blocked,
-    draftId,
-    onSave,
-    sampleProjects,
-    save,
-    collapseNow,
-    toast,
-    rememberDraft,
-    blockedChoice,
-  };
-  useEffect(() => {
-    function holdPop(event: PopStateEvent, splitUrl: string) {
-      event.stopImmediatePropagation();
-      window.history.pushState(window.history.state, "", splitUrl);
-    }
-    function leavePop() {
-      releasePop.current = true;
-      window.history.back();
-    }
-    function onPop(event: PopStateEvent) {
-      const api = popApi.current;
-      if (releasePop.current) {
-        releasePop.current = false;
-        return;
-      }
-      const splitUrl = hereRef.current;
-      if (discardClose.current) return;
-      if (api.blockedChoice()) {
-        if (!warned.current) {
-          warned.current = true;
-          holdPop(event, splitUrl);
-          return;
-        }
-        clearSplitDraft(api.draftId);
-        return;
-      }
-      const now = gate.current;
-      if (!now.dirty || !now.valid) return;
-      holdPop(event, splitUrl);
-      api.rememberDraft();
-      popLeave.current = true;
-      const work = (async () => {
-        try {
-          if (now.method === "one") {
-            await api.collapseNow(now.oneProject);
-            clearSplitDraft(api.draftId);
-            leavePop();
-            return;
-          }
-          if (api.onSave) {
-            const saved = await api.onSave(rowsRef.current);
-            if (saved === false) {
-              popLeave.current = false;
-              return;
-            }
-            clearSplitDraft(api.draftId);
-            leavePop();
-            return;
-          }
-          if (api.sampleProjects || api.blocked()) return;
-          await api.save.mutateAsync();
-          clearSplitDraft(api.draftId);
-          leavePop();
-        } catch {
-          popLeave.current = false;
-          api.toast.show({ tone: "bad", message: "הפיצול לא נשמר" });
-        }
-      })();
-      inflight.current = work;
-      void work.finally(() => {
-        if (inflight.current === work) inflight.current = null;
-      });
-    }
-    // The module listener is already on window, so a later pop cannot miss it.
-    splitPop = onPop;
-    return () => {
-      if (splitPop === onPop) splitPop = null;
-    };
-  }, []);
-  function openManual() {
-    if (busy) return;
-    if (method !== "manual") priorMethod.current = method;
-    if (!manualEdited.current && method && method !== "manual") {
-      const source = method === "income" ? incomeBasis(active) : evenBasis((method === "chosen" ? picked : active).map((project) => project.id));
-      const ids = (method === "chosen" ? picked : active).map((project) => project.id);
-      setManual(basisToPercents(ids, source));
-      manualEdited.current = true;
-    }
-    setMethod("manual");
-  }
-  function focusShare(event: { currentTarget: HTMLDivElement; target: EventTarget }) {
-    if (busy) return;
-    if (event.target instanceof HTMLElement && event.target.closest("input")) return;
-    event.currentTarget.querySelector("input")?.focus();
-  }
-  if (writeGate === "wait") return null;
-  if (writeGate !== "show") return writeGate;
-  if (phase.kind !== "ready" || active.length === 0) {
+  if (phase.kind !== "ready" || (!sample && !txn.data)) {
     return (
       <ScreenState
         title="פיצול בין פרויקטים"
         backTo={fallback}
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { void dashboard.refetch(); void txn.refetch(); }}
+        empty={<EmptyState icon={<ProjectsIcon />} title="אין תנועה להצגה" body="התנועה לא נמצאה." />}
+      />
+    );
+  }
+  const projects: ChangeChoice[] = sampleProjects
+    ? sampleProjects.map((project) => ({ id: project.id, name: project.name, status: project.status ?? "active" }))
+    : (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status }));
+  if (projects.length === 0) {
+    return (
+      <ScreenState
+        title="פיצול בין פרויקטים"
+        backTo={fallback}
+        phase={{ kind: "empty" }}
+        onRetry={() => { void dashboard.refetch(); }}
         empty={<EmptyState icon={<ProjectsIcon />} title="אין פרויקטים לפיצול" body="פיצול מחכה לפרויקט אחד לפחות." />}
       />
     );
   }
-  const meta = sampleMeta ?? [txn.data?.supplier_name, txn.data?.doc_date ? formatDisplay(txn.data.doc_date) : ""].filter(Boolean).join(" · ");
-  const allLine = evenSentence(evenParts, amount);
-  const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתפצל שווה" : evenSentence(chosenParts, amount);
-  const manualLeft = 10000 - manualUsed;
-  const manualStatus = manualLeft > 0
-    ? `נשארו ${percentWords(manualLeft)}% לפצל`
-    : manualLeft < 0
-      ? `הסך ${percentWords(manualUsed)}%. צריך 100%.`
-      : "הסך 100%";
-  const oneName = [...active, ...extraProjects].find((project) => project.id === oneProject)?.name ?? "";
-  const summary = !method
-    ? "בחרו איך לפצל"
-    : method === "one" && oneProject === ""
-      ? COLLAPSE_PICK_HOLD
-      : method === "one"
-        ? `${oneName} · ${ONE_PROJECT_DETAIL}`
-        : method === "chosen" && picked.length < 2
-          ? "בחרו לפחות 2 פרויקטים"
-          : method === "chosen"
-            ? chosenLine
-            : method === "manual" && !valid
-              ? manualStatus
-              : method === "manual"
-                ? `פיצול ידני · ${String(manualParts.length)} פרויקטים`
-                : method === "income"
-                  ? `לפי הכנסות · ${String(incomeParts.length)} פרויקטים`
-                  : allLine;
-  const summaryIdle = method != null && !valid;
-  const showDetail = method === "equal" || (method === "income" && hasIncome);
-  const detailParts = method === "income" ? incomeParts : evenParts;
-  const pickerProjects: ChangeChoice[] = [
-    ...active.map((project) => ({ id: project.id, name: project.name, status: project.status })),
-    ...extraProjects.filter((project) => !active.some((item) => item.id === project.id)),
-  ];
+  const detail = txn.data;
+  const lineMinor = sampleAmount ?? absAgorot(detail?.amount_net ?? 0n);
+  const meta = sampleMeta ?? [detail?.supplier_name ?? detail?.customer_name ?? detail?.description, detail?.doc_date ? formatDisplay(detail.doc_date) : ""].filter(Boolean).join(" · ");
+  const saved = projectDraftFrom(detail?.project_id, detail?.allocations);
+  const initial = sample
+    ? {
+        parts: (sampleParts ?? []).map((part) => ({ key: newProjectPartKey(), projectId: part.projectId, unit: part.unit ?? "amount", value: part.value })),
+        restProjectId: sampleRestProject === undefined ? (projects[0]?.id ?? null) : sampleRestProject,
+      }
+    : saved;
+  const baseline = sharesKey(checkProjectSplit(initial.parts, initial.restProjectId, lineMinor).shares);
+  return (
+    <ProjectSplitEditor
+      key={transactionId}
+      transactionId={transactionId}
+      projects={projects}
+      lineMinor={lineMinor}
+      income={detail?.direction === "income"}
+      currency={sampleCurrency ?? detail?.currency ?? "ILS"}
+      meta={meta}
+      initial={initial}
+      baseline={baseline}
+      undoShares={sample ? null : checkProjectSplit(saved.parts, saved.restProjectId, lineMinor).shares}
+      sample={sample}
+      sampleSaving={sampleSaving}
+      initialWarned={sampleWarned}
+      onSave={onSave}
+      example={example}
+      fallback={fallback}
+    />
+  );
+}
+
+async function saveShares(transactionId: string, shares: ProjectShare[]): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  assertNoError(await supabase.rpc("save_split", { p_transaction_id: transactionId, p_shares: shares }));
+}
+
+/**
+ * The open editor's browser-back guard. It listens from module load, before the router does: a
+ * listener added on mount runs after the router's, which has already left the screen by then.
+ */
+let popGuard: ((event: PopStateEvent) => void) | null = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", (event) => { popGuard?.(event); }, true);
+}
+
+/** A part's value field. The field adds its own name prefix to the id, so match the end. */
+function partField(part: ProjectPart): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[id$="psplit-${part.unit === "percent" ? "pct" : "amt"}-${part.key}"]`);
+}
+
+function ProjectSplitEditor({
+  transactionId,
+  projects: givenProjects,
+  lineMinor,
+  income,
+  currency,
+  meta,
+  initial,
+  baseline,
+  undoShares,
+  sample,
+  sampleSaving,
+  initialWarned,
+  onSave,
+  example,
+  fallback,
+}: {
+  transactionId: string;
+  projects: ChangeChoice[];
+  lineMinor: bigint;
+  income: boolean;
+  currency: string;
+  meta: string;
+  initial: { parts: ProjectPart[]; restProjectId: string | null };
+  baseline: string;
+  undoShares: ProjectShare[] | null;
+  sample: boolean;
+  sampleSaving: boolean;
+  initialWarned: boolean;
+  onSave?: (rows: SplitSaveRow[]) => SaveOutcome | Promise<SaveOutcome>;
+  example?: ReactNode;
+  fallback: string;
+}) {
+  const toast = useToast();
+  const goBack = useGoBack();
+  const invalidate = useInvalidateBooks();
+  const blockedPreview = useBlockedPreview();
+  const location = useLocation();
+  const [parts, setParts] = useState<ProjectPart[]>(initial.parts);
+  const [restProjectId, setRestProjectId] = useState<string | null>(initial.restProjectId);
+  const [target, setTarget] = useState<PickTarget | null>(null);
+  const [warned, setWarned] = useState(initialWarned);
+  const [saving, setSaving] = useState(false);
+  const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
+  const [lastEdited, setLastEdited] = useState<string | null>(null);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  /** A new part takes the unit of the last part typed, as in the split by categories. */
+  const [typedUnit, setTypedUnit] = useState<PartUnit>(() => initial.parts.at(-1)?.unit ?? "amount");
+  const addRef = useRef<HTMLButtonElement>(null);
+  const pickerOpener = useRef<HTMLElement | null>(null);
+  const leaving = useRef(false);
+  const busy = sampleSaving || saving;
+  const zero = lineMinor === 0n;
+  const projects = useMemo(() => [...givenProjects, ...extraProjects.filter((extra) => !givenProjects.some((project) => project.id === extra.id))], [givenProjects, extraProjects]);
+  const check = checkProjectSplit(parts, restProjectId, lineMinor);
+  const dirty = sharesKey(check.shares) !== baseline || (check.shares == null && (parts.length > 0 || restProjectId !== initial.restProjectId));
+  const invalid = check.shares == null;
+  const projectName = (id: string | null) => (id == null ? null : projects.find((project) => project.id === id)?.name ?? null);
+  const restMinor = check.restMinor;
+  const splitMinor = restMinor != null && restMinor >= 0n ? lineMinor - restMinor : null;
+
+  function update(key: string, change: Partial<ProjectPart>) {
+    setParts((list) => list.map((part) => (part.key === key ? { ...part, ...change } : part)));
+    setLastEdited(key);
+  }
+
+  function discard() {
+    leaving.current = true;
+    goBack(fallback);
+  }
+
+  async function undoTo(previous: ProjectShare[]) {
+    try {
+      await saveShares(transactionId, previous);
+      await invalidate(PROJECT_SPLIT_KEYS);
+      toast.show({ message: "הפיצול הקודם חזר" });
+    } catch {
+      toast.show({ tone: "bad", message: "לא הצלחנו לבטל." });
+    }
+  }
+
+  async function write(shares: ProjectShare[]): Promise<boolean> {
+    if (busy) return false;
+    if (onSave) {
+      setSaving(true);
+      try {
+        const done = await onSave(shares);
+        if (done === false) return false;
+        if (done === "left") {
+          leaving.current = true;
+          return true;
+        }
+      } catch (error) {
+        toast.show(hasCategorySplit(error)
+          ? { tone: "bad", message: LINE_HAS_CATEGORY_SPLIT }
+          : { tone: "bad", message: LINE_SPLIT_SAVE_FAILURE, action: "ניסיון חוזר", onAction: () => { void write(shares); } });
+        return false;
+      } finally {
+        setSaving(false);
+      }
+      leaving.current = true;
+      goBack(fallback);
+      return true;
+    }
+    if (sample) {
+      leaving.current = true;
+      goBack(fallback);
+      return true;
+    }
+    if (blockedPreview()) return false;
+    setSaving(true);
+    try {
+      await saveShares(transactionId, shares);
+    } catch (error) {
+      setSaving(false);
+      toast.show(hasCategorySplit(error)
+        ? { tone: "bad", message: LINE_HAS_CATEGORY_SPLIT }
+        : { tone: "bad", message: LINE_SPLIT_SAVE_FAILURE, action: "ניסיון חוזר", onAction: () => { void write(shares); } });
+      return false;
+    }
+    setSaving(false);
+    await invalidate(PROJECT_SPLIT_KEYS);
+    const previous = undoShares;
+    toast.show({
+      message: "הפיצול נשמר",
+      ...(previous != null && previous.length > 0 ? { action: "ביטול", onAction: () => { void undoTo(previous); } } : {}),
+    });
+    leaving.current = true;
+    goBack(fallback);
+    return true;
+  }
+
+  async function leave() {
+    if (busy) return;
+    if (!dirty) {
+      discard();
+      return;
+    }
+    if (invalid || check.shares == null) {
+      if (!warned) {
+        setWarned(true);
+        return;
+      }
+      discard();
+      return;
+    }
+    await write(check.shares);
+  }
+
+  // Browser back saves like ✕ (0075): the first pop of an invalid split is held.
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+  const here = `${location.pathname}${location.search}${location.hash}`;
+  const hereRef = useRef(here);
+  hereRef.current = here;
+  const gateRef = useRef({ dirty, busy });
+  gateRef.current = { dirty, busy };
+  useEffect(() => {
+    function onPop(event: PopStateEvent) {
+      if (leaving.current) return;
+      const gate = gateRef.current;
+      if (!gate.dirty && !gate.busy) return;
+      event.stopImmediatePropagation();
+      window.history.pushState(window.history.state, "", hereRef.current);
+      void leaveRef.current();
+    }
+    popGuard = onPop;
+    return () => {
+      if (popGuard === onPop) popGuard = null;
+    };
+  }, []);
+
+  function openPicker(next: PickTarget, opener: HTMLElement | null) {
+    if (busy || zero) return;
+    pickerOpener.current = next.kind === "new" ? addRef.current : opener;
+    setTarget(next);
+  }
+
+  function pickProject(id: string) {
+    if (id === "") return;
+    if (target?.kind === "new") {
+      const key = newProjectPartKey();
+      setParts((list) => [...list, { key, projectId: id, unit: typedUnit, value: "" }]);
+      setLastEdited(key);
+      setFocusKey(key);
+      setTarget({ kind: "part", key });
+      return;
+    }
+    if (target?.kind === "rest") {
+      setRestProjectId(id);
+      return;
+    }
+    if (target?.kind === "part") update(target.key, { projectId: id });
+  }
+
+  // Picking a project closes the picker at once, before the new part's field exists; once it
+  // renders, the sheet's focus return (which waits for the sheet to go) lands on it.
+  useLayoutEffect(() => {
+    if (focusKey == null) return;
+    const part = parts.find((item) => item.key === focusKey);
+    const field = part ? partField(part) : null;
+    if (field) {
+      pickerOpener.current = field;
+      setFocusKey(null);
+    }
+  }, [focusKey, parts]);
+
+  /** A part's picker hands focus to its value field, so the next tap types. */
+  function closePicker() {
+    if (target?.kind === "part") {
+      const part = parts.find((item) => item.key === target.key);
+      const field = part ? partField(part) : null;
+      if (field) pickerOpener.current = field;
+    }
+    setTarget(null);
+  }
+
+  const holdText: string | null = check.overMinor > 0n
+    ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor })
+    : check.restIssue === "no project"
+      ? COPY.restProject
+      : Object.values(check.issues).includes("same project twice")
+        ? COPY.twice
+        : Object.keys(check.issues).length > 0 ? COPY.missing : null;
+  const showHold = warned && invalid && holdText != null;
+  const targetPart = target?.kind === "part" ? parts.find((part) => part.key === target.key) : undefined;
+  const pickerProjectId = target?.kind === "rest" ? (restProjectId ?? "") : (targetPart?.projectId ?? "");
+  const restName = projectName(restProjectId);
+  const restLabel = `השאר · ${restName ?? "בחירת פרויקט"}`;
+
   return (
     <>
-    <form
-      className="ui-split"
-      autoComplete="off"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void leave();
-      }}
-    >
-      <ScreenHeader
-        layout="stacked"
-        title="פיצול בין פרויקטים"
-        leading={<IconButton label="סגירה" disabled={sampleSaving} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
-        trailing={example}
-      />
-      <div className="ui-split-amount">
-        <p className="t-display"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
-        {meta ? <p className="ui-split-meta t-label">{meta}</p> : null}
-      </div>
-      <h2 className="ui-split-question t-title-3">איך לפצל?</h2>
-      <fieldset className="ui-split-body" disabled={busy}>
-        <div className="ui-split-card" role="radiogroup" aria-label="איך לפצל?">
-          {/* FLOW-343: a picked row whose sentence the footer already says drops its own copy. */}
-          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={method === "equal" ? undefined : allLine} selected={method === "equal"} busy={busy && method === "equal"} disabled={busy && method !== "equal"} onSelect={() => { setMethod("equal"); }} />
-          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={method === "chosen" ? undefined : chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} disabled={busy && method !== "chosen"} onSelect={() => { setMethod("chosen"); }} />
-          <RadioRow
-            marker="start"
-            label="לפי הכנסות"
-            description={hasIncome ? "לפי ההכנסות של כל פרויקט בתקופה" : undefined}
-            disabledReason={hasIncome ? undefined : "אין הכנסות בתקופה הזו"}
-            disabled={busy && method !== "income"}
-            selected={method === "income"}
-            busy={busy && method === "income"}
-            onSelect={() => { setMethod("income"); }}
-          />
-          <RadioRow
-            marker="start"
-            label={ONE_PROJECT_OPTION}
-            description={ONE_PROJECT_DETAIL}
-            disabled={busy && method !== "one"}
-            selected={method === "one"}
-            busy={busy && method === "one"}
-            onSelect={() => {
-              setMethod("one");
-              setOneOpen(true);
-            }}
-          />
+      <form
+        className="ui-split ui-lsplit ui-psplit"
+        autoComplete="off"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void leave();
+        }}
+      >
+        <ScreenHeader
+          layout="stacked"
+          title="פיצול בין פרויקטים"
+          leading={<IconButton label="סגירה" disabled={sampleSaving} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
+          trailing={example}
+        />
+        <div className="ui-lsplit-head">
+          <p className="t-display">
+            {income ? <span className="sr-only">הכנסה </span> : null}
+            <BigNumber agorot={lineMinor} presentation="detail" currency={currency} income={income} size="display" />
+          </p>
+          {meta ? <p className="t-label ui-lsplit-meta"><bdi>{meta}</bdi></p> : null}
         </div>
-        {method === "chosen" ? (
-          <div className="ui-split-card ui-split-detail">
-            {active.map((project) => {
-              const on = chosen.includes(project.id);
-              const part = partById.get(project.id);
+        <fieldset className="ui-split-body" disabled={busy || zero}>
+          <div className="ui-split-card ui-lsplit-card">
+            {parts.map((part, index) => {
+              const name = projectName(part.projectId) ?? "בחירת פרויקט";
+              const issue = check.issues[part.key];
+              const percent = part.unit === "percent" ? percentOf(part.value) : null;
+              const amount = part.unit === "amount" ? amountOf(part.value) : null;
+              const cents = check.minor[part.key];
+              const over = check.overMinor > 0n && !showHold && (lastEdited === part.key || (lastEdited == null && index === parts.length - 1));
+              const messageId = `psplit-msg-${part.key}`;
+              const message = issue === "same project twice"
+                ? COPY.twice
+                : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor }) : undefined;
+              const fieldError = issue === "percent over" ? "עד 100%" : undefined;
               return (
-                <CheckRow
-                  key={project.id}
-                  label={project.name}
-                  checked={on}
-                  disabled={busy}
-                  value={on && part ? formatShare(part.agorot) : undefined}
-                  onChange={(next) => {
-                    setChosen((current) => next ? [...current, project.id] : current.filter((id) => id !== project.id));
-                  }}
-                />
-              );
-            })}
-          </div>
-        ) : null}
-        {showDetail ? (
-          <div className="ui-split-detail">
-            <p className="ui-split-link">
-              <TextLink chevron={false} expanded={detail} disabled={busy} onClick={() => { setDetail((open) => !open); }}>
-                {detail ? "הסתרת הפירוט" : "הצגת הפירוט"}
-              </TextLink>
-            </p>
-            {detail ? (
-              <div className="ui-split-card">
-                {detailParts.map((part) => {
-                  const project = active.find((item) => item.id === part.id);
-                  if (!project) return null;
-                  return <CheckRow key={part.id} readOnly label={project.name} value={formatShare(part.agorot)} />;
-                })}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {method === "manual" ? (
-          <div className="ui-split-card ui-split-detail">
-            {active.map((project, index) => {
-              const raw = manual[project.id] ?? "";
-              const bp = percentToBp(raw);
-              const part = partById.get(project.id);
-              return (
-                <div
-                  key={project.id}
-                  className="ui-split-manual"
-                  onMouseDown={(event) => {
-                    if (event.target instanceof HTMLElement && event.target.closest("input")) return;
-                    event.preventDefault();
-                  }}
-                  onClick={(event) => { focusShare(event); }}
-                >
-                  <span className="ui-row-title">{project.name}</span>
-                  <span className="ui-split-manual-end">
-                    <PercentField
-                      hideLabel
-                      id={`split-pct-${project.id}`}
-                      name={`split-pct-${project.id}`}
-                      label={`אחוז, ${project.name}`}
-                      value={raw}
-                      disabled={busy}
-                      error={bp > 10000 ? "עד 100%" : undefined}
-                      enterKeyHint={index === active.length - 1 ? "done" : "next"}
-                      onValueChange={(next) => {
-                        manualEdited.current = true;
-                        setManual({ ...manual, [project.id]: next });
-                      }}
-                    />
-                    {part ? <p className="ui-split-manual-money t-label">{formatShare(part.agorot)}</p> : null}
-                  </span>
+                <div key={part.key} className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
+                  <div className="ui-lsplit-text">
+                    <button
+                      type="button"
+                      className="ui-lsplit-pick ui-hit"
+                      aria-label={`${name}, שינוי`}
+                      aria-describedby={message ? messageId : undefined}
+                      onClick={(event) => { openPicker({ kind: "part", key: part.key }, event.currentTarget); }}
+                    >
+                      <span className="ui-lsplit-title">
+                        {/* The full name is in the button's label. */}
+                        <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
+                      </span>
+                    </button>
+                    <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${name}`} onClick={() => {
+                      setParts((list) => list.filter((item) => item.key !== part.key));
+                      setLastEdited(null);
+                    }}>
+                      <CloseIcon size={18} />
+                    </IconButton>
+                  </div>
+                  <div className="ui-lsplit-end ui-lsplit-end-entry">
+                    <div className="ui-lsplit-entry">
+                      <SegmentedControl
+                        label={`יחידה, ${name}`}
+                        showLabel={false}
+                        radius="input"
+                        value={part.unit}
+                        options={[{ value: "percent", label: "%" }, { value: "amount", label: currency === "USD" ? "$" : "₪" }]}
+                        disabled={busy}
+                        onChange={(unit) => {
+                          if (unit === part.unit) return;
+                          // Keep the same money: the cents become the amount, or the share the percent.
+                          const value = unit === "amount"
+                            ? (cents != null ? amountText(cents) : "")
+                            : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
+                          update(part.key, { unit, value });
+                          setTypedUnit(unit);
+                        }}
+                      />
+                      {part.unit === "percent" ? (
+                        <PercentField
+                          hideLabel
+                          id={`psplit-pct-${part.key}`}
+                          label={`אחוז, ${name}`}
+                          value={part.value}
+                          decimals={2}
+                          disabled={busy}
+                          error={fieldError}
+                          describedBy={message ? messageId : undefined}
+                          enterKeyHint={index === parts.length - 1 ? "done" : "next"}
+                          onValueChange={(value) => {
+                            update(part.key, { value });
+                            setTypedUnit(part.unit);
+                          }}
+                        />
+                      ) : (
+                        <MoneyField
+                          hideLabel
+                          id={`psplit-amt-${part.key}`}
+                          label={`סכום, ${name}`}
+                          prefix={currency === "USD" ? "$" : "₪"}
+                          value={part.value}
+                          disabled={busy}
+                          describedBy={message ? messageId : undefined}
+                          enterKeyHint={index === parts.length - 1 ? "done" : "next"}
+                          onValueChange={(value) => {
+                            update(part.key, { value });
+                            setTypedUnit(part.unit);
+                          }}
+                        />
+                      )}
+                    </div>
+                    <span className="ui-lsplit-resolved t-label" aria-live="polite">
+                      {part.unit === "percent"
+                        ? (percent != null ? <Amount minor={cents ?? percentPartsMinor([percent], lineMinor)[0] ?? 0n} currency={currency} /> : null)
+                        : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
+                    </span>
+                  </div>
+                  {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
                 </div>
               );
             })}
+            <button
+              type="button"
+              className="ui-lsplit-part ui-lsplit-rest ui-hit"
+              aria-label={`השאר, ${restName ?? "בלי פרויקט"}, שינוי`}
+              aria-describedby={check.restIssue === "no project" && warned ? "psplit-rest-msg" : undefined}
+              onClick={(event) => { openPicker({ kind: "rest" }, event.currentTarget); }}
+            >
+              <span className="ui-lsplit-text">
+                <span className="ui-lsplit-pick">
+                  <span className="ui-lsplit-title"><span className="ui-lsplit-name" data-clip-ok="">{restLabel}</span></span>
+                  <span className="ui-lsplit-project">נשאר בשורה</span>
+                </span>
+              </span>
+              <span className="ui-lsplit-end">
+                {restMinor == null ? (
+                  <span className="ui-lsplit-amount t-body">…</span>
+                ) : restMinor < 0n ? (
+                  <>
+                    <span className="ui-lsplit-amount t-body ui-split-bad"><Amount minor={restMinor} currency={currency} /></span>
+                    <span className="ui-lsplit-resolved t-label">לא נשאר</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="ui-lsplit-amount t-body"><Amount minor={restMinor} currency={currency} /></span>
+                    <span className="ui-lsplit-resolved t-label">{restMinor === 0n ? "יורד" : <Percent value={shareOfLine(restMinor, lineMinor)} />}</span>
+                  </>
+                )}
+              </span>
+            </button>
+            {check.restIssue === "no project" && warned ? <p id="psplit-rest-msg" className="ui-lsplit-msg ui-lsplit-rest-msg" role="status">{COPY.restProject}</p> : null}
+            {parts.length === 0 ? <p className="t-hint ui-lsplit-empty">הוסיפו חלק כדי לפצל. מה שלא פוצל נשאר בשורה.</p> : null}
           </div>
-        ) : null}
-        <p className="ui-split-link">
-          {method === "manual" ? (
-            <TextLink chevron={false} disabled={busy} onClick={() => { setMethod(priorMethod.current); }}>חזרה לאפשרויות</TextLink>
-          ) : (
-            <TextLink chevron={false} disabled={busy} onClick={openManual}>פיצול ידני</TextLink>
-          )}
-        </p>
-        {method === "manual" && valid ? <p className="ui-split-remain t-label">הסך 100%</p> : null}
-      </fieldset>
-      <div className="ui-split-cta">
-        {summaryIdle ? (
-          <HoldLine onDiscard={abandon}>
-            {method === "manual" && manualLeft < 0 ? (
-              <>
-                {"הסך "}
-                <bdi className="ui-split-bad" dir="ltr">{`${percentWords(manualUsed)}%`}</bdi>
-                {". צריך 100%."}
-              </>
-            ) : summary}
-          </HoldLine>
-        ) : (
-          <p className="ui-split-summary t-body">{summary}</p>
-        )}
-      </div>
-    </form>
-    <ChangeAssignment
-      host="overlay"
-      open={oneOpen}
-      onOpenChange={setOneOpen}
-      contained
-      start="project"
-      supplier=""
-      amount={formatIls(amount)}
-      direction="expense"
-      projects={pickerProjects}
-      categories={[]}
-      projectId={oneProject}
-      categoryId=""
-      onProjectId={setOneProject}
-      onCategoryId={() => undefined}
-      projectNote={COLLAPSE_SPLIT_NOTE}
-      hideSplitLink
-      onCommitPick={(_kind, id) => collapseNow(id)}
-      onSplit={() => { setOneOpen(false); }}
-      onCreateProject={async (name) => {
-        if (sampleProjects != null) {
-          const created = { id: `split-extra-${String(extraProjects.length + 1)}`, name, status: "active" as const };
-          setExtraProjects((list) => [...list, created]);
-          return created;
-        }
-        return saveNewProject(name, blocked, toast, (project) => {
-          setExtraProjects((list) => [...list, project]);
-        }, invalidate);
-      }}
-    />
+        </fieldset>
+        <div className="ui-split-cta ui-lsplit-foot" aria-busy={busy || undefined}>
+          <div className="ui-lsplit-totals">
+            <span className="ui-lsplit-add">
+              <TextLink
+                buttonRef={addRef}
+                chevron={false}
+                icon={<PlusIcon size={18} />}
+                disabled={busy || zero || parts.length >= LINE_SPLIT_MAX_PARTS}
+                onClick={() => { openPicker({ kind: "new" }, null); }}
+              >
+                הוספת חלק
+              </TextLink>
+            </span>
+            <span className="ui-lsplit-sums">
+              <span className="ui-lsplit-total">
+                <span className="t-hint">פוצלו</span>
+                <span className="t-body">
+                  {busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
+                  {check.overMinor > 0n
+                    ? <Amount minor={lineMinor + check.overMinor} currency={currency} />
+                    : splitMinor != null ? <Amount minor={splitMinor} currency={currency} /> : "…"}
+                </span>
+              </span>
+              <span className="ui-lsplit-total ui-lsplit-total-end">
+                <span className="t-hint">{check.overMinor > 0n ? "עוברים את השורה" : "נשאר לשורה"}</span>
+                <span className={check.overMinor > 0n ? "t-body ui-split-bad" : "t-body"}>
+                  {check.overMinor > 0n
+                    ? <Amount minor={-check.overMinor} currency={currency} />
+                    : restMinor != null ? <Amount minor={restMinor} currency={currency} /> : "…"}
+                </span>
+              </span>
+            </span>
+          </div>
+          {showHold ? (
+            <HoldLine onDiscard={discard}>
+              {/* The rest row's red line already says it: here only for screen readers (FLOW-343). */}
+              {holdText === COPY.restProject ? <span className="sr-only">{holdText}</span> : holdText}
+            </HoldLine>
+          ) : null}
+        </div>
+      </form>
+      <ChangeAssignment
+        host="overlay"
+        open={target != null}
+        onOpenChange={(open) => { if (!open) closePicker(); }}
+        contained
+        start="project"
+        supplier=""
+        amount={money(lineMinor, currency)}
+        direction={income ? "income" : "expense"}
+        projects={projects}
+        categories={[]}
+        projectId={pickerProjectId}
+        categoryId=""
+        onProjectId={pickProject}
+        onCategoryId={() => undefined}
+        onCommitPick={() => Promise.resolve(undefined)}
+        hideSplitLink
+        returnFocusRef={pickerOpener}
+        onSplit={() => { setTarget(null); }}
+        onCreateProject={async (name) => {
+          if (sample) {
+            const created = { id: `psplit-added-${name}`, name, status: "active" as const };
+            setExtraProjects((list) => [...list, created]);
+            return created;
+          }
+          return saveNewProject(name, blockedPreview, toast, (project) => {
+            setExtraProjects((list) => [...list, project]);
+          }, invalidate);
+        }}
+      />
     </>
   );
 }
