@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Sheet, SheetSurface } from "./sheet";
 import { expectRtl, expectTarget } from "./test-support";
@@ -103,3 +103,38 @@ function sheetFocusRule(): string {
   }
   return "";
 }
+
+function ReturnHarness() {
+  const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <button type="button" ref={opener} onClick={() => { setOpen(true); }}>ניתוק</button>
+      <Sheet open={open} onOpenChange={setOpen} title="לנתק?" returnFocusRef={opener}>
+        <p>תוכן</p>
+      </Sheet>
+    </>
+  );
+}
+
+describe("Sheet focus return (FLOW-310)", () => {
+  it("returns focus to the opener after Escape and marks its ring until it blurs", async () => {
+    render(<ReturnHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "לנתק?" }), { key: "Escape" });
+    const opener = screen.getByRole("button", { name: "ניתוק", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).toHaveAttribute("data-focus-ring");
+    act(() => { opener.blur(); });
+    expect(opener).not.toHaveAttribute("data-focus-ring");
+  });
+
+  it("returns focus after ✕ with no forced ring", async () => {
+    render(<ReturnHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    const opener = screen.getByRole("button", { name: "ניתוק", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).not.toHaveAttribute("data-focus-ring");
+  });
+});

@@ -18,7 +18,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (FLOW-339 lane 3 items merged #294); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (#298); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -607,15 +607,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
-- **Type:** BACKLOG NIT · **Status:** in progress (UI lane 3: focus return, stacked fade, ListRow markup, toast fallback) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** partly done (#298: focus return, stacked fade, ListRow markup, toast fallback); the open boxes are left · **Depends on:** —
 - [ ] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload.
-- [ ] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes.
-- [ ] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row.
+- [x] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes. (Does not reproduce on main: a per-frame probe of the Connections ניתוק confirm shows the top scrim fading 1.00→0 over about 220ms after Escape, ✕ and Back; #298.)
+- [x] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row. (#298: Escape marks the returned control's ring until it blurs; Categories' create, merge, hide and move sheets return focus to their opener.)
 - [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
 - [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung.
 - [ ] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length.
-- [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
-- [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
+- [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
+- [x] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment. (Already true on main: the toast waits for the sheet pad before it shows; e2e/toast.spec.ts samples every frame at 320 and 390, safe area 0, 20 and 47, and never sees ✕ covered; 31/31 pass, #298.)
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
 
 <a id="flow-319"></a>

@@ -213,6 +213,7 @@ export function CategoryMenuSheet({
           return true;
         }}
         title={moveTitle(moveFrom?.lines)}
+        returnFocusRef={returnFocusRef}
       >
         {moveFrom == null ? null : (
           <div className="ui-stack ui-cat-sheet">

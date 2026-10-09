@@ -108,12 +108,12 @@
   color: var(--color-on-band);
 }
 
-.ui-btn:focus-visible,
-.ui-icon-btn:focus-visible,
+.ui-btn:is(:focus-visible, [data-focus-ring]:focus),
+.ui-icon-btn:is(:focus-visible, [data-focus-ring]:focus),
 .ui-field-control:focus-visible,
-.ui-chip:focus-visible,
-.ui-seg-btn:focus-visible,
-.ui-hit:focus-visible {
+.ui-chip:is(:focus-visible, [data-focus-ring]:focus),
+.ui-seg-btn:is(:focus-visible, [data-focus-ring]:focus),
+.ui-hit:is(:focus-visible, [data-focus-ring]:focus) {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -378,7 +378,7 @@ a.ui-row,
   display: contents;
 }
 
-.ui-row:is(:focus-visible, [aria-pressed="true"])::before,
+.ui-row:is(:focus-visible, [data-focus-ring]:focus, [aria-pressed="true"])::before,
 .ui-radio-row:is(:focus-visible, [aria-checked="true"])::before,
 .ui-review-line:focus-visible::before {
   background: var(--color-tint);
@@ -389,7 +389,7 @@ a.ui-row,
 }
 
 /* The square focus ring would draw a second box. The tint is the indicator. */
-.ui-row:focus-visible,
+.ui-row:is(:focus-visible, [data-focus-ring]),
 .ui-radio-row:focus-visible,
 .ui-review-line:focus-visible {
   outline: none;

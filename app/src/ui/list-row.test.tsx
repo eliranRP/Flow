@@ -437,3 +437,22 @@ describe("ListRow transaction in a cost list (FLOW-339)", () => {
     expect(refund?.textContent).toContain("זיכוי");
   });
 });
+
+describe("ListRow markup (FLOW-310)", () => {
+  it("puts no block element inside a button or a link, and a heading only in a static row", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="button" title="כפתור" hint="רמז" icon={<span />} onClick={() => undefined} meta="מטא" heading />
+        <ListRow variant="danger" title="מחיקה" hint="רמז" onClick={() => undefined} />
+        <ListRow variant="item" title="קישור" hint="רמז" href="/a" chevron heading />
+        <ListRow variant="project" title="פרויקט" hint="רמז" agorot={100_000n} href="/p" />
+        <ListRow variant="transaction" title="תנועה" hint="05/10 · מגדל" agorot={-100_000n} sign="out" source="bank" href="/t" />
+        <ListRow variant="static" title="כותרת" hint="רמז" heading />
+      </MemoryRouter>,
+    );
+    for (const control of document.querySelectorAll("button, a")) {
+      expect(control.querySelector("div, p, h1, h2, h3, h4, h5, h6, ul, section")).toBeNull();
+    }
+    expect(screen.getAllByRole("heading").map((node) => node.textContent)).toEqual(["כותרת"]);
+  });
+});

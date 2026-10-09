@@ -78,6 +78,12 @@ function syncSheetInert(): void {
   }
 }
 
+/** Draws the focus ring on a control that script focused after a keyboard close, until it blurs. */
+export function showRingUntilBlur(el: HTMLElement): void {
+  el.setAttribute("data-focus-ring", "");
+  el.addEventListener("blur", () => { el.removeAttribute("data-focus-ring"); }, { once: true });
+}
+
 export function Sheet({
   open,
   onOpenChange,
@@ -133,6 +139,8 @@ export function Sheet({
   const closing = useRef(false);
   const deciding = useRef(false);
   const wasOpen = useRef(false);
+  /** The sheet closed from the keyboard (Escape), so the returned focus shows its ring. */
+  const keyClose = useRef(false);
   const opened = useRef(false);
   const closeNotified = useRef(true);
   const onClosedRef = useRef(onClosed);
@@ -214,6 +222,7 @@ export function Sheet({
     if (!returnFocusRef) return;
     if (open) {
       wasOpen.current = true;
+      keyClose.current = false;
       return;
     }
     if (!wasOpen.current) return;
@@ -239,7 +248,11 @@ export function Sheet({
         return;
       }
       wasOpen.current = false;
-      if (!blocked && el?.isConnected) el.focus();
+      if (blocked || el?.isConnected !== true) return;
+      el.focus();
+      // FLOW-310: a focus moved by script after Escape may not match :focus-visible, so the
+      // opener would hold focus with no ring. Mark it until it loses focus.
+      if (keyClose.current) showRingUntilBlur(el);
     };
     const timer = window.setTimeout(tryFocus, 0);
     return () => {
@@ -322,6 +335,7 @@ export function Sheet({
             keepOpenForToast(event);
           }}
           onEscapeKeyDown={(event) => {
+            keyClose.current = true;
             if (onEscape) {
               event.preventDefault();
               onEscape();
