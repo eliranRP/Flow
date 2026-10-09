@@ -388,9 +388,10 @@ a.ui-row,
   background: var(--surface-hover);
 }
 
-/* The square focus ring would draw a second box. The tint is the indicator. */
-.ui-row:is(:focus-visible, [data-focus-ring]),
-.ui-radio-row:is(:focus-visible, [data-focus-ring]),
+/* The square focus ring would draw a second box. The tint is the indicator. `[data-focus-ring]:focus`
+   keeps this as specific as the .ui-hit ring rule above, which a row link also carries. */
+.ui-row:is(:focus-visible, [data-focus-ring], [data-focus-ring]:focus),
+.ui-radio-row:is(:focus-visible, [data-focus-ring], [data-focus-ring]:focus),
 .ui-review-line:focus-visible {
   outline: none;
 }

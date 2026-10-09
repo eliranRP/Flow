@@ -14,15 +14,15 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-310 logic items: sheet history (✕ at open; reload covered) and keyboard (layout-viewport fallback, stale Vaul lift) | The next non-UI item |
+| Dev lane 1 | FLOW-404 `rehab_by_category` from the rehab CTE; FLOW-309 `reopen_review` and the stale `missing_category` label (#300 review) (#308, in review); first the red-main fix (storybook: loans list bigint args, project row focus outline) | The next non-UI item |
 | Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (#298); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-310 clip-check review of whitelisted ellipsis (FLOW-310 focus merged #298); FLOW-341 card with the owner (sent 06:00Z) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-343: cycle 7 phone polish (loan setup focus, split copy said once, the card's refund refusal) (FLOW-339 Search merged #299) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-115 loan with no balance row is not paid off; currency empty state | Next small ready bug |
+| Backlog bug fixes | FLOW-408 lines keep their currency; FLOW-329 loan line hint (#311) | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -611,7 +611,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Tests: the project-picker toast pad path; click through from 'בחירת קטגוריה' to the picker; assert `open.search` is empty; a test that fails if the effect deps revert.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
-- [ ] From the #300 review: `reopen_review` does not drop the `missing_project` row a category pick queued (as `undo_reassign` now does; no path reaches it today), and a category saved without resolving leaves the row labelled `missing_category` for MCP `list_review`'s reason filter.
+- [x] From the #300 review: `reopen_review` does not drop the `missing_project` row a category pick queued (as `undo_reassign` now does; no path reaches it today), and a category saved without resolving leaves the row labelled `missing_category` for MCP `list_review`'s reason filter. (Done in #308, migration 20261013030000: `reopen_review` deletes the queued row as `undo_reassign` does; a category set with `p_resolve false` in `set_transaction_category` or `resolve_review` relabels the open income row to `missing_project` when the line still needs a project, sync relabels rows left from before.)
 - [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
@@ -629,7 +629,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
 - [x] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment. (Already true on main: the toast waits for the sheet pad before it shows. The committed e2e/toast.spec.ts samples every frame at 320×693 and 390×844 with `--safe-top` 0, 20 and 47 and fails if the toast covers ✕; 31/31 pass, #298.)
-- [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
+- [x] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it. (#309: measured every story at 320, 360 and 390. Tightened: the period bar's presets size to their words and switch to "3 ח׳" below 390, since "3 חוד…" showed at 360 to 390; sheet titles wrap to two lines before an ellipsis. Kept: chips, pills, switch labels and the status pill, reasons in the design log.)
 
 <a id="flow-319"></a>
 ### FLOW-319 · Type sizes, headers and text colours, income in green
@@ -735,7 +735,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** On the transaction detail, the only way to take a line out of the P&L is an unlabelled ⋯ at the top-left corner, the hardest spot to reach one-handed. Show a "ברווח והפסד" switch row under the category row; keep ⋯ only for delete. Move "פיצול בין פרויקטים" to the bottom of the screen, in the thumb zone. (cycle 3) The new "פיצול" section from #150 also sits mid-screen; it moves with it.
 - **Acceptance:** out-of-P&L is one tap on the detail and reversible; ⋯ shows only when delete applies; tests; design review.
 - **Done (#248):** a "ברווח והפסד" switch row under the category row (a loan line shows it locked); ⋯ only on a manual line, holding מחיקה. The פיצול section was already at the bottom of the card.
-- [ ] Follow-up from #252: a line in a loan category with no loan split (`pnl_fixed`, unmatched) still shows the locked row as "תשלום הלוואה · נספר לפי הפיצול", though nothing is split. Give it its own hint (#252 changed only the matched case, to "לפי חלקי ההלוואה").
+- [x] (Backlog bug fixes, 2026-10-09: the hint is "תשלום הלוואה · לפי הקטגוריה") Follow-up from #252: a line in a loan category with no loan split (`pnl_fixed`, unmatched) still shows the locked row as "תשלום הלוואה · נספר לפי הפיצול", though nothing is split. Give it its own hint (#252 changed only the matched case, to "לפי חלקי ההלוואה").
 
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
@@ -923,7 +923,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Mockup approved as drawn (2026-10-08; the project's plans/flow-404-investment-mockup.html). The project page gets an "השקעה" card under the categories. Its head says מתחילת הפרויקט, and the screen's period and basis don't change it. It has three rows (מחיר קנייה, שווי אחרי שיפוץ, שווי היום with its date), each opening a bottom sheet with the number pad. Each sheet saves its own figure through `set_project_investment` (the שווי היום sheet also its date, which starts on today), on שמירה or when the sheet closes, and מחיקה clears the figure. Under the rows, הון מאולץ and הון נוכחי sit side by side with their formula. An equity that needs a missing figure names the figure; one that can't be worked out because of another currency says so; it never shows 0. Then come two rows: שיפוץ עד היום opens the rehab list by category, with the left-out categories under it, and יתרת הלוואות lists other-currency loans apart. A viewer sees no chevrons and no הוספה, and the overhead project has no card.
 - [x] The category ⋯ sheet gets a "נספרת בשיפוץ" switch showing `in_rehab`, with a one-line hint. A kept-out category's hint says why it is off by default. When the owner changed the default, the hint says so and "החזרה לברירת המחדל" sends null. A viewer sees the switch disabled, with its hint.
 - [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch (card and sheets in #223; switch is UI lane 3's).
-- [ ] Follow-up (server): `get_project().investment` returns `rehab_by_category` from the same CTE as `rehab_minor`, so the rehab list always adds up to the total. Today the app rebuilds it from the project's cash-basis categories and `list_categories().in_rehab`, and shows only the total when they differ: a loan fees part filed in an ordinary category (0130), suggested and in-review lines, shared lines with no category, and archived categories.
+- [x] Follow-up (server): `get_project().investment` returns `rehab_by_category` from the same CTE as `rehab_minor`, so the rehab list always adds up to the total. Today the app rebuilds it from the project's cash-basis categories and `list_categories().in_rehab`, and shows only the total when they differ: a loan fees part filed in an ordinary category (0130), suggested and in-review lines, shared lines with no category, and archived categories. (Done in #308, migration 20261013030000: rows of `{category_id, name, hidden, amount_minor}` in the project currency, largest first, with `category_id` null for lines with no category; they sum to `rehab_minor`. The app can switch to it.)
 - [ ] Open (UI): a counted category in the rehab list should open its lines. The category screen (`project-category-screen.tsx`) reads the period from the URL but always uses the books basis (invoiced), so `?period=all&basis=cash` would not match the rehab figure. Needs a `basis` query parameter on that screen, or the server list above.
 
 <a id="flow-405"></a>
@@ -953,7 +953,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-408 · Currency alignment in project lists
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** —
 - [ ] In mixed-currency projects, the non-tappable USD category rows sit 32px further out than the tappable ILS rows. Reserve the chevron space so the amount column lines up.
-- [ ] Verify on main: project rows accept a currency in `list-row.tsx` but never use it, and some list rows (project detail, filed today, project waiting, project category) may drop the currency. Fix any that still do.
+- [x] (Backlog bug fixes, 2026-10-09: `list-row.tsx` uses the currency now; project detail and project category passed it; filed today and project waiting dropped it, fixed, the latter with migration `20261013040000`) Verify on main: project rows accept a currency in `list-row.tsx` but never use it, and some list rows (project detail, filed today, project waiting, project category) may drop the currency. Fix any that still do.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
@@ -1162,7 +1162,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] If the flag read stalls past 1s while Jev is on, the card swaps back and writes the flag off; a flag that's off while Jev is on leaves one approvable read on the next launch; the 5-minute flag cache delays a server-side change; each next card waits about 0.8s again during a long stall.
 - [ ] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden.
 - [ ] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render.
-- [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
+- [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
 - [ ] Delete the old shared connector key once per launch, not on every read.
 - [ ] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות; a "no key" status once a key-status RPC exists.
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
