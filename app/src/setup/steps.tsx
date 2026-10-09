@@ -97,8 +97,15 @@ export function isStarterLocked(error: Error): boolean {
  * FLOW-406: right after the company step, before step 1 brings lines in. כללי is picked on
  * arrival and המשך is the one button; with the books no longer empty the step moves on silently.
  */
-export function StepStarter({ onDone }: { onDone: (set: StarterSetKey | null) => void }) {
-  const [set, setSet] = useState<StarterSetKey>("general");
+export function StepStarter({
+  initial,
+  onDone,
+}: {
+  /** The set already applied in this run, so back from step 1 shows it and does not re-apply it. */
+  initial?: StarterSetKey | null;
+  onDone: (set: StarterSetKey | null) => void;
+}) {
+  const [set, setSet] = useState<StarterSetKey>(initial ?? "general");
   const apply = useWrite<StarterSetKey>({
     failure: SAVE_ERROR,
     keys: ["categories"],
@@ -118,7 +125,10 @@ export function StepStarter({ onDone }: { onDone: (set: StarterSetKey | null) =>
       step={0}
       title={STARTER_TITLE}
       line={STARTER_LINE}
-      primary={<Button type="button" full busy={apply.isPending} onClick={() => { apply.mutate(set); }}>המשך</Button>}
+      primary={<Button type="button" full busy={apply.isPending} onClick={() => {
+        if (set === initial) onDone(set);
+        else apply.mutate(set);
+      }}>המשך</Button>}
     >
       <div className="ui-setup-starter" role="radiogroup" aria-label={STARTER_TITLE}>
         {STARTER_SETS.map((row) => (

@@ -260,4 +260,25 @@ describe("setup route history", () => {
     expect(readSetupStore(userId, companyId).starter_set).toBeNull();
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
+
+  it("back from step 1 shows the set already applied and does not apply it again", async () => {
+    markCompanyCreated(userId);
+    starter.calls = [];
+    starter.error = null;
+    const router = renderRoute("/setup/0");
+    fireEvent.click(await screen.findByRole("radio", { name: "השכרת נכסים" }));
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect((await screen.findByRole("radio", { name: "השכרת נכסים" })).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    expect(starter.calls).toEqual([{ p_set: "rentals" }]);
+  });
 });

@@ -194,6 +194,7 @@ function SetupStepBody({
     if (starterCompany != null) {
       return (
         <StepStarter
+          initial={readSetupStore(userId, starterCompany).starter_set}
           onDone={(set) => {
             if (userId && set != null) {
               const current = readSetupStore(userId, starterCompany);
