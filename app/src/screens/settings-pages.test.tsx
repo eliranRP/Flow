@@ -185,8 +185,7 @@ describe("Connections page", () => {
   it("groups the four connectors under ספרים ובנק and עזרים, with Back to Settings", () => {
     renderAt(<ConnectionsScreen sample={business} />, "/settings/connections");
     expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
-    expect(screen.getByText("הגדרות")).toHaveClass("t-hint");
-    expect(screen.getByRole("button", { name: "חזרה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חזרה להגדרות" })).toBeInTheDocument();
     const books = screen.getByRole("heading", { name: "ספרים ובנק" });
     const helpers = screen.getByRole("heading", { name: "עזרים" });
     const sumit = screen.getByRole("button", { name: "SUMIT" });

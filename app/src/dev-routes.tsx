@@ -122,7 +122,7 @@ export function DevReview() {
   const total = devReviewItems.length;
   return (
     <div className="ui-review-queue" data-bar="">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
+      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" />
       <div className="ui-review-meter">
         <ProgressBar
           variant="thin"

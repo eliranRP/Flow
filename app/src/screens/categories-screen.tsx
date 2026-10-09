@@ -14,6 +14,7 @@ import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { ChevronDownIcon, KeptOutIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
 import { KeptOutTag } from "../ui/line-marks";
+import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -42,9 +43,12 @@ function CategoryLine({
   category,
   muted = false,
   plain = false,
+  href,
   onMenu,
 }: {
   category: CategoryRow & { count?: number };
+  /** FLOW-322: the category's lines, in search. */
+  href?: string;
   muted?: boolean;
   /** A viewer row keeps the height and drops the pointer. */
   plain?: boolean;
@@ -53,7 +57,8 @@ function CategoryLine({
   return (
     <ListRow
       variant="item"
-      plain={plain}
+      plain={plain && href == null}
+      href={href}
       title={category.name}
       muted={muted}
       meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
@@ -98,6 +103,9 @@ export function CategoriesScreen({
   const [pickOpen, setPickOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const toast = useToast();
+  // FLOW-322: a category row opens that category's lines, every period, in search.
+  const linesHref = (category: CategoryRow) =>
+    `/search${searchFiltersQuery({ ...EMPTY_FILTERS, category: category.id, direction: category.kind }, new URLSearchParams(search))}`;
   const menuOpener = useRef<HTMLElement | null>(null);
   const pnl = useWrite<PnlChange>({
     failure: pnlFailureText,
@@ -208,6 +216,7 @@ export function CategoriesScreen({
             key={category.id}
             category={category}
             plain={holdWrites}
+            href={linesHref(category)}
             onMenu={holdWrites ? undefined : (opener) => {
               menuOpener.current = opener;
               setMenu(category);
@@ -256,6 +265,7 @@ export function CategoriesScreen({
                   category={category}
                   muted
                   plain={holdWrites}
+                  href={linesHref(category)}
                   onMenu={holdWrites ? undefined : (opener) => {
                     menuOpener.current = opener;
                     setMenu(category);

@@ -95,12 +95,15 @@ export function useGoBack(): (fallback: string) => void {
 export function BackButton({
   fallback,
   label = "חזרה",
+  text,
   onBand = false,
   disabled = false,
   children,
 }: {
   fallback: string;
   label?: string;
+  /** FLOW-334 H2: the screen Back returns to, shown beside the arrow ("‹ הגדרות"). */
+  text?: string;
   onBand?: boolean;
   disabled?: boolean;
   children?: ReactNode;
@@ -108,6 +111,25 @@ export function BackButton({
   const goBack = useGoBack();
   // FLOW-332: the start-edge swipe does what this button does.
   useEdgeBack(disabled ? null : () => { goBack(fallback); });
+  // The label promises where Back goes, so it shows only when Back goes there (opened from Home, it is the icon).
+  const landsOnText = useBackLandsOn(fallback);
+  if (text != null && text !== "" && landsOnText) {
+    return (
+      <button
+        type="button"
+        className="ui-back-labelled"
+        aria-label={`חזרה ל${text}`}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          goBack(fallback);
+        }}
+      >
+        <BackIcon />
+        <span className="ui-back-text" data-clip-ok="">{text}</span>
+      </button>
+    );
+  }
   return (
     <IconButton
       label={label}
@@ -151,8 +173,30 @@ export function scrollPageToTop(): void {
 }
 
 /** Restores the scroll of a history entry. The period and the tab live elsewhere. */
+/** The path at each browser history index this app has seen, so a labelled Back can check where it goes. */
+const pathsByIndex = new Map<number, string>();
+
+function pathOf(to: string): string {
+  return to.split(/[?#]/)[0] ?? to;
+}
+
+/**
+ * True when Back lands on `fallback`'s screen: a deep link replaces itself with the fallback, and a
+ * pop lands there only when the previous entry is that screen. MemoryRouter (unit tests) has no index.
+ */
+export function useBackLandsOn(fallback: string): boolean {
+  useLocation();
+  const idx = historyIndex();
+  if (idx == null || idx === 0) return true;
+  return pathsByIndex.get(idx - 1) === pathOf(fallback);
+}
+
 export function ScrollMemory() {
   const location = useLocation();
+  useEffect(() => {
+    const idx = historyIndex();
+    if (idx != null) pathsByIndex.set(idx, location.pathname);
+  }, [location.key, location.pathname]);
   useEffect(() => {
     const key = location.key;
     const saved = scrollPositions.get(key);
