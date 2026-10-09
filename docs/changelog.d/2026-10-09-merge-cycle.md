@@ -1,0 +1,1 @@
+`node scripts/merge-cycle.mjs` reports how long each merged PR took from open to merge against the owner's targets (small 5 minutes, medium 10, large 20). The lane manager posts it every hour.
