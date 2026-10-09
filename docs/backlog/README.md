@@ -104,7 +104,7 @@ pnpm db:types:check
 pnpm build-storybook && pnpm clip-check   # then read clip-report.txt; the console shows only 40 lines
 ```
 
-The builder runs lint, typecheck, and the touched tests, then pushes. The pre-push hook runs `scripts/local-ci.sh` on the files the PR changes against `main` (app parts that already passed on the same inputs are skipped) and stops a push that fails. It builds Storybook and runs the layout specs and the every-story check only when a Storybook spec or the Storybook setup changes; otherwise the vitest Storybook tests cover the changed stories. `main` runs the full set before each deploy. A reviewer may run it locally on the patched code.
+The builder runs lint, typecheck, and the touched tests, then pushes. The pre-push hook runs `scripts/local-ci.sh` on the files the PR changes against `main` (app parts that already passed on the same inputs are skipped) and stops a push that fails. It builds Storybook and runs the layout specs and the every-story check only when a Storybook spec or the Storybook setup changes; otherwise the vitest Storybook tests cover the changed stories. A `package.json`, tsconfig or `pnpm-lock.yaml` change counts as a setup change only when it changes what the Storybook build reads: the app's dependencies and Storybook scripts, the compiler options, or the app's lockfile entries (`scripts/storybook-stories.mjs`). `main` runs the full set before each deploy. A reviewer may run it locally on the patched code.
 
 ## How the team works
 

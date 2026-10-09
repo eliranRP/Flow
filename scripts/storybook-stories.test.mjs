@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { pickStories, relatedRun, selectStories } from "./storybook-stories.mjs";
+import { pickStories, reachesBuild, relatedRun, selectStories } from "./storybook-stories.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const select = (...changed) => selectStories(changed, { root });
@@ -35,6 +38,83 @@ test("whole tiers fit the budget, nearest first; the first tier always goes", ()
   assert.deepEqual(pickStories(tiered, counts, 30), { files: ["a", "b", "c"], partial: true });
   assert.deepEqual(pickStories(tiered, counts, 35), { files: ["a", "b", "c", "d"], partial: false });
   assert.deepEqual(pickStories([], counts, 35), { files: [], partial: false });
+});
+
+// A throwaway repo with the manifests, a tsconfig and a lockfile at a base commit.
+function configRepo() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "storybook-stories-"));
+  const write = (file, text) => {
+    fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+    fs.writeFileSync(path.join(dir, file), text);
+  };
+  const json = (file, value) => write(file, `${JSON.stringify(value, null, 2)}\n`);
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" }).trim();
+  const app = {
+    name: "@flow/app",
+    type: "module",
+    scripts: { build: "vite build", "build-storybook": "storybook build" },
+    dependencies: { react: "19.0.0" },
+    devDependencies: { storybook: "9.0.0" },
+  };
+  const rootPkg = { name: "flow", scripts: { lint: "eslint ." }, devDependencies: { wrangler: "4.0.0" } };
+  const tsconfig = { extends: "../tsconfig.base.json", compilerOptions: { jsx: "react-jsx" }, include: ["src"] };
+  const lock = (rootTool, appReact) =>
+    `lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    devDependencies:\n      wrangler:\n        version: ${rootTool}\n\n` +
+    `  app:\n    dependencies:\n      react:\n        version: ${appReact}\n\n  packages/shared: {}\n\npackages:\n\n  x@1.0.0: {}\n`;
+  json("app/package.json", app);
+  json("package.json", rootPkg);
+  json("app/tsconfig.json", tsconfig);
+  json("tsconfig.base.json", { compilerOptions: { strict: true } });
+  write("pnpm-lock.yaml", lock("4.0.0", "19.0.0"));
+  write("app/src/a.stories.tsx", "export default {};\n");
+  git("init", "-q", "-b", "main");
+  git("config", "user.email", "ci@example.com");
+  git("config", "user.name", "CI");
+  git("add", "-A");
+  git("commit", "-q", "-m", "base");
+  const base = git("rev-parse", "HEAD");
+  const reaches = (file) => reachesBuild(file, { root: dir, base });
+  return { dir, base, app, rootPkg, tsconfig, lock, json, write, reaches };
+}
+
+test("a script, include list or root tool change does not reach the Storybook build", () => {
+  const r = configRepo();
+  try {
+    r.json("app/package.json", { ...r.app, scripts: { ...r.app.scripts, "test:perf": "playwright test -c perf" } });
+    r.json("package.json", { ...r.rootPkg, scripts: { lint: "eslint .", perf: "pnpm -C app test:perf" }, devDependencies: { wrangler: "4.1.0" } });
+    r.json("app/tsconfig.json", { ...r.tsconfig, include: ["src", "perf"] });
+    r.write("pnpm-lock.yaml", r.lock("4.1.0", "19.0.0"));
+    for (const file of ["app/package.json", "package.json", "app/tsconfig.json", "pnpm-lock.yaml"]) assert.equal(r.reaches(file), false, file);
+    assert.deepEqual(selectStories(["app/package.json", "app/tsconfig.json", "pnpm-lock.yaml"], { root: r.dir, base: r.base }), []);
+  } finally {
+    fs.rmSync(r.dir, { recursive: true, force: true });
+  }
+});
+
+test("a dependency, storybook script, compiler option or app lockfile change reaches every story", () => {
+  const r = configRepo();
+  try {
+    const cases = [
+      ["app/package.json", () => r.json("app/package.json", { ...r.app, dependencies: { react: "19.1.0" } })],
+      ["app/package.json", () => r.json("app/package.json", { ...r.app, scripts: { ...r.app.scripts, "build-storybook": "storybook build --quiet" } })],
+      ["package.json", () => r.json("package.json", { ...r.rootPkg, pnpm: { overrides: { react: "19.1.0" } } })],
+      ["app/tsconfig.json", () => r.json("app/tsconfig.json", { ...r.tsconfig, compilerOptions: { jsx: "preserve" } })],
+      ["tsconfig.base.json", () => r.json("tsconfig.base.json", { compilerOptions: { strict: true, target: "es2022" } })],
+      ["pnpm-lock.yaml", () => r.write("pnpm-lock.yaml", r.lock("4.0.0", "19.1.0"))],
+      ["app/tsconfig.json", () => r.write("app/tsconfig.json", "{ // not JSON\n}")],
+    ];
+    for (const [file, change] of cases) {
+      execFileSync("git", ["checkout", "-q", "--", "."], { cwd: r.dir });
+      change();
+      assert.equal(r.reaches(file), true, file);
+    }
+    execFileSync("git", ["checkout", "-q", "--", "."], { cwd: r.dir });
+    assert.equal(reachesBuild("app/package.json", { root: r.dir }), true, "no base: any manifest change reaches");
+    assert.equal(reachesBuild("app/new-tsconfig.json", { root: r.dir, base: r.base }), false, "not an app tsconfig name");
+    assert.equal(reachesBuild("app/tsconfig.perf.json", { root: r.dir, base: r.base }), true, "a new tsconfig has no base side");
+  } finally {
+    fs.rmSync(r.dir, { recursive: true, force: true });
+  }
 });
 
 test("the vitest runs take the related tests for sources, migrations, e2e files and app CSS", () => {

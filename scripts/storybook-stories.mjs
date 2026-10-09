@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // The story files a set of changed files reaches, for the pre-push every-story check.
-// Usage: git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --index <index.json> [--budget N]
+// Usage: git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --index <index.json> [--budget N] [--base <base>]
+//        git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --setup [--base <base>]  (prints yes or no)
 //        git diff --name-status <base> HEAD -- <app inputs> | node scripts/storybook-stories.mjs --related-run
 // Prints the story files to open, one per line as Storybook's index names them (./src/x.stories.tsx),
 // or "all" when a change reaches every story (the Storybook config, the lockfile, the smoke itself),
@@ -10,6 +11,9 @@
 // budget (default 250); the first tier is always taken.
 // CSS picks no story: the every-story check looks for console and network errors, which CSS
 // can't cause; the layout specs run whenever the app changes.
+// With --base, a package manifest, tsconfig or the lockfile picks all only when the part the
+// Storybook build reads changed (see reachesBuild); without it, any change to one picks all.
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,11 +21,74 @@ import { importWalker } from "./e2e-specs.mjs";
 
 const runsAll = [
   /^app\/\.storybook\//,
-  /^app\/(package\.json|vite\.config\.ts|tsconfig[^/]*\.json|playwright\.storybook\.config\.ts)$/,
+  /^app\/(vite\.config\.ts|playwright\.storybook\.config\.ts)$/,
   /^app\/e2e\/storybook-[^/]+$/,
   /^scripts\/(storybook-stories|e2e-specs)\.mjs$/,
-  /^pnpm-lock\.yaml$/,
 ];
+
+/** The parts of a JSON file the Storybook build reads, or null when it does not parse. */
+function jsonParts(text, pick) {
+  try {
+    return JSON.stringify(pick(JSON.parse(text)));
+  } catch {
+    return null;
+  }
+}
+
+const storybookScripts = (scripts = {}) =>
+  Object.fromEntries(Object.entries(scripts).filter(([name]) => /storybook/.test(name)).sort());
+
+/** A pnpm-lock.yaml importer block ("  app:" up to the next importer), or "" when absent. */
+function importerBlock(text, importer) {
+  const lines = text.split("\n");
+  const start = lines.indexOf(`  ${importer}:`);
+  if (start < 0) return "";
+  let end = start + 1;
+  while (end < lines.length && !/^ {0,2}\S/.test(lines[end])) end += 1;
+  return lines.slice(start, end).join("\n");
+}
+
+/** Text before the lockfile's importers: settings and overrides, which change every install. */
+const lockHead = (text) => text.slice(0, Math.max(0, text.indexOf("\nimporters:")));
+
+// Files whose change reaches the Storybook build only through some of their content: the part
+// each rule returns. The root importer and the root package's other fields are the workspace's
+// tools (lint, wrangler, type generation), which the app's build never loads.
+const buildParts = [
+  [/^app\/package\.json$/, (text) => jsonParts(text, (pkg) => [pkg.type, pkg.dependencies, pkg.devDependencies, storybookScripts(pkg.scripts)])],
+  [/^package\.json$/, (text) => jsonParts(text, (pkg) => [pkg.pnpm, storybookScripts(pkg.scripts)])],
+  [/^(app\/tsconfig[^/]*|tsconfig\.base)\.json$/, (text) => jsonParts(text, (config) => [config.extends, config.compilerOptions])],
+  [/^pnpm-lock\.yaml$/, (text) => [lockHead(text), importerBlock(text, "app"), importerBlock(text, "packages/shared")].join("\n")],
+];
+
+function readAt(root, ref, file) {
+  try {
+    return ref == null
+      ? fs.readFileSync(path.join(root, file), "utf8")
+      : execFileSync("git", ["show", `${ref}:${file}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether a change to one file reaches every story: the Storybook setup, the smoke itself, or the
+ * part of a manifest, tsconfig or lockfile the build reads. Without a base, or when the file is new,
+ * deleted or does not parse on either side, a manifest change reaches every story.
+ * @param {string} file repo-relative
+ * @param {{ root: string, base?: string }} options
+ */
+export function reachesBuild(file, { root, base }) {
+  if (runsAll.some((pattern) => pattern.test(file))) return true;
+  const rule = buildParts.find(([pattern]) => pattern.test(file));
+  if (!rule) return false;
+  if (!base) return true;
+  const before = readAt(root, base, file);
+  const after = readAt(root, null, file);
+  if (before == null || after == null) return true;
+  const [partsBefore, partsAfter] = [rule[1](before), rule[1](after)];
+  return partsBefore == null || partsAfter == null || partsBefore !== partsAfter;
+}
 
 /** Every story file under app/src, repo-relative. */
 function storyFiles(root, folder = "app/src/") {
@@ -36,11 +103,11 @@ function storyFiles(root, folder = "app/src/") {
 
 /**
  * @param {string[]} changed repo-relative paths
- * @param {{ root: string }} options
+ * @param {{ root: string, base?: string }} options
  * @returns {Array<[number, string]> | "all"} [tier, story file as ./src/...], tier 1 first
  */
-export function selectStories(changed, { root }) {
-  if (changed.some((file) => runsAll.some((pattern) => pattern.test(file)))) return "all";
+export function selectStories(changed, { root, base }) {
+  if (changed.some((file) => reachesBuild(file, { root, base }))) return "all";
   const sources = new Set(changed.filter((file) => /\.(ts|tsx|json)$/.test(file)));
   if (sources.size === 0) return [];
   const walk = importWalker(root);
@@ -115,14 +182,23 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log(relatedRun(lines) ? "related" : "all");
     process.exit(0);
   }
-  const indexPath = arg("--index");
-  if (!indexPath) throw new Error("usage: storybook-stories.mjs --index <index.json> [--budget N]");
   const changed = fs
     .readFileSync(0, "utf8")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  const stories = selectStories(changed, { root });
+  const base = arg("--base");
+  const indexPath = arg("--index");
+  if (process.argv.includes("--setup")) {
+    console.log(changed.some((file) => reachesBuild(file, { root, base })) ? "yes" : "no");
+  } else if (!indexPath) {
+    throw new Error("usage: storybook-stories.mjs --index <index.json> [--budget N] [--base <base>]");
+  } else {
+    printStories(selectStories(changed, { root, base }), indexPath, Number(arg("--budget") ?? "250"));
+  }
+}
+
+function printStories(stories, indexPath, budget) {
   if (stories === "all") {
     console.log("all");
   } else {
@@ -133,7 +209,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     // A story file the index doesn't name means the paths drifted: fail rather than open nothing.
     const missing = stories.filter(([, file]) => !counts.has(file)).map(([, file]) => file);
     if (missing.length > 0) throw new Error(`not in Storybook's index: ${missing.join(", ")}`);
-    const { files, partial } = pickStories(stories, counts, Number(arg("--budget") ?? "250"));
+    const { files, partial } = pickStories(stories, counts, budget);
     for (const file of files) console.log(file);
     if (partial) console.log("partial");
   }
