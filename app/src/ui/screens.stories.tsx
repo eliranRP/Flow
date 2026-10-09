@@ -121,7 +121,7 @@ export const InstallIphoneOther: Story = {
   name: "iPhone other browser",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="iphone-other" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="iphone-other" browser="other" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };

@@ -3,7 +3,7 @@ import { FocusTitle } from "./focus-title";
 import { AppIcon, CloseIcon, DownloadIcon, HomeIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { Button } from "./button";
-import { ANDROID_INSTALL_STEPS, IOS_INSTALL_STEPS, type InstallStepCopy } from "./install-copy";
+import { ANDROID_INSTALL_STEPS, iosBrowser, iosInstallLead, iosInstallSteps, type InstallStepCopy, type IosBrowser } from "./install-copy";
 import { ListRow } from "./list-row";
 import { runInstallPrompt, type InstallMode } from "./install-prompt";
 
@@ -19,8 +19,11 @@ export function InstallScreen({
   example,
   onDismiss,
   onInstall,
+  browser,
 }: {
   mode: InstallMode;
+  /** The iPhone browser whose steps to show. Live reads the user agent; stories pass one. */
+  browser?: IosBrowser;
   /** Stories pass the mockup tag. A live offer omits it. */
   example?: ReactNode;
   onDismiss: () => void;
@@ -28,6 +31,8 @@ export function InstallScreen({
   onInstall?: () => void;
 }) {
   const android = mode === "android-prompt" || mode === "android-steps";
+  // Safari's steps on an iPhone or iPad Safari; Chrome and Firefox on iPhone get their own.
+  const ios = mode === "iphone-other" ? (browser ?? iosBrowser()) : "safari";
 
   async function install() {
     if (onInstall) {
@@ -52,12 +57,12 @@ export function InstallScreen({
             {android ? <>התקנת <bdi dir="ltr">Flow</bdi></> : "הוספה למסך הבית"}
           </FocusTitle>
           <p className="ui-install-sub">
-            {android ? "נפתח כמו אפליקציה, ישר ממסך הבית." : "באייפון זה נעשה מספארי, בשלושה צעדים."}
+            {android ? "נפתח כמו אפליקציה, ישר ממסך הבית." : iosInstallLead(ios)}
           </p>
         </header>
         {mode === "android-prompt" ? <BenefitList /> : null}
         {mode === "android-steps" ? <StepList steps={ANDROID_INSTALL_STEPS} /> : null}
-        {mode === "iphone" || mode === "ipad" || mode === "iphone-other" ? <StepList steps={IOS_INSTALL_STEPS} /> : null}
+        {mode === "iphone" || mode === "ipad" || mode === "iphone-other" ? <StepList steps={iosInstallSteps(ios)} /> : null}
       </div>
       <div className="ui-install-cta">
         {mode === "android-prompt" ? (

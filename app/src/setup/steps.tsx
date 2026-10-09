@@ -10,7 +10,7 @@ import { COMPANY_NAME_MAX, companyNameError } from "../screens/rename-company";
 import { Notice } from "../ui/banner";
 import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
-import { ANDROID_INSTALL_STEPS, IOS_INSTALL_STEPS } from "../ui/install-copy";
+import { ANDROID_INSTALL_STEPS, iosBrowser, iosInstallSteps } from "../ui/install-copy";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
 import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
@@ -370,7 +370,7 @@ export function StepReview({
 
 function installRows(mode: InstallMode): ReactNode {
   if (mode === "android-prompt") return null;
-  const steps = mode === "android-steps" ? ANDROID_INSTALL_STEPS : IOS_INSTALL_STEPS;
+  const steps = mode === "android-steps" ? ANDROID_INSTALL_STEPS : iosInstallSteps(mode === "iphone-other" ? iosBrowser() : "safari");
   return (
     <ol className="ui-setup-steps">
       {steps.map((step, index) => (
