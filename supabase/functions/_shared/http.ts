@@ -1,5 +1,5 @@
 /** Request headers a browser preflight may send. Every function allows this same list. */
-export const corsAllowHeaders = "authorization, x-client-info, apikey, content-type, x-flow-cron";
+export const corsAllowHeaders = "authorization, x-client-info, apikey, content-type, x-flow-cron, x-flow-company";
 
 export const corsHeaders: Record<string, string> = {
   "access-control-allow-origin": "*",

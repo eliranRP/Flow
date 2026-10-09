@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
+import type { LoanKind } from "@flow/shared";
 import { BackIcon, CalendarIcon, ChevronDownIcon, InfoIcon, LoanIcon, PlusIcon, RefreshIcon } from "../ui/icons";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
@@ -21,6 +22,9 @@ import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
 import { useOpenFromQuery } from "../open-from-query";
 import { useHoldWrites } from "../use-is-viewer";
+import { RadioRow } from "../ui/radio-row";
+import { LOAN_KIND_LABEL } from "./loan-copy";
+import { LOAN_KIND_DESCRIPTION } from "./loan-detail-data";
 import {
   LOAN_CURRENCY_MARK,
   firstOfNextMonth,
@@ -29,6 +33,7 @@ import {
   loanFinalLine,
   loanPreview,
   minorToInput,
+  newLoanKindMonths,
   readCompanyLoanCurrency,
   type LoanCurrency,
   type LoanDraft,
@@ -58,7 +63,36 @@ export type LoanSetupInitial = {
   escrow?: string;
   currency?: LoanCurrency;
   payment?: string;
+  /** FLOW-106 §3.3: the interest-only or amortization months. */
+  kindMonths?: string;
 };
+
+/** FLOW-106 §3.3: the סוג field. The sheet owns the choice and the picker view, like פרויקט. */
+export type LoanKindField = {
+  value: LoanKind;
+  buttonRef?: Ref<HTMLButtonElement>;
+  onOpen: () => void;
+};
+
+const LOAN_KINDS: readonly LoanKind[] = ["amortizing", "interest_only", "balloon", "demand"];
+
+/** The סוג view inside the new-loan sheet: one row per kind, each with its one-line description. */
+export function LoanKindPicker({ selected, onSelect }: { selected: LoanKind; onSelect: (kind: LoanKind) => void }) {
+  return (
+    <div role="radiogroup" aria-label="סוג ההלוואה">
+      {LOAN_KINDS.map((option) => (
+        <RadioRow
+          key={option}
+          value={option}
+          label={LOAN_KIND_LABEL[option]}
+          description={LOAN_KIND_DESCRIPTION[option]}
+          selected={selected === option}
+          onSelect={() => { onSelect(option); }}
+        />
+      ))}
+    </div>
+  );
+}
 
 type ReadyPreview = Extract<LoanPreview, { status: "ready" }>;
 
@@ -72,6 +106,7 @@ export function LoanSetupForm({
   keepDraft,
   saveButtonRef,
   project,
+  kind: kindField,
   formId,
   saveInFoot = false,
 }: {
@@ -86,6 +121,8 @@ export function LoanSetupForm({
   saveButtonRef?: Ref<HTMLButtonElement>;
   /** FLOW-119. The project field. The sheet owns the choice and the picker view. */
   project?: LoanProjectField;
+  /** FLOW-106 §3.3. The סוג field; without it the loan is a regular (amortizing) one. */
+  kind?: LoanKindField;
   /** The form's id, so a שמירה outside it (the sheet's foot) submits it. */
   formId?: string;
   /** FLOW-347: the sheet pins שמירה in its foot (`LoanSaveButton`), so the form leaves it out. */
@@ -95,6 +132,10 @@ export function LoanSetupForm({
   const dateLabelId = useId();
   const projectLabelId = useId();
   const projectValueId = useId();
+  const kindLabelId = useId();
+  const kindValueId = useId();
+  const kind: LoanKind = kindField?.value ?? "amortizing";
+  const demand = kind === "demand";
   const [name, setName] = useState(initial?.name ?? "");
   const [principal, setPrincipal] = useState(initial?.principal ?? "");
   const [rate, setRate] = useState(initial?.rate ?? "");
@@ -103,6 +144,17 @@ export function LoanSetupForm({
   const [escrow, setEscrow] = useState(initial?.escrow ?? "0");
   const [currency, setCurrency] = useState<LoanCurrency>(initial?.currency ?? companyCurrency);
   const [payment, setPayment] = useState<string | null>(initial?.payment ?? null);
+  const [kindMonths, setKindMonths] = useState(initial?.kindMonths ?? newLoanKindMonths(kind, initial?.term ?? "360"));
+  // A new kind starts its months field at that kind's default (the loan page's defaults).
+  const shownKind = useRef(kind);
+  useEffect(() => {
+    if (shownKind.current === kind) return;
+    shownKind.current = kind;
+    setKindMonths(newLoanKindMonths(kind, term));
+    setTouched((current) => ({ ...current, months: false }));
+    // Only a kind change resets the months; the term is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind]);
   const [advanced, setAdvanced] = useState(advancedOpen || initial?.payment != null);
   const [dateOpen, setDateOpen] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<LoanField, boolean>>>({});
@@ -117,7 +169,9 @@ export function LoanSetupForm({
     escrow,
     currency,
     payment,
-  }), [name, principal, rate, term, startDate, escrow, currency, payment]);
+    kind,
+    kindMonths,
+  }), [name, principal, rate, term, startDate, escrow, currency, payment, kind, kindMonths]);
   const preview = useMemo(() => loanPreview(draft), [draft]);
   if (preview.status === "ready") lastReady.current = preview;
   const shown = preview.status === "ready" ? preview : lastReady.current;
@@ -150,8 +204,9 @@ export function LoanSetupForm({
       escrow,
       currency,
       payment: payment ?? undefined,
+      kindMonths,
     });
-  }, [name, principal, rate, term, startDate, escrow, currency, payment, keepDraft]);
+  }, [name, principal, rate, term, startDate, escrow, currency, payment, kindMonths, keepDraft]);
 
   const formRef = useRef<HTMLFormElement>(null);
   function submit(event: SubmitEvent) {
@@ -191,6 +246,24 @@ export function LoanSetupForm({
 
   return (
     <form ref={formRef} id={formId} className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
+      {kindField ? (
+        <div className="ui-field">
+          <span id={kindLabelId} className="ui-field-label">סוג</span>
+          <button
+            type="button"
+            ref={kindField.buttonRef}
+            className="ui-field-control ui-date-field"
+            aria-labelledby={`${kindLabelId} ${kindValueId}`}
+            aria-haspopup="dialog"
+            disabled={busy}
+            onClick={kindField.onOpen}
+          >
+            <span id={kindValueId} className="ui-pick-value" data-clip-ok="">{LOAN_KIND_LABEL[kind]}</span>
+            <ChevronDownIcon size={20} />
+          </button>
+          <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
+        </div>
+      ) : null}
       <TextField
         label="מלווה"
         value={name}
@@ -258,21 +331,38 @@ export function LoanSetupForm({
         onBlur={() => { touch("rate"); }}
         onValueChange={setRate}
       />
-      <TextField
-        label="תקופה בחודשים"
-        value={term}
-        dir="ltr"
-        inputMode="numeric"
-        numeric
-        disabled={busy}
-        reserveMessage
-        enterKeyHint="next"
-        error={shownError("term")}
-        onBlur={() => { touch("term"); }}
-        onChange={(event) => { onTerm(event.target.value); }}
-      />
+      {demand ? null : (
+        <TextField
+          label="תקופה בחודשים"
+          value={term}
+          dir="ltr"
+          inputMode="numeric"
+          numeric
+          disabled={busy}
+          reserveMessage
+          enterKeyHint="next"
+          error={shownError("term")}
+          onBlur={() => { touch("term"); }}
+          onChange={(event) => { onTerm(event.target.value); }}
+        />
+      )}
+      {kind === "interest_only" || kind === "balloon" ? (
+        <TextField
+          label={kind === "interest_only" ? "חודשי ריבית בלבד" : "פריסה בחודשים"}
+          value={kindMonths}
+          dir="ltr"
+          inputMode="numeric"
+          numeric
+          disabled={busy}
+          reserveMessage
+          enterKeyHint="next"
+          error={shownError("months")}
+          onBlur={() => { touch("months"); }}
+          onChange={(event) => { setKindMonths(event.target.value.replace(/\D/g, "").slice(0, 3)); }}
+        />
+      ) : null}
       <div className="ui-field">
-        <span id={dateLabelId} className="ui-field-label">תאריך תשלום ראשון</span>
+        <span id={dateLabelId} className="ui-field-label">{demand ? "תאריך התחלה" : "תאריך תשלום ראשון"}</span>
         <button
           type="button"
           className="ui-field-control ui-date-field"
@@ -290,13 +380,15 @@ export function LoanSetupForm({
       <DateSheet
         open={dateOpen}
         onOpenChange={setDateOpen}
-        title="תאריך תשלום ראשון"
+        title={demand ? "תאריך התחלה" : "תאריך תשלום ראשון"}
         value={startDate}
         allowFuture
         shortcuts={false}
         disabled={busy}
         onApply={setStartDate}
       />
+      {demand ? null : (
+      <>
       <MoneyField
         label="מסים וביטוח לחודש"
         value={escrow}
@@ -338,13 +430,17 @@ export function LoanSetupForm({
           />
         </div>
       ) : null}
+      </>
+      )}
       {/* FLOW-344 (B): the preview shows only while every field is valid, so it never reads as another loan's payment. */}
       {/* Empty, the region leaves the layout, so the gap above שמירה is the usual one between fields. */}
       <div aria-live="polite" className={canSave && shown ? undefined : "sr-only"}>
-        {canSave && shown ? (
+        {canSave && shown && demand ? (
+          <p className="ui-row-hint">ריבית יומית על היתרה, בלי לוח תשלומים.</p>
+        ) : canSave && shown ? (
           <>
           <p>
-            תשלום חודשי{" "}
+            {kind === "interest_only" ? "תשלום אחרי חודשי הריבית" : "תשלום חודשי"}{" "}
             <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
           </p>
           <p>
@@ -368,7 +464,7 @@ export function LoanSetupForm({
         ) : null}
       </div>
       {/* FLOW-344: the payment error takes a line only when there is one; the preview above no longer jumps. */}
-      {!advanced && shownError("payment") != null ? (
+      {!advanced && !demand && shownError("payment") != null ? (
         <p className="ui-field-message" role="alert">{shownError("payment")}</p>
       ) : null}
       {/* FLOW-115: always tappable; a tap shows each field's error, and each says what to type. */}
@@ -423,13 +519,15 @@ export function LoanSettingsSection({
   // The page sits under this list's path: /settings/loans/:id, or /e2e/loans/:id in the dev fixture.
   const loanHref = (id: string) => `${location.pathname.replace(/\/$/, "")}/${encodeURIComponent(id)}${search}`;
   const [open, setOpenState] = useState(false);
-  const [view, setView] = useState<"form" | "project">("form");
+  const [view, setView] = useState<"form" | "project" | "kind">("form");
   const [draftProject, setDraftProject] = useState<string | null>(null);
+  const [draftKind, setDraftKind] = useState<LoanKind>("amortizing");
   // The picker keeps the form's height, so the sheet does not jump when they swap.
   const [formHeight, setFormHeight] = useState<number | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLButtonElement>(null);
   const projectFieldRef = useRef<HTMLButtonElement>(null);
+  const kindFieldRef = useRef<HTMLButtonElement>(null);
   const sheetTitle = useRef<HTMLHeadingElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
   const loanFormId = useId();
@@ -440,6 +538,7 @@ export function LoanSettingsSection({
     keepDraft.current = false;
     draftRef.current = null;
     setDraftProject(null);
+    setDraftKind("amortizing");
     setView("form");
   }, []);
   const setOpen = useCallback((next: boolean) => {
@@ -451,7 +550,7 @@ export function LoanSettingsSection({
   const setSheet = useSheetHistory("loan-new", open, setOpen, () => {
     // FLOW-115: Back during a save waits for it, like ✕ and Escape (0075).
     if (posted.current) return false;
-    if (view !== "project") return true;
+    if (view === "form") return true;
     backToForm();
     return false;
   }, adoptNew);
@@ -510,19 +609,20 @@ export function LoanSettingsSection({
     setLoanSheet(true);
   });
 
-  function openPicker() {
+  function openPicker(next: "project" | "kind" = "project") {
     setFormHeight(formRef.current?.offsetHeight ?? null);
-    setView("project");
+    setView(next);
     // The פרויקט field is hidden now. Focus the title, like the change sheet's picker.
     requestAnimationFrame(() => { sheetTitle.current?.focus({ preventScroll: true }); });
   }
 
   function backToForm() {
+    const field = view === "kind" ? kindFieldRef : projectFieldRef;
     setView("form");
-    requestAnimationFrame(() => { projectFieldRef.current?.focus({ preventScroll: true }); });
+    requestAnimationFrame(() => { field.current?.focus({ preventScroll: true }); });
   }
 
-  const picking = view === "project";
+  const picking = view !== "form";
   const loading = sample === "loading" || (sample == null && balances.isLoading);
   const failed = sample === "error" || (sample == null && balances.isError);
   const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
@@ -546,9 +646,9 @@ export function LoanSettingsSection({
           title={LOANS_ERROR_TITLE}
           body="נסו שוב בעוד רגע"
           action={(
+            // The tint action every empty and error state uses (DESIGN-RULES §2.8, FLOW-334), not a fill.
             <Button
               variant="pill"
-              className="ui-btn-retry"
               icon={<RefreshIcon />}
               busy={sample == null && balances.isFetching}
               onClick={() => { if (sample == null) void balances.refetch(); }}
@@ -593,7 +693,7 @@ export function LoanSettingsSection({
       <Sheet
         open={holdWrites ? false : open}
         onOpenChange={setLoanSheet}
-        title={picking ? "פרויקט" : "הלוואה"}
+        title={view === "kind" ? "סוג ההלוואה" : picking ? "פרויקט" : "הלוואה"}
         titleRef={sheetTitle}
         returnFocusRef={newLoanReturn}
         leading={picking ? (
@@ -630,7 +730,18 @@ export function LoanSettingsSection({
           </div>
         ) : (
           <>
-            {picking ? (
+            {view === "kind" ? (
+              <div style={formHeight ? { minHeight: formHeight } : undefined}>
+                <LoanKindPicker
+                  selected={draftKind}
+                  onSelect={(next) => {
+                    setDraftKind(next);
+                    backToForm();
+                  }}
+                />
+              </div>
+            ) : null}
+            {view === "project" ? (
               <div style={formHeight ? { minHeight: formHeight } : undefined}>
                 <LoanProjectPicker
                   source={source}
@@ -654,7 +765,12 @@ export function LoanSettingsSection({
                 project={{
                   name: projectNameOf(source, draftProject),
                   buttonRef: projectFieldRef,
-                  onOpen: openPicker,
+                  onOpen: () => { openPicker("project"); },
+                }}
+                kind={{
+                  value: draftKind,
+                  buttonRef: kindFieldRef,
+                  onOpen: () => { openPicker("kind"); },
                 }}
                 onSave={(row) => {
                   if (holdWrites || blocked?.()) return;

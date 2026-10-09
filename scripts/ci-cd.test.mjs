@@ -422,7 +422,7 @@ test("the homepage and /settings retry like build.txt, list reads wait for the s
   assert.ok(smokeSpec.indexOf("const statusCall = waitStatus(page)") < smokeSpec.indexOf('openList(page, "/settings"'));
   const http = readFileSync(new URL("../supabase/functions/_shared/http.ts", import.meta.url), "utf8");
   const handler = readFileSync(new URL("../supabase/functions/flow-mcp/handler.ts", import.meta.url), "utf8");
-  assert.match(http, /export const corsAllowHeaders = "authorization, x-client-info, apikey, content-type, x-flow-cron"/);
+  assert.match(http, /export const corsAllowHeaders = "authorization, x-client-info, apikey, content-type, x-flow-cron, x-flow-company"/);
   assert.match(handler, /corsHeadersFor/);
   assert.equal(handler.includes('"authorization, content-type, apikey"'), false);
 

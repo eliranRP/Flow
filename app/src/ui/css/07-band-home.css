@@ -142,7 +142,8 @@
 .ui-flow {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  /* FLOW-334: the הכנסות / הוצאות rows sit on a 52px pitch (44px target + 8px), not 76px. */
+  gap: var(--space-2);
   margin-top: var(--space-section);
   padding-inline: var(--space-side);
   text-align: start;

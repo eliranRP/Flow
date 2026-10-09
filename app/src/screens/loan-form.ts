@@ -4,8 +4,10 @@ import {
   LOAN_TERM_MONTHS_MAX,
   LoanScheduleError,
   parseDecimalHalfEven,
+  regularPaymentMinor,
   type LoanBalloon,
   type LoanFinalAdjustment,
+  type LoanKind,
   type LoanSchedule,
 } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
@@ -63,6 +65,10 @@ export type LoanDraft = {
   currency: LoanCurrency;
   /** Null uses the computed payment. A string is the advanced override. */
   payment: string | null;
+  /** FLOW-106 §3.3. Missing reads as amortizing. */
+  kind?: LoanKind;
+  /** Interest-only: the interest-only months. Balloon: the amortization months. */
+  kindMonths?: string;
 };
 
 export type LoanInsert = {
@@ -70,11 +76,16 @@ export type LoanInsert = {
   name: string;
   principal_minor: number;
   annual_rate_ppm: number;
-  term_months: number;
+  /** Null for a demand loan only (loans_kind_chk). */
+  term_months: number | null;
   start_date: string;
-  payment_minor: number;
+  /** Null for a demand loan only. */
+  payment_minor: number | null;
   escrow_minor: number;
   currency: LoanCurrency;
+  kind?: LoanKind;
+  interest_only_months?: number | null;
+  amortization_months?: number | null;
   /** FLOW-119. Optional project (decision 0105). */
   project_id?: string | null;
 };
@@ -84,6 +95,8 @@ export type LoanPreview =
   | { status: "error"; code: string }
   | {
       status: "ready";
+      kind: LoanKind;
+      /** 0 for a demand loan, which has no fixed payment. */
       paymentMinor: bigint;
       interestMinor: bigint;
       escrowMinor: bigint;
@@ -99,7 +112,7 @@ export type LoanPreview =
       insert: Omit<LoanInsert, "company_id">;
     };
 
-export type LoanField = "name" | "principal" | "rate" | "term" | "escrow" | "payment";
+export type LoanField = "name" | "principal" | "rate" | "term" | "escrow" | "payment" | "months";
 
 export type LoanFieldErrors = Partial<Record<LoanField, string>>;
 
@@ -155,7 +168,57 @@ function termOf(text: string): number | null {
   return term;
 }
 
+/** The months field's starting value for a kind on the new-loan form (the loan page's defaults). */
+export function newLoanKindMonths(kind: LoanKind, term: string): string {
+  const months = termOf(term);
+  if (kind === "interest_only") return String(Math.min(12, months ?? 12));
+  if (kind === "balloon") return String(Math.max(360, months ?? 360));
+  return "";
+}
+
+function monthsOf(text: string | undefined): number | null {
+  return text != null && /^\d{1,3}$/.test(text.trim()) ? Number(text.trim()) : null;
+}
+
+/** A demand loan: no term, no fixed payment, no escrow; interest accrues daily (decision 0132). */
+function demandPreview(draft: LoanDraft): LoanPreview {
+  const principalMinor = minorOf(draft.principal);
+  const ratePpm = ratePpmOf(draft.rate);
+  if (principalMinor == null || principalMinor <= 0n || ratePpm == null) {
+    if (draft.rate.trim() !== "" && !draft.rate.trim().endsWith(".") && ratePpmOf(draft.rate) == null) {
+      return { status: "error", code: "rate" };
+    }
+    return { status: "empty" };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.startDate)) return { status: "error", code: "start_date" };
+  return {
+    status: "ready",
+    kind: "demand",
+    paymentMinor: 0n,
+    interestMinor: 0n,
+    escrowMinor: 0n,
+    balloon: null,
+    finalAdjustment: null,
+    largeFinalMinor: null,
+    insert: {
+      name: draft.name.trim(),
+      principal_minor: Number(principalMinor),
+      annual_rate_ppm: ratePpm,
+      term_months: null,
+      start_date: draft.startDate,
+      payment_minor: null,
+      escrow_minor: 0,
+      currency: draft.currency,
+      kind: "demand",
+      interest_only_months: null,
+      amortization_months: null,
+    },
+  };
+}
+
 export function loanPreview(draft: LoanDraft): LoanPreview {
+  const kind = draft.kind ?? "amortizing";
+  if (kind === "demand") return demandPreview(draft);
   const principalMinor = minorOf(draft.principal);
   const escrowText = draft.escrow.trim() === "" ? "0" : draft.escrow;
   const escrowMinor = minorOf(escrowText);
@@ -170,9 +233,13 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.startDate)) return { status: "error", code: "start_date" };
 
+  const io = kind === "interest_only" ? monthsOf(draft.kindMonths) : null;
+  const amortization = kind === "balloon" ? monthsOf(draft.kindMonths) : null;
   try {
-    const levelPi = contractualPaymentMinor({ principalMinor, annualRatePpm: ratePpm, termMonths });
-    const paymentMinor = draft.payment == null ? levelPi + escrowMinor : minorOf(draft.payment);
+    const levelPi = kind === "amortizing"
+      ? contractualPaymentMinor({ principalMinor, annualRatePpm: ratePpm, termMonths }) + escrowMinor
+      : regularPaymentMinor({ principalMinor, annualRatePpm: ratePpm, termMonths, escrowMinor, kind, interestOnlyMonths: io, amortizationMonths: amortization });
+    const paymentMinor = draft.payment == null ? levelPi : minorOf(draft.payment);
     if (paymentMinor == null || paymentMinor <= 0n || paymentMinor > SAFE_MINOR) return { status: "empty" };
     const schedule = buildLoanSchedule({
       principalMinor,
@@ -181,11 +248,15 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
       startDate: draft.startDate,
       paymentMinor,
       escrowMinor,
+      kind,
+      interestOnlyMonths: io,
+      amortizationMonths: amortization,
     });
     const interestMinor = schedule.rows.reduce((sum, row) => sum + row.interestMinor, 0n);
     const name = draft.name.trim();
     return {
       status: "ready",
+      kind,
       paymentMinor,
       interestMinor,
       escrowMinor,
@@ -201,6 +272,9 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
         payment_minor: Number(paymentMinor),
         escrow_minor: Number(escrowMinor),
         currency: draft.currency,
+        kind,
+        interest_only_months: io,
+        amortization_months: amortization,
       },
     };
   } catch (error) {
@@ -241,7 +315,8 @@ function timesAboveTwice(finalPi: bigint, pi: bigint): string {
 /** One line for the final payment. A 2× warning replaces the adjusted line. */
 export function loanFinalLine(preview: Extract<LoanPreview, { status: "ready" }>): LoanFinalLine | null {
   if (preview.balloon) {
-    return { tone: "plain", lead: "התשלום האחרון גבוה יותר", amountMinor: preview.balloon.amountMinor };
+    const lead = preview.kind === "balloon" ? "בלון בסוף התקופה" : "התשלום האחרון גבוה יותר";
+    return { tone: "plain", lead, amountMinor: preview.balloon.amountMinor };
   }
   const pi = preview.paymentMinor - preview.escrowMinor;
   if (preview.largeFinalMinor != null && pi > 0n) {
@@ -281,8 +356,20 @@ export function loanFieldErrors(draft: LoanDraft, preview: LoanPreview): LoanFie
   else if (rate.startsWith("-")) errors.rate = "כתבו ריבית בלי מינוס.";
   else if (rate !== "" && !rate.endsWith(".") && ratePpmOf(rate) == null) errors.rate = RATE_RANGE;
 
+  // A demand loan has no term, escrow or payment (FLOW-106 §3.3).
+  if (draft.kind === "demand") return errors;
+
   if (draft.term.trim() === "") errors.term = "כתבו את מספר החודשים.";
   else if (draft.term.startsWith("-") || termOf(draft.term) == null) errors.term = TERM_RANGE;
+
+  const term = termOf(draft.term);
+  const months = monthsOf(draft.kindMonths);
+  if (draft.kind === "interest_only" && (months == null || months < 1 || (term != null && months > term))) {
+    errors.months = term == null ? "כתבו את מספר חודשי הריבית בלבד." : `כתבו בין 1 ל־${String(term)} חודשים.`;
+  }
+  if (draft.kind === "balloon" && (months == null || months > LOAN_TERM_MONTHS_MAX || (term != null && months < term))) {
+    errors.months = `כתבו בין ${String(term ?? 1)} ל־${String(LOAN_TERM_MONTHS_MAX)} חודשים.`;
+  }
 
   const escrowText = draft.escrow.trim() === "" ? "0" : draft.escrow;
   const escrow = amountState(escrowText);

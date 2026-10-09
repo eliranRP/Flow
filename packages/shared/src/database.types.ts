@@ -5,7 +5,26 @@ export type Database = {
   
   "public": {
           Tables: {
-            "allocations": {
+            "active_companies": {
+                  Row: {
+                    "company_id": string,"updated_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "active_companies_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"allocations": {
                   Row: {
                     "amount_net": number,"company_id": string,"created_at": string,"id": string,"project_id": string,"share_bp": number,"transaction_id": string,"updated_at": string
                   }
@@ -112,6 +131,44 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "company_integrations_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"company_invites": {
+                  Row: {
+                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"id": string,"invited_by": string | null,"role": string,"status": string
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"id"?: string,"invited_by"?: string | null,"role": string,"status"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_invites_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"company_members": {
+                  Row: {
+                    "company_id": string,"created_at": string,"id": string,"invited_by": string | null,"role": string,"updated_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_members_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "companies"
@@ -894,7 +951,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "answer_push_prompt":
+            "accept_invite":
+{ Args: { "p_invite_id": string }; Returns: Json
+                           },
+"answer_push_prompt":
 { Args: { "p_yes": boolean }; Returns: Json
                            },
 "approve_review_item":
@@ -907,6 +967,9 @@ isOneToOne: false
                            },
 "bump_mcp_rate":
 { Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
+                           },
+"cancel_invite":
+{ Args: { "p_invite_id": string }; Returns: Json
                            },
 "claim_connector_refreshes":
 { Args: { "p_limit": number }; Returns: {
@@ -939,6 +1002,9 @@ isOneToOne: false
                            },
 "create_manual_entry":
 { Args: { "p_category_id"?: string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id"?: string,"p_vat_exempt"?: boolean }; Returns: string
+                           },
+"decline_invite":
+{ Args: { "p_invite_id": string }; Returns: Json
                            },
 "delete_category":
 { Args: { "p_category_id": string }; Returns: Json
@@ -993,6 +1059,9 @@ isOneToOne: false
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
                            },
+"invite_member":
+{ Args: { "p_email": string,"p_role"?: string }; Returns: Json
+                           },
 "jev_finish_usage":
 { Args: { "p_calls": number,"p_company": string,"p_failed"?: number,"p_input_tokens"?: number,"p_output_tokens"?: number,"p_run": string,"p_tagged"?: number }; Returns: undefined
                            },
@@ -1042,6 +1111,9 @@ isOneToOne: false
               "company_id": string,"id": number
             }[]
                            },
+"list_my_companies":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "list_project_category":
 { Args: { "p_basis"?: string,"p_category": string,"p_currency"?: string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
                            },
@@ -1049,6 +1121,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "list_skipped_review":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"list_team":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "list_unpaid":
@@ -1107,6 +1182,9 @@ isOneToOne: false
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
                            },
+"mcp_invite_member":
+{ Args: { "p_email": string,"p_idempotency_key": string,"p_role": string }; Returns: Json
+                           },
 "mcp_jev_accuracy":
 { Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
                            },
@@ -1124,6 +1202,9 @@ isOneToOne: false
                            },
 "mcp_move_category_lines":
 { Args: { "p_from": string,"p_idempotency_key": string,"p_into": string }; Returns: Json
+                           },
+"mcp_remove_member":
+{ Args: { "p_idempotency_key": string,"p_user_id": string }; Returns: Json
                            },
 "mcp_rename_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_name": string }; Returns: Json
@@ -1176,6 +1257,9 @@ isOneToOne: false
 "mcp_set_loan_rate":
 { Args: { "p_annual_rate_ppm": number,"p_effective_date": string,"p_idempotency_key": string,"p_loan_id": string }; Returns: Json
                            },
+"mcp_set_member_role":
+{ Args: { "p_idempotency_key": string,"p_role": string,"p_user_id": string }; Returns: Json
+                           },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
                            },
@@ -1215,6 +1299,9 @@ isOneToOne: false
 "move_category_lines":
 { Args: { "p_from": string,"p_into": string }; Returns: Json
                            },
+"my_invites":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "note_auth_failure":
 { Args: { "p_address": string }; Returns: Json
                            },
@@ -1232,6 +1319,9 @@ isOneToOne: false
                            },
 "note_sync_failure":
 { Args: { "p_code": string,"p_company": string }; Returns: string
+                           },
+"owner_company_for":
+{ Args: { "p_hint"?: string,"p_user": string }; Returns: string
                            },
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
@@ -1261,11 +1351,17 @@ isOneToOne: false
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
                            },
+"remove_member":
+{ Args: { "p_user_id": string }; Returns: Json
+                           },
 "rename_category":
 { Args: { "p_category_id": string,"p_name": string }; Returns: Json
                            },
 "rename_company":
 { Args: { "p_company_id": string,"p_name": string }; Returns: Json
+                           },
+"reopen_invite":
+{ Args: { "p_invite_id": string }; Returns: Json
                            },
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
@@ -1339,6 +1435,9 @@ isOneToOne: false
 "set_invoice_paid":
 { Args: { "p_id": string,"p_paid": boolean }; Returns: Json
                            },
+"set_member_role":
+{ Args: { "p_role": string,"p_user_id": string }; Returns: Json
+                           },
 "set_notification_prefs":
 { Args: { "p_evening_reminder"?: boolean,"p_new_transaction"?: boolean,"p_weekly_summary"?: boolean }; Returns: Json
                            },
@@ -1364,10 +1463,13 @@ isOneToOne: false
 { Args: { "p_company": string }; Returns: undefined
                            },
 "store_mcp_credential":
-{ Args: { "p_expires_at": string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
+{ Args: { "p_expires_at": string,"p_hint"?: string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
                            },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"switch_company":
+{ Args: { "p_company_id": string }; Returns: Json
                            },
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
