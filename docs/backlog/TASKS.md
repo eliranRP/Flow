@@ -4,7 +4,7 @@ Open tasks only. How to claim and finish a task is in the [backlog guide](README
 
 Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI change, design review), `PLAN FIRST` (plan and mockup, owner approval before any build), `BUG`, `MCP` (flow-mcp work), `BACKLOG NIT` (reviewer follow-ups, batch several per PR).
 
-Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `blocked`, `done`.
+Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
 Last full sync: 2026-10-07.
 
@@ -28,7 +28,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake.
+Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id | Title | Type | Status |
 | --- | --- | --- | --- | --- |
@@ -577,12 +577,6 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** done (#111) · **Depends on:** —
 - **What:** Rows grouped by day headers (today, yesterday, date), a round initials avatar, the counterparty in bold with the payment method under it, the amount at the end with small cents, income in green, a pending chip, dense rows without card borders.
 - **Acceptance:** mockup approved; design review.
-
-<a id="flow-306"></a>
-### FLOW-306 · Invoice photo capture
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
-- **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
-- **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
 
 <a id="flow-307"></a>
 ### FLOW-307 · Large amounts on the transaction detail at 320px
@@ -1330,6 +1324,20 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** MCP · **Status:** blocked on the owner's approval · **Depends on:** FLOW-101 (done, #70)
 - **What:** Data work for the MCP/data agent, no code: re-check company totals after FLOW-101; hide default loan categories a company doesn't use (the interest category is the target for split interest, so check after PR B); move deposit and closing returns filed as refunds into a kept-out category if the owner approves.
 - **Acceptance:** the data agent reports before and after totals to the coordinator.
+
+## Future features
+
+Features the owner parked for later. Nobody claims, plans, or builds them, and the lane manager doesn't schedule them, until the owner brings one back; then it moves to its area and the priority queue with a new status.
+
+| Id | Title | Parked |
+| --- | --- | --- |
+| [FLOW-306](#flow-306) | Invoice photo capture | 2026-10-09 |
+
+<a id="flow-306"></a>
+### FLOW-306 · Invoice photo capture
+- **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09; the A/B mockup card waits until the owner brings it back) · **Depends on:** —
+- **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
+- **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
 
 ## Done
 
