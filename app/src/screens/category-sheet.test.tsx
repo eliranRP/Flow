@@ -80,22 +80,23 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
   it("orders the rows and keeps delete last", async () => {
     const sheet = await openSheet("חומרים");
     const names = within(sheet).getAllByRole("button").map((button) => button.getAttribute("aria-label") ?? button.textContent);
-    const move = names.findIndex((name) => name.includes("העברת כל התנועות"));
-    const merge = names.findIndex((name) => name.includes("מיזוג לקטגוריה אחרת"));
+    const move = names.findIndex((name) => name.includes("העברה לקטגוריה אחרת"));
     const hide = names.findIndex((name) => name.includes("הסתרה"));
     const remove = names.findIndex((name) => name.includes("מחיקה"));
     expect(move).toBeGreaterThan(-1);
-    expect(move).toBeLessThan(merge);
-    expect(merge).toBeLessThan(hide);
+    expect(move).toBeLessThan(hide);
     expect(hide).toBeLessThan(remove);
-    expect(within(sheet).getByText("42 תנועות עוברות לקטגוריה אחרת. חומרים נשארת.")).toBeInTheDocument();
+    // FLOW-341: one move row, and no row carries a sentence.
+    expect(names.filter((name) => name.includes("מיזוג"))).toEqual([]);
+    expect(sheet.querySelectorAll(".t-hint")).toHaveLength(0);
     expect(within(sheet).getByRole("switch", { name: "נספרת בשיפוץ" })).toBeChecked();
   });
 
   it("moves all lines on one tap, then ביטול undoes that move", async () => {
     const sheet = await openSheet("חומרים");
-    fireEvent.click(within(sheet).getByRole("button", { name: /העברת כל התנועות/ }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
     const picker = await screen.findByRole("dialog", { name: "העברת 42 תנועות אל" });
+    expect(within(picker).getByRole("switch", { name: "להסתיר את חומרים" })).not.toBeChecked();
     expect(within(picker).queryByRole("button", { name: /תקבול/ })).not.toBeInTheDocument();
     expect(within(picker).queryByRole("button", { name: /^חומרים/ })).not.toBeInTheDocument();
     expect(within(picker).queryByRole("button", { name: /תשלומי הלוואה/ })).not.toBeInTheDocument();
@@ -104,6 +105,42 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     expect(await screen.findByText("42 תנועות הועברו מחומרים אל קבלנים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(calls("undo_category_move")).toEqual([{ p_move_id: "m1" }]); });
+  });
+
+  it("merges instead when the picker's hide switch is on (FLOW-341)", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
+    const picker = await screen.findByRole("dialog", { name: "העברת 42 תנועות אל" });
+    fireEvent.click(within(picker).getByRole("switch", { name: "להסתיר את חומרים" }));
+    fireEvent.click(within(picker).getByRole("button", { name: /קבלנים/ }));
+    const confirm = await screen.findByRole("dialog", { name: "למזג את הקטגוריה?" });
+    expect(within(confirm).getByText("חומרים ← קבלנים")).toBeInTheDocument();
+    expect(within(confirm).getByText("התנועות עוברות אל היעד, וחומרים מוסתרת. אי אפשר להפריד אחר כך.")).toBeInTheDocument();
+    expect(calls("move_category_lines")).toEqual([]);
+    // A merge is not a delete: no bin on its button.
+    expect(within(confirm).getByRole("button", { name: "מיזוג" }).querySelector("svg")).toBeNull();
+    fireEvent.click(within(confirm).getByRole("button", { name: "מיזוג" }));
+    await waitFor(() => { expect(calls("merge_category")).toEqual([{ p_from: "c1", p_into: "c2" }]); });
+  });
+
+  it("confirms a hide with a neutral button, since a hide can be undone (FLOW-341)", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: "הסתרה" }));
+    const confirm = await screen.findByRole("dialog", { name: "להסתיר את הקטגוריה?" });
+    const button = within(confirm).getByRole("button", { name: "הסתרה" });
+    expect(button.querySelector("svg")).toBeNull();
+    expect(button.className).not.toMatch(/danger/);
+  });
+
+  it("an empty category can only merge, with no switch", async () => {
+    const sheet = await openSheet("אחר");
+    fireEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
+    const picker = await screen.findByRole("dialog", { name: "מיזוג אל" });
+    expect(within(picker).queryByRole("switch")).not.toBeInTheDocument();
+    // Only a loan category's picker lists the built-in loan categories.
+    expect(within(picker).queryByRole("button", { name: /תשלומי הלוואה/ })).not.toBeInTheDocument();
+    fireEvent.click(within(picker).getByRole("button", { name: /קבלנים/ }));
+    expect(await screen.findByRole("dialog", { name: "למזג את הקטגוריה?" })).toBeInTheDocument();
   });
 
   it("confirms a delete with the counts, then ביטול restores the category", async () => {
@@ -132,7 +169,6 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
 
   it("an empty category has no count, no split line and no move link", async () => {
     const sheet = await openSheet("אחר");
-    expect(within(sheet).getByRole("button", { name: /העברת כל התנועות/ })).toBeDisabled();
     fireEvent.click(within(sheet).getByRole("button", { name: "מחיקה" }));
     const confirm = await screen.findByRole("dialog", { name: "למחוק את הקטגוריה?" });
     expect(within(confirm).getByText("אחר · אין תנועות")).toBeInTheDocument();
@@ -174,7 +210,7 @@ describe("category sheet: rename", () => {
     const sheet = await openSheet("חומרים");
     const names = within(sheet).getAllByRole("button").map((button) => button.getAttribute("aria-label") ?? button.textContent);
     const rename = names.findIndex((name) => name.includes("שינוי שם"));
-    const move = names.findIndex((name) => name.includes("העברת כל התנועות"));
+    const move = names.findIndex((name) => name.includes("העברה לקטגוריה אחרת"));
     expect(rename).toBeGreaterThan(-1);
     expect(rename).toBeLessThan(move);
   });

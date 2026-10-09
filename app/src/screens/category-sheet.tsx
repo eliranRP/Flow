@@ -5,7 +5,6 @@ import {
   deleteConsequence,
   deleteDetail,
   deleteItem,
-  moveHint,
   moveTitle,
 } from "../category-copy";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -18,7 +17,10 @@ import { CategoryGroupSheet, groupNames } from "./category-group";
 import { CategoryRenameSheet } from "./category-rename";
 import { KEPT_OUT } from "./screen-shared";
 
-/** FLOW-405 + FLOW-404: the sheet a category's ⋯ opens in Settings → Categories, and the move and delete it starts. */
+/**
+ * FLOW-405 + FLOW-404: the sheet a category's ⋯ opens in Settings → Categories, and the move and delete it starts.
+ * FLOW-341: one move row and no hints; the picker's switch turns the move into a merge.
+ */
 
 export type ManagedCategory = CategoryRow & { count?: number };
 
@@ -55,12 +57,14 @@ export function CategoryMenuSheet({
   onClose: () => void;
   onPnl: (category: ManagedCategory) => void;
   onHide: (category: ManagedCategory) => void;
-  onMerge: (category: ManagedCategory) => void;
+  /** The picker's switch was on, or the category can only merge: the screen confirms the merge. */
+  onMerge: (from: ManagedCategory, into: ManagedCategory) => void;
   /** A preview or a viewer: says why and returns true, so nothing is written. */
   blocked: () => boolean;
   returnFocusRef: RefObject<HTMLElement | null>;
 }) {
   const [moveFrom, setMoveFrom] = useState<ManagedCategory | null>(null);
+  const [hideAfter, setHideAfter] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ManagedCategory | null>(null);
   const [renameTarget, setRenameTarget] = useState<ManagedCategory | null>(null);
   const [groupTarget, setGroupTarget] = useState<ManagedCategory | null>(null);
@@ -70,13 +74,16 @@ export function CategoryMenuSheet({
   const keptOut = category?.excluded_from_pnl === true;
   const income = category?.kind === "income";
   const hidden = category?.hidden === true;
+  // A loan category, a hidden one, or one with no lines has nothing to move on its own: it can only merge.
+  const mergeOnly = moveFrom != null && (moveFrom.loan_part != null || moveFrom.hidden || moveFrom.lines === 0);
   const targets = moveFrom == null
     ? []
-    // Same kind, visible, and not a built-in loan category: those take only loan payment parts.
-    : rows.filter((row) => row.id !== moveFrom.id && row.kind === moveFrom.kind && !row.hidden && row.loan_part == null);
+    // Same kind and visible. Only a loan category lists the built-in loan categories: those take only loan payment parts.
+    : rows.filter((row) => row.id !== moveFrom.id && row.kind === moveFrom.kind && !row.hidden && (moveFrom.loan_part != null || row.loan_part == null));
 
   function openMove(from: ManagedCategory) {
     onClose();
+    setHideAfter(false);
     setMoveFrom(from);
   }
 
@@ -99,7 +106,6 @@ export function CategoryMenuSheet({
             {loanLine == null && !income && !hidden ? (
               <Toggle
                 label="נספרת בשיפוץ"
-                hint="העלויות בקטגוריה נכנסות לשיפוץ ולהון המאולץ של כל פרויקט."
                 checked={countsAsRehab(category)}
                 busy={rehab.isPending}
                 onChange={(next) => {
@@ -119,9 +125,6 @@ export function CategoryMenuSheet({
                 <ListRow
                   variant="button"
                   title={keptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
-                  hint={keptOut ? "הסכומים ייספרו שוב כהכנסה או הוצאה." : "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה."}
-                  wrapHint
-                  describeHint
                   busy={pnlBusy}
                   onClick={() => {
                     if (pnlBusy || blocked()) return;
@@ -151,26 +154,11 @@ export function CategoryMenuSheet({
                   }}
                 />
               ) : null}
-              {loanLine == null && !hidden ? (
-                <ListRow
-                  variant="button"
-                  title="העברת כל התנועות"
-                  hint={moveHint(category.name, category.lines)}
-                  wrapHint
-                  describeHint
-                  disabled={category.lines === 0}
-                  clearHint
-                  onClick={() => { openMove(category); }}
-                />
-              ) : null}
               <ListRow
                 variant="button"
-                title="מיזוג לקטגוריה אחרת"
-                hint={`התנועות עוברות, ו${category.name} מוסתרת.`}
-                wrapHint
-                describeHint
+                title="העברה לקטגוריה אחרת"
                 disabled={pnlBusy}
-                onClick={() => { onMerge(category); }}
+                onClick={() => { openMove(category); }}
               />
               <ListRow
                 variant="button"
@@ -212,12 +200,20 @@ export function CategoryMenuSheet({
           setMoveFrom(null);
           return true;
         }}
-        title={moveTitle(moveFrom?.lines)}
+        title={mergeOnly ? "מיזוג אל" : moveTitle(moveFrom?.lines)}
         returnFocusRef={returnFocusRef}
       >
         {moveFrom == null ? null : (
           <div className="ui-stack ui-cat-sheet">
-            <p className="t-hint text-text-secondary">{`מ${moveFrom.name}. הקטגוריה נשארת ברשימה.`}</p>
+            {/* Above the list, so a long list never hides it before the pick. */}
+            {mergeOnly ? null : (
+              <Toggle
+                label={`להסתיר את ${moveFrom.name}`}
+                checked={hideAfter}
+                disabled={move.isPending}
+                onChange={setHideAfter}
+              />
+            )}
             <List>
               {targets.map((target) => (
                 <ListRow
@@ -228,7 +224,14 @@ export function CategoryMenuSheet({
                   busy={move.isPending && move.variables.into.id === target.id}
                   disabled={move.isPending}
                   onClick={() => {
-                    if (move.isPending || blocked()) return;
+                    if (move.isPending) return;
+                    if (mergeOnly || hideAfter) {
+                      // The merge confirm says what happens, and checks the write gate on its own button.
+                      setMoveFrom(null);
+                      onMerge(moveFrom, target);
+                      return;
+                    }
+                    if (blocked()) return;
                     move.mutate({ from: { id: moveFrom.id, name: moveFrom.name }, into: { id: target.id, name: target.name } });
                   }}
                 />
@@ -268,6 +271,7 @@ export function CategoryMenuSheet({
           onClick: () => {
             const from = deleteTarget;
             setDeleteTarget(null);
+            setHideAfter(false);
             setMoveFrom(from);
           },
         } : undefined}

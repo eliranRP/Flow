@@ -73,11 +73,24 @@ export const MovePicker: Story = {
   render: () => <Screen />,
   play: async ({ canvasElement }) => {
     const sheet = await openMenu(canvasElement, "חומרים");
-    await userEvent.click(within(sheet).getByRole("button", { name: /העברת כל התנועות/ }));
+    await userEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
     await body(canvasElement).findByRole("dialog", { name: "העברת 42 תנועות אל" });
   },
 };
 export const MovePickerDark: Story = { ...MovePicker, name: "Move all lines, dark", ...dark };
+
+export const MoveAndHide: Story = {
+  name: "Move with the hide switch on: confirm the merge",
+  render: () => <Screen />,
+  play: async ({ canvasElement }) => {
+    const sheet = await openMenu(canvasElement, "חומרים");
+    await userEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
+    const picker = await body(canvasElement).findByRole("dialog", { name: "העברת 42 תנועות אל" });
+    await userEvent.click(within(picker).getByRole("switch", { name: "להסתיר את חומרים" }));
+    await userEvent.click(within(picker).getByRole("button", { name: /קבלנים/ }));
+    await body(canvasElement).findByRole("dialog", { name: "למזג את הקטגוריה?" });
+  },
+};
 
 export const DeleteConfirm: Story = {
   name: "Delete, a category with lines",
