@@ -201,7 +201,7 @@ async function syncCompany(
     if (claim.data == null || claim.data.length === 0) return { ok: true, lines: 0, skipped: true };
   }
   // Release the claim this run took on every exit, including throws that skip
-  // note_connector_failure, so Settings does not show syncing until the 15-minute cutoff.
+  // note_connector_failure, so Settings does not show syncing until the 10-minute cutoff.
   try {
     let noted = false;
     const noteOnce = async (code: string) => {

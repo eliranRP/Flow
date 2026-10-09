@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resetSetupServerForTests } from "./server-store";
+import { resetSetupServerForTests, setupUploadsSettled } from "./server-store";
 import { emptySetupStore, loadSetupStore, readSetupStore, writeSetupStore } from "./storage";
 
 const server = vi.hoisted(() => ({
@@ -60,8 +60,9 @@ describe("setup flags on the server", () => {
   it("uploads flags this phone kept before the server had a row", async () => {
     localStorage.setItem(`flow.setup.${user}.${company}`, JSON.stringify(skippedTwo));
     await loadSetupStore(user, company);
+    await setupUploadsSettled();
     expect(server.upserts).toHaveLength(1);
-    expect(server.upserts[0]?.row).toMatchObject({ user_id: user, company_id: company, state: skippedTwo });
+    expect(server.upserts[0]?.row).toEqual({ user_id: user, company_id: company, state: skippedTwo });
     expect(server.upserts[0]?.options).toEqual({ onConflict: "user_id,company_id" });
   });
 
@@ -69,6 +70,7 @@ describe("setup flags on the server", () => {
     server.row = { state: { ...emptySetupStore(), run_started_at: "2026-10-01T00:00:00.000Z" } };
     writeSetupStore(user, company, skippedTwo);
     await loadSetupStore(user, company);
+    await setupUploadsSettled();
     expect(readSetupStore(user, company)).toEqual(skippedTwo);
     expect(server.upserts.at(-1)?.row).toMatchObject({ state: skippedTwo });
   });
@@ -87,6 +89,7 @@ describe("setup flags on the server", () => {
     server.error = { message: "offline" };
     await loadSetupStore(user, company);
     writeSetupStore(user, company, { ...emptySetupStore(), run_started_at: "2026-10-09T02:00:00.000Z" });
+    await setupUploadsSettled();
     expect(server.upserts).toHaveLength(0);
   });
 
@@ -96,10 +99,34 @@ describe("setup flags on the server", () => {
     expect(server.upserts).toHaveLength(0);
   });
 
-  it("uploads every write once a company exists, and none before", () => {
+  it("uploads every write once a company exists, and none before", async () => {
     writeSetupStore(user, null, skippedTwo);
+    await setupUploadsSettled();
     expect(server.upserts).toHaveLength(0);
     writeSetupStore(user, company, skippedTwo);
+    await setupUploadsSettled();
     expect(server.upserts).toHaveLength(1);
+  });
+
+  it("a write on a page that never read the row merges into it instead of wiping it", async () => {
+    // A cold /review?setup=1 on a phone with no local flags: the other phone closed the card and skipped step 2.
+    server.row = { state: { ...skippedTwo, card_dismissed_at: "2026-10-09T03:00:00.000Z" } };
+    writeSetupStore(user, company, { ...emptySetupStore(), sample_review_at: "2026-10-09T04:00:00.000Z" });
+    await setupUploadsSettled();
+    const merged = { ...skippedTwo, card_dismissed_at: "2026-10-09T03:00:00.000Z", sample_review_at: "2026-10-09T04:00:00.000Z" };
+    expect(server.upserts.map((u) => u.row.state)).toEqual([merged]);
+    expect(readSetupStore(user, company)).toEqual(merged);
+  });
+
+  it("sends the newest copy last when writes come close together", async () => {
+    server.row = { state: skippedTwo };
+    writeSetupStore(user, company, { ...skippedTwo, confirmed_lists_at: "2026-10-09T05:00:00.000Z" });
+    writeSetupStore(user, company, { ...readSetupStore(user, company), installed_at: "2026-10-09T05:01:00.000Z" });
+    await setupUploadsSettled();
+    expect(server.upserts.at(-1)?.row.state).toMatchObject({
+      confirmed_lists_at: "2026-10-09T05:00:00.000Z",
+      installed_at: "2026-10-09T05:01:00.000Z",
+      skipped: { "2": "2026-10-09T00:01:00.000Z" },
+    });
   });
 });

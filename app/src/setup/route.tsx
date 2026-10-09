@@ -104,9 +104,10 @@ export function SetupIndex() {
   const search = usePreviewSearch();
   const { status, session } = useAuth();
   const facts = useSetupFacts(!preview && status === "authed");
-  const { store } = useSetupStore(session?.user.id ?? null, facts.companyId);
+  const { store, ready } = useSetupStore(session?.user.id ?? null, facts.companyId);
   if (preview) return <Navigate to={`/${search}`} replace />;
-  if (status === "loading" || !facts.ready) return null;
+  // Wait for the server copy too (FLOW-506), so a new phone opens the step the owner reached.
+  if (status === "loading" || !facts.ready || !ready) return null;
   return <Navigate to={indexTarget(store, facts)} replace />;
 }
 
@@ -119,12 +120,12 @@ export function SetupStepScreen() {
   const { status, session } = useAuth();
   const userId = session?.user.id ?? null;
   const facts = useSetupFacts(!preview && status === "authed" && !viewer.viewer);
-  const { store } = useSetupStore(userId, facts.companyId);
+  const { store, ready } = useSetupStore(userId, facts.companyId);
   if (preview) return <Navigate to={`/${search}`} replace />;
   if (step == null) return <Navigate to="/setup" replace />;
   if (!viewer.ready || status === "loading") return null;
   if (viewer.viewer) return <Navigate to={`/${search}`} replace />;
-  if (!facts.ready) return null;
+  if (!facts.ready || !ready) return null;
   if (step === 0 && facts.companyId != null && !(userId && companyCreatedThisRun(userId))) {
     return <Navigate to={indexTarget(store, facts)} replace />;
   }
