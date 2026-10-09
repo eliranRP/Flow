@@ -346,11 +346,7 @@ export function LoanTransactionSplit({
   if (!on || writesHeld || split != null) return null;
   if (query.isLoading) {
     if (!keyedPrincipal) return null;
-    return (
-      <List className="ui-loan-skel">
-        <ListRow variant="skeleton" />
-      </List>
-    );
+    return <LoanMatchSkeleton />;
   }
   if (query.isError) {
     if (!keyedPrincipal) return null;
@@ -373,7 +369,7 @@ export function LoanTransactionSplit({
   const offered = loaded.loans.filter((item) => loanTakesPaymentOn(item, docDate) && item.kind !== "demand");
   const lineCurrency = loaded.currency;
   const currencyLoans = offered.filter((item) => item.currency === lineCurrency);
-  const matchHint = currencyLoans.length === 1 ? currencyLoans[0]?.name : undefined;
+  const matchHint = loanMatchHint(currencyLoans, lineCurrency);
   const savingId = match.isPending ? match.variables : null;
   return (
     <LoanMatchOffer
@@ -400,6 +396,25 @@ export function LoanTransactionSplit({
       }}
     />
   );
+}
+
+/** The שיוך row while the loans load, at the row's height (FLOW-115). */
+export function LoanMatchSkeleton() {
+  return (
+    <List className="ui-loan-skel">
+      <ListRow variant="skeleton" />
+    </List>
+  );
+}
+
+/**
+ * FLOW-115: the שיוך row always has a hint, so it keeps the skeleton's height when the read lands:
+ * the lone loan's name, else how many loans there are, else that none is in the line's currency.
+ */
+export function loanMatchHint(loans: ReadonlyArray<{ name: string }>, lineCurrency: string): string {
+  if (loans.length === 1) return loans[0]?.name ?? "";
+  if (loans.length === 0) return `אין הלוואה ${currencyWord(lineCurrency)}`;
+  return `${String(loans.length)} הלוואות`;
 }
 
 export function useLoanBalances(companyId: string | null) {

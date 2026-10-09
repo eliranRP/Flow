@@ -1,0 +1,1 @@
+The transaction card's "שיוך להלוואה" row jumped about 23px when the loans finished loading: its placeholder was the height of a row without a hint, and the row had a hint only when one loan matched. The row now always has a hint (the loan's name, "2 הלוואות", or "אין הלוואה בדולר"), and the placeholder is that row's height.

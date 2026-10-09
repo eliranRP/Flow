@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
+import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanMatchHint } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -481,5 +481,21 @@ describe("LoanTransactionSplit", () => {
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
+  });
+
+  it("counts the loans on the שיוך row when there are two (FLOW-115)", async () => {
+    db.loans = [...db.loans, { ...db.loans[0], id: "loan-2", name: "הלוואה שנייה" }];
+    db.balances = [...db.balances, { loan_id: "loan-2", balance_minor: 10_000_000 }];
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).getByText("2 הלוואות")).toBeInTheDocument();
+  });
+});
+
+describe("loanMatchHint (FLOW-115)", () => {
+  it("always gives the row a hint", () => {
+    expect(loanMatchHint([{ name: "משכנתא" }], "ILS")).toBe("משכנתא");
+    expect(loanMatchHint([{ name: "א" }, { name: "ב" }, { name: "ג" }], "ILS")).toBe("3 הלוואות");
+    expect(loanMatchHint([], "USD")).toBe("אין הלוואה בדולר");
   });
 });
