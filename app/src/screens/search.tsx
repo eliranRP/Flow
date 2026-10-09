@@ -233,6 +233,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
               match={typed}
               details={searchRowDetails(row)}
               realCents
+              setAside={row.kept_out}
               pending={row.line_status === "pending"}
               agorot={row.amount_net}
               currency={row.currency}

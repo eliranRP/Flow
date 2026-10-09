@@ -80,6 +80,7 @@ export function ProjectTransactions({
           dateOf={(txn) => txn.doc_date}
           amountOf={projectMonthAmount}
           complete={held.length < PROJECT_RECENT_CAP}
+          net
           renderRow={(txn) => {
             const row = projectLineRow(txn);
             return (
@@ -91,6 +92,7 @@ export function ProjectTransactions({
                 sign={row.sign}
                 currency={txn.currency ?? "ILS"}
                 realCents
+                setAside={txn.kept_out === true}
                 source={rowSource(txn.source)}
                 href={`/transactions/${txn.id}${search}`}
                 state={txnListState(heldIds, txn.id, listFrom)}

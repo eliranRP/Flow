@@ -61,15 +61,17 @@ describe("project recent list months", () => {
       txn("c", "2026-09-08", -40_000n, "expense", "USD"),
       txn("d", "2026-08-20", -220_000n, "expense"),
     ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000, הוצאות −₪3,500, הוצאות −$400");
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200");
+    expect(totalsOf("ספטמבר 2026")).toBe("נטו ₪8,500");
+    // FLOW-340 C: one labeled net per month, as Search; another currency on a muted line under it.
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-more")?.textContent).toBe("ועוד −$400 בדולר");
+    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪2,200");
   });
 
   it("shows only the name of the last month when get_project hit its 40-line cap", () => {
     const rows = Array.from({ length: 40 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
     wrap(<ProjectDetailScreen section="transactions" sample={project(rows)} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪2,000");
+    expect(totalsOf("ספטמבר 2026")).toBe("נטו −₪2,000");
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
@@ -81,8 +83,11 @@ describe("project recent list months", () => {
       { ...txn("d", "2026-08-20", 300_000n, "income"), kept_out: true },
       txn("e", "2026-08-18", -220_000n, "expense"),
     ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000, הוצאות −₪3,500");
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200");
+    expect(totalsOf("ספטמבר 2026")).toBe("נטו ₪8,500");
+    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪2,200");
+    // The owner's pick C: a kept-out row fades whole; a row that counts does not.
+    expect(screen.getByRole("link", { name: /^Line b/ })).toHaveClass("ui-row-set-aside");
+    expect(screen.getByRole("link", { name: /^Line a/ })).not.toHaveClass("ui-row-set-aside");
   });
 
   it("adds this project's parts of a line split by category, with the line's sign", () => {
@@ -92,8 +97,8 @@ describe("project recent list months", () => {
       txn("c", "2026-09-10", -100_000n, "expense"),
       { ...txn("d", "2026-08-20", -500_000n, "expense"), parts_minor: null },
     ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪3,000, הוצאות −₪9,000");
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");
+    expect(totalsOf("ספטמבר 2026")).toBe("נטו −₪6,000");
+    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪5,000");
   });
 
   it("leads a split line's row with this project's part, and names the whole line quietly (owner, 2026-10-09)", () => {
@@ -118,8 +123,8 @@ describe("project recent list months", () => {
       // An income line whose share here is below zero: money goes out.
       { ...txn("c", "2026-08-20", 1_000_000n, "income"), parts_minor: -200_000n },
     ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪540");
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,000");
+    expect(totalsOf("ספטמבר 2026")).toBe("נטו ₪540");
+    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪2,000");
   });
 
   it("marks a kept-out line on the row and opens the lines without an extra tap (FLOW-411)", () => {
@@ -136,7 +141,7 @@ describe("project recent list months", () => {
     const rows = Array.from({ length: 39 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
     wrap(<ProjectDetailScreen section="transactions" sample={project(rows)} />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪1,900");
+    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪1,900");
   });
 });
 
