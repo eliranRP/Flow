@@ -16,9 +16,9 @@ export function ErrorState({ offline, onRetry }: ErrorStateProps) {
         title={offline ? "אין חיבור לאינטרנט" : "לא הצלחנו לטעון את הנתונים"}
         body={offline ? "בדקו את החיבור ונסו שוב. שום דבר לא נמחק." : "נסו שוב בעוד רגע"}
         action={
+          // The tint action every empty and error state uses (DESIGN-RULES §2.8, FLOW-334), not a fill.
           <Button
             variant="pill"
-            className="ui-btn-retry"
             icon={<RefreshIcon />}
             onClick={() => {
               onRetry();

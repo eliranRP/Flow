@@ -253,7 +253,8 @@ function ReviewerProject() {
 function ReviewerTransaction({ path }: { path: string }) {
   const id = path.split("/").pop() ?? "";
   const filed = useSyncExternalStore(subscribeReviewerFiled, reviewerFiledView, reviewerFiledView);
-  const row = filed.find((item) => item.id === id);
+  // FLOW-334: "1" stands for the first sample row, like the dev server's /transactions/1?preview=1.
+  const row = filed.find((item) => item.id === id) ?? (id === "1" ? filed[0] : undefined);
   if (!row) {
     return <ScreenHeader title="תנועה" subtitle="השורה לא ברשימת הדוגמה" backTo="/reviewer/filed" />;
   }
