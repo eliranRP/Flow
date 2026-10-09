@@ -33,7 +33,7 @@ async function renderAt(path: string) {
 describe("App", () => {
   it("shows the first-run Home in preview, without a fake profit", async () => {
     await renderAt("/?preview=1");
-    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("App", () => {
     }
     expect(screen.queryByText(/צילום חשבונית/)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),
+      screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק", hidden: true }),
     ).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "ניווט ראשי", hidden: true })).toBeInTheDocument();
     await waitFor(() => {
@@ -150,7 +150,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
     await waitFor(() => {
       expect(document.activeElement).toHaveAttribute("aria-label", "הוספה");
     });
@@ -162,7 +162,7 @@ describe("App", () => {
     expect(await screen.findByRole("dialog", { name: "הוספה" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" }),
+      screen.queryByRole("heading", { name: "כאן יופיע הרווח של העסק" }),
     ).not.toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {

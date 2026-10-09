@@ -134,7 +134,7 @@ describe("project recent list months", () => {
     ])} />);
     expect(screen.queryByText("תנועות אחרונות")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "כל הקטגוריות" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Line a/ })).toHaveTextContent(/מחוץ לרווח · ציוד/);
+    expect(screen.getByRole("link", { name: /Line a/ })).toHaveTextContent(/לא נספר ברווח · ציוד/);
   });
 
   it("totals the last month when the list is under the cap", () => {

@@ -8,6 +8,7 @@ import { JEV_HINT } from "./copy";
 import { SetupStep } from "./shell";
 import { StepBusiness, StepInstall, StepSumit } from "./steps";
 import { StoryRoute } from "../ui/story-route";
+import { NO_PREFS } from "../push";
 
 const meta = {
   title: "Screens/Setup",
@@ -89,12 +90,18 @@ export const ConnectStep320: Story = {
 };
 
 /** FLOW-506: step 5 draws the install screen's numbered steps. */
-const installStep = (mode: "iphone" | "android-steps") => ({
+const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
   args: SmartTag.args,
   parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/5">
-      <StepInstall initialMode={mode} onBack={() => undefined} onSkip={() => undefined} onFinish={() => undefined} />
+      <StepInstall
+        initialMode={mode}
+        pushSample={reminder ? { prefs: NO_PREFS, support: "ok" } : undefined}
+        onBack={() => undefined}
+        onSkip={() => undefined}
+        onFinish={() => undefined}
+      />
     </StoryRoute>
   ),
 });
@@ -105,5 +112,18 @@ export const InstallStepIphoneDark: Story = { ...installStep("iphone"), name: "I
 export const InstallStepIphone320: Story = {
   ...installStep("iphone"),
   name: "Install step, iPhone, 320",
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
+};
+
+/** FLOW-502: step 5 offers the review card's evening reminder once. */
+export const InstallStepReminder: Story = { ...installStep("android-steps", true), name: "Install step, evening reminder" };
+export const InstallStepReminderDark: Story = {
+  ...installStep("android-steps", true),
+  name: "Install step, evening reminder, dark",
+  globals: { theme: "dark" },
+};
+export const InstallStepReminder320: Story = {
+  ...installStep("android-steps", true),
+  name: "Install step, evening reminder, 320",
   parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };

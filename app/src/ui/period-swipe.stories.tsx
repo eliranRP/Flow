@@ -19,7 +19,7 @@ function Demo({ start }: { start: "months3" | "all" }) {
         <PeriodBar period={period} onChange={setPeriod} />
       </div>
       <PeriodSwipe period={period} onChange={setPeriod}>
-        <Hero label={`רווח נקי, ${windowLabel(period)}`} agorot={1_840_000n} explanation="הכנסות פחות הוצאות" />
+        <Hero label={`רווח, ${windowLabel(period)}`} agorot={1_840_000n} explanation="הכנסות פחות הוצאות" />
       </PeriodSwipe>
     </TopBand>
   );

@@ -15,7 +15,6 @@ import { Toggle } from "../ui/toggle";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
 import { CategoryGroupSheet, groupNames } from "./category-group";
 import { CategoryRenameSheet } from "./category-rename";
-import { KEPT_OUT } from "./screen-shared";
 
 /**
  * FLOW-405 + FLOW-404: the sheet a category's ⋯ opens in Settings → Categories, and the move and delete it starts.
@@ -128,7 +127,7 @@ export function CategoryMenuSheet({
               {loanLine == null ? (
                 <ListRow
                   variant="button"
-                  title={keptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
+                  title={keptOut ? "לספור ברווח" : "לא לספור ברווח"}
                   busy={pnlBusy}
                   onClick={() => {
                     if (pnlBusy || blocked()) return;

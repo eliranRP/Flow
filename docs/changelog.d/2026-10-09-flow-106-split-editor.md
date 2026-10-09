@@ -1,0 +1,1 @@
+The loan picker has "חלוקה אחרת", which opens "חלוקת התשלום": split a loan payment by the schedule over 1 to 12 installments, take bank fees off the top and pick their category (and keep it on the loan), or type the lender's exact interest, escrow, principal and fees. Save waits until the parts add up to the payment (FLOW-106).

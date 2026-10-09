@@ -1,0 +1,1 @@
+- FLOW-502: setup step 5 offers the evening reminder once, with the same card as the review screen. Answering either one answers both. An iPhone tab is not asked on that step, which already teaches the Home Screen.

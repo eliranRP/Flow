@@ -195,7 +195,7 @@ describe("auth guard when Supabase is configured", () => {
       emit("SIGNED_IN", session);
     });
     await settle();
-    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "לאישור" })).not.toBeInTheDocument();
   });
 });
