@@ -599,6 +599,25 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"setup_states": {
+                  Row: {
+                    "company_id": string,"state": NonNullable<Json>,"updated_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"state"?: NonNullable<Json>,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"state"?: NonNullable<Json>,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "setup_states_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"split_rule_targets": {
                   Row: {
                     "company_id": string,"created_at": string,"id": string,"month": string | null,"project_id": string,"rule_id": string,"share_bp": number,"updated_at": string
