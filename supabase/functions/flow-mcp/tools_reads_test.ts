@@ -282,7 +282,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
   if (projects.structuredContent.ok) {
     assertEquals((projects.structuredContent.data as { basis: string }).basis, "invoiced");
   }
-  const cashProjects = await callTool("list_projects", {}, ["read"], rpc);
+  const cashProjects = await callTool("list_projects", { basis: "cash" }, ["read"], rpc);
   assertEquals(cashProjects.structuredContent.ok, true);
   if (cashProjects.structuredContent.ok) {
     assertEquals((cashProjects.structuredContent.data as { basis: string }).basis, "cash");
@@ -505,22 +505,22 @@ Deno.test("get_project passes a period, both dates or neither", async () => {
 });
 
 Deno.test("get_profit_months reads the company or one project by month", async () => {
-  const months = { basis: "cash", months: [{ month: "2026-09", by_currency: [{ currency: "ILS", income_minor: 100, expense_minor: 40, profit_minor: 60 }] }], by_currency: [] };
+  const months = { basis: "invoiced", months: [{ month: "2026-09", by_currency: [{ currency: "ILS", income_minor: 100, expense_minor: 40, profit_minor: 60 }] }], by_currency: [] };
   const { calls, rpc } = rpcOf((name, body) => name !== "get_profit_months"
     ? { status: 500, json: null }
     : body.p_project_id === PROJECT_B ? { status: 200, json: null } : { status: 200, json: months });
   const company = await callTool("get_profit_months", { from: "2026-07-01", to: "2026-09-30" }, ["read"], rpc);
   assertEquals(company.isError, false);
   if (company.structuredContent.ok) assertEquals(company.structuredContent.data, months);
-  const project = await callTool("get_profit_months", { project_id: PROJECT, basis: "invoiced" }, ["read"], rpc);
+  const project = await callTool("get_profit_months", { project_id: PROJECT, basis: "cash" }, ["read"], rpc);
   assertEquals(project.isError, false);
   const missing = await callTool("get_profit_months", { project_id: PROJECT_B }, ["read"], rpc);
   assertEquals(missing.isError, true);
   if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error.code, "not_found");
   assertEquals(calls.map((call) => call.body), [
-    { p_from: "2026-07-01", p_to: "2026-09-30", p_basis: "cash", p_project_id: null },
-    { p_from: null, p_to: null, p_basis: "invoiced", p_project_id: PROJECT },
-    { p_from: null, p_to: null, p_basis: "cash", p_project_id: PROJECT_B },
+    { p_from: "2026-07-01", p_to: "2026-09-30", p_basis: "invoiced", p_project_id: null },
+    { p_from: null, p_to: null, p_basis: "cash", p_project_id: PROJECT },
+    { p_from: null, p_to: null, p_basis: "invoiced", p_project_id: PROJECT_B },
   ]);
 });
 
@@ -566,19 +566,19 @@ Deno.test("get_project calls get_project with the id and each basis", async () =
   }
 });
 
-Deno.test("get_project defaults to the cash basis, like list_projects and get_totals", async () => {
+Deno.test("get_project defaults to the invoiced basis, like list_projects and get_totals (FLOW-103)", async () => {
   const { calls, rpc } = rpcOf((name) => name === "get_project" || name === "get_dashboard"
-    ? { status: 200, json: name === "get_project" ? PROJECT_FIXTURE : { projects: [], basis: "cash" } }
+    ? { status: 200, json: name === "get_project" ? PROJECT_FIXTURE : { projects: [], basis: "invoiced" } }
     : { status: 500, json: null });
   const project = await callTool("get_project", { id: PROJECT }, ["read"], rpc);
   const nullBasis = await callTool("get_project", { id: PROJECT, basis: null }, ["read"], rpc);
   await callTool("list_projects", {}, ["read"], rpc);
   assertEquals(project.isError, false);
   assertEquals(nullBasis.isError, false);
-  assertEquals(calls[0], { name: "get_project", body: { p_id: PROJECT, p_basis: "cash" } });
-  assertEquals(calls[1], { name: "get_project", body: { p_id: PROJECT, p_basis: "cash" } });
+  assertEquals(calls[0], { name: "get_project", body: { p_id: PROJECT, p_basis: "invoiced" } });
+  assertEquals(calls[1], { name: "get_project", body: { p_id: PROJECT, p_basis: "invoiced" } });
   assertEquals(calls[2]?.body.p_basis, calls[0]?.body.p_basis);
-  if (project.structuredContent.ok) assertEquals((project.structuredContent.data as { basis: string }).basis, "cash");
+  if (project.structuredContent.ok) assertEquals((project.structuredContent.data as { basis: string }).basis, "invoiced");
 });
 
 Deno.test("get_project rejects a bad id, a bad basis, and an extra argument before any read", async () => {
@@ -700,7 +700,7 @@ Deno.test("get_breakdown calls the group totals, then a group's lines, and check
   assertEquals(groups.isError, false);
   assertEquals(calls[0], {
     name: "get_breakdown",
-    body: { p_direction: "expense", p_from: null, p_to: null, p_group_by: "category", p_basis: "cash" },
+    body: { p_direction: "expense", p_from: null, p_to: null, p_group_by: "category", p_basis: "invoiced" },
   });
 
   const lines = await callTool("get_breakdown", {

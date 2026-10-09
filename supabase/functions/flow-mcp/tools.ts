@@ -82,7 +82,7 @@ export async function callTool(
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const body = await dashboard(rpc, from, to, basis);
     if (isFail(body)) return body;
@@ -95,7 +95,7 @@ export async function callTool(
   if (name === "get_project") {
     const projectId = args.id;
     if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
@@ -121,7 +121,7 @@ export async function callTool(
   if (name === "get_project_group") {
     const groupId = args.id;
     if (typeof groupId !== "string" || !UUID.test(groupId)) return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
@@ -135,7 +135,7 @@ export async function callTool(
     // The RPC returns null for an unknown id and for another company's group.
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
-    return ok(result.json as Review);
+    return ok({ ...(result.json as Review), basis });
   }
 
   if (name === "get_project_categories") {
@@ -158,7 +158,7 @@ export async function callTool(
     if (typeof to !== "string" && to != null) return to;
     if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
     if (from != null && to != null && monthsBetween(from, to) >= PROFIT_MONTHS_MAX) return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const projectId = args.project_id == null ? null : args.project_id;
     if (projectId != null && (typeof projectId !== "string" || !UUID.test(projectId))) return fail("validation", "validation");
@@ -167,7 +167,7 @@ export async function callTool(
     // The RPC returns null for a project of another company or an unknown one.
     if (result.json == null) return projectId == null ? fail("refused", READ_REFUSED) : fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
-    return ok(result.json as Review);
+    return ok({ ...(result.json as Review), basis });
   }
 
   if (name === "get_jev_status") {
@@ -250,7 +250,7 @@ export async function callTool(
     const level = args.level == null ? "category" : args.level;
     if (level !== "category" && level !== "parent") return fail("validation", "validation");
     if (level === "parent" && groupBy !== "category") return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
@@ -269,7 +269,7 @@ export async function callTool(
       if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
         return fail("refused", READ_REFUSED);
       }
-      return ok(result.json as Review);
+      return ok({ ...(result.json as Review), basis });
     }
     const group = args.group == null ? null : args.group;
     if (group != null && (typeof group !== "string" || group.length === 0 || group.length > 64)) return fail("validation", "validation");
@@ -289,6 +289,45 @@ export async function callTool(
       p_group_key: group,
       p_currency: currency,
       p_excluded: excluded,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok({ ...(result.json as Review), basis });
+  }
+
+  // FLOW-413 (decision 0168): money in and out per month, on the company's cash basis.
+  if (name === "get_cash_months") {
+    const months = args.months == null ? 6 : args.months;
+    if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 24) {
+      return fail("validation", "validation");
+    }
+    const result = await rpc("cash_months", { p_months: months });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(result.json as Review);
+  }
+
+  if (name === "get_cash_lines") {
+    // A month is YYYY-MM or any YYYY-MM-DD in it, as get_cash_months returns it.
+    const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
+    if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
+    const side = args.side;
+    if (side !== "in" && side !== "out" && side !== "excluded") return fail("validation", "validation");
+    const currency = args.currency ?? null;
+    if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
+    const limit = limitOf(args.limit, 40);
+    if (typeof limit !== "number") return limit;
+    if (limit === 0) return fail("validation", "validation");
+    const offset = offsetOf(args.offset);
+    if (typeof offset !== "number") return offset;
+    const result = await rpc("cash_month_lines", {
+      p_month: month,
+      p_side: side,
+      p_currency: currency,
       p_limit: limit,
       p_offset: offset,
     });
