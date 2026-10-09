@@ -44,7 +44,7 @@ test("search opens from the Projects header", async ({ page }) => {
 });
 
 test("a project's כל התנועות opens search with the project chip set", async ({ page }) => {
-  await page.goto("/e2e/project-detail?preview=1");
+  await page.goto("/e2e/project-detail?preview=1&section=transactions");
   await page.getByRole("link", { name: "כל התנועות" }).click();
   await expect(page).toHaveURL(/\/search\?preview=1&project=p1$/);
   await expect(page.getByRole("button", { name: "שיפוץ הרצל 12" })).toHaveAttribute("aria-pressed", "true");

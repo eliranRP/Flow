@@ -55,7 +55,7 @@ function totalsOf(month: string): string | null {
 
 describe("project recent list months", () => {
   it("totals stored-negative expenses with a minus, a missing currency as ₪, and USD apart", () => {
-    wrap(<ProjectDetailScreen sample={project([
+    wrap(<ProjectDetailScreen section="transactions" sample={project([
       txn("a", "2026-09-14", 1_200_000n, "income"),
       txn("b", "2026-09-10", -350_000n, "expense", "ILS"),
       txn("c", "2026-09-08", -40_000n, "expense", "USD"),
@@ -68,13 +68,13 @@ describe("project recent list months", () => {
   it("shows only the name of the last month when get_project hit its 40-line cap", () => {
     const rows = Array.from({ length: 40 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
-    wrap(<ProjectDetailScreen sample={project(rows)} />);
+    wrap(<ProjectDetailScreen section="transactions" sample={project(rows)} />);
     expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪2,000");
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
   it("leaves lines kept out of the P&L out of the month totals", () => {
-    wrap(<ProjectDetailScreen sample={project([
+    wrap(<ProjectDetailScreen section="transactions" sample={project([
       txn("a", "2026-09-14", 1_200_000n, "income"),
       { ...txn("b", "2026-09-12", 500_000n, "income"), kept_out: true },
       txn("c", "2026-09-10", -350_000n, "expense"),
@@ -86,7 +86,7 @@ describe("project recent list months", () => {
   });
 
   it("adds this project's parts of a line split by category, with the line's sign", () => {
-    wrap(<ProjectDetailScreen sample={project([
+    wrap(<ProjectDetailScreen section="transactions" sample={project([
       { ...txn("a", "2026-09-14", -1_200_000n, "expense"), parts_minor: 800_000n },
       { ...txn("b", "2026-09-12", 900_000n, "income"), parts_minor: 300_000n },
       txn("c", "2026-09-10", -100_000n, "expense"),
@@ -97,7 +97,7 @@ describe("project recent list months", () => {
   });
 
   it("takes a signed share as it comes: a reversal part is already minus (decision 0138)", () => {
-    wrap(<ProjectDetailScreen sample={project([
+    wrap(<ProjectDetailScreen section="transactions" sample={project([
       // A supplier refund filed as income: 70.00 left as income, 30.00 put back against expenses.
       { ...txn("a", "2026-09-14", 10_000n, "income"), parts_minor: 4_000n },
       // An expense line whose reversal parts outweigh its own on this project: money comes back.
@@ -110,7 +110,7 @@ describe("project recent list months", () => {
   });
 
   it("marks a kept-out line on the row and opens the lines without an extra tap (FLOW-411)", () => {
-    wrap(<ProjectDetailScreen sample={project([
+    wrap(<ProjectDetailScreen section="transactions" sample={project([
       { ...txn("a", "2026-09-14", -150_000n, "expense"), kept_out: true, category: "ציוד" },
       txn("b", "2026-08-12", -100_000n, "expense"),
     ])} />);
@@ -122,7 +122,7 @@ describe("project recent list months", () => {
   it("totals the last month when the list is under the cap", () => {
     const rows = Array.from({ length: 39 }, (_, index) =>
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
-    wrap(<ProjectDetailScreen sample={project(rows)} />);
+    wrap(<ProjectDetailScreen section="transactions" sample={project(rows)} />);
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪1,900");
   });
 });

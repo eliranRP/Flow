@@ -361,14 +361,15 @@ describe("viewer gates", () => {
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
       expect(document.querySelector(".ui-menu-slot")).toBeInstanceOf(HTMLElement);
     }],
-    ["V32", "the project overhead switch is disabled", () => {
+    ["V32", "the project overhead switch is not offered: it lives in the ⋯ menu a viewer has no button for (FLOW-340 C)", () => {
       viewer(
         <Routes>
           <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={project} />} />
         </Routes>,
         "/projects/p1",
       );
-      expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeDisabled();
+      expect(screen.queryByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
       expect(screen.queryByText(VIEWER_NOTE)).not.toBeInTheDocument();
     }],
     ["V33", "the project skeleton keeps an empty menu slot", () => {
