@@ -1,0 +1,43 @@
+/*
+  FLOW-325 (plan §10): a split part swiped toward the start side is removed (swipe-remove.tsx).
+  The row slides over a red "מחיקה" that waits under it on the end side; the card clips both.
+  The vertical scroll and pinch-zoom stay with the browser.
+*/
+.ui-sremove {
+  position: relative;
+}
+
+.ui-sremove[data-on] {
+  touch-action: pan-y pinch-zoom;
+}
+
+.ui-sremove-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-inline: var(--space-5);
+  background: var(--color-error);
+  color: var(--color-surface);
+  font-weight: 600;
+  /* Hidden at rest; after a release it stays shown until the row has slid back over it. */
+  visibility: hidden;
+  transition: visibility 0s linear var(--dur-fast);
+}
+
+.ui-sremove[data-drag] .ui-sremove-under {
+  visibility: visible;
+  transition: none;
+}
+
+.ui-sremove-row {
+  position: relative;
+  background: var(--color-surface);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.ui-sremove[data-drag]:not([data-leaving]) .ui-sremove-row {
+  transition: none;
+}
