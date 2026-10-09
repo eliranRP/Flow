@@ -1,6 +1,6 @@
 import type { FiledTodayRow } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { readTxnList } from "../txn-nav";
@@ -81,8 +81,11 @@ describe("FiledTodayScreen by project", () => {
     expect(heads).toEqual(["Project A", "Project B", FILED_NO_PROJECT]);
     const projectA = screen.getByRole("group", { name: "Project A" });
     expect(projectA).toHaveTextContent("3 תנועות");
-    expect(within(projectA).getByText("₪10,000.00")).toHaveClass("ui-income");
-    expect(within(projectA).getByText("−₪4,340.50")).toBeInTheDocument();
+    const figuresA = [...(projectA.querySelectorAll(".ui-month-totals bdi"))];
+    expect(figuresA.map((node) => node.textContent)).toEqual(["₪10,000.00", "−₪4,340.50"]);
+    expect(figuresA[0]).toHaveClass("ui-income");
+    // The agorot are drawn small, as on the rows (FLOW-334).
+    expect(figuresA.map((node) => node.querySelector(".ui-num-cents")?.textContent)).toEqual([".00", ".50"]);
     const projectB = screen.getByRole("group", { name: "Project B" });
     // FLOW-347: every head takes one shape, a one-line group's too: the count, then the total.
     const headB = projectB.querySelector(".ui-month-totals");
