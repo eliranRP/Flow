@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(42);
+select plan(44);
 
 do $users$
 begin
@@ -325,6 +325,25 @@ select public.reopen_review(
 reset role;
 select is(pg_temp.project_of('rec_h'), pg_temp.id('meadow'), 'undo of the invoice leaves it too');
 
+
+-- 12. A category deleted under a paired receipt is not the owner refiling it: the next approval
+-- of the invoice still moves it.
+insert into rrp (label, id) values ('spare', tests.fixture_category(pg_temp.id('co'), 'Spare in', 'income'));
+select pg_temp.doc('inv_j', 'invoice', 'ext-j', null, 50000, '2026-10-12');
+select pg_temp.doc('rec_j', 'receipt', 'ext-rj', 'ext-j', 50000, '2026-10-13');
+select pg_temp.sync();
+reset role;
+select tests.authenticate_as('rrp_owner');
+select public.approve_review_item(pg_temp.open_row('inv_j'), pg_temp.id('harbor'), pg_temp.id('spare'));
+select public.delete_category(pg_temp.id('spare')) is not null;
+select public.approve_review_item(pg_temp.open_row('inv_j'), pg_temp.id('harbor'), pg_temp.id('other_in'));
+reset role;
+select is(pg_temp.category_of('rec_j'), pg_temp.id('other_in'), 'after a category delete the receipt still follows the approval');
+select ok(
+  (select q.paired_with is not null from public.review_queue q
+   where q.transaction_id = pg_temp.id('rec_j') and q.status in ('approved', 'changed')
+   order by q.created_at desc limit 1),
+  'and stays paired');
 
 select * from finish();
 rollback;

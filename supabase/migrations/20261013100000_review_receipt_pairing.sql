@@ -176,8 +176,9 @@ begin
     if exists (
       select 1 from public.transactions t
       where t.id = rr.transaction_id and t.company_id = rr.company_id
-        and (t.project_id is distinct from rr.paired_project_id
-          or t.category_id is distinct from rr.paired_category_id)
+        -- A null left by a deleted project or category is not the owner's choice.
+        and ((t.project_id is not null and t.project_id is distinct from rr.paired_project_id)
+          or (t.category_id is not null and t.category_id is distinct from rr.paired_category_id))
     ) then
       update public.review_queue set paired_with = null where id = rr.id;
       continue;
@@ -341,8 +342,9 @@ begin
     if paired_row is not null and exists (
       select 1 from public.review_queue q
       where q.id = paired_row
-        and (r.project_id is distinct from q.paired_project_id
-          or r.category_id is distinct from q.paired_category_id)
+        -- A null left by a deleted project or category is not the owner's choice.
+        and ((r.project_id is not null and r.project_id is distinct from q.paired_project_id)
+          or (r.category_id is not null and r.category_id is distinct from q.paired_category_id))
     ) then
       update public.review_queue set paired_with = null where id = paired_row;
       continue;
