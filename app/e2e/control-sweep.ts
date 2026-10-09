@@ -55,6 +55,14 @@ async function fingerprint(page: Page) {
 async function gotoSettled(page: Page, url: string) {
   await page.goto(url);
   await page.waitForFunction(() => document.documentElement.dataset.screensLoaded === "1");
+  // A route that opens a sheet on load: wait until it is open and done moving, or a control under it
+  // reads as reachable and the sheet covers it mid-click (main went red on /add after #360).
+  if (sheetOnLoad.has(url)) {
+    await page.locator("[data-vaul-drawer][data-state='open']").first().waitFor();
+    // Finite animations only: a skeleton shine or a spinner loops forever.
+    await page.waitForFunction(() => document.getAnimations().every((animation) =>
+      animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity));
+  }
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
