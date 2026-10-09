@@ -15,3 +15,9 @@ export const Bar: Story = {
   args: { width: "md" },
   tags: ["clip-no-text"],
 };
+
+/** No shine, for a storyboard frame such as the setup demos (FLOW-506). */
+export const Still: Story = {
+  args: { width: "md", still: true },
+  tags: ["clip-no-text"],
+};

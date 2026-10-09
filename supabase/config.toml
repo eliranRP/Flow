@@ -90,6 +90,10 @@ verify_jwt = false
 [functions.jev-tag]
 verify_jwt = false
 
+# FLOW-502: the evening push cron uses the same header. The function also takes the service key.
+[functions.push-send]
+verify_jwt = false
+
 # The bearer is the MCP secret or the app JWT, checked inside the function.
 [functions.flow-mcp]
 verify_jwt = false

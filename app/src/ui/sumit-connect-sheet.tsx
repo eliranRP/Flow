@@ -1,6 +1,7 @@
 import { useRef, useState, type RefObject } from "react";
 import { flushSync } from "react-dom";
 import { ConnectSheet } from "./connect-sheet";
+import { ImportFromField } from "./import-from-field";
 import { TextField } from "./text-field";
 
 export function SumitConnectSheet({
@@ -20,6 +21,8 @@ export function SumitConnectSheet({
   onSubmit,
   onDisconnect,
   disconnectRef,
+  importFrom = null,
+  setImportFrom,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,6 +40,9 @@ export function SumitConnectSheet({
   onSubmit: () => void;
   onDisconnect?: () => void;
   disconnectRef?: RefObject<HTMLButtonElement | null>;
+  /** "ייבוא מ" (FLOW-505): null is מההתחלה. Shown only with `setImportFrom`. */
+  importFrom?: string | null;
+  setImportFrom?: (value: string | null) => void;
 }) {
   // Empty fields are caught here, on reserved message lines, before they reach the server.
   const [missing, setMissing] = useState({ companyId: false, apiKey: false });
@@ -82,6 +88,7 @@ export function SumitConnectSheet({
             reserveMessage
             onChange={(event) => { setMissing((m) => ({ ...m, apiKey: false })); setApiKey(event.target.value); }}
           />
+          {setImportFrom == null ? null : <ImportFromField value={importFrom} onChange={setImportFrom} disabled={busy} />}
         </>
       )}
       submitLabel={submitLabel}
