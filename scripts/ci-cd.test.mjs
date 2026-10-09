@@ -606,7 +606,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const stamps = [...local.matchAll(/echo "\$head" >/g)].map((m) => m.index);
   assert.equal(stamps.length, 2);
   // The fast gate stamps after the scoped Storybook smoke; --full runs the whole smoke after it.
-  const scoped = local.indexOf('FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke');
+  const scoped = local.indexOf('FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story"');
   assert.ok(scoped > local.indexOf("pnpm test:storybook\n") && stamps[0] > scoped);
   assert.ok(stamps[0] < local.indexOf("pnpm test:storybook:smoke\n"));
   assert.ok(local.indexOf("if (( ! full )); then") < stamps[0]);

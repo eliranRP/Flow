@@ -359,7 +359,10 @@ storybook_smoke() {
   else
     echo "local-ci: the every-story check opens the stories of $(grep -cvx partial "$scope" || true) files the changes since ${base:0:7} reach."
   fi
-  FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --workers="${FLOW_STORY_WORKERS:-4}"
+  # Two runs, as on main: next to the every-story shards, the focus specs miss their timing.
+  pnpm test:storybook:smoke --reporter=line --grep-invert "every static story"
+  FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story" \
+    --workers="${FLOW_STORY_WORKERS:-4}"
   mark_green "smoke-$app_key"
   # Only a run that opened every story the change reaches moves the next run's base here.
   if grep -qx partial "$scope"; then
