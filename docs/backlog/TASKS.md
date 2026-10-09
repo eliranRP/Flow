@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-404 `rehab_by_category` from the rehab CTE; FLOW-309 `reopen_review` and the stale `missing_category` label (#300 review) (#308, in review); first the red-main fix (storybook: loans list bigint args, project row focus outline) | The next non-UI item |
+| Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | The next non-UI item |
 | Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
@@ -1235,7 +1235,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-809"></a>
 ### FLOW-809 · Public Storybook per PR head for reviewers
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in progress (dev lane 1; hosting approved by the owner 2026-10-09) · **Depends on:** —
 - **What:** Reviewers can't download CI artifacts without a login. Publish the built Storybook (sample data only) per PR head, so design re-reviews cover only the changed stories.
 - **Acceptance:** owner approves the hosting; no real data or hosted keys in the published build.
 
