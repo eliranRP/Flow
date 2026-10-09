@@ -338,6 +338,19 @@ export const projectDetailSchema = z
         }),
       )
       .optional(),
+    excluded_category_rollups_by_currency: z
+      .array(
+        z.object({
+          currency: z.string().regex(/^[A-Z]{3}$/),
+          id: z.string(),
+          name: z.string().nullable(),
+          amount_minor: agorotSchema,
+          own_amount_minor: agorotSchema,
+          children: z.number().int(),
+          has_shared_share: z.boolean().optional(),
+        }),
+      )
+      .optional(),
     /** Project expenses whose category is still a suggestion. Omitted on older payloads. */
     pending_count: z.number().int().nonnegative().optional(),
     pending_agorot: agorotSchema.optional(),

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(20);
+select plan(21);
 
 select tests.create_supabase_user('ru_owner', 'ru-owner@example.com');
 select tests.create_supabase_user('ru_other', 'ru-other@example.com');
@@ -31,6 +31,12 @@ insert into ru (label, id) values
 insert into ru (label, id) values
   ('water', public.create_category('Water', 'expense', pg_temp.id('bills'))),
   ('power', public.create_category('Power', 'expense', pg_temp.id('bills')));
+insert into ru (label, id) values ('kept', public.create_category('Kept Costs', 'expense'));
+insert into ru (label, id) values ('kept_fee', public.create_category('Kept Fee', 'expense', pg_temp.id('kept')));
+do $k$ begin
+  perform public.set_category_excluded_from_pnl(pg_temp.id('kept'), true);
+  perform public.set_category_excluded_from_pnl(pg_temp.id('kept_fee'), true);
+end $k$;
 
 reset role;
 insert into public.transactions (
@@ -47,7 +53,8 @@ from (values
   (-2000, '2026-08-12', 'ru:water', 'water'),
   (-3000, '2026-09-14', 'ru:power', 'power'),
   (-500,  '2026-09-16', 'ru:fees',  'fees'),
-  (-700,  '2026-10-05', 'ru:water-oct', 'water')
+  (-700,  '2026-10-05', 'ru:water-oct', 'water'),
+  (-900,  '2026-09-20', 'ru:kept-fee', 'kept_fee')
 ) as v(amount, d, ikey, cat);
 
 select tests.authenticate_as('ru_owner');
@@ -86,6 +93,13 @@ select is(
   (select (r->>'amount_agorot')::bigint from ru_proj, jsonb_array_elements(body->'category_rollups') r),
   6700::bigint,
   'the agorot roll-up matches'
+);
+
+select is(
+  (select r - 'name' - 'has_shared_share' from ru_proj, jsonb_array_elements(body->'excluded_category_rollups_by_currency') r),
+  jsonb_build_object('currency', 'ILS', 'id', pg_temp.id('kept'), 'amount_minor', 900,
+    'own_amount_minor', 0, 'children', 1),
+  'kept-out sub-categories roll up under their kept-out parent'
 );
 
 -- project_category_months: parents[] sums the months.

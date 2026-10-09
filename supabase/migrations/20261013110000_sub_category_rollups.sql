@@ -5,7 +5,8 @@
 -- gets the same total as before:
 -- - get_project: each category row gains parent_id; new category_rollups (agorot) and
 --   category_rollups_by_currency hold one row per parent with sub-categories: the sum of its
---   own and its children's rows, and own_* for its own lines ("בלי תת-קטגוריה").
+--   own and its children's rows, and own_* for its own lines ("בלי תת-קטגוריה");
+--   excluded_category_rollups_by_currency does the same for the kept-out rows.
 -- - project_category_months: each row gains parent_id; a new parents[] sums the months.
 -- - get_breakdown and get_breakdown_lines: group_by 'parent' folds sub-categories into their
 --   parent.
@@ -48,7 +49,7 @@ as $$
       (r->>p_amount_key)::bigint as amount,
       coalesce((r->>'has_shared_share')::boolean, false) as shared
     from jsonb_array_elements(coalesce(p_rows, '[]'::jsonb)) r
-    where r->>'id' is not null
+    where r->>'id' ~* '^[0-9a-f-]{36}$'
   ),
   tagged as (
     select rows.*, coalesce(c.parent_id, c.id) as parent, c.parent_id is null as own
@@ -75,7 +76,8 @@ as $$
         'children', s.children,
         'has_shared_share', s.shared
       )
-    order by s.currency, s.amount desc, pc.name), '[]'::jsonb)
+    order by s.currency is distinct from private.company_base_currency(p_company), s.currency,
+      s.amount desc, pc.name), '[]'::jsonb)
   from sums s
   join public.categories pc on pc.id = s.parent;
 $$;
@@ -93,7 +95,7 @@ as $$
       (r->>'this_month_minor')::bigint as this_month,
       r->'months_minor' as months
     from jsonb_array_elements(coalesce(p_rows, '[]'::jsonb)) r
-    where r->>'id' is not null
+    where r->>'id' ~* '^[0-9a-f-]{36}$'
   ),
   tagged as (
     select rows.*, coalesce(c.parent_id, c.id) as parent, c.parent_id is null as own
@@ -132,7 +134,8 @@ as $$
       select jsonb_agg(m.amount order by m.ord) from months m
       where m.currency = x.currency and m.parent = x.parent
     ), '[]'::jsonb)
-  ) order by x.currency, x.this_month desc, pc.name), '[]'::jsonb)
+  ) order by x.currency is distinct from private.company_base_currency(p_company), x.currency,
+    x.this_month desc, pc.name), '[]'::jsonb)
   from totals x
   join public.categories pc on pc.id = x.parent;
 $$;
@@ -171,7 +174,8 @@ begin
     'categories_by_currency', private.category_rows_with_parent(result->'categories_by_currency', cid),
     'excluded_categories_by_currency', private.category_rows_with_parent(result->'excluded_categories_by_currency', cid),
     'category_rollups', private.category_rollup_rows(result->'categories', 'amount_agorot', cid),
-    'category_rollups_by_currency', private.category_rollup_rows(result->'categories_by_currency', 'amount_minor', cid)
+    'category_rollups_by_currency', private.category_rollup_rows(result->'categories_by_currency', 'amount_minor', cid),
+    'excluded_category_rollups_by_currency', private.category_rollup_rows(result->'excluded_categories_by_currency', 'amount_minor', cid)
   );
 $n$;
   execute replace(def, anchor, addition || anchor);
