@@ -83,6 +83,16 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
     white-space: nowrap;
     border: 0;
   }
+
+  /* FLOW-352 1 (cycle 11): beside a הצעה pill about 99px are left at 320, so the value wraps to a second
+     line before it ends in an ellipsis. */
+  .ui-review-ai .ui-row-title-text {
+    display: -webkit-box;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 }
 
 /* FLOW-327 1.5: both fields missing; the bar's first button points here. */

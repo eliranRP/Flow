@@ -56,7 +56,13 @@ test("a long suggestion keeps הצעת Jev and the chevron inside the row at 320
     inside(await tag.boundingBox(), "הצעת Jev");
     const row = tag.locator("xpath=ancestor::button[1]");
     inside(await row.locator(".ui-row-chevron").boundingBox(), "the chevron");
-    const cut = await row.locator(".ui-row-title-text").evaluate((node) => node.scrollWidth > node.clientWidth);
+    // FLOW-352 1: the value wraps to two lines at 320, then ends in an ellipsis.
+    const title = row.locator(".ui-row-title-text");
+    const { cut, lines } = await title.evaluate((node) => {
+      const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
+      return { cut: node.scrollHeight > node.clientHeight, lines: Math.round(node.clientHeight / lineHeight) };
+    });
     expect(cut).toBe(true);
+    expect(lines).toBe(2);
   }
 });
