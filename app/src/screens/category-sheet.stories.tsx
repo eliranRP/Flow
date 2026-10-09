@@ -24,6 +24,7 @@ const categories: CategoryRow[] = [
   { id: "c5", name: "ביטוח נכס", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 18, split_lines: 0, loan_used: true, rehab: false, in_rehab: false },
   { id: "c6", name: "עמלות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 4, split_lines: 0, loan_used: false, in_rehab: true },
   { id: "c7", name: "אחר", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, lines: 0, split_lines: 0, loan_used: false, in_rehab: true },
+  { id: "i1", name: "שכר דירה", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false, lines: 14, split_lines: 0, loan_used: false },
   { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal", lines: 12, loan_used: true },
 ];
 
@@ -67,6 +68,17 @@ export const MenuLoanCategory: Story = {
   render: () => <Screen />,
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "תשלומי הלוואה"); },
 };
+
+/** FLOW-347: the only income category has nowhere to move, so its sheet has no move row. */
+export const MenuNowhereToMove: Story = {
+  name: "Menu, the only category of its kind (no move row)",
+  render: () => <Screen />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("radio", { name: "הכנסות" }));
+    await openMenu(canvasElement, "שכר דירה");
+  },
+};
+export const MenuNowhereToMove320: Story = { ...MenuNowhereToMove, name: "Menu, no move row, 320", ...at320 };
 
 export const MovePicker: Story = {
   name: "Move all lines: pick where they go",
