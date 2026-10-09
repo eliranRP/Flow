@@ -13,36 +13,36 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const splitProjects = [
-  { id: "a", name: "בניין מגורים חולון", incomeAgorot: 20_000_000n },
-  { id: "b", name: "מגדל משרדים פ״ת", incomeAgorot: 15_000_000n },
-  { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
-  { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
+  { id: "a", name: "בניין מגורים חולון" },
+  { id: "b", name: "מגדל משרדים פ״ת" },
+  { id: "c", name: "וילה רעננה" },
+  { id: "d", name: "בית פרטי כפר סבא" },
 ];
 
+type Part = { projectId: string; unit?: "percent" | "amount"; value: string };
+
 function SplitStory({
-  method,
-  shares,
-  chosen,
-  projects = splitProjects,
+  parts,
+  rest,
   saving = false,
+  warned = false,
 }: {
-  method?: "equal" | "chosen" | "income" | "manual" | null;
-  shares?: Record<string, string>;
-  chosen?: string[];
-  projects?: typeof splitProjects;
+  parts?: Part[];
+  rest?: string | null;
   saving?: boolean;
+  warned?: boolean;
 } = {}) {
   return (
     <StoryRoute entry="/transactions/t1/split">
       <ExampleBar />
       <SplitScreen
         sampleMeta="חשמל · 12/09/2026"
-        sampleAmount={100_000n}
-        sampleProjects={projects}
-        sampleMethod={method}
-        sampleShares={shares}
-        sampleChosen={chosen}
+        sampleAmount={2_866_316n}
+        sampleProjects={splitProjects}
+        sampleParts={parts}
+        sampleRestProject={rest}
         sampleSaving={saving}
+        sampleWarned={warned}
       />
     </StoryRoute>
   );
@@ -57,55 +57,46 @@ function splitQuadrant(render: () => ReactElement): { base: Story; dark: Story; 
   };
 }
 
-const splitDefault = splitQuadrant(() => <SplitStory />);
+/** The line on one project: no parts yet, the whole amount is the rest. */
+const splitDefault = splitQuadrant(() => <SplitStory rest="a" />);
 export const SplitDefault: Story = splitDefault.base;
 export const SplitDefaultDark: Story = splitDefault.dark;
 export const SplitDefault320: Story = splitDefault.narrow;
 export const SplitDefaultDark320: Story = splitDefault.darkNarrow;
 
-const splitAll = splitQuadrant(() => <SplitStory method="equal" />);
-export const SplitAll: Story = splitAll.base;
-export const SplitAllDark: Story = splitAll.dark;
-export const SplitAll320: Story = splitAll.narrow;
-export const SplitAllDark320: Story = splitAll.darkNarrow;
+/** Exact amounts: one part to the cent, the rest on the line's project. */
+const splitExact = splitQuadrant(() => <SplitStory rest="a" parts={[{ projectId: "b", value: "8000" }]} />);
+export const SplitExact: Story = splitExact.base;
+export const SplitExactDark: Story = splitExact.dark;
+export const SplitExact320: Story = splitExact.narrow;
+export const SplitExactDark320: Story = splitExact.darkNarrow;
 
-const splitSelected2 = splitQuadrant(() => <SplitStory method="chosen" chosen={["a", "c"]} />);
-export const SplitSelected2: Story = splitSelected2.base;
-export const SplitSelected2Dark: Story = splitSelected2.dark;
-export const SplitSelected2_320: Story = splitSelected2.narrow;
-export const SplitSelected2Dark320: Story = splitSelected2.darkNarrow;
-
-const splitSelectedInvalid = splitQuadrant(() => <SplitStory method="chosen" chosen={["a"]} />);
-export const SplitSelectedInvalid: Story = splitSelectedInvalid.base;
-export const SplitSelectedInvalidDark: Story = splitSelectedInvalid.dark;
-export const SplitSelectedInvalid320: Story = splitSelectedInvalid.narrow;
-export const SplitSelectedInvalidDark320: Story = splitSelectedInvalid.darkNarrow;
-
-const splitIncomeDisabled = splitQuadrant(() => (
-  <SplitStory projects={splitProjects.map((project) => ({ ...project, incomeAgorot: 0n }))} />
+/** A percent part and an amount part side by side. */
+const splitMixed = splitQuadrant(() => (
+  <SplitStory rest="a" parts={[{ projectId: "b", unit: "percent", value: "25" }, { projectId: "c", value: "1500.50" }]} />
 ));
-export const SplitIncomeDisabled: Story = splitIncomeDisabled.base;
-export const SplitIncomeDisabledDark: Story = splitIncomeDisabled.dark;
-export const SplitIncomeDisabled320: Story = splitIncomeDisabled.narrow;
-export const SplitIncomeDisabledDark320: Story = splitIncomeDisabled.darkNarrow;
+export const SplitMixed: Story = splitMixed.base;
+export const SplitMixedDark: Story = splitMixed.dark;
+export const SplitMixed320: Story = splitMixed.narrow;
+export const SplitMixedDark320: Story = splitMixed.darkNarrow;
 
-const splitManualValid = splitQuadrant(() => (
-  <SplitStory method="manual" shares={{ a: "25", b: "25", c: "25", d: "25" }} />
+/** Parts past the line, after a first ✕: the part and the footer say by how much. */
+const splitOver = splitQuadrant(() => (
+  <SplitStory rest="a" warned parts={[{ projectId: "b", value: "20000" }, { projectId: "c", value: "10000" }]} />
 ));
-export const SplitManualValid: Story = splitManualValid.base;
-export const SplitManualValidDark: Story = splitManualValid.dark;
-export const SplitManualValid320: Story = splitManualValid.narrow;
-export const SplitManualValidDark320: Story = splitManualValid.darkNarrow;
+export const SplitOver: Story = splitOver.base;
+export const SplitOverDark: Story = splitOver.dark;
+export const SplitOver320: Story = splitOver.narrow;
+export const SplitOverDark320: Story = splitOver.darkNarrow;
 
-const splitManualOver = splitQuadrant(() => (
-  <SplitStory method="manual" shares={{ a: "70", b: "50" }} />
-));
-export const SplitManualOver: Story = splitManualOver.base;
-export const SplitManualOverDark: Story = splitManualOver.dark;
-export const SplitManualOver320: Story = splitManualOver.narrow;
-export const SplitManualOverDark320: Story = splitManualOver.darkNarrow;
+/** A shared line with no project: the rest asks for one. */
+const splitNoRest = splitQuadrant(() => <SplitStory rest={null} warned parts={[{ projectId: "b", value: "8000" }]} />);
+export const SplitNoRestProject: Story = splitNoRest.base;
+export const SplitNoRestProjectDark: Story = splitNoRest.dark;
+export const SplitNoRestProject320: Story = splitNoRest.narrow;
+export const SplitNoRestProjectDark320: Story = splitNoRest.darkNarrow;
 
-const splitSaving = splitQuadrant(() => <SplitStory method="equal" saving />);
+const splitSaving = splitQuadrant(() => <SplitStory rest="a" saving parts={[{ projectId: "b", value: "8000" }]} />);
 export const SplitSaving: Story = splitSaving.base;
 export const SplitSavingDark: Story = splitSaving.dark;
 export const SplitSaving320: Story = splitSaving.narrow;

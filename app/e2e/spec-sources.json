@@ -175,6 +175,7 @@
       "screens/line-split.tsx"
     ],
     "split.spec.ts": [
+      "project-split.ts",
       "screens/split-screen.tsx",
       "screens/project-detail-screen.tsx"
     ],

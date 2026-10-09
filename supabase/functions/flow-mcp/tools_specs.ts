@@ -138,8 +138,9 @@ const SHARES_SPEC = {
     properties: {
       project_id: { type: "string" },
       share: { type: "integer" },
+      amount_minor: { type: "integer" },
     },
-    required: ["project_id", "share"],
+    required: ["project_id"],
     additionalProperties: false,
   },
 };
@@ -168,7 +169,7 @@ function writeTools() {
       category_id: { type: "string" },
       remember: { type: "boolean" },
     }, true),
-    toolSpec("assign_expense_split", "Split one expense across projects. Each share is a whole percent; shares must sum to 100. Optional category_id sets the category like assign_expense.", {
+    toolSpec("assign_expense_split", "Split one expense across projects. Each share is a whole percent (share; shares sum to 100) or an exact amount in cents (amount_minor; all shares then give amount_minor and sum to the line exactly: parts must sum to the line, parts exceed the line). Optional category_id sets the category like assign_expense.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },

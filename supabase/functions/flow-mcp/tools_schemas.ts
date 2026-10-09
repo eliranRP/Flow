@@ -146,20 +146,26 @@ export const assignSchema = z.object({
   category_id: UUID_TEXT,
   remember: z.boolean().optional(),
 }).strict();
+// A share is a whole percent (share) or, since FLOW-346, an exact amount_minor (cents).
 const splitShareSchema = z.object({
   project_id: UUID_TEXT,
-  share: z.number().int().min(1).max(100),
-}).strict();
+  share: z.number().int().min(1).max(100).optional(),
+  amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
+}).strict().refine((item) => (item.share === undefined) !== (item.amount_minor === undefined));
 const SPLIT_SHARES = z.array(splitShareSchema).min(2).max(50);
-// Projects are unique and the whole percents sum to 100.
-function sharesAreValid(shares: { project_id: string; share: number }[]): boolean {
+// Projects are unique, and every share is one kind: whole percents that sum to 100, or exact
+// amounts (the database checks that they sum to the line).
+function sharesAreValid(shares: { project_id: string; share?: number; amount_minor?: number }[]): boolean {
   const seen = new Set<string>();
   let total = 0;
   for (const item of shares) {
-    if (seen.has(item.project_id)) return false;
-    seen.add(item.project_id);
-    total += item.share;
+    const id = item.project_id.toLowerCase();
+    if (seen.has(id)) return false;
+    seen.add(id);
+    total += item.share ?? 0;
   }
+  const amounts = shares.filter((item) => item.amount_minor !== undefined).length;
+  if (amounts > 0) return amounts === shares.length;
   return total === 100;
 }
 export const assignExpenseSplitSchema = z.object({

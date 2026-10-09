@@ -99,9 +99,9 @@ export function DevSplit() {
       <SplitScreen
         sampleAmount={1001n}
         sampleProjects={[
-          { id: "a", name: "שיפוץ הרצל 12", incomeAgorot: 3_000n },
-          { id: "b", name: "שיפוץ דירה ביאליק 8 חולון", incomeAgorot: 1_000n },
-          { id: "c", name: "פרגולה בית כהן", incomeAgorot: 1_000n },
+          { id: "a", name: "שיפוץ הרצל 12" },
+          { id: "b", name: "שיפוץ דירה ביאליק 8 חולון" },
+          { id: "c", name: "פרגולה בית כהן" },
         ]}
         onSave={(rows) => {
           if (fail) throw new Error("save");

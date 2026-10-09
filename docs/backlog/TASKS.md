@@ -118,6 +118,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
+| 71 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | in-progress (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -894,6 +895,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-314 (#291) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
 - **What:** At a list end a sideways drag doesn't move the card at all (160px drag, transform 0), so the gesture reads as broken, and mid-list a drag shows a blank page behind the card. The visible prev/next controls are vertical ˄ ˅ in the top corner while the swipe is sideways, against §3.7 (a swipe follows the arrows it repeats). Proposal: a resisted drag at the ends and the next card peeking in; the owner picks ‹ › arrows or keeps ˄ ˅.
 - **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+
+<a id="flow-346"></a>
+### FLOW-346 · Split between projects works like the split by categories, in exact amounts
+- **Type:** SMALL UI · **Status:** in-progress (#325) · **Source:** owner's ask in the project thread (2026-10-09): "make it look similar ... clean simple and easy ... remove the features we have today and keep it the same way we did for category"
+- **What:** The project split takes exact amounts or percents per project with a rest row, in the category editor's layout; the presets and the manual percent list go. `save_split` and MCP `assign_expense_split` take `amount_minor` shares (decision 0164).
+- **Acceptance:** the design lead signs off against DESIGN-RULES; the owner sees 390px screenshots before merge; a design log entry.
 
 ## Projects and reports
 

@@ -440,12 +440,14 @@ function ReviewerUnsplit() {
           sampleAmount={unsplitNet}
           sampleProjects={projects}
           sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
+          sampleRestProject={null}
           backTo="/reviewer"
-          onOneProject={(id) => {
+          onSave={(rows) => {
             pendingSave.current = true;
-            setCollapsed(id);
+            // One project takes the whole line; parts across projects keep it shared.
+            setCollapsed(rows.length === 1 ? (rows[0]?.project_id ?? null) : null);
             setShowSplit(false);
-            return Promise.resolve("left" as const);
+            return "left";
           }}
         />
       ) : (
@@ -556,6 +558,7 @@ function ReviewerSplit() {
       sampleAmount={leasing ? unsplitNet : reviewerSharedAgorot}
       sampleProjects={leasing ? unsplitProjects.map((project) => ({ id: project.id, name: project.name })) : reviewerSplitProjects}
       sampleMeta={leasing ? "ליסינג הדרך בע״מ · 01/07/2026" : "עגורני החוף בע״מ · 29/09/2026"}
+      sampleRestProject={null}
       backTo={`/reviewer/review?save=${mode}`}
       onSave={async () => {
         try {
