@@ -5,18 +5,20 @@
  * split on anything that is not a letter or a digit), so punctuation and line breaks between the
  * words of an entry do not hide it. A hit prints only the file and the line, never the text.
  * Without the secret the check skips, except in CI on eliranRP/Flow, where it is required.
+ * Exit codes: 0 clean or skipped, 1 denied names found, 2 secret missing in CI, 3 a tracked file
+ * could not be read (the scan is incomplete).
+ * Known gap: a Hebrew prefix letter joined to a name (ו, ה, ב, ל, מ, ש) is not split off.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const binary = /\.(png|jpe?g|gif|ico|webp|woff2?|ttf|otf|pdf|zip|gz)$/i;
 
-/** @param {string} text */
+/** camelCase splits into words, so `zorbelQuint` reads as "zorbel quint". @param {string} text */
 export function words(text) {
-  const stripped = text.normalize("NFKD").replace(/\p{M}+/gu, "");
+  const stripped = text.normalize("NFKD").replace(/\p{M}+/gu, "").replace(/(\p{Ll})(\p{Lu})/gu, "$1 $2");
   return stripped.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 0);
 }
 
@@ -51,7 +53,9 @@ export function denyListRequired(env) {
 export function deniedLines(text, entries) {
   /** @type {Map<string, string[][]>} */
   const byFirst = new Map();
-  for (const entry of entries) {
+  // A multi-word entry also matches its words run together ("zorbelquint", a slug or an email).
+  const joined = entries.filter((entry) => entry.length > 1).map((entry) => [entry.join("")]);
+  for (const entry of [...entries, ...joined]) {
     const list = byFirst.get(entry[0]) ?? [];
     list.push(entry);
     byFirst.set(entry[0], list);
@@ -79,41 +83,51 @@ export function deniedLines(text, entries) {
  * @param {string[][]} entries
  */
 export function scanFiles(dir, files, entries) {
+  /** @type {string[]} */
   const hits = [];
+  /** @type {string[]} */
+  const unreadable = [];
   for (const file of files) {
     if (binary.test(file)) continue;
     let text;
     try {
       text = readFileSync(path.join(dir, file), "utf8");
-    } catch {
+    } catch (error) {
+      // The error code only: a message could quote nothing secret, but keep the output to paths.
+      unreadable.push(`${file}: ${/** @type {NodeJS.ErrnoException} */ (error).code ?? "read error"}`);
       continue;
     }
     for (const line of deniedLines(text, entries)) hits.push(`${file}:${line}`);
   }
-  return hits;
-}
-
-function trackedFiles() {
-  return execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
+  return { hits, unreadable };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const env = { get: (/** @type {string} */ name) => process.env[name] };
-  const entries = denyEntries(process.env.MERCURY_FIXTURE_DENYLIST);
+  const raw = process.env.MERCURY_FIXTURE_DENYLIST;
+  const entries = denyEntries(raw);
   if (entries.length === 0) {
-    if (denyListRequired(env)) {
+    if (denyListRequired(env) && !raw?.trim()) {
       console.error("check-deny-list: MERCURY_FIXTURE_DENYLIST is required in CI on eliranRP/Flow");
-      process.exit(1);
+      process.exit(2);
     }
-    console.log("check-deny-list: skipped, MERCURY_FIXTURE_DENYLIST is not set");
+    console.log(raw?.trim()
+      ? "check-deny-list: skipped, no entries after the allow-list"
+      : "check-deny-list: skipped, MERCURY_FIXTURE_DENYLIST is not set");
     process.exit(0);
   }
-  const files = trackedFiles();
-  const hits = scanFiles(root, files, entries);
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const files = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
+  const { hits, unreadable } = scanFiles(root, files, entries);
   if (hits.length > 0) {
     console.error(`check-deny-list: ${hits.length} denied name(s) found (file:line only):`);
     for (const hit of hits) console.error(`  ${hit}`);
-    process.exit(1);
   }
+  if (unreadable.length > 0) {
+    console.error(`check-deny-list: ${unreadable.length} tracked file(s) could not be read:`);
+    for (const file of unreadable) console.error(`  ${file}`);
+  }
+  if (hits.length > 0) process.exit(1);
+  if (unreadable.length > 0) process.exit(3);
   console.log(`check-deny-list: ${files.length} tracked files, no denied names`);
 }

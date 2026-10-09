@@ -122,6 +122,17 @@ Create the access token at <https://supabase.com/dashboard/account/tokens>:
 5. Copy the value into the GitHub environment `production` as `SUPABASE_ACCESS_TOKEN`. Do not write the token, or any prefix of it, into this runbook.
 6. Write the expiry date in [Access token expiry](#access-token-expiry). A renewal reminder is scheduled by the owner's assistant about 5 days before that date.
 
+## Deny-list check
+
+`MERCURY_FIXTURE_DENYLIST` is a repository Actions secret, not a `production` one: one real name or code per line, any number of words. CI's Mercury connector step passes it to the Mercury fixture test and to `node scripts/check-deny-list.mjs`, which scans every tracked text file and prints only `file:line`, never the text. To see where a hit is, run `ci` by hand on the branch (Actions, ci, Run workflow) and read that step. Without the secret the check skips, so the pre-push hook never fails on it. The owner's first name is allowed (`allowedEntries` in the script). It does not split a Hebrew prefix letter off a name.
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | Clean, or skipped (no secret outside CI, or only allowed names) |
+| 1 | Denied names found; the lines are listed |
+| 2 | The secret is missing in CI on eliranRP/Flow |
+| 3 | A tracked file could not be read, so the scan is incomplete |
+
 ## Access token expiry
 
 The scoped token lasts 30 days. This runbook is where the date is kept. When you create or renew the token, fill in the row. A renewal reminder is scheduled by the owner's assistant about 5 days before the expiry date.
