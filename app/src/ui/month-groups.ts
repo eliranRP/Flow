@@ -49,7 +49,7 @@ export function groupByMonth<T>(
 
 /**
  * Rows grouped under a key (a project on שויכו היום, FLOW-334), in the order each key first
- * appears; rows keep their order inside a group. Every group is drawn, one included, since its
+ * appears, the "" key last; rows keep their order inside a group. Every group is drawn, one included, since its
  * head carries the name the rows no longer repeat. Totals add up each row's shown value, as
  * groupByMonth does.
  */
@@ -70,7 +70,8 @@ export function groupByKey<T>(
     group.rows.push(row);
     addTo(group.totals, amountOf(row), cents);
   }
-  const list = [...groups.values()];
+  // The "" group (no project on שויכו היום) goes last, as unassigned does on the breakdown.
+  const list = [...groups.values()].sort((a, b) => Number(a.key === "") - Number(b.key === ""));
   for (const group of list) group.totals.sort(byCurrency);
   return list;
 }

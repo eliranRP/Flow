@@ -62,6 +62,12 @@ describe("groupByKey", () => {
     expect(groups[0]?.totals).toEqual([{ currency: "ILS", incomeMinor: 1_000_000n, expenseMinor: 434_050n }]);
   });
 
+  it("puts the no-project group last, wherever its first row is", () => {
+    const rows = [ROWS[3], ...ROWS.slice(0, 3)].filter((row): row is FiledTodayRow => row != null);
+    const groups = groupByKey(rows, (row) => ({ key: row.project_name ?? "", title: row.project_name ?? "none" }), (row) => ({ minor: row.amount_net, currency: "ILS", direction: row.direction }));
+    expect(groups.map((group) => group.key)).toEqual(["Project A", "Project B", ""]);
+  });
+
   it("draws a lone group too", () => {
     const groups = groupByKey([ROWS[0]], () => ({ key: "k", title: "t" }), () => ({ minor: 1n, currency: "ILS", direction: "expense" }));
     expect(groups).toHaveLength(1);
@@ -78,8 +84,9 @@ describe("FiledTodayScreen by project", () => {
     expect(within(projectA).getByText("₪10,000.00")).toHaveClass("ui-income");
     expect(within(projectA).getByText("−₪4,340.50")).toBeInTheDocument();
     const projectB = screen.getByRole("group", { name: "Project B" });
-    expect(projectB).toHaveTextContent("תנועה אחת");
-    expect(within(projectB).getByText("−₪1,200.00")).toBeInTheDocument();
+    // A one-line group's head says the count only: its total would repeat the row's amount.
+    const headB = projectB.querySelector(".ui-month-totals");
+    expect(headB).toHaveTextContent(/^תנועה אחת$/);
   });
 
   it("keeps only the category in each row's hint", () => {

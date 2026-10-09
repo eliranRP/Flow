@@ -165,7 +165,8 @@ function MonthSection<T>({
           {showTotals ? (
             <p className="ui-month-totals t-label">
               {count != null ? <span className="ui-group-count">{count}</span> : null}
-              {group.totals
+              {/* A one-line group's total is its row's amount: the head says the count only. */}
+              {count != null && group.rows.length === 1 ? null : group.totals
                 // A currency that rounds to zero draws no line, so it can't take the first slot.
                 .filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n)
                 .map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0 && count == null} />)}
