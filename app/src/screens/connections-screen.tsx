@@ -7,7 +7,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useRefreshingNow } from "../israel-clock";
-import { hebrewMercuryError } from "../mercury-copy";
+import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
 import { hebrewSumitError, israelSyncPhrase, retryClockParts } from "../sumit-copy";
 import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
@@ -99,8 +99,7 @@ export function ConnectionsScreen({
     if (connectOpen && !importSeen.sumit) setSumitImport({ touched: false, value: null });
     if (mercuryConnectOpen && !importSeen.mercury) setMercuryImport({ touched: false, value: null });
   }
-  // SUMIT reads its stored date once sumit_status returns it (#327); until then it shows מההתחלה.
-  const sumitImportFrom = sumitImport.touched ? sumitImport.value : null;
+  const sumitImportFrom = sumitImport.touched ? sumitImport.value : (status.data?.import_from ?? null);
   const mercuryImportFrom = mercuryImport.touched ? mercuryImport.value : (mercuryStatus.data?.import_from ?? null);
   const setSumitImportFrom = useCallback((value: string | null) => { setSumitImport({ touched: true, value }); }, []);
   const setMercuryImportFrom = useCallback((value: string | null) => { setMercuryImport({ touched: true, value }); }, []);
@@ -168,13 +167,16 @@ export function ConnectionsScreen({
       assertNoError(await supabase.rpc("disconnect_sumit"));
     },
   });
+  const mercuryRefreshResult = useRef<unknown>(null);
   const mercuryRefresh = useWrite({
     failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
     silent: (error) => error.message === "sync_held",
-    success: REFRESH_DONE,
+    success: () => mercuryRefreshDone(mercuryRefreshResult.current),
     keys: MERCURY_REFRESH_KEYS,
     run: async () => {
+      mercuryRefreshResult.current = null;
       const data = await invokeEdge("mercury-sync", { force: true });
+      mercuryRefreshResult.current = data;
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
         await queryClient.refetchQueries({ queryKey: ["mercury"] });
         const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["mercury"] }).some(([, d]) => d?.syncing === true);
