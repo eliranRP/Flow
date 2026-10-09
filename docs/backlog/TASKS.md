@@ -1026,7 +1026,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.
   - [ ] Settings → Categories drill-in (cat-b, cat-b-2), #378.
-  - [ ] Project page parent roll-ups on server 1b (#363).
+  - [ ] Project page: sub-categories fold under their parent (list_categories' parent_id), #378.
   - [ ] Project groups (proj-b, proj-b-2), the grouped picker and the starter pick, after servers 2 and 3.
 
 <a id="flow-407"></a>

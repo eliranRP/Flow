@@ -98,6 +98,6 @@ describe("FLOW-406 sub-categories in Settings → Categories", () => {
     expect(deleteFailureText(children)).toBe("יש לקטגוריה תת-קטגוריות. העבירו אותן קודם.");
     expect(mergeFailureText(children)).toBe("יש לקטגוריה תת-קטגוריות. העבירו אותן קודם.");
     expect(groupFailureText(Object.assign(new Error("category_parent_nested"), { code: "23514" })))
-      .toBe("לקטגוריה הזו יש תת-קטגוריות, אז היא לא נכנסת לקבוצה.");
+      .toBe("לקטגוריה הזו יש תת-קטגוריות, אז אין לה קטגוריית אב.");
   });
 });

@@ -1,1 +1,1 @@
-Categories: a category with sub-categories shows how many it has and opens its own page, which lists them with their line counts and adds new ones under it (FLOW-406).
+Categories: every category shows how many lines it has. A category with sub-categories shows how many it has and opens its own page, which lists them and adds new ones under it. In a category's ⋯ menu, קבוצה is now קטגוריית אב. On a project page, sub-categories fold under their parent, with the parent's own lines last (FLOW-406).

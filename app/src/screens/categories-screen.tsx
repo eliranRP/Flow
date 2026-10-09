@@ -41,6 +41,11 @@ type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
 
 type ListedCategory = CategoryRow & { count?: number };
 
+/** A category's line count: a sample's `count`, else list_categories' `lines` (FLOW-406, mockup cat-b). */
+function lineCount(category: ListedCategory): number | undefined {
+  return category.count ?? category.lines;
+}
+
 function countLine(count: number): string {
   return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
 }
@@ -83,7 +88,7 @@ function CategoryLine({
       chevron={subCount != null}
       meta={subCount != null
         ? subCount === 1 ? "תת-קטגוריה אחת" : `${String(subCount)} תת-קטגוריות`
-        : category.count == null ? undefined : countLine(category.count)}
+        : lineCount(category) == null ? undefined : countLine(lineCount(category) ?? 0)}
       tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
       action={onMenu == null ? undefined : (
         <IconButton
@@ -230,7 +235,7 @@ export function CategoriesScreen({
   const title = parent?.name ?? "קטגוריות";
   const kicker = parent == null ? "הגדרות" : "קטגוריות";
   const backTo = parent == null ? `/settings${search}` : `${listPath}${search}`;
-  const lines = parent?.rollup_lines ?? parent?.count;
+  const lines = parent?.rollup_lines ?? (parent == null ? undefined : lineCount(parent));
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
       <ScreenState

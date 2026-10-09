@@ -10,13 +10,13 @@ import { useToast } from "../ui/toast";
 import { assertNoError, useWrite } from "../use-write";
 
 /**
- * FLOW-401 (decision 0149): the "קבוצה" sheet a category's ⋯ opens. One tap on a group applies it,
- * with a ביטול toast. "קבוצה חדשה" asks for a name. A group with no categories left is gone.
+ * FLOW-401 (decision 0149): the "בחירת קטגוריית אב" sheet a category's ⋯ opens (FLOW-406: a group is a parent category now). One tap on a group applies it,
+ * with a ביטול toast. "קטגוריית אב חדשה" asks for a name. A group with no categories left is gone.
  */
 
 export const GROUP_NAME_MAX = 40;
-export const GROUP_SAVED = "הקבוצה נשמרה";
-export const GROUP_UNDONE = "הקבוצה הוחזרה";
+export const GROUP_SAVED = "קטגוריית האב נשמרה";
+export const GROUP_UNDONE = "קטגוריית האב הוחזרה";
 
 /** Folds the same group typed with other spaces, as the server stores it. */
 export function cleanGroupName(name: string): string {
@@ -25,20 +25,20 @@ export function cleanGroupName(name: string): string {
 
 export function groupNameError(name: string): string | undefined {
   const clean = cleanGroupName(name);
-  if (clean === "") return "צריך שם לקבוצה";
+  if (clean === "") return "צריך שם לקטגוריה";
   if (clean.length > GROUP_NAME_MAX) return `שם ארוך מדי – עד ${String(GROUP_NAME_MAX)} תווים`;
   return undefined;
 }
 
 export function groupFailureText(error: Error): string {
-  if ((error as Error & { code?: string }).code === "42501") return "רק בעלי העסק יכולים לשנות קבוצה.";
+  if ((error as Error & { code?: string }).code === "42501") return "רק בעלי העסק יכולים לשנות קטגוריית אב.";
   if (error.message.includes("category not found")) return "הקטגוריה לא נמצאה.";
   // FLOW-406: a group is a parent category now, one level deep.
-  if (error.message.includes("category_parent_nested")) return "לקטגוריה הזו יש תת-קטגוריות, אז היא לא נכנסת לקבוצה.";
-  if (error.message.includes("category_parent_loan_part")) return "קטגוריה של הלוואה לא נכנסת לקבוצה.";
-  if (error.message.includes("category_parent_kind")) return "הקבוצה היא קטגוריה מסוג אחר.";
-  if (error.message.includes("validation") || (error as Error & { code?: string }).code === "23514") return "שם הקבוצה לא תקין.";
-  return "הקבוצה לא נשמרה.";
+  if (error.message.includes("category_parent_nested")) return "לקטגוריה הזו יש תת-קטגוריות, אז אין לה קטגוריית אב.";
+  if (error.message.includes("category_parent_loan_part")) return "לקטגוריה של הלוואה אין קטגוריית אב.";
+  if (error.message.includes("category_parent_kind")) return "קטגוריית האב מסוג אחר.";
+  if (error.message.includes("validation") || (error as Error & { code?: string }).code === "23514") return "שם הקטגוריה לא תקין.";
+  return "קטגוריית האב לא נשמרה.";
 }
 
 /** The groups in use, in Hebrew order. */
@@ -46,6 +46,31 @@ export function groupNames(rows: ReadonlyArray<{ group_name?: string | null }>):
   const names = new Set<string>();
   for (const row of rows) {
     if (row.group_name != null && row.group_name !== "") names.add(row.group_name);
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, "he"));
+}
+
+type ParentCandidate = {
+  id: string;
+  name: string;
+  kind: string;
+  hidden: boolean;
+  loan_part?: string | null;
+  parent_id?: string | null;
+  group_name?: string | null;
+};
+
+/**
+ * FLOW-406: where a category can go: a visible top-level category of its kind that is not a loan
+ * category, plus any group still in use (an older payload has no parent ids). Hebrew order.
+ */
+export function parentChoices(category: { id: string; kind: string } | null, rows: readonly ParentCandidate[]): string[] {
+  if (category == null) return [];
+  const names = new Set(groupNames(rows.filter((row) => row.kind === category.kind)));
+  for (const row of rows) {
+    if (row.id === category.id || row.kind !== category.kind || row.hidden) continue;
+    if (row.loan_part != null || row.parent_id != null) continue;
+    names.add(row.name);
   }
   return [...names].sort((a, b) => a.localeCompare(b, "he"));
 }
@@ -142,7 +167,7 @@ export function CategoryGroupSheet({
         onClose();
         return true;
       }}
-      title="קבוצה"
+      title="בחירת קטגוריית אב"
       hint={category?.name}
       returnFocusRef={returnFocusRef}
       action={adding ? (
@@ -159,7 +184,7 @@ export function CategoryGroupSheet({
           }}
         >
           <TextField
-            label="שם הקבוצה"
+            label="שם הקטגוריה"
             value={name}
             maxLength={GROUP_NAME_MAX * 2}
             error={error}
@@ -174,9 +199,9 @@ export function CategoryGroupSheet({
         </form>
       ) : (
         <div className="ui-stack ui-cat-sheet">
-          <div role="radiogroup" aria-label="קבוצה">
+          <div role="radiogroup" aria-label="קטגוריית אב">
             <RadioRow
-              label="בלי קבוצה"
+              label="בלי קטגוריית אב"
               selected={current == null}
               busy={save.isPending && save.variables.group == null}
               disabled={save.isPending}
@@ -196,7 +221,7 @@ export function CategoryGroupSheet({
           <List>
             <ListRow
               variant="button"
-              title="קבוצה חדשה"
+              title="קטגוריית אב חדשה"
               icon={<PlusIcon />}
               className="ui-row-add"
               disabled={save.isPending}

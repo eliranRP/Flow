@@ -1,4 +1,4 @@
-import type { ProjectCategoryMonthRow, ProjectDetail } from "@flow/shared";
+import type { CategoryRow, ProjectCategoryMonthRow, ProjectDetail } from "@flow/shared";
 import { useState } from "react";
 import { absAgorot } from "../agorot";
 import { isCurrentPeriod, type PeriodChoice } from "../period";
@@ -21,6 +21,8 @@ function pendingApprovalTitle(count: number): string {
 
 /** The hidden word on a "—" row: a usual bill that has not come yet this month. */
 export const NOT_IN_YET = "עוד לא הגיע";
+/** FLOW-406 (decision 0164): a parent's own lines, last inside its fold. */
+export const OWN_LINES = "בלי תת-קטגוריה";
 
 /**
  * Confirmed categories, then the amount still waiting, so the lines match the project's expenses.
@@ -34,6 +36,7 @@ export function ProjectCategories({
   categoryTo,
   period,
   sampleGroups,
+  sampleCategories,
   sampleMonths,
 }: {
   project: NonNullable<ProjectDetail>;
@@ -45,6 +48,8 @@ export function ProjectCategories({
   period?: PeriodChoice;
   /** Stories: the group of each category id. */
   sampleGroups?: Record<string, string>;
+  /** Stories: list_categories rows, for the parents (FLOW-406). */
+  sampleCategories?: CategoryRow[];
   /** Stories: project_category_months rows for the month shown. */
   sampleMonths?: ProjectCategoryMonthRow[];
 }) {
@@ -53,8 +58,20 @@ export function ProjectCategories({
   const months = useProjectCategoryMonthsQuery(live ? project.id : "", period ?? null);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const groupOf = new Map<string, string>(Object.entries(sampleGroups ?? {}));
-  for (const row of categories.data ?? []) {
-    if (row.group_name != null && row.group_name !== "") groupOf.set(row.id, row.group_name);
+  // FLOW-406: a sub-category folds under its parent, and the parent's own lines join it as
+  // "בלי תת-קטגוריה". An older payload with no parent ids folds by group_name.
+  const own = new Set<string>();
+  const listed = sampleCategories ?? categories.data ?? [];
+  const names = new Map(listed.map((row) => [row.id, row.name]));
+  for (const row of listed) {
+    const parentName = row.parent_id == null ? undefined : names.get(row.parent_id);
+    if (row.parent_id != null && parentName != null) {
+      groupOf.set(row.id, parentName);
+      groupOf.set(row.parent_id, parentName);
+      own.add(row.parent_id);
+    } else if (row.group_name != null && row.group_name !== "") {
+      groupOf.set(row.id, row.group_name);
+    }
   }
   // A past month's missing bill never came: "—" with "not in yet" is only for the open month.
   const current = period == null || isCurrentPeriod(period);
@@ -93,7 +110,7 @@ export function ProjectCategories({
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
 
-  function categoryRow(item: CategoryItem) {
+  function categoryRow(item: CategoryItem, inGroup = false) {
     const { line } = item;
     const href = line.id != null && !item.missing
       ? (categoryTo ?? categoryHref(project.id, line.id, line.currency, categorySearch))
@@ -102,7 +119,7 @@ export function ProjectCategories({
       <ListRow
         key={`${line.currency}:${line.id ?? line.name ?? ""}`}
         variant="project"
-        title={line.name ?? "בלי קטגוריה"}
+        title={inGroup && line.id != null && own.has(line.id) ? OWN_LINES : line.name ?? "בלי קטגוריה"}
         agorot={absAgorot(line.amount_minor)}
         currency={line.currency}
         loss={false}
@@ -145,7 +162,10 @@ export function ProjectCategories({
               });
             }}
           >
-            {entry.items.map(categoryRow)}
+            {[
+              ...entry.items.filter((item) => item.line.id == null || !own.has(item.line.id)),
+              ...entry.items.filter((item) => item.line.id != null && own.has(item.line.id)),
+            ].map((item) => categoryRow(item, true))}
           </CategoryGroupRow>
         );
       }))}

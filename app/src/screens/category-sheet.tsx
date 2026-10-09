@@ -13,7 +13,7 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
-import { CategoryGroupSheet, groupNames } from "./category-group";
+import { CategoryGroupSheet, parentChoices } from "./category-group";
 import { CategoryRenameSheet } from "./category-rename";
 import { KEPT_OUT } from "./screen-shared";
 
@@ -34,6 +34,11 @@ export function countsAsRehab(category: CategoryRow): boolean {
 /** Where a category's lines can move: same kind and visible. Only a loan category lists the built-in loan categories, which take only loan payment parts. */
 export function moveTargets(from: ManagedCategory, rows: ManagedCategory[]): ManagedCategory[] {
   return rows.filter((row) => row.id !== from.id && row.kind === from.kind && !row.hidden && (from.loan_part != null || row.loan_part == null));
+}
+
+/** FLOW-406: the parent's name, from its id; group_name on an older payload. */
+function parentName(category: ManagedCategory, rows: ManagedCategory[]): string | null {
+  return rows.find((row) => row.id === category.parent_id)?.name ?? category.group_name ?? null;
 }
 
 function lineCount(lines: number | undefined): string | undefined {
@@ -145,12 +150,12 @@ export function CategoryMenuSheet({
                   setRenameTarget(category);
                 }}
               />
-              {/* FLOW-401: an expense category can fold into a group on the project page. */}
-              {!income ? (
+              {/* FLOW-406: any category but a parent with sub-categories can sit under a parent. */}
+              {loanLine == null && !rows.some((row) => row.parent_id === category.id) ? (
                 <ListRow
                   variant="button"
-                  title="קבוצה"
-                  meta={category.group_name ?? undefined}
+                  title="קטגוריית אב"
+                  meta={parentName(category, rows) ?? undefined}
                   disabled={pnlBusy}
                   onClick={() => {
                     onClose();
@@ -253,8 +258,8 @@ export function CategoryMenuSheet({
         returnFocusRef={returnFocusRef}
       />
       <CategoryGroupSheet
-        category={groupTarget}
-        groups={groupNames(rows)}
+        category={groupTarget == null ? null : { ...groupTarget, group_name: parentName(groupTarget, rows) }}
+        groups={parentChoices(groupTarget, rows)}
         onClose={() => { setGroupTarget(null); }}
         blocked={blocked}
         returnFocusRef={returnFocusRef}

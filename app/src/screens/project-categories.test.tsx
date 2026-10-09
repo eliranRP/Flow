@@ -74,4 +74,28 @@ describe("project categories list (FLOW-401)", () => {
     fireEvent.click(screen.getByRole("button", { name: /חשבונות/ }));
     expect(screen.queryByText("עוד לא הגיע")).toBeNull();
   });
+
+  it("folds sub-categories under their parent, with the parent's own lines last (FLOW-406)", () => {
+    const row = (id: string, name: string, parent_id: string | null = null) => ({ id, name, kind: "expense" as const, hidden: false, is_default: false, parent_id });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ProjectCategories
+            project={{ ...project, categories: [...project.categories, { id: "c8", name: "תחזוקה", amount_agorot: 10_000n }] }}
+            search=""
+            sampleCategories={[row("c1", "חומרים"), row("c8", "תחזוקה"), row("c5", "חשמל", "c8"), row("c6", "גז", "c8")]}
+            sampleMonths={[]}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const group = screen.getByRole("button", { name: /תחזוקה/ });
+    // 455 + 155 + 100.
+    expect(group).toHaveTextContent("₪710");
+    fireEvent.click(group);
+    const links = screen.getAllByRole("link").map((link) => link.textContent);
+    const own = links.findIndex((text) => text.includes("בלי תת-קטגוריה"));
+    expect(own).toBeGreaterThan(links.findIndex((text) => text.includes("חשמל")));
+    expect(own).toBeGreaterThan(links.findIndex((text) => text.includes("גז")));
+  });
 });
