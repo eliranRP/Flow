@@ -1,11 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   categoryRowSchema,
   dashboardSchema,
+  mercuryStatusSchema,
+  type MercuryStatus,
   projectDetailSchema,
   projectGroupDetailSchema,
   reviewRowSchema,
 } from "./dashboard";
+import type { Database } from "./database.types.ts";
 
 const project = {
   id: "p",
@@ -266,5 +269,27 @@ describe("project groups (FLOW-406)", () => {
     const parsed = projectGroupDetailSchema.parse({ ...group, basis: "cash", from: null, to: null, projects: [row] });
     expect(parsed.projects[0]?.id).toBe("p");
     expect(parsed.income_agorot).toBe(100n);
+  });
+});
+
+// FLOW-508: the Mercury status schema is written by hand; it must keep the view's columns.
+type ConnectorStatusRow = Database["public"]["Views"]["connector_connection_status"]["Row"];
+
+describe("mercuryStatusSchema", () => {
+  it("has exactly the columns of connector_connection_status", () => {
+    expectTypeOf<keyof MercuryStatus>().toEqualTypeOf<keyof ConnectorStatusRow>();
+    const row: Record<keyof ConnectorStatusRow, null> = {
+      account_labels: null,
+      company_id: null,
+      connected: null,
+      import_from: null,
+      last_error: null,
+      last_sync_at: null,
+      next_attempt_at: null,
+      provider: null,
+      skip_count: null,
+      syncing: null,
+    };
+    expect(Object.keys(mercuryStatusSchema.shape).sort()).toEqual(Object.keys(row).sort());
   });
 });
