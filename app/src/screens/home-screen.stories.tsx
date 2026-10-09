@@ -256,6 +256,33 @@ export const HomeMixedCurrency: Story = {
   ),
 };
 
+// FLOW-339: a profit in shekels and a loss in dollars; the label names both.
+export const HomeMixedSigns: Story = {
+  render: () => (
+    <StoryRoute entry="/" tabs>
+      <HomeBooks
+        data={{
+          ...mixedCurrencyDashboard,
+          by_currency: [
+            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 40_000n, net_profit_minor: 60_000n, count: 2 },
+            { currency: "USD", income_minor: 50_000n, direct_minor: 175_000n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 175_000n, net_profit_minor: -125_000n, count: 2 },
+          ],
+        }}
+        previewing={false}
+        search=""
+        unpaidGross={0n}
+        unpaidCount={0}
+        period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
+        onPeriod={() => undefined}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const HomeMixedSignsDark: Story = { ...HomeMixedSigns, globals: { theme: "dark" } };
+export const HomeMixedSigns320: Story = { ...HomeMixedSigns, parameters: { viewport: { defaultViewport: "flow320" } } };
+
 // Profit by period (decision 0141, plan option A): Home on the period bar, the project with its own
 // period and the summary first, the "לפי חודש" page, and Unpaid with a mark that stays (FLOW-330).
 
