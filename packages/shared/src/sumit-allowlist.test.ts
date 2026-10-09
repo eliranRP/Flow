@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { assertSumitUrl, documentUrls, invoicesMissingLinks, mapCrmEntity, SUMIT_ALLOWLIST, type SumitDoc } from "../../../supabase/functions/_shared/ledger.ts";
+import {
+  assertSumitUrl,
+  crmEntityDrift,
+  documentUrls,
+  invoicesMissingLinks,
+  isSchemaDrift,
+  mapCrmEntity,
+  SUMIT_ALLOWLIST,
+  type SumitDoc,
+} from "../../../supabase/functions/_shared/ledger.ts";
 
 function expense(vat: number | null, wo = -118, gross = -118): Record<string, unknown> {
   return {
@@ -40,6 +49,36 @@ describe("mapCrmEntity", () => {
     expect(mapCrmEntity(expense(18, -100, -118))?.vat).toBe(18);
   });
 });
+describe("crmEntityDrift", () => {
+  it("is null for a row that maps and for a kind the sync does not read", () => {
+    expect(crmEntityDrift(expense(18, -100, -118))).toBeNull();
+    expect(crmEntityDrift({ ...expense(18), Accounting_DefinitionEnum: [99] })).toBeNull();
+  });
+
+  it("names the field that broke on a row the sync should read", () => {
+    const { Accounting_DefinitionEnum: _definition, ...noDefinition } = expense(18);
+    expect(crmEntityDrift(noDefinition)).toBe("Accounting_DefinitionEnum");
+    expect(crmEntityDrift({ ...expense(18), ID: "42" })).toBe("ID");
+    expect(crmEntityDrift({ ...expense(18), Accounting_DisplayCompanyValue: ["-118"] })).toBe("Accounting_DisplayCompanyValue");
+    expect(crmEntityDrift({ ...expense(18), Accounting_DisplayCompanyValueWithoutVAT: [] })).toBe(
+      "Accounting_DisplayCompanyValueWithoutVAT",
+    );
+    expect(crmEntityDrift({ ...expense(18), Accounting_Date: "2026-09-01" })).toBe("Accounting_Date");
+    for (const field of ["ID", "Accounting_DisplayCompanyValue", "Accounting_Date"]) {
+      expect(mapCrmEntity({ ...expense(18), [field]: null })).toBeNull();
+    }
+  });
+});
+
+describe("isSchemaDrift", () => {
+  it("is drift past 1 broken row in 20", () => {
+    expect(isSchemaDrift({ mapped: 40, broken: {} })).toBe(false);
+    expect(isSchemaDrift({ mapped: 19, broken: { ID: 1 } })).toBe(false);
+    expect(isSchemaDrift({ mapped: 18, broken: { ID: 1, Accounting_Date: 1 } })).toBe(true);
+    expect(isSchemaDrift({ mapped: 0, broken: { Accounting_DefinitionEnum: 3 } })).toBe(true);
+  });
+});
+
 describe("documentUrls", () => {
   it("maps DocumentID to a pay.sumit.co.il link and drops anything else", () => {
     const urls = documentUrls({

@@ -1,7 +1,17 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
-import { assertSumitUrl, deriveLine, documentUrls, invoicesMissingLinks, mapCrmEntity, type SumitDoc } from "../_shared/ledger.ts";
+import {
+  assertSumitUrl,
+  crmEntityDrift,
+  type CrmTally,
+  deriveLine,
+  documentUrls,
+  invoicesMissingLinks,
+  isSchemaDrift,
+  mapCrmEntity,
+  type SumitDoc,
+} from "../_shared/ledger.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 
 declare const Deno: {
@@ -62,7 +72,7 @@ Deno.serve(async (req) => {
           await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
           const message = error instanceof Error ? error.message : "sync failed";
           if (message !== "sumit_rejected" && message !== "sumit_auth") {
-            const code = message === "sync_page_cap" ? "sync_page_cap" : "sync_failed";
+            const code = message === "sync_page_cap" || message === "sync_schema_drift" ? message : "sync_failed";
             await noteSyncFailure(admin, row.company_id, code);
           }
           console.error("sumit-sync cron", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));
@@ -89,7 +99,7 @@ Deno.serve(async (req) => {
     }
     const message = error instanceof Error ? error.message : "sync failed";
     console.error("sumit-sync", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));
-    const known = message === "sync_failed" || message === "sync_page_cap" || message === "sumit_rejected" || message === "sumit_auth" || message === "SUMIT is not connected" || message === "unauthorized" || message === "no company";
+    const known = message === "sync_failed" || message === "sync_page_cap" || message === "sync_schema_drift" || message === "sumit_rejected" || message === "sumit_auth" || message === "SUMIT is not connected" || message === "unauthorized" || message === "no company";
     const code = known ? message : "sync_failed";
     return json({ error: code }, message === "sumit_rejected" ? 429 : 500);
   }
@@ -198,8 +208,8 @@ async function runSync(
     const message = error instanceof Error ? error.message : "sync failed";
     const safe = apiKey === "" ? message : message.replaceAll(apiKey, "[redacted]");
     console.error("sumit sync failed", safe.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]").slice(0, 400));
-    const code = message === "sync_page_cap"
-      ? "sync_page_cap"
+    const code = message === "sync_page_cap" || message === "sync_schema_drift"
+      ? message
       : message === "sumit_rejected" || message === "sumit_auth"
         ? message
         : "sync_failed";
@@ -213,7 +223,10 @@ async function runSync(
   }
 }
 
-/** Wait 15 minutes after sync_failed or sync_page_cap so a stuck page cannot fill the drain. */
+/**
+ * Wait 15 minutes after sync_failed, sync_page_cap or sync_schema_drift so a stuck page cannot
+ * fill the drain.
+ */
 async function noteSyncFailure(admin: SupabaseClient, companyId: string, code: string): Promise<void> {
   const noted = await admin.rpc("note_sync_failure", { p_company: companyId, p_code: code });
   if (noted.error) {
@@ -296,7 +309,7 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
   const folder = findFolder(folders, "מסמכים");
   if (folder == null) throw new Error("SUMIT documents folder was not found");
   const docs: SumitDoc[] = [];
-  let dropped = 0;
+  const tally: CrmTally = { mapped: 0, broken: {} };
   let start = 0;
   for (let page = 0; page < PAGE_CAP; page += 1) {
     reads += 1;
@@ -307,24 +320,52 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
       Paging: { StartIndex: start, PageSize: 1000 },
     });
     const data = payload.Data;
+    // FLOW-510: a page with a body but no row list means SUMIT changed its shape.
+    if (pageShapeDrift(data)) {
+      console.error("sumit-sync page without a row list", JSON.stringify(Object.keys(data as object).slice(0, 10)));
+      throw new Error("sync_schema_drift");
+    }
     const entities = extractEntities(data);
     for (const entity of entities) {
       if (!entity || typeof entity !== "object") continue;
-      const mapped = mapCrmEntity(entity as Record<string, unknown>);
-      if (mapped) docs.push(mapped);
-      else dropped += 1;
+      const record = entity as Record<string, unknown>;
+      const mapped = mapCrmEntity(record);
+      if (mapped) {
+        docs.push(mapped);
+        tally.mapped += 1;
+        continue;
+      }
+      const field = crmEntityDrift(record);
+      if (field != null) tally.broken[field] = (tally.broken[field] ?? 0) + 1;
     }
     const hasNext = Boolean(
       data && typeof data === "object" && "HasNextPage" in data && (data as { HasNextPage?: boolean }).HasNextPage,
     );
     if (!hasNext || entities.length === 0) {
-      if (dropped > 0) console.error("sumit-sync dropped entities", dropped);
+      checkDrift(tally);
       return { docs, reads };
     }
     start += entities.length;
   }
-  if (dropped > 0) console.error("sumit-sync dropped entities", dropped);
+  checkDrift(tally);
   throw new Error("sync_page_cap");
+}
+
+/**
+ * FLOW-510. Logs the SUMIT fields that broke (names and counts, never values). Past the
+ * isSchemaDrift share it throws sync_schema_drift before anything is written, so the full sweep
+ * cannot void documents SUMIT still has; below it the broken rows are dropped as before.
+ */
+function checkDrift(tally: CrmTally): void {
+  if (Object.keys(tally.broken).length === 0) return;
+  console.error("sumit-sync rows that did not map", JSON.stringify({ mapped: tally.mapped, broken: tally.broken }));
+  if (isSchemaDrift(tally)) throw new Error("sync_schema_drift");
+}
+
+function pageShapeDrift(data: unknown): boolean {
+  if (data == null || Array.isArray(data) || typeof data !== "object") return false;
+  const record = data as Record<string, unknown>;
+  return !["Entities", "Data", "List"].some((key) => Array.isArray(record[key]));
 }
 
 /** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */

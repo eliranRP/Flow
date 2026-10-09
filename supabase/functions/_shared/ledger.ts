@@ -218,6 +218,40 @@ export function mapCrmEntity(entity: Record<string, unknown>): SumitDoc | null {
   };
 }
 
+/**
+ * FLOW-510. The SUMIT field that broke when a CRM row cannot be mapped, else null. A row of a
+ * kind the sync does not read (a quote, an order) is skipped by design and is not drift. A row
+ * with no definition enum at all is drift: SUMIT may have renamed the field.
+ */
+export function crmEntityDrift(entity: Record<string, unknown>): string | null {
+  const definition = first<number>(entity.Accounting_DefinitionEnum);
+  if (typeof definition !== "number") return "Accounting_DefinitionEnum";
+  if (!KIND_BY_DEFINITION[definition]) return null;
+  if (typeof entity.ID !== "number") return "ID";
+  if (typeof first<number>(entity.Accounting_DisplayCompanyValue) !== "number") return "Accounting_DisplayCompanyValue";
+  if (typeof first<number>(entity.Accounting_DisplayCompanyValueWithoutVAT) !== "number") {
+    return "Accounting_DisplayCompanyValueWithoutVAT";
+  }
+  if (typeof first<string>(entity.Accounting_Date) !== "string") return "Accounting_Date";
+  return null;
+}
+
+/** FLOW-510. The rows one sync mapped, and the rows it could not map by the field that broke. */
+export interface CrmTally {
+  mapped: number;
+  broken: Record<string, number>;
+}
+
+/**
+ * FLOW-510. More than 1 in 20 of the rows the sync should read could not be mapped. The sync then
+ * stops before it writes, so the full sweep cannot void documents SUMIT still has: the last good
+ * ledger stays, and the connection shows sync_schema_drift.
+ */
+export function isSchemaDrift(tally: CrmTally): boolean {
+  const broken = Object.values(tally.broken).reduce((sum, count) => sum + count, 0);
+  return broken > 0 && broken * 20 > tally.mapped + broken;
+}
+
 /** Read-only SUMIT paths. Anything else throws before the request. */
 export const SUMIT_ALLOWLIST = [
   "https://api.sumit.co.il/crm/schema/listfolders/",
