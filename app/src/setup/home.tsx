@@ -21,8 +21,9 @@ export function SetupHomeSlot({ emptyHome }: { emptyHome: boolean }) {
 function SetupHomeUser({ userId, emptyHome }: { userId: string; emptyHome: boolean }) {
   const dashboard = useDashboardQuery();
   const companyId = dashboard.data?.company_id ?? null;
-  const { store } = useSetupStore(userId, companyId);
-  if (store.run_started_at == null) return null;
+  // Wait for the server copy (FLOW-506): a stale local copy must not show the card, toast, or write.
+  const { store, ready } = useSetupStore(userId, companyId);
+  if (!ready || store.run_started_at == null) return null;
   return <SetupHomeReady userId={userId} companyId={companyId} emptyHome={emptyHome} />;
 }
 
