@@ -92,17 +92,10 @@
   min-block-size: var(--control-height);
 }
 
-.ui-setup-steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* Step 5 uses the install screen's numbered steps (FLOW-506); the step body already has the side gutter. */
+.ui-install-steps.ui-setup-steps {
   margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ui-setup-steps li {
-  min-block-size: var(--touch-min);
+  padding-inline: 0;
 }
 
 .ui-setup-card {
