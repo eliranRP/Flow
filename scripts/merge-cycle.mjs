@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-// Merge-cycle report: how long each merged PR took from open to merge, against the owner's targets
+// Merge-cycle report: how long each merged PR took from its last push to merge, against the owner's targets
 // (2026-10-09): a small PR merges within 5 minutes, a medium one within 10, a large one within 20.
+// The clock starts at the head commit's committer date (the last push, which is when the gate started), because
+// lanes open a draft PR when they claim a task and flip it to ready seconds before merging, so neither created_at
+// nor ready_for_review measures the push-to-merge cycle. It falls back to created_at when the commit cannot be read.
 // Usage: node scripts/merge-cycle.mjs [--since <ISO time>] [--repo owner/name] [--json]
 //   --since defaults to 3 hours ago. GITHUB_TOKEN raises the API rate limit when set; reads go through curl, so the proxy settings apply.
 // The lane manager runs it every hour and posts the table; a miss names its cause in the post.
@@ -17,20 +20,22 @@ export function sizeOf(lines, files) {
   return { size: "L", target: 20 };
 }
 
-/** One report row from a merged pull request (the GitHub REST shape). */
-export function rowOf(pr) {
+/** One report row from a merged pull request (the GitHub REST shape); `pushedAt` is its head commit's date. */
+export function rowOf(pr, pushedAt) {
   const lines = (pr.additions ?? 0) + (pr.deletions ?? 0);
   const files = pr.changed_files ?? 0;
   const { size, target } = sizeOf(lines, files);
-  const opened = Date.parse(pr.created_at);
+  const from = pushedAt ? "push" : "open";
+  const start = Date.parse(pushedAt ?? pr.created_at);
   const merged = Date.parse(pr.merged_at);
-  const minutes = Math.round((merged - opened) / 60000);
+  const minutes = Math.round((merged - start) / 60000);
   return {
     number: pr.number,
     title: pr.title,
     size,
     lines,
     files,
+    from,
     minutes,
     target,
     met: minutes <= target,
@@ -70,7 +75,7 @@ export function format(rows) {
   );
   const summary = summarize(rows);
   lines.push("");
-  lines.push("size | merged | met | median min");
+  lines.push("size | merged | met | median min (lower middle)");
   for (const size of ["S", "M", "L"]) {
     const bucket = summary.bySize[size];
     if (bucket)
@@ -99,7 +104,21 @@ async function github(url, token) {
   return JSON.parse(stdout);
 }
 
-/** Merged PRs since `since`, with their line and file counts (one request per PR). */
+/** The head commit's committer date (the last push), or undefined when the commit cannot be read any more. */
+async function pushedAtOf(repo, pr, token, get) {
+  if (!pr.head?.sha) return undefined;
+  try {
+    const commit = await get(
+      `https://api.github.com/repos/${repo}/commits/${pr.head.sha}`,
+      token,
+    );
+    return commit.commit?.committer?.date;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Merged PRs since `since`, with their line and file counts and last push (two requests per PR). */
 export async function fetchRows({ repo, since, token, get = github }) {
   const sinceMs = Date.parse(since);
   const rows = [];
@@ -109,16 +128,14 @@ export async function fetchRows({ repo, since, token, get = github }) {
       token,
     );
     if (!list.length) break;
-    let older = 0;
     for (const pr of list) {
-      if (!pr.merged_at) continue;
-      if (Date.parse(pr.merged_at) < sinceMs) {
-        older += 1;
-        continue;
-      }
-      rows.push(rowOf(await get(pr.url, token)));
+      if (!pr.merged_at || Date.parse(pr.merged_at) < sinceMs) continue;
+      const detail = await get(pr.url, token);
+      rows.push(rowOf(detail, await pushedAtOf(repo, detail, token, get)));
     }
-    if (older > 0 && rows.length) break;
+    // Every in-window merge has updated_at >= merged_at >= since, so once a page's last
+    // PR was updated before the cutoff, no later page can hold one.
+    if (Date.parse(list[list.length - 1].updated_at) < sinceMs) break;
   }
   return rows.sort((a, b) => Date.parse(a.mergedAt) - Date.parse(b.mergedAt));
 }

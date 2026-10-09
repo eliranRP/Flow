@@ -22,12 +22,18 @@ const pr = (number, minutes, lines, files = 2) => ({
   url: `pr/${number}`,
 });
 
-test("a row measures open to merge against the size's target", () => {
+test("a row measures the last push to merge against the size's target", () => {
   const row = rowOf(pr(1, 7, 50));
   assert.equal(row.size, "S");
+  assert.equal(row.from, "open");
   assert.equal(row.minutes, 7);
   assert.equal(row.met, false);
   assert.equal(rowOf(pr(2, 9, 300)).met, true);
+  // A draft opened at claim time and pushed 3 minutes before the merge counts 3 minutes, not 60.
+  const pushed = rowOf(pr(3, 60, 50), "2026-10-09T10:57:00Z");
+  assert.equal(pushed.from, "push");
+  assert.equal(pushed.minutes, 3);
+  assert.equal(pushed.met, true);
 });
 
 test("the summary counts met targets and medians per size", () => {
@@ -49,21 +55,37 @@ test("the summary counts met targets and medians per size", () => {
   assert.match(text, /met target: 2\/4$/);
 });
 
-test("fetchRows keeps merged PRs since the cutoff and reads each one's counts", async () => {
+test("fetchRows keeps merged PRs since the cutoff, reads each one's counts and last push, and pages by update time", async () => {
   const calls = [];
+  const listed = (number, minutes, updatedAt, mergedAt) => ({
+    ...pr(number, minutes, 10),
+    updated_at: updatedAt,
+    ...(mergedAt === undefined ? {} : { merged_at: mergedAt }),
+  });
   const get = async (url) => {
     calls.push(url);
     if (url.includes("/pulls?")) {
       if (url.endsWith("page=1")) {
         return [
-          pr(3, 5, 10),
-          { number: 9, url: "pr/9", merged_at: null },
-          { ...pr(1, 5, 10), merged_at: "2026-10-09T09:00:00Z" },
+          // Merged at 09:00, before the cutoff, but commented on at 10:30: it must not stop the paging.
+          listed(1, 5, "2026-10-09T10:30:00Z", "2026-10-09T09:00:00Z"),
+          listed(3, 5, "2026-10-09T10:05:00Z"),
+          listed(9, 5, "2026-10-09T10:04:00Z", null),
         ];
       }
-      return [];
+      if (url.endsWith("page=2")) {
+        return [
+          listed(4, 5, "2026-10-09T10:03:00Z"),
+          listed(2, 5, "2026-10-09T09:20:00Z", "2026-10-09T09:10:00Z"),
+        ];
+      }
+      throw new Error(`page 3 must not be read: ${url}`);
     }
-    return pr(Number(url.split("/").pop()), 5, 10);
+    if (url.includes("/commits/")) {
+      return { commit: { committer: { date: "2026-10-09T10:03:00Z" } } };
+    }
+    const number = Number(url.split("/").pop());
+    return { ...pr(number, 5, 10), head: { sha: `sha${number}` } };
   };
   const rows = await fetchRows({
     repo: "o/r",
@@ -71,13 +93,36 @@ test("fetchRows keeps merged PRs since the cutoff and reads each one's counts", 
     get,
   });
   assert.deepEqual(
-    rows.map((row) => row.number),
-    [3],
+    rows.map((row) => [row.number, row.from, row.minutes]),
+    [
+      [3, "push", 2],
+      [4, "push", 2],
+    ],
   );
-  assert.ok(calls.includes("pr/3"));
+  assert.ok(calls.includes("https://api.github.com/repos/o/r/commits/sha3"));
   assert.ok(!calls.includes("pr/9"), "an unmerged PR is not fetched");
   assert.ok(
     !calls.includes("pr/1"),
     "a PR merged before the cutoff is not fetched",
+  );
+});
+
+test("fetchRows falls back to the open time when the head commit cannot be read", async () => {
+  const get = async (url) => {
+    if (url.includes("/pulls?"))
+      return url.endsWith("page=1")
+        ? [{ ...pr(5, 5, 10), updated_at: "2026-10-09T09:00:00Z" }]
+        : [];
+    if (url.includes("/commits/")) throw new Error("gone");
+    return { ...pr(5, 5, 10), head: { sha: "sha5" } };
+  };
+  const rows = await fetchRows({
+    repo: "o/r",
+    since: "2026-10-09T08:00:00Z",
+    get,
+  });
+  assert.deepEqual(
+    rows.map((row) => [row.number, row.from, row.minutes]),
+    [[5, "open", 5]],
   );
 });
