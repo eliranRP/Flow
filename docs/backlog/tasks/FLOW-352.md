@@ -1,0 +1,9 @@
+<a id="flow-352"></a>
+# FLOW-352 · Phone polish after the October 9 evening deploy (cycle 11)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** item 1 after #371, item 4 after #372 (same files)
+- **Source:** cycle 11 phone review of deploy 23d1fd5, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-11/shots/`.
+- [x] (UI lane 2, #380: a value that doesn't fit beside its pill takes the row's width and the pill drops under it; the value clamps at two lines) Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
+- [x] Picker sheets: `.ui-radio-desc` uses the label style (weight 500, secondary grey), so the line under an option reads as heavy as the option name. Use the row hint style: weight 400, `--color-text-muted` (css/12-split.css:163-171). Shots of 3-4 pickers before and after.
+- [x] (UI lane 1, with the FLOW-106 split editor PR) Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
+- [x] Kept-out rows fade at 50% opacity, which drops the "מחוץ לרווח" line to about 2.1:1 and the name to 3.4:1 in light mode. Fade the icon, name and amount to about 0.6 and keep the hint at full muted grey (about 5.8:1) (css/02-fields-sheets.css:197-199). Design lead's call within the owner's pick C; the rows still read as faded.
+- **Acceptance:** shots at 320 and 390, light and dark; design lead sign-off.

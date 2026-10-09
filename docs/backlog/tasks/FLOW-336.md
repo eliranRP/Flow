@@ -1,0 +1,5 @@
+<a id="flow-336"></a>
+# FLOW-336 · Step the period one-handed
+- **Type:** PLAN FIRST · **Status:** done (#239, decision 0150) · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
+- **What:** The period bar sits in the top third on Home (presets y≈15–51, stepper y≈62–111 at 375x667) and on the project band (y≈162–258). Stepping a month from Home's default takes 2 taps at the top edge and each further month another, about 550px above a resting thumb. Proposal: keep the bar where the owner put it, and add a sideways swipe on the band's hero figure that steps the window by the preset's length (same rules as the stepper: the later step stops at the current window), with a short haptic and the label updating. Swipe is the one-handed path; the arrows stay for accessibility.
+- **Acceptance:** owner's choice on a card; works in RTL (swipe toward the start side goes earlier); does not fight the edge swipe-back (FLOW-332) or vertical scroll; a decision record.

@@ -1,0 +1,7 @@
+<a id="flow-345"></a>
+# FLOW-345 · Card swipe: a cue at the list ends and arrows that match
+- **Type:** PLAN FIRST · **Status:** done (UI lane 2, #336: option D, owner 2026-10-09) · **Depends on:** FLOW-314 (#291) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **Approval:** 2026-10-09 07:17Z, the owner picked option D on the card (mockup `mockups/cycle-7/flow-345-d.png`; a, b and c rejected).
+- **What:** At a list end a sideways drag doesn't move the card at all (160px drag, transform 0), so the gesture reads as broken, and mid-list a drag shows a blank page behind the card. The visible prev/next controls are vertical ˄ ˅ in the top corner while the swipe is sideways, against §3.7 (a swipe follows the arrows it repeats). Proposal: a resisted drag at the ends and the next card peeking in; the owner picks ‹ › arrows or keeps ˄ ˅.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+- [x] (UI lane 2, #336: option D, owner 2026-10-09) ˄ ˅ leave the top bar; הקודמת · "N מתוך M" · הבאה sit in a quiet row at the bottom of the card, an end hides its word and keeps the counter centred, the pressed word keeps focus; mid-drag the neighbour's edge peeks in (with its name from the prefetch), and at a list end the card gives up to 32px and springs back. Design log [2026-10-09-flow-345](../../design/log/2026-10-09-flow-345.md), with notes for the design lead on §3.7 and §4 screen 10; built shots in the project's `mockups/cycle-7/flow-345-built/`.

@@ -1,0 +1,6 @@
+<a id="flow-102"></a>
+# FLOW-102 · Unassigned bucket, overhead project, unpaid row on the invoiced basis
+- **Type:** SMALL CYCLE · **Status:** done (#71) · **Depends on:** —
+- **What:** Three P&L gaps found while cleaning real data. (1) Lines with no project, shared split or overhead role drop out of direct + shared + overhead, so the parts don't add up to the company total. Return an `unassigned` bucket in `company_pnl`, `get_project` callers and the MCP totals. (2) Let a company mark one project as its overhead project, so lines filed there count as overhead, not as direct cost (today overhead reads 0 for a company that files overhead into a project). (3) An unpaid expense row is left out on the invoiced basis; review the rule against [calculations](../../module-1-project-pnl/calculations.md) and fix or document it.
+- **MCP:** totals tools return the unassigned bucket; a write tool to set or clear the overhead project (idempotency key, write bucket, undo).
+- **Acceptance:** pgTAP: projects + overhead + unassigned = company total on both bases, ILS and USD; the overhead project's lines move from direct to overhead and back on undo; cross-tenant refusal with a positive control; the unpaid-row rule has a test either way. Decision and changelog.

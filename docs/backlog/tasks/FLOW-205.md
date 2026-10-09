@@ -1,0 +1,14 @@
+<a id="flow-205"></a>
+# FLOW-205 · MCP hardening follow-ups
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [x] Undo ignores `review_queue.prior_*` and `reassign_undo.prior_*` that still point at the row. (Conflict while a prior project, category or share points at it: migration `20261010130000`.)
+- [x] Names accept control and invisible characters. (FLOW-205 part 1: project, category and loan names with a control or invisible format character are `validation`; ZWJ stays for emoji.)
+- [x] A second hide returns the generic refusal; if the app unhides a category the MCP hid, the MCP can neither re-hide nor undo. (A re-hide keeps the one open undo; undo of a hide the app reversed succeeds: migration `20261010130000`.)
+- [x] TOOLS.md conflict wording, and document the `sync_bank` errors.
+- [x] `mercury-sync` `deno check` doesn't resolve imports (also on main). (It needs the function's own `--config`; `scripts/check-edge-functions.sh` checks every function that way in local CI and CI, and found a null check in `sumit-connect`.)
+- [x] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token. (Production QA, 2026-10-09: `sync_bank` with the Flow QA key, then `get_sync_status`, passed on live 23d1fd5 (done in 17 s, no 401) and runs in the hourly deploy check; flow-mcp's session-less JWT takes the same owner fallback, so a break shows as `unauthorized`. Needs a live MCP token for the sandbox company Flow QA, so it belongs with the Production QA thread's deploy check.)
+- [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
+- [x] A race test (dblink pgTAP or e2e) for the undo row lock. (`mcp_undo_race.test.sql`.)
+- [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
+- [x] The MCP review schema still requires `project_id` for kept-out income that doesn't need one. (FLOW-205 part 1: `assign_expense` takes no project for a kept-out income category; any other category without one is `validation`.)
+- [x] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space. (Migration `20261010160000`: the database refuses hidden characters in project, category, loan and company names and stores wide spaces as plain ones; a refused MCP name says `name has an invisible or control character`.)

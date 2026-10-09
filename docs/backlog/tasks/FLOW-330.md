@@ -1,0 +1,8 @@
+<a id="flow-330"></a>
+# FLOW-330 · Mark paid that stays marked
+- **Type:** SMALL CYCLE · **Status:** done (#199; server and MCP #163) · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
+- **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`unpaid-screen.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
+- **MCP:** for (a), the unpaid tools return and can set the flag.
+- **Acceptance:** a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
+- [x] Server and MCP (#163, decision [0133](../../decisions/0133-invoice-paid-marks.md)): `set_invoice_paid(id, paid)` stores the mark, `list_unpaid` keeps the row with `marked_paid_at`; MCP `list_unpaid` and `set_invoice_paid` (undo `invoice_paid`).
+- [x] (Already on main, checked 2026-10-09 by Backlog bug fixes: `unpaid-screen.tsx` calls `set_invoice_paid` in one tap with "ביטול הסימון" to clear it, `unpaidTotals` and Home's `unpaidOpenGross` skip marked rows, and the row schema carries `marked_paid_at` and `currency`) Screen (UI lane): "סימון כשולם" calls `set_invoice_paid` in one tap (no explainer step) instead of `setHidden`; a marked row shows "סומן כשולם · ממתין לסנכרון" with a way to clear it; Unpaid's total and Home's unpaid row sum only rows with `marked_paid_at` null; add `marked_paid_at` and `currency` to `unpaidRowSchema`.
