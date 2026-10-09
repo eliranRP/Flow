@@ -5,6 +5,7 @@ import { mercuryAccountsChanged } from "../_shared/connectors/mercury/client.ts"
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
+import { parseImportFrom, saveImportFrom } from "../_shared/import-from.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -34,9 +35,11 @@ Deno.serve(async (req) => {
     const user = await userClient.auth.getUser();
     if (user.error || !user.data.user) return json({ error: "unauthorized" }, 401);
 
-    const body = (await req.json()) as { apiKey?: unknown };
+    const body = (await req.json()) as { apiKey?: unknown; importFrom?: unknown };
     apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
     if (apiKey.length < 8) return json({ error: "api key is required" }, 400);
+    const importFrom = parseImportFrom(body.importFrom);
+    if (importFrom === false) return json({ error: "import date is invalid" }, 400);
 
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
@@ -92,7 +95,9 @@ Deno.serve(async (req) => {
       .eq("company_id", company.data.id)
       .eq("provider", "mercury");
     if (labeled.error) return json({ error: "could not store the connection" }, 500);
-    return json({ connected: true, accounts: validated.accounts.length });
+    // Before the first sync tick reads it. The connection stands even if only the date fails.
+    const importSaved = await saveImportFrom(userClient, "mercury", importFrom);
+    return json({ connected: true, accounts: validated.accounts.length, import_from_saved: importSaved });
   } catch (error) {
     const message = error instanceof Error ? error.message : "connect failed";
     const scrubbed = apiKey ? message.replaceAll(apiKey, "[redacted]") : message;
