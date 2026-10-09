@@ -379,6 +379,8 @@ export function DevCategories() {
     <CategoriesScreen
       sample={[
         { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false, count: 2 },
+        // A second visible expense category, so חומרים has somewhere to move (FLOW-347).
+        { id: "c4", name: "קבלנים", kind: "expense", hidden: false, is_default: false, count: 1 },
         { id: "c2", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
         { id: "c3", name: "עבודה", kind: "income", hidden: false, is_default: false, count: 1 },
       ]}
@@ -515,8 +517,12 @@ function DevStepTransaction({ n }: { n: number }) {
 
 export function DevProjectDetail() {
   const [params] = useSearchParams();
+  const section = params.get("section");
   return (
     <ProjectDetailScreen
+      // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample.
+      section={section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
+      sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
       sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       sample={{
         id: "p1",
