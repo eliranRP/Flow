@@ -29,14 +29,35 @@ export function ok(data: unknown): ToolResult {
   return { isError: false, structuredContent: { ok: true, data } };
 }
 
+/** A client's own key, echoed in a refusal only when it is short and plain (FLOW-414). */
+export function shownKey(key: string): string {
+  return /^[A-Za-z0-9_.]{1,64}$/.test(key) ? key : "a field";
+}
+
 export function argsOf(input: unknown, allowed: Set<string>): Record<string, unknown> | ToolResult {
   if (input == null) return {};
   if (typeof input !== "object" || Array.isArray(input)) return fail("validation", "validation");
   const record = input as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (IDENTITY.has(key) || !allowed.has(key)) return fail("validation", "validation");
+    // The key is named so a client can see which field to drop (FLOW-414).
+    if (IDENTITY.has(key)) return fail("validation", `${key}: set by the connection, not an argument`);
+    if (!allowed.has(key)) return fail("validation", `${shownKey(key)}: unknown field`);
   }
   return record;
+}
+
+/**
+ * A bare `validation` from an amount or percent reader, renamed to say which field failed and
+ * what it takes (FLOW-414). Any other result passes through.
+ */
+export function named<T>(value: T | ToolResult, field: string, takes: string): T | ToolResult {
+  if (typeof value === "object" && value != null && "isError" in value) {
+    const error = (value as ToolResult).structuredContent;
+    if (!error.ok && error.error.code === "validation" && error.error.message === "validation") {
+      return fail("validation", `${field}: ${takes}`);
+    }
+  }
+  return value;
 }
 
 export function isFail(value: Record<string, unknown> | ToolResult): value is ToolResult {

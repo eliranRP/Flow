@@ -597,7 +597,7 @@ export function LoanSettingsSection({
         titleRef={sheetTitle}
         returnFocusRef={newLoanReturn}
         leading={picking ? (
-          <IconButton label="חזרה" onClick={backToForm}>
+          <IconButton label="חזרה" className="ui-back-btn" onClick={backToForm}>
             <BackIcon />
           </IconButton>
         ) : undefined}
