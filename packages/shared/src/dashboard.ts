@@ -99,6 +99,17 @@ export const unpaidRowSchema = z.object({
   document_url: z.string().nullable().optional(),
 });
 
+/**
+ * FLOW-309 (decision 0165): a receipt paired with a connector invoice in review. Amounts are agorot,
+ * like every other amount here.
+ */
+export const reviewReceiptSchema = z.object({
+  transaction_id: z.string(),
+  doc_date: z.string(),
+  amount_gross: agorotSchema,
+  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+});
+
 export const reviewRowSchema = z.object({
   id: z.string(),
   transaction_id: z.string(),
@@ -133,6 +144,15 @@ export const reviewRowSchema = z.object({
   auto_approved_today: z.number().int().nonnegative().optional(),
   /** True when today's filed set includes an assistant approval. Decision 0080. */
   assistant_filed_today: z.boolean().optional(),
+  /**
+   * FLOW-309 (decision 0165): the invoice's paired receipts, oldest first; [] on any other line.
+   * Optional until the pairing server deploys; a malformed list drops to undefined, never the queue.
+   */
+  receipts: z.array(reviewReceiptSchema).optional().catch(undefined),
+  /** FLOW-309: the receipts cover the invoice after its credit notes. */
+  paid: z.boolean().optional().catch(undefined),
+  /** FLOW-309: the latest receipt's date, or null when there is none. */
+  paid_on: z.string().nullable().optional().catch(undefined),
 });
 
 /** A SUMIT row filed today with no open review item. Same filter as auto_approved_today. */
@@ -641,6 +661,7 @@ export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
 export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
 export type ReviewRow = z.infer<typeof reviewRowSchema>;
+export type ReviewReceipt = z.infer<typeof reviewReceiptSchema>;
 export type FiledTodayRow = z.infer<typeof filedTodaySchema>;
 export type CategoryRow = z.infer<typeof categoryRowSchema>;
 export type ProjectCategoryMonthRow = z.infer<typeof projectCategoryMonthRowSchema>;

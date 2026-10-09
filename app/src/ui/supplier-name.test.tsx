@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { TransactionScreen } from "../screens/flow-screens";
+import { UnpaidScreen } from "../screens/unpaid-screen";
 import { BooksProvider } from "../use-books";
 import { ChangeAssignment } from "./change-sheet";
 import { ReviewCard } from "./review-card";
@@ -64,6 +65,33 @@ describe("supplier names", () => {
     expect(titles.some((node) => node.classList.contains("ui-review-supplier"))).toBe(true);
     expect(titles.some((node) => node.classList.contains("ui-remember-supplier"))).toBe(true);
     expect(titles.some((node) => node.classList.contains("ui-party"))).toBe(true);
+  });
+
+  it("wraps a long customer name on the unpaid list up to two lines", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ToastProvider>
+            <UnpaidScreen
+              sample={[
+                { id: "a", description: "חשבונית", doc_date: "2026-09-01", customer_name: longName, project_name: null, open_gross_agorot: 10_000n, open_net_agorot: 10_000n, document_url: null },
+              ]}
+            />
+          </ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const title = screen.getByText(longName);
+    expect(title.classList.contains("ui-row-title")).toBe(true);
+    wraps(title);
+    expect(getComputedStyle(title).webkitLineClamp).toBe("2");
+  });
+
+  it("keeps the review card name to three lines", () => {
+    render(<ReviewCard supplier={longName} sourceLine="חשבונית · 01/07/2026" netAgorot={-100n} />);
+    const title = screen.getByText(longName);
+    wraps(title);
+    expect(getComputedStyle(title).webkitLineClamp).toBe("3");
   });
 
   it("keeps the remember arrow's spaces outside its LTR bdi (FLOW-328)", () => {

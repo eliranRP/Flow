@@ -117,4 +117,19 @@ describe.each(forms)("%s company name", (_label, show) => {
     });
     expect(screen.queryByText(RENAME_CONTROL_CHAR)).not.toBeInTheDocument();
   });
+
+  it("describes the business type with its own hint and sends the exempt choice (FLOW-506)", async () => {
+    const calls = mockRpc();
+    show();
+    const exempt = screen.getByRole("radio", { name: "עוסק פטור" });
+    fireEvent.click(exempt);
+    expect(screen.getByText("עוסק פטור: בלי מע״מ.")).toBeInTheDocument();
+    expect(screen.queryByText("עוסק מורשה: מע״מ 18%.")).not.toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "סוג העסק" })).toHaveAccessibleDescription("עוסק פטור: בלי מע״מ.");
+    fireEvent.change(field(), { target: { value: "סטודיו אלפא" } });
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(creates(calls)).toEqual([{ name: "create_company", args: { p_name: "סטודיו אלפא", p_vat_registered: false } }]);
+    });
+  });
 });

@@ -116,7 +116,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
         </p>
         <p className="t-label text-text-secondary">ממתין לתשלום · טרם נגבה</p>
       </div>
-      <List>
+      <List className="ui-list-wrap-title">
         {rows.map((row) => {
           const marked = unpaidIsMarked(row);
           const busy = busyId === row.id && mark.isPending;

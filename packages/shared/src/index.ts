@@ -76,6 +76,7 @@ export type {
   ProjectRow,
   ProjectWaitingRow,
   FiledTodayRow,
+  ReviewReceipt,
   ReviewRow,
   SearchPage,
   SearchRow,

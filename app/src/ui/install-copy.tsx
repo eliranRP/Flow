@@ -13,7 +13,7 @@ export type InstallStepCopy = {
 
 export const IOS_INSTALL_STEPS: readonly InstallStepCopy[] = [
   { id: "menu", text: <>מקישים <bdi dir="ltr">•••</bdi> בספארי</> },
-  { id: "share", text: "שיתוף ואז הוספה למסך הבית" },
+  { id: "share", text: "בוחרים שיתוף ואז ״הוספה למסך הבית״" },
   { id: "add", text: "מקישים הוספה" },
 ];
 

@@ -1,25 +1,19 @@
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } from "react";
-import { flushSync } from "react-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
-import { getSupabase } from "../lib/supabase";
 import { JEV_DEFAULT, saveJevIntegration } from "../screens/jev-settings";
-import { COMPANY_NAME_MAX, companyNameError } from "../screens/rename-company";
+import { useCompanyForm } from "../screens/company-form";
 import { Notice } from "../ui/banner";
 import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
-import { ANDROID_INSTALL_STEPS, iosBrowser, iosInstallSteps } from "../ui/install-copy";
+import { InstallSteps } from "../ui/install-screen";
 import { List, ListRow } from "../ui/list-row";
-import { SegmentedControl } from "../ui/segmented-control";
 import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
-import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
 import { detectInstallMode, hasInstallPrompt, isStandalone, runInstallPrompt, type InstallMode } from "../ui/install-prompt";
-import { assertNoError, useWrite } from "../use-write";
-import { useHoldWrites } from "../use-is-viewer";
+import { useWrite } from "../use-write";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { CountTitle, NameHint } from "./card";
 import {
@@ -30,7 +24,6 @@ import {
   STEP_TITLE,
   SUMIT_FAILURE_LINE,
   SUMIT_FAILURE_TITLE,
-  VAT_HINT,
   categoryTitle,
   nameHint,
   visibleCategoryNames,
@@ -60,83 +53,25 @@ export function StepBusiness({
   initialName?: string;
 }) {
   const { session } = useAuth();
-  const client = useQueryClient();
-  const seeded = displayName(session?.user.user_metadata);
-  const [name, setName] = useState(initialName ?? seeded);
-  const [error, setError] = useState(() => (initialName == null ? undefined : companyNameError(initialName)));
-  const fieldRef = useRef<HTMLInputElement>(null);
-  const [vat, setVat] = useState<"registered" | "exempt">("registered");
-  const hintId = useId();
-  const created = useRef<string | null>(null);
-  const holdWrites = useHoldWrites();
-  const save = useWrite({
-    failure: SAVE_ERROR,
-    keys: ["home", "dashboard", "sumit"],
-    onSuccess: () => {
+  // The same form as onboarding, seeded with the signed-in name.
+  const form = useCompanyForm({
+    initialName: initialName ?? displayName(session?.user.user_metadata),
+    checked: initialName != null,
+    onCreated: (companyId) => {
       if (userId) markCompanyCreated(userId);
-      const companyId = created.current;
-      if (companyId) onDone(companyId);
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      const result = await supabase.rpc("create_company", { p_name: name.trim(), p_vat_registered: vat === "registered" });
-      assertNoError(result);
-      if (typeof result.data !== "string" || result.data === "") throw new Error("validation");
-      created.current = result.data;
-      await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
+      onDone(companyId);
     },
   });
-
-  function submit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    // FLOW-506: the run starts only for an owner, but the role can change while the step is open.
-    if (holdWrites || save.isPending) return;
-    // The create_company rule (FLOW-606), on the field instead of a save toast.
-    const problem = companyNameError(name);
-    // Commit the message before focus, so the field is announced with it.
-    flushSync(() => { setError(problem); });
-    if (problem) {
-      fieldRef.current?.focus();
-      return;
-    }
-    save.mutate();
-  }
 
   return (
     <SetupStep
       step={0}
       title={STEP_TITLE[0] ?? ""}
       line="השם שיופיע בבית."
-      onSubmit={submit}
-      primary={<Button type="submit" full busy={save.isPending}>המשך</Button>}
+      onSubmit={form.submit}
+      primary={<Button type="submit" full busy={form.busy}>המשך</Button>}
     >
-      <TextField
-        ref={fieldRef}
-        label="שם העסק"
-        value={name}
-        maxLength={COMPANY_NAME_MAX * 2 + 20}
-        aria-required="true"
-        error={error}
-        onChange={(event) => {
-          setName(event.target.value);
-          if (error) setError(undefined);
-        }}
-        onBlur={() => {
-          setError(companyNameError(name));
-        }}
-      />
-      <SegmentedControl
-        label="סוג העסק"
-        describedBy={hintId}
-        value={vat}
-        onChange={setVat}
-        options={[
-          { value: "registered", label: "עוסק מורשה" },
-          { value: "exempt", label: "עוסק פטור" },
-        ]}
-      />
-      <p id={hintId} className="t-hint">{vat === "registered" ? VAT_HINT.registered : VAT_HINT.exempt}</p>
+      {form.fields}
     </SetupStep>
   );
 }
@@ -371,31 +306,19 @@ export function StepReview({
   );
 }
 
-function installRows(mode: InstallMode): ReactNode {
-  if (mode === "android-prompt") return null;
-  const steps = mode === "android-steps" ? ANDROID_INSTALL_STEPS : iosInstallSteps(mode === "iphone-other" ? iosBrowser() : "safari");
-  return (
-    <ol className="ui-setup-steps">
-      {steps.map((step, index) => (
-        <li key={step.id}>
-          <span className="ui-setup-stepn" aria-hidden="true">{String(index + 1)}</span>
-          <span>{step.text}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 export function StepInstall({
   onBack,
   onSkip,
   onFinish,
+  initialMode,
 }: {
   onBack?: () => void;
   onSkip: () => void;
   onFinish: (kind: "ios" | "install") => void;
+  /** Stories pass a device. Live reads the browser. */
+  initialMode?: InstallMode;
 }) {
-  const [mode, setMode] = useState<InstallMode>(() => detectInstallMode());
+  const [mode, setMode] = useState<InstallMode>(() => initialMode ?? detectInstallMode());
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
   useEffect(() => {
@@ -446,7 +369,7 @@ export function StepInstall({
       }
     >
       <p className="sr-only">הכתובת בספארי היא <bdi dir="ltr">{host}</bdi>.</p>
-      {installRows(prompt && !standalone ? "android-prompt" : mode)}
+      <InstallSteps mode={prompt && !standalone ? "android-prompt" : mode} className="ui-setup-steps" />
     </SetupStep>
   );
 }
