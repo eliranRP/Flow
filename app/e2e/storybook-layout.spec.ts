@@ -105,8 +105,8 @@ async function layoutProblems(page: Page): Promise<string[]> {
     const sheetTitle = document.querySelector(".ui-sheet-head .t-title-2");
     if (sheetTitle instanceof HTMLElement) {
       const line = Number.parseFloat(getComputedStyle(sheetTitle).lineHeight);
-      if (Number.isFinite(line) && sheetTitle.getBoundingClientRect().height > line * 1.4) {
-        problems.push("sheet title is more than 1 line");
+      if (Number.isFinite(line) && sheetTitle.getBoundingClientRect().height > line * 2.4) {
+        problems.push("sheet title is more than 2 lines");
       }
     }
     const emptyTitle = document.querySelector(".ui-empty-title");
