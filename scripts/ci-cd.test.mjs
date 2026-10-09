@@ -672,3 +672,12 @@ test("the gate treats design images as docs and asks storybook-stories.mjs wheth
   assert.ok(local.includes('"$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes'));
   assert.ok(local.includes('${base:+--base "$base"} <<<"$changed" >"$scope"'));
 });
+
+test("the gate starts containerd then dockerd and fails, never skips, when a change needs Docker and it won't start", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  assert.ok(local.includes('(sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)'));
+  assert.ok(local.includes('(sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)'));
+  assert.match(local, /if ! start_docker; then[\s\S]*?Nothing is left to main\.[\s\S]*?exit 1\n  else/);
+  assert.doesNotMatch(local, /Docker is not running, so the e2e specs/);
+  assert.ok(local.includes("skipping them: ${e2e_specs[*]}"));
+});
