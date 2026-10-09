@@ -93,13 +93,13 @@ export const SumitImportFromToggle: Story = {
   },
 };
 
-/** FLOW-350: with מתאריך on, חיבור stays pinned in the sheet's foot and in view at 320 and 375x667. */
+/** FLOW-350: with מתאריך on, חיבור stays pinned in the sheet's foot at 320 and 375x667. */
 const pinnedPlay: Story["play"] = async ({ canvasElement }) => {
   const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור SUMIT" });
   const submit = within(dialog).getByRole("button", { name: "חיבור" });
+  // Pinned in the foot, outside the scrolling form (the shots check it is in view at each size).
   await expect(submit.closest(".ui-sheet-foot")).not.toBeNull();
-  const box = submit.getBoundingClientRect();
-  await expect(box.bottom).toBeLessThanOrEqual(canvasElement.ownerDocument.documentElement.clientHeight);
+  await expect(submit.closest("form")).toBeNull();
 };
 
 export const SumitImportFromDate320: Story = {
