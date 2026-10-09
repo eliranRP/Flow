@@ -370,8 +370,9 @@ begin
     end if;
 
     -- FLOW-309: income whose category was the open question still needs a project, unless
-    -- the category keeps it out of the P&L. Queue that, since sync does not queue a line with a
-    -- settled row.
+    -- the category keeps it out of the P&L (sync's test; an expense category on income is a
+    -- reversal and needs one too). Queue that, since sync does not queue a line with a settled
+    -- row. The pick is the owner's, so the category is not a guess here.
     if direction = 'income'::public.txn_direction
       and exists (
         select 1
@@ -379,8 +380,7 @@ begin
         join public.categories c on c.id = t.category_id and c.company_id = t.company_id
         where t.id = p_id and t.company_id = cid
           and t.project_id is null
-          and c.kind = 'income'::public.category_kind
-          and not coalesce(c.excluded_from_pnl, false)
+          and not private.line_category_out(c.excluded_from_pnl, false, c.loan_part)
       )
     then
       insert into public.review_queue (company_id, transaction_id, status, reason)

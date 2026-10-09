@@ -210,7 +210,7 @@ export function loanSaveFailureText(error: Error, fallback = "לא הצלחנו 
   if (message.includes("loan closed") || message.includes("loan_closed")) return "ההלוואה נסגרה לפני תאריך התשלום.";
   if (message.includes("loan already attached")) return "התשלום כבר שויך להלוואה אחרת.";
   if (message.includes("fees category required")) return "חסרה קטגוריה לעמלות.";
-  if (message.includes("category does not fit the loan part") || message.includes("category not found")) return "קטגוריית העמלות לא מתאימה.";
+  if (message.includes("category does not fit the loan part") || message.includes("category not found")) return "הקטגוריה לא מתאימה לחלק הזה.";
   if (message.includes("a later payment is already attached")) return "כבר שויך תשלום מאוחר יותר.";
   if (message.includes("payment before the loan start")) return "התשלום לפני תחילת ההלוואה.";
   return fallback;

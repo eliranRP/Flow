@@ -84,7 +84,7 @@ select is(
       and q.reason = 'missing_category'
   ),
   1,
-  'sumit income with no category or project is queued as missing_category (FLOW-309)'
+  'sumit income with a guessed category and no project is queued as missing_category (FLOW-309)'
 );
 
 update public.transactions

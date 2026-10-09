@@ -377,7 +377,7 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     renderRow();
     const dialog = await openSheet();
     fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
-    expect(await screen.findByText("קטגוריית העמלות לא מתאימה.")).toBeInTheDocument();
+    expect(await screen.findByText("הקטגוריה לא מתאימה לחלק הזה.")).toBeInTheDocument();
   });
 
   it("marks a split that waits for review and opens it with the line's new split", async () => {

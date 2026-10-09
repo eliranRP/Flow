@@ -117,7 +117,8 @@ begin
   end if;
 
   -- As in mcp_attach_loan_payment: interest, escrow and principal once each, plus at most one
-  -- fees part above zero, as whole non-negative minor units. Any part may name a category.
+  -- fees part above zero, as whole non-negative minor units. Unlike the MCP attach, which names
+  -- only a fees category, any part here may name one.
   select count(*) in (3, 4)
      and count(distinct e.value->>'part') = count(*)
      and count(*) filter (where e.value->>'part' in ('interest', 'escrow', 'principal')) = 3
