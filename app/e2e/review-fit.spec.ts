@@ -34,7 +34,7 @@ test("at 320x693 the worst-case card ends above the bar, and אישור, שינ�
   await page.setViewportSize({ width: 320, height: 693 });
   await page.goto(fit);
   await expect(page.locator(".ui-review-reason")).toBeVisible();
-  const supplier = page.getByRole("heading", { name: "חומרי בניין ואינסטלציה השרון בע״מ" });
+  const supplier = page.getByRole("heading", { name: "חומרי בניין ואינסטלציה לדוגמה בע״מ" });
   const nameLine = await supplier.evaluate((node) => Number.parseFloat(getComputedStyle(node).lineHeight));
   expect((await box(supplier, "the supplier")).height, "the supplier wraps").toBeGreaterThan(nameLine * 1.5);
   const tabs = await box(page.locator(".ui-tabbar"), "the tab bar");

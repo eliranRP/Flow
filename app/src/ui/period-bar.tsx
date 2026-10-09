@@ -15,7 +15,7 @@ import {
 } from "../period";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
-import { ChevronDownIcon } from "./icons";
+import { ChevronDownIcon, OutwardChevron } from "./icons";
 import { PresetPeriodSheet } from "./period-picker";
 import { SegmentedControl } from "./segmented-control";
 
@@ -142,27 +142,4 @@ function stepName(period: PeriodChoice, target: PeriodChoice | null, delta: -1 |
     default:
       return delta < 0 ? "תקופה קודמת" : "תקופה הבאה";
   }
-}
-
-/**
- * The stepper chevrons. Each points away from the label, toward its own edge: the start (right)
- * one points right and the end (left) one points left. Drawn as SVG so dir=rtl never flips them.
- */
-export function OutwardChevron({ side }: { side: "start" | "end" }) {
-  return (
-    <svg
-      width={24}
-      height={24}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.25}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      data-points={side === "start" ? "right" : "left"}
-    >
-      <polyline points={side === "start" ? "9 6 15 12 9 18" : "15 6 9 12 15 18"} />
-    </svg>
-  );
 }

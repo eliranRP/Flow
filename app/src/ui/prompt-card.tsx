@@ -1,4 +1,4 @@
-import { useId, type Ref } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { Button } from "./button";
 
 /**
@@ -22,7 +22,8 @@ export function PromptCard({
   yesLabel?: string;
   noLabel?: string;
   busy?: boolean;
-  note?: string;
+  /** May hold a link (the iPhone note links "למסך הבית" to the install steps). */
+  note?: ReactNode;
   noteDismissLabel?: string;
   /** The note's dismiss button: the caller moves focus here when the note replaces כן. */
   dismissRef?: Ref<HTMLButtonElement>;

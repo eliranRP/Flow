@@ -16,7 +16,7 @@ const categorySample = {
   categoryName: "חומרים",
   projectName: "וילה רעננה",
   rows: [
-    { id: "t1", description: "חומרי בניין השרון", doc_date: "2026-09-14", amount_net: -8_500_000n },
+    { id: "t1", description: "חומרי בניין לדוגמה", doc_date: "2026-09-14", amount_net: -8_500_000n },
     { id: "t2", description: "מלט וחול", doc_date: "2026-09-20", amount_net: -21_500_000n },
   ],
 };

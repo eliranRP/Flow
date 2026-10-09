@@ -80,9 +80,9 @@ function reviewDay(daysAgo: number): string {
 
 const statementReviews: ReviewRow[] = [
   { ...sampleReview, id: "s1", transaction_id: "ts1", doc_date: reviewDay(0), supplier_name: null, description: "Northwind Traders", amount_net: -4_299n, currency: "USD", source: "mercury", line_status: "pending", project_name: null, category_name: null },
-  { ...sampleReview, id: "s2", transaction_id: "ts2", doc_date: reviewDay(0), supplier_name: "חשמל השרון בע״מ", amount_net: -120_050n, source: "mercury", line_status: "posted" },
+  { ...sampleReview, id: "s2", transaction_id: "ts2", doc_date: reviewDay(0), supplier_name: "חשמל לדוגמה בע״מ", amount_net: -120_050n, source: "mercury", line_status: "posted" },
   { ...sampleReview, id: "s3", transaction_id: "ts3", doc_date: reviewDay(1), supplier_name: "לקוח לדוגמה", direction: "income", amount_net: 500_000n, source: "sumit", doc_kind: "invoice", project_name: "וילה רעננה", category_name: "מקדמות" },
-  { ...sampleReview, id: "s4", transaction_id: "ts4", doc_date: reviewDay(3), supplier_name: "שיש הגליל", amount_net: -345_000n, source: "sumit", doc_kind: "receipt" },
+  { ...sampleReview, id: "s4", transaction_id: "ts4", doc_date: reviewDay(3), supplier_name: "שיש לדוגמה", amount_net: -345_000n, source: "sumit", doc_kind: "receipt" },
   { ...sampleReview, id: "s5", transaction_id: "ts5", doc_date: reviewDay(40), supplier_name: "Contoso Building Supplies International", amount_net: -999_999_999n, currency: "USD", source: "mercury", line_status: "pending", category_name: "שיפוץ דירת הגג ברחוב הרצל, כולל הריסה וחשמל" },
   { ...sampleReview, id: "s6", transaction_id: "ts6", doc_date: reviewDay(41), supplier_name: null, description: "4242-1234", amount_net: -10_000n, source: "mercury", project_name: null, category_name: null },
 ];
@@ -189,8 +189,8 @@ export const ReviewFoldStress: Story = {
         rows={[{
           ...sampleReview,
           id: "q-stress",
-          supplier_name: "חומרי בניין והובלות השרון בע״מ",
-          description: "חומרי בניין והובלות השרון בע״מ",
+          supplier_name: "חומרי בניין והובלות לדוגמה בע״מ",
+          description: "חומרי בניין והובלות לדוגמה בע״מ",
           project_id: null,
           project_name: null,
           category_id: null,

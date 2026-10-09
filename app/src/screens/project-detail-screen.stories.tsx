@@ -67,7 +67,7 @@ export const ProjectDetail: Story = {
           transactions: [
             {
               id: "t1",
-              description: "חומרי בניין השרון",
+              description: "חומרי בניין לדוגמה",
               doc_date: "2026-09-14",
               amount_net: -8_500_000n,
               direction: "expense",
