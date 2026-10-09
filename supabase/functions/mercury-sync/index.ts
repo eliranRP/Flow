@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database, Json } from "../../../packages/shared/src/database.types.ts";
 import { CONNECTOR_RECHECK_LIMIT, planConnectorSync, type ConfirmResult, type StoredLine } from "../_shared/connectors/engine.ts";
 import { MERCURY_KEK_REF, MERCURY_POSTED_LOOKBACK_DAYS } from "../_shared/connectors/mercury/capabilities.ts";
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
@@ -6,12 +7,19 @@ import {
   MercuryRequestError,
   backoffUntil,
   getMercuryTransaction,
+  mercuryTreasuryAccountCount,
   recheckMissingPending,
 } from "../_shared/connectors/mercury/client.ts";
 import { addCalendarDays, jerusalemDate } from "../_shared/connectors/mercury/dates.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { treasuryVoidIds, type TreasuryStoredLine } from "../_shared/connectors/mercury/normalize.ts";
-import { isVoidMercuryStatus } from "../_shared/connectors/mercury/rules.ts";
+import {
+  MERCURY_TREASURY_CANCEL_OF,
+  MERCURY_TREASURY_FEE_TYPES,
+  MERCURY_TREASURY_OTHER_INCOME_TYPES,
+  MERCURY_TREASURY_YIELD_TYPES,
+  isVoidMercuryStatus,
+} from "../_shared/connectors/mercury/rules.ts";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import type { ConnectorSession } from "../_shared/connectors/types.ts";
@@ -22,6 +30,8 @@ declare const Deno: {
   env: { get(name: string): string | undefined };
   serve(handler: (req: Request) => Promise<Response> | Response): void;
 };
+
+type Admin = SupabaseClient<Database>;
 
 const te = new TextEncoder();
 const CLAIM_MS = 10 * 60 * 1000;
@@ -49,7 +59,7 @@ Deno.serve(async (req) => {
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const kekSecret = Deno.env.get(MERCURY_KEK_REF) ?? "";
   if (!url || !anon || !service || !kekSecret) return json({ error: "server is missing a secret" }, 500);
-  const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+  const admin = createClient<Database>(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
 
   try {
     const cron = req.headers.get("x-flow-cron");
@@ -81,7 +91,7 @@ Deno.serve(async (req) => {
     }
 
     const header = req.headers.get("Authorization") ?? "";
-    const userClient = createClient(url, anon, {
+    const userClient = createClient<Database>(url, anon, {
       global: { headers: { Authorization: header } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
@@ -158,7 +168,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function syncCompany(
-  admin: SupabaseClient,
+  admin: Admin,
   companyId: string,
   kek: Uint8Array,
   force: boolean,
@@ -240,12 +250,14 @@ async function syncCompany(
         stored: loaded.stored,
         now: () => now,
         confirmLine: (line) => confirmStored(session, line, now),
-        resolveRemovedIds: (rawLines) => treasuryVoidIds(rawLines, loaded.treasury),
+        resolveRemovedIds: (rawLines) =>
+          treasuryVoidIds(rawLines, loaded.treasury, mercuryTreasuryAccountCount(session)),
       });
       if (!plan.ok) {
         await noteOnce(plan.code);
         throw new Error(plan.code);
       }
+      // The skip records and recheck stamps commit with the lines (FLOW-509).
       const saved = await admin.rpc("upsert_connector_lines", {
         p_company: companyId,
         p_provider: "mercury",
@@ -253,9 +265,12 @@ async function syncCompany(
           lines: plan.lines,
           removed_ids: plan.removedIds,
           complete: plan.complete,
-        },
-        p_next_cursor: plan.nextCursor,
-        p_expected_prev_cursor: row.sync_cursor,
+          skips: plan.skips.map((skip) => ({ external_id: skip.externalId, reason: skip.reason })),
+          checked: plan.rechecked.map((item) => ({ external_id: item.externalId, checked_at: item.checkedAt })),
+        } as unknown as Json,
+        // The generated arg types drop null; both cursors are nullable text.
+        p_next_cursor: plan.nextCursor as string,
+        p_expected_prev_cursor: row.sync_cursor as string,
       });
       if (saved.error) {
         if ((saved.error.message ?? "").includes("sync_cursor_conflict")) {
@@ -269,27 +284,12 @@ async function syncCompany(
         await noteOnce("rejected");
         throw new Error("rejected");
       }
-      if (plan.complete) {
-        await admin.from("connector_skips").delete().eq("company_id", companyId).eq("provider", "mercury");
-      }
-      if (plan.skips.length > 0) {
-        const inserted = await admin.from("connector_skips").insert(plan.skips.map((skip) => ({
-          company_id: companyId,
-          provider: "mercury",
-          external_id: skip.externalId,
-          reason: skip.reason,
-        })));
-        if (inserted.error) {
-          await noteOnce("rejected");
-          throw new Error("rejected");
-        }
-      }
       const pendingMissing: Record<string, string> = {};
       for (const item of plan.pendingMissing) pendingMissing[item.externalId] = item.missingSince;
       const labeled = await admin
         .from("connector_connections")
         .update({
-          account_labels: plan.accounts,
+          account_labels: plan.accounts.map(({ id, label }) => ({ id, label })),
           settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
         })
         .eq("company_id", companyId)
@@ -298,7 +298,6 @@ async function syncCompany(
         await noteOnce("rejected");
         throw new Error("rejected");
       }
-      if (plan.rechecked.length > 0) await stampChecked(admin, companyId, plan.rechecked);
       if (plan.complete) {
         const stamped = await admin.rpc("stamp_connector_sync", { p_company: companyId, p_provider: "mercury" });
         if (stamped.error) {
@@ -370,7 +369,7 @@ async function syncCompany(
   }
 }
 
-async function noteFailure(admin: SupabaseClient, companyId: string, code: string): Promise<void> {
+async function noteFailure(admin: Admin, companyId: string, code: string): Promise<void> {
   const noted = await admin.rpc("note_connector_failure", {
     p_company: companyId,
     p_provider: "mercury",
@@ -388,6 +387,20 @@ async function noteFailure(admin: SupabaseClient, companyId: string, code: strin
 const STORED_PAGE = 1000;
 // transactions has no source_account_id column (the upsert never stores it), so don't select it.
 const STORED_COLUMNS = "external_id, line_status, doc_date, amount_original, provider_meta";
+
+// Treasury lines are not on GET /transaction/{id}, so the recheck of old lines skips them; a
+// cancel voids them instead. A line with no kind is still rechecked.
+const TREASURY_LINE_KINDS = [
+  ...MERCURY_TREASURY_YIELD_TYPES,
+  ...MERCURY_TREASURY_OTHER_INCOME_TYPES,
+  ...MERCURY_TREASURY_FEE_TYPES,
+  "manualAmendmentPosted",
+];
+const NOT_TREASURY = `provider_meta->>kind.is.null,provider_meta->>kind.not.in.(${TREASURY_LINE_KINDS.join(",")})`;
+// The lines a cancel can void, read back a year: a cancel comes within days of its original.
+const TREASURY_CANCELLABLE = [...new Set(Object.values(MERCURY_TREASURY_CANCEL_OF))];
+const TREASURY_STORED_DAYS = 366;
+const TREASURY_STORED_LIMIT = 2000;
 
 interface StoredRow {
   external_id: string;
@@ -409,7 +422,13 @@ function kindOf(meta: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function baseStored(admin: SupabaseClient, companyId: string) {
+function accountOf(meta: unknown): string | null {
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return null;
+  const value = (meta as { account_id?: unknown }).account_id;
+  return typeof value === "string" && value.length > 0 && value.length <= 128 ? value : null;
+}
+
+function baseStored(admin: Admin, companyId: string) {
   return admin
     .from("transactions")
     .select(STORED_COLUMNS)
@@ -421,7 +440,7 @@ function baseStored(admin: SupabaseClient, companyId: string) {
 type StoredFilter = ReturnType<typeof baseStored>;
 
 async function readPages(
-  admin: SupabaseClient,
+  admin: Admin,
   companyId: string,
   apply: (query: StoredFilter) => StoredFilter,
 ): Promise<StoredRow[]> {
@@ -439,7 +458,7 @@ async function readPages(
 }
 
 async function loadStored(
-  admin: SupabaseClient,
+  admin: Admin,
   companyId: string,
   missing: Record<string, string>,
   windowStart: string,
@@ -453,6 +472,7 @@ async function loadStored(
     .eq("line_status", "posted")
     .is("removed_at", null)
     .lt("doc_date", windowStart)
+    .or(NOT_TREASURY)
     .filter("provider_meta->>checked_at", "is", null)
     .order("doc_date", { ascending: true })
     .limit(CONNECTOR_RECHECK_LIMIT);
@@ -467,17 +487,23 @@ async function loadStored(
       .eq("line_status", "posted")
       .is("removed_at", null)
       .lt("doc_date", windowStart)
+      .or(NOT_TREASURY)
       .not("provider_meta->>checked_at", "is", null)
       .order("provider_meta->>checked_at", { ascending: true })
       .limit(CONNECTOR_RECHECK_LIMIT - oldRows.length);
     if (checked.error) throw new Error("could not read stored lines");
     oldRows.push(...(checked.data ?? []) as StoredRow[]);
   }
-  const treasury = await readPages(admin, companyId, (query) =>
-    query.eq("line_status", "posted").or(
-      "provider_meta->>kind.eq.interestPosted,provider_meta->>kind.eq.dividendPosted,provider_meta->>kind.eq.mercuryFeePosted",
-    )
-  );
+  // Bounded by date and count, so a long history neither throws nor is read in full (FLOW-509).
+  const treasuryRead = await baseStored(admin, companyId)
+    .eq("line_status", "posted")
+    .in("provider_meta->>kind", TREASURY_CANCELLABLE)
+    .gte("doc_date", addCalendarDays(windowStart, -TREASURY_STORED_DAYS))
+    .order("doc_date", { ascending: false })
+    .order("external_id", { ascending: true })
+    .limit(TREASURY_STORED_LIMIT);
+  if (treasuryRead.error) throw new Error("could not read stored lines");
+  const treasury = (treasuryRead.data ?? []) as StoredRow[];
 
   const stored: StoredLine[] = [];
   const seen = new Set<string>();
@@ -494,48 +520,21 @@ async function loadStored(
     });
   }
   const yields: TreasuryStoredLine[] = [];
+  const seenYields = new Set<string>();
   for (const row of treasury) {
     const kind = kindOf(row.provider_meta);
     if (!kind || typeof row.external_id !== "string" || typeof row.amount_original !== "number") continue;
-    if (yields.some((item) => item.externalId === row.external_id)) continue;
+    if (seenYields.has(row.external_id)) continue;
+    seenYields.add(row.external_id);
     yields.push({
       externalId: row.external_id,
       kind,
       amountCents: Math.abs(row.amount_original),
-      accountId: null,
+      accountId: accountOf(row.provider_meta),
       docDate: row.doc_date,
     });
   }
   return { stored, treasury: yields };
-}
-
-async function stampChecked(
-  admin: SupabaseClient,
-  companyId: string,
-  rechecked: { externalId: string; checkedAt: string }[],
-): Promise<void> {
-  const ids = [...new Set(rechecked.map((item) => item.externalId))];
-  if (ids.length === 0) return;
-  // One read for every rechecked line instead of a read and a write per line.
-  const current = await admin
-    .from("transactions")
-    .select("id, external_id, provider_meta")
-    .eq("company_id", companyId)
-    .eq("source", "mercury")
-    .in("external_id", ids);
-  if (current.error) throw new Error("rejected");
-  const stampOf = new Map(rechecked.map((item) => [item.externalId, item.checkedAt]));
-  for (const row of (current.data ?? []) as Array<{ id: string; external_id: string; provider_meta: unknown }>) {
-    const checkedAt = stampOf.get(row.external_id);
-    if (!checkedAt) continue;
-    const meta = isRecord(row.provider_meta) ? row.provider_meta : {};
-    const saved = await admin
-      .from("transactions")
-      .update({ provider_meta: { ...meta, checked_at: checkedAt } })
-      .eq("company_id", companyId)
-      .eq("id", row.id);
-    if (saved.error) throw new Error("rejected");
-  }
 }
 
 async function confirmStored(session: ConnectorSession, line: StoredLine, now: Date): Promise<ConfirmResult> {
