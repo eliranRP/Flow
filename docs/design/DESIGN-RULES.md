@@ -419,6 +419,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11
 - When a queue card leaves with focus in its action bar, focus goes to the next card's first button, or to the empty state's action; a tap that didn't focus the bar moves nothing. The queue's blocks stay on the 8px step, trimmed only on short phones (FLOW-309).
 - Jev's fill is named with ✦ and the word Jev wherever the value shows; only "✦" when there is no room, never הצעה. With Jev on and no key, its Settings row says "אין מפתח" (FLOW-704).
 - A value an automatic job filled says who filled it and how to undo it, in one line with no reason. Turning the job off keeps that line and its undo, with no new suggestion (FLOW-331, FLOW-702).
+- A connector invoice its receipt paid shows one muted line under the amount, under the VAT line: ✓ "שולם · קבלה dd/mm", or "שולם חלקית · קבלה dd/mm" with no ✓. With no receipts there is no line. The supplier name wraps to three lines before it ends in an ellipsis (FLOW-309, #371).
 
 **Band**
 
