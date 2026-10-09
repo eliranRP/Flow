@@ -87,7 +87,7 @@ html[data-kb="open"] .ui-search-dock {
   font-weight: var(--type-title-3-weight);
 }
 
-/* A result's line 2 (date · project · category): whole parts as many as fit (.ui-hint-parts). */
+/* A result's line 2 (its statuses only, FLOW-339 option C): whole parts as many as fit (.ui-hint-parts). */
 .ui-statement-details {
   flex: 0 1 auto;
 }
