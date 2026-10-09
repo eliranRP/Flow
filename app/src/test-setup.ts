@@ -1,4 +1,4 @@
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { resetSheetHistoryLock } from "./ui/back";
@@ -26,6 +26,11 @@ if (typeof window.matchMedia !== "function") {
     }),
   });
 }
+
+// CI runs every jsdom file at once, and a screen now mounts a few ticks after its lazy import
+// resolves (FLOW-804). The 1 s default for findBy/waitFor ran out on a loaded runner (red main
+// on 6aaf93a); a test that expects nothing to appear passes its own short timeout.
+configure({ asyncUtilTimeout: 3_000 });
 
 document.documentElement.lang = "he";
 document.documentElement.dir = "rtl";
