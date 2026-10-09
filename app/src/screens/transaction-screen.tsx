@@ -457,7 +457,7 @@ export function TransactionScreen({
   // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
   // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
   const pnlRow = loanLine ? (
-    <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint={loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · נספר לפי הפיצול"} />
+    <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint={loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · לפי הקטגוריה"} />
   ) : pnl.mixed ? (
     splitCategoryTo ? (
       <ListRow variant="item" href={splitCategoryTo} title="ברווח והפסד" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" label="ברווח והפסד, לפי הקטגוריות בפיצול, פיצול לפי קטגוריות" chevron />

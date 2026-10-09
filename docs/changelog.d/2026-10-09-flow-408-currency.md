@@ -1,0 +1,1 @@
+A dollar line showed in shekels in two lists: the lines filed today and a project's waiting lines. The server already sent the currency for filed-today lines but the app dropped it; `project_waiting` now sends it too (migration 20261013040000). Both lists show each line in its own currency, and the waiting list's month totals add up per currency.
