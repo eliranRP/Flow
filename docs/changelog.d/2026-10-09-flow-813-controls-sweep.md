@@ -1,0 +1,1 @@
+The no-op control sweep moved out of `controls.spec.ts` into four specs by screen (`controls-sweep-home`, `-review`, `-projects`, `-settings`), sharing `app/e2e/control-sweep.ts` (FLOW-813 follow-up, [TASKS](backlog/TASKS.md#flow-813)). The same 70 tests run. The pre-push gate now runs only the sweep for the screens a push changes, and not all 41 routes.

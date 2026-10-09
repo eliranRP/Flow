@@ -30,6 +30,39 @@
       "screens/connections-screen.tsx",
       "screens/assistant-settings.tsx"
     ],
+    "controls-sweep-home.spec.ts": [
+      "screens/HomeScreen.tsx",
+      "screens/change-form.tsx",
+      "screens/SignInScreen.tsx",
+      "screens/HelpScreen.tsx",
+      "screens/PlaceholderScreen.tsx",
+      "screens/add-sheet.tsx",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-sweep-projects.spec.ts": [
+      "screens/projects-screen.tsx",
+      "screens/project-detail-screen.tsx",
+      "screens/profit-months.tsx",
+      "screens/transaction-screen.tsx",
+      "screens/split-screen.tsx",
+      "screens/unpaid-screen.tsx",
+      "screens/missing-bills-screen.tsx"
+    ],
+    "controls-sweep-review.spec.ts": [
+      "screens/review-screen.tsx",
+      "screens/review-queue.tsx",
+      "screens/filed-today-screen.tsx",
+      "screens/change-form.tsx",
+      "ui/change-sheet.tsx",
+      "ui/review-card.tsx"
+    ],
+    "controls-sweep-settings.spec.ts": [
+      "screens/settings-screen.tsx",
+      "screens/categories-screen.tsx",
+      "screens/connections-screen.tsx",
+      "screens/onboarding-screen.tsx"
+    ],
     "controls.spec.ts": [
       "screens/",
       "setup/",

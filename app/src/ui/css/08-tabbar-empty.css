@@ -170,6 +170,9 @@ button.ui-tab-slot {
   max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap));
   margin-inline: auto;
   overflow: hidden;
+  /* The body scrolls, never the panel: clip stops a click's scroll-into-view or scroll anchoring
+     from scrolling the panel mid tall-to-short change, which hid the header's padding. */
+  overflow: clip;
   padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);

@@ -1,0 +1,1 @@
+The pre-push gate shares its record of green runs across lanes: marks name git trees, not commits, and also go to a folder every lane's container mounts (`FLOW_LOCAL_CI_SHARED_CACHE`). A part another lane passed on the same inputs is skipped, and lint is skipped when its own inputs already passed (FLOW-813, [TASKS](backlog/TASKS.md#flow-813)).

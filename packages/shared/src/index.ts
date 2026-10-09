@@ -82,6 +82,7 @@ export type {
   SumitStatus,
   MercuryStatus,
   TransactionDetail,
+  TransactionLoanSplit,
   UnpaidRow,
 } from "./dashboard.ts";
 export {

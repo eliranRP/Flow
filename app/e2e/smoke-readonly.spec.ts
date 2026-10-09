@@ -219,7 +219,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);
   const reviewRows = await responseAt(reviewResponses, 0).json() as unknown;
   expect(isUnknownArray(reviewRows)).toBe(true);
-  await expect(page.getByText("מסמכים שמחכים לשיוך")).toBeVisible();
+  await expect(page.getByText("תנועות שמחכות לשיוך")).toBeVisible();
   if (!isUnknownArray(reviewRows) || reviewRows.length === 0) {
     await expect(page.getByText("הכל מאושר", { exact: true })).toBeVisible();
   } else {
