@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GROUP_BY_KEY } from "../breakdown";
-import { allTime, defaultPeriod, periodLabel } from "../period";
+import { allTime, defaultPeriod, periodPillLabel } from "../period";
 import { BooksProvider } from "../use-books";
 import { BreakdownLinesScreen, BreakdownScreen } from "./breakdown";
 
@@ -181,12 +181,12 @@ describe("Breakdown screen", () => {
     wrap("/flow/expense");
     await screen.findByText("חומרי בנייה לדוגמה");
     expect(rpc.calls.find((c) => c.name === "get_breakdown")?.args).toHaveProperty("p_from");
-    fireEvent.click(screen.getByRole("button", { name: periodLabel(defaultPeriod()) }));
+    fireEvent.click(screen.getByRole("button", { name: periodPillLabel(defaultPeriod()) }));
     fireEvent.click(screen.getByRole("radio", { name: /^הכול/ }));
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "get_breakdown" && !("p_from" in (c.args as object)))).toBe(true);
     });
-    expect(screen.getByRole("button", { name: periodLabel(allTime()) })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: periodPillLabel(allTime()) })).toBeInTheDocument();
   });
 
   it("says one waiting line in the singular (FLOW-322)", async () => {
@@ -287,7 +287,7 @@ describe("Breakdown lines screen", () => {
       expect(rpc.calls.some((c) => c.name === "get_breakdown_lines" && !("p_from" in (c.args as object)))).toBe(true);
     });
     // FLOW-334: the pill sits under the title on the start side, not in the top corner.
-    const pill = screen.getByRole("button", { name: periodLabel(allTime()) });
+    const pill = screen.getByRole("button", { name: periodPillLabel(allTime()) });
     expect(pill.closest(".ui-page-below")).not.toBeNull();
     expect(pill.closest(".ui-page-title-row")).toBeNull();
   });

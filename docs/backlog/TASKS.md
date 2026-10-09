@@ -20,7 +20,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | FLOW-106 screens: the split editor "חלוקת התשלום" (match sheet merged #374) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-309 pairing on the review card (option A: "✓ שולם · קבלה dd/mm" under the amount, on #350's `receipts`/`paid`/`paid_on`) + long supplier names (overflow-wrap on the review supplier line, the project picker, unpaid hints, the add-sheet hint) | Next UI task for the review and transaction screens |
 | UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
+| UI lane 4 | FLOW-351 part 2: the transaction VAT line at 320 and the period pill and Search chip words (`period.ts` `periodPillLabel`, `transaction-screen.tsx`, `breakdown.tsx`, `search.tsx`), PR on `claude/project-thread-rg28jx` (items 3-5 merged #372) | FLOW-352 items 2 and 4: radio hint style, kept-out rows |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-502 setup step 5 offers the evening reminder once | Next small ready item from the lane manager |
@@ -958,10 +958,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-351"></a>
 ### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
-- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 in #372; items 1 and 2 follow in a second PR once #367 lands) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 done #372; items 1 and 2 in the second PR) · **Depends on:** —
 - **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
-- [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
-- [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
+- [x] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
+- [x] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
 - [x] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
 - [x] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
 - [x] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
