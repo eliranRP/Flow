@@ -166,6 +166,11 @@
     "txn-step.spec.ts": [
       "screens/transaction-screen.tsx",
       "screens/filed-today-screen.tsx"
+    ],
+    "txn-swipe.spec.ts": [
+      "ui/card-swipe.tsx",
+      "txn-nav.tsx",
+      "screens/transaction-screen.tsx"
     ]
   }
 }

@@ -20,6 +20,8 @@ function Card() {
       <input aria-label="שדה" />
       <div contentEditable="true" data-testid="note" />
       <button type="button" onClick={() => { void navigate(-1); }}>back</button>
+      {nav ? <button type="button" onClick={() => { nav.move("prev", "swipe"); }}>swipe left</button> : null}
+      <p data-testid="enter">{nav?.enter ?? "none"}</p>
     </div>
   );
 }
@@ -120,6 +122,18 @@ describe("prev and next on the card", () => {
     fireEvent.keyDown(screen.getByRole("textbox", { name: "שדה" }), { key: "ArrowLeft" });
     fireEvent.keyDown(window, { key: "ArrowLeft", altKey: true });
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/b");
+  });
+
+  it("a swipe moves like the buttons, announces, and says which side the card enters from (FLOW-314)", () => {
+    renderCard("b", list);
+    expect(screen.getByTestId("enter")).toHaveTextContent("none");
+    fireEvent.click(screen.getByRole("button", { name: "swipe left" }));
+    expect(screen.getByTestId("path")).toHaveTextContent("/transactions/a");
+    expect(screen.getByTestId("enter")).toHaveTextContent("prev");
+    expect(screen.getByRole("status")).toHaveTextContent("תנועה 1 מתוך 3. ספק a");
+    // A button move clears it, so the next card does not slide in.
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
+    expect(screen.getByTestId("enter")).toHaveTextContent("none");
   });
 
   it("replaces the card's entry and keeps the query, so Back pops straight to the list", () => {

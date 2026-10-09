@@ -568,6 +568,9 @@ export function useLineMetaPageQuery(transactionIds: readonly string[], enabled 
   });
 }
 
+/** The server's cap on ids per `get_line_meta` call (`(p_ids)[1:200]`). */
+export const LINE_META_MAX = 200;
+
 export function lineMetaPageQueryKey(preview: string, ids: readonly string[]) {
   return ["line-meta", preview, "page", ids.join(",")] as const;
 }
@@ -587,11 +590,16 @@ export async function readLineMetaPage(client: QueryClient, preview: string, ids
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   await waitForAccessToken(supabase);
-  const { data, error } = await supabase.rpc("get_line_meta", { p_ids: missing });
-  if (error) throw error;
+  // FLOW-315: `get_line_meta` reads at most LINE_META_MAX ids a call and drops the rest, so a longer
+  // list goes in chunks; an id is cached as "no details" only when its own chunk was read.
+  const chunks: string[][] = [];
+  for (let start = 0; start < missing.length; start += LINE_META_MAX) chunks.push(missing.slice(start, start + LINE_META_MAX));
+  const results = await Promise.all(chunks.map((chunk) => supabase.rpc("get_line_meta", { p_ids: chunk })));
+  for (const { error } of results) if (error) throw error;
   const asked = new Set(missing);
-  const rows = parseTxnMetaList(data).filter((row) => asked.has(row.transaction_id));
-  for (const row of rows) out.set(row.transaction_id, row);
+  for (const { data } of results) {
+    for (const row of parseTxnMetaList(data)) if (asked.has(row.transaction_id)) out.set(row.transaction_id, row);
+  }
   for (const id of missing) client.setQueryData(lineMetaQueryKey(preview, id), out.get(id) ?? null);
   return out;
 }

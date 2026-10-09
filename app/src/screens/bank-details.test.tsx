@@ -1,17 +1,18 @@
 import type { ReviewRow } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TxnMeta } from "../txn-meta";
 import { BankDetails } from "../ui/bank-details";
 import { ToastProvider } from "../ui/toast";
-import { BooksProvider } from "../use-books";
+import { BooksProvider, lineMetaQueryKey, readLineMetaPage } from "../use-books";
 import { ReviewQueue, TransactionScreen } from "./flow-screens";
 
 const db = vi.hoisted(() => ({
   meta: [] as unknown,
   metaError: false,
+  failTimes: null as null | (() => boolean),
   calls: [] as Array<{ name: string; args: unknown }>,
 }));
 
@@ -41,6 +42,7 @@ vi.mock("../lib/supabase", () => ({
       db.calls.push({ name, args });
       if (name === "get_transaction") return Promise.resolve({ data: transaction, error: null });
       if (name === "get_line_meta") {
+        if (db.failTimes?.() === true) return Promise.resolve({ data: null, error: { message: "meta down" } });
         return Promise.resolve(db.metaError ? { data: null, error: { message: "meta down" } } : { data: db.meta, error: null });
       }
       return Promise.resolve({ data: [], error: null });
@@ -99,6 +101,7 @@ function renderDetail() {
 afterEach(() => {
   db.meta = [];
   db.metaError = false;
+  db.failTimes = null;
   db.calls = [];
   vi.restoreAllMocks();
 });
@@ -177,8 +180,13 @@ describe("BankDetails rows", () => {
     render(<BankDetails meta={{ ...empty, memo: "A long memo" }} party="x" direction="expense" />);
     const toggle = screen.getByRole("button", { name: /הערה/ });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // FLOW-315: a ▾ cue says the row opens, and turns over while it is open.
+    const cue = toggle.querySelector(".ui-bank-memo-cue");
+    expect(cue).not.toBeNull();
+    expect(cue).not.toHaveAttribute("data-open");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle.querySelector(".ui-bank-memo-cue")).toHaveAttribute("data-open");
   });
 });
 
@@ -217,4 +225,65 @@ describe("review card meta (FLOW-304)", () => {
     expect(screen.getByText("תנועות שמחכות לשיוך")).toBeInTheDocument();
     expect(db.calls.filter((call) => call.name === "get_line_meta").map((call) => call.args)).toEqual([{ p_ids: ["tx"] }]);
   });
+
+  it("reads the whole queue's details in one call, so the next card needs no read of its own (FLOW-315)", async () => {
+    db.meta = [
+      { ...empty, method: "card", card_last4: "4242" },
+      { ...empty, transaction_id: "tx2", method: "ach" },
+    ];
+    renderQueue([reviewRow, { ...reviewRow, id: "r2", transaction_id: "tx2", supplier_name: "Sample Tenant" }]);
+    expect(await screen.findByText("כרטיס שמסתיים ב־4242")).toHaveClass("sr-only");
+    // The next card's details came with that read: the old warm-up read of one other row is gone.
+    await waitFor(() => {
+      expect(db.calls.filter((call) => call.name === "get_line_meta").map((call) => call.args)).toEqual([{ p_ids: ["tx", "tx2"] }]);
+    });
+  });
+
+  it("falls back to the card's own read when the queue's read fails", async () => {
+    db.meta = [{ ...empty, method: "card", card_last4: "4242" }];
+    // The queue's read fails twice (its one retry included); the card's own read then succeeds.
+    let failures = 2;
+    db.failTimes = () => {
+      failures -= 1;
+      return failures >= 0;
+    };
+    renderQueue([reviewRow]);
+    expect(await screen.findByText("כרטיס שמסתיים ב־4242", undefined, { timeout: 4000 })).toHaveClass("sr-only");
+    expect(db.calls.filter((call) => call.name === "get_line_meta")).toHaveLength(3);
+  });
 });
+
+describe("readLineMetaPage (FLOW-315)", () => {
+  it("reads past the server's 200-id cap in chunks, and caches only ids it read", async () => {
+    const ids = Array.from({ length: 450 }, (_, index) => `id-${String(index).padStart(3, "0")}`);
+    db.meta = [{ ...empty, transaction_id: "id-420", method: "ach" }];
+    const client = new QueryClient();
+    const out = await readLineMetaPage(client, "off", ids);
+    const asked = db.calls.filter((call) => call.name === "get_line_meta").map((call) => (call.args as { p_ids: string[] }).p_ids);
+    expect(asked.map((chunk) => chunk.length)).toEqual([200, 200, 50]);
+    expect(asked.flat()).toEqual(ids);
+    expect(out.get("id-420")?.method).toBe("ach");
+    expect(client.getQueryData(lineMetaQueryKey("off", "id-420"))).toMatchObject({ method: "ach" });
+    expect(client.getQueryData(lineMetaQueryKey("off", "id-001"))).toBeNull();
+  });
+
+  it("caches nothing when a chunk fails", async () => {
+    db.metaError = true;
+    const client = new QueryClient();
+    await expect(readLineMetaPage(client, "off", ["a", "b"])).rejects.toBeTruthy();
+    expect(client.getQueryData(lineMetaQueryKey("off", "a"))).toBeUndefined();
+  });
+});
+
+function renderQueue(rows: ReviewRow[]) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <MemoryRouter>
+          <ReviewQueue rows={rows} search="" />
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
