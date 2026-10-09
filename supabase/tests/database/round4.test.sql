@@ -26,7 +26,7 @@ insert into r4 (label, id) select 'other', id from public.projects where name = 
 insert into r4 (label, id)
 select 'materials', id from public.categories where name = 'חומרים' and kind = 'expense';
 insert into r4 (label, id)
-select 'income_cat', id from public.categories where name = 'תקבול מלקוח' and kind = 'income';
+select 'income_cat', id from public.categories where name = 'הכנסה מלקוחות' and kind = 'income';
 
 select lives_ok(
   format(
