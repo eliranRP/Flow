@@ -1,0 +1,9 @@
+<a id="flow-350"></a>
+# FLOW-350 · Phone polish after the October 9 midday builds (cycle 9)
+- **Type:** SMALL UI · **Status:** done (UI lane 4, #358) · **Depends on:** —
+- **Source:** cycle 9 phone review of deploy 2c3bb3c, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-9/shots/`.
+- [x] (UI lane 4, #358: חיבור pinned in the sheet foot for both connect sheets; "ייבוא מ" keeps the fields' reserved line) SUMIT connect sheet at 320 and 375x667: after מתאריך the body scrolls and only 9px of חיבור stay in view. With מההתחלה, חיבור sits 15px under the segmented control, against about 37px under each field, so it jumps 60px when the option changes. Pin חיבור in the sheet's foot, as the loan setup sheet does (FLOW-347), and give the segmented control the fields' reserved line. Mercury's sheet still fits.
+- [x] (UI lane 4, #358: outward SVG chevrons, shared with the range sheet; the picked day and today are circles) Date sheet ("ייבוא מתאריך" and the loan setup date sheet): the month arrows are ‹ › text glyphs that RTL mirrors, so both point at the month name. Use outward SVG chevrons (§3.4). The picked day is a square box where mockup 15b has a filled circle; at 320 a rounded sliver shows beside it. This also holds the 15b date details that a done FLOW-115 item left open.
+- [x] (UI lane 4, #358: one shared IosHomeNote for the card and Settings) Review reminder card on an iPhone tab: "למסך הבית" in the card's note is plain text, with הבנתי as the only action. Link it to the install steps, as Settings → התראות does.
+- [x] (UI lane 4, #358: swapped in stories, tests, the dev fixtures and e2e) Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.

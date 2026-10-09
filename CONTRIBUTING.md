@@ -4,6 +4,10 @@ This repository holds product documentation and design artifacts. Do not add app
 
 Write in English. Use Hebrew only to quote a UI label, and keep the English meaning next to it the first time it matters.
 
+## Backlog
+
+Each task is its own file, `docs/backlog/tasks/FLOW-<id>.md`. Edit that file, never [docs/backlog/TASKS.md](docs/backlog/TASKS.md): the index is generated. The index lists only each task's id, title and type, so a status change touches the task file alone. When you change a title or type, or add a task, run `node scripts/backlog-index.mjs` and commit TASKS.md with it; local CI and CI fail when the index is out of date. On a merge conflict in TASKS.md, take either side and run the script again. A new task also gets a `- FLOW-<id>` line under its area in `docs/backlog/tasks/index-source.md`. The Lanes now table in that file belongs to the lane manager ([how the team works](docs/backlog/README.md)).
+
 ## Changelog
 
 Every documentation change gets a changelog entry. Do not edit [docs/changelog.md](docs/changelog.md) in a PR. Add one file, `docs/changelog.d/YYYY-MM-DD-<id>.md`, with the entry and no heading, so parallel PRs never conflict on it ([how](docs/changelog.d/README.md)). Say what changed and which decision or screen it affects.

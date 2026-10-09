@@ -307,6 +307,7 @@ static_part() {
   fi
   node scripts/check-migration-transaction.mjs
   node scripts/check-file-size.mjs
+  node scripts/backlog-index.mjs --check
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }

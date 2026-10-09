@@ -1,0 +1,10 @@
+<a id="flow-353"></a>
+# FLOW-353 · Phone polish after the October 9 night deploy (cycle 12)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 12 phone review of main at ac10960 (deploy f0b2d62 and later merges), 2026-10-09. Shots and findings in the project files under `reviews/ui-ux-cycle-12/`.
+- [ ] Split editor "חלוקת התשלום", exact parts: when the parts go over the line, the summary still reads "נשאר $0" and only a red line under it says they are over. At 375x667 and 320 that line sits half under the sheet's foot, above the disabled שמירה. Let the summary row carry the state ("חסרים $x" / "עודף $x"), as the line-split editor does (line-split-editor.tsx:585), and drop the separate line (screens/loan-split-editor.tsx:259-260, :281).
+- [ ] Setup step 5: on arrival the reminder card's כן / לא עכשיו sit under the pinned סיום, so only the question shows (48px of scroll at 390x844, 200px at 375x667). Put the card above the numbered install steps, or shorten the install demo (setup/steps.tsx:378).
+- [ ] Open invoices: the row hint breaks inside "לפני / 37 ימים" at 320, and the code can print "לפני 0 ימים" and "לפני 1 ימים". Pass the parts as `hintParts` so each stays whole, and say היום / אתמול / לפני יומיים (screens/unpaid-screen.tsx:31-35, :138-139).
+- [ ] Investment card at 320: "עודכן 01/10/2026" breaks between the word and the date. Keep it whole (ui/investment-card.tsx:315-319).
+- [ ] Docs: the implementation guide still requires "רווח נקי בספטמבר" (design/system/implementation-guide.md:458), and the design boards still say רווח נקי and לא שולמו (design/src/01-home-*, 12-unpaid-*, flow.py, ds.py, states.py). Move them to the §3.6 words so a reviewer doesn't flag the new copy.
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
