@@ -327,8 +327,10 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await page.goto("/e2e/project-detail?preview=1");
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "סיום הפרויקט" }).click();
-  await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toBeVisible();
-  await page.getByRole("button", { name: "אישור" }).click();
+  // FLOW-334: either way can be undone, so the confirm repeats the action and is not red.
+  const finish = page.getByRole("dialog", { name: "לסיים את הפרויקט?" });
+  await expect(finish).toBeVisible();
+  await finish.getByRole("button", { name: "סיום הפרויקט" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toHaveCount(0);
