@@ -495,6 +495,18 @@ declare
   def text;
   anchor text;
 begin
+  -- MCP refusals name the group rules, as they name the project and category ones.
+  def := pg_get_functiondef('private.mcp_refused(text)'::regprocedure);
+  anchor := $a$        'category already exists',
+$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'mcp_refused is not the expected definition';
+  end if;
+  execute replace(def, anchor, anchor || $n$        'project group already exists',
+        'group name is too short',
+        'group name is too long',
+$n$);
+
   -- company_pnl: group_id on each project row, and groups[] from those rows.
   def := pg_get_functiondef('public.company_pnl(uuid,date,date,text)'::regprocedure);
   anchor := $a$      p.sumit_budget_section_id,

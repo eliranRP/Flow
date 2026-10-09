@@ -274,8 +274,9 @@ select is(
   'the same key replays the answer'
 );
 select is(
-  public.mcp_create_project_group('pg-create-2', 'North')->'error'->>'code',
-  'refused',
+  public.mcp_create_project_group('pg-create-2', 'North')->'error'->>'code'
+    || ':' || (public.mcp_create_project_group('pg-create-3', 'North')->'error'->>'message'),
+  'refused:project group already exists',
   'a taken name is refused'
 );
 select is(
