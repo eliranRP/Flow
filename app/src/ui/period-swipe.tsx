@@ -1,6 +1,7 @@
 import { useRef, type ReactNode, type TouchEvent } from "react";
 import { canStep, stepPeriod, type PeriodChoice } from "../period";
 import { cx } from "./cx";
+import { EDGE_PX } from "./edge-back";
 
 /**
  * FLOW-336 (decision 0150): a sideways swipe on the band's profit figure steps the period by the
@@ -17,7 +18,8 @@ import { cx } from "./cx";
  * earlier, so a finger moving right, toward that arrow, goes earlier; moving left goes later. The
  * later step stops at the current window, like the disabled later arrow.
  */
-export const EDGE_PX = 24;
+// The same edge zone as swipe-back (FLOW-332) and the card swipe (FLOW-314).
+export { EDGE_PX };
 export const DECIDE_PX = 10;
 export const COMMIT_RATIO = 0.3;
 /** A flick: at least this fast (px per ms) over at least FLICK_MIN_PX. */
@@ -38,7 +40,7 @@ export function swipeAxis(dx: number, dy: number): SwipeAxis {
 
 /** True when a touch starts within the edge zone of either side of the screen. */
 export function inEdgeZone(x: number, viewportWidth: number): boolean {
-  return x < EDGE_PX || x > viewportWidth - EDGE_PX;
+  return x <= EDGE_PX || x >= viewportWidth - EDGE_PX;
 }
 
 /**

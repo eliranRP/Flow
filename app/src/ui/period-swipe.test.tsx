@@ -18,7 +18,11 @@ describe("swipe rules (FLOW-314's, decision 0150)", () => {
     expect(EDGE_PX).toBe(24);
     expect(inEdgeZone(10, 375)).toBe(true);
     expect(inEdgeZone(370, 375)).toBe(true);
-    expect(inEdgeZone(24, 375)).toBe(false);
+    // The 24th px from either edge belongs to swipe-back (FLOW-332), as on the card.
+    expect(inEdgeZone(24, 375)).toBe(true);
+    expect(inEdgeZone(351, 375)).toBe(true);
+    expect(inEdgeZone(25, 375)).toBe(false);
+    expect(inEdgeZone(350, 375)).toBe(false);
     expect(inEdgeZone(200, 375)).toBe(false);
   });
 
