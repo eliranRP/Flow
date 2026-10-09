@@ -9,7 +9,7 @@ test("code files get 800 lines, tests 1,200, and migrations and generated types 
   assert.equal(limitFor("app/src/screens/home.test.tsx"), 1200);
   assert.equal(limitFor("app/e2e/controls.spec.ts"), 1200);
   assert.equal(limitFor("supabase/functions/flow-mcp/tools_reads_test.ts"), 1200);
-  assert.equal(limitFor("supabase/functions/flow-mcp/tools_test_support.ts"), 1200);
+  assert.equal(limitFor("supabase/functions/flow-mcp/tools_test_support.ts"), 800);
   assert.equal(limitFor("supabase/tests/database/loans_l1.test.sql"), 1200);
   assert.equal(limitFor("supabase/migrations/20261010090000_loan_kinds_rates.sql"), null);
   assert.equal(limitFor("packages/shared/src/database.types.ts"), null);

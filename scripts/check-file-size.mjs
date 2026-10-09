@@ -5,7 +5,7 @@
  * shrink but not grow, and its entry has to go once it is under the limit.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,7 +13,8 @@ export const codeLimit = 800;
 export const testLimit = 1200;
 
 const codeFile = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|sql|sh|css|py)$/;
-const testFile = /(\.test\.|\.spec\.|_test\.|_test_support\.)[^/]*$|^supabase\/tests\/|^app\/e2e\//;
+// Test helpers outside supabase/tests and app/e2e (test-support.ts, *_test_support.ts) are held to 800.
+const testFile = /(\.test\.|\.spec\.|_test\.)[^/]*$|^supabase\/tests\/|^app\/e2e\//;
 const exempt = [/^supabase\/migrations\//, /^packages\/shared\/src\/database\.types\.ts$/];
 
 /** @param {string} file */
@@ -73,7 +74,8 @@ export function repoFiles(root) {
   const out = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   return out
     .split("\0")
-    .filter((file) => file && limitFor(file) !== null)
+    // A tracked file deleted in a dirty working tree is skipped, not read.
+    .filter((file) => file && limitFor(file) !== null && existsSync(path.join(root, file)))
     .map((file) => {
       const text = readFileSync(path.join(root, file), "utf8");
       const lines = text.length === 0 ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
