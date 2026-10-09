@@ -70,7 +70,8 @@ describe("assistant settings", () => {
 
   it("shows an empty row, and a connected row keeps last use in the sheet", () => {
     const iso = "2026-09-30T11:05:00.000Z";
-    const phrase = israelUsePhrase(iso) ?? "";
+    // The query matches the DOM's text with its whitespace folded, so the no-break space is folded here too.
+    const phrase = (israelUsePhrase(iso) ?? "").replace(/\s+/g, " ");
     const { rerender } = renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
     expect(screen.getByRole("button", { name: "עוזר AI" })).toBeInTheDocument();
     rerender(
