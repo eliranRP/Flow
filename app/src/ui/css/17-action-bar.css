@@ -84,9 +84,16 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
     border: 0;
   }
 
-  /* FLOW-352 1 (cycle 11): beside a הצעה pill about 99px are left at 320, so the value wraps to a second
-     line before it ends in an ellipsis. */
+  /* FLOW-352 1 (cycle 11): beside a הצעה pill only about 52px are left for the value at 320. A value that
+     doesn't fit beside the pill takes the row's width and the pill drops under it, still on the chevron
+     side; the value wraps to a second line before it ends in an ellipsis. */
+  .ui-review-ai .ui-row-title-with-tag {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+
   .ui-review-ai .ui-row-title-text {
+    flex: 0 1 auto;
     display: -webkit-box;
     overflow-wrap: break-word;
     white-space: normal;
