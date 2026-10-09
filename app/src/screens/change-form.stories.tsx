@@ -152,6 +152,27 @@ export const ChangeProjectPicker: Story = {
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
 };
 
+/** FLOW-325 §10 (option A): פיצול לפי קטגוריות under פיצול בין פרויקטים approves, then opens the parts editor. */
+export const ChangeProjectPickerDark: Story = {
+  name: "Project picker dark",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+};
+
+export const ChangeProjectPicker320: Story = {
+  name: "Project picker 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+};
+
+/** No category yet: the line cannot be approved, so the sheet offers no split by categories. */
+export const ChangeProjectPickerNoCategory: Story = {
+  name: "Project picker, no category",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" categoryId="" suggestionCategoryId="" />,
+};
+
 export const ChangeProjectSearching: Story = {
   name: "Project picker searching",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
