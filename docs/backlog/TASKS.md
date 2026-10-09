@@ -129,6 +129,10 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
+| 79 | [FLOW-353](#flow-353) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI | ready |
+| 80 | [FLOW-354](#flow-354) | The default income category in the money terms word | PLAN FIRST | owner approved the rename on the money terms glossary |
+| 81 | [FLOW-355](#flow-355) | A project row on Home's first screen at 375x667 | PLAN FIRST | owner picked "Both changes" |
+| 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST | owner picked "Hide" |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -241,6 +245,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-350"></a>[FLOW-350](tasks/FLOW-350.md) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (#358) | UI lane 4 |
 | <a id="flow-351"></a>[FLOW-351](tasks/FLOW-351.md) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress | UI lane 4 |
 | <a id="flow-352"></a>[FLOW-352](tasks/FLOW-352.md) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready | — |
+| <a id="flow-353"></a>[FLOW-353](tasks/FLOW-353.md) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI | ready | — |
+| <a id="flow-354"></a>[FLOW-354](tasks/FLOW-354.md) | The default income category in the money terms word | PLAN FIRST | owner approved the rename on the money terms glossary | — |
+| <a id="flow-355"></a>[FLOW-355](tasks/FLOW-355.md) | A project row on Home's first screen at 375x667 | PLAN FIRST | owner picked "Both changes" | UI lane 1 |
+| <a id="flow-138"></a>[FLOW-138](tasks/FLOW-138.md) | A paid-off loan's leftover balance has no word | PLAN FIRST | owner picked "Hide" | UI lane 4 |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) | — |
 
 ## Projects and reports

@@ -127,6 +127,10 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 76 | FLOW-414 |
 | 77 | FLOW-351 |
 | 78 | FLOW-352 |
+| 79 | FLOW-353 |
+| 80 | FLOW-354 |
+| 81 | FLOW-355 |
+| 82 | FLOW-138 |
 | 78 | FLOW-346 |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -233,6 +237,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-350
 - FLOW-351
 - FLOW-352
+- FLOW-353
+- FLOW-354
+- FLOW-355
+- FLOW-138
 - FLOW-346
 
 ## Projects and reports

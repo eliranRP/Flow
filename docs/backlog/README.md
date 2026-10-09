@@ -65,6 +65,7 @@ Limits that apply to the whole cycle:
 - **Merge on approval.** Send the PR to the reviewers as soon as it is pushed. Merge (squash) as soon as they approve the current head. GitHub runs no CI on pull requests, so there is nothing else to wait for.
 - **Deploys go in batches.** A push to `main` runs the `ci` workflow, but its `plan` job stops it until 5 PRs have merged since the last successful deploy. Then `main` runs the full suite (every story, both e2e shards, pgTAP) and deploys. To deploy sooner, run the `ci` workflow by hand on `main` (Actions, then `ci`, then Run workflow). The deploy check and the prod check happen once per batch, for every task in it.
 - **A red batch comes first.** If the full suite fails on `main`, nothing deploys. The fix is the next PR to merge, and no other PR merges before it. After it merges, run the `ci` workflow by hand to deploy the batch.
+- **Merge targets (owner, 2026-10-09).** From the last push to merge: a small PR (up to 80 lines and 4 files) within 5 minutes, a medium one (up to 400 lines) within 10, a large one within 20. `node scripts/merge-cycle.mjs` reports every merged PR against them; the lane manager posts it each hour and names the cause of each miss.
 - **No catch-up merges.** Merge `main` into a branch only to fix a conflict. Check for conflicts after every merge.
 - **Production is read-only for checks.** Never write to production to test a change.
 

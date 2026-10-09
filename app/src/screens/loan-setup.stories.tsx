@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fireEvent, waitFor, within } from "@storybook/test";
 import { Sheet } from "../ui/sheet";
-import { LoanSaveButton, LoanSetupForm } from "./loan-setup";
+import type { LoanKind } from "@flow/shared";
+import { LoanKindPicker, LoanSaveButton, LoanSetupForm } from "./loan-setup";
 
 const meta = {
   title: "Screens/Loan setup",
@@ -143,3 +144,30 @@ export const DateSheetOpen: Story = {
   },
 };
 export const DateSheetOpenDark320: Story = { ...DateSheetOpen, ...dark320 };
+
+/**
+ * FLOW-106 §3.3: the סוג field, first in the form; רגילה by default. Interest-only adds its months
+ * and names the payment after them; balloon adds the spread and the balloon line; demand drops the
+ * term, escrow and עוד and says how interest runs.
+ */
+const kindField = (value: LoanKind) => ({ value, onOpen: () => undefined });
+export const KindRegular: Story = { args: { ...example, kind: kindField("amortizing") }, ...light390 };
+export const KindInterestOnly: Story = { args: { ...example, kind: kindField("interest_only") }, ...light390 };
+export const KindInterestOnlyDark320: Story = { args: { ...example, kind: kindField("interest_only") }, ...dark320 };
+const balloonKind = { ...example, initial: { ...example.initial, term: "60" }, kind: kindField("balloon") };
+export const KindBalloon: Story = { args: balloonKind, ...light390 };
+export const KindBalloon320: Story = { args: balloonKind, ...light320 };
+export const KindDemand: Story = { args: { ...example, kind: kindField("demand") }, ...light390 };
+export const KindDemandDark: Story = { args: { ...example, kind: kindField("demand") }, ...dark390 };
+export const KindDemand320: Story = { args: { ...example, kind: kindField("demand") }, ...light320 };
+
+/** The סוג view inside the new-loan sheet: one row per kind with its description. */
+function KindPickerInSheet() {
+  return (
+    <Sheet open onOpenChange={() => undefined} title="סוג ההלוואה">
+      <LoanKindPicker selected="amortizing" onSelect={() => undefined} />
+    </Sheet>
+  );
+}
+export const KindPicker: Story = { args: example, render: () => <KindPickerInSheet />, ...light390 };
+export const KindPickerDark320: Story = { args: example, render: () => <KindPickerInSheet />, ...dark320 };
