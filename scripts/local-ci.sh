@@ -12,6 +12,10 @@
 #     - for a migration, pgTAP, seed or flow-mcp change: a fresh local database (every migration applied), the
 #       flow-mcp smoke, the db types check, and the pgTAP files that name what changed
 #       (scripts/pgtap-specs.mjs).
+#   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
+#     merge of main that leaves the patch unchanged; lint and the file-size check only when the
+#     branch changes only docs/ or Markdown (a claim commit). Each run appends a line to
+#     gate-times.log beside the shared cache: time, branch, mode, seconds, result, parts.
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
@@ -39,9 +43,11 @@ cd "$root"
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
 
+ran=()
 phase() {
   echo
   echo "== local-ci: $1 ($(( $(date +%s) - started ))s)"
+  ran+=("$(( $(date +%s) - started ))s ${1%%:*}")
 }
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
@@ -62,6 +68,18 @@ fi
 shared="${FLOW_LOCAL_CI_SHARED_CACHE:-}"
 if [[ -n "$shared" ]] && mkdir -p "$shared" 2>/dev/null; then caches+=("$shared"); fi
 head_tree="$(git rev-parse 'HEAD^{tree}')"
+# One line per run in gate-times.log, next to the shared cache when there is one: time, branch, mode,
+# seconds, result, and when each part started. The lane manager reads it to see which part is slow.
+mode="$( (( full )) && echo full || echo default)"
+times_log="$cache/gate-times.log"
+[[ -z "$shared" ]] || times_log="$(dirname "$shared")/gate-times.log"
+log_time() {
+  local rc=$? parts
+  parts="$(IFS=','; echo "${ran[*]}")"
+  printf '%s\t%s\t%s\t%ss\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse --abbrev-ref HEAD)" "$mode" \
+    "$(( $(date +%s) - started ))" "$( (( rc == 0 )) && echo pass || echo "fail $rc")" "$parts" >>"$times_log" 2>/dev/null || true
+}
+trap log_time EXIT
 skips=1
 if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi
 # What the app reads: its sources, the shared packages, the design tokens, _shared and the
@@ -107,6 +125,30 @@ if [[ -z "$pr_fork" ]] && (( ! full )); then
 fi
 pr_files=""
 [[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
+# The branch's own patch against main. A run that passes marks it, so a merge of main that leaves the
+# patch unchanged (main's CI covers main) needs no second run.
+patch_id=""
+[[ -z "$pr_fork" ]] || patch_id="$(git diff "$pr_fork" HEAD | git patch-id --stable | cut -d' ' -f1)"
+passed() {
+  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id"
+}
+if (( skips )) && [[ -n "$patch_id" ]] && has_mark "patch-$patch_id"; then
+  mode="same patch"
+  echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
+  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+  exit 0
+fi
+# Only docs or Markdown against main: lint and the file-size check, nothing else.
+if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
+  mode="docs"
+  phase "docs only: lint and the file-size check"
+  pnpm lint
+  node scripts/check-file-size.mjs
+  passed
+  phase "passed on ${head:0:7} (docs only)"
+  exit 0
+fi
 # The files changed since $1 that this branch also changes against main.
 branch_changes() {
   local since
@@ -440,7 +482,7 @@ if (( ! full )); then
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"
-  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+  passed
   phase "passed on ${head:0:7} (main opens every story and runs all e2e before each deploy)"
   exit 0
 fi
@@ -464,5 +506,5 @@ eval "$(bash scripts/ci-local-supabase-env.sh)"
 pnpm test:e2e
 
 mark_green "tree-e2e-$head_tree"
-echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+passed
 phase "passed on ${head:0:7}"
