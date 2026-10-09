@@ -41,6 +41,17 @@ test("a swipe right opens the next card and a swipe left the previous one", asyn
   await expect(page).toHaveURL(/\/e2e\/txn-list\?preview=1$/);
 });
 
+test("the swiped-to card slides in once: a reload shows it in place, still in the list", async ({ page }) => {
+  await openFromList(page, "ספק 5");
+  await swipe(page, 160, 110);
+  await expect(page).toHaveURL(/\/transactions\/t-step-6\?preview=1$/);
+  await expect(page.locator(".ui-cswipe-card")).toHaveAttribute("data-enter", "next");
+  await page.reload();
+  await expect(page.getByText("ספק 6", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", next)).toBeVisible();
+  await expect(page.locator(".ui-cswipe-card")).not.toHaveAttribute("data-enter");
+});
+
 test("a short move, a vertical move and the first card's previous side stay put", async ({ page }) => {
   await openFromList(page, "ספק 1");
   await swipe(page, 25);

@@ -2,7 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allTime, presetPeriod, stepPeriod, windowLabel, type PeriodChoice } from "../period";
-import { COMMIT_RATIO, EDGE_PX, FLICK_MIN_PX, FLICK_SPEED, PeriodSwipe, inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
+import { EDGE_PX } from "./edge-back";
+import { COMMIT_RATIO, FLICK_MIN_PX, FLICK_SPEED, PeriodSwipe, inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
 
 describe("swipe rules (FLOW-314's, decision 0150)", () => {
   it("decides nothing under 10px, then the larger axis", () => {
@@ -18,7 +19,11 @@ describe("swipe rules (FLOW-314's, decision 0150)", () => {
     expect(EDGE_PX).toBe(24);
     expect(inEdgeZone(10, 375)).toBe(true);
     expect(inEdgeZone(370, 375)).toBe(true);
-    expect(inEdgeZone(24, 375)).toBe(false);
+    // The 24th px from either edge belongs to swipe-back (FLOW-332), as on the card.
+    expect(inEdgeZone(24, 375)).toBe(true);
+    expect(inEdgeZone(351, 375)).toBe(true);
+    expect(inEdgeZone(25, 375)).toBe(false);
+    expect(inEdgeZone(350, 375)).toBe(false);
     expect(inEdgeZone(200, 375)).toBe(false);
   });
 
