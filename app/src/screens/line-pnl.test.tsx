@@ -95,10 +95,11 @@ describe("one line out of the P&L", () => {
     expect(within(document.querySelector(".ui-status-row") as HTMLElement).getByText("ברווח והפסד")).toBeTruthy();
   });
 
-  it("locks a loan line", () => {
+  it("locks a loan line; with no loan split it counts by its category (FLOW-329)", () => {
     show({ ...base, pnl_fixed: true, pnl_state: "mixed" });
     expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
-    expect(screen.getByText("תשלום הלוואה · נספר לפי הפיצול")).toBeTruthy();
+    expect(screen.getByText("תשלום הלוואה · לפי הקטגוריה")).toBeTruthy();
+    expect(screen.queryByText(/לפי הפיצול/)).toBeNull();
     expect(screen.queryByText("חלקית ברווח")).toBeNull();
   });
 
