@@ -14,16 +14,16 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
-| Dev lane 2 | FLOW-510: SUMIT schema-drift check (server and sumit-sync only) | The lane manager's next non-UI item |
+| Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
+| Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
-| UI lane 2 | FLOW-404 השקעה card on the project page (#223) | FLOW-114 loan match on the transaction card (owner picked B, one row), FLOW-333 editor items, the detail hint of 322, review card fit at 375x667 |
+| UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-334 H1 (sticky compact bar) + H2 (labelled Back) in ScreenHeader, and FLOW-322 except the transaction detail hint and Home, PR #259 (FLOW-124/125 merged #253) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-331: the + tab opens quick actions (new project, new loan, connect a bank); #231 follow-ups (SegmentedControl busy and numeric labels, clip-check stall); filing the #231 review leftovers | Next unclaimed UI task |
+| UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-329 + FLOW-124 items 2 and 3 (#248) | Next small ready item |
-| File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | the three app test files left over 1,200 lines (books-states, round5-ui, sumit-row), one per PR, each when no open PR changes it |
+| Backlog bug fixes | FLOW-333 split editor C1, C3a, C3b, C3c, C4, C5, C7, C9 (#261) | toast e2e settle-wait flake (lane manager), then next small ready bug |
+| File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | none for TypeScript: no test file is over 1,200 lines and no source file over 800. Left: `supabase/tests/database/mcp_cycle3a.test.sql` (1,652 lines), a pgTAP file, if the team wants SQL tests under the same limit |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -82,7 +82,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
 | 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) |
 | 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | done (#162) |
-| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready (item 5, server) |
+| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | done (#242) |
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
@@ -104,12 +104,12 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | claimed (UI lane 4, 2026-10-08) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | merged (#238) |
-| 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
+| 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | C13 open (C1–C9 done: UI lane 2, #261) |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
 | 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | done (#239; owner chose the swipe, 2026-10-08) |
 | 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
-| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | ready (app only, #231 review) |
+| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | claimed (UI lane 4, 2026-10-09) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -306,12 +306,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-134"></a>
 ### FLOW-134 · Loan part categories follow-ups (FLOW-106 part 2 review)
-- **Type:** BACKLOG NIT · **Status:** ready (item 5, server) · **Depends on:** FLOW-106 part 2
+- **Type:** BACKLOG NIT · **Status:** done (#242) · **Depends on:** FLOW-106 part 2
 - [x] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge. (Moved when the target fits, else the merge is refused: migration `20261010090000`, decision 0132.)
 - [x] The categories screen shows a generic error when a flip is refused with `loan category is fixed` for a category a loan uses; give it copy (Mercury UI thread). (`pnlFailureText` in `category-copy.ts`.)
 - [x] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread). (`LoanTransactionSplit` takes the line's `categoryId` and offers שיוך when a loan's principal category is that category.)
 - [x] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns. (One loop over the four keys; the update trigger runs only when a part category changes: migration `20261010090000`, decision 0132.)
-- [ ] (from #248 review) `get_transaction`'s `pnl_fixed` is `loan_part is not null` on the line's own category, so a line matched on a loan's own principal category (item 3) reads false while `set_transaction_pnl` refuses it. Make `pnl_fixed` true when the line has loan splits; the card checks the loan-split flag meanwhile.
+- [x] (from #248 review, not a bug) `get_transaction`'s `pnl_fixed` is already `loan_part is not null or exists (loan_splits)` (since `20261007210000`); pgTAP `line_state_in_lists` covers a loan payment on a plain category.
 
 <a id="flow-135"></a>
 ### FLOW-135 · Loan installments follow-ups (FLOW-106 part 3 review)
@@ -349,14 +349,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-114"></a>
 ### FLOW-114 · Loans server follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready (loan match server items done in #184; the screen parts for a UI lane; the backfill item open) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (loan match server items done in #184; the loan match UI done in #252; the backfill item open) · **Depends on:** —
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
 - [ ] Backfill existing loan lines into `loans` / `loan_splits`.
+- [ ] Server follow-up from #252: `save_loan_split` takes `category_id` only on the fees part, so an edit of a split, or the undo of an unmatch, files interest, escrow and principal under the loan's categories or the keyed defaults again. Let it accept `category_id` on every part (checked by `private.loan_part_category_ok`, decision 0128), so a part the owner moved to another fitting category keeps it.
 - [x] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow. (Obsolete: the default parts resolve by `categories.loan_part`, not by name or visibility.)
 - [x] Date formatting for years below 1000. (Four digits, and real leap years for years 0 to 99.)
-- [ ] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view. (Server done: `save_loan_split` writes the split and checks the balance (20261010120000); `clear_loan_split` and MCP `detach_loan_payment` unmatch, and `get_transaction` returns `loan_split` (#184, [0136](../decisions/0136-loan-unmatch.md)). Left for a UI lane: write through `save_loan_split`, an unmatch button through `clear_loan_split`, the P&L cache keys after a match or unmatch, the category picker locked on a matched payment, and reading `loan_split` from the transaction instead of `get_loan_split`.)
+- [x] Loan match: do the split correction in one server call; check the remaining balance on the server; P&L cache keys after a match; an unmatch flow and a category lock on a matched payment; avoid a split read on every expense view. (Server done: `save_loan_split` writes the split and checks the balance (20261010120000); `clear_loan_split` and MCP `detach_loan_payment` unmatch, and `get_transaction` returns `loan_split` (#184, [0136](../decisions/0136-loan-unmatch.md)). Left for a UI lane: write through `save_loan_split`, an unmatch button through `clear_loan_split`, the P&L cache keys after a match or unmatch, the category picker locked on a matched payment, and reading `loan_split` from the transaction instead of `get_loan_split`.) UI done in #252 (option B, the owner's pick 2026-10-08): the matched payment is one row in the category slot that opens the split sheet; `save_loan_split` for a match, an edit and the undo of an unmatch; `clear_loan_split` for ביטול השיוך with an undo toast; the category locked while matched; the P&L, loan and card keys refreshed after each write; `loan_split` read from `get_transaction`; the balance check's refusal as a toast.
 - [x] Follow-up to the owner's call: relax the interest-category check so split interest can use another category (pairs with FLOW-106 d). (FLOW-106 part 2, decision 0128.)
 
 <a id="flow-115"></a>
@@ -711,6 +712,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** On the transaction detail, the only way to take a line out of the P&L is an unlabelled ⋯ at the top-left corner, the hardest spot to reach one-handed. Show a "ברווח והפסד" switch row under the category row; keep ⋯ only for delete. Move "פיצול בין פרויקטים" to the bottom of the screen, in the thumb zone. (cycle 3) The new "פיצול" section from #150 also sits mid-screen; it moves with it.
 - **Acceptance:** out-of-P&L is one tap on the detail and reversible; ⋯ shows only when delete applies; tests; design review.
 - **Done (#248):** a "ברווח והפסד" switch row under the category row (a loan line shows it locked); ⋯ only on a manual line, holding מחיקה. The פיצול section was already at the bottom of the card.
+- [ ] Follow-up from #252: a line in a loan category with no loan split (`pnl_fixed`, unmatched) still shows the locked row as "תשלום הלוואה · נספר לפי הפיצול", though nothing is split. Give it its own hint (#252 changed only the matched case, to "לפי חלקי ההלוואה").
 
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
@@ -735,19 +737,19 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-333"></a>
 ### FLOW-333 · Split editor and split review card follow-ups (cycle 3)
-- **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** C2 "עדכון הפיצול" as the main button; C3b and C3c approved as proposed; C4 "הוספת חלק" in the bottom bar · **Depends on:** FLOW-325 (#150, #161); C2 and C8 after FLOW-327 (pinned action bar, same `review-card.tsx`) · **Overlaps:** FLOW-327, FLOW-325 (splitting from the review card) · **Source:** mobile UI/UX review cycle 3 (2026-10-08, deploy a77efd8)
+- **Type:** SMALL UI · **Status:** ready (C13 open; C1–C9 done in #261 and UI lane 2's C2, C6, C8) · **Owner (2026-10-08):** C2 "עדכון הפיצול" as the main button; C3b and C3c approved as proposed; C4 "הוספת חלק" in the bottom bar · **Depends on:** FLOW-325 (#150, #161); C2 and C8 after FLOW-327 (pinned action bar, same `review-card.tsx`) · **Overlaps:** FLOW-327, FLOW-325 (splitting from the review card) · **Source:** mobile UI/UX review cycle 3 (2026-10-08, deploy a77efd8)
 - **What:** Findings on the split-by-category editor and the split_mismatch review card, shot at 375x667, 393x852 (light and dark) and 412x915.
-- [ ] C1 (high) The ₪ field in a part is a fixed `6rem` (`ui.css` `.ui-lsplit-entry > .ui-field:last-child`), so "₪ 12,345.67" is cut off, and the percent hint shows "25720.16%" with no separators. Put the entry on its own full-width line with `flex: 1` (or size it by `--money-digits`), format the hint; add a 320 story with 9,999,999.99.
+- [x] C1 (high) The ₪ field in a part is a fixed `6rem` (`ui.css` `.ui-lsplit-entry > .ui-field:last-child`), so "₪ 12,345.67" is cut off, and the percent hint shows "25720.16%" with no separators. Put the entry on its own full-width line with `flex: 1` (or size it by `--money-digits`), format the hint; add a 320 story with 9,999,999.99.
 - [x] C2 (high, owner chose this) On a split_mismatch card the primary button is still אישור, which keeps the wrong P&L; "עדכון הפיצול" is only a text link. Build: "עדכון הפיצול" becomes the primary in the action bar, אישור becomes a secondary "להשאיר כך"; remove the link from `ReviewCard`.
-- [ ] C3a After a part's project or category picker closes, focus that part's value field (today 4 taps per amount part, 5 per percent part, 6 per refund part, against the plan's 3).
-- [ ] C3b (owner approved) The ₪/% unit of a new part follows the unit of the last part typed.
-- [ ] C3c (owner approved) On an inflow (refund) line, open the reversal section expanded.
-- [ ] C4 (owner chose the bottom bar) "הוספת חלק" moves down the screen with each part (y=311, 445, 602) and ends under the sticky footer; put it in the sticky bottom bar next to the totals.
-- [ ] C5 The hold sentence shows live before any ✕ and twice, and the footer grows to about 27% of a 375x667 screen; show it once, only after the first ✕ (`showHold`).
+- [x] C3a After a part's project or category picker closes, focus that part's value field (today 4 taps per amount part, 5 per percent part, 6 per refund part, against the plan's 3).
+- [x] C3b (owner approved) The ₪/% unit of a new part follows the unit of the last part typed.
+- [x] C3c (owner approved) On an inflow (refund) line, open the reversal section expanded.
+- [x] C4 (owner chose the bottom bar) "הוספת חלק" moves down the screen with each part (y=311, 445, 602) and ends under the sticky footer; put it in the sticky bottom bar next to the totals.
+- [x] C5 The hold sentence shows live before any ✕ and twice, and the footer grows to about 27% of a 375x667 screen; show it once, only after the first ✕ (`showHold`).
 - [x] C6 Disabled controls look active: style `.ui-text-link:disabled`, give the rest row a disabled look, add a "לתור" link to the banner, and line the banner's inset up with the card.
-- [ ] C7 The ₪/% segment buttons are 34px wide; `min-inline-size: var(--touch-min)` on `.ui-seg-btn`.
+- [x] C7 The ₪/% segment buttons are 34px wide; `min-inline-size: var(--touch-min)` on `.ui-seg-btn`.
 - [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
-- [ ] C9 The line's own project appears twice in a part's project picker.
+- [x] C9 The line's own project appears twice in a part's project picker. (C1, C3a–C3c, C4, C5, C7, C9: #261)
 - [ ] C13 (from #231 design review) A Jev card at 375x667 no longer fits above the action bar with the slim banner on: main already misses by about 10px with a reason line, and the filled line ("✦ מולא ע״י Jev" + בטל, one line since #245) adds about 19px; a quiet or loud flag adds more. Add a Screens/Routes story at 375x667 with a Jev card (filled line, a quiet flag, the slim banner on), which needs Jev suggestions and fills in the sample queue, then win back about 20–30px so it fits.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
@@ -1091,7 +1093,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-706"></a>
 ### FLOW-706 · Jev fills can't be undone from the app while Jev is off
-- **Type:** BUG · **Status:** ready · **Depends on:** — · **Source:** #231 code review
+- **Type:** BUG · **Status:** claimed (UI lane 4, 2026-10-09) · **Depends on:** — · **Source:** #231 code review
 - **What:** Decision 0145 says fills already made stay undoable after the owner turns Jev off. The app reads `jev_prefills` only inside the Jev suggestion read, which runs only while the connector is on, so with Jev off a filled line shows no "✦ מולא ע״י Jev" and no בטל (MCP `undo_jev_prefill` still works). App only, no server change: read the newest standing fill per open line even when the connector is off, show the label with בטל, and keep the stored values (no visual fill).
 - **Acceptance:** a queue test with the connector off and a standing fill shows the label and בטל calls `undo_jev_prefill`; design review.
 
@@ -1183,7 +1185,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Measured:** cold 247s; a push that leaves the app unchanged (server, docs, tests) 53s; a one-file app change 148s (39 related unit files, 17 story files).
 - **Follow-up (e2e for the touched screens):** the default run now also runs the e2e specs that reach the files changed since the last commit whose specs passed in this clone (or since main). `app/e2e/spec-sources.json` maps each spec to the screens it opens; `scripts/e2e-specs.mjs` follows their imports (the screens barrel by name, `@flow/shared` too), and `App.tsx`, `dev-routes.tsx`, CSS and the e2e config run every spec. A test fails when a new spec is not in the map. It needs Docker: local Supabase starts (or resets) in the background while lint runs; without Docker the run names the specs it left to main. Specs run with `--fully-parallel` on Playwright's default workers (on every core a toast timing spec timed out). A run without Docker does not move the next run's base, so the skipped specs come back.
 - **Measured (4 cores, 2 workers):** all 22 specs 5.6 min (gate 619s); a copy change in one screen (`jev-settings.tsx`) picks 9 specs, 3.6 min, and the whole gate takes 391s; server, docs and test-only pushes pick none. **Trade-off:** a screen change now costs about 3.5 more minutes, over the 4-minute budget, because `controls.spec.ts` (70 tests, 285s of test time) opens nearly every screen. Splitting it by screen is the next saving.
-- **Next:** split `controls.spec.ts` by screen; lint (48s, type-aware) bounds the fast path; a shared green cache (`FLOW_LOCAL_CI_CACHE`) would let one lane's pass count for another.
+- **Controls split:** the no-op sweep (41 routes, about 207s of the 285s in `controls.spec.ts`) moved into four specs by screen sharing `app/e2e/control-sweep.ts`, so a screen change runs one sweep file, not all of them. The functional controls tests stay in `controls.spec.ts`.
+- **Shared green cache:** green marks name git trees instead of commits, and also go to `FLOW_LOCAL_CI_SHARED_CACHE`, a folder every lane's container mounts (`/mnt/project-files/ci/local-ci-cache` when it is writable; empty keeps marks local). A part another lane already passed on the same inputs is skipped, and a squash merge whose tree a lane passed counts as a green base. Lint (48s, type-aware) is skipped when its inputs (the TypeScript, JavaScript and JSON sources outside `docs`, `design` and `supabase`, `_shared`, which linted tests import, and the lockfile) already passed, so a docs, SQL or shell push no longer waits on it.
 
 ## Data hygiene (public repo)
 

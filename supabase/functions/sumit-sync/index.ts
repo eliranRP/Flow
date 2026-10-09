@@ -5,11 +5,13 @@ import {
   assertSumitUrl,
   crmEntityDrift,
   type CrmTally,
+  definitionOf,
   deriveLine,
   documentUrls,
   invoicesMissingLinks,
   isSchemaDrift,
   mapCrmEntity,
+  pageShapeDrift,
   type SumitDoc,
 } from "../_shared/ledger.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
@@ -356,12 +358,6 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
   throw new Error("sync_page_cap");
 }
 
-function definitionOf(record: Record<string, unknown>): string {
-  const value = record.Accounting_DefinitionEnum;
-  const first = Array.isArray(value) ? value[0] : value;
-  return typeof first === "number" ? String(first) : "other";
-}
-
 /** FLOW-510. Counts of the kinds the sync skipped by design, so a renumbered kind is visible. */
 function logSkippedKinds(kinds: Map<string, number>): void {
   if (kinds.size > 0) console.log("sumit-sync kinds not read", JSON.stringify(Object.fromEntries(kinds)));
@@ -376,18 +372,6 @@ function checkDrift(tally: CrmTally): void {
   if (Object.keys(tally.broken).length === 0) return;
   console.error("sumit-sync rows that did not map", JSON.stringify({ mapped: tally.mapped, broken: tally.broken }));
   if (isSchemaDrift(tally)) throw new Error("sync_schema_drift");
-}
-
-/**
- * FLOW-510. A page whose Data field is gone, or whose Data object has none of the row-list keys
- * the sync reads. A null Data or a null or empty row list is an empty company, not drift.
- */
-function pageShapeDrift(payload: Record<string, unknown>): boolean {
-  if (!("Data" in payload)) return true;
-  const data = payload.Data;
-  if (data == null || Array.isArray(data) || typeof data !== "object") return false;
-  const record = data as Record<string, unknown>;
-  return !["Entities", "Data", "List"].some((key) => key in record);
 }
 
 /** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   assertSumitUrl,
   crmEntityDrift,
+  definitionOf,
   documentUrls,
   invoicesMissingLinks,
   isSchemaDrift,
   mapCrmEntity,
+  pageShapeDrift,
   SUMIT_ALLOWLIST,
   type SumitDoc,
 } from "../../../supabase/functions/_shared/ledger.ts";
@@ -53,6 +55,7 @@ describe("crmEntityDrift", () => {
   it("is null for a row that maps and for a kind the sync does not read", () => {
     expect(crmEntityDrift(expense(18, -100, -118))).toBeNull();
     expect(crmEntityDrift({ ...expense(18), Accounting_DefinitionEnum: [99] })).toBeNull();
+    expect(crmEntityDrift({ Accounting_DefinitionEnum: [99] })).toBeNull();
   });
 
   it("names the field that broke on a row the sync should read", () => {
@@ -76,6 +79,32 @@ describe("isSchemaDrift", () => {
     expect(isSchemaDrift({ mapped: 19, broken: { ID: 1 } })).toBe(false);
     expect(isSchemaDrift({ mapped: 18, broken: { ID: 1, Accounting_Date: 1 } })).toBe(true);
     expect(isSchemaDrift({ mapped: 0, broken: { Accounting_DefinitionEnum: 3 } })).toBe(true);
+  });
+
+  it("stops a small company on one broken row", () => {
+    expect(isSchemaDrift({ mapped: 3, broken: { ID: 1 } })).toBe(true);
+  });
+});
+
+describe("pageShapeDrift", () => {
+  it("is drift when Data is gone or has no row list", () => {
+    expect(pageShapeDrift({})).toBe(true);
+    expect(pageShapeDrift({ Data: { Rows: [] } })).toBe(true);
+    expect(pageShapeDrift({ Data: { HasNextPage: false } })).toBe(true);
+  });
+
+  it("reads a null Data or a null or empty row list as an empty company", () => {
+    expect(pageShapeDrift({ Data: null })).toBe(false);
+    expect(pageShapeDrift({ Data: [] })).toBe(false);
+    expect(pageShapeDrift({ Data: { Entities: [] } })).toBe(false);
+    expect(pageShapeDrift({ Data: { Entities: null } })).toBe(false);
+  });
+});
+
+describe("definitionOf", () => {
+  it("names the kind, or other when the enum is missing", () => {
+    expect(definitionOf({ Accounting_DefinitionEnum: [99] })).toBe("99");
+    expect(definitionOf({})).toBe("other");
   });
 });
 

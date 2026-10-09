@@ -252,6 +252,24 @@ export function isSchemaDrift(tally: CrmTally): boolean {
   return broken > 0 && broken * 20 > tally.mapped + broken;
 }
 
+/** FLOW-510. A CRM row's definition enum as a string for the skipped-kinds log, else "other". */
+export function definitionOf(entity: Record<string, unknown>): string {
+  const definition = first<number>(entity.Accounting_DefinitionEnum);
+  return typeof definition === "number" ? String(definition) : "other";
+}
+
+/**
+ * FLOW-510. A page whose Data field is gone, or whose Data object has none of the row-list keys
+ * the sync reads. A null Data or a null or empty row list is an empty company, not drift.
+ */
+export function pageShapeDrift(payload: Record<string, unknown>): boolean {
+  if (!("Data" in payload)) return true;
+  const data = payload.Data;
+  if (data == null || Array.isArray(data) || typeof data !== "object") return false;
+  const record = data as Record<string, unknown>;
+  return !["Entities", "Data", "List"].some((key) => key in record);
+}
+
 /** Read-only SUMIT paths. Anything else throws before the request. */
 export const SUMIT_ALLOWLIST = [
   "https://api.sumit.co.il/crm/schema/listfolders/",

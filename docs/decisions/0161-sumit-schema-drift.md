@@ -18,3 +18,5 @@ When more than 1 in 20 of the counted rows broke, the sync stops before it write
 ## Consequences
 
 A SUMIT change shows up as one Settings error and a log line instead of a quietly emptier ledger. Settings shows the generic Hebrew error for the new code until a UI lane adds its own line to `app/src/sumit-copy.ts`.
+
+There is no floor, so a company with fewer than 20 rows stops on a single broken row, such as a draft with no amount, and retries every 15 minutes until the row is fixed in SUMIT. A page whose `Data` has no row-list key at all, even an empty one, also counts as drift. Both fail closed on purpose: a stopped sync keeps the ledger, and a wrong sweep would void it.
