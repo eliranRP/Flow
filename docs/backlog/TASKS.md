@@ -1008,7 +1008,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-505"></a>
 ### FLOW-505 · Import-range picker for connectors
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (owner picked option B, 2026-10-09: an inline segmented control [מההתחלה | מתאריך] labelled "ייבוא מ" in the SUMIT and Mercury connect sheets, with the date field under it when מתאריך is on; mockup in the project's mockups/plan-first/flow-505/b.png) · **Depends on:** —
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
 
