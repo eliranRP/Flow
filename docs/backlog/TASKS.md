@@ -14,16 +14,16 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
+| Dev lane 1 | Free: FLOW-810 clip check follow-ups in review (the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
+| UI lane 4 | FLOW-315: bank details follow-ups (one read for the review queue's details, the detail memo's expand cue) (FLOW-706 merged #270) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-338 a loss on the band drawn white, project page and Home hero (#290) | Next small ready bug |
-| File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (#277), then the pgTAP file `mcp_cycle3a.test.sql` into `mcp_cycle3a`, `mcp_cycle3a_gates` and `mcp_cycle3a_sync` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | Guard: `scripts/check-file-size.mjs` fails local CI and CI when a file goes over the limits, with `scripts/file-size-allow.txt` for exceptions |
+| Backlog bug fixes | FLOW-339 Settings → Loans balance at the list amount size, cents on one line (#293) | Next small ready bug |
+| File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (#277), then the pgTAP file `mcp_cycle3a.test.sql` into `mcp_cycle3a`, `mcp_cycle3a_gates` and `mcp_cycle3a_sync` (#281), then headroom splits for the files within 10% of their limit: `loans_l1` + `loans_l1_access`, `loan-setup` + `loan-setup-settings` tests, and `jev-connector-scope.ts`, `split-screen-draft.ts`, `project-investment-data.ts`, `connections-status.ts` and `transaction-screen-loan.stories.tsx` moved out (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | none: every file not on the allow list is at least 10% under its limit after the headroom splits; `scripts/check-file-size.mjs` (#285) keeps every file under its limit |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -86,7 +86,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
-| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | claimed (UI lane 2, handed over from UI lane 4, 2026-10-09; replaces closed draft #279) |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | done (#253, #248) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
@@ -109,7 +109,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
 | 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | done (#239; owner chose the swipe, 2026-10-08) |
 | 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
-| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | claimed (UI lane 4, 2026-10-09) |
+| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) |
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
@@ -534,10 +534,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-314"></a>
 ### FLOW-314 · Swipe between transactions on the card
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-303 (#100)
+- **Type:** SMALL UI · **Status:** claimed (handed over from UI lane 4, 2026-10-09, flow314; replaces closed draft #279; the follow-ups below stay open) · **Depends on:** FLOW-303 (#100)
 - **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
 - **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.
-- Also from #100's design session: add the project's waiting list (card rows only) and let ˅ at the last loaded category row load the next page. From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
+- Follow-ups, open (not in this PR):
+  - [ ] From #100's design session: add the project's waiting list (card rows only) to the walk.
+  - [ ] ˅ at the last loaded category row loads the next page.
+  - [ ] From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
+  - [ ] From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
+  - [ ] From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
@@ -548,13 +553,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-315"></a>
 ### FLOW-315 · Bank details follow-ups (#107 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-304 (#107)
-- [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
-- [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
+- **Type:** BACKLOG NIT · **Status:** done (#283), except the account label's last 4, which waits on the owner · **Depends on:** FLOW-304 (#107)
+- [x] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list. (#283: one read for the next 50 cards, in chunks of 200 ids, the server cap; the card does not wait for it, since the details are supplementary. אישור itself no longer moves: the bar is pinned since FLOW-327.)
+- [x] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾). (#283)
 - [x] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
 - [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filtered on `owner_id`, so a viewer's project page was empty: fixed in `20261010190000_viewer_project_page.sql` with the drill-down, category totals and filed-today helpers.)
 - [ ] Stored Mercury account labels lose their digits at import, so the account row never shows a last 4. Keep the label's last 4 at import if the owner wants it.
-- [ ] The review queue warms the first other row's details, not the next card's.
+- [x] The review queue warms the first other row's details, not the next card's. (#283: the one read covers every card in the queue.)
 
 <a id="flow-305"></a>
 ### FLOW-305 · Review list in a bank-statement style
@@ -829,7 +834,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] (med) Review card, Jev filled line: the בטל link's `::after` hit area (y≈267–311 at 375) covers the bottom 13px of the category row, so a tap meant for the row can undo Jev's fill. Give the filled line its own 44px row or `--space-3` above it, budgeted with FLOW-333 C13.
 - [x] (UI lane 3, 2026-10-09) (med) Breakdown: the header under "יצא" and every category row carry a minus. A figure labelled as a cost carries none (FLOW-328, FLOW-334 H3); keep it only when refunds beat costs, as Home does. Both levels use one header order.
 - [ ] (med) Search: the subtitle carries three figures and month heads up to two unlabelled totals, about 11 figures a screen. Keep only the count in the subtitle. A row hint that does not fit shows the project or the category whole, not a one-letter cut (the meta rule in DESIGN-RULES §3.7).
-- [ ] Settings → Loans: balances are 13px with 7.8px agorot (`.ui-loan-amount` inherits the hint size). Use the amount size and the shared agorot class, as other lists do.
+- [x] Settings → Loans: balances are 13px with 7.8px agorot (`.ui-loan-amount` inherits the hint size). Use the amount size and the shared agorot class, as other lists do. (Also the ".00" fell to its own line: the loan form's wrapper shared the class, now `.ui-loan-amount-field`; #293.)
 - [x] (UI lane 3, 2026-10-09: Back's label, and the cost rows and subtitle drop the minus; the ".00" half stays open below) Project category lines: Back is a bare icon with the project name as the subtitle. Use the project name as Back's label (FLOW-334 H2) and drop the subtitle.
 - [ ] Transaction rows show ".00" on whole amounts, but DESIGN-RULES §3.5 says agorot show only when non-zero. Decision 0120 option C (the owner's) keeps ".00" on transaction rows, like Mercury, so this needs the owner's call before any change.
 - [ ] Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
@@ -1141,7 +1146,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-706"></a>
 ### FLOW-706 · Jev fills can't be undone from the app while Jev is off
-- **Type:** BUG · **Status:** claimed (UI lane 4, 2026-10-09) · **Depends on:** — · **Source:** #231 code review
+- **Type:** BUG · **Status:** done (#270) · **Depends on:** — · **Source:** #231 code review
 - **What:** Decision 0145 says fills already made stay undoable after the owner turns Jev off. The app reads `jev_prefills` only inside the Jev suggestion read, which runs only while the connector is on, so with Jev off a filled line shows no "✦ מולא ע״י Jev" and no בטל (MCP `undo_jev_prefill` still works). App only, no server change: read the newest standing fill per open line even when the connector is off, show the label with בטל, and keep the stored values (no visual fill).
 - **Acceptance:** a queue test with the connector off and a standing fill shows the label and בטל calls `undo_jev_prefill`; design review.
 
@@ -1201,13 +1206,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-810"></a>
 ### FLOW-810 · Clip check follow-ups and 320px clipping
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Re-run the real clip check on main and record the exit code and per-class table; fix the remaining clipped stories at 320.
-- [ ] Skip hidden or screen-reader-only text when measuring, including descendants; widen the 1×1 check (`clip: rect(0…)`, `clip-path: inset(50%)`, `.sr-only`).
-- [ ] De-duplicate nested-block lines; measure `clip-no-text` stories but waive only the zero rule.
-- [ ] Freeze the date in date-relative stories so clip results don't drift.
-- [ ] Long supplier names need `overflow-wrap: anywhere` on the review supplier line; older truncations in the project picker, unpaid hints and the add-sheet hint; a stress story with a 3-line supplier.
-- [ ] A per-story retry; a story whose sample totals don't add up.
+- **Type:** BACKLOG NIT · **Status:** done (this PR) except the UI items, left to the UI lanes · **Depends on:** —
+- [x] Re-run the real clip check on main and record the exit code and per-class table; fix the remaining clipped stories at 320. (Main at 596c409, 2026-10-09: exit 1, 24 story views clip, 4 stories at every width and theme: `ui-row-missing t-amount` "— עוד לא הגיע" +82px in the three project-categories group-open stories (18 views), and a bare span ", הוצאות −$40" +11px in MonthList two-currencies (6 views). Both are screen-reader-only text (`sr-only` inside the row; the month bar's spoken total), not visible clips. With this PR the check passes at 320 in light and dark: 1000 stories, 27,328 elements, 13 without text. Nothing to fix at 320.)
+- [x] Skip hidden or screen-reader-only text when measuring, including descendants; widen the 1×1 check (`clip: rect(0…)`, `clip-path: inset(50%)`, `.sr-only`). (A block is skipped when it or any element around it is `.sr-only` or `.visually-hidden`, has a zero `clip` rect, a 50% `clip-path` inset, or is a 1×1 box that hides overflow.)
+- [x] De-duplicate nested-block lines; measure `clip-no-text` stories but waive only the zero rule. (Each block measures only its own text, so a clipped nested block is one line. A `clip-no-text` story is measured like the rest; measuring nothing is not a failure for it.)
+- [x] Freeze the date in date-relative stories so clip results don't drift. (Every story sees 2026-10-15 09:00 Israel time, `FROZEN_NOW`.)
+- [ ] Long supplier names need `overflow-wrap: anywhere` on the review supplier line; older truncations in the project picker, unpaid hints and the add-sheet hint; a stress story with a 3-line supplier. (Left to the UI lanes: UI lane 2 owns the review card, and dev lanes don't open UI PRs.)
+- [x] A per-story retry. (A story that does not render gets one more load before it counts.)
+- [ ] A story whose sample totals don't add up. (The item doesn't name the story, and the clip check measures widths, not sums; left for whoever filed it to name.)
 
 <a id="flow-811"></a>
 ### FLOW-811 · CI and deploy follow-ups

@@ -262,7 +262,7 @@ export const StatementMethods320Dark: Story = { args: statementArgs, render: () 
 /** FLOW-501: a loan on the Loans page. The meta slot holds the balance with small cents; a waiting loan warns. */
 function LoanRows() {
   return (
-    <List>
+    <List className="ui-loan-list">
       <ListRow
         variant="button"
         title="משכנתא אלון"
