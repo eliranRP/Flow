@@ -17,6 +17,8 @@ type MonthListProps<T> = {
   days?: boolean;
   /** The rows show cents, so the month totals add exact minor units and show cents too. FLOW-305. */
   cents?: boolean;
+  /** The list is titled as a cost (a category's lines): expense totals carry no minus (DESIGN-RULES §3.7, FLOW-339). */
+  cost?: boolean;
 };
 
 /**
@@ -35,6 +37,7 @@ export function MonthList<T>({
   complete = true,
   days = false,
   cents = false,
+  cost = false,
 }: MonthListProps<T>) {
   const baseId = useId();
   const groups = groupByMonth(rows, dateOf, amountOf, cents);
@@ -73,6 +76,7 @@ export function MonthList<T>({
           renderRow={renderRow}
           days={days}
           cents={cents}
+          cost={cost}
         />
       ))}
     </List>
@@ -94,6 +98,7 @@ function MonthSection<T>({
   renderRow,
   days,
   cents,
+  cost = false,
 }: {
   id: string;
   group: MonthGroup<T>;
@@ -105,6 +110,7 @@ function MonthSection<T>({
   renderRow: (row: T) => ReactNode;
   days: boolean;
   cents: boolean;
+  cost?: boolean;
 }) {
   return (
     <div className="ui-month" role={head ? "group" : undefined} aria-labelledby={head ? id : undefined}>
@@ -116,7 +122,7 @@ function MonthSection<T>({
               {group.totals
                 // A currency that rounds to zero draws no line, so it can't take the first slot.
                 .filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n)
-                .map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} first={index === 0} />)}
+                .map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0} />)}
             </p>
           ) : null}
         </div>
@@ -159,9 +165,10 @@ function Rows<T>({
  * figures don't run together (FLOW-313). The pause leads the hidden label rather than trailing the
  * figure, so it adds no width past the figure's box.
  */
-function MonthTotalLine({ total, cents, first }: { total: MonthTotal; cents: boolean; first: boolean }) {
+function MonthTotalLine({ total, cents, cost, first }: { total: MonthTotal; cents: boolean; cost: boolean; first: boolean }) {
   const text = (minor: bigint, direction: "income" | "expense") => {
-    const formatted = formatAmountText(minor, total.currency, { direction, detail: cents });
+    // In a cost list the expense figure is the list's own subject, so it needs no minus.
+    const formatted = formatAmountText(minor, total.currency, { direction: cost && direction === "expense" ? undefined : direction, detail: cents });
     return cents ? withCents(formatted) : formatted;
   };
   const income = total.incomeMinor > 0n ? text(total.incomeMinor, "income") : null;

@@ -37,6 +37,8 @@
 /review/filed/ /review/filed 301
 /unpaid /app-shell 200
 /unpaid/ /unpaid 301
+/missing-bills /app-shell 200
+/missing-bills/ /missing-bills 301
 /notifications /app-shell 200
 /notifications/ /notifications 301
 /settings /app-shell 200

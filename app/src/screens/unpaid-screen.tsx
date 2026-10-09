@@ -3,7 +3,7 @@ import { useState } from "react";
 import { absAgorot } from "../agorot";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { unpaidIsMarked, unpaidTotals } from "../unpaid";
+import { unpaidDocumentUrl, unpaidIsMarked, unpaidTotals } from "../unpaid";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useSumitStatusQuery, useUnpaidQuery } from "../use-books";
@@ -120,10 +120,15 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
         {rows.map((row) => {
           const marked = unpaidIsMarked(row);
           const busy = busyId === row.id && mark.isPending;
+          // FLOW-335: a row with SUMIT's document link opens it in a new tab; without one it stays still.
+          const documentUrl = unpaidDocumentUrl(row);
           return (
             <ListRow
               key={row.id}
               variant="project"
+              href={documentUrl ?? undefined}
+              external={documentUrl != null}
+              chevron={documentUrl != null}
               title={row.customer_name ?? row.description}
               hint={marked ? `${UNPAID_MARKED} · ${unpaidHintLine(row)}` : unpaidHintLine(row)}
               wrapHint

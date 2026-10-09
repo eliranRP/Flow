@@ -21,6 +21,8 @@ type Common = {
   /** Hint uses t-hint, and the control points at it with aria-describedby. */
   describeHint?: boolean;
   href?: string;
+  /** The href is an outside page: it opens in a new tab, and the name says so. */
+  external?: boolean;
   state?: unknown;
   action?: ReactNode;
   /** The action sits under the row, on the start side under the name (FLOW-335). */
@@ -61,7 +63,16 @@ export type ListRowProps =
     /** No amount yet: a muted "—" with this hidden word instead (FLOW-401: a bill not in yet). */
     missing?: string;
   })
-  | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string; /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */ inWord?: string })
+  | (Common & {
+    variant: "transaction";
+    agorot: bigint;
+    /** "cost": money out in a list already titled as a cost, so no minus (DESIGN-RULES §3.7, FLOW-339). */
+    sign: "in" | "out" | "cost";
+    source: "invoice" | "bank";
+    currency?: string;
+    /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */
+    inWord?: string;
+  })
   | StatementRowProps
   | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
@@ -200,6 +211,7 @@ export function ListRow(props: ListRowProps) {
           <ChevronIcon />
         </span>
       ) : null}
+      {props.external === true && props.href != null ? <span className="sr-only">{NEW_TAB}</span> : null}
     </>
   );
 
@@ -270,7 +282,18 @@ export function ListRow(props: ListRowProps) {
         : "ui-row ui-hit",
     toneClass,
   );
-  const row = props.href ? (
+  const row = props.href && props.external === true ? (
+    <a
+      href={props.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      aria-label={externalName(described ? rowName(props) : props.label)}
+      aria-describedby={described}
+    >
+      {body}
+    </a>
+  ) : props.href ? (
     <Link
       to={props.href}
       state={props.state}
@@ -294,6 +317,13 @@ export function ListRow(props: ListRowProps) {
     );
   }
   return withAction(props, row);
+}
+
+const NEW_TAB = "(נפתח בלשונית חדשה)";
+
+/** An outside link's own name keeps the new-tab note the hidden span gives the content. */
+function externalName(name: string | undefined): string | undefined {
+  return name == null ? undefined : `${name} ${NEW_TAB}`;
 }
 
 function rowName(props: { label?: string; title: ReactNode }): string | undefined {
@@ -343,8 +373,9 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out"; inWord?: string }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
+  const cost = props.sign === "cost";
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
   // minus in the main text colour and is never green (decision 0120).
   const income = props.sign === "in" && props.agorot >= 0n;
@@ -355,7 +386,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
       <BigNumber
         agorot={abs}
         currency={props.currency}
-        direction={income ? "income" : "expense"}
+        direction={income ? "income" : cost ? undefined : "expense"}
         income={income}
         cents="always"
       />

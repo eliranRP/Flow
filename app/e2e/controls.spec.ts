@@ -126,7 +126,8 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   for (const name of [/פרויקט חדש/, /הלוואה חדשה/, /חיבור בנק/]) {
     await expect(page.getByRole("button", { name })).toBeEnabled();
   }
-  await page.getByRole("button", { name: "ביטול" }).click();
+  // FLOW-339: ✕ closes it; ביטול belongs to confirm sheets.
+  await page.getByRole("dialog", { name: "הוספה" }).getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
 });
 

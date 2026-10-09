@@ -421,4 +421,29 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(avatar).toHaveAttribute("data-avatar", "icon");
     expect(avatar?.querySelector("svg")).not.toBeNull();
   });
+
+  it("keeps the new-tab note in an outside link's name, also when the row has its own label (FLOW-335)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="project" title="לקוח" label="לקוח, 01/09" agorot={100n} loss={false} href="https://pay.sumit.co.il/x" external />
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole("link", { name: "לקוח, 01/09 (נפתח בלשונית חדשה)" });
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+});
+
+describe("ListRow transaction in a cost list (FLOW-339)", () => {
+  it("draws a cost with no minus and a refund as זיכוי", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="מלט" agorot={-8_500_000n} sign="cost" source="invoice" href="/t/1" />
+        <ListRow variant="transaction" title="החזר" agorot={50_000n} sign="in" inWord="זיכוי" source="invoice" href="/t/2" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("מלט").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("₪85,000.00");
+    const refund = screen.getByText("החזר").closest(".ui-row");
+    expect(refund?.querySelector(".ui-num")?.textContent).toBe("₪500.00");
+    expect(refund?.textContent).toContain("זיכוי");
+  });
 });
