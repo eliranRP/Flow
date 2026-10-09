@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -29,6 +29,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "loan_update"` | `id` | the loan id |
 | `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
 | `undo` `kind: "loan_rate"` | `id` | the rate row id `set_loan_rate` returned |
+| `set_loan_index` | `loan_id` | `list_loans` `loans[].id` |
+| `undo` `kind: "loan_index"` | `id` | the loan id `set_loan_index` used |
+| `undo` `kind: "index_rate"` | `id` | the write id `set_index_rate` returned |
 | `undo` `kind: "overhead_project"` | `id` | the company id `set_overhead_project` returned |
 | `undo` `kind: "line_split"` | `id` | the transaction id `split_line` used |
 | `undo` `kind: "line_pnl"` | `id` | the transaction id `set_line_pnl` used |
@@ -474,7 +477,7 @@ Read tools use `mcp_list_loans` and shared schedule math. Writes use the same wr
 
 ### list_loans
 
-Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Loans come in the saved order: by name until `reorder_loans` changes it, and a loan added since goes last ([0142](../decisions/0142-loan-delete-and-order.md)). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)). `accrued_interest_minor` is what an open demand loan owes in interest today (`accrued_as_of`, the UTC day): interest earlier payments left unpaid plus what accrued since the last payment or the start, daily on actual/365, the same figure as `get_loan_schedule`'s `accrued.interest_minor`. It is null for the other kinds, whose interest is in the schedule rows, for a closed loan, and when the loan's payments could not be read ([FLOW-211](../backlog/TASKS.md#flow-211)).
+Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Loans come in the saved order: by name until `reorder_loans` changes it, and a loan added since goes last ([0142](../decisions/0142-loan-delete-and-order.md)). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); `rate_index` (`il_prime` or null) and `rate_margin_ppm` (the margin over it, may be negative, null when unlinked; see `set_loan_index`, [0160](../decisions/0160-loan-index-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)). `accrued_interest_minor` is what an open demand loan owes in interest today (`accrued_as_of`, the UTC day): interest earlier payments left unpaid plus what accrued since the last payment or the start, daily on actual/365, the same figure as `get_loan_schedule`'s `accrued.interest_minor`. It is null for the other kinds, whose interest is in the schedule rows, for a closed loan, and when the loan's payments could not be read ([FLOW-211](../backlog/TASKS.md#flow-211)).
 
 ### get_loan_schedule
 
@@ -525,6 +528,32 @@ Patch fields: `name`, `principal`, `annual_rate_percent`, `term_months`, `start_
 ```
 
 From `effective_date` on, the loan's rate is `annual_rate_percent` (0 to 100, at most 4 decimals), entered by hand when an index such as prime changes; Flow fetches no index ([0132](../decisions/0132-loan-kinds-rates.md)). A second call for the same date changes that row, and `annual_rate_percent: null` removes it (`refused` / `rate not found` when there is none). A date before the loan's `start_date` is `refused` / `rate before the loan start`; an unknown loan or another company's is `refused` / `loan not found`. The rate in force on a date is the latest row on or before it, else the loan's own `annual_rate_percent`; `get_loan_schedule` and `attach_loan_payment` use it, and a change recasts the payment from the first row it applies to. Payments already attached keep their parts. Output `data`: `{ "id", "loan_id", "effective_date", "annual_rate_ppm", "previous_rate_ppm", "undo_kind": "loan_rate" }`; `id` is the rate row's id (kept when the row is removed, so undo can put it back) and `previous_rate_ppm` is the row's rate before the call (null when there was none). Undo `kind: "loan_rate"` takes that id and puts the row back as it was (removed, restored with the same id, or its old rate); if the row changed since, it is `conflict`.
+
+### set_loan_index
+
+```json
+{
+  "idempotency_key": "index-1",
+  "loan_id": "<loan id>",
+  "rate_index": "il_prime",
+  "margin_percent": 0.75
+}
+```
+
+Links the loan's rate to an index: `il_prime` (the Bank of Israel prime rate) plus `margin_percent` (-100 to 100, at most 4 decimals; negative for prime minus). `rate_index: null` with `margin_percent: null` unlinks it; one without the other is `validation`. Linking writes no rate by itself: `set_index_rate` does, from a date. An unknown loan or another company's is `refused` / `loan not found`. Output `data`: `{ "loan_id", "rate_index", "rate_margin_ppm", "previous": { "rate_index", "rate_margin_ppm" }, "undo_kind": "loan_index" }`. Undo `kind: "loan_index"` with the loan id puts the link before back; once the link changed again it is `conflict` ([0160](../decisions/0160-loan-index-rates.md)).
+
+### set_index_rate
+
+```json
+{
+  "idempotency_key": "prime-2027-01",
+  "rate_index": "il_prime",
+  "effective_date": "2027-01-01",
+  "annual_rate_percent": 5.5
+}
+```
+
+Records a new index rate from `effective_date` on, for example when the Bank of Israel moves prime. Every loan linked to `rate_index` gets a rate row on that date at `annual_rate_percent` (0 to 100, at most 4 decimals) plus its margin, kept between 0% and 100%: the same row `set_loan_rate` writes, so a row already on that date is replaced, and `get_loan_schedule`, demand interest and `list_loans` use it the same way. A loan whose `start_date` is after the date is skipped and listed in `skipped` with `reason` `rate before the loan start`, and a loan paid off or closed before the date with `rate after the loan closed`. No linked loan is `refused` / `no loan linked to this index`; when every linked loan is skipped it is `refused` / `no linked loan is open on this date`. Output `data`: `{ "id", "rate_index", "effective_date", "index_rate_ppm", "loans": [{ "loan_id", "name", "rate_id", "annual_rate_ppm", "previous_rate_ppm" }], "skipped": [{ "loan_id", "name", "reason" }], "undo_kind": "index_rate" }`; `id` is the write's id. Undo `kind: "index_rate"` with that id puts every row back as it was (removed, or its old rate), all or nothing: if any of those rows changed since, it is `conflict` and nothing moves ([0160](../decisions/0160-loan-index-rates.md)).
 
 ### attach_loan_payment
 
