@@ -86,7 +86,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
-| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | claimed (UI lane 2, handed over from UI lane 4, 2026-10-09; replaces closed draft #279) |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | done (#253, #248) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
@@ -534,10 +534,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-314"></a>
 ### FLOW-314 · Swipe between transactions on the card
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-303 (#100)
+- **Type:** SMALL UI · **Status:** claimed (handed over from UI lane 4, 2026-10-09, flow314; replaces closed draft #279; the follow-ups below stay open) · **Depends on:** FLOW-303 (#100)
 - **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
 - **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.
-- Also from #100's design session: add the project's waiting list (card rows only) and let ˅ at the last loaded category row load the next page. From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
+- Follow-ups, open (not in this PR):
+  - [ ] From #100's design session: add the project's waiting list (card rows only) to the walk.
+  - [ ] ˅ at the last loaded category row loads the next page.
+  - [ ] From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
+  - [ ] From #291's code review: the slide-in replays after Back from a pushed screen or a reload (`txnEnter` lives in history); clear it on `animationend` or honour it once per `location.key`.
+  - [ ] From #291's code review: the band-figure swipe (`period-swipe.tsx` `inEdgeZone`) still takes the 24th edge px; use `<=`/`>=` with `EDGE_PX` from edge-back, as the card does.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail

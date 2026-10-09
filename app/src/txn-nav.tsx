@@ -10,7 +10,7 @@ import { ChevronDownIcon, ChevronUpIcon } from "./ui/icons";
 /** The list a card was opened from: its rows in the order shown, and its address. */
 export type TxnList = { ids: readonly string[]; from: string };
 
-type Via = "next" | "prev" | "key";
+type Via = "next" | "prev" | "key" | "swipe";
 
 /** Ids on each side of the opened row. A longer list sends a window around it. */
 const SIDE = 250;
@@ -39,7 +39,13 @@ export function readTxnList(state: unknown): TxnList | null {
 function readVia(state: unknown): Via | null {
   if (!isRecord(state)) return null;
   const via = state.txnVia;
-  return via === "next" || via === "prev" || via === "key" ? via : null;
+  return via === "next" || via === "prev" || via === "key" || via === "swipe" ? via : null;
+}
+
+/** FLOW-314: the side a swiped-to card enters from. */
+function readEnter(state: unknown): "next" | "prev" | null {
+  if (!isRecord(state)) return null;
+  return state.txnEnter === "next" || state.txnEnter === "prev" ? state.txnEnter : null;
 }
 
 export type TxnNav = {
@@ -50,6 +56,8 @@ export type TxnNav = {
   next: string | null;
   /** How this card was reached: a button keeps focus on it, any move is announced. */
   via: Via | null;
+  /** Set when a swipe opened this card: the direction it moved. */
+  enter: "next" | "prev" | null;
   move: (direction: "next" | "prev", via: Via) => void;
 };
 
@@ -73,12 +81,12 @@ export function useTxnNav(transactionId: string): TxnNav | null {
     // Replace, so Back pops straight to the list at its saved scroll spot.
     void navigate(`/transactions/${target}${location.search}`, {
       replace: true,
-      state: { txnList: list, txnVia: via },
+      state: via === "swipe" ? { txnList: list, txnVia: via, txnEnter: direction } : { txnList: list, txnVia: via },
     });
     scrollPageToTop();
   }, [list, next, prev, navigate, location.search, transactionId]);
   if (list == null || index < 0 || list.ids.length < 2) return null;
-  return { list, index, total: list.ids.length, prev, next, via: readVia(location.state), move };
+  return { list, index, total: list.ids.length, prev, next, via: readVia(location.state), enter: readEnter(location.state), move };
 }
 
 /** Warm the neighbours' reads once the card is ready. */
