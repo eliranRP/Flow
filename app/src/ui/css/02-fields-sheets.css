@@ -37,8 +37,8 @@
   );
 }
 
-/* FLOW-115: loan list and loan page rows while they load: the title and the hint line every loaded
-   row has, so the list does not grow when the read lands. */
+/* FLOW-115: loan list and loan page rows while they load: the two text lines every loaded row has
+   (title and hint, or eyebrow and title), so the list does not grow when the read lands. */
 .ui-loan-skel-rows .ui-row {
   min-height: calc(
     2 * var(--row-pad)
