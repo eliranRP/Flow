@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(23);
+select plan(27);
 
 select tests.create_supabase_user('mi_a', 'mi-a@example.com');
 select tests.create_supabase_user('mi_b', 'mi-b@example.com');
@@ -147,6 +147,41 @@ select is(
   'invoiced basis counts posted Mercury income'
 );
 reset role;
+
+-- A Mercury income line stored with no category (no visible income default at the time).
+-- The relabel's update runs transactions_fill_category like any later update or sync of the
+-- line, so it gets the default as a suggestion, which review still asks about (0097).
+update public.categories set hidden = true
+where company_id = (select id from mi_ref where label = 'a') and kind = 'income' and is_default;
+insert into public.transactions (company_id, direction, doc_kind, line_status, currency, amount_gross, amount_net, amount_original,
+  vat_amount, vat_status, doc_date, source, external_id, idempotency_key, description)
+select id, 'income', 'receipt', 'posted', 'USD', 6100, 6100, 6100, 0, 'source', '2026-09-13', 'mercury', 'mi-uncat', 'mercury:mi-uncat', 'Sample uncategorized deposit'
+from mi_ref where label = 'a';
+update public.categories set hidden = false
+where company_id = (select id from mi_ref where label = 'a') and kind = 'income' and is_default;
+select is((select category_id from public.transactions where external_id = 'mi-uncat'), null::uuid, 'the line is stored with no category');
+select is(private.relabel_mercury_income(), '{"closed": 0, "refreshed": 0, "relabeled": 1}'::jsonb, 'the relabel reaches the uncategorized line');
+select is(
+  (select t.category_suggested and c.is_default and not t.category_assigned and not t.user_assigned
+   from public.transactions t join public.categories c on c.id = t.category_id where t.external_id = 'mi-uncat'),
+  true,
+  'the relabel gives the uncategorized line the default as a suggestion, not an assignment'
+);
+
+do $$ begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform public.sync_review_queue((select id from mi_ref where label = 'a'));
+  perform set_config('request.jwt.claims', null, true);
+  perform set_config('request.jwt.claim.role', null, true);
+end $$;
+select is(
+  (select string_agg(q.status::text || ':' || q.reason::text, ',') from public.review_queue q
+   join public.transactions t on t.id = q.transaction_id where t.external_id = 'mi-uncat'),
+  'open:missing_category',
+  'review asks about the suggested category on a line with no project'
+);
 
 select ok(not has_function_privilege('anon', 'private.relabel_mercury_income()', 'execute'), 'anon cannot run the relabel');
 select ok(not has_function_privilege('authenticated', 'private.relabel_mercury_income()', 'execute'), 'authenticated cannot run the relabel');

@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-506 shared demo card and tab bar | Next small ready item from the lane manager |
+| Backlog bug fixes | Mercury sync follow-ups: void first line count, relabel suggestion (FLOW-414 merged #361) | Next small ready item from the lane manager |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -123,6 +123,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (UI lane 4, #345) |
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
+| 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -390,6 +391,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
 - [x] (Backlog bug fixes, 2026-10-09: the row always has a hint and the placeholder is the hinted row's height, 94.6px; the jump was really 72 → 94.6px in the one-loan case) The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
 - [x] (Backlog bug fixes, 2026-10-09: the sheet says "אין הלוואה בדולר."; a loan with no balance row shows its principal) Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
+
+<a id="flow-414"></a>
+### FLOW-414 · Loan tools: interest kept out of profit, interest-only term, field-named errors
+- **Type:** BUG · **Status:** done (Backlog bug fixes, decision 0166) · **Source:** the Flow MCP agent's requests, relayed by the lane manager 2026-10-09 (bookkeeping priority)
+- [x] `update_loan` refused a kept-out category for interest or escrow ("category does not fit the loan part"), so a rehab or flip hard-money loan's interest could not stay out of profit as a carrying cost. Interest and escrow now take any expense category, counted or kept out, as fees do; principal still needs a kept-out one, and a built-in loan category in use keeps its side (decision 0166). The app's part-category picker follows.
+- [x] `add_loan` with `kind: "interest_only"` and `interest_only_months` equal to `term_months` (12 of 12) was reported as a bare `validation`. It passes on main (zod, the schedule and the SQL check all allow it); a test now locks it in, and the field-named errors below show what a refused payload got wrong (months sent as text, for example).
+- [x] `add_loan`, `update_loan` and `attach_loan_payment` errors name the failing field and what it takes (`interest_only_months: required with kind interest_only`, `parts.escrow: an amount of zero or more, at most two decimals, not rounded`); every tool names an unknown or identity argument.
 
 ## MCP
 
@@ -1142,8 +1150,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
 - [x] Six surviving mutations in the client resume and own-account paths. (#321: `resume_own_account_test.ts` covers the cursor field checks, the treasury resume reaching only the resumed account, and the card, missing-account and overlong-id checks. A rerun kills 14 of 15 mutants; the survivor swaps the bad-JSON fallback for `timestampFromCursor`, which already returns null for anything starting with `{`.)
 - [x] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy. (#321: `docs/runbooks/mercury-sync.md`.)
-- [ ] (#331 review) `upsert_connector_lines` counts a first-seen line that arrives already void (inserted with `removed_at`) in `inserted`, so the refresh toast can say "תנועה חדשה אחת" for a failed or cancelled Mercury transaction that never shows. Count only live inserts.
-- [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
+- [x] (Backlog bug fixes, 2026-10-09: done in #335; migration `20261013080000_push_notifications.sql` counts only a first-seen line that is not void, pgTAP `push_notifications.test.sql`.) (#331 review) `upsert_connector_lines` counts a first-seen line that arrives already void (inserted with `removed_at`) in `inserted`, so the refresh toast can say "תנועה חדשה אחת" for a failed or cancelled Mercury transaction that never shows. Count only live inserts.
+- [x] (Backlog bug fixes, 2026-10-09: kept as designed. The relabel's update runs `transactions_fill_category` like any later update or sync of the line, so the suggestion is the one a sync gives, and an income guess still opens in review as a missing category. Decision 0097 and the changelog now say so and that the relabel closes reopened review rows; pgTAP `mercury_income_doc_kind.test.sql` pins it.) Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
 - [x] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it. (#321: "The token's scope" in `docs/runbooks/mercury-sync.md`.)
 
 <a id="flow-511"></a>

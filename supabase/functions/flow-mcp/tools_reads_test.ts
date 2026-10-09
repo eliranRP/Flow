@@ -536,7 +536,8 @@ Deno.test("get_profit_months rejects bad arguments before any read", async () =>
   ]) {
     const result = await callTool("get_profit_months", args, ["read"], rpc);
     assertEquals(result.isError, true);
-    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
+    // An extra or identity key is named (FLOW-414); the rest stay a bare validation.
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 0);
   assertEquals((await callTool("get_profit_months", { from: "2006-02-01", to: "2026-01-31" }, ["read"], rpc)).isError, false);
@@ -600,9 +601,7 @@ Deno.test("get_project rejects a bad id, a bad basis, and an extra argument befo
   for (const pending of cases) {
     const result = await pending;
     assertEquals(result.isError, true);
-    if (!result.structuredContent.ok) {
-      assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
-    }
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 0);
 });
