@@ -333,7 +333,8 @@ export function LoanSetupForm({
         </div>
       ) : null}
       {/* FLOW-344 (B): the preview shows only while every field is valid, so it never reads as another loan's payment. */}
-      <div aria-live="polite">
+      {/* Empty, the region leaves the layout, so the gap above שמירה is the usual one between fields. */}
+      <div aria-live="polite" className={canSave && shown ? undefined : "sr-only"}>
         {canSave && shown ? (
           <>
           <p>
@@ -360,10 +361,9 @@ export function LoanSetupForm({
           </>
         ) : null}
       </div>
-      {!advanced ? (
-        <p className="ui-field-message ui-field-message-slot" role={shownError("payment") ? "alert" : undefined}>
-          {shownError("payment") ?? ""}
-        </p>
+      {/* FLOW-344: the payment error takes a line only when there is one; the preview above no longer jumps. */}
+      {!advanced && shownError("payment") != null ? (
+        <p className="ui-field-message" role="alert">{shownError("payment")}</p>
       ) : null}
       {/* FLOW-115: always tappable; a tap shows each field's error, and each says what to type. */}
       <Button type="submit" buttonRef={saveButtonRef} busy={busy}>שמירה</Button>
