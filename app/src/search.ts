@@ -189,30 +189,11 @@ export function searchRowTitle(row: SearchRow): string {
 }
 
 /**
- * What a row adds to its month head and the count line: a kept-out line adds nothing, as on the
+ * What a row adds to its month head: a kept-out line adds nothing, as on the
  * project page (0099). Otherwise the line's own amount in its own currency.
  */
 export function searchRowAmount(row: SearchRow): { minor: bigint; currency: string; direction: SearchDirection } {
   return { minor: row.kept_out ? 0n : row.amount_net, currency: row.currency, direction: row.direction };
-}
-
-export type SearchTotal = { currency: string; incomeMinor: bigint; expenseMinor: bigint };
-
-/** Money in and out per currency over the shown rows, ILS first, then in the order seen. */
-export function searchTotals(rows: readonly SearchRow[]): SearchTotal[] {
-  const totals: SearchTotal[] = [];
-  for (const row of rows) {
-    const amount = searchRowAmount(row);
-    const abs = amount.minor < 0n ? -amount.minor : amount.minor;
-    let total = totals.find((item) => item.currency === amount.currency);
-    if (!total) {
-      total = { currency: amount.currency, incomeMinor: 0n, expenseMinor: 0n };
-      totals.push(total);
-    }
-    if (amount.direction === "income") total.incomeMinor += abs;
-    else total.expenseMinor += abs;
-  }
-  return totals.sort((a, b) => (a.currency === "ILS" ? 0 : 1) - (b.currency === "ILS" ? 0 : 1));
 }
 
 /** "תנועה אחת" or "N תנועות". */
