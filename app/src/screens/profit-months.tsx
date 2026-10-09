@@ -151,7 +151,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
         <EmptyState icon={<ChartIcon />} title={EMPTY_TITLE} body={EMPTY_BODY} />
       ) : (
         // FLOW-335: no explainer under the list; each row carries a chevron (as FLOW-328 did elsewhere).
-        <List>
+        <List className="ui-profit-months">
           {rows.map((month) => (
             <MonthRow
               key={month.month}
