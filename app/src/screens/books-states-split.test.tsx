@@ -489,7 +489,7 @@ describe("rejected writes", () => {
       if (name === "list_categories") {
         return Promise.resolve({
           data: [
-            { id: "c1", name: "תקבול מלקוח", kind: "income", hidden: false, is_default: true },
+            { id: "c1", name: "הכנסה מלקוחות", kind: "income", hidden: false, is_default: true },
             { id: "c2", name: "הכנסה אחרת", kind: "income", hidden: false, is_default: false },
           ],
           error: null,
@@ -531,9 +531,9 @@ describe("rejected writes", () => {
       expect(screen.getByRole("button", { name: /פרויקט: אתר א/ })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
-    fireEvent.click(await screen.findByRole("radio", { name: "תקבול מלקוח" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הכנסה מלקוחות" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /קטגוריה: תקבול מלקוח/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /קטגוריה: הכנסה מלקוחות/ })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסה אחרת" }));

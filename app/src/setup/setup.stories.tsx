@@ -97,7 +97,8 @@ const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
     <StoryRoute entry="/setup/5">
       <StepInstall
         initialMode={mode}
-        pushSample={reminder ? { prefs: NO_PREFS, support: "ok" } : undefined}
+        // An answered sample hides the card without a server read (a story never fetches).
+        pushSample={{ prefs: reminder ? NO_PREFS : { ...NO_PREFS, prompt_answered: true }, support: "ok" }}
         onBack={() => undefined}
         onSkip={() => undefined}
         onFinish={() => undefined}

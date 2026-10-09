@@ -28,10 +28,11 @@ function daysBefore(iso: string): number {
   return Math.max(0, Math.round((end - start) / 86_400_000));
 }
 
-/** "היום", "אתמול", else "לפני N ימים" (FLOW-353). */
+/** "היום", "אתמול", "לפני יומיים", else "לפני N ימים" (FLOW-353). */
 export function unpaidAge(days: number): string {
   if (days === 0) return "היום";
   if (days === 1) return "אתמול";
+  if (days === 2) return "לפני יומיים";
   return `לפני ${String(days)} ימים`;
 }
 

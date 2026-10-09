@@ -38,6 +38,8 @@ import {
   renameCategorySchema,
   renameCompanySchema,
   reorderLoansSchema,
+  setCashBasisSchema,
+  setCategoryCashSchema,
   setCategoryGroupSchema,
   setCategoryParentSchema,
   setCategoryPnlSchema,
@@ -46,6 +48,8 @@ import {
   setInvoicePaidSchema,
   setMemberRoleSchema,
   setJevModeSchema,
+  setLineCashSchema,
+  setLinesCashSchema,
   setLinePnlSchema,
   setLinesPnlSchema,
   setIndexRateSchema,
@@ -279,6 +283,40 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_in_pnl: parsed.data.in_pnl,
+    };
+  } else if (name === "set_category_cash") {
+    const parsed = setCategoryCashSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_category_cash";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+      p_in_cash: parsed.data.in_cash,
+    };
+  } else if (name === "set_line_cash") {
+    const parsed = setLineCashSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_line_cash";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_in_cash: parsed.data.in_cash,
+    };
+  } else if (name === "set_lines_cash") {
+    const parsed = setLinesCashSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_lines_cash";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items,
+    };
+  } else if (name === "set_cash_basis") {
+    const parsed = setCashBasisSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_cash_basis";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_basis: parsed.data.basis,
     };
   } else if (name === "set_invoice_paid") {
     const parsed = setInvoicePaidSchema.safeParse(args);

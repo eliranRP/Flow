@@ -2,7 +2,7 @@
 # FLOW-309 · Review queue follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready (UI lane 2 has the counter, focus, spacing, e2e and mid-swap items, 2026-10-09) · **Depends on:** —
 - [x] Unit-test the live refresh of filed-today and the transaction on approve and undo; restore the toast fade-ramp assertion. (Backlog bug fixes: `review-refresh.test.tsx` keeps both reads open and checks each is read again after אישור and after ביטול. `toast.spec.ts` `assertFade`: after a pad move the toast must ramp, with no pad move it must appear in one frame (0075). No flow pads the sheet today, so the ramp branch has no case yet.)
-- [ ] A toast ramp case once a flow pads the sheet (or a test-only safe area that forces a pad, as the spec before 263b1d25 did).
+- [x] (UI lane 2: `toast.spec.ts` "a pad move settles first, then the fade ramps" sets a test-only safe area 20px past the category sheet's top at 320 and 390; the pad settles before the toast shows, then the fade ramps) A toast ramp case once a flow pads the sheet (or a test-only safe area that forces a pad, as the spec before 263b1d25 did).
 - [x] (UI lane 2, #391) Decide whether the queue banner counts every filed-today row (it should match the list); align the preview's filed-today list with live. (It does: `list_review.auto_approved_today` and `list_auto_assigned_today()` both read `private.filed_today_rows()`, and pgTAP pins them equal; the preview banner counts its own list.)
 - [x] Fixtures for a single-project item with `project_suggested` false. (Already there: `dev/review-e2e-fixture.ts` seed rows and `e2eChangeSample` with one project, `books-states-card.test.tsx` ChangeForm with one project, and the Jev review tests.)
 - [ ] A real soft-keyboard test for the review change sheet.
