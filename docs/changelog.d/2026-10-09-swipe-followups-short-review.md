@@ -1,0 +1,1 @@
+A transaction reached by a swipe slides in once, not again after Back or a reload; the month swipe leaves the screen's edge to swipe-back; and on short phones a flagged review card keeps its flag to one line, so the card ends above אישור ([FLOW-314](backlog/TASKS.md#flow-314), [FLOW-333](backlog/TASKS.md#flow-333)).

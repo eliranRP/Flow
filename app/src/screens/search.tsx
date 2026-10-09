@@ -1,6 +1,6 @@
 import { onlineManager } from "@tanstack/react-query";
-import { formatAmountText, type SearchRow } from "@flow/shared";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { SearchRow } from "@flow/shared";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import * as searchE2eFixture from "../dev/search-e2e-fixture";
 import { allTime, customRange, periodLabel, presetPeriod, samePeriod, windowLabel, type PresetKind } from "../period";
@@ -16,7 +16,6 @@ import {
   searchCountWords,
   searchRowAmount,
   searchRowTitle,
-  searchTotals,
   useDebounced,
   uniqueSearchRows,
   useSearchQuery,
@@ -262,9 +261,10 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   return (
     <div className="ui-search-screen" ref={screenRef}>
       <ScreenHeader title="חיפוש" backTo={`/${previewSearch}`} />
+      {/* FLOW-339 C6-6: the count only. The month heads carry the totals, and every row its amount. */}
       <p className="ui-search-count t-label" role="status">
         {phase.kind === "ready" && rows.length > 0 ? (
-          <CountLine rows={rows} total={total} complete={complete} />
+          <span>{searchCountWords(total)}</span>
         ) : null}
         {refreshing ? <span className="ui-spinner" role="img" aria-label="מחפש" /> : null}
       </p>
@@ -290,34 +290,6 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
         </div>
       </div>
     </div>
-  );
-}
-
-/** "7 תנועות · ₪4,820 יצא · ₪310 נכנס": the count, then money out and in per currency once every row is here. */
-function CountLine({ rows, total, complete }: { rows: readonly SearchRow[]; total: number; complete: boolean }) {
-  const totals = complete ? searchTotals(rows) : [];
-  return (
-    <span>
-      {searchCountWords(total)}
-      {totals.map((sum) => (
-        <Fragment key={sum.currency}>
-          {sum.expenseMinor > 0n ? (
-            <>
-              {" · "}
-              <bdi dir="ltr" className="ui-num">{formatAmountText(sum.expenseMinor, sum.currency)}</bdi>
-              {" יצא"}
-            </>
-          ) : null}
-          {sum.incomeMinor > 0n ? (
-            <>
-              {" · "}
-              <bdi dir="ltr" className="ui-num">{formatAmountText(sum.incomeMinor, sum.currency)}</bdi>
-              {" נכנס"}
-            </>
-          ) : null}
-        </Fragment>
-      ))}
-    </span>
   );
 }
 

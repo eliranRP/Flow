@@ -398,6 +398,19 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
   });
 
+  it("draws the details as whole parts, each carrying its separator, so one that does not fit drops whole (FLOW-339 C6-6)", () => {
+    renderRow({ details: [{ text: "3 באוק׳" }, { text: "ממתינה לאישור", tone: "accent" }, { text: "" }] });
+    const details = screen.getByRole("link").querySelector(".ui-statement-details");
+    expect(details).toHaveClass("ui-hint-parts");
+    const parts = [...(details?.querySelectorAll(".ui-hint-part") ?? [])];
+    expect(parts.map((part) => part.textContent)).toEqual(["3 באוק׳", " · ממתינה לאישור"]);
+    expect(parts.every((part) => part.hasAttribute("data-clip-ok"))).toBe(true);
+    expect(parts[1]?.querySelector(".ui-statement-accent")?.textContent).toBe("ממתינה לאישור");
+    // A state to act on shortens instead of dropping; other parts show whole or not at all.
+    expect(parts[1]).toHaveClass("ui-hint-part-keep");
+    expect(parts[0]).not.toHaveClass("ui-hint-part-keep");
+  });
+
   it("draws a passed method under the amount, isolating a Latin label, and speaks its words", () => {
     renderRow({ method: { icon: null, text: "••4242", spoken: "כרטיס שמסתיים ב־4242", ltr: true } });
     const method = screen.getByRole("link").querySelector(".ui-statement-method");

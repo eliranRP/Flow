@@ -120,12 +120,12 @@ afterEach(() => {
 });
 
 describe("Search screen (FLOW-323)", () => {
-  it("lists every line newest first with no text, and totals what it shows", async () => {
+  it("lists every line newest first with no text, and counts them with no totals (FLOW-339 C6-6)", async () => {
     wrap("/search");
     expect(await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ })).toBeInTheDocument();
     expect(searchCalls()[0]?.args).toEqual({ p_scope: "all", p_limit: 50, p_offset: 0 });
     const status = screen.getByRole("status");
-    expect(status).toHaveTextContent("2 תנועות · ₪124 יצא · ₪500 נכנס");
+    expect(status).toHaveTextContent(/^2 תנועות$/);
     // The income line names its customer and waits for review, in words on the row.
     const income = screen.getByRole("link", { name: /^לקוח לדוגמה/ });
     expect(income).toHaveAccessibleName(/ממתינה לאישור/);
