@@ -133,14 +133,26 @@ begin
      or p_auth is null or p_auth !~ '^[A-Za-z0-9_-]{16,32}$' then
     raise exception 'invalid keys' using errcode = '22023';
   end if;
-  -- One row per endpoint: a device that signs in as another user moves to that user.
+  -- One row per endpoint: a shared browser that signs in as another user moves to that user.
+  -- The endpoint is the browser's own unguessable URL; a caller who copied someone else's
+  -- could only stop their pushes, since the keys sent with it are the caller's.
   insert into public.push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)
   values (uid, p_endpoint, p_p256dh, p_auth, nullif(left(btrim(coalesce(p_user_agent, '')), 300), ''))
   on conflict (endpoint) do update
   set user_id = excluded.user_id,
       p256dh = excluded.p256dh,
       auth = excluded.auth,
-      user_agent = excluded.user_agent;
+      user_agent = excluded.user_agent,
+      updated_at = pg_catalog.now();
+  -- At most 10 devices per user, newest kept, so one account cannot stall the evening run.
+  delete from public.push_subscriptions s
+  where s.user_id = uid
+    and s.id not in (
+      select k.id from public.push_subscriptions k
+      where k.user_id = uid
+      order by k.updated_at desc, k.id
+      limit 10
+    );
 end;
 $$;
 
@@ -290,8 +302,14 @@ begin
   return query
   select d.user_id, s.endpoint, s.p256dh, s.auth, d.waiting
   from private.push_evening_due_users() d
-  join public.push_subscriptions s on s.user_id = d.user_id
-  order by d.user_id, s.created_at;
+  cross join lateral (
+    select k.endpoint, k.p256dh, k.auth
+    from public.push_subscriptions k
+    where k.user_id = d.user_id
+    order by k.updated_at desc, k.id
+    limit 10
+  ) s
+  order by d.user_id;
 end;
 $$;
 

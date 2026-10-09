@@ -131,6 +131,7 @@ export async function sendPush(
   keys: VapidKeys,
   now: Date,
   ttlSeconds = 4 * 60 * 60,
+  timeoutMs = 10_000,
 ): Promise<PushOutcome> {
   if (!PUSH_ENDPOINT.test(target.endpoint) || target.endpoint.length > 2048) return "gone";
   let body: Bytes;
@@ -146,6 +147,7 @@ export async function sendPush(
     response = await fetchImpl(target.endpoint, {
       method: "POST",
       redirect: "error",
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         authorization,
         "content-encoding": "aes128gcm",

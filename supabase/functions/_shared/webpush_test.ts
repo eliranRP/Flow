@@ -145,7 +145,7 @@ Deno.test("sendPush never posts to a host that is not a push service", async () 
 
 Deno.test("the evening line names the waiting count", () => {
   assertEquals(eveningMessage(1).body, "תנועה אחת מחכה לאישור");
-  assertEquals(eveningMessage(7), { kind: "evening", title: "תזכורת ערב", body: "7 תנועות מחכות לאישור", url: "/review" });
+  assertEquals(eveningMessage(7), { title: "תזכורת ערב", body: "7 תנועות מחכות לאישור", url: "/review", tag: "evening-reminder" });
 });
 
 Deno.test("a user is reminded when one device took it; gone devices are listed", async () => {
@@ -211,8 +211,9 @@ Deno.test("push-send reminds due users and records the results", async () => {
   );
   assertEquals(response.status, 200);
   assertEquals(await response.json(), { users: 2, sent: 1, gone: 1, failed: 0 });
-  assertEquals(calls.map((call) => call.url), [ENDPOINT, "https://web.push.apple.com/example-device-2", "note"]);
-  assertEquals(calls[2]?.body, { p_reminded: ["u1"], p_gone: ["https://web.push.apple.com/example-device-2"] });
+  assertEquals(calls.map((call) => call.url).sort(), [ENDPOINT, "https://web.push.apple.com/example-device-2", "note"].sort());
+  assertEquals(calls[calls.length - 1]?.url, "note");
+  assertEquals(calls[calls.length - 1]?.body, { p_reminded: ["u1"], p_gone: ["https://web.push.apple.com/example-device-2"] });
 });
 
 Deno.test("encryptPush matches the RFC 8291 appendix A example", async () => {
@@ -240,4 +241,39 @@ Deno.test("encryptPush matches the RFC 8291 appendix A example", async () => {
     base64UrlEncode(record),
     "DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN",
   );
+});
+
+Deno.test("a push service that hangs times out as failed", async () => {
+  const keys = await vapidKeys();
+  const receiver = await browser();
+  const hang: typeof fetch = (_input, init) => new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+  });
+  const target = { endpoint: ENDPOINT, p256dh: receiver.p256dh, auth: receiver.authText };
+  assertEquals(await sendPush(hang, target, {}, keys, NOW, 60, 20), "failed");
+});
+
+Deno.test("no send starts after the budget, and sends run side by side", async () => {
+  const target = (user: string, endpoint: string): EveningTarget => ({ user_id: user, endpoint, p256dh: "p", auth: "a", waiting: 1 });
+  let clock = 0;
+  let running = 0;
+  let peak = 0;
+  const started: string[] = [];
+  const result = await remindEvening(
+    Array.from({ length: 12 }, (_, index) => target(`u${index}`, `e${index}`)),
+    async (item) => {
+      started.push(item.endpoint);
+      running += 1;
+      peak = Math.max(peak, running);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      clock += 10;
+      running -= 1;
+      return "sent";
+    },
+    { now: () => clock, budgetMs: 25, concurrency: 3 },
+  );
+  assertEquals(peak, 3);
+  assertEquals(started.length < 12, true);
+  assertEquals(result.report.sent + result.report.failed, 12);
+  assertEquals(result.report.sent, started.length);
 });

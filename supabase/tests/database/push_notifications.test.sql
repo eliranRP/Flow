@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(30);
+select plan(32);
 
 do $users$
 begin
@@ -56,6 +56,31 @@ select lives_ok(
   'saving the same device again is fine'
 );
 select is((public.get_notification_prefs()->>'has_subscription')::boolean, true, 'the owner now has a device');
+
+-- At most 10 devices per user: the oldest goes.
+reset role;
+-- The touch trigger would stamp now(); age the first device past it.
+set local session_replication_role = replica;
+update public.push_subscriptions set updated_at = pg_catalog.now() - interval '1 day'
+where endpoint = 'https://fcm.googleapis.com/fcm/send/dev-1';
+set local session_replication_role = origin;
+select tests.authenticate_as('pn_owner');
+select lives_ok(
+  $$select public.push_subscribe('https://fcm.googleapis.com/fcm/send/extra-' || n, pg_temp.key(87), pg_temp.key(22))
+    from generate_series(1, 10) as n$$,
+  'the owner saves ten more devices'
+);
+reset role;
+select results_eq(
+  $$select count(*)::int, bool_or(endpoint = 'https://fcm.googleapis.com/fcm/send/dev-1')
+    from public.push_subscriptions where user_id = tests.get_supabase_uid('pn_owner')$$,
+  $$values (10, false)$$,
+  'only the ten newest devices are kept'
+);
+delete from public.push_subscriptions where user_id = tests.get_supabase_uid('pn_owner');
+insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
+values (tests.get_supabase_uid('pn_owner'), 'https://fcm.googleapis.com/fcm/send/dev-1', repeat('A', 87), repeat('A', 22));
+select tests.authenticate_as('pn_owner');
 
 -- Prefs writes.
 select is(

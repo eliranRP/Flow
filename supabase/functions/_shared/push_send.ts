@@ -24,10 +24,10 @@ export interface PushReport {
   failed: number;
 }
 
-/** The Hebrew line for the evening reminder. */
-export function eveningMessage(waiting: number): { title: string; body: string; url: string; kind: "evening" } {
+/** The evening reminder, in the shape the app's service worker reads (title, body, url, tag). */
+export function eveningMessage(waiting: number): { title: string; body: string; url: string; tag: string } {
   const body = waiting === 1 ? "תנועה אחת מחכה לאישור" : `${waiting} תנועות מחכות לאישור`;
-  return { kind: "evening", title: "תזכורת ערב", body, url: "/review" };
+  return { title: "תזכורת ערב", body, url: "/review", tag: "evening-reminder" };
 }
 
 export function readVapid(env: (name: string) => string): VapidKeys | null {
@@ -60,21 +60,40 @@ function parseTargets(data: unknown): EveningTarget[] {
   });
 }
 
-/** Sends to every device of each due user; a user counts as reminded when one device took it. */
+/** Sends at once, at most this many. Each send has its own timeout (webpush.ts). */
+export const PUSH_CONCURRENCY = 8;
+/** No new send starts after this, so the results are recorded inside the function's time limit. */
+export const PUSH_BUDGET_MS = 90_000;
+
+/**
+ * Sends to every device of each due user; a user counts as reminded when one device took it.
+ * A send not started before the budget runs out is left for the next day, and counted as failed.
+ */
 export async function remindEvening(
   targets: readonly EveningTarget[],
   send: (target: EveningTarget) => Promise<PushOutcome>,
+  options: { now?: () => number; budgetMs?: number; concurrency?: number } = {},
 ): Promise<{ report: PushReport; reminded: string[]; gone: string[] }> {
+  const now = options.now ?? Date.now;
+  const deadline = now() + (options.budgetMs ?? PUSH_BUDGET_MS);
   const report: PushReport = { users: new Set(targets.map((target) => target.user_id)).size, sent: 0, gone: 0, failed: 0 };
   const reminded = new Set<string>();
   const gone: string[] = [];
-  for (const target of targets) {
-    const outcome = await send(target);
-    report[outcome] += 1;
-    if (outcome === "sent") reminded.add(target.user_id);
-    if (outcome === "gone") gone.push(target.endpoint);
-  }
-  return { report, reminded: [...reminded].sort(), gone };
+  let next = 0;
+  const worker = async () => {
+    while (next < targets.length) {
+      const target = targets[next];
+      next += 1;
+      if (!target) continue;
+      const outcome = now() < deadline ? await send(target) : "failed";
+      report[outcome] += 1;
+      if (outcome === "sent") reminded.add(target.user_id);
+      if (outcome === "gone") gone.push(target.endpoint);
+    }
+  };
+  const lanes = Math.max(1, Math.min(options.concurrency ?? PUSH_CONCURRENCY, targets.length));
+  await Promise.all(Array.from({ length: lanes }, worker));
+  return { report, reminded: [...reminded].sort(), gone: gone.sort() };
 }
 
 async function rpc(deps: PushSendDeps, url: string, key: string, name: string, args: unknown): Promise<unknown> {
