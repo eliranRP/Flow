@@ -192,8 +192,8 @@ export function jevConnectorLiveKey(userId: string | null): readonly ["jev-conne
 
 /**
  * FLOW-704: when the scope binds after this session's live read said on, the scoped key takes that
- * answer (and its time), so the connector is not read a second time. Off is not carried over: a
- * read past its deadline also returns off, and that must not stand as a known off.
+ * answer (and its time), so the connector is not read a second time. Only an answered on is
+ * carried over; a read past its deadline is an error, never a known off.
  */
 export function jevLiveOn(client: QueryClient, userId: string | null): number | null {
   const live = client.getQueryState<boolean>(jevConnectorLiveKey(userId));

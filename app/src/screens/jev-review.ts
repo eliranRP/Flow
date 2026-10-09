@@ -366,8 +366,8 @@ export async function loadJevConnector(signal?: AbortSignal): Promise<boolean> {
 /**
  * The one-second read. A completed read stores the flag. A timeout throws `JevConnectorStall` and
  * leaves the stored flag alone, so it cannot overwrite an on that settings just wrote. The card
- * reads a stall as off for now, and the next queue read asks again instead of keeping an off that
- * no read gave (FLOW-704).
+ * reads a stall as off while the review screen stays open; the next time it mounts it asks again
+ * instead of keeping an off that no read gave (FLOW-704).
  */
 export async function fetchJevConnector(signal?: AbortSignal): Promise<boolean> {
   const on = await withJevDeadline<boolean | typeof STALLED>(signal, async (linked) => {
