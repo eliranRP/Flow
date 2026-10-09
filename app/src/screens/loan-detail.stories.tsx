@@ -41,7 +41,20 @@ export const AmortizingDark: Story = { name: "Amortizing, dark", ...loan("loan-m
 export const AmortizingSE: Story = { name: "Amortizing, 375×667", ...loan("loan-mortgage"), ...se };
 export const InterestOnlyRates: Story = { name: "Interest-only with rate changes", ...loan("loan-bridge") };
 export const InterestOnlyRatesDark: Story = { name: "Interest-only with rate changes, dark", ...loan("loan-bridge"), ...dark };
-export const InterestOnlyRates320: Story = { name: "Interest-only with rate changes, 320", ...loan("loan-bridge"), ...at320 };
+export const InterestOnlyRates320: Story = {
+  name: "Interest-only with rate changes, 320",
+  ...loan("loan-bridge"),
+  ...at320,
+  // The סוג value wraps to a second line at 320 instead of ending in "חו…" (design lead).
+  play: async ({ canvasElement }) => {
+    const kind = within(canvasElement).getByRole("button", { name: /^סוג/ });
+    const value = kind.querySelector<HTMLElement>(".ui-row-title");
+    await expect(value).toHaveTextContent("ריבית בלבד · 6 מתוך 24 חודשים");
+    await expect(value == null ? Number.NaN : value.scrollHeight - value.clientHeight).toBeLessThanOrEqual(1);
+    await expect(value == null ? "" : getComputedStyle(value).whiteSpace).toBe("normal");
+  },
+};
+export const InterestOnlyRates320Dark: Story = { ...InterestOnlyRates320, name: "Interest-only with rate changes, dark 320", ...dark };
 export const BalloonWaitingReview: Story = { name: "Balloon, a payment waiting for review", ...loan("loan-note") };
 export const BalloonWaitingReviewDark320: Story = { name: "Balloon, waiting for review, dark 320", ...loan("loan-note"), ...dark, ...at320 };
 export const Demand: Story = { name: "Demand", ...loan("loan-partner") };

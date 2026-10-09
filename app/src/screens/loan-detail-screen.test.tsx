@@ -137,4 +137,19 @@ describe("loan page: states and the viewer", () => {
       expect(screen.getByRole("dialog", { name: "תאריך פירעון" })).toHaveTextContent("יש תשלום משויך אחרי התאריך הזה. בחרו תאריך מאוחר יותר.");
     });
   });
+
+  it("shows payment amounts without a minus (DESIGN-RULES §3.7)", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage");
+    const row = screen.getByRole("link", { name: /^תשלום 01\/09\/2026/ });
+    expect(row).toHaveAccessibleName("תשלום 01/09/2026, $1,512.40");
+    expect(row.textContent).not.toMatch(/[-−]/);
+  });
+
+  it("checks the default row when the loan names the keyed category itself", async () => {
+    const store = sampleLoanStore();
+    await store.update("loan-mortgage", { categoryIds: { interest: "cat-interest" } });
+    renderLoan(store, "loan-mortgage");
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית ריבית$/ }));
+    expect(screen.getByRole("radio", { name: "ברירת מחדל · ריבית" })).toHaveAttribute("aria-checked", "true");
+  });
 });

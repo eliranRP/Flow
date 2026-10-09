@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
@@ -21,7 +21,6 @@ import { useToast } from "../ui/toast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
-import { previewLoanStore } from "../dev/loan-detail-sample";
 import {
   LOAN_PART_LABEL,
   LOAN_STATUS_LABEL,
@@ -63,6 +62,7 @@ import {
 } from "./loan-detail-store";
 import { formatLoanMoney } from "./loan-form";
 import { LoanBalance } from "./loan-list";
+import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
 
 /**
@@ -100,16 +100,29 @@ export function LoanDetailScreen({
   const location = useLocation();
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const store = givenStore ?? (preview === "off" ? null : previewLoanStore());
+  // `?preview=1` reads invented loans. They load on demand, so the sample module stays out of
+  // the main bundle and a signed-in owner never downloads it.
+  const [previewStore, setPreviewStore] = useState<MemoryLoanStore | null>(null);
+  const wantsPreview = givenStore == null && preview !== "off";
+  useEffect(() => {
+    if (!wantsPreview) return;
+    let current = true;
+    void import("../dev/loan-detail-sample").then((sample) => {
+      if (current) setPreviewStore(sample.previewLoanStore());
+    });
+    return () => { current = false; };
+  }, [wantsPreview]);
+  const store = givenStore ?? (wantsPreview ? previewStore : null);
   useMemoryLoanStore(store);
-  const live = useLiveLoan(loanId, store == null);
-  const dashboard = useDashboardQuery(store == null);
+  const isLive = givenStore == null && !wantsPreview;
+  const live = useLiveLoan(loanId, isLive);
+  const dashboard = useDashboardQuery(isLive);
   const back = listPath ?? `${location.pathname.replace(/\/[^/]*\/?$/, "")}${search}`;
   const read: LoanRead = preview === "loading"
     ? { phase: "loading" }
     : preview === "error" || preview === "error-server"
       ? { phase: "error", retry: () => undefined, retrying: false }
-      : store ? store.read(loanId) : live;
+      : store ? store.read(loanId) : wantsPreview ? { phase: "loading" } : live;
   const projects: LoanProjectSource = store
     ? { rows: store.projects }
     : {
@@ -155,7 +168,7 @@ export function LoanDetailScreen({
       key={read.bundle.loan.id}
       bundle={read.bundle}
       writes={store ?? liveLoanWrites}
-      liveKeys={store == null}
+      liveKeys={isLive}
       projects={projects}
       back={back}
       today={givenToday ?? israelToday()}
@@ -221,9 +234,9 @@ function LoanDetailReady({
     setSheet(true);
   }
 
-  async function refresh() {
+  async function refresh(keys: readonly string[] = ["loans", "project", "dashboard", "categories"]) {
     if (!liveKeys) return;
-    await Promise.all(["loans", "project", "dashboard", "categories"].map((key) => client.invalidateQueries({ queryKey: [key] })));
+    await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   }
 
   /**
@@ -308,7 +321,7 @@ function LoanDetailReady({
 
   return (
     <ViewerScope>
-      <div>
+      <div className="ui-loan-page">
         <ScreenHeader title={loan.name} kicker="הלוואות" backTo={back} />
         <ViewerNote />
         <div className="ui-page-pad ui-loan-head">
@@ -344,31 +357,29 @@ function LoanDetailReady({
         {shownRates.length > 0 ? (
           <>
             <SectionHead title="שינויי ריבית" />
-            {shownRates.length > 0 ? (
-              <List>
-                {shownRates.map((item) => (
-                  holdWrites ? (
-                    <ListRow key={item.id} variant="static" title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.effectiveDate)}</bdi>} meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(item.annualRatePpm)}</bdi>} />
-                  ) : (
-                    <ListRow
-                      key={item.id}
-                      variant="button"
-                      title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.effectiveDate)}</bdi>}
-                      label={`שינוי ריבית מ־${formatDisplay(item.effectiveDate)}, ${formatRatePpm(item.annualRatePpm)}`}
-                      meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(item.annualRatePpm)}</bdi>}
-                      chevron
-                      onClick={() => { setRate(item); open("rate"); }}
-                    />
-                  )
-                ))}
-                <ListRow
-                  variant="static"
-                  title={<>מההתחלה · <bdi className="ui-num" dir="ltr">{formatDisplay(loan.startDate)}</bdi></>}
-                  meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(loan.annualRatePpm)}</bdi>}
-                  tone="muted"
-                />
-              </List>
-            ) : null}
+            <List>
+              {shownRates.map((item) => (
+                holdWrites ? (
+                  <ListRow key={item.id} variant="static" title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.effectiveDate)}</bdi>} meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(item.annualRatePpm)}</bdi>} />
+                ) : (
+                  <ListRow
+                    key={item.id}
+                    variant="button"
+                    title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.effectiveDate)}</bdi>}
+                    label={`שינוי ריבית מ־${formatDisplay(item.effectiveDate)}, ${formatRatePpm(item.annualRatePpm)}`}
+                    meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(item.annualRatePpm)}</bdi>}
+                    chevron
+                    onClick={() => { setRate(item); open("rate"); }}
+                  />
+                )
+              ))}
+              <ListRow
+                variant="static"
+                title={<>מההתחלה · <bdi className="ui-num" dir="ltr">{formatDisplay(loan.startDate)}</bdi></>}
+                meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(loan.annualRatePpm)}</bdi>}
+                tone="muted"
+              />
+            </List>
             {holdWrites ? null : (
               <div className="ui-page-pad ui-loan-link">
                 <TextLink chevron={false} onClick={() => { setRate(null); open("rate"); }}>+ קביעת ריבית</TextLink>
@@ -397,10 +408,10 @@ function LoanDetailReady({
                 variant="item"
                 href={`/transactions/${item.transactionId}${search}`}
                 title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.docDate)}</bdi>}
-                label={`תשלום ${formatDisplay(item.docDate)}, ${formatLoanMoney(-item.totalMinor, loan.currency)}${item.needsReview ? ", ממתין לבדיקה" : ""}`}
+                label={`תשלום ${formatDisplay(item.docDate)}, ${formatLoanMoney(item.totalMinor, loan.currency)}${item.needsReview ? ", ממתין לבדיקה" : ""}`}
                 hint={item.needsReview ? "ממתין לבדיקה" : paymentHint(item, loan)}
                 tone={item.needsReview ? "warning" : undefined}
-                meta={<LoanBalance minor={-item.totalMinor} currency={loan.currency} className="t-amount" />}
+                meta={<LoanBalance minor={item.totalMinor} currency={loan.currency} className="t-amount" />}
                 chevron
               />
             ))}
@@ -547,7 +558,8 @@ function LoanDetailReady({
       toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message });
       return;
     }
-    await refresh();
+    // The payments count whole again under their own categories: every P&L read changes.
+    await refresh(LOAN_WRITE_KEYS);
     // The list is the page under this one; replace keeps Back from landing on the deleted loan.
     void navigate(back, { replace: true });
     toast.show({
@@ -557,7 +569,7 @@ function LoanDetailReady({
         void (async () => {
           try {
             await writes.restoreLoan(loanId);
-            if (liveKeys) await client.invalidateQueries({ queryKey: ["loans"] });
+            await refresh(LOAN_WRITE_KEYS);
             toast.show({ message: "ההלוואה חזרה" });
           } catch (raw) {
             const failure = loanFailure(raw instanceof Error ? raw : new Error("failed"), ctx);

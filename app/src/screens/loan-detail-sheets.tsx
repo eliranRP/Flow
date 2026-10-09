@@ -14,6 +14,7 @@ import { LOAN_KIND_LABEL, LOAN_PART_LABEL, LOAN_STATUS_LABEL } from "./loan-copy
 import {
   LOAN_KIND_DESCRIPTION,
   FEES_NONE_DESC,
+  keyedCategory,
   kindMonthsDefault,
   kindPatch,
   partCategoryOptions,
@@ -180,13 +181,15 @@ export function LoanPartSheet({
   }, [open, part]);
   if (part == null) return null;
   const current = loan.categoryIds[part];
+  // A loan that names the keyed category itself files to the default: that row is the checked one.
+  const onDefault = current == null || current === keyedCategory(categories, part)?.id;
   const options = partCategoryOptions(categories, part, current);
   const needle = query.trim();
   const searchable = options.length >= SEARCH_FROM;
   const shown = searchable && needle !== "" ? options.filter((row) => row.name.includes(needle)) : options;
   const choose = (id: string | null) => {
     if (saving != null) return;
-    if (id === current) {
+    if (id === current || (id == null && onDefault)) {
       onOpenChange(false);
       return;
     }
@@ -219,7 +222,7 @@ export function LoanPartSheet({
             layout="picker"
             label={partDefaultLabel(categories, part)}
             description={part === "fees" ? FEES_NONE_DESC : undefined}
-            selected={current == null}
+            selected={onDefault}
             busy={saving != null && saving.id == null}
             disabled={saving != null && saving.id != null}
             onSelect={() => { choose(null); }}

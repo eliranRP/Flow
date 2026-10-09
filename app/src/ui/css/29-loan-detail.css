@@ -58,3 +58,14 @@
 .ui-date-error {
   margin: 0;
 }
+
+/* A row's value on the loan page wraps to two lines instead of losing its end at 320
+   ("ריבית בלבד · 6 מתוך 24 חודשים"), like the loans list's names (FLOW-339, design lead). */
+.ui-loan-page .ui-project-list .ui-row-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
