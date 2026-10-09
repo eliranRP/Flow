@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-07
 **Status:** Accepted (owner chose option A of the FLOW-107 mockups, 2026-10-07)
+**Amended:** 2026-10-08, FLOW-114 option B (owner pick): on the transaction card a matched payment is one row that opens the split sheet. The parts list, "נספר ברווח" and "מחוץ לרווח" are no longer on the card. The read (`get_loan_split`, `by_parts`, `in_pnl`) and the list rows are unchanged.
 
 ## Context
 

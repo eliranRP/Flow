@@ -2,6 +2,8 @@ import { formatAmountText, formatMoney, type TransactionDetail } from "@flow/sha
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
+import { LoanCategoryRow } from "./loan-match-row";
+import { useLoanSplitView } from "./loan-match-api";
 import { absAgorot } from "../agorot";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
@@ -161,6 +163,7 @@ export function TransactionScreen({
   const categories = useCategoriesQuery(sample == null);
   const lineSplitQuery = useLineSplitQuery(sample ? "" : transactionId, sample == null);
   const loanSplitFlag = useLoanSplitFlag(sample?.id ?? transactionId);
+  const loanSplitView = useLoanSplitView((sample ?? detail.data)?.loan_split);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const remove = useWrite({
     failure: "לא הצלחנו למחוק.",
@@ -419,7 +422,7 @@ export function TransactionScreen({
   // A line with a loan split is fixed too: set_transaction_pnl refuses it, and its mixed state is
   // the loan's parts, not a split by category. get_transaction's pnl_fixed reads only the line's
   // category, which misses a loan's own (unkeyed) principal category (FLOW-134 item 3).
-  const loanLine = txn.pnl_fixed === true || loanSplitFlag;
+  const loanLine = txn.pnl_fixed === true || loanSplitFlag || loanSplitView != null;
   const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged || loanLine ? null : txn.pnl_state, splitByCategory);
   const pnlPill = pnl.out ? (
     <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
@@ -442,7 +445,7 @@ export function TransactionScreen({
   // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
   // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
   const pnlRow = loanLine ? (
-    <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="תשלום הלוואה · נספר לפי הפיצול" />
+    <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint={loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · נספר לפי הפיצול"} />
   ) : pnl.mixed ? (
     splitCategoryTo ? (
       <ListRow variant="item" href={splitCategoryTo} title="ברווח והפסד" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" label="ברווח והפסד, לפי הקטגוריות בפיצול, פיצול לפי קטגוריות" chevron />
@@ -521,14 +524,17 @@ export function TransactionScreen({
             setChangeSheet(true);
           }} />
         )}
-        {holdWrites ? (
-          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
-        ) : (
-          <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
-            setChangeStart("category");
-            setChangeSheet(true);
-          }} />
-        )}
+        {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
+        <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} active={sample == null} readOnly={holdWrites}>
+          {holdWrites ? (
+            <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+          ) : (
+            <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
+              setChangeStart("category");
+              setChangeSheet(true);
+            }} />
+          )}
+        </LoanCategoryRow>
       </List>
       <LoanTransactionSplit
         transactionId={txn.id}
@@ -538,6 +544,7 @@ export function TransactionScreen({
         direction={txn.direction}
         active={sample == null}
         readOnly={holdWrites}
+        split={txn.loan_split}
       />
       {vatShown && txn.vat_amount !== 0n ? (
         <p className="ui-page-pad t-hint">
@@ -557,7 +564,7 @@ export function TransactionScreen({
         split={lineSplit}
         readOnly={holdWrites}
         categories={sample ? (sampleCategories ?? []) : (categories.data ?? [])}
-        loanSplit={loanSplitFlag}
+        loanSplit={loanSplitFlag || loanSplitView != null}
         projectSplitTo={`/transactions/${txn.id}/split${search}`}
         onProjectSplit={onOpenSplit ? openSplit : undefined}
         categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
@@ -568,6 +575,7 @@ export function TransactionScreen({
         onOpenChange={setChangeSheet}
         contained
         start={changeStart}
+        categoryLocked={loanSplitView != null}
         returnFocusRef={changeStart === "category" ? categoryRowRef : projectRowRef}
         supplier={party}
         amount={formatAmountText(absAgorot(txn.amount_net), txn.currency, {
