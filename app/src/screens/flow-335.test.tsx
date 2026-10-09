@@ -102,9 +102,9 @@ describe("FLOW-335 project band", () => {
     const row = screen.getByRole("link", { name: /לפי חודש/ });
     expect(row).toHaveClass("ui-row");
     expect(row.closest(".ui-banner")).toBeNull();
-    expect(screen.queryByRole("switch", { name: /אחרי חלק בהוצאות כלליות/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /רווח אחרי כלליות/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByRole("switch", { name: /אחרי חלק בהוצאות כלליות/ })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /רווח אחרי כלליות/ })).toBeInTheDocument();
   });
 });
 

@@ -181,7 +181,7 @@ describe("project overhead hero", () => {
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
     // FLOW-340 C: the switch lives in the ⋯ menu.
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByText("דלוק · החלק בכלליות הוא ₪40,000")).toBeInTheDocument();
+    expect(screen.getByText("החלק בכלליות ₪40,000")).toBeInTheDocument();
   });
 
   it("clicking the switch saves and shows the profit after the income share", async () => {
@@ -215,7 +215,7 @@ describe("project overhead hero", () => {
     // The loading screen has its own עוד; wait for the page's rows first.
     await screen.findByRole("link", { name: /^הכנסות/ });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    const toggle = await screen.findByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
+    const toggle = await screen.findByRole("switch", { name: "רווח אחרי כלליות" });
     expect(toggle).not.toBeChecked();
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();
     fireEvent.click(toggle);
@@ -225,7 +225,7 @@ describe("project overhead hero", () => {
     expect(calls).toEqual([{ p_on: true, p_project_id: "a" }]);
     // The project screen asks for the same books basis as Home (decision 0060).
     expect(projectArgs).toContainEqual(expect.objectContaining({ p_id: "a", p_basis: "invoiced" }));
-    expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeChecked();
   });
 
   it("rolls the switch back when the save fails", async () => {
@@ -250,10 +250,10 @@ describe("project overhead hero", () => {
     // The loading screen has its own עוד; wait for the page's rows first.
     await screen.findByRole("link", { name: /^הכנסות/ });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    const toggle = await screen.findByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
+    const toggle = await screen.findByRole("switch", { name: "רווח אחרי כלליות" });
     fireEvent.click(toggle);
     await waitFor(() => {
-      expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).not.toBeChecked();
+      expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeChecked();
     });
     expect(document.querySelector(".t-display")?.textContent).toBe("₪100,000");
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();

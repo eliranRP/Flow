@@ -157,6 +157,43 @@ export const ProjectMixedCurrency: Story = {
   ),
 };
 
+// FLOW-339: a profit in shekels and a loss in dollars; the band's label names both.
+export const ProjectMixedSigns: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/mix2" tabs>
+      <ExampleBar />
+      <ProjectDetailScreen
+        sample={{
+          id: "mix2",
+          name: "Harbor Sample",
+          status: "active",
+          state_label: "פעיל",
+          budget_agorot: null,
+          income_agorot: 100_000n,
+          direct_agorot: 40_000n,
+          shared_agorot: 0n,
+          profit_agorot: 60_000n,
+          by_currency: [
+            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, profit_minor: 60_000n },
+            { currency: "USD", income_minor: 50_000n, direct_minor: 175_000n, shared_minor: 0n, profit_minor: -125_000n },
+          ],
+          categories_by_currency: [
+            { currency: "ILS", id: "i1", name: "Materials", amount_minor: 40_000n },
+            { currency: "USD", id: "u1", name: "Freight", amount_minor: 175_000n },
+          ],
+          categories: [],
+          pending_count: 0,
+          transactions: [],
+        }}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectMixedSignsDark: Story = { ...ProjectMixedSigns, globals: { theme: "dark" } };
+export const ProjectMixedSigns320: Story = { ...ProjectMixedSigns, parameters: { viewport: { defaultViewport: "flow320" } } };
+
 const periodProject: NonNullable<ProjectDetailData> = {
   id: "p-a",
   name: "וילה לדוגמה",
