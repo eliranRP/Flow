@@ -25,7 +25,7 @@ import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { ChartIcon, DocumentIcon, ReviewIcon } from "../ui/icons";
+import { ChartIcon, DocumentIcon, InboxIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
@@ -158,11 +158,12 @@ function BreakdownBody({
             ))}
           </List>
           {review > 0 ? (
-            <List className="ui-breakdown-quiet">
+            <List>
+              {/* FLOW-356: a row into the review queue looks like Home's review row: the inbox icon and tint. */}
               <ListRow
                 variant="item"
-                tone="muted"
-                icon={<ReviewIcon />}
+                icon={<InboxIcon />}
+                className="ui-row-pending"
                 title={review === 1 ? "תנועה אחת ממתינה לאישור" : `${String(review)} ממתינים לאישור`}
                 hint="כבר כלולים בסכום"
                 chevron
