@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import type { ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { contractualPaymentMinor } from "@flow/shared";
+import { contractualPaymentMinor, regularPaymentMinor } from "@flow/shared";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { firstOfNextMonth } from "./loan-form";
@@ -265,7 +265,63 @@ describe("LoanSettingsSection", () => {
       payment_minor: Number(payment),
       escrow_minor: 0,
       currency: "ILS",
+      kind: "amortizing",
+      interest_only_months: null,
+      amortization_months: null,
       project_id: null,
+    });
+  });
+
+  it("starts as a regular loan and saves a demand loan with no term, payment or escrow (FLOW-106 §3.3)", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    openLoan();
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "סוג רגילה" }));
+    expect(screen.getByRole("heading", { name: "סוג ההלוואה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /לפי דרישה/ }));
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "סוג לפי דרישה" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("תקופה בחודשים")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("מסים וביטוח לחודש")).not.toBeInTheDocument();
+    expect(screen.getByText("ריבית יומית על היתרה, לפי 365 יום. בלי לוח תשלומים.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    expect(db.inserts[0]).toMatchObject({
+      kind: "demand",
+      term_months: null,
+      payment_minor: null,
+      escrow_minor: 0,
+      interest_only_months: null,
+      amortization_months: null,
+    });
+  });
+
+  it("saves an interest-only loan with its months and the payment after them (FLOW-106 §3.3)", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    openLoan();
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "סוג רגילה" }));
+    fireEvent.click(screen.getByRole("radio", { name: /ריבית בלבד/ }));
+    const months = screen.getByLabelText("חודשי ריבית בלבד");
+    expect(months).toHaveValue("12");
+    fireEvent.change(months, { target: { value: "24" } });
+    expect(screen.getByText(/תשלום אחרי חודשי הריבית/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    const payment = regularPaymentMinor({
+      principalMinor: 10_000_000n,
+      annualRatePpm: 112_042,
+      termMonths: 360,
+      escrowMinor: 0n,
+      kind: "interest_only",
+      interestOnlyMonths: 24,
+    });
+    expect(db.inserts[0]).toMatchObject({
+      kind: "interest_only",
+      term_months: 360,
+      interest_only_months: 24,
+      amortization_months: null,
+      payment_minor: Number(payment),
     });
   });
 

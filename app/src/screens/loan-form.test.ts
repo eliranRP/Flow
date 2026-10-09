@@ -4,6 +4,7 @@ import { loanFinalLine, type LoanPreview } from "./loan-form";
 function ready(pi: bigint, finalPi: bigint): Extract<LoanPreview, { status: "ready" }> {
   return {
     status: "ready",
+    kind: "amortizing",
     paymentMinor: pi,
     interestMinor: 0n,
     escrowMinor: 0n,
