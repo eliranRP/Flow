@@ -105,6 +105,19 @@ export const IncompleteDimmed: Story = {
 };
 export const IncompleteDimmedDark: Story = { ...IncompleteDimmed, ...dark390 };
 
+/** FLOW-343: שמירה on a new, empty loan moves focus to the first field to type, with its error. */
+export const SaveFocusesFirstEmpty: Story = {
+  args: { companyCurrency: "ILS", initial: { startDate: "2026-11-01" } },
+  ...light390,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await fireEvent.click(canvas.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => expect(canvas.getByLabelText("מלווה")).toHaveFocus());
+    await expect(canvas.getByText("כתבו את שם המלווה.")).toBeVisible();
+  },
+};
+export const SaveFocusesFirstEmptyDark320: Story = { ...SaveFocusesFirstEmpty, ...dark320 };
+
 /** FLOW-115: the first-payment date sheet, open. */
 export const DateSheetOpen: Story = {
   args: example,

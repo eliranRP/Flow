@@ -67,7 +67,9 @@ test("a refund's reversal part needs a project before it saves", async ({ page }
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByLabel("סכום, חומרי בניין").fill("500");
   await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByText("בחרו פרויקט לחלק ההחזר.")).toBeVisible();
+  // FLOW-343: said once, on the part's red line; the footer sentence is for screen readers.
+  await expect(page.locator(".ui-lsplit-project-error")).toHaveText("פרויקט · חובה בהחזר");
+  await expect(page.getByRole("button", { name: "ביטול השינוי" })).toBeVisible();
   expect(await readSaved(page)).toBeNull();
   // The part's row opens straight on the project list while it misses one.
   await page.getByRole("button", { name: /^חומרי בניין, החזר/ }).click();
