@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(17);
+select plan(18);
 
 do $users$
 begin
@@ -125,10 +125,18 @@ select is(pg_temp.open_reasons('txn_c'), 'missing_project', 'a reversal category
 
 -- 5. Without resolving (p_resolve false), the card stays open but asks for the project now.
 select tests.authenticate_as('fir_owner');
-select public.set_transaction_category(pg_temp.id('txn_a'), pg_temp.id('rent'), false);
+insert into fir (label, id) values ('undo_a2', public.set_transaction_category(pg_temp.id('txn_a'), pg_temp.id('rent'), false));
 reset role;
 select is(pg_temp.open_reasons('txn_a'), 'missing_project',
   'a category set without resolving relabels the row to missing_project');
+
+-- Undoing that pick restores the guess and the category question, and a sync keeps it.
+select tests.authenticate_as('fir_owner');
+select public.undo_reassign(pg_temp.id('undo_a2'));
+reset role;
+select pg_temp.sync();
+reset role;
+select is(pg_temp.open_reasons('txn_a'), 'missing_category', 'undoing a pick made without resolving puts missing_category back');
 
 -- A kept-out category set without resolving leaves the category question.
 select tests.authenticate_as('fir_owner');

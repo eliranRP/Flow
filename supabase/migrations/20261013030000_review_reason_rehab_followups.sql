@@ -8,7 +8,8 @@
 --    undo_reassign does (20261013010000). A category the owner sets without resolving the card
 --    (resolve_review or set_transaction_category with p_resolve false) relabels an open income
 --    missing_category row to missing_project when the line still needs a project; sync does the
---    same for rows left from before, and this file relabels the existing ones once.
+--    same for rows left from before, and this file relabels the existing ones once. Undoing
+--    such a pick puts the missing_category label back.
 -- Other functions are patched in place (pg_get_functiondef), each anchor checked to match once.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -93,7 +94,7 @@ begin
         'name', c.name,
         'hidden', coalesce(c.hidden, false),
         'amount_minor', g.amount_minor
-      ) order by g.amount_minor desc, c.name nulls last)
+      ) order by g.amount_minor desc, c.name nulls last, g.category_id)
       from by_category g
       left join public.categories c on c.id = g.category_id and c.company_id = p_company_id
       where g.amount_minor <> 0
@@ -228,6 +229,34 @@ end;$n$);
     perform private.relabel_income_category_pick(cid, txn);
     return;
   end if;$n$);
+
+  -- undo_reassign of a pick made without resolving: the row the pick relabelled takes the
+  -- category reason back once the line's guess is restored (sync's own rule).
+  def := pg_get_functiondef('public.undo_reassign(uuid)'::regprocedure);
+  anchor := $a$  update public.reassign_undo
+  set undone_at = now()
+  where id = p_id and company_id = cid;$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'undo_reassign is not the expected definition';
+  end if;
+  execute replace(def, anchor, $n$  if review_id is null then
+    update public.review_queue q
+    set reason = 'missing_category'
+    from public.transactions t
+    where q.company_id = cid
+      and q.transaction_id = txn
+      and q.status = 'open'
+      and q.reason = 'missing_project'
+      and t.id = txn
+      and t.company_id = cid
+      and t.direction = 'income'::public.txn_direction
+      and t.project_id is null
+      and (t.category_id is null or (not t.user_assigned and not t.category_assigned));
+  end if;
+
+  update public.reassign_undo
+  set undone_at = now()
+  where id = p_id and company_id = cid;$n$);
 
   -- set_transaction_category without resolving: the same.
   def := pg_get_functiondef('public.set_transaction_category(uuid,uuid,boolean)'::regprocedure);
