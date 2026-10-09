@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(27);
+select plan(28);
 
 do $users$
 begin
@@ -147,7 +147,7 @@ select is(
 );
 
 update public.connector_connections
-set sync_claimed_at = pg_catalog.now() - interval '16 minutes',
+set sync_claimed_at = pg_catalog.now() - interval '11 minutes',
     last_error = 'auth'
 where company_id = (select id from ops where label = 'a')
   and provider = 'sumit';
@@ -172,6 +172,21 @@ select is(
 
 update public.connector_connections
 set next_attempt_at = null
+where company_id = (select id from ops where label = 'a')
+  and provider = 'sumit';
+
+-- FLOW-508: the per-provider overload uses the same 10-minute window (the claim is 11 minutes old).
+create temp table f508 as select c.id from public.claim_connector_refreshes(20, 'sumit') c;
+select is(
+  (select count(*)::int from f508),
+  1,
+  'an old sync claim is claimed by the per-provider overload too'
+);
+
+-- Put that request and the claim back, so the one-argument form below sees the same state.
+update public.connector_refresh_requests set claimed_at = null where id in (select id from f508);
+update public.connector_connections
+set sync_claimed_at = pg_catalog.now() - interval '11 minutes'
 where company_id = (select id from ops where label = 'a')
   and provider = 'sumit';
 

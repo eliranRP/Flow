@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -307,6 +307,17 @@ describe("LoanSetupForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(screen.getByText("כתבו את הסכום המקורי.")).toBeInTheDocument();
     expect(screen.getByText("כתבו את הריבית השנתית.")).toBeInTheDocument();
+  });
+
+  it("moves focus to the first field to fix on a failed שמירה (FLOW-343)", async () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
+    fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
+    const save = screen.getByRole("button", { name: "שמירה" });
+    save.focus();
+    fireEvent.click(save);
+    // The amount comes before the rate in the form, so it takes focus.
+    await waitFor(() => { expect(screen.getByLabelText("סכום מקורי")).toHaveFocus(); });
   });
 
   it("dims the kept preview while a field is incomplete, and says 0 is too small (FLOW-115)", () => {

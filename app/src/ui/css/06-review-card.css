@@ -22,8 +22,9 @@
   min-block-size: var(--touch-min);
 }
 
+/* FLOW-309: the 8px step under the counter row; a short phone trims it to 4 (below). */
 .ui-review-queue .ui-banner {
-  margin-top: var(--space-1);
+  margin-top: var(--space-2);
   padding-block: var(--space-1);
 }
 
@@ -51,13 +52,42 @@
   min-block-size: calc(var(--type-label-size) * var(--type-label-line));
 }
 
-/* FLOW-327 1.4: "1 מתוך 3" with no padding around a digit. Tabular digits, so 9→10 grows inward. */
+/* FLOW-327 1.4: "1 מתוך 3" with no padding between a digit and "מתוך". FLOW-309: tabular digits, and
+   each number reserves the total's digits in a hidden ::before, so the index going 9→10 or 99→100
+   changes no box and nothing beside the counter moves. The spare room sits on the outer side. */
+.ui-review-meter .t-hint {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-review-counter {
+  flex: none;
+}
+
 .ui-review-count {
   display: inline;
 }
 
-.ui-review-meter .t-hint {
-  font-variant-numeric: tabular-nums;
+.ui-review-count[data-reserve] {
+  display: inline-grid;
+}
+
+.ui-review-count[data-reserve]::before {
+  content: attr(data-reserve);
+  visibility: hidden;
+}
+
+.ui-review-count[data-reserve]::before,
+.ui-review-count[data-reserve] > span {
+  grid-area: 1 / 1;
+}
+
+/* The bdi is LTR: the index hugs "מתוך" on its left, the total hugs it on its right. */
+.ui-review-count[data-side="index"] {
+  justify-items: start;
+}
+
+.ui-review-count[data-side="total"] {
+  justify-items: end;
 }
 
 .ui-review-ai .ui-row {
@@ -263,6 +293,10 @@
   .ui-review {
     gap: var(--space-1);
     padding: var(--space-2);
+  }
+
+  .ui-review-queue .ui-banner {
+    margin-top: var(--space-1);
   }
 
   .ui-review-queue .ui-banner + .ui-review-motion > .ui-review {

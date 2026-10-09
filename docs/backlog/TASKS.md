@@ -14,12 +14,12 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-404 `rehab_by_category` from the rehab CTE; FLOW-309 `reopen_review` and the stale `missing_category` label (#300 review) (#308, in review) | The next non-UI item |
-| Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
+| Dev lane 1 | FLOW-404 `rehab_by_category` from the rehab CTE; FLOW-309 `reopen_review` and the stale `missing_category` label (#300 review) (#308, in review); first the red-main fix (storybook: loans list bigint args, project row focus outline) | The next non-UI item |
+| Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
-| UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
+| UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (#298); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-339 C6-6: Search shows only the count under the title, and a row hint shows whole parts (C6-3 merged #292) | #231 follow-ups in the Jev and settings area |
+| UI lane 4 | FLOW-343: cycle 7 phone polish (loan setup focus, split copy said once, the card's refund refusal) (FLOW-339 Search merged #299) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-115 loan with no balance row is not paid off; currency empty state | Next small ready bug |
@@ -102,7 +102,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | done (#165; whole-unit amounts item open, conflicts with 0120) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | done (#248) |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
-| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | claimed (UI lane 4, 2026-10-08) |
+| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | done (#245) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | merged (#238) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | C13 in #278; C1–C9 done (UI lane 2, #261) |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | H1 and H2 done (#259); H3 with UI lane 1 |
@@ -115,7 +115,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
-| 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | ready |
+| 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | in-progress (#306) |
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 
@@ -598,15 +598,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-309"></a>
 ### FLOW-309 · Review queue follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (UI lane 2 has the counter, focus, spacing, e2e and mid-swap items, 2026-10-09) · **Depends on:** —
 - [ ] Unit-test the live refresh of filed-today and the transaction on approve and undo; restore the toast fade-ramp assertion.
 - [ ] Decide whether the queue banner counts every filed-today row (it should match the list); align the preview's filed-today list with live.
 - [ ] Fixtures for a single-project item with `project_suggested` false; a real soft-keyboard test.
-- [ ] Counter shifts sideways at 9→10 and 99→100 (tabular digits, reserve width).
-- [ ] Focus falls to body after a successful אישור or ביטול; move it to the next card's אישור.
-- [ ] Banner and card spacing: keep the 8px step and trim only on short screens; at 320×693 a wrapping supplier plus a reason line pushes שינוי/דלג under the tab bar; a one-line banner saves 44px.
-- [ ] e2e for the plural title at 320 and for אישור clearing the tab bar at 320×693.
-- [ ] A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
+- [x] (UI lane 2, #304: tabular digits, and each number reserves the total's digits; at 320 the counter and its bar stay put from 1 to 10 of 12, e2e `review-fit.spec.ts`. Only the total itself crossing 9→10 or 99→100 still widens it once) Counter shifts sideways at 9→10 and 99→100 (tabular digits, reserve width).
+- [x] (UI lane 2, #304: with focus in the bar, focus goes to the next card's first button after אישור or דלג, to לדף הבית when the queue empties, and back to the returning card's אישור after ביטול on the toast; a tap that never focused the bar moves nothing, and a tap's focus draws no ring) Focus falls to body after a successful אישור or ביטול; move it to the next card's אישור.
+- [x] (UI lane 2, #304: the banner sits 8px under the counter row above 720px tall, 4px in the short-phone block. Measured at 320x693 with a two-line supplier, Jev's two-line reason and the wrapped plural banner: the card ends 21px above the pinned bar, שינוי and דלג 8px above the tab bar (the pinned bar, #278 and #296 already fit it); the page scrolls 10px. The plural title can't share a line with לרשימה at 320 without new copy (242px for 188)) Banner and card spacing: keep the 8px step and trim only on short screens; at 320×693 a wrapping supplier plus a reason line pushes שינוי/דלג under the tab bar; a one-line banner saves 44px.
+- [ ] Follow-up from #304: at 320x693 with the wrapped plural banner the review page still scrolls 10px under the pinned bar (everything fits at scroll 0); a one-line banner at 320 would need new copy (title and לרשימה need 242px of 188).
+- [x] (UI lane 2, #304: `app/e2e/review-fit.spec.ts` on `/review?preview=1&e2e=list&fit=1`; also the counter from 9 to 10 and the focus path) e2e for the plural title at 320 and for אישור clearing the tab bar at 320×693.
+- [x] (UI lane 2, #304: `review-swap.ts` swaps on the head's id, a card that comes back while leaving settles, any changed field of the card on screen shows, and the refs are written after render; unit tests in `review-queue-swap.test.tsx`) A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
 - [ ] Tests: the project-picker toast pad path; click through from 'בחירת קטגוריה' to the picker; assert `open.search` is empty; a test that fails if the effect deps revert.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
@@ -747,7 +748,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-331"></a>
 ### FLOW-331 · A useful + tab while capture is not built
-- **Type:** SMALL UI · **Status:** claimed (UI lane 4) · **Owner (2026-10-08):** quick actions (new project, new loan, connect a bank) · **Depends on:** — · **Overlaps:** FLOW-306 · **Source:** cycle 1 (U1, U7)
+- **Type:** SMALL UI · **Status:** done (#245) · **Owner (2026-10-08):** quick actions (new project, new loan, connect a bank) · **Depends on:** — · **Overlaps:** FLOW-306 · **Source:** cycle 1 (U1, U7)
 - **What:** The + in the middle of the tab bar is the best thumb spot in the app, and today it opens a sheet where both options are disabled. Until photo capture (FLOW-306) ships, + offers what works today: new project, new loan, connect a bank. "פרויקט חדש" then leaves the Projects header's top-left corner.
 - **Acceptance:** no disabled-only sheet; design review.
 
@@ -875,11 +876,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-343"></a>
 ### FLOW-343 · Phone polish after the October 9 builds (cycle 7)
-- **Type:** SMALL UI · **Status:** ready · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
-- [ ] (high) Loan setup: a tap on שמירה with empty fields keeps focus on the button with the page scrolled down, so at 375 two of three errors sit above the fold. Move focus (and scroll) to the first empty field, as §2.8 says. Add a story and a test.
-- [ ] Split by categories, refund part with no project: the same missing project is said three times ("פרויקט · חובה בהחזר", "חלק החזר צריך פרויקט." and the footer). Keep it once, on the part's own line as the tap target (§3.7, a warning shows in one place only).
-- [ ] Split between projects, "שאבחר": the picked choice's hint and the pinned footer repeat "₪500 לכל אחד מ־2 פרויקטים". Show it once, in the footer.
-- [ ] Transaction card, the refusal for a kept-out refund part with no project (#286): shorten to "לחלק ההחזר אין פרויקט." with a "לפיצול" action on the toast.
+- **Type:** SMALL UI · **Status:** in-progress (#306) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- [x] (UI lane 4, #306: focus and scroll to the first field to fix; story SaveFocusesFirstEmpty) (high) Loan setup: a tap on שמירה with empty fields keeps focus on the button with the page scrolled down, so at 375 two of three errors sit above the fold. Move focus (and scroll) to the first empty field, as §2.8 says. Add a story and a test.
+- [x] (UI lane 4, #306: only the part's red "פרויקט · חובה בהחזר"; the footer keeps ביטול השינוי and the sentence for screen readers) Split by categories, refund part with no project: the same missing project is said three times ("פרויקט · חובה בהחזר", "חלק החזר צריך פרויקט." and the footer). Keep it once, on the part's own line as the tap target (§3.7, a warning shows in one place only).
+- [x] (UI lane 4, #306: also "שווה בין כל הפרויקטים", which repeated the same way) Split between projects, "שאבחר": the picked choice's hint and the pinned footer repeat "₪500 לכל אחד מ־2 פרויקטים". Show it once, in the footer.
+- [x] (UI lane 4, #306) Transaction card, the refusal for a kept-out refund part with no project (#286): shorten to "לחלק ההחזר אין פרויקט." with a "לפיצול" action on the toast.
 - **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
 
 <a id="flow-344"></a>
@@ -1019,8 +1020,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; demo CSS reaches into component internals; `data-setup-visible` exists only for tests.
 - [x] One list row puts the minus after the amount; it should come before the currency sign. (Not reproducible on 2026-10-09: every demo and setup story draws −₪ first; the SUMIT demo rows use the shared transaction row.)
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
-- [ ] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)).
-- [ ] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; tests for API-key clear and the Settings write block; a hold-writes check on the first step's submit.
+- [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
+- [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
+- [ ] Tests for the Settings write block; a hold-writes check on the first step's submit.
 - [ ] Spec drift: demo timing, the SUMIT sheet sizes at 320, hiding vs focusing שוב during a replay; step 3 scrolls a little longer than designed.
 - [ ] Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`); the banner's tone-bad icon; note inset vs frame.
 - [ ] Release check on a real iOS device for the Hebrew Safari labels.
@@ -1033,7 +1035,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop.
-- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle).
+- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
 <a id="flow-508"></a>
@@ -1046,7 +1048,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Refresh completion is announced only by the toast; add a status text update. (The sheet's "מחובר · עודכן …" line updates from `last_sync_at` after the refetch; the toast is `role="status"`.)
 - [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
 - [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
-- [ ] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`).
+- [x] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`). (10 minutes: an edge function stops at 400 seconds at most, so no live run outlives it. `CLAIM_MS`, the status view, `sumit_status` and both claim overloads, `20261013020100_sync_claim_window.sql`.)
 - [x] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320. (The sync time now has its own line in the SUMIT and Mercury sheets, so no line starts with "·"; checked at 320. The retry time shows under רענון עכשיו while held; the last use and the sync time share the today / yesterday / D.M rules.)
 - [x] Onboarding header back control goes to sign-in and drops `preview=1`; the onboarding round trip leaves no-op Back steps. (Back goes to `return` with preview kept, and a save replaces the entry. Also: Mercury's "פרטי העסק" link came back to the SUMIT sheet; it now returns to Mercury's.)
 

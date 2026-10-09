@@ -95,4 +95,23 @@ describe("setup SUMIT connect", () => {
     expect(invoke.mock.calls.length).toBeGreaterThanOrEqual(1);
     restore();
   });
+
+  it("clears the API key after a successful connect and keeps the company number", async () => {
+    const restore = reducedMotion();
+    invoke.mockResolvedValue({ data: {}, error: null });
+    render(<Harness onSkip={vi.fn()} onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const again = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    expect(within(again).getByLabelText("מפתח API")).toHaveValue("");
+    expect(within(again).getByLabelText("מספר חברה")).toHaveValue("1001");
+    restore();
+  });
 });

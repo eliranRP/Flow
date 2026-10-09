@@ -114,8 +114,11 @@ describe("split by category editor (FLOW-325)", () => {
     const pick = screen.getByRole("button", { name: /^חומרי בניין, החזר, פרויקט · חובה בהחזר/ });
     expect(pick).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(await screen.findByText("בחרו פרויקט לחלק ההחזר.")).toBeInTheDocument();
-    expect(screen.getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
+    // FLOW-343: said once, on the part's red line. The hold line keeps it for screen readers only.
+    const hold = await screen.findByText("בחרו פרויקט לחלק ההחזר.");
+    expect(hold).toHaveClass("sr-only");
+    expect(screen.queryByText("חלק החזר צריך פרויקט.")).toBeNull();
+    expect(pick.querySelector(".ui-lsplit-project-error")?.textContent).toBe("פרויקט · חובה בהחזר");
     expect(screen.getByRole("button", { name: "ביטול השינוי" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(await screen.findByText("פרטי התנועה")).toBeInTheDocument();
