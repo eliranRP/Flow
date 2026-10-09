@@ -150,7 +150,7 @@ async function expectReopenedBlank(inserts: number) {
   const save = screen.getByRole("button", { name: "שמירה" });
   expect(save).toBeEnabled();
   fireEvent.click(save);
-  expect(screen.getByText("חסר מלווה.")).toBeInTheDocument();
+  expect(screen.getByText("כתבו את שם המלווה.")).toBeInTheDocument();
   await act(async () => {
     await new Promise((resolve) => { setTimeout(resolve, 40); });
   });
@@ -322,12 +322,12 @@ describe("LoanSetupForm", () => {
     const term = screen.getByLabelText("תקופה בחודשים");
     fireEvent.change(term, { target: { value: "600" } });
     expect(term).toHaveValue("600");
-    expect(screen.queryByText("התקופה היא בין חודש אחד ל־600.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כתבו בין 1 ל־600 חודשים.")).not.toBeInTheDocument();
     fireEvent.change(term, { target: { value: "1000" } });
     expect(term).toHaveValue("1000");
-    expect(screen.queryByText("התקופה היא בין חודש אחד ל־600.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כתבו בין 1 ל־600 חודשים.")).not.toBeInTheDocument();
     fireEvent.blur(term);
-    expect(screen.getByText("התקופה היא בין חודש אחד ל־600.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו בין 1 ל־600 חודשים.")).toBeInTheDocument();
   });
 
   it("keeps the last preview while a field is incomplete", () => {
@@ -337,12 +337,23 @@ describe("LoanSetupForm", () => {
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("6.");
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
-    expect(screen.queryByText("הריבית היא עד 100%.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כתבו ריבית עד 100%.")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "" } });
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
-    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+    expect(screen.queryByText("הסכום צריך להיות גדול מ־0.")).not.toBeInTheDocument();
+  });
+
+  it("dims the kept preview while a field is incomplete, and says 0 is too small (FLOW-115)", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
+    const preview = screen.getByText("₪599.55").closest("[aria-live]");
+    expect(preview).not.toHaveClass("ui-loan-preview-stale");
+    fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
+    expect(screen.getByText("₪599.55").closest("[aria-live]")).toHaveClass("ui-loan-preview-stale");
+    fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "0" } });
+    fireEvent.blur(screen.getByLabelText("סכום מקורי"));
+    expect(screen.getByText("הסכום צריך להיות גדול מ־0.")).toBeInTheDocument();
   });
 
   it("shows every blocking reason under its field", () => {
@@ -361,15 +372,15 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.queryByText("חסר מלווה.")).not.toBeInTheDocument();
-    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כתבו את שם המלווה.")).not.toBeInTheDocument();
+    expect(screen.queryByText("הסכום צריך להיות גדול מ־0.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     const lender = screen.getByLabelText("מלווה");
-    expect(document.getElementById(lender.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חסר מלווה.");
-    expect(screen.getByText("חסר מלווה.")).toBeInTheDocument();
-    expect(screen.getByText("חסר סכום.")).toBeInTheDocument();
-    expect(screen.getByText("חסרה תקופה.")).toBeInTheDocument();
-    expect(screen.getByText("המסים והביטוח גבוהים מהתשלום.")).toBeInTheDocument();
+    expect(document.getElementById(lender.getAttribute("aria-describedby") ?? "")).toHaveTextContent("כתבו את שם המלווה.");
+    expect(screen.getByText("כתבו את שם המלווה.")).toBeInTheDocument();
+    expect(screen.getByText("הסכום צריך להיות גדול מ־0.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו את מספר החודשים.")).toBeInTheDocument();
+    expect(screen.getByText("המסים והביטוח צריכים להיות נמוכים מהתשלום.")).toBeInTheDocument();
     expect(screen.getByLabelText("מלווה").closest(".ui-field")).toHaveClass("ui-field-error");
     expect(screen.getByLabelText("סכום מקורי").closest(".ui-field")).toHaveClass("ui-field-error");
     expect(screen.getByLabelText("תקופה בחודשים").closest(".ui-field")).toHaveClass("ui-field-error");
@@ -377,12 +388,12 @@ describe("LoanSetupForm", () => {
 
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "-12" } });
     expect(screen.getByLabelText("סכום מקורי")).toHaveValue("-12");
-    expect(screen.getByText("הסכום שלילי.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו סכום בלי מינוס.")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "-1" } });
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("-1");
-    expect(screen.getByText("הריבית שלילית.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו ריבית בלי מינוס.")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "90071992547410" } });
-    expect(screen.getByText("הסכום גדול מדי.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו סכום קטן יותר.")).toBeInTheDocument();
   });
 
   it("shows a field error on blur, and keeps the message line while typing", () => {
@@ -391,22 +402,22 @@ describe("LoanSetupForm", () => {
     const slot = lender.closest(".ui-field")?.querySelector(".ui-field-message-slot");
     expect(slot).not.toBeNull();
     expect(slot).toHaveTextContent("");
-    expect(screen.queryByText("חסר מלווה.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כתבו את שם המלווה.")).not.toBeInTheDocument();
     fireEvent.blur(lender);
-    expect(slot).toHaveTextContent("חסר מלווה.");
+    expect(slot).toHaveTextContent("כתבו את שם המלווה.");
 
     const principal = screen.getByLabelText("סכום מקורי");
     fireEvent.change(principal, { target: { value: "0" } });
-    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+    expect(screen.queryByText("הסכום צריך להיות גדול מ־0.")).not.toBeInTheDocument();
     fireEvent.change(principal, { target: { value: "0.5" } });
     expect(principal).toHaveValue("0.5");
-    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+    expect(screen.queryByText("הסכום צריך להיות גדול מ־0.")).not.toBeInTheDocument();
 
     const term = screen.getByLabelText("תקופה בחודשים");
     fireEvent.change(term, { target: { value: "" } });
-    expect(screen.queryByText("חסרה תקופה.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כתבו את מספר החודשים.")).not.toBeInTheDocument();
     fireEvent.blur(term);
-    expect(screen.getByText("חסרה תקופה.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו את מספר החודשים.")).toBeInTheDocument();
   });
 
   it("keeps the computed payment under עוד and shows interest", () => {
@@ -727,6 +738,21 @@ describe("LoanSettingsSection", () => {
     expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שמירה" })).toHaveFocus();
     expect(screen.getByLabelText("סכום מקורי")).toBeEnabled();
+  });
+
+  it("keeps the sheet on ✕ and Escape while a save runs (FLOW-115)", async () => {
+    let release: () => void = () => undefined;
+    db.hold = new Promise((resolve) => { release = resolve; });
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    openLoan();
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(screen.getByLabelText("סכום מקורי")).toBeDisabled(); });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "הלוואה" })).getByRole("button", { name: "סגירה" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    release();
+    await waitFor(() => { expect(screen.getByRole("status")).toHaveTextContent("ההלוואה נשמרה"); });
   });
 
   it("toasts and closes after a save", async () => {

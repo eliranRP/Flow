@@ -6,6 +6,7 @@ import { IconButton } from "../ui/icon-button";
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
+import { Skeleton } from "../ui/skeleton";
 import { DateSheet } from "../ui/date-sheet";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
@@ -314,7 +315,8 @@ export function LoanSetupForm({
         </div>
       ) : null}
       {shown ? (
-        <div aria-live="polite">
+        // FLOW-115: the kept preview dims while a field is incomplete or wrong, so it doesn't read as the new loan.
+        <div aria-live="polite" className={ready && !invalid ? undefined : "ui-loan-preview-stale"}>
           <p>
             תשלום חודשי{" "}
             <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
@@ -403,6 +405,8 @@ export function LoanSettingsSection({
   // Back in the picker view returns to the form, like Escape and חזרה.
   const adoptNew = useRef(false);
   const setSheet = useSheetHistory("loan-new", open, setOpen, () => {
+    // FLOW-115: Back during a save waits for it, like ✕ and Escape (0075).
+    if (posted.current) return false;
     if (view !== "project") return true;
     backToForm();
     return false;
@@ -436,6 +440,7 @@ export function LoanSettingsSection({
     success: "ההלוואה נשמרה",
     keys: ["loans", "project"],
     onSuccess: () => {
+      posted.current = false;
       clearDraft();
       setSheet(false);
     },
@@ -556,9 +561,29 @@ export function LoanSettingsSection({
           </IconButton>
         ) : undefined}
         onEscape={picking ? backToForm : undefined}
+        onBeforeClose={() => !posted.current}
       >
         {currency == null ? (
-          <p role="status">טוען…</p>
+          // FLOW-115: the form's shape while the currency read lands, so the sheet does not jump.
+          <div className="ui-stack ui-loan-skeleton" aria-busy="true">
+            <p className="sr-only" role="status">טוען…</p>
+            <div className="ui-loan-skel-field" key="a">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+            <div className="ui-loan-skel-field" key="b">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+            <div className="ui-loan-skel-field" key="c">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+            <div className="ui-loan-skel-field" key="d">
+              <Skeleton width="sm" />
+              <Skeleton className="ui-loan-skel-control" />
+            </div>
+          </div>
         ) : (
           <>
             {picking ? (
