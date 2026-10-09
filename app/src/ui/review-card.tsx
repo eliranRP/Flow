@@ -21,9 +21,9 @@ export const REVIEW_MISMATCH_ID = "review-mismatch";
 /** FLOW-327: both fields are missing. The bar's first button points at it. */
 export const REVIEW_MISSING_BOTH = "בחרו פרויקט וקטגוריה";
 export const REVIEW_MISSING_ID = "review-missing";
-/** FLOW-702: the auto job wrote Jev's values on this line; בטל takes the fill back (decision 0145). */
+/** FLOW-702: the auto job wrote Jev's values on this line; ביטול takes the fill back (decision 0145). */
 export const JEV_FILLED = "מולא ע״י Jev";
-export const JEV_FILLED_UNDO = "בטל";
+export const JEV_FILLED_UNDO = "ביטול";
 
 /** Draws copy parts, each number in its own bdi. */
 export function CopyLine({ parts }: { parts: readonly CopyPart[] }) {
@@ -90,7 +90,7 @@ type ReviewCardProps = {
   missingBoth?: boolean;
   /**
    * FLOW-702: Jev's auto fill stands on this line. The card says "✦ מולא ע״י Jev" under the rows, one
-   * line with no reason (the owner's pick, so it never wraps), and בטל when `onUndo` is set (a viewer gets
+   * line with no reason (the owner's pick, so it never wraps), and ביטול when `onUndo` is set (a viewer gets
    * the label only). Shown only with a הצעת Jev pill, or with `alone` (FLOW-706: Jev is off, so the
    * card shows the stored values without the pill, and the fill stays undoable).
    */
@@ -164,6 +164,7 @@ export function ReviewCard({
   const mismatch = reason === "split_mismatch";
   const jevOnCard = !pending && lines.some((line) => line.jev);
   const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
+  const spike = flag?.spike ?? null;
   const filled = jevFilled != null && !pending && (jevOnCard || jevFilled.alone === true) ? jevFilled : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
@@ -191,9 +192,22 @@ export function ReviewCard({
           ) : null}
         </div>
       </div>
-      <p className="t-display">
-        <bdi dir="ltr">{amountText}</bdi>
-      </p>
+      {spike?.pill ? (
+        <div className="ui-review-amount">
+          <p className="t-display">
+            <bdi dir="ltr">{amountText}</bdi>
+          </p>
+          <span className="ui-status ui-review-spike" aria-hidden="true">
+            <bdi className="ui-num" dir="ltr">{spike.pill}</bdi>
+          </span>
+          <span className="sr-only">{spike.spoken}</span>
+        </div>
+      ) : (
+        <p className="t-display">
+          <bdi dir="ltr">{amountText}</bdi>
+        </p>
+      )}
+      {spike?.usual ? <p className="t-hint ui-review-usual"><CopyLine parts={spike.usual} /></p> : null}
       {vatLine ? <p className="t-hint">{vatLine}</p> : null}
       {memo ? <ReviewMemo memo={memo} /> : null}
       <div className="ui-review-ai">
@@ -246,7 +260,7 @@ export function ReviewCard({
                 size="hint"
                 chevron={false}
                 busy={filled.busy === true}
-                label={`${JEV_FILLED_UNDO} את המילוי של Jev`}
+                label={`${JEV_FILLED_UNDO} המילוי של Jev`}
                 onClick={filled.onUndo}
               >
                 {JEV_FILLED_UNDO}
@@ -272,7 +286,8 @@ export function ReviewCard({
           <p className="t-hint ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
         ) : null}
       </div>
-      {flag ? <ReviewFlagBlock flag={flag} /> : null}
+      {/* A spike pill is the whole warning: no row at the end repeats it (design lead, 2026-10-09). */}
+      {flag && spike?.pill == null && (flag.tone === "loud" || flag.line.length > 0) ? <ReviewFlagBlock flag={flag} /> : null}
     </article>
   );
 }
@@ -292,6 +307,7 @@ function SplitPartsTitle({ count }: { count: number }) {
 /**
  * Loud: a warning row with the icon, the title in the text colour and the hint in warning.
  * Quiet: one muted hint line. Both start with a hidden "לבדיקה:". Never a control.
+ * An amount spike's "↑ N%" and usual amount sit by the amount instead, with no row here (2026-10-09).
  */
 function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
   if (flag.tone === "loud") {
