@@ -124,7 +124,7 @@ Rubik. Weights mean something: 400 hints, row titles, row secondary lines and li
 |---|---|---|---|---|
 | hero | 52px | 1.15 | 600 | Home profit only. Letter-spacing −0.02em |
 | display | 36px | 1.2 | 600 | Main amount on inner screens |
-| title-1 | 34px | 1.15 | 600 | Page titles. Letter-spacing −0.01em |
+| title-1 | 34px | 1.15 | 600 | Tab-root page titles. Letter-spacing −0.01em. A stacked title under Back is 28px, same line and weight (FLOW-347, #355) |
 | title-2 | 22px | 1.35 | 600 | Sheet titles |
 | band-title | 32px | 1.25 | 600 | Project name on the band |
 | heading | 20px | 1.3 | 600 | Section heads, month heads in lists |
@@ -327,11 +327,12 @@ Guide §11.1.
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8 and 9 (2026-10-09). The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8 and 9 (2026-10-09), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
 - A stacked page with Back pins a compact bar once its large title scrolls off. The bar is 44px under the safe area and shows Back and the title in `title-3` on one line with an ellipsis, over a `line` hairline on the page background, with a 120ms fade (none with reduced motion). Month heads pin under it. There is no bar on inline headers, tab roots, or screens with their own leading control. [0156](../decisions/0156-labelled-back-and-compact-bar.md) (FLOW-334 H1).
+- A page under Back titles at 28px; tab roots keep `title-1` 34. Back's chevron point, the title and the rows share one start edge, and ✕ sits on the end edge (owner feedback on FLOW-347 shots, #355).
 - With Back and a kicker, the kicker becomes Back's label ("‹ הגדרות"), in `label` and `accent-text`, cut at about 16 characters. It shows only when Back really goes there (FLOW-334 H2).
 - A review queue's header uses `layout="inline"` even with Back, so the card and its pinned bar stay off the tab bar at 375×667. הצגת הכול sits on the start side of the counter row, and a card opened from the list leaves it out (FLOW-327).
 - A linked transaction row carries the trailing chevron. A row that opens something keeps one trailing control: when ⋯ holds the end slot, the title and count are the link and ⋯ is its own 44px button (FLOW-326, FLOW-334).
