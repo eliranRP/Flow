@@ -63,10 +63,8 @@ export function shownCompanyFor(userId: string | null): string | null {
 export function setShownCompany(userId: string, companyId: string | null): void {
   const valid = companyId != null && UUID.test(companyId) ? companyId : null;
   shown = { userId, companyId: valid };
-  const entries = readStored();
-  if (valid == null) delete entries[userId];
-  else entries[userId] = valid;
-  writeStored(entries);
+  const others = Object.entries(readStored()).filter(([user]) => user !== userId);
+  writeStored(Object.fromEntries(valid == null ? others : [...others, [userId, valid]]));
 }
 
 /**

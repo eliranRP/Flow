@@ -1,0 +1,133 @@
+/* FLOW-601: the team page, the invite cards, and the company on Home's band (decision 0167). */
+
+/* Mockup a-1: a person row is a 40px initials circle, the name, and the role under it. */
+.ui-person-row .ui-row-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+/* The page scrolls above the pinned הזמנה bar. */
+.ui-team-page {
+  padding-block-end: calc(var(--control-height) + 2 * var(--space-3) + var(--space-4));
+}
+
+.ui-team-error {
+  margin: var(--space-2) 0 0;
+  padding-inline: var(--space-side);
+}
+
+/* Mockups invite-3 and invite-4: the company, "role · מ<name>", then הצטרפות and דחייה. */
+.ui-invite-card {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  padding-block: var(--space-3);
+}
+
+.ui-invite-name {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-title-3-size);
+  line-height: var(--type-title-3-line);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.ui-invite-line {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
+  overflow-wrap: anywhere;
+}
+
+.ui-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin-block-start: var(--space-3);
+}
+
+.ui-invite-actions > .ui-btn {
+  min-inline-size: 6.5rem;
+  padding-inline: var(--space-6);
+}
+
+.ui-invite-actions > .ui-text-link {
+  min-block-size: var(--touch-min);
+}
+
+/* The switcher's הזמנות head: the hint size, muted, as in mockup invite-4. */
+.ui-company-invites-head {
+  margin: var(--space-6) 0 var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+}
+
+.ui-company-new {
+  display: flex;
+  margin-block-start: var(--space-6);
+}
+
+/* Mockup invite-3: a full-screen list after sign-in, with אחר כך at the bottom. */
+.ui-invites-screen {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  padding-block-start: calc(env(safe-area-inset-top, 0px) + var(--space-8));
+  padding-inline: var(--space-side);
+}
+
+.ui-invites-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-block-start: var(--space-4);
+}
+
+.ui-invites-later {
+  display: flex;
+  justify-content: center;
+  margin-block-start: auto;
+  padding-block: var(--space-6) calc(var(--safe-bottom, 0px) + var(--space-4));
+}
+
+/* Mockup a-3: the company's name on Home's band, a 16px ▼ after it, a 44px hit area. */
+.ui-band-company {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: var(--touch-min);
+  margin-inline-start: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-on-band);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-band-company:active {
+  background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
+}
+
+.ui-band-company-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  font-size: var(--type-title-2-size);
+  line-height: var(--type-title-2-line);
+  font-weight: var(--type-title-2-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-band-company > svg {
+  flex: none;
+}

@@ -1,6 +1,7 @@
 import { createContext, createElement, useContext, type ReactNode } from "react";
 import { z } from "zod";
 import { getSupabase } from "./lib/supabase";
+import { ROLE_CHOICE_LABEL } from "./ui/role-choice";
 import { assertNoError, isTransientWriteError, type WriteFailure } from "./use-write";
 
 /**
@@ -12,11 +13,7 @@ import { assertNoError, isTransientWriteError, type WriteFailure } from "./use-w
 export type TeamRole = "owner" | "editor" | "viewer";
 export type MemberRole = "editor" | "viewer";
 
-export const ROLE_LABEL: Record<TeamRole, string> = { owner: "בעלים", editor: "עורך", viewer: "צופה" };
-/** The hint under each choice on the invite sheet (owner's pick 2026-10-09: צופה is "צפייה בלבד"). */
-export const ROLE_HINT: Record<MemberRole, string> = { viewer: "צפייה בלבד", editor: "יכול לשייך ולשנות" };
-/** The order the choices are listed in, צופה first: it is the default. */
-export const MEMBER_ROLES: readonly MemberRole[] = ["viewer", "editor"];
+export const ROLE_LABEL: Record<TeamRole, string> = { owner: "בעלים", ...ROLE_CHOICE_LABEL };
 
 const teamRole = z.enum(["owner", "editor", "viewer"]);
 const memberRole = z.enum(["editor", "viewer"]);
@@ -87,6 +84,8 @@ export type AcceptResult = z.infer<typeof acceptResultSchema>;
 export type TeamApi = {
   /** False when there is no client to call, as in a story without a fake. */
   ready: () => boolean;
+  /** An in-memory team (a story, a dev fixture) answers for this user without a session. */
+  sampleUser?: string;
   listMyCompanies: () => Promise<MyCompanies>;
   switchCompany: (companyId: string) => Promise<void>;
   listTeam: () => Promise<Team>;

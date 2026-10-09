@@ -32,7 +32,7 @@ describe("company header (FLOW-601)", () => {
 
   it("names the shown company on RPC, table and edge function calls", async () => {
     const base = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => Promise.resolve(new Response("{}")));
-    const fetcher = withCompanyHeader(base as unknown as typeof fetch);
+    const fetcher = withCompanyHeader(base);
     setShownCompany(USER_A, COMPANY_A);
     await fetcher(`${API}/rest/v1/rpc/get_dashboard`, { method: "POST", headers: { apikey: "public" } });
     expect(sentHeader(base)).toBe(COMPANY_A);
@@ -45,7 +45,7 @@ describe("company header (FLOW-601)", () => {
 
   it("leaves sign-in calls and a session with no shown company as they are", async () => {
     const base = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => Promise.resolve(new Response("{}")));
-    const fetcher = withCompanyHeader(base as unknown as typeof fetch);
+    const fetcher = withCompanyHeader(base);
     await fetcher(`${API}/rest/v1/rpc/get_dashboard`, {});
     expect(sentHeader(base)).toBeNull();
     setShownCompany(USER_A, COMPANY_A);

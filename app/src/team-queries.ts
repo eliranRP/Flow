@@ -12,13 +12,23 @@ export const TEAM_KEY = "team";
 export const MY_INVITES_KEY = "my-invites";
 
 /**
+ * Who the team reads answer for: the session's user, or an in-memory team's sample user (a story
+ * or a dev fixture, which has no session). A sample never moves the real company header.
+ */
+export function useTeamUser(): { userId: string | null; signedIn: boolean; sample: boolean } {
+  const { status, session } = useAuth();
+  const api = useTeamApi();
+  if (api.sampleUser != null) return { userId: api.sampleUser, signedIn: true, sample: true };
+  return { userId: session?.user.id ?? null, signedIn: status === "authed", sample: false };
+}
+
+/**
  * `list_my_companies` for the signed-in user. The answer names the company this request opened
  * (the `x-flow-company` header when the user still belongs to it, else the last one opened), and
  * the app shows that one from then on. A switch made while this read was out wins over its answer.
  */
 export function useMyCompaniesQuery(active = true) {
-  const { status, session } = useAuth();
-  const userId = session?.user.id ?? null;
+  const { userId, signedIn, sample } = useTeamUser();
   const client = useQueryClient();
   const api = useTeamApi();
   const previousUser = useRef<string | null | undefined>(undefined);
@@ -32,7 +42,7 @@ export function useMyCompaniesQuery(active = true) {
   const canRead = api.ready();
   const query = useQuery({
     queryKey: [MY_COMPANIES_KEY, userId],
-    enabled: active && status === "authed" && userId != null && canRead,
+    enabled: active && signedIn && userId != null && canRead,
     retry: false,
     queryFn: async ({ signal }): Promise<MyCompanies> => {
       if (userId == null) throw new Error("no user");
@@ -40,36 +50,34 @@ export function useMyCompaniesQuery(active = true) {
       const data = await api.listMyCompanies();
       // A sign-out clears the cache and aborts this read. A late answer saves nothing.
       signal.throwIfAborted();
-      if (shownCompanyFor(userId) === sent) {
+      if (!sample && shownCompanyFor(userId) === sent) {
         if (data.active_id !== sent) setShownCompany(userId, data.active_id);
         writeRoleCache(userId, data.active_id ?? "", data.role ?? "owner");
       }
       return data;
     },
   });
-  return { ...query, canRead, userId };
+  return { ...query, canRead, userId, signedIn };
 }
 
 /** The pending invites addressed to the signed-in user's Google email. */
 export function useMyInvitesQuery(active = true) {
-  const { status, session } = useAuth();
-  const userId = session?.user.id ?? null;
+  const { userId, signedIn } = useTeamUser();
   const api = useTeamApi();
   return useQuery({
     queryKey: [MY_INVITES_KEY, userId],
-    enabled: active && status === "authed" && userId != null && api.ready(),
+    enabled: active && signedIn && userId != null && api.ready(),
     queryFn: () => api.myInvites(),
   });
 }
 
 /** The shown company's team: the owner first, then members, then (for the owner) pending invites. */
 export function useTeamQuery(active = true) {
-  const { status, session } = useAuth();
-  const userId = session?.user.id ?? null;
+  const { userId, signedIn } = useTeamUser();
   const api = useTeamApi();
   return useQuery({
     queryKey: [TEAM_KEY, userId],
-    enabled: active && status === "authed" && userId != null && api.ready(),
+    enabled: active && signedIn && userId != null && api.ready(),
     queryFn: () => api.listTeam(),
   });
 }
@@ -81,18 +89,17 @@ export function useTeamQuery(active = true) {
  */
 export function useOpenCompany(): (companyId: string, options?: { opened?: boolean }) => Promise<void> {
   const client = useQueryClient();
-  const { session } = useAuth();
+  const { userId, sample } = useTeamUser();
   const api = useTeamApi();
-  const userId = session?.user.id ?? null;
   return async (companyId, options) => {
     if (userId == null) throw new Error("no user");
     const before = shownCompanyFor(userId);
-    setShownCompany(userId, companyId);
+    if (!sample) setShownCompany(userId, companyId);
     if (options?.opened !== true) {
       try {
         await api.switchCompany(companyId);
       } catch (error) {
-        setShownCompany(userId, before);
+        if (!sample) setShownCompany(userId, before);
         throw error;
       }
     }
@@ -107,9 +114,8 @@ export function useOpenCompany(): (companyId: string, options?: { opened?: boole
  * company, which create_company moves to the new one. The list is read again on the way back.
  */
 export function useLeaveShownCompany(): () => void {
-  const { session } = useAuth();
-  const userId = session?.user.id ?? null;
+  const { userId, sample } = useTeamUser();
   return () => {
-    if (userId != null) setShownCompany(userId, null);
+    if (userId != null && !sample) setShownCompany(userId, null);
   };
 }

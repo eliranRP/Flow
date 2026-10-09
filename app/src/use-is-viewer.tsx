@@ -1,11 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useId, type ReactElement, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "./auth";
 import { shownCompanyFor } from "./lib/company-header";
 import { usePreviewSearch } from "./preview";
 import { readRoleCache } from "./company-role-cache";
-import { MY_COMPANIES_KEY, useMyCompaniesQuery } from "./team-queries";
+import { MY_COMPANIES_KEY, useMyCompaniesQuery, useTeamUser } from "./team-queries";
 import { TextLink } from "./ui/text-link";
 
 type PinnedRole = "owner" | "editor" | "viewer";
@@ -38,9 +37,8 @@ export type CompanyRole = "loading" | "viewer" | "editor" | "owner" | "unknown";
  */
 export function useCompanyRole(): CompanyRole {
   const pinned = useContext(PinnedRoleContext);
-  const { status } = useAuth();
   const companies = useMyCompaniesQuery(pinned == null);
-  const { userId, canRead } = companies;
+  const { userId, canRead, signedIn } = companies;
   const failed = companies.isError;
   const refetch = companies.refetch;
   useEffect(() => {
@@ -55,7 +53,7 @@ export function useCompanyRole(): CompanyRole {
   }, [failed, refetch]);
   if (pinned != null) return pinned;
   // No session yet, so there is no company to wait for.
-  if (status !== "authed" || userId == null || !canRead) return "owner";
+  if (!signedIn || userId == null || !canRead) return "owner";
   if (companies.data) return companies.data.role ?? "owner";
   if (failed) {
     const saved = readRoleCache(userId);
@@ -70,8 +68,7 @@ export function useCompanyRole(): CompanyRole {
 /** Tries the company read again. The quiet line uses this after a failed read. */
 export function useRetryCompanyRole(): () => void {
   const client = useQueryClient();
-  const { session } = useAuth();
-  const userId = session?.user.id ?? null;
+  const { userId } = useTeamUser();
   return () => { void client.refetchQueries({ queryKey: [MY_COMPANIES_KEY, userId] }); };
 }
 
