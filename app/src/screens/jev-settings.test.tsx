@@ -3,7 +3,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { bindJevConnectorScope, jevConnectorQueryKey, jevConnectorStorageKey, type JevConnectorScope } from "./jev-review";
+import {
+  bindJevConnectorScope,
+  jevConnectorQueryKey,
+  jevConnectorStorageKey,
+  writeJevConnectorFlag,
+  type JevConnectorScope,
+} from "./jev-review";
 
 const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 import {
@@ -376,6 +382,7 @@ describe("Jev settings card", () => {
     let release: () => void = () => undefined;
     db.readHold = new Promise((resolve) => { release = resolve; });
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    writeJevConnectorFlag(true, scope);
     const { container } = renderLive(<JevSettings />);
     await waitFor(() => {
       expect(container.querySelector(".ui-jev-options-reserve")).not.toBeNull();
@@ -387,6 +394,80 @@ describe("Jev settings card", () => {
     });
     expect(container.querySelector(".ui-jev-options-reserve")).toBeNull();
     expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument();
+  });
+
+  it("reserves no אפשרויות line while loading when Jev was last known off (FLOW-704)", async () => {
+    let release: () => void = () => undefined;
+    db.readHold = new Promise((resolve) => { release = resolve; });
+    db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
+    writeJevConnectorFlag(false, scope);
+    const { container } = renderLive(<JevSettings />);
+    await waitFor(() => expect(container.querySelector(".ui-row")).toHaveAttribute("aria-busy", "true"));
+    expect(container.querySelector(".ui-jev-options")).toBeNull();
+    release();
+    await readySwitch();
+    expect(container.querySelector(".ui-jev-options")).toBeNull();
+  });
+
+  it("says the new switch state once the owner's toggle is saved (FLOW-704)", async () => {
+    db.row = { enabled: false, mode: "off", threshold: 0.9 };
+    const { container } = renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    const said = container.querySelector("[data-jev-said]");
+    expect(said).toHaveAttribute("role", "status");
+    expect(said).toHaveTextContent(/^$/);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(said).toHaveTextContent("תיוג חכם (Jev): פעיל · הצעות בלבד"));
+  });
+
+  it("says nothing when the toggle's save fails (FLOW-704)", async () => {
+    db.row = { enabled: false, mode: "off", threshold: 0.9 };
+    db.writeError = { message: "down" };
+    const { container } = renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    await waitFor(() => { expect(db.writes).toHaveLength(1); });
+    await waitFor(() => expect(toggle).not.toHaveAttribute("aria-busy"));
+    expect(toggle).not.toBeChecked();
+    expect(container.querySelector("[data-jev-said]")).toHaveTextContent(/^$/);
+  });
+
+  it("trusts a cached off over a remembered on for the loading reserve (FLOW-704)", async () => {
+    db.readHold = new Promise(() => undefined);
+    writeJevConnectorFlag(true, scope);
+    const { container } = renderLive(<JevSettings />, (client) => {
+      client.setQueryData(jevConnectorQueryKey(scope), false);
+    });
+    await waitFor(() => expect(container.querySelector(".ui-row")).toHaveAttribute("aria-busy", "true"));
+    expect(container.querySelector(".ui-jev-options")).toBeNull();
+  });
+
+  it("reserves from a cached on with nothing remembered (FLOW-704)", async () => {
+    db.readHold = new Promise(() => undefined);
+    const { container } = renderLive(<JevSettings />, (client) => {
+      client.setQueryData(jevConnectorQueryKey(scope), true);
+    });
+    await waitFor(() => { expect(container.querySelector(".ui-jev-options-reserve")).not.toBeNull(); });
+  });
+
+  it("announces nothing when a blocked tap saves nothing (FLOW-704)", async () => {
+    db.row = { enabled: false, mode: "off", threshold: 0.9 };
+    const { container } = renderLive(<JevSettings blocked={() => true} />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    expect(db.writes).toHaveLength(0);
+    expect(container.querySelector("[data-jev-said]")).toHaveTextContent(/^$/);
+  });
+
+  it("turns the אפשרויות chevron with the panel (FLOW-704)", () => {
+    const { container } = render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true }} />);
+    const link = screen.getByRole("button", { name: "אפשרויות" });
+    const turn = container.querySelector(".ui-jev-options .ui-chevron-turn");
+    expect(link).toHaveAttribute("aria-expanded", "false");
+    expect(turn).toHaveAttribute("data-open", "false");
+    fireEvent.click(link);
+    expect(link).toHaveAttribute("aria-expanded", "true");
+    expect(turn).toHaveAttribute("data-open", "true");
   });
 
   it("shows שגיאה when the row fails to load, not an on state", async () => {

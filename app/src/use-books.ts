@@ -45,6 +45,7 @@ import {
   dropLegacyJevConnectorKey,
   fetchJevConnector,
   jevConnectorQueryKey,
+  seedJevConnectorFromLive,
   jevScopeFollowsLive,
   jevQueueKey,
   jevQueueQueryKey,
@@ -211,6 +212,7 @@ async function settleReviewJevScope(
       : null;
     if (!completeJevScopeLookup(lookup, scope) || scope == null || jevScopeFollowsLive()) return;
     if (jevQueueKey(ids) === "" || typeof supabase.from !== "function") return;
+    seedJevConnectorFromLive(client, scope);
     void client.query({
       queryKey: jevConnectorQueryKey(scope),
       retry: false,

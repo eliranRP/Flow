@@ -124,11 +124,14 @@
   flex: none;
 }
 
+/* FLOW-704: "✦", then "Jev" on a Jev fill when it fits whole, then the values ("…" below 3em). */
 .ui-statement-suggest {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 0 1 auto;
+}
+
+.ui-statement-suggest > .ui-hint-part-keep {
+  flex: 1 1 3em;
+  max-inline-size: max-content;
 }
 
 .ui-statement-spark {

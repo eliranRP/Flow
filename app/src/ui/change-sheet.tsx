@@ -7,7 +7,7 @@ import { IconButton } from "./icon-button";
 import { BackIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { RouteSheet } from "./route-sheet";
-import { ReversalTag, SuggestTag } from "./suggest-tag";
+import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 import { Sheet } from "./sheet";
 import { TextField } from "./text-field";
 import { Toggle } from "./toggle";
@@ -29,6 +29,9 @@ type Shared = {
   categoryId: string;
   suggestionProjectId?: string;
   suggestionCategoryId?: string;
+  /** The suggested project or category is Jev's fill, so it says הצעת Jev, not הצעה (FLOW-704). */
+  suggestionProjectJev?: boolean;
+  suggestionCategoryJev?: boolean;
   onProjectId: (id: string) => void;
   onCategoryId: (id: string) => void;
   /** Omitted when the save cannot store a supplier rule. */
@@ -570,7 +573,7 @@ export function ChangeAssignment(props: Props) {
                 eyebrow="פרויקט"
                 title={projectLabel}
                 label={`פרויקט: ${projectLabel}, שינוי`}
-                tag={projectSuggested ? <SuggestTag /> : undefined}
+                tag={projectSuggested ? (props.suggestionProjectJev ? <JevTag /> : <SuggestTag />) : undefined}
                 chevron
                 onClick={() => {
                   openPicker("project");
@@ -584,7 +587,7 @@ export function ChangeAssignment(props: Props) {
               eyebrow="קטגוריה"
               title={categoryName === "" ? "לא נבחר" : categoryName}
               label={`קטגוריה: ${categoryName === "" ? "לא נבחר" : categoryName}${categoryReversal ? ", החזר" : ""}, שינוי`}
-              tag={categorySuggested ? <SuggestTag /> : categoryReversal ? <ReversalTag /> : undefined}
+              tag={categorySuggested ? (props.suggestionCategoryJev ? <JevTag /> : <SuggestTag />) : categoryReversal ? <ReversalTag /> : undefined}
               chevron
               onClick={() => {
                 openPicker("category");
@@ -625,6 +628,7 @@ export function ChangeAssignment(props: Props) {
           listed={listed}
           selectedId={pickerKind === "project" ? props.projectId : props.categoryId}
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId}
+          suggestionJev={pickerKind === "project" ? props.suggestionProjectJev === true : props.suggestionCategoryJev === true}
           savingId={savingId}
           note={pickerKind === "project" ? props.projectNote : undefined}
           noneLabel={pickerKind === "project" ? props.noProjectLabel : undefined}
