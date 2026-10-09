@@ -7,6 +7,11 @@ type ToggleProps = {
   hint?: ReactNode;
   checked: boolean;
   disabled?: boolean;
+  /**
+   * Something else decides the switch (FLOW-348 A): it looks disabled and ignores taps, but stays
+   * focusable (`aria-disabled`), so focus moved to it after a retry does not fall to the page.
+   */
+  locked?: boolean;
   /** Stays focusable. The caller ignores a second change while this is set. */
   busy?: boolean;
   /** Draws the switch as a grouped list row, with the icon in the same slot as SUMIT. */
@@ -19,7 +24,7 @@ type ToggleProps = {
 };
 
 /** A 44px row. The switch is off, on, or disabled with not-allowed. */
-export function Toggle({ label, hint, checked, disabled = false, busy = false, icon, inputRef, disabledNoteId, onChange }: ToggleProps) {
+export function Toggle({ label, hint, checked, disabled = false, locked = false, busy = false, icon, inputRef, disabledNoteId, onChange }: ToggleProps) {
   const hintId = useId();
   const viewerNoteId = useViewerNoteId();
   const noteId = disabledNoteId ?? viewerNoteId;
@@ -50,11 +55,12 @@ export function Toggle({ label, hint, checked, disabled = false, busy = false, i
         role="switch"
         checked={checked}
         disabled={disabled}
+        aria-disabled={locked || undefined}
         aria-busy={busy || undefined}
         aria-label={label}
         aria-describedby={described}
         onChange={(event) => {
-          if (disabled || busy) return;
+          if (disabled || locked || busy) return;
           onChange(event.target.checked);
         }}
       />
