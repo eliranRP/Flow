@@ -18,7 +18,6 @@ Today:
 - Projects have no group or type. `company_pnl` returns `projects[]` and the MCP `list_projects` reads it.
 - A new company gets one fixed list of categories from `private.seed_default_categories` (7 expense, 2 income, plus loan and transfer rows). Setup only links to Settings → Categories.
 
-
 The nouns, agreed with the design lead: **תת-קטגוריה** under a plain **קטגוריה**, **קבוצה** for a project group, and **קטגוריות לפתיחה** for the starter pick.
 
 ## Decision
@@ -98,9 +97,9 @@ This is the one change existing data sees. A group label that becomes a real cat
 ### Writes on a parent
 
 - `delete_category` and `merge_category` on a parent with children are refused with `category_has_children`; move or unparent the children first. `move_category_lines` moves only the category's own lines.
-- `hide_category` on a parent hides the parent only; its children stay visible under "no parent" in lists until they are hidden or moved.
+- `hide_category` on a parent hides the parent only; its children stay visible, listed at top level while the parent is hidden.
 - `rename_category` is unchanged; a child's parent is by id, so a rename keeps the link.
-- Undo rows of kind `category_group` already in `private.mcp_writes` still undo through the alias: undoing one restores the old `parent_id`, and conflicts if it changed since.
+- Undo rows of kind `category_group` already in `private.mcp_writes` hold group_name text, not a parent id. The alias undo maps `before` to the parent the backfill made for that name (or no parent when it was null), and conflicts when the current parent no longer matches `after`.
 
 ### Order of PRs
 
