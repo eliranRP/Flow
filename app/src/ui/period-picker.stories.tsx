@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { fn } from "@storybook/test";
 import type { Meta, StoryObj } from "@storybook/react";
-import { PeriodPicker, RangeSheet } from "./period-picker";
+import { allTime, type PeriodChoice } from "../period";
+import { PeriodPicker, PresetPeriodSheet, RangeSheet } from "./period-picker";
 import { longHebrew } from "./story-support";
 import { TopBand } from "./top-band";
 
@@ -54,4 +55,26 @@ export const Range: Story = {
   args,
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <RangeSheet open onOpenChange={() => undefined} onApply={() => undefined} />,
+};
+
+/** FLOW-349: the one period list Home, the breakdown and Search share. */
+function Shared() {
+  const [period, setPeriod] = useState<PeriodChoice>(allTime());
+  return <PresetPeriodSheet period={period} onChange={setPeriod} open onOpenChange={() => undefined} />;
+}
+export const SharedSheet: Story = {
+  args,
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <Shared />,
+};
+export const SharedSheet320: Story = {
+  args,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <Shared />,
+};
+export const SharedSheetDark320: Story = {
+  args,
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <Shared />,
 };

@@ -1,0 +1,14 @@
+/* FLOW-347: a sideways chip row. While chips wait past the inline end, that end fades out over
+   the side gutter and a little more, so the cut chip reads as "more", not as a sliver. */
+.ui-chip-scroller[data-more="end"] {
+  mask-image: linear-gradient(to right, transparent, #000 calc(var(--space-side) + var(--space-6)));
+}
+
+.ui-chip-scroller[data-more="end"]:dir(ltr) {
+  mask-image: linear-gradient(to left, transparent, #000 calc(var(--space-side) + var(--space-6)));
+}
+
+/* A chip scrolled into view stops clear of the fade, not under it. */
+.ui-chip-scroller {
+  scroll-padding-inline-end: calc(var(--space-side) + var(--space-6));
+}
