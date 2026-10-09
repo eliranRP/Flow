@@ -13,9 +13,11 @@ afterEach(() => {
 const exact = { normalizer: (text: string) => text };
 
 describe("Unpaid row hint (FLOW-353)", () => {
-  it("names today and yesterday, and counts older days", () => {
+  it("names today, yesterday and two days ago, and counts older days", () => {
     expect(unpaidAge(0)).toBe("היום");
     expect(unpaidAge(1)).toBe("אתמול");
+    expect(unpaidAge(2)).toBe("לפני יומיים");
+    expect(unpaidAge(3)).toBe("לפני 3 ימים");
     expect(unpaidAge(37)).toBe("לפני 37 ימים");
   });
 
