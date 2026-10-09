@@ -1,9 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/** FLOW-314: a sideways swipe on the card does what ˄ ˅ do. A real touch probe, not a click. */
+/** FLOW-314: a sideways swipe on the card does what הבאה and הקודמת do. A real touch probe, not a click. */
 test.use({ viewport: { width: 390, height: 700 }, hasTouch: true });
 
 const next = { name: "התנועה הבאה" } as const;
+const stepRow = { name: "מעבר בין תנועות" } as const;
+
+/** The card's own text: the neighbour's name on a peeking edge (FLOW-345) is not the card arriving. */
+function onCard(page: Page, text: string, options: { exact: boolean }) {
+  return page.locator(".ui-cswipe-card").getByText(text, options);
+}
 
 /** A touch swipe across the card at mid height: a positive distance moves the finger right. */
 async function swipe(page: Page, distance: number, startX = 195, dy = 0) {
@@ -24,18 +30,18 @@ async function swipe(page: Page, distance: number, startX = 195, dy = 0) {
 async function openFromList(page: Page, name: string) {
   await page.goto("/e2e/txn-list?preview=1");
   await page.getByRole("link", { name: new RegExp(`^${name}(?!\\d)`) }).click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", next)).toBeVisible();
+  await expect(onCard(page, name, { exact: true })).toBeVisible();
+  await expect(page.getByRole("group", stepRow)).toBeVisible();
 }
 
 test("a swipe right opens the next card and a swipe left the previous one", async ({ page }) => {
   await openFromList(page, "ספק 5");
   await swipe(page, 160, 110);
   await expect(page).toHaveURL(/\/transactions\/t-step-6\?preview=1$/);
-  await expect(page.getByText("ספק 6", { exact: true })).toBeVisible();
+  await expect(onCard(page, "ספק 6", { exact: true })).toBeVisible();
   await swipe(page, -160, 280);
   await expect(page).toHaveURL(/\/transactions\/t-step-5\?preview=1$/);
-  await expect(page.getByText("ספק 5", { exact: true })).toBeVisible();
+  await expect(onCard(page, "ספק 5", { exact: true })).toBeVisible();
   // Each move replaced the entry, so Back still returns to the list.
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/e2e\/txn-list\?preview=1$/);
@@ -47,7 +53,7 @@ test("the swiped-to card slides in once: a reload shows it in place, still in th
   await expect(page).toHaveURL(/\/transactions\/t-step-6\?preview=1$/);
   await expect(page.locator(".ui-cswipe-card")).toHaveAttribute("data-enter", "next");
   await page.reload();
-  await expect(page.getByText("ספק 6", { exact: true })).toBeVisible();
+  await expect(onCard(page, "ספק 6", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", next)).toBeVisible();
   await expect(page.locator(".ui-cswipe-card")).not.toHaveAttribute("data-enter");
 });
@@ -57,7 +63,7 @@ test("a short move, a vertical move and the first card's previous side stay put"
   await swipe(page, 25);
   await swipe(page, 30, 195, 200);
   await swipe(page, -160, 280);
-  await expect(page.getByText("ספק 1", { exact: true })).toBeVisible();
+  await expect(onCard(page, "ספק 1", { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/transactions\/t-step-1\?preview=1$/);
 });
 
@@ -83,7 +89,7 @@ test("the last card's next side stays put, and a card opened from a link does no
   await swipe(page, 160, 110);
   await expect(page).toHaveURL(/\/transactions\/t-step-24\?preview=1$/);
   await page.goto("/transactions/t-step-5?preview=1");
-  await expect(page.getByText("ספק 5", { exact: true })).toBeVisible();
+  await expect(onCard(page, "ספק 5", { exact: true })).toBeVisible();
   await expect(page.locator(".ui-cswipe-on")).toHaveCount(0);
   await swipe(page, 160, 110);
   await swipe(page, -160, 280);
@@ -104,4 +110,44 @@ test("the card follows the finger without giving the page a sideways scroll", as
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await session.detach();
   await expect(page).toHaveURL(/\/transactions\/t-step-5\?preview=1$/);
+});
+
+/** Holds a finger down mid-drag; the caller lifts it. */
+async function hold(page: Page, from: number, to: number) {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: from, y: 360, id: 1 }] });
+  for (let step = 1; step <= 8; step += 1) {
+    await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: Math.round(from + ((to - from) * step) / 8), y: 361, id: 1 }] });
+  }
+  return async () => {
+    await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: from, y: 361, id: 1 }] });
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await session.detach();
+  };
+}
+
+test("FLOW-345: mid-drag the next card's edge peeks in from the left with its name", async ({ page }) => {
+  await openFromList(page, "ספק 5");
+  const lift = await hold(page, 110, 206);
+  const peek = page.locator('.ui-cswipe-peek[data-side="next"]');
+  await expect(peek).toHaveCSS("transform", /matrix\(1, 0, 0, 1, 96, 0\)/);
+  await expect(peek).toContainText("ספק 6");
+  const card = await page.locator(".ui-cswipe-card").boundingBox();
+  const edge = await peek.boundingBox();
+  // The neighbour ends 16px left of the card, inside the screen.
+  expect(card && edge && Math.round(card.x - (edge.x + edge.width))).toBe(16);
+  expect(edge && edge.x + edge.width).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await lift();
+  await expect(page).toHaveURL(/\/transactions\/t-step-5\?preview=1$/);
+});
+
+test("FLOW-345: at a list end the card gives a little (at most 32px), nothing peeks, and it springs back", async ({ page }) => {
+  await openFromList(page, "ספק 24");
+  const lift = await hold(page, 110, 270);
+  await expect(page.locator(".ui-cswipe-card")).toHaveCSS("transform", /matrix\(1, 0, 0, 1, 32, 0\)/);
+  await expect(page.locator('.ui-cswipe-peek[data-side="next"]')).toHaveCount(0);
+  await lift();
+  await expect(page.locator(".ui-cswipe-card")).toHaveCSS("transform", "none");
+  await expect(page).toHaveURL(/\/transactions\/t-step-24\?preview=1$/);
 });
