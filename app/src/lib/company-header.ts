@@ -68,12 +68,14 @@ export function setShownCompany(userId: string, companyId: string | null): void 
 }
 
 /**
- * The session changed: this user's saved company becomes the shown one, and every other
- * user's entry is dropped. Null (signed out) keeps nothing.
+ * The session changed: a newly signed-in user's saved company becomes the shown one, and every
+ * other user's entry is dropped. Null (signed out) keeps nothing.
  */
 export function noteShownCompanyUser(userId: string | null): void {
   const entries = readStored();
-  const mine = userId == null ? null : (entries[userId] ?? null);
+  // The same user (a token refresh, a tab back in view): this tab keeps the company it shows. Another
+  // tab's switch writes storage, but must not move this tab's writes to a company it does not show.
+  const mine = userId == null ? null : userId === shown.userId ? shown.companyId : (entries[userId] ?? null);
   shown = { userId, companyId: mine };
   writeStored(userId != null && mine != null ? { [userId]: mine } : {});
 }

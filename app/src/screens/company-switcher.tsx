@@ -99,7 +99,8 @@ export function CompanySheet({
         )
       ) : (
         <div role="radiogroup" aria-label="חברה">
-          {data.companies.map((company) => (
+          {/* The legacy demo book (a viewer row) cannot be switched to; it shows only while open. */}
+          {data.companies.filter((company) => !(company.is_demo && company.role === "viewer") || company.id === data.active_id).map((company) => (
             <RadioRow
               key={company.id}
               label={company.name}

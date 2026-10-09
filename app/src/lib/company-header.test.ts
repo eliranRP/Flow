@@ -64,6 +64,14 @@ describe("company header (FLOW-601)", () => {
     expect(shownCompanyFor(USER_A)).toBe(COMPANY_B);
   });
 
+  it("keeps this tab's company when another tab switches and the same user's session event arrives", () => {
+    setShownCompany(USER_A, COMPANY_A);
+    // Another tab opened B and saved it; this tab then hears SIGNED_IN or TOKEN_REFRESHED for A.
+    localStorage.setItem("flow-shown-company", JSON.stringify({ [USER_A]: COMPANY_B }));
+    noteShownCompanyUser(USER_A);
+    expect(shownCompanyId()).toBe(COMPANY_A);
+  });
+
   it("drops another user's company when the session changes, and keeps none after sign-out", () => {
     setShownCompany(USER_A, COMPANY_A);
     noteShownCompanyUser(USER_B);

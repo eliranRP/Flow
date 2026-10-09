@@ -56,6 +56,27 @@ describe("company switcher (FLOW-601, mockup a-3)", () => {
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "חברה" })).toBeNull(); });
   });
 
+  it("leaves out the old demo book, which a switch cannot open", async () => {
+    const demo = { id: "ffffffff-ffff-4fff-8fff-ffffffffffff", name: "דמו לדוגמה", role: "viewer" as const, is_demo: true, active: false };
+    const companies = companiesFor("owner", true);
+    answer("list_my_companies", { data: { ...companies, companies: [...companies.companies, demo] } });
+    const dialog = await openSheet();
+    expect(within(dialog).getAllByRole("radio")).toHaveLength(2);
+    expect(within(dialog).queryByRole("radio", { name: "דמו לדוגמה" })).toBeNull();
+  });
+
+  it("starts every read over when the server shows another company than the one sent", async () => {
+    answer("list_my_companies", { data: companiesFor("owner", true) });
+    const { client } = renderTeam(<CompanySwitcher />, "/");
+    await screen.findByRole("button", { name: "חברה: חברה לדוגמה" });
+    client.setQueryData(["projects"], ["a row of A"]);
+    // This user left A elsewhere: the server answers with B.
+    answer("list_my_companies", { data: { ...companiesFor("owner", true), active_id: COMPANY_B, role: "editor" } });
+    await client.refetchQueries({ queryKey: ["my-companies"] });
+    await waitFor(() => { expect(shownCompanyFor(TEAM_USER)).toBe(COMPANY_B); });
+    await waitFor(() => { expect(client.getQueryData(["projects"])).toBeUndefined(); });
+  });
+
   it("keeps the company shown before when the switch fails", async () => {
     answer("list_my_companies", { data: companiesFor("owner", true) });
     refuse("switch_company", "forbidden", "42501");

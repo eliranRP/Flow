@@ -51,7 +51,14 @@ export function useMyCompaniesQuery(active = true) {
       // A sign-out clears the cache and aborts this read. A late answer saves nothing.
       signal.throwIfAborted();
       if (!sample && shownCompanyFor(userId) === sent) {
-        if (data.active_id !== sent) setShownCompany(userId, data.active_id);
+        if (data.active_id !== sent) {
+          setShownCompany(userId, data.active_id);
+          // The server showed another company (this user left the one sent): no screen keeps its rows.
+          if (sent != null) {
+            pinReviewLine(null);
+            void client.resetQueries({ predicate: (cached) => cached.queryKey[0] !== MY_COMPANIES_KEY });
+          }
+        }
         writeRoleCache(userId, data.active_id ?? "", data.role ?? "owner");
       }
       return data;

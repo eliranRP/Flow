@@ -136,6 +136,7 @@ export const INVITE_DECLINED = "ההזמנה נדחתה";
 export const DECLINE_FAILED = "לא הצלחנו לדחות את ההזמנה.";
 export const REOPEN_FAILED = "כבר אי אפשר לבטל את הדחייה.";
 export const INVITE_GONE = "ההזמנה כבר לא פתוחה.";
+export const MEMBER_GONE = "כבר לא בצוות.";
 export const SWITCH_FAILED = "לא הצלחנו לעבור לחברה.";
 
 /** A simple shape check before the request; the server has the last word (`invalid email`). */
@@ -164,7 +165,8 @@ export function inviteRefusal(error: Error): { field: string } | { toast: WriteF
 export function teamFailure(words: string): (error: Error) => WriteFailure {
   return (error) => {
     if (refusedByRole(error)) return { message: OWNER_ONLY, retry: false };
-    if (/not found|not pending|not declined/.test(error.message)) return { message: INVITE_GONE, retry: false };
+    if (error.message === "member not found") return { message: MEMBER_GONE, retry: false };
+    if (/invite not found|not pending|not declined/.test(error.message)) return { message: INVITE_GONE, retry: false };
     return words;
   };
 }

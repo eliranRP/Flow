@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "./auth";
 import { myCompaniesFor } from "./team-test-support";
-import { shownCompanyFor } from "./lib/company-header";
+import { resetShownCompanyForTests, shownCompanyFor } from "./lib/company-header";
 import { RolePreview, useCompanyRole, useHoldOwnerSettings, useHoldWrites, useIsViewer, useWriteGate, VIEWER_NOTE, ViewerNote, ViewerPreview, ViewerScope } from "./use-is-viewer";
 
 const viewerId = "11111111-1111-4111-8111-111111111111";
@@ -119,6 +119,8 @@ function cachedRole(userId: string): { companyId: string; role: string } | undef
 describe("useIsViewer", () => {
   beforeEach(() => {
     localStorage.clear();
+    // Each test is a fresh page load: the shown company starts from storage.
+    resetShownCompanyForTests();
     state.userId = viewerId;
     state.ownerId = ownerId;
     state.companyId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
