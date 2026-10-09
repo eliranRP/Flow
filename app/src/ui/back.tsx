@@ -133,6 +133,7 @@ export function BackButton({
   return (
     <IconButton
       label={label}
+      className={children == null ? "ui-back-btn" : undefined}
       onBand={onBand}
       disabled={disabled}
       onClick={() => {
