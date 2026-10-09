@@ -352,7 +352,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11 (2026-10-09), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 12 (2026-10-09), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -366,6 +366,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11
 - A stacked page's own control (the period pill) sits under the title on the start side, in `ScreenHeader`'s `below` slot, not in the top end corner. The subtitle and count line then don't repeat it (FLOW-334).
 - A sideways swipe repeats a control already on screen and never replaces it. One set of rules: touch only, 24px edge zones (the 24th px included) left to swipe-back, nothing inside a field, a sheet or a sideways list, decide after 10px and give vertical moves to the page, follow the finger and commit past 30% or a flick, stay put toward an end, swap on release with reduced motion, and no swipe while pinch-zoomed. In RTL a finger moving right goes forward (FLOW-314).
 - One search entry per screen. A filter that misses offers the wider search as a row with the typed text ("חיפוש בתנועות: …"), not an empty state (FLOW-342).
+- A period pill or chip uses the period sheet's row name (חודש, 3 חודשים, שנה, הכול) while the window ends now, and the month name once it steps back ("ספטמבר 2026"). Subtitles and the band keep their phrases (FLOW-351).
 - A sheet closed with Escape returns focus to its opener with the focus ring showing; closed by touch, focus returns with no ring (FLOW-310).
 - A card opened from a list walks it from a quiet row pinned at the bottom (thumb zone, on the safe area): הקודמת on the start side, הבאה on the end side as accent text links with 44px hit areas and no glyphs, and a muted "N מתוך M" between them. At a list end that word is hidden with `visibility` and keeps its box, so the counter stays centred, and focus waits on the counter. The row is filled with `bg` and shows a top hairline only while content is under it. A card opened from a link shows no row (FLOW-345).
 - Mid-drag, the neighbour's edge peeks in from the side it will enter, with its name when the prefetch holds it. Toward a list end the card gives a quarter of the move, at most 32px, and springs back. Reduced motion: no follow, no peek (FLOW-345).
@@ -413,6 +414,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11
 - A row that leads to the review queue looks like Home's review row, with the inbox icon and tint, never like a list item (FLOW-334).
 - A link that writes before it navigates shows busy in place and ignores presses until the write settles. It stays put when the write fails (FLOW-325).
 - The bin icon and red mark real deletes only (FLOW-334).
+- Every money word comes from the Money terms table in §3.6. A by-month row's hint shows הוצאות only when the month has income, and no hint when income is 0 (money terms, #367).
 
 **Sheets and settings**
 
@@ -435,6 +437,9 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11
 - A sheet whose form can grow pins its main action in the sheet's foot. A destructive secondary stays in the body (FLOW-350).
 - A menu's actions are rows, not a row list plus a separate button (FLOW-334).
 - A picker row whose tap writes something says what it writes in its description. A row that can't be picked stays listed, off, and says why in the same place. Pickable rows come first (FLOW-106).
+- A form or list that appears in two places is one component, so a fix lands in both. A one-time question shown in two places shares one answer (FLOW-506, FLOW-502).
+- A line that asks the user to fix a sum prints the gap, not the target they must add up to. A waiting state says what changed. A row that is saving keeps focus (FLOW-115).
+- A form whose parts must add up to a total says in one place, its summary row, what is still missing or over ("חסרים $x" / "עודף $x"), and its save stays off until they match. This is the one exception to a save that stays enabled (FLOW-106, cycle 12).
 
 **Review card and Jev**
 
@@ -445,6 +450,9 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11
 - Jev's fill is named with ✦ and the word Jev wherever the value shows; only "✦" when there is no room, never הצעה. With Jev on and no key, its Settings row says "אין מפתח" (FLOW-704).
 - A value an automatic job filled says who filled it and how to undo it, in one line with no reason. Turning the job off keeps that line and its undo, with no new suggestion (FLOW-331, FLOW-702).
 - A connector invoice its receipt paid shows one muted line under the amount, under the VAT line: ✓ "שולם · קבלה dd/mm", or "שולם חלקית · קבלה dd/mm" with no ✓. With no receipts there is no line. The supplier name wraps to three lines before it ends in an ellipsis (FLOW-309, #371).
+- While Jev's read waits and a row shows a skeleton, the card holds the hidden ✦ line under its rows, so the reason or "מולא ע״י Jev" lands without moving the card or the action bar. A card whose rows are all stored, a shared cost and a split_mismatch card hold nothing (FLOW-704).
+- On a phone-width card (under 25rem) the ✦ line starts at the card's start edge, under the labels; from 25rem up it stays in the value column (FLOW-704).
+- At phone width, a value that doesn't fit beside its pill takes the row's width, and the pill drops under it on the chevron side. A short value keeps its pill inline (FLOW-352).
 
 **Band**
 
