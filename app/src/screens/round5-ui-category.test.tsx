@@ -238,7 +238,7 @@ describe("shared transaction category", () => {
     );
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /מפוצל · 2 פרויקטים/ }));
-    expect(await screen.findByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
   });
 
   it("saves a shared category without calling reassign", async () => {
@@ -342,7 +342,7 @@ describe("shared transaction category", () => {
     });
     expect(await screen.findByText("עלות משותפת · טרם פוצלה")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /עלות משותפת · טרם פוצלה/ }));
-    expect(await screen.findByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
   });
 
   it("names the single project on a one-share row", async () => {
@@ -568,7 +568,7 @@ describe("shared transaction category", () => {
     expect(rpc.calls.some((call) => call.name === "set_transaction_category" || call.name === "collapse_split")).toBe(false);
   });
 
-  it("collapses a split from לפרויקט אחד and does not call save_split", async () => {
+  it("moves a split to one project by removing its part, and ביטול puts the shares back (FLOW-346)", async () => {
     rpc.calls.length = 0;
     rpc.impl = (name) => {
       if (name === "get_transaction") {
@@ -632,24 +632,28 @@ describe("shared transaction category", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("radio", { name: "לפרויקט אחד" }));
-    expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
-    expect(screen.getByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "חולון" }));
+    fireEvent.click(await screen.findByRole("button", { name: "הסרת החלק וילה" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     await waitFor(() => {
-      expect(rpc.calls.find((call) => call.name === "collapse_split")?.args).toEqual({
-        p_id: "tx",
-        p_project_id: "p1",
+      expect(rpc.calls.find((call) => call.name === "save_split")?.args).toEqual({
+        p_transaction_id: "tx",
+        p_shares: [{ project_id: "p1", amount_minor: 1_000_000 }],
       });
     });
-    expect(rpc.calls.some((call) => call.name === "save_split")).toBe(false);
+    expect(rpc.calls.some((call) => call.name === "collapse_split")).toBe(false);
     fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
     await waitFor(() => {
-      expect(rpc.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-one")).toBe(true);
+      expect(rpc.calls.filter((call) => call.name === "save_split").at(-1)?.args).toEqual({
+        p_transaction_id: "tx",
+        p_shares: [
+          { project_id: "p2", amount_minor: 400_000 },
+          { project_id: "p1", amount_minor: 600_000 },
+        ],
+      });
     });
   });
 
-  it("stays open when לפרויקט אחד has no project yet", async () => {
+  it("holds a shared line until the rest has a project", () => {
     rpc.calls.length = 0;
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -662,17 +666,17 @@ describe("shared transaction category", () => {
                   { id: "p1", name: "חולון" },
                   { id: "p2", name: "וילה" },
                 ]}
+                sampleRestProject={null}
+                sampleParts={[{ projectId: "p2", value: "4" }]}
               />
             </MemoryRouter>
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(screen.getByRole("radio", { name: "לפרויקט אחד" }));
-    fireEvent.click(await screen.findByRole("button", { name: "חזרה" }));
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
-    expect(screen.getByText("בחרו פרויקט.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(screen.getAllByText("בחרו פרויקט לשאר.").length).toBeGreaterThan(0);
     expect(rpc.calls.some((call) => call.name === "collapse_split" || call.name === "save_split")).toBe(false);
   });
 });

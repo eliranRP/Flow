@@ -52,3 +52,7 @@ export const Refused: Story = { args: { error: "יש תשלום משויך אח�
 export const RefusedDark320: Story = { args: { error: "יש תשלום משויך אחרי התאריך הזה. בחרו תאריך מאוחר יותר." }, ...dark, ...at320 };
 export const Saving: Story = { args: { busy: true } };
 export const Range: Story = { args: { min: "2026-09-10", max: "2026-10-20", reason: undefined } };
+
+/** FLOW-350: outward chevrons and the picked day as a filled circle, as in mockup 15b. */
+export const PickedDay320: Story = { args: { min: undefined, reason: undefined }, ...at320 };
+export const PickedDayDark320: Story = { args: { min: undefined, reason: undefined }, ...dark, ...at320 };

@@ -1,3 +1,4 @@
+import { amountText } from "./line-split";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
@@ -380,8 +381,8 @@ function ReviewerSave() {
 const unsplitProjects = [
   { id: "p-alon", name: reviewerProjectName, bp: 1667 },
   { id: "p-raanana", name: reviewerOtherProjectName, bp: 1667 },
-  { id: "p-north", name: "מגרש הצפון", bp: 1667 },
-  { id: "p-south", name: "מחסן הדרום", bp: 1667 },
+  { id: "p-north", name: "מגרש לדוגמה", bp: 1667 },
+  { id: "p-south", name: "מחסן לדוגמה", bp: 1667 },
   { id: "p-east", name: "גג המזרח", bp: 1666 },
   { id: "p-west", name: "חניון המערב", bp: 1666 },
 ] as const;
@@ -441,12 +442,16 @@ function ReviewerUnsplit() {
           sampleAmount={unsplitNet}
           sampleProjects={projects}
           sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
+          // Opens like the saved six-way split: the first project keeps the rest, the others are exact parts.
+          sampleRestProject={unsplitProjects[0].id}
+          sampleParts={unsplitProjects.slice(1).map((project) => ({ projectId: project.id, value: amountText(unsplitShare(project.bp)) }))}
           backTo="/reviewer"
-          onOneProject={(id) => {
+          onSave={(rows) => {
             pendingSave.current = true;
-            setCollapsed(id);
+            // One project takes the whole line; parts across projects keep it shared.
+            setCollapsed(rows.length === 1 ? (rows[0]?.project_id ?? null) : null);
             setShowSplit(false);
-            return Promise.resolve("left" as const);
+            return "left";
           }}
         />
       ) : (
@@ -497,8 +502,8 @@ function ReviewerSplitExpense() {
   const projects = [
     { id: "p-alon", name: reviewerProjectName },
     { id: "p-raanana", name: reviewerOtherProjectName },
-    { id: "p-north", name: "מגרש הצפון" },
-    { id: "p-south", name: "מחסן הדרום" },
+    { id: "p-north", name: "מגרש לדוגמה" },
+    { id: "p-south", name: "מחסן לדוגמה" },
     { id: "p-east", name: "גג המזרח" },
     { id: "p-west", name: "חניון המערב" },
   ];
@@ -557,6 +562,7 @@ function ReviewerSplit() {
       sampleAmount={leasing ? unsplitNet : reviewerSharedAgorot}
       sampleProjects={leasing ? unsplitProjects.map((project) => ({ id: project.id, name: project.name })) : reviewerSplitProjects}
       sampleMeta={leasing ? "ליסינג הדרך בע״מ · 01/07/2026" : "עגורני החוף בע״מ · 29/09/2026"}
+      sampleRestProject={null}
       backTo={`/reviewer/review?save=${mode}`}
       onSave={async () => {
         try {
@@ -565,7 +571,8 @@ function ReviewerSplit() {
           // useWrite already toasted. Returning false keeps that toast and the screen.
           return false;
         }
-        return undefined;
+        // The sample write already moved to the queue.
+        return "left";
       }}
     />
   );

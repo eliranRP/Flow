@@ -389,7 +389,7 @@ test("the primary action stays above the tab bar on a crowded review card", asyn
 test("the primary action stays above the tab bar on a list card with a long supplier, a banner, a split, and a note", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 693 });
   await page.goto("/iframe.html?id=screens-routes--review-fold-stress&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "חומרי בניין והובלות השרון בע״מ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "חומרי בניין והובלות לדוגמה בע״מ" })).toBeVisible();
   await expect(page.getByText("14 מתוך 15")).toBeVisible();
   await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
   await expect(page.getByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" })).toBeVisible();
@@ -746,39 +746,24 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   expect(motion.transform).not.toBe("none");
 });
 
-test("split stays calm and pins the summary", async ({ page }) => {
+test("split between projects pins its totals and keeps names on one line", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-income-disabled&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("אופן הפיצול")).toHaveCount(0);
-  await expect(page.getByRole("switch")).toHaveCount(0);
-  await expect(page.locator(".ui-chip-scope")).toHaveCount(0);
-  const income = page.getByRole("radio", { name: /לפי הכנסות/ });
-  await expect(income).toBeDisabled();
+  await page.goto("/iframe.html?id=screens-routes--split-exact&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("radio")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  const summary = page.locator(".ui-split-cta");
-  const summaryBox = await summary.boundingBox();
-  expect(summaryBox).not.toBeNull();
-  if (summaryBox) {
-    expect(summaryBox.y + summaryBox.height).toBeGreaterThan(800);
-    expect(summaryBox.y + summaryBox.height).toBeLessThanOrEqual(844);
+  await expect(page.getByText("נשאר לשורה")).toBeVisible();
+  const foot = page.locator(".ui-split-cta");
+  const footBox = await foot.boundingBox();
+  expect(footBox).not.toBeNull();
+  if (footBox) {
+    expect(footBox.y + footBox.height).toBeGreaterThan(800);
+    expect(footBox.y + footBox.height).toBeLessThanOrEqual(844);
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-default-320&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".ui-split-summary")).toBeVisible();
+  await page.goto("/iframe.html?id=screens-routes--split-mixed-320&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".ui-lsplit-part").first()).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
-  const titles = await page.locator(".ui-split-card .ui-row-title").evaluateAll((nodes) => nodes.map((node) => {
-    const style = getComputedStyle(node);
-    return {
-      lines: node.getClientRects().length,
-      clipped: style.textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1,
-    };
-  }));
-  expect(titles.length).toBeGreaterThan(0);
-  for (const title of titles) {
-    expect(title.lines).toBe(1);
-    expect(title.clipped).toBe(false);
-  }
 });
 
 /** The route stories are checked in quarters, so workers or shards share the work and each part stays well under its 120 s (about 1 s a story). */

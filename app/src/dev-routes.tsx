@@ -80,41 +80,52 @@ export function DevExpense() {
 const devReviewItems = [
   {
     id: "1",
-    supplier: "חומרי בניין השרון בע״מ",
+    supplier: "חומרי בניין לדוגמה בע״מ",
     project: "שיפוץ הרצל 12",
     category: "חומרים",
     netAgorot: -1_600_000n,
   },
   {
     id: "2",
-    supplier: "הובלות הגליל",
+    supplier: "הובלות לדוגמה",
     project: "וילה רעננה",
     category: "הובלה",
     netAgorot: -400_000n,
   },
 ];
 
+/** The saved rows, in a node outside React so they stay readable after the screen leaves. */
+function splitSavedNode(): HTMLElement {
+  let node = document.getElementById("e2e-split-saved");
+  if (node == null) {
+    node = document.createElement("div");
+    node.id = "e2e-split-saved";
+    node.hidden = true;
+    document.body.append(node);
+  }
+  return node;
+}
+
 export function DevSplit() {
   const [params] = useSearchParams();
-  const [saved, setSaved] = useState("");
   const fail = params.get("save") === "fail";
+  useEffect(() => {
+    splitSavedNode().textContent = "";
+  }, []);
   return (
-    <>
-      <SplitScreen
-        sampleAmount={1001n}
-        sampleProjects={[
-          { id: "a", name: "שיפוץ הרצל 12", incomeAgorot: 3_000n },
-          { id: "b", name: "שיפוץ דירה ביאליק 8 חולון", incomeAgorot: 1_000n },
-          { id: "c", name: "פרגולה בית כהן", incomeAgorot: 1_000n },
-        ]}
-        onSave={(rows) => {
-          if (fail) throw new Error("save");
-          setSaved(JSON.stringify(rows));
-          return undefined;
-        }}
-      />
-      <div id="e2e-split-saved" hidden>{saved}</div>
-    </>
+    <SplitScreen
+      sampleAmount={1001n}
+      sampleProjects={[
+        { id: "a", name: "שיפוץ הרצל 12" },
+        { id: "b", name: "שיפוץ דירה ביאליק 8 חולון" },
+        { id: "c", name: "פרגולה בית כהן" },
+      ]}
+      onSave={(rows) => {
+        if (fail) throw new Error("save");
+        splitSavedNode().textContent = JSON.stringify(rows);
+        return undefined;
+      }}
+    />
   );
 }
 
@@ -221,7 +232,7 @@ export function DevReviewBanner() {
         reason: "missing_category",
         project_id: "p1",
         category_id: "c1",
-        supplier_name: "מנופי המרכז בע״מ",
+        supplier_name: "מנופים לדוגמה בע״מ",
         project_name: "שיפוץ הרצל 12",
         category_name: "חומרים",
         auto_approved_today: 39,
@@ -235,9 +246,9 @@ export function DevFiled() {
   return (
     <FiledTodayScreen
       sample={[
-        { id: "t-filed", description: "מלט", doc_date: "2026-09-29", amount_net: -350_000n, direction: "expense", supplier_name: "מנופי המרכז בע״מ", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
-        { id: "t-filed-2", description: "הובלה", doc_date: "2026-09-29", amount_net: -120_000n, direction: "expense", supplier_name: "הובלות הגליל", project_name: "וילה רעננה", category_name: "הובלה" },
-        { id: "t-filed-3", description: "צבע", doc_date: "2026-09-29", amount_net: -84_050n, direction: "expense", supplier_name: "צבעי השרון", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
+        { id: "t-filed", description: "מלט", doc_date: "2026-09-29", amount_net: -350_000n, direction: "expense", supplier_name: "מנופים לדוגמה בע״מ", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
+        { id: "t-filed-2", description: "הובלה", doc_date: "2026-09-29", amount_net: -120_000n, direction: "expense", supplier_name: "הובלות לדוגמה", project_name: "וילה רעננה", category_name: "הובלה" },
+        { id: "t-filed-3", description: "צבע", doc_date: "2026-09-29", amount_net: -84_050n, direction: "expense", supplier_name: "צבעים לדוגמה", project_name: "שיפוץ הרצל 12", category_name: "חומרים" },
         { id: "t-filed-4", description: "עמלה", doc_date: "2026-09-29", amount_net: -2_500n, direction: "expense", supplier_name: "עמלת בנק", project_name: null, category_name: "עמלות" },
       ]}
     />
@@ -622,7 +633,7 @@ export function DevChange() {
     <ChangeAssignment
       host="route"
       closeTo="/review?preview=1"
-      supplier="מנופי המרכז בע״מ"
+      supplier="מנופים לדוגמה בע״מ"
       amount="₪3,500"
       direction="expense"
       projects={projects}

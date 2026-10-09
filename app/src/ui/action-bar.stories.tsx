@@ -33,7 +33,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
       </header>
       <div className="ui-page-pad">
         <ReviewCard
-          supplier="חומרי בניין השרון בע״מ"
+          supplier="חומרי בניין לדוגמה בע״מ"
           sourceLine="חשבונית · 21/09/2026"
           netAgorot={-850000n}
           vatLine="לפני מע״מ · מע״מ ₪1,530"

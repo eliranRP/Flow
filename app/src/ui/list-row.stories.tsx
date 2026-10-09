@@ -152,6 +152,18 @@ export const ListOfRows: Story = {
   ),
 };
 
+/** FLOW-408: a row that opens nothing keeps the chevron's space, so its amount lines up with linked rows. */
+export const ProjectRowsLineUp: Story = {
+  args: { variant: "project", title: "חומרים", agorot: "3000000" },
+  render: () => (
+    <List>
+      <ListRow variant="project" title="חומרים" agorot={3_000_000n} loss={false} href="/projects/1/categories/c1" chevron />
+      <ListRow variant="project" title="בלי קטגוריה" agorot={420_000n} loss={false} chevronSpace />
+      <ListRow variant="project" title="חשמל ומים לדוגמה" agorot={125_000n} currency="USD" loss={false} href="/projects/1/categories/c2?currency=USD" chevron />
+    </List>
+  ),
+};
+
 /** Option C (decision 0120): income green with no plus and small cents (".00" included), expense with − and cents,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {
@@ -224,7 +236,7 @@ function StatementBankRows({ only }: { only?: BankKind }) {
     ach: <ListRow key="ach" variant="statement" title="Fabrikam Supply Co" fallback="bank" method={achMethod} suggestion="וילה לדוגמה · חומרים" agorot={-245_000n} currency="USD" sign="out" href="/review/all?item=12" />,
     wire: <ListRow key="wire" variant="statement" title="לקוח לדוגמה" fallback="bank" method={wireMethod} agorot={1_500_000n} currency="USD" sign="in" href="/review/all?item=13" />,
     check: <ListRow key="check" variant="statement" title="קבלן לדוגמה" fallback="bank" method={checkMethod} pending agorot={-80_000n} currency="USD" sign="out" href="/review/all?item=14" />,
-    none: <ListRow key="none" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={noMetaMethod} agorot={-120_050n} sign="out" href="/review/all?item=15" />,
+    none: <ListRow key="none" variant="statement" title="חשמל לדוגמה בע״מ" fallback="bank" method={noMetaMethod} agorot={-120_050n} sign="out" href="/review/all?item=15" />,
   };
   return <List>{only ? rows[only] : Object.values(rows)}</List>;
 }
@@ -232,18 +244,18 @@ function StatementBankRows({ only }: { only?: BankKind }) {
 function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "jev" | "jevPending" | "jevPair" | "long" | "fallback" | "all" }) {
   const rows = {
     income: <ListRow key="income" variant="statement" title="לקוח לדוגמה" fallback="invoice" method={invoiceMethod} agorot={500_000n} sign="in" href="/review/all?item=1" />,
-    expense: <ListRow key="expense" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
+    expense: <ListRow key="expense" variant="statement" title="חשמל לדוגמה בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
     pending: <ListRow key="pending" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} pending agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=3" />,
     suggestion: (
-      <ListRow key="suggestion" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
+      <ListRow key="suggestion" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
     ),
     // FLOW-704: Jev's fill reads "✦ Jev · …" and the row's name says הצעת Jev.
     jev: (
-      <ListRow key="jev" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=7" />
+      <ListRow key="jev" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=7" />
     ),
     // With בהמתנה at 320 only "✦" fits; the row's name still says הצעת Jev.
     jevPending: (
-      <ListRow key="jevPending" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} pending suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=8" />
+      <ListRow key="jevPending" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} pending suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=8" />
     ),
     long: (
       <ListRow
@@ -358,8 +370,8 @@ export const LoanBalance320: Story = {
 function StatementSearchRows() {
   return (
     <List>
-      <ListRow variant="statement" title="חומרי בניין השרון" fallback="invoice" match="חומרי" details={[{ text: "08/10" }, { text: "שיפוץ לדוגמה" }, { text: "חומרים" }]} agorot={-124_000n} sign="out" href="/transactions/s1" />
-      <ListRow variant="statement" title="חומרי בניין השרון" fallback="invoice" match="חומרי" details={[{ text: "02/10" }, { text: "ממתינה לאישור", tone: "accent" }]} agorot={-38_600n} sign="out" href="/transactions/s2" />
+      <ListRow variant="statement" title="חומרי בניין לדוגמה" fallback="invoice" match="חומרי" details={[{ text: "08/10" }, { text: "שיפוץ לדוגמה" }, { text: "חומרים" }]} agorot={-124_000n} sign="out" href="/transactions/s1" />
+      <ListRow variant="statement" title="חומרי בניין לדוגמה" fallback="invoice" match="חומרי" details={[{ text: "02/10" }, { text: "ממתינה לאישור", tone: "accent" }]} agorot={-38_600n} sign="out" href="/transactions/s2" />
       <ListRow variant="statement" title="החזר חומרי גמר" fallback="invoice" match="חומרי" details={[{ text: "21/09" }, { text: "וילה לדוגמה" }, { text: "פוצלה ל־2" }]} agorot={31_000n} sign="in" inWord="זיכוי" href="/transactions/s3" />
       <ListRow variant="statement" title="Contoso Building Supplies International" fallback="bank" match="supplies" details={[{ text: "מחוץ לרווח" }, { text: "14/09" }, { text: longHebrew }]} agorot={-999_999_999n} currency="USD" sign="out" href="/transactions/s4" />
     </List>

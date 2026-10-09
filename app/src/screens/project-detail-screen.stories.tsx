@@ -1,9 +1,10 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
+import { userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, dark, ExampleBar, exampleOnBand } from "../ui/screen-stories-support";
+import { at320, dark, ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -67,7 +68,7 @@ export const ProjectDetail: Story = {
           transactions: [
             {
               id: "t1",
-              description: "חומרי בניין השרון",
+              description: "חומרי בניין לדוגמה",
               doc_date: "2026-09-14",
               amount_net: -8_500_000n,
               direction: "expense",
@@ -156,6 +157,48 @@ export const ProjectMixedCurrency: Story = {
     </StoryRoute>
   ),
 };
+
+// FLOW-339: a profit in shekels and a loss in dollars; the band's label names both.
+export const ProjectMixedSigns: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/mix2" tabs>
+      <ExampleBar />
+      <ProjectDetailScreen
+        sample={{
+          id: "mix2",
+          name: "נמל לדוגמה",
+          status: "active",
+          state_label: "פעיל",
+          budget_agorot: null,
+          income_agorot: 100_000n,
+          direct_agorot: 40_000n,
+          shared_agorot: 0n,
+          profit_agorot: 60_000n,
+          by_currency: [
+            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, profit_minor: 60_000n },
+            { currency: "USD", income_minor: 50_000n, direct_minor: 175_000n, shared_minor: 0n, profit_minor: -125_000n },
+          ],
+          categories_by_currency: [
+            { currency: "ILS", id: "i1", name: "חומרים", amount_minor: 40_000n },
+            { currency: "USD", id: "u1", name: "הובלה", amount_minor: 175_000n },
+          ],
+          categories: [],
+          pending_count: 0,
+          transactions: [
+            { id: "ms1", description: "תשלום לקוח לדוגמה", doc_date: "2026-10-04", amount_net: 100_000n, direction: "income", category: null },
+            { id: "ms2", description: "ספק חומרים לדוגמה", doc_date: "2026-09-22", amount_net: -40_000n, direction: "expense", category: "חומרים" },
+            { id: "ms3", description: "לקוח חו״ל לדוגמה", doc_date: "2026-09-12", amount_net: 50_000n, currency: "USD", direction: "income", category: null },
+            { id: "ms4", description: "חברת הובלה לדוגמה", doc_date: "2026-08-28", amount_net: -175_000n, currency: "USD", direction: "expense", category: "הובלה" },
+          ],
+        }}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectMixedSignsDark: Story = { ...ProjectMixedSigns, globals: { theme: "dark" } };
+export const ProjectMixedSigns320: Story = { ...ProjectMixedSigns, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 const periodProject: NonNullable<ProjectDetailData> = {
   id: "p-a",
@@ -266,6 +309,48 @@ export const ProjectOverviewDark: Story = { ...ProjectOverview, name: "Project, 
 export const ProjectOverview320: Story = { ...ProjectOverview, name: "Project, short page, 320", ...at320 };
 export const ProjectOverviewDark320: Story = { ...ProjectOverview, name: "Project, short page, dark, 320", ...dark, ...at320 };
 
+/** FLOW-334: the ⋯ menu, the overhead switch then "סיום הפרויקט" as a row. */
+export const ProjectMenu: Story = {
+  name: "Project, ⋯ menu",
+  render: ProjectOverview.render,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
+  },
+};
+export const ProjectMenuDark: Story = { ...ProjectMenu, name: "Project, ⋯ menu, dark", ...dark };
+export const ProjectMenu320: Story = { ...ProjectMenu, name: "Project, ⋯ menu, 320", ...at320 };
+
+/** A finished project offers "החזרה לפעיל" in the same place. */
+export const ProjectMenuFinished: Story = {
+  name: "Project, ⋯ menu, finished",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={{ ...overviewProject, status: "finished", state_label: "הסתיים" }}
+        sampleInvestment={filledInvestment}
+        sectionTo={sectionTo}
+      />
+    </StoryRoute>
+  ),
+  play: ProjectMenu.play,
+};
+
+/** The neutral confirm: the button repeats the action, with no red and no bin. */
+export const ProjectFinishConfirm: Story = {
+  name: "Project, finish confirm",
+  render: ProjectOverview.render,
+  play: async (context) => {
+    await ProjectMenu.play?.(context);
+    const body = storyBody(context.canvasElement);
+    await userEvent.click(await body.findByRole("button", { name: "סיום הפרויקט" }));
+    await body.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+  },
+};
+export const ProjectFinishConfirmDark: Story = { ...ProjectFinishConfirm, name: "Project, finish confirm, dark", ...dark };
+export const ProjectFinishConfirm320: Story = { ...ProjectFinishConfirm, name: "Project, finish confirm, 320", ...at320 };
+
 export const ProjectExpenses: Story = {
   name: "Project, expenses section",
   render: () => (
@@ -276,6 +361,23 @@ export const ProjectExpenses: Story = {
 };
 export const ProjectExpensesDark: Story = { ...ProjectExpenses, name: "Project, expenses section, dark", ...dark };
 export const ProjectExpenses320: Story = { ...ProjectExpenses, name: "Project, expenses section, 320", ...at320 };
+
+/** FLOW-334: the waiting row reads as Home's review row (inbox icon, tint), not a category. */
+export const ProjectExpensesWaiting: Story = {
+  name: "Project, expenses section, waiting row",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/expenses" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={{ ...overviewProject, pending_count: 2, pending_agorot: 1_250_000n }}
+        section="expenses"
+        sectionTo={sectionTo}
+      />
+    </StoryRoute>
+  ),
+};
+export const ProjectExpensesWaitingDark: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, dark", ...dark };
+export const ProjectExpensesWaiting320: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, 320", ...at320 };
 
 export const ProjectTransactionsSection: Story = {
   name: "Project, transactions section",
