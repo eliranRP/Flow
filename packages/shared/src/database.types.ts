@@ -1261,6 +1261,12 @@ isOneToOne: false
 "mcp_review_anomalies":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"mcp_set_cash_basis":
+{ Args: { "p_basis": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_set_category_cash":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_in_cash": boolean }; Returns: Json
+                           },
 "mcp_set_category_group":
 { Args: { "p_category_id": string,"p_group_name": string,"p_idempotency_key": string }; Returns: Json
                            },
@@ -1288,8 +1294,14 @@ isOneToOne: false
 "mcp_set_jev_mode":
 { Args: { "p_enabled": boolean,"p_idempotency_key": string,"p_mode"?: string,"p_threshold"?: number }; Returns: Json
                            },
+"mcp_set_line_cash":
+{ Args: { "p_idempotency_key": string,"p_in_cash": boolean,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_set_line_pnl":
 { Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_set_lines_cash":
+{ Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
 "mcp_set_lines_pnl":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
