@@ -1,0 +1,1 @@
+Connecting SUMIT or Mercury sends "ייבוא מ" with the connect call, and the connect function saves it right after storing the key, so the first sync after connecting already skips lines before the date (FLOW-505 follow-up). If only the date fails, the sheet still says it is connected and that the date was not saved.
