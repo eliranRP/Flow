@@ -463,7 +463,7 @@
   text-align: center;
 }
 
-.ui-setup-icon span {
+.ui-setup-icon > .ui-setup-cap {
   max-inline-size: 100%;
   overflow-wrap: anywhere;
 }

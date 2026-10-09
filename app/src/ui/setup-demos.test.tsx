@@ -86,6 +86,7 @@ describe("demo timeline", () => {
     expect(source).toMatch(/<Skeleton [^>]*\bstill\b/);
     expect(css).not.toContain(".ui-skeleton-bar");
     expect(css).not.toContain(".ui-app-icon");
+    expect(css).not.toMatch(/\.ui-setup-icon span\b/);
     expect(css).not.toMatch(/@keyframes/);
     expect(css).not.toMatch(/\btransition\s*:/);
     expect(source.includes("flow.app")).toBe(false);
