@@ -295,7 +295,7 @@
   text-underline-offset: 2px;
 }
 
-.ui-text-link:focus-visible {
+.ui-text-link:is(:focus-visible, [data-focus-ring]:focus) {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
