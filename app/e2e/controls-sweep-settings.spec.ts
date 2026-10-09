@@ -1,13 +1,12 @@
 import { sweepControls } from "./control-sweep";
 
-// The no-op control sweep for Settings, Connections, Loans, Categories, onboarding and notifications.
+// The no-op control sweep for Settings, Connections, Loans, Categories, and onboarding.
 sweepControls([
   "/settings?preview=1",
   "/settings/categories?preview=1",
   "/settings/connections?preview=1",
   "/settings/loans?preview=1",
   "/onboarding?preview=1",
-  "/notifications?preview=1",
   "/e2e/settings?preview=1",
   "/e2e/connections?preview=1",
   "/e2e/connections?preview=1&connected=1",

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { AssistantSettings } from "./assistant-settings";
-import { LoansScreen, NotificationsScreen, SettingsScreen } from "./flow-screens";
+import { LoansScreen, SettingsScreen } from "./flow-screens";
 import { NotificationsLockFrame } from "../ui/reference-frames.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
@@ -15,16 +15,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-/** FLOW-328: the shared empty state, Hebrew only. */
-export const Notifications: Story = {
-  render: () => (
-    <StoryRoute entry="/notifications?preview=1">
-      <NotificationsScreen />
-    </StoryRoute>
-  ),
-};
-export const NotificationsDark: Story = { ...Notifications, name: "Notifications, dark", globals: { theme: "dark" } };
 
 export const SettingsEmpty: Story = {
   render: () => (

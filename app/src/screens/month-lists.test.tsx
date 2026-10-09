@@ -247,4 +247,14 @@ describe("category drill-down months", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, pageSize: undefined }} backTo="/projects/a" />);
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");
   });
+
+  it("puts the lines' total in the subtitle, and the count once every row is shown (FLOW-334)", () => {
+    const { unmount } = wrap(<ProjectCategoryScreen sample={sample} backTo="/projects/a" />);
+    const subtitle = () => document.querySelector("header p.t-label")?.textContent ?? "";
+    expect(subtitle()).toContain("₪");
+    expect(subtitle()).not.toMatch(/תנועות|תנועה אחת/);
+    unmount();
+    wrap(<ProjectCategoryScreen sample={{ ...sample, pageSize: undefined }} backTo="/projects/a" />);
+    expect(subtitle()).toMatch(new RegExp(`· ${String(sample.rows.length)} תנועות$`));
+  });
 });
