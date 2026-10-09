@@ -16,13 +16,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
+| Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
 | UI lane 1 | FLOW-339: the band label with a profit in one currency and a loss in another, and the project overhead switch's label (FLOW-340 C merged #338) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-325 §10 option A (the פיצול לפי קטגוריות link in שינוי: `ui/change-picker.tsx`, `ui/change-sheet.tsx`, `screens/change-form.tsx`, `approve-review.ts`) + FLOW-347 שויכו היום heads (`ui/month-list.tsx`, `css/11-month-lists.css` `.ui-group-*`) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Mercury sync follow-ups: void first line count, relabel suggestion (FLOW-414 merged #361) | Next small ready item from the lane manager |
+| Backlog bug fixes | FLOW-507/506 write-gate tests: inner gates after a role change, Settings switches, setup first step hold (Mercury follow-ups merged #365) | FLOW-506 setup business step and install rows unify, after #358 |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -124,6 +125,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
+| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -619,7 +621,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
 - [x] From the #300 review: `reopen_review` does not drop the `missing_project` row a category pick queued (as `undo_reassign` now does; no path reaches it today), and a category saved without resolving leaves the row labelled `missing_category` for MCP `list_review`'s reason filter. (Done in #308, migration 20261013030000: `reopen_review` deletes the queued row as `undo_reassign` does; a category set with `p_resolve false` in `set_transaction_category` or `resolve_review` relabels the open income row to `missing_project` when the line still needs a project, sync relabels rows left from before.)
-- [ ] A connector invoice and its receipt both land in review. (Ready for a lane: owner picked option A, 2026-10-09: one card per payment. The receipt joins its invoice, the card shows "✓ שולם · קבלה dd/mm" under the amount, and one approval covers both; the receipt never gets a card of its own. Mockup in the project's mockups/plan-first/flow-309-pair/a.png.)
+- [ ] A connector invoice and its receipt both land in review. (Server: in-progress (dev lane 3, #350, decision [0165](../decisions/0165-invoice-receipt-pairing.md)): the receipt waits with its invoice, one approval or change files both, undo takes both back; `list_review` items carry `receipts`, `paid`, `paid_on`. Left for UI lane 2: the "✓ שולם · קבלה dd/mm" line on the card from `paid` and `paid_on`. Owner's pick: owner picked option A, 2026-10-09: one card per payment. The receipt joins its invoice, the card shows "✓ שולם · קבלה dd/mm" under the amount, and one approval covers both; the receipt never gets a card of its own. Mockup in the project's mockups/plan-first/flow-309-pair/a.png.)
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
 - [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
@@ -949,6 +951,17 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Sample data: one supplier name in the Transaction step and ReviewCard stories, and three in the שויכו היום dev fixture, read like plausible real local businesses. Swap them for clearly invented names (the deny list on main catches only known names).
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
 
+<a id="flow-351"></a>
+### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
+- [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
+- [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
+- [ ] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
+- [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
+- [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
+- **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
 ## Projects and reports
 
 <a id="flow-401"></a>
@@ -1105,7 +1118,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
 - [x] Key the resume flag by user id; move render-phase module writes to `useLayoutEffect`; a test for the API-key clear. (Resume is once per user per page load; the landing route is noted in a layout effect; `sumit-step.test.tsx` checks the key is empty after a connect and the company number stays.)
-- [ ] Tests for the Settings write block; a hold-writes check on the first step's submit.
+- [x] (Backlog bug fixes, 2026-10-09: the business step's submit returns while writes are held, and `viewer-role-flip.test.tsx` covers it for viewer and unknown with an owner control; the Settings switches lock when the role turns viewer, in the same file, beside `viewer-writes.test.tsx`.) Tests for the Settings write block; a hold-writes check on the first step's submit.
 - [ ] Spec drift: demo timing, the SUMIT sheet sizes at 320, hiding vs focusing שוב during a replay; step 3 scrolls a little longer than designed.
 - [x] (Backlog bug fixes, 2026-10-09: removed, with their 320 overrides) Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`).
 - [ ] The banner's tone-bad icon; note inset vs frame.
@@ -1119,7 +1132,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [x] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: keep it.)
-- [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
+- [x] (Backlog bug fixes, 2026-10-09: `viewer-role-flip.test.tsx` opens each sheet or form as the owner, turns the role to viewer or unknown, then submits: the new project form, SUMIT and Mercury connect, SUMIT refresh, ניתוק and its question, the category menu (מחוץ לרווח והפסד, נספרת בשיפוץ) and new category, and the + sheet, which leaves for Home. Each case has an owner control that writes, and removing any of these checks fails its case. The category screen had no check inside its sheets; its writes now check the role again. Jev and the overhead switch lock on the change, so a tap reaches no handler.) Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
 <a id="flow-508"></a>
