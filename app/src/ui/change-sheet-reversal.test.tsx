@@ -45,14 +45,14 @@ describe("reversal section in the category picker", () => {
   it("starts closed, opens on tap, and lists the other kind in its own radiogroup", async () => {
     render(<Harness />);
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
-    const toggle = within(dialog).getByRole("button", { name: "הכנסה שהוחזרה" });
+    const toggle = within(dialog).getByRole("button", { name: "החזר ללקוח" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(within(dialog).queryByRole("radio", { name: "שכירות" })).not.toBeInTheDocument();
     toggle.focus();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(toggle).toHaveFocus();
-    const group = within(dialog).getByRole("radiogroup", { name: "הכנסה שהוחזרה" });
+    const group = within(dialog).getByRole("radiogroup", { name: "החזר ללקוח" });
     expect(group).toHaveAccessibleDescription("למשל שכירות שחזרה. מקטין את ההכנסות.");
     expect(within(group).getByRole("radio", { name: "שכירות" })).toBeInTheDocument();
     expect(within(dialog).getByRole("radiogroup", { name: "קטגוריה" })).not.toContainElement(within(group).getByRole("radio", { name: "שכירות" }));
@@ -61,15 +61,15 @@ describe("reversal section in the category picker", () => {
   it("stays open with a heading when the current category is a reversal", async () => {
     render(<Harness start="i1" />);
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
-    expect(within(dialog).queryByRole("button", { name: "הכנסה שהוחזרה" })).not.toBeInTheDocument();
-    expect(within(dialog).getByText("הכנסה שהוחזרה")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "החזר ללקוח" })).not.toBeInTheDocument();
+    expect(within(dialog).getByText("החזר ללקוח")).toBeInTheDocument();
     expect(within(dialog).getByRole("radio", { name: "שכירות" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("shows a search match from the other kind under its heading", async () => {
     render(<Harness query="שכיר" />);
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
-    expect(within(dialog).getByRole("radiogroup", { name: "הכנסה שהוחזרה" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("radiogroup", { name: "החזר ללקוח" })).toBeInTheDocument();
     expect(within(dialog).getByRole("radio", { name: "שכירות" })).toBeInTheDocument();
     expect(within(dialog).queryByText("לא נמצאה קטגוריה בשם הזה")).not.toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe("reversal section in the category picker", () => {
   it("shows no section when the other kind has nothing to offer", async () => {
     render(<Harness reversals={[]} />);
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
-    expect(within(dialog).queryByText("הכנסה שהוחזרה")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("החזר ללקוח")).not.toBeInTheDocument();
   });
 });
 

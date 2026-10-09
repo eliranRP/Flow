@@ -39,15 +39,15 @@ export const INVESTMENT_TITLE = "השקעה";
 /** The card ignores the screen's period and basis (0143). */
 export const INVESTMENT_SCOPE = "מתחילת הפרויקט";
 export const INVESTMENT_LABELS: Record<InvestmentField, string> = {
-  purchase: "מחיר קנייה",
+  purchase: "מחיר רכישה",
   arv: "שווי אחרי שיפוץ",
   value: "שווי היום",
 };
 export const REHAB_LABEL = "שיפוץ עד היום";
 export const LOANS_LABEL = "יתרת הלוואות";
-export const FORCED_LABEL = "הון מאולץ";
-export const CURRENT_LABEL = "הון נוכחי";
-export const FORCED_FORMULA = "שווי אחרי שיפוץ פחות קנייה ושיפוץ";
+export const FORCED_LABEL = "השבחה צפויה";
+export const CURRENT_LABEL = "הון עצמי בנכס";
+export const FORCED_FORMULA = "שווי אחרי שיפוץ פחות רכישה ושיפוץ";
 export const CURRENT_FORMULA = "שווי היום פחות הלוואות";
 export const INVESTMENT_ERROR = "לא הצלחנו לטעון.";
 

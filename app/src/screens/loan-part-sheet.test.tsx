@@ -12,14 +12,14 @@ describe("LoanPartSheet", () => {
       <LoanPartSheet part={part} loan={loan} categories={SAMPLE_LOAN_CATEGORIES} open onOpenChange={() => undefined} onSave={() => Promise.resolve(null)} />,
     );
     const row = screen.getByRole("radio", { name: /עלויות סגירה/ });
-    expect(row).toHaveAccessibleDescription(/מחוץ לרווח והפסד/);
-    expect(screen.getByRole("radio", { name: /הוצאות משרד/ })).not.toHaveAccessibleDescription(/מחוץ לרווח והפסד/);
+    expect(row).toHaveAccessibleDescription(/לא נספר ברווח/);
+    expect(screen.getByRole("radio", { name: /הוצאות משרד/ })).not.toHaveAccessibleDescription(/לא נספר ברווח/);
   });
 
   it("does not mark principal's categories, which are all kept out", () => {
     render(
       <LoanPartSheet part="principal" loan={loan} categories={SAMPLE_LOAN_CATEGORIES} open onOpenChange={() => undefined} onSave={() => Promise.resolve(null)} />,
     );
-    expect(screen.queryByText("מחוץ לרווח והפסד")).not.toBeInTheDocument();
+    expect(screen.queryByText("לא נספר ברווח")).not.toBeInTheDocument();
   });
 });

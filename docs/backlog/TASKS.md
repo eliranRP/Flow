@@ -17,13 +17,13 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
-| UI lane 1 | FLOW-106 screens: the loan match sheet says what one tap writes (schedule row, catch-up installments, demand loans), then the split editor (FLOW-339 merged #362) | The kind field on the new-loan form; company "לפי חודש" |
+| UI lane 1 | FLOW-106 screens: the split editor "חלוקת התשלום" (match sheet merged #374) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-309 pairing on the review card (option A: "✓ שולם · קבלה dd/mm" under the amount, on #350's `receipts`/`paid`/`paid_on`) + long supplier names (overflow-wrap on the review supplier line, the project picker, unpaid hints, the add-sheet hint) | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-406 screens (owner's drill-in, mockups cat-b, cat-b-2, proj-b, proj-b-2): Settings → Categories, where a parent opens its sub-categories, and the project page's parent roll-ups on #363's reads | The project groups screens (proj-b) once server 2 lands; the picker and setup |
-| UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-506 one company form and one install steps list (write-gate tests merged #366) | Next small ready item from the lane manager |
+| Backlog bug fixes | FLOW-502 setup step 5 offers the evening reminder once | Next small ready item from the lane manager |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -125,7 +125,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
-| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
+| 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
+| 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -360,7 +361,8 @@ Everything else follows by area, roughly in priority order inside each area.
   - [x] The loan page `/settings/loans/:id`: balance and status, סוג, ריבית and שינויי ריבית, פרויקט (moved from the list), מצב with the close date from the last payment, קטגוריות לחלקים.
   - [x] The list: open loans, then paid-off and closed under a collapsed "נסגרו (N)"; a row opens the loan page; the new-loan toast has פתיחה.
   - [x] (UI lane 1, 2026-10-09) The match sheet says what one tap writes on each loan: "לפי הלוח · $x", "N תשלומים לפי הלוח · $x" when the line equals 2 to 12 unpaid rows to the cent (that tap writes them together), and demand loans with "ריבית צבורה $x · השאר לקרן". A loan that cannot take the line shows off with its reason (closed or paid off before the line's date, before a demand loan's start, a later demand payment attached, above the balance). The match already saves through `save_loan_split`.
-  - [ ] The split editor "חלוקת התשלום" (fees, N installments, exact parts), opened from "חלוקה אחרת" under the match sheet and from "עריכת החלוקה" on a matched line.
+  - [x] (UI lane 1, 2026-10-09) The split editor "חלוקת התשלום", opened from "חלוקה אחרת" under the match sheet: by the schedule over 1 to 12 installments with fees off the top (demand loans: the accrued interest), or the lender's exact parts; fees name their category and can keep it on the loan.
+  - [ ] Open the same editor from "עריכת החלוקה" on a matched line.
   - [ ] The kind field on the new-loan form (the kind is set on the loan page for now).
   - [ ] The locked line in Categories for a category a loan uses (categories-screen is in #259).
 
@@ -379,7 +381,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
-- [ ] Backfill existing loan lines into `loans` / `loan_splits`. (Checked 2026-10-09, dev lane 1: not a plain migration. A line has no link to a loan except a `loan_splits` row, so a backfill must pick the loan for each line by amount, date and currency, and split a payment that differs from the schedule; both need judgment per line. Left for the owner or the Flow MCP agent through `attach_loan_payment` or the app's loan match, line by line; no migration. Owner, 2026-10-09: the Flow MCP agent decides and runs it.)
+- [x] Backfill existing loan lines into `loans` / `loan_splits`. (Handed to the Flow MCP agent, 2026-10-09: no code. Checked 2026-10-09, dev lane 1: not a plain migration. A line has no link to a loan except a `loan_splits` row, so a backfill must pick the loan for each line by amount, date and currency, and split a payment that differs from the schedule; both need judgment per line. Left for the owner or the Flow MCP agent through `attach_loan_payment` or the app's loan match, line by line; no migration. Owner, 2026-10-09: the Flow MCP agent decides and runs it.)
 - [x] Server follow-up from #252: `save_loan_split` takes `category_id` only on the fees part, so an edit of a split, or the undo of an unmatch, files interest, escrow and principal under the loan's categories or the keyed defaults again. Let it accept `category_id` on every part (checked by `private.loan_part_category_ok`, decision 0128), so a part the owner moved to another fitting category keeps it. (Migration `20261013000000`; the app sends each stored part's category on an edit and on the undo of an unmatch.)
 - [x] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow. (Obsolete: the default parts resolve by `categories.loan_part`, not by name or visibility.)
 - [x] Date formatting for years below 1000. (Four digits, and real leap years for years 0 to 99.)
@@ -446,7 +448,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A second hide returns the generic refusal; if the app unhides a category the MCP hid, the MCP can neither re-hide nor undo. (A re-hide keeps the one open undo; undo of a hide the app reversed succeeds: migration `20261010130000`.)
 - [x] TOOLS.md conflict wording, and document the `sync_bank` errors.
 - [x] `mercury-sync` `deno check` doesn't resolve imports (also on main). (It needs the function's own `--config`; `scripts/check-edge-functions.sh` checks every function that way in local CI and CI, and found a null check in `sumit-connect`.)
-- [ ] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token. (Needs a live MCP token for the sandbox company Flow QA, so it belongs with the Production QA thread's deploy check.)
+- [x] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token. (Production QA, 2026-10-09: `sync_bank` with the Flow QA key, then `get_sync_status`, passed on live 23d1fd5 (done in 17 s, no 401) and runs in the hourly deploy check; flow-mcp's session-less JWT takes the same owner fallback, so a break shows as `unauthorized`. Needs a live MCP token for the sandbox company Flow QA, so it belongs with the Production QA thread's deploy check.)
 - [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
 - [x] A race test (dblink pgTAP or e2e) for the undo row lock. (`mcp_undo_race.test.sql`.)
 - [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
@@ -956,14 +958,24 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-351"></a>
 ### FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 in #372; items 1 and 2 follow in a second PR once #367 lands) · **Depends on:** —
 - **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
 - [ ] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
 - [ ] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).
-- [ ] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
-- [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
-- [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
+- [x] Search chips: the row fades only its end, so once scrolled, הוצאות is cut hard at the start edge with no cue that תקופה is off screen. Fade the start edge too when the row is scrolled (chip-scroller.tsx, 31-chip-scroller.css).
+- [x] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
+- [x] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
+<a id="flow-352"></a>
+### FLOW-352 · Phone polish after the October 9 evening deploy (cycle 11)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** item 1 after #371, item 4 after #372 (same files)
+- **Source:** cycle 11 phone review of deploy 23d1fd5, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-11/shots/`.
+- [ ] Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
+- [ ] Picker sheets: `.ui-radio-desc` uses the label style (weight 500, secondary grey), so the line under an option reads as heavy as the option name. Use the row hint style: weight 400, `--color-text-muted` (css/12-split.css:163-171). Shots of 3-4 pickers before and after.
+- [x] (UI lane 1, with the FLOW-106 split editor PR) Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
+- [ ] Kept-out rows fade at 50% opacity, which drops the "מחוץ לרווח" line to about 2.1:1 and the name to 3.4:1 in light mode. Fade the icon, name and amount to about 0.6 and keep the hint at full muted grey (about 5.8:1) (css/02-fields-sheets.css:197-199). Design lead's call within the owner's pick C; the rows still read as faded.
+- **Acceptance:** shots at 320 and 390, light and dark; design lead sign-off.
 
 <a id="flow-346"></a>
 ### FLOW-346 · Split between projects works like the split by categories, in exact amounts
@@ -1025,8 +1037,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.
-  - [ ] Settings → Categories drill-in (cat-b, cat-b-2), #378.
-  - [ ] Project page: sub-categories fold under their parent (list_categories' parent_id), #378.
+  - [x] Settings → Categories drill-in (cat-b, cat-b-2), #378 (owner OK on the real-app shots, 2026-10-09).
+  - [x] Project page: sub-categories fold under their parent (list_categories' parent_id), #378.
   - [ ] Project groups (proj-b, proj-b-2), the grouped picker and the starter pick, after servers 2 and 3.
 
 <a id="flow-407"></a>
@@ -1097,7 +1109,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] App (UI lane 4, #340): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`.
 - [x] App follow-up (Production QA, 2026-10-09; UI lane 4, #358): the "הוספה למסך הבית" screen showed Safari's steps in every iPhone browser. Chrome (CriOS) now shows its share button in the address bar, Firefox (FxiOS) its ☰ menu, any other iPhone browser its share button; Safari and iPad keep •••. Read from the user agent (`iosBrowser`).
 - [x] Server part 2 (PR #343): תנועה חדשה within 5 minutes of a sync bringing bank or SUMIT lines (`flow-push-new`), and סיכום שבועי on Sunday at 08:00 Israel time (`flow-push-weekly`), with counts only and no amounts (the owner's pick, 2026-10-09).
-- [ ] Setup step 5 offers it once it ships.
+- [x] Setup step 5 offers it once it ships. (Backlog bug fixes: the same card under the install steps, sharing the review card's asked-once answer; an iPhone tab is not asked there, since the step already teaches the Home Screen.)
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow

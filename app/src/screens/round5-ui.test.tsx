@@ -186,7 +186,7 @@ describe("transaction status chips", () => {
   it("shows a queued expense as waiting and an unpaid invoice as uncollected", () => {
     const { unmount } = renderTxn({ ...expense, review_status: "open", paid: false, open_gross_agorot: null });
     expect(screen.getByText("ממתין לאישור")).toBeInTheDocument();
-    expect(screen.queryByText("טרם נגבה")).not.toBeInTheDocument();
+    expect(screen.queryByText("לגבייה")).not.toBeInTheDocument();
     expect(screen.queryByText("שולם")).not.toBeInTheDocument();
     unmount();
 
@@ -200,7 +200,7 @@ describe("transaction status chips", () => {
       supplier_name: null,
     });
     expect(screen.getByText("מאושר")).toBeInTheDocument();
-    expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
+    expect(screen.getByText("לגבייה")).toBeInTheDocument();
   });
 
   it("puts the VAT on the amount's line with no minus, and no empty invoice row (FLOW-339)", () => {
@@ -260,7 +260,7 @@ describe("transaction status chips", () => {
     renderTxn({ ...expense, review_status: null, paid: null, open_gross_agorot: null });
     expect(screen.queryByText("ממתין לאישור")).not.toBeInTheDocument();
     expect(screen.queryByText("מאושר")).not.toBeInTheDocument();
-    expect(screen.queryByText("טרם נגבה")).not.toBeInTheDocument();
+    expect(screen.queryByText("לגבייה")).not.toBeInTheDocument();
     expect(screen.queryByText("שולם")).not.toBeInTheDocument();
   });
 });

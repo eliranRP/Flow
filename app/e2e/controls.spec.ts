@@ -197,7 +197,7 @@ test("a preview load error returns to the empty preview", async ({ page }) => {
   await page.goto("/?preview=error");
   await page.getByRole("button", { name: "ניסיון חוזר" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
   await page.goto("/unpaid?preview=error");
   await page.getByRole("button", { name: "ניסיון חוזר" }).click();
   await expect(page).toHaveURL(/\/unpaid\?preview=1$/);
@@ -392,7 +392,7 @@ test("unpaid marks a row paid in one tap, keeps it listed, and clears the mark",
   await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
   // FLOW-335: the total sits on the start (right) side, lined up with the title, not on the end side.
   const totalBox = await page.locator(".ui-unpaid-totals bdi").first().boundingBox();
-  const titleBox = await page.getByRole("heading", { name: "חשבוניות שלא שולמו" }).boundingBox();
+  const titleBox = await page.getByRole("heading", { name: "חשבוניות פתוחות" }).boundingBox();
   expect(Math.abs((totalBox?.x ?? 0) + (totalBox?.width ?? 0) - ((titleBox?.x ?? 0) + (titleBox?.width ?? 0)))).toBeLessThan(4);
   await expect(page.getByRole("button", { name: /רענון מ־SUMIT/ })).toHaveCount(0);
   await page.getByRole("button", { name: "סימון כשולם" }).click();
@@ -532,7 +532,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
-  const overhead = page.getByRole("switch", { name: "רווח אחרי כלליות" });
+  const overhead = page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   await expect(page.getByRole("button", { name: "התנתקות" })).toHaveCount(0);
@@ -553,7 +553,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
-  await expect(page.getByRole("switch", { name: "רווח אחרי כלליות" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "הלוואות" })).toHaveCount(0);
   await page.goto("/e2e/connections?preview=1&nocompany=1");
   const sumit = page.getByRole("button", { name: "SUMIT" });

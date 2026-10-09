@@ -8,6 +8,8 @@ import { Notice } from "../ui/banner";
 import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
 import { InstallSteps } from "../ui/install-screen";
+import type { NotificationPrefs, PushSupport } from "../push";
+import { ReviewPushPrompt } from "../screens/review-push-prompt";
 import { List, ListRow } from "../ui/list-row";
 import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
@@ -311,12 +313,15 @@ export function StepInstall({
   onSkip,
   onFinish,
   initialMode,
+  pushSample,
 }: {
   onBack?: () => void;
   onSkip: () => void;
   onFinish: (kind: "ios" | "install") => void;
   /** Stories pass a device. Live reads the browser. */
   initialMode?: InstallMode;
+  /** Stories pass the reminder card's answer and push support. Live reads them. */
+  pushSample?: { prefs: NotificationPrefs; support: PushSupport };
 }) {
   const [mode, setMode] = useState<InstallMode>(() => initialMode ?? detectInstallMode());
   const onFinishRef = useRef(onFinish);
@@ -370,6 +375,18 @@ export function StepInstall({
     >
       <p className="sr-only">הכתובת בספארי היא <bdi dir="ltr">{host}</bdi>.</p>
       <InstallSteps mode={prompt && !standalone ? "android-prompt" : mode} className="ui-setup-steps" />
+      {/* FLOW-502: the review card's evening reminder, asked once across both places. */}
+      <ReviewPushPrompt
+        sample={pushSample?.prefs}
+        support={pushSample?.support}
+        focusAfter={focusSetupAction}
+        iphoneTab="hide"
+      />
     </SetupStep>
   );
+}
+
+/** The step's own button (סיום or התקנה) takes focus when the reminder card closes. */
+function focusSetupAction(): void {
+  document.querySelector<HTMLElement>(".ui-setup-cta button")?.focus({ preventScroll: true });
 }

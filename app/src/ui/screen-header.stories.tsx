@@ -17,7 +17,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = { args: { title: "עזרה", subtitle: "לעזרה בכניסה כותבים לנו." } };
 export const TitleOnly: Story = { args: { title: "הגדרות" } };
-export const WithBack: Story = { args: { title: "חשבוניות שלא שולמו", backTo: "/" } };
+export const WithBack: Story = { args: { title: "חשבוניות פתוחות", backTo: "/" } };
 export const LongHebrew: Story = { args: { title: longHebrew, subtitle: longHebrew, backTo: "/" } };
 /** FLOW-334 H2 (decision 0156): the kicker is Back's label, "‹ הגדרות", on its own bar above the title. */
 export const WithBackAndKicker: Story = { args: { title: "קטגוריות", kicker: "הגדרות", backTo: "/settings" } };

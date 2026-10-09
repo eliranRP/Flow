@@ -1,12 +1,13 @@
 /* FLOW-334 H2 (decision 0156): a labelled Back, "‹ הגדרות", in place of the kicker. The arrow sits
-   where the icon Back's arrow sits; the label is cut at about 16 characters. */
+   where the icon Back's arrow sits, its point on the title's start edge (FLOW-352: the glyph's own
+   8px inset hangs past the gutter too); the label is cut at about 16 characters. */
 .ui-back-labelled {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   min-inline-size: 0;
   min-block-size: var(--touch-min);
-  margin-inline-start: calc((var(--touch-min) - 24px) / -2);
+  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
   padding-block: 0;
   padding-inline: calc((var(--touch-min) - 24px) / 2) var(--space-3);
   border: 0;

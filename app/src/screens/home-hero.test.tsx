@@ -51,7 +51,7 @@ describe("Home hero", () => {
     renderHome(books());
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.queryByText(/שלום/)).not.toBeInTheDocument();
-    const label = screen.getByText("רווח נקי החודש");
+    const label = screen.getByText("רווח החודש");
     expect(label).toHaveClass("ui-band-label");
     const style = getComputedStyle(label);
     expect(style.paddingInlineStart === "0px" || style.paddingInlineStart === "0").toBe(true);
@@ -59,8 +59,8 @@ describe("Home hero", () => {
     expect(style.textAlign === "start" || style.textAlign === "right").toBe(true);
     expect(screen.getByRole("heading", { name: "₪39,164" })).toBeInTheDocument();
     expect(screen.getByText(heroExplanation())).toBeInTheDocument();
-    const income = screen.getByText("נכנס");
-    const spent = screen.getByText("יצא");
+    const income = screen.getByText("הכנסות");
+    const spent = screen.getByText("הוצאות");
     expect(income.closest(".ui-band")).toBeNull();
     expect(spent.closest(".ui-band")).toBeNull();
     expect(document.querySelector(".ui-band .ui-band-figures")).toBeNull();
@@ -131,7 +131,7 @@ describe("Home hero", () => {
     }));
     expect(screen.getByText("₪600")).toBeInTheDocument();
     expect(screen.getByText("$1,500")).toBeInTheDocument();
-    expect(screen.getByText("רווח נקי החודש")).toBeInTheDocument();
+    expect(screen.getByText("רווח החודש")).toBeInTheDocument();
     expect(screen.queryByText("מחודש שעבר")).not.toBeInTheDocument();
   });
 
@@ -180,28 +180,28 @@ describe("Home hero", () => {
       ],
     }));
     expect(screen.getByText(`רווח והפסד ${periodPhrase(thisMonth())}`)).toBeInTheDocument();
-    expect(screen.queryByText(`רווח נקי ${periodPhrase(thisMonth())}`)).not.toBeInTheDocument();
+    expect(screen.queryByText(`רווח ${periodPhrase(thisMonth())}`)).not.toBeInTheDocument();
   });
 });
 
 describe("Home flow rows (FLOW-301)", () => {
-  it("opens the breakdown from נכנס and יצא, naming the period and amount", () => {
+  it("opens the breakdown from הכנסות and הוצאות, naming the period and amount", () => {
     renderHome(books());
-    const out = screen.getByRole("link", { name: "יצא החודש ₪432,836 – פירוט" });
+    const out = screen.getByRole("link", { name: "הוצאות החודש ₪432,836 – פירוט" });
     expect(out).toHaveAttribute("href", "/flow/expense");
-    expect(screen.getByRole("link", { name: /^נכנס החודש/ })).toHaveAttribute("href", "/flow/income");
+    expect(screen.getByRole("link", { name: /^הכנסות החודש/ })).toHaveAttribute("href", "/flow/income");
   });
 
-  it("reads a cost under יצא with no minus, since the label says the money went out (FLOW-334 H3)", () => {
+  it("reads a cost under הוצאות with no minus, since the label says the money went out (FLOW-334 H3)", () => {
     renderHome(books());
-    const out = screen.getByRole("link", { name: "יצא החודש ₪432,836 – פירוט" });
+    const out = screen.getByRole("link", { name: "הוצאות החודש ₪432,836 – פירוט" });
     expect(out).toHaveTextContent("₪432,836");
     expect(out).not.toHaveTextContent("−");
   });
 
-  it("keeps the minus under יצא only when refunds beat costs (FLOW-334 H3)", () => {
+  it("keeps the minus under הוצאות only when refunds beat costs (FLOW-334 H3)", () => {
     renderHome(books({ expense_agorot: -1_250_000n, direct_agorot: -1_250_000n, net_profit_agorot: 48_450_000n }));
-    const out = screen.getByRole("link", { name: "יצא החודש −₪12,500 – פירוט" });
+    const out = screen.getByRole("link", { name: "הוצאות החודש −₪12,500 – פירוט" });
     expect(out).toHaveTextContent("−₪12,500");
   });
 });

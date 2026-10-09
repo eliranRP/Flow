@@ -4,7 +4,7 @@ import { HELP_EMAIL } from "../src/config";
 test("preview home is the first-run empty state", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");
-  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
   await expect(page.getByText("שלום", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Flow", { exact: true })).toHaveCount(0);
   await expect(page.getByText("עוד אין נתונים")).toBeVisible();
@@ -60,13 +60,13 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   if (!reduced) throw new Error("the sheet drawer is missing");
   expect(reduced.animation).toBe("0.001s");
   expect(reduced.transition).toBe("0.001s");
-  await expect(page.locator("h1", { hasText: "כאן יופיע הרווח הנקי של העסק" })).toHaveCount(1);
+  await expect(page.locator("h1", { hasText: "כאן יופיע הרווח של העסק" })).toHaveCount(1);
   // Vaul hides the page behind the sheet from assistive tech. The bar is still on screen.
   await expect(page.locator('nav[aria-label="ניווט ראשי"]')).toBeVisible();
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(1);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
   await expect(page.getByRole("link", { name: "הוספה" })).toBeFocused();
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
   await page.goto("/projects?preview=1");

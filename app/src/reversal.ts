@@ -12,8 +12,8 @@ type Direction = "income" | "expense";
 
 /** The picker section for the other kind ([0103](../../docs/decisions/0103-reversals-across-directions.md)). */
 export const REVERSAL_HEADING: Record<Direction, string> = {
-  expense: "הכנסה שהוחזרה",
-  income: "הוצאה שהוחזרה",
+  expense: "החזר ללקוח",
+  income: "החזר מספק",
 };
 
 export const REVERSAL_HINT: Record<Direction, string> = {

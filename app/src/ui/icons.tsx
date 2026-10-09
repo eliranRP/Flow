@@ -74,6 +74,15 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+/** The stepper's minus (FLOW-106). */
+export function MinusIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2.2} {...props}>
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </Svg>
+  );
+}
+
 export function BackIcon(props: IconProps) {
   return (
     <Svg stroke={2} {...props}>

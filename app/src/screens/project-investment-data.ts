@@ -129,7 +129,7 @@ function leftOutReason(category: RehabCategory | undefined): string | undefined 
   if (category == null) return undefined;
   if (category.rehab === false) return "הוצאה מהשיפוץ בהגדרות";
   if (category.loan_part != null && category.loan_part !== "") return "חלק מתשלום הלוואה";
-  if (category.excluded_from_pnl === true) return "מחוץ לרווח והפסד";
+  if (category.excluded_from_pnl === true) return "לא נספר ברווח";
   return undefined;
 }
 
