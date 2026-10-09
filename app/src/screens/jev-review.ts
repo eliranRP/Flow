@@ -154,7 +154,7 @@ export function withJev<T extends JevRow>(row: T, state: JevReviewState): T & {
 }
 
 /**
- * FLOW-702: the card says "מולא ע״י Jev" with בטל when the auto job's fill still stands on the
+ * FLOW-702: the card says "מולא ע״י Jev" with ביטול when the auto job's fill still stands on the
  * stored row: a field Jev shows holds the value the job wrote. A visual-only suggestion is not a fill.
  */
 export function jevFilledOnCard(row: JevRow, state: JevReviewState): boolean {
@@ -191,7 +191,7 @@ export async function loadJevFills(ids: readonly string[], signal?: AbortSignal)
       if (!Array.isArray(read.data)) throw new Error("jev_prefills");
       for (const row of read.data as Array<{ transaction_id: string; project_id: string | null; category_id: string | null; undone_at: string | null }>) {
         // undo_jev_prefill takes back the newest fill that still stands, so a standing fill wins
-        // over a newer undone one: the line still holds Jev's values and בטל can take them back.
+        // over a newer undone one: the line still holds Jev's values and ביטול can take them back.
         const held = fills.get(row.transaction_id);
         if (held != null && (held.state === "filled" || row.undone_at != null)) continue;
         fills.set(row.transaction_id, {

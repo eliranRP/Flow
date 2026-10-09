@@ -91,7 +91,7 @@ export const SKIPPED_REOPEN_TO_CARD = "לכרטיס";
 export const SKIPPED_REOPEN_FAILED = "לא הצלחנו להחזיר לתור.";
 
 /**
- * FLOW-309, option A: the last block of הצג הכול. Loading and an empty list render nothing, so
+ * FLOW-309, option A: the last block of הצגת הכול. Loading and an empty list render nothing, so
  * nothing above it moves. החזרה לתור calls `reopen_review`, which only reopens a skipped row.
  */
 export function ReviewSkippedSection({
@@ -192,7 +192,7 @@ function focusAfterReopen(nextId: string | null) {
   target?.focus({ preventScroll: true });
 }
 
-/** The link to the skipped cards in הצג הכול. */
+/** The link to the skipped cards in הצגת הכול. */
 export function skippedListPath(listPath: string): string {
   return `${listPath}#${SKIPPED_SECTION_ID}`;
 }
