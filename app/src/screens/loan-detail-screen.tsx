@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactElement, type ReactNode, type Ref } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
@@ -229,6 +229,9 @@ function LoanDetailReady({
   const [deleting, setDeleting] = useState(false);
   const busyClose = useRef(false);
   const returnRef = useRef<HTMLElement | null>(null);
+  // The status opener is the מצב row, or "שינוי" beside the pill once the loan ended (FLOW-356). A
+  // status change swaps one for the other, so the sheet returns focus to whichever is mounted now.
+  const statusRef = useRef<HTMLButtonElement | null>(null);
   const setSheet = useSheetHistory("loan-detail", sheet != null, (next) => {
     if (!next) setSheetState(null);
   }, () => !busyClose.current);
@@ -320,11 +323,11 @@ function LoanDetailReady({
   // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
   const ended = !showsLoanBalance(loan);
 
-  function row(key: string, label: string, value: ReactNode, icon: ReactElement, onOpen: (() => void) | null, hint?: string) {
+  function row(key: string, label: string, value: ReactNode, icon: ReactElement, onOpen: (() => void) | null, hint?: string, buttonRef?: Ref<HTMLButtonElement>) {
     return holdWrites || onOpen == null ? (
       <ListRow key={key} variant="static" eyebrow={label} title={value} icon={icon} hint={hint} />
     ) : (
-      <ListRow key={key} variant="button" eyebrow={label} title={value} icon={icon} hint={hint} chevron onClick={onOpen} />
+      <ListRow key={key} variant="button" eyebrow={label} title={value} icon={icon} hint={hint} chevron onClick={onOpen} buttonRef={buttonRef} />
     );
   }
 
@@ -344,7 +347,7 @@ function LoanDetailReady({
             {ended ? (
               // The מצב row goes, so the status changes from here (reopening a loan stays one tap away).
               holdWrites ? null : (
-                <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" onClick={() => { open("status"); }}>שינוי</TextLink>
+                <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" buttonRef={statusRef} onClick={() => { open("status"); }}>שינוי</TextLink>
               )
             ) : (
               <span className="t-hint">{loan.kind === "demand" ? "יתרת קרן" : "יתרה"}</span>
@@ -368,7 +371,7 @@ function LoanDetailReady({
           {row("rate", "ריבית", <RateValue loan={loan} today={today} />, <PercentIcon />, () => { setRate(null); open("rate"); })}
           {payment == null || ended ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
           {row("project", "פרויקט", projectName ?? NO_PROJECT, <ProjectsIcon />, () => { open("project"); })}
-          {ended ? null : row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); })}
+          {ended ? null : row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); }, undefined, statusRef)}
         </List>
 
         {/* No rate rows yet: the ריבית row above opens קביעת ריבית, so the section waits (mockup B6). */}
@@ -493,7 +496,7 @@ function LoanDetailReady({
               loan={loan}
               open={sheet === "status"}
               onOpenChange={setSheet}
-              returnFocusRef={returnRef}
+              returnFocusRef={statusRef}
               lastPayment={lastPaid}
               defaultDate={closeDateDefault(loan, payments, today)}
               onSave={(next) => patchSave(next, statusToast(next.status, loan.balanceMinor, loan.currency), "status")}

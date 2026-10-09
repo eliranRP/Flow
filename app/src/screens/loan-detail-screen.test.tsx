@@ -125,6 +125,9 @@ describe("loan page: states and the viewer", () => {
     expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "שינוי מצב" }));
     await waitFor(() => { expect(screen.getByRole("radio", { name: "נפרעה" })).toHaveAttribute("aria-checked", "true"); });
+    // Reopening swaps "שינוי" for the מצב row; focus lands on the row, not the page.
+    fireEvent.click(screen.getByRole("radio", { name: "פתוחה" }));
+    await waitFor(() => { expect(screen.getByRole("button", { name: /^מצב/ })).toHaveFocus(); });
   });
 
   it("offers the tint ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {

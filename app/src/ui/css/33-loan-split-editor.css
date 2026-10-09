@@ -77,7 +77,7 @@
   margin-block-start: var(--space-2);
 }
 
-/* FLOW-115: the match sheet with no loan to pick says why, then offers הלוואה חדשה. */
+/* FLOW-115, FLOW-356: the match sheet with no loan to pick offers הלוואה חדשה; the row's hint says why. */
 .ui-loan-empty {
   display: flex;
   flex-direction: column;
@@ -89,7 +89,7 @@
   margin: 0;
 }
 
-/* The empty state's 44px button, under its one line, not 24px away as on a page (FLOW-356). */
+/* The empty state's 44px button sits the gap under its one line, not 24px away as on a page (FLOW-356). */
 .ui-loan-empty > .ui-empty-action {
-  margin-top: var(--space-2);
+  margin-top: 0;
 }

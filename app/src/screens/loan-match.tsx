@@ -519,8 +519,8 @@ export function LoanMatchSkeleton() {
 export const LOAN_EMPTY_NEXT_STEP = "אפשר להוסיף הלוואה חדשה, ואז לשייך אליה את התשלום.";
 
 /**
- * FLOW-115: why the match sheet has no loan to pick, in the same words on the row's hint and in the
- * sheet: none offered at all, or none in the line's currency.
+ * FLOW-115: why the match sheet has no loan to pick, on the row's hint only (the sheet does not
+ * repeat it, FLOW-356): none offered at all, or none in the line's currency.
  */
 export function loanEmptyLine(offered: ReadonlyArray<{ currency: string }>, lineCurrency: string): string {
   return offered.length === 0 ? "אין עדיין הלוואה" : `אין הלוואה ${currencyWord(lineCurrency)}`;
