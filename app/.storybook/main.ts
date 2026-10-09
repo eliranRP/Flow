@@ -14,6 +14,9 @@ const config: StorybookConfig = {
     config.define = {
       ...config.define,
       "import.meta.env.VITE_FLOW_MCP_URL": JSON.stringify("https://example.com/functions/v1/flow-mcp"),
+      // The build is public (FLOW-809): no hosted project or key from .env.production.
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://example.supabase.co"),
+      "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify("storybook-sample-anon-key"),
     };
     return config;
   },
