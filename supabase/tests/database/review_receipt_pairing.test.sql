@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(36);
+select plan(37);
 
 do $users$
 begin
@@ -157,6 +157,9 @@ select is(pg_temp.review_item('inv_a')->>'paid_on', '2026-10-12', 'paid_on is th
 select is((pg_temp.review_item('inv_b')->>'paid')::boolean, false, 'a part payment is not paid');
 select is(pg_temp.review_item('rec_lone')->'receipts', '[]'::jsonb, 'any other item has no receipts');
 select is(pg_temp.review_item('rec_lone')->>'paid_on', null, 'and no paid_on');
+select is(
+  (pg_temp.review_item('inv_a')->>'auto_approved_today')::integer, 0,
+  'a receipt waiting with its invoice is not counted as filed automatically today');
 
 -- 2. One approval files both.
 select is(

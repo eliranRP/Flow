@@ -21,7 +21,8 @@
 --    receipt waits with its invoice again.
 -- Two triggers apply the rules, so every write path follows them: review_queue rows (insert, or a
 -- status change) and the invoice and receipt lines themselves. sync_review_queue also skips a
--- receipt whose invoice waits, so a sync does not add and drop its row each time.
+-- receipt whose invoice waits, so a sync does not add and drop its row each time, and
+-- filed_today_rows does not count such a receipt as filed automatically.
 --
 -- list_review: an income invoice's item carries its receipts (receipts, paid, paid_on), so the
 -- card can show "✓ שולם · קבלה dd/mm" (UI lane 2 builds the card). MCP list_review echoes them.
@@ -278,7 +279,10 @@ begin
     from public.transactions t
     where t.id = any(receipt_ids) and t.company_id = inv.company_id
     order by t.doc_date, t.id
-    for update
+    -- A receipt another transaction holds (a sync writing it) is left to that transaction: its
+    -- own trigger follows the invoice once the receipt is written, and waiting here could
+    -- deadlock with a sync that holds the receipt and waits for the invoice.
+    for update skip locked
   loop
     select q.id into paired_row
     from public.review_queue q
@@ -506,16 +510,45 @@ $$;
 
 revoke all on function private.line_receipt_pairing() from public, anon, authenticated;
 
-create trigger transactions_invoice_pairing
-  after insert or update of project_id, category_id, pnl_role, removed_at, line_status on public.transactions
+create trigger transactions_invoice_pairing_insert
+  after insert on public.transactions
   for each row
   when (new.direction = 'income' and new.doc_kind = 'invoice')
   execute function private.line_receipt_pairing();
 
-create trigger transactions_receipt_pairing
-  after insert or update of linked_external_id, removed_at, line_status on public.transactions
+-- A sync's upsert lists these columns on every line, so only a real change fires.
+create trigger transactions_invoice_pairing
+  after update of project_id, category_id, pnl_role, removed_at, line_status on public.transactions
+  for each row
+  when (
+    new.direction = 'income' and new.doc_kind = 'invoice'
+    and (
+      old.project_id is distinct from new.project_id
+      or old.category_id is distinct from new.category_id
+      or old.pnl_role is distinct from new.pnl_role
+      or old.removed_at is distinct from new.removed_at
+      or old.line_status is distinct from new.line_status
+    )
+  )
+  execute function private.line_receipt_pairing();
+
+create trigger transactions_receipt_pairing_insert
+  after insert on public.transactions
   for each row
   when (new.direction = 'income' and new.doc_kind = 'receipt')
+  execute function private.line_receipt_pairing();
+
+create trigger transactions_receipt_pairing
+  after update of linked_external_id, removed_at, line_status on public.transactions
+  for each row
+  when (
+    new.direction = 'income' and new.doc_kind = 'receipt'
+    and (
+      old.linked_external_id is distinct from new.linked_external_id
+      or old.removed_at is distinct from new.removed_at
+      or old.line_status is distinct from new.line_status
+    )
+  )
   execute function private.line_receipt_pairing();
 
 -- list_review: patched from the current definition with counted anchors, so changes merged since
@@ -613,6 +646,24 @@ begin
     and not private.receipt_waits(t.id)
     and not exists ($n$);
   execute def;
+end
+$patch$;
+
+-- filed_today_rows: a receipt waiting with its invoice is not filed, so it is not counted as
+-- filed automatically today.
+do $patch$
+declare
+  def text;
+  anchor text;
+begin
+  def := pg_get_functiondef('private.filed_today_rows()'::regprocedure);
+  anchor := $a$      and filed.created_at >= bounds.start_at$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'filed_today_rows is not the expected definition';
+  end if;
+  execute replace(def, anchor, anchor || $n$
+      -- FLOW-309: a receipt that waits with its invoice (decision 0164).
+      and not private.receipt_waits(filed.id)$n$);
 end
 $patch$;
 
