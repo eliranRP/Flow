@@ -313,10 +313,11 @@ export function InvestmentCard({
           <FigureRow
             title={INVESTMENT_LABELS.value}
             hint={figures.valueMinor != null && figures.valueDate != null ? (
-              <>
-                {"עודכן "}
+              // FLOW-353: the word and its date stay on one line at 320.
+              <span className="ui-nowrap">
+                {"עודכן\u00A0"}
                 <bdi dir="ltr" className="ui-num">{formatDisplay(figures.valueDate)}</bdi>
-              </>
+              </span>
             ) : undefined}
             value={<FigureValue minor={figures.valueMinor} currency={currency} readOnly={readOnly} />}
             readOnly={readOnly}

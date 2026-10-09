@@ -1,5 +1,5 @@
 import { formatAmountText, type UnpaidRow } from "@flow/shared";
-import { useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { absAgorot } from "../agorot";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
@@ -28,11 +28,33 @@ function daysBefore(iso: string): number {
   return Math.max(0, Math.round((end - start) / 86_400_000));
 }
 
-function unpaidHintLine(row: UnpaidRow): string {
-  const date = formatDayMonth(row.doc_date);
-  const project = row.project_name ?? "";
-  const age = `לפני ${String(daysBefore(row.doc_date))} ימים`;
-  return [date, project, age].filter((part) => part !== "").join(" · ");
+/** "היום", "אתמול", else "לפני N ימים" (FLOW-353). */
+export function unpaidAge(days: number): string {
+  if (days === 0) return "היום";
+  if (days === 1) return "אתמול";
+  return `לפני ${String(days)} ימים`;
+}
+
+/**
+ * FLOW-353: the hint's parts, each carrying its "·" at its start, so at 320 the line breaks before a
+ * separator. The date, the age and the mark stay whole; a long project name may still wrap.
+ */
+function unpaidHint(row: UnpaidRow, marked: boolean): ReactNode {
+  const parts: Array<{ text: string; whole: boolean }> = [
+    ...(marked ? [{ text: UNPAID_MARKED, whole: true }] : []),
+    { text: formatDayMonth(row.doc_date), whole: true },
+    ...(row.project_name ? [{ text: row.project_name, whole: false }] : []),
+    { text: unpaidAge(daysBefore(row.doc_date)), whole: true },
+  ];
+  return parts.map((part, index) => {
+    const text = index === 0 ? part.text : `·\u00A0${part.text}`;
+    return (
+      <Fragment key={index}>
+        {index === 0 ? null : " "}
+        {part.whole ? <span className="ui-nowrap">{text}</span> : text}
+      </Fragment>
+    );
+  });
 }
 
 /** FLOW-330. The marked row's line, and the toasts of a mark and a clear. */
@@ -130,7 +152,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
               external={documentUrl != null}
               chevron={documentUrl != null}
               title={row.customer_name ?? row.description}
-              hint={marked ? `${UNPAID_MARKED} · ${unpaidHintLine(row)}` : unpaidHintLine(row)}
+              hint={unpaidHint(row, marked)}
               wrapHint
               agorot={absAgorot(row.open_gross_agorot)}
               currency={row.currency ?? "ILS"}

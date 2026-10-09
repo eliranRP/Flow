@@ -1,6 +1,8 @@
 # FLOW-353 items 3 and 4: dates stay whole at 320
 
-- PR: (this PR, UI lane 3).
-- Planned:
-  - Open invoices: the row hint keeps "לפני 37 ימים" whole at 320, and a document from today or yesterday says היום / אתמול (unpaid-screen.tsx).
-  - Investment card: the value row's hint keeps "עודכן 01/10/2026" whole at 320 (investment-card.tsx).
+- PR: #392 (UI lane 3).
+- What changed:
+  - Open invoices: the row hint's date, its age and the "סומן כשולם · ממתין לסנכרון" mark each stay on one line, and each part carries its "·" at its start, so at 320 the line breaks before a separator. A long project name may still wrap. A document from today says היום, and one from yesterday says אתמול.
+  - Investment card: "עודכן" and its date stay on one line on the שווי היום row.
+- Rule: a hint's date or age is never split across lines; a wrapping hint breaks before its "·" (as FLOW-351 part 2).
+- Shots: mockups/flow-353-build/ in the project files.
