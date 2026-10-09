@@ -267,43 +267,52 @@ export function loanFinalLine(preview: Extract<LoanPreview, { status: "ready" }>
 /** Every blocking field at once. An incomplete rate or amount is not an error. */
 export function loanFieldErrors(draft: LoanDraft, preview: LoanPreview): LoanFieldErrors {
   const errors: LoanFieldErrors = {};
-  if (draft.name.trim() === "") errors.name = "חסר מלווה.";
+  if (draft.name.trim() === "") errors.name = "כתבו את שם המלווה.";
 
   const principal = amountState(draft.principal);
-  if (principal === "minus") errors.principal = "הסכום שלילי.";
-  else if (principal === "zero") errors.principal = "חסר סכום.";
-  else if (principal === "large") errors.principal = "הסכום גדול מדי.";
+  if (principal === "empty") errors.principal = "כתבו את הסכום המקורי.";
+  // FLOW-115: each message says what to type; a 0 is not a missing amount.
+  if (principal === "minus") errors.principal = MINUS;
+  else if (principal === "zero") errors.principal = "הסכום צריך להיות גדול מ־0.";
+  else if (principal === "large") errors.principal = TOO_LARGE;
 
   const rate = draft.rate.trim();
-  if (rate.startsWith("-")) errors.rate = "הריבית שלילית.";
-  else if (rate !== "" && !rate.endsWith(".") && ratePpmOf(rate) == null) errors.rate = "הריבית היא עד 100%.";
+  if (rate === "") errors.rate = "כתבו את הריבית השנתית.";
+  else if (rate.startsWith("-")) errors.rate = "כתבו ריבית בלי מינוס.";
+  else if (rate !== "" && !rate.endsWith(".") && ratePpmOf(rate) == null) errors.rate = RATE_RANGE;
 
-  if (draft.term.trim() === "") errors.term = "חסרה תקופה.";
-  else if (draft.term.startsWith("-") || termOf(draft.term) == null) errors.term = "התקופה היא בין חודש אחד ל־600.";
+  if (draft.term.trim() === "") errors.term = "כתבו את מספר החודשים.";
+  else if (draft.term.startsWith("-") || termOf(draft.term) == null) errors.term = TERM_RANGE;
 
   const escrowText = draft.escrow.trim() === "" ? "0" : draft.escrow;
   const escrow = amountState(escrowText);
-  if (escrow === "minus") errors.escrow = "הסכום שלילי.";
-  else if (escrow === "large") errors.escrow = "הסכום גדול מדי.";
+  if (escrow === "minus") errors.escrow = MINUS;
+  else if (escrow === "large") errors.escrow = TOO_LARGE;
 
   const payment = draft.payment == null || draft.payment === "" ? "empty" : amountState(draft.payment);
-  if (payment === "minus") errors.payment = "הסכום שלילי.";
-  else if (payment === "large") errors.payment = "הסכום גדול מדי.";
+  if (payment === "minus") errors.payment = MINUS;
+  else if (payment === "large") errors.payment = TOO_LARGE;
 
   const escrowCoversPayment = typeof escrow === "bigint" && typeof payment === "bigint" && escrow >= payment;
   if (errors.escrow == null && (escrowCoversPayment || (preview.status === "error" && preview.code === "escrow"))) {
-    errors.escrow = "המסים והביטוח גבוהים מהתשלום.";
+    errors.escrow = "המסים והביטוח צריכים להיות נמוכים מהתשלום.";
   }
   if (errors.payment == null && preview.status === "error" && preview.code === "payment_below_interest") {
-    errors.payment = "התשלום לא מכסה את הריבית.";
+    errors.payment = BELOW_INTEREST;
   }
   return errors;
 }
 
+const MINUS = "כתבו סכום בלי מינוס.";
+const TOO_LARGE = "כתבו סכום קטן יותר.";
+const RATE_RANGE = "כתבו ריבית עד 100%.";
+const TERM_RANGE = "כתבו בין 1 ל־600 חודשים.";
+const BELOW_INTEREST = "התשלום צריך להיות גבוה מהריבית החודשית.";
+
 export function loanErrorText(code: string): string {
-  if (code === "payment_below_interest") return "התשלום לא מכסה את הריבית.";
-  if (code === "rate") return "הריבית היא עד 100%.";
-  if (code === "term") return "התקופה היא בין חודש אחד ל־600.";
+  if (code === "payment_below_interest") return BELOW_INTEREST;
+  if (code === "rate") return RATE_RANGE;
+  if (code === "term") return TERM_RANGE;
   if (code === "start_date") return "תאריך לא תקין.";
   return "לא ניתן לחשב את לוח הסילוקין.";
 }
