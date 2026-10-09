@@ -132,9 +132,9 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) });
   await expect(row).toBeVisible();
 
+  // FLOW-340 C: the project page's הלוואות row names its one open loan.
   await page.goto(`/projects/${projectA}`);
-  await expect(page.getByRole("heading", { name: "הלוואות" })).toBeVisible();
-  await expect(page.getByText(lender)).toBeVisible();
+  await expect(page.getByRole("link", { name: /^הלוואות/ })).toContainText(lender);
 
   await page.goto("/settings/loans");
   await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) }).click();

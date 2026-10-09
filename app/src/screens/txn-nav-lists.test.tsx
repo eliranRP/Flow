@@ -67,11 +67,11 @@ const project: NonNullable<ProjectDetail> = {
 
 describe("lists that open a card with prev and next", () => {
   it("the project's recent list sends its rows and is still open on Back", () => {
-    wrap("/projects/p1", "/projects/:projectId", <ProjectDetailScreen sample={project} />);
+    wrap("/projects/p1/transactions", "/projects/:projectId/transactions", <ProjectDetailScreen section="transactions" sample={project} />);
     fireEvent.click(screen.getByRole("link", { name: /Line b/ }));
     expect(screen.getByTestId("card")).toHaveTextContent("/transactions/b");
     expect(screen.getByTestId("ids")).toHaveTextContent("a,b,c");
-    expect(screen.getByTestId("from")).toHaveTextContent("/projects/p1");
+    expect(screen.getByTestId("from")).toHaveTextContent("/projects/p1/transactions");
     fireEvent.click(screen.getByRole("button", { name: "back" }));
     expect(screen.getByRole("link", { name: /Line a/ })).toBeInTheDocument();
   });
