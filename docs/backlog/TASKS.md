@@ -120,7 +120,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | PLAN FIRST | plan-first (owner card) |
-| 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | PLAN FIRST | plan-first (owner card) |
+| 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -609,7 +609,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
 - [x] From the #300 review: `reopen_review` does not drop the `missing_project` row a category pick queued (as `undo_reassign` now does; no path reaches it today), and a category saved without resolving leaves the row labelled `missing_category` for MCP `list_review`'s reason filter. (Done in #308, migration 20261013030000: `reopen_review` deletes the queued row as `undo_reassign` does; a category set with `p_resolve false` in `set_transaction_category` or `resolve_review` relabels the open income row to `missing_project` when the line still needs a project, sync relabels rows left from before.)
-- [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
+- [ ] A connector invoice and its receipt both land in review. (Ready for a lane: owner picked option A, 2026-10-09: one card per payment. The receipt joins its invoice, the card shows "✓ שולם · קבלה dd/mm" under the amount, and one approval covers both; the receipt never gets a card of its own. Mockup in the project's mockups/plan-first/flow-309-pair/a.png.)
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
 - [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
@@ -915,9 +915,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-349"></a>
 ### FLOW-349 · One set of period choices everywhere
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
-- **What:** Two period sheets share the title "תקופה" with different choices. Home and the project page offer חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם. Search and the breakdown (PeriodPicker) offer החודש / חודש קודם / מתחילת השנה / כל התקופה / טווח מותאם. "שנה" and "מתחילת השנה" are different ranges, and Search can't pick 3 months. Proposal A (recommended): one list everywhere, Home's, through one shared sheet. B: keep both and name the Search one differently.
-- **Acceptance:** owner's choice on a card with 390px PNGs; one shared component and story; a design log entry.
+- **Type:** SMALL UI · **Status:** ready (design lead, 2026-10-09: a consistency fix, no owner card) · **Source:** mobile UI/UX review cycle 8 (2026-10-09, deploy ae88bfe), shots in the project's reviews/ui-ux-cycle-8/
+- **What:** Every "תקופה" sheet uses Home's list, words and order through one shared sheet: חודש / 3 חודשים / 6 חודשים / שנה / הכול / טווח מותאם, with Home's hints. Search's sheet today says כל התקופה first and "2026" for the year; any other period picker (the breakdown's) follows too. Mockup: the project's mockups/plan-first/flow-349/a.png (today: current.png).
+- **Acceptance:** one shared component and story; Search, breakdown and Home use it; a design log entry.
 
 ## Projects and reports
 
