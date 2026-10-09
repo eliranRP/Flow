@@ -288,14 +288,20 @@ function LinesBody({
     return <ScreenState stacked title={title} backTo={back} trailing={periodControl} phase={phase} onRetry={() => { void lines.refetch(); }} />;
   }
 
-  const subtitleParts: string[] = [directionLabel(direction), periodLabel(period)];
-  if (sum) subtitleParts.push(lineCountHint(sum.count, false));
   const more = sample ? false : lines.hasNextPage;
+  // The header comes from the same lines as the list: no lines is "—" and no count (design lead, #259).
+  const none = rows.length === 0 && !more;
+  const subtitleParts: string[] = [directionLabel(direction), periodLabel(period)];
+  if (sum && !none) subtitleParts.push(lineCountHint(sum.count, false));
 
   return (
     <div>
       <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} trailing={periodControl} />
-      {sum ? <Totals direction={direction} totals={[sum]} /> : null}
+      {none ? (
+        <p className="ui-breakdown-total ui-page-pad">
+          <span className="ui-breakdown-total-line t-display text-text-secondary">—</span>
+        </p>
+      ) : sum ? <Totals direction={direction} totals={[sum]} /> : null}
       {rows.length === 0 ? (
         <EmptyState
           icon={<DocumentIcon />}

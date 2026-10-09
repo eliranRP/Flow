@@ -276,6 +276,9 @@ describe("Breakdown lines screen", () => {
     wrap("/flow/expense/category/ILS/c1");
     expect(await screen.findByText("אין תנועות כאן בתקופה הזו")).toBeInTheDocument();
     expect(screen.getByText("אפשר לבחור תקופה אחרת.")).toBeInTheDocument();
+    // The header comes from the same lines: no lines is "—" and no count, not the summary's total.
+    expect(document.querySelector(".ui-breakdown-total")).toHaveTextContent(/^—$/);
+    expect(document.querySelector("header")).not.toHaveTextContent("תנועות");
     fireEvent.click(screen.getByRole("button", { name: "בחירת תקופה" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^הכול/ }));
     await waitFor(() => {

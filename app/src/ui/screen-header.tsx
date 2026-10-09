@@ -77,8 +77,26 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   );
 }
 
-/** The compact bar's height, under the safe area: one touch target. */
+/** The compact bar's height under the safe area: one touch target. */
 const COMPACT_BAR = 44;
+
+/** The safe area on top (installed app under a notch), in px. --safe-top is an env(), so a probe resolves it. */
+function safeTop(): number {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;padding-top:var(--safe-top)";
+  document.body.append(probe);
+  const value = Number.parseFloat(getComputedStyle(probe).paddingTop);
+  probe.remove();
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** Headers whose bar is showing. Month heads pin under the bar while any is (11-month-lists.css). */
+let barsShowing = 0;
+
+function setBarShowing(delta: number): void {
+  barsShowing = Math.max(0, barsShowing + delta);
+  document.documentElement.toggleAttribute("data-compact-bar", barsShowing > 0);
+}
 
 /** True once the mark has scrolled up under the compact bar. */
 function useScrolledPast(mark: RefObject<HTMLElement | null>): boolean {
@@ -86,12 +104,13 @@ function useScrolledPast(mark: RefObject<HTMLElement | null>): boolean {
   useEffect(() => {
     const node = mark.current;
     if (node == null || typeof IntersectionObserver === "undefined") return;
+    const top = COMPACT_BAR + safeTop();
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[entries.length - 1];
-        if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.top < COMPACT_BAR);
+        if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
       },
-      { rootMargin: `-${String(COMPACT_BAR)}px 0px 0px 0px` },
+      { rootMargin: `-${String(top)}px 0px 0px 0px` },
     );
     observer.observe(node);
     return () => {
@@ -99,11 +118,10 @@ function useScrolledPast(mark: RefObject<HTMLElement | null>): boolean {
     };
   }, [mark]);
   useEffect(() => {
-    // Month heads pin under the bar while it shows (11-month-lists.css reads --month-sticky-top).
-    const root = document.documentElement;
-    root.toggleAttribute("data-compact-bar", past);
+    if (!past) return;
+    setBarShowing(1);
     return () => {
-      root.removeAttribute("data-compact-bar");
+      setBarShowing(-1);
     };
   }, [past]);
   return past;

@@ -16,6 +16,8 @@ type Common = {
   hint?: ReactNode;
   /** The hint wraps instead of ending in an ellipsis. */
   wrapHint?: boolean;
+  /** The hint's whole parts on one line; a part that does not fit drops (a transaction row always does). */
+  hintParts?: readonly ReactNode[];
   /** Hint uses t-hint, and the control points at it with aria-describedby. */
   describeHint?: boolean;
   href?: string;
@@ -143,7 +145,8 @@ export function ListRow(props: ListRowProps) {
   const sideAction = (props.variant === "item" || props.variant === "project" || props.variant === "transaction")
     && props.href != null && props.action != null && props.actionBelow !== true;
   // A transaction row's hint stays on one line and ends in an ellipsis, so a line never ends on a "·".
-  const oneLineHint = props.variant === "transaction" && !props.wrapHint;
+  const oneLineHint = props.hintParts != null || (props.variant === "transaction" && !props.wrapHint);
+  const hintValue = props.hintParts ?? props.hint;
   const titleBody = (
     <>
       {props.tag ? (
@@ -170,7 +173,7 @@ export function ListRow(props: ListRowProps) {
           ) : (
             <span className={titleClass} dir={titleDir}>{titleBody}</span>
           )}
-          {props.hint != null ? (
+          {hintValue != null ? (
             <span
               id={described}
               role={props.hintStatus ? "status" : undefined}
@@ -183,7 +186,7 @@ export function ListRow(props: ListRowProps) {
               )}
               data-clip-ok={oneLineHint ? "" : undefined}
             >
-              {oneLineHint ? hintParts(props.hint) : props.hint}
+              {oneLineHint ? hintParts(hintValue) : hintValue}
             </span>
           ) : null}
         </CopyText>
@@ -306,11 +309,12 @@ const HINT_SEPARATOR = " · ";
  * "·" and a date is never cut. Only a first part that is too long on its own ends in an ellipsis.
  * Screen readers still read every part.
  */
-function hintParts(hint: ReactNode): ReactNode {
-  if (typeof hint !== "string" || !hint.includes(HINT_SEPARATOR)) return hint;
+function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
+  const parts = isPartList(hint) ? hint : typeof hint === "string" && hint.includes(HINT_SEPARATOR) ? hint.split(HINT_SEPARATOR) : null;
+  if (parts == null) return hint as ReactNode;
   return (
     <span className="ui-hint-parts">
-      {hint.split(HINT_SEPARATOR).map((part, index) => (
+      {parts.map((part, index) => (
         <span key={index} className="ui-hint-part" data-clip-ok="">
           {index > 0 ? HINT_SEPARATOR : null}
           {part}
@@ -318,6 +322,10 @@ function hintParts(hint: ReactNode): ReactNode {
       ))}
     </span>
   );
+}
+
+function isPartList(hint: ReactNode | readonly ReactNode[]): hint is readonly ReactNode[] {
+  return Array.isArray(hint);
 }
 
 function titleText(props: Common): ReactNode {

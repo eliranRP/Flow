@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ScrollMemory } from "./back";
 import { ScreenHeader } from "./screen-header";
 import { expectRtl, expectTarget } from "./test-support";
 
@@ -57,6 +58,32 @@ describe("ScreenHeader", () => {
     expect(header?.querySelector("p.t-hint")).toBeNull();
     const order = Array.from(header?.children ?? []).map((node) => node.textContent);
     expect(order).toEqual(["הגדרות", "קטגוריות", "", "שורה"]);
+  });
+
+  it("labels Back only when Back goes to the kicker's screen", () => {
+    function at(idx: number, path: string) {
+      window.history.replaceState({ idx }, "");
+      return render(
+        <MemoryRouter initialEntries={[path]}>
+          <ScrollMemory />
+          <ScreenHeader title="חיבורים" kicker="הגדרות" backTo="/settings" />
+        </MemoryRouter>,
+      );
+    }
+    try {
+      // Opened from Home: Back pops to Home, so it is the icon, not "‹ הגדרות".
+      at(0, "/").unmount();
+      const fromHome = at(1, "/settings/connections");
+      expect(screen.getByRole("button", { name: "חזרה" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "חזרה להגדרות" })).not.toBeInTheDocument();
+      fromHome.unmount();
+      // Opened from Settings: Back pops to Settings, so it says so.
+      at(0, "/settings").unmount();
+      at(1, "/settings/connections");
+      expect(screen.getByRole("button", { name: "חזרה להגדרות" })).toBeInTheDocument();
+    } finally {
+      window.history.replaceState(null, "");
+    }
   });
 
   it("keeps the icon Back when there is no kicker, and never labels a leading control", () => {

@@ -84,6 +84,13 @@
 
 html[data-compact-bar] {
   --month-sticky-top: calc(var(--safe-top) + var(--touch-min) + 1px);
+  /* A row reached by Tab stops below the bar, not under it (WCAG 2.4.11). */
+  scroll-padding-block-start: calc(var(--safe-top) + var(--touch-min) + 1px);
+}
+
+/* With month heads pinned under the bar, both are reserved (11-month-lists.css). */
+html[data-compact-bar]:has(.ui-month-head) {
+  scroll-padding-block-start: calc(var(--safe-top) + var(--touch-min) + 1px + var(--space-10) * 3);
 }
 
 @keyframes ui-compact-in {
