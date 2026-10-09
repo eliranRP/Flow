@@ -27,6 +27,8 @@ export function ImportFromField({
   const [dateOpen, setDateOpen] = useState(false);
   // The last day picked comes back when מתאריך is chosen again.
   const [lastDate, setLastDate] = useState(value ?? importFromDefault());
+  // A stored date that arrives or changes while the field stays mounted becomes the one to come back to.
+  if (value != null && value !== lastDate) setLastDate(value);
   const mode: ImportMode = value == null ? "start" : "date";
   return (
     <>
@@ -64,7 +66,7 @@ export function ImportFromField({
         value={value ?? lastDate}
         shortcuts={false}
         disabled={disabled}
-        onApply={(iso) => { setLastDate(iso); onChange(iso); }}
+        onApply={onChange}
       />
     </>
   );

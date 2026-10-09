@@ -232,6 +232,52 @@ describe("Mercury status row", () => {
     expect(names).not.toContain("set_import_from");
   });
 
+  it("keeps a stored date on a reconnect that leaves ייבוא מ alone", async () => {
+    mockLive(mercury({ connected: false, last_error: "auth", import_from: "2026-03-01" }));
+    const names: string[] = [];
+    const live = rpc.impl;
+    rpc.impl = (name, args) => { names.push(name); return live(name, args); };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const dialog = screen.getByRole("dialog", { name: "צריך לחבר מחדש את Mercury" });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור מחדש" }));
+    await waitFor(() => { expect(invokeEdge).toHaveBeenCalledOnce(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "צריך לחבר מחדש את Mercury" })).not.toBeInTheDocument(); });
+    expect(names).not.toContain("set_import_from");
+  });
+
+  it("saves מההתחלה over a stored date when chosen", async () => {
+    mockLive(mercury({ connected: false, last_error: "auth", import_from: "2026-03-01" }));
+    const calls: Array<[string, unknown]> = [];
+    const live = rpc.impl;
+    rpc.impl = (name, args) => { calls.push([name, args]); return live(name, args); };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const dialog = screen.getByRole("dialog", { name: "צריך לחבר מחדש את Mercury" });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מההתחלה" }));
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור מחדש" }));
+    await waitFor(() => { expect(calls.some(([name]) => name === "set_import_from")).toBe(true); });
+    expect(calls.find(([name]) => name === "set_import_from")?.[1]).toEqual({ p_provider: "mercury", p_from: null });
+  });
+
+  it("does not save ייבוא מ when the connect fails", async () => {
+    mockLive(null);
+    invokeEdge.mockRejectedValueOnce(new Error("auth"));
+    const names: string[] = [];
+    const live = rpc.impl;
+    rpc.impl = (name, args) => { names.push(name); return live(name, args); };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const dialog = screen.getByRole("dialog", { name: "חיבור Mercury" });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    expect(await screen.findByText("החיבור נכשל. בדקו את המפתח.")).toBeInTheDocument();
+    expect(names).not.toContain("set_import_from");
+  });
+
   it("opens a reconnect with the stored import date", async () => {
     mockLive(mercury({ connected: false, last_error: "auth", import_from: "2026-03-01" }));
     renderSettings();
@@ -254,6 +300,7 @@ describe("Mercury status row", () => {
     fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
     expect(await screen.findByText("Mercury מחובר, אבל תאריך הייבוא לא נשמר.")).toBeInTheDocument();
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "חיבור Mercury" })).not.toBeInTheDocument(); });
   });
 
   it("shows refresh.failed when rate limited without a retry time", async () => {
