@@ -14,16 +14,16 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
+| Dev lane 1 | Free: FLOW-810 clip check follow-ups in review (the supplier-line and truncation items stay with the UI lanes) | The next non-UI item |
 | Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-115 loan setup follow-ups (errors say what to type, dimmed kept preview, close waits for save, loading skeleton, always-enabled save) (FLOW-322 `/notifications` and FLOW-334 leftovers merged #272) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-315: bank details follow-ups (one read for the review queue's details, the detail memo's expand cue) (FLOW-706 merged #270) | #231 follow-ups in the Jev and settings area |
+| UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-338 a loss on the band drawn white, project page and Home hero (#290) | Next small ready bug |
-| File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (#277), then the pgTAP file `mcp_cycle3a.test.sql` into `mcp_cycle3a`, `mcp_cycle3a_gates` and `mcp_cycle3a_sync` (#281), then headroom splits for the files within 10% of their limit: `loans_l1` + `loans_l1_access`, `loan-setup` + `loan-setup-settings` tests, and `jev-connector-scope.ts`, `split-screen-draft.ts`, `project-investment-data.ts`, `connections-status.ts` and `transaction-screen-loan.stories.tsx` moved out (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | none: every file not on the allow list is at least 10% under its limit after the headroom splits; `scripts/check-file-size.mjs` (#285) keeps every file under its limit |
+| Backlog bug fixes | FLOW-339 Settings → Loans balance at the list amount size, cents on one line (#293) | Next small ready bug |
+| File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -111,7 +111,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
 | 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | done (#270) |
 | 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
-| 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready |
+| 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready (Jev undo item: does not reproduce, #292) |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
@@ -831,13 +831,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-333 C13 (review card fit at 375x667), FLOW-334 · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** Polish found at 375x667, 393x852 (light and dark) and 412x915 after the October 8 builds.
 - [ ] (low) Band label with mixed-sign currencies: since FLOW-338 (#290) a loss on the band is white, and with two currencies where one is a loss the label still says רווח (project page `bandLoss` needs a single currency; Home's `heroLabelProfit` picks the non-negative figure). Name the loss in the label or per line.
-- [ ] (med) Review card, Jev filled line: the בטל link's `::after` hit area (y≈267–311 at 375) covers the bottom 13px of the category row, so a tap meant for the row can undo Jev's fill. Give the filled line its own 44px row or `--space-3` above it, budgeted with FLOW-333 C13.
-- [ ] (med) Breakdown: the header under "יצא" and every category row carry a minus. A figure labelled as a cost carries none (FLOW-328, FLOW-334 H3); keep it only when refunds beat costs, as Home does. Both levels use one header order.
+- [x] (UI lane 4, #292: does not reproduce. The `::after` grows down and sideways only (`inset-block: 0 calc(100% - var(--touch-min))`, since #231), so it starts at the line's top, which is the category row's bottom; at 375 and 393 a point 1–13px above בטל hits the row. The capture script assumed a centered 44px box. The ReviewCard "Jev filled" stories now check this in their play.) (med) Review card, Jev filled line: the בטל link's `::after` hit area (y≈267–311 at 375) covers the bottom 13px of the category row, so a tap meant for the row can undo Jev's fill. Give the filled line its own 44px row or `--space-3` above it, budgeted with FLOW-333 C13.
+- [x] (UI lane 3, 2026-10-09) (med) Breakdown: the header under "יצא" and every category row carry a minus. A figure labelled as a cost carries none (FLOW-328, FLOW-334 H3); keep it only when refunds beat costs, as Home does. Both levels use one header order.
 - [ ] (med) Search: the subtitle carries three figures and month heads up to two unlabelled totals, about 11 figures a screen. Keep only the count in the subtitle. A row hint that does not fit shows the project or the category whole, not a one-letter cut (the meta rule in DESIGN-RULES §3.7).
-- [ ] Settings → Loans: balances are 13px with 7.8px agorot (`.ui-loan-amount` inherits the hint size). Use the amount size and the shared agorot class, as other lists do.
-- [ ] Project category lines: Back is a bare icon with the project name as the subtitle. Use the project name as Back's label (FLOW-334 H2) and drop the subtitle. Row amounts show ".00" on whole amounts; agorot show only when non-zero (§3.5).
+- [x] Settings → Loans: balances are 13px with 7.8px agorot (`.ui-loan-amount` inherits the hint size). Use the amount size and the shared agorot class, as other lists do. (Also the ".00" fell to its own line: the loan form's wrapper shared the class, now `.ui-loan-amount-field`; #293.)
+- [x] (UI lane 3, 2026-10-09: Back's label, and the cost rows and subtitle drop the minus; the ".00" half stays open below) Project category lines: Back is a bare icon with the project name as the subtitle. Use the project name as Back's label (FLOW-334 H2) and drop the subtitle.
+- [ ] Transaction rows show ".00" on whole amounts, but DESIGN-RULES §3.5 says agorot show only when non-zero. Decision 0120 option C (the owner's) keeps ".00" on transaction rows, like Mercury, so this needs the owner's call before any change.
 - [ ] Transaction card: "מע״מ −₪1,530 · לפי המסמך" floats between the category row and the P&L switch row. Fold it into the amount's meta line ("לפני מע״מ · מע״מ ₪1,530") with no minus.
-- [ ] Add sheet (+ tab): it has both ✕ and a "ביטול" link, and ✕ sits about 8px below the title baseline. Drop ביטול (it belongs on confirm sheets) and align ✕ with the title.
+- [x] (UI lane 3, 2026-10-09: ✕ is centred on the title row in every sheet) Add sheet (+ tab): it has both ✕ and a "ביטול" link, and ✕ sits about 8px below the title baseline. Drop ביטול (it belongs on confirm sheets) and align ✕ with the title.
 - [ ] Project page, overhead switch: the hint "כבוי · מציג רווח לפני כלליות" repeats the switch state. Label "אחרי כלליות" with no hint, as Settings does.
 - [ ] (copy, waits on the owner's card) "הצג הכול" and "בטל" are singular imperatives (§3.6). Proposed: "הצגת הכול" and "ביטול". "בטל" is in the owner-approved FLOW-702 plan.
 - **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
@@ -1205,13 +1206,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-810"></a>
 ### FLOW-810 · Clip check follow-ups and 320px clipping
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Re-run the real clip check on main and record the exit code and per-class table; fix the remaining clipped stories at 320.
-- [ ] Skip hidden or screen-reader-only text when measuring, including descendants; widen the 1×1 check (`clip: rect(0…)`, `clip-path: inset(50%)`, `.sr-only`).
-- [ ] De-duplicate nested-block lines; measure `clip-no-text` stories but waive only the zero rule.
-- [ ] Freeze the date in date-relative stories so clip results don't drift.
-- [ ] Long supplier names need `overflow-wrap: anywhere` on the review supplier line; older truncations in the project picker, unpaid hints and the add-sheet hint; a stress story with a 3-line supplier.
-- [ ] A per-story retry; a story whose sample totals don't add up.
+- **Type:** BACKLOG NIT · **Status:** done (this PR) except the UI items, left to the UI lanes · **Depends on:** —
+- [x] Re-run the real clip check on main and record the exit code and per-class table; fix the remaining clipped stories at 320. (Main at 596c409, 2026-10-09: exit 1, 24 story views clip, 4 stories at every width and theme: `ui-row-missing t-amount` "— עוד לא הגיע" +82px in the three project-categories group-open stories (18 views), and a bare span ", הוצאות −$40" +11px in MonthList two-currencies (6 views). Both are screen-reader-only text (`sr-only` inside the row; the month bar's spoken total), not visible clips. With this PR the check passes at 320 in light and dark: 1000 stories, 27,328 elements, 13 without text. Nothing to fix at 320.)
+- [x] Skip hidden or screen-reader-only text when measuring, including descendants; widen the 1×1 check (`clip: rect(0…)`, `clip-path: inset(50%)`, `.sr-only`). (A block is skipped when it or any element around it is `.sr-only` or `.visually-hidden`, has a zero `clip` rect, a 50% `clip-path` inset, or is a 1×1 box that hides overflow.)
+- [x] De-duplicate nested-block lines; measure `clip-no-text` stories but waive only the zero rule. (Each block measures only its own text, so a clipped nested block is one line. A `clip-no-text` story is measured like the rest; measuring nothing is not a failure for it.)
+- [x] Freeze the date in date-relative stories so clip results don't drift. (Every story sees 2026-10-15 09:00 Israel time, `FROZEN_NOW`.)
+- [ ] Long supplier names need `overflow-wrap: anywhere` on the review supplier line; older truncations in the project picker, unpaid hints and the add-sheet hint; a stress story with a 3-line supplier. (Left to the UI lanes: UI lane 2 owns the review card, and dev lanes don't open UI PRs.)
+- [x] A per-story retry. (A story that does not render gets one more load before it counts.)
+- [ ] A story whose sample totals don't add up. (The item doesn't name the story, and the clip check measures widths, not sums; left for whoever filed it to name.)
 
 <a id="flow-811"></a>
 ### FLOW-811 · CI and deploy follow-ups

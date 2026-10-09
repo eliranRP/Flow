@@ -214,3 +214,28 @@ describe("day heads (FLOW-305)", () => {
     expect(screen.getByRole("group", { name: "אוגוסט 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪1.00");
   });
 });
+
+describe("MonthList in a cost list (FLOW-339)", () => {
+  function renderCost(rows: Row[], cost: boolean) {
+    return render(
+      <MonthList rows={rows} keyOf={(r) => r.id} dateOf={dateOf} amountOf={amountOf} cost={cost} renderRow={(r) => <p>{r.id}</p>} />,
+    );
+  }
+
+  it("drops the minus on the expense figure the list is titled for", () => {
+    renderCost([row("a", "2026-09-02", 35_000n, "expense"), row("b", "2026-08-01", 70_000n, "expense")], true);
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות ₪350");
+  });
+
+  it("keeps a refund as money in, green with no sign", () => {
+    renderCost([row("a", "2026-09-02", 35_000n, "expense"), row("b", "2026-09-01", 5_000n, "income"), row("c", "2026-08-01", 70_000n, "expense")], true);
+    const totals = screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals");
+    expect(totals?.textContent).toBe("הכנסות ₪50, הוצאות ₪350");
+    expect(totals?.querySelector(".ui-income")?.textContent).toBe("₪50");
+  });
+
+  it("keeps the minus outside a cost list", () => {
+    renderCost([row("a", "2026-09-02", 35_000n, "expense"), row("b", "2026-08-01", 70_000n, "expense")], false);
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪350");
+  });
+});
