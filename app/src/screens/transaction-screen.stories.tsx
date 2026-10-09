@@ -5,7 +5,7 @@ import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";
 import type { TxnMeta } from "../txn-meta";
-import { ExampleBar, storyBody } from "../ui/screen-stories-support";
+import { ExampleBar, at320, dark, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -58,6 +58,43 @@ function TransactionStory() {
 export const Transaction: Story = {
   render: () => <TransactionStory />,
 };
+
+/** FLOW-351: a five-digit assumed VAT at 320. The line breaks before a "·", never leaving the date alone. */
+function AssumedVatStory() {
+  return (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "חשבונית חומרים",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -10_030_000n,
+          amount_net: -8_500_000n,
+          vat_amount: -1_530_000n,
+          vat_status: "assumed",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "p1",
+          project_name: "פרויקט לדוגמה",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "חומרי בניין לדוגמה בע״מ",
+          customer_name: null,
+          review_status: "approved",
+          paid: true,
+          open_gross_agorot: null,
+        }}
+        sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה", code: "P-01" }]}
+        sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      />
+    </StoryRoute>
+  );
+}
+export const TransactionAssumedVat320: Story = { render: () => <AssumedVatStory />, ...at320 };
+export const TransactionAssumedVatDark320: Story = { render: () => <AssumedVatStory />, ...at320, ...dark };
+export const TransactionAssumedVat: Story = { render: () => <AssumedVatStory /> };
 
 /** FLOW-320: the project row opens the change sheet straight on the project picker. */
 export const TransactionProjectPicker: Story = {

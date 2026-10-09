@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { allTime, periodLabel, type PeriodChoice } from "../period";
+import { allTime, periodPillLabel, type PeriodChoice } from "../period";
 import { PeriodPicker, PresetPeriodSheet, RangeSheet } from "./period-picker";
 import { longHebrew } from "./story-support";
 import { TopBand } from "./top-band";
@@ -13,7 +13,7 @@ function Demo({ initialOpen, pill }: { initialOpen: boolean; pill?: string }) {
     <TopBand
       trailing={
         <PeriodPicker
-          pill={pill ?? periodLabel(period)}
+          pill={pill ?? periodPillLabel(period)}
           open={open}
           onOpenChange={setOpen}
           period={period}
