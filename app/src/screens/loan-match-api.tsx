@@ -380,7 +380,8 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
       startDate: loan.start_date,
       paymentMinor: loan.payment_minor,
       escrowMinor: loan.escrow_minor,
-      balanceMinor: balanceByLoan.get(loan.id) ?? 0n,
+      // No balance row yet: nothing is paid, so the principal is left.
+      balanceMinor: balanceByLoan.get(loan.id) ?? BigInt(loan.principal_minor),
       kind: loan.kind,
       interestOnlyMonths: loan.interest_only_months,
       amortizationMonths: loan.amortization_months,
