@@ -36,11 +36,15 @@ test("search opens from Home, finds a line, opens it, and Back keeps the search"
   await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toBeVisible();
 });
 
-test("search opens from the Projects header", async ({ page }) => {
+test("a project-name miss on Projects opens search with the text", async ({ page }) => {
   await page.goto("/e2e/projects?preview=1");
-  await page.getByRole("link", { name: "חיפוש תנועות" }).click();
-  await expect(page).toHaveURL(/\/search\?preview=1$/);
-  await expect(page.getByRole("searchbox", { name: "חיפוש תנועות" })).toBeFocused();
+  // FLOW-342 (A): no header magnifier on Projects.
+  await expect(page.getByRole("link", { name: "חיפוש תנועות" })).toHaveCount(0);
+  await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("ספק 3");
+  await page.getByRole("link", { name: /^חיפוש בתנועות: ספק 3/ }).click();
+  await expect(page).toHaveURL(/\/search\?preview=1&q=/);
+  await expect(page.getByRole("searchbox", { name: "חיפוש תנועות" })).toHaveValue("ספק 3");
+  await expect(page.getByRole("link", { name: /^ספק 3(?!\d)/ })).toBeVisible();
 });
 
 test("a project's כל התנועות opens search with the project chip set", async ({ page }) => {

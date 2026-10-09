@@ -43,6 +43,14 @@ export const SEARCH_DEBOUNCE_MS = 300;
 /** The server takes at most this much text; a longer paste is cut, never refused. */
 export const SEARCH_MAX_LENGTH = 100;
 
+/** The search screen with `q` typed and any extra filters, keeping the preview flag from `search`. */
+export function searchHref(query: string, search: string, extra: Record<string, string> = {}): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set("q", query.slice(0, SEARCH_MAX_LENGTH));
+  for (const [key, value] of Object.entries(extra)) params.set(key, value);
+  return `/search?${params.toString()}`;
+}
+
 const ID = /^[A-Za-z0-9-]{1,64}$/;
 /** The server takes a uuid or "none" and refuses anything else (0140), so a live read sends no other id. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

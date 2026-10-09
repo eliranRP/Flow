@@ -93,17 +93,18 @@ export const DollarsDark320: Story = {
 export const New: Story = { args: { companyCurrency: "ILS", initial: { startDate: "2026-11-01" } }, ...light390 };
 export const NewDark320: Story = { args: { companyCurrency: "ILS", initial: { startDate: "2026-11-01" } }, ...dark320 };
 
-/** FLOW-115: the kept preview dims while the principal is cleared. */
-export const IncompleteDimmed: Story = {
+/** FLOW-344 (B): with the principal cleared, the preview hides until the form is valid again. */
+export const IncompleteHidden: Story = {
   args: example,
   ...light390,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await fireEvent.change(canvas.getByLabelText("סכום מקורי"), { target: { value: "" } });
-    await waitFor(() => expect(canvasElement.querySelector(".ui-loan-preview-stale")).not.toBeNull());
+    await waitFor(() => expect(canvas.queryByText(/ריבית כוללת/)).toBeNull());
   },
 };
-export const IncompleteDimmedDark: Story = { ...IncompleteDimmed, ...dark390 };
+export const IncompleteHiddenDark: Story = { ...IncompleteHidden, ...dark390 };
+export const IncompleteHidden320: Story = { ...IncompleteHidden, ...light320 };
 
 /** FLOW-343: שמירה on a new, empty loan moves focus to the first field to type, with its error. */
 export const SaveFocusesFirstEmpty: Story = {
