@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-704 Jev flag-read stall (app logic, no visual change) and its tests; FLOW-309 project-picker tests, PR #330 | FLOW-309 and FLOW-704 server follow-ups |
+| Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-502 server PR 1: push subscriptions and per-user prefs, the send function with the evening reminder and its cron; the void-line insert count in `upsert_connector_lines`, PR #335 | FLOW-502 PR 2 (new-line and Sunday summary sends) |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
@@ -1242,7 +1242,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-804"></a>
 ### FLOW-804 · Performance pass
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** plan in review (dev lane 1, [plan](../qa/flow-804-performance-plan.md), waits on the owner's pick) · **Depends on:** —
 - **What:** A bundle budget with a CI check (Home route target), Lighthouse CI, real-user timings, and Hebrew mobile flows in Playwright.
 - **Acceptance:** Home usable within 2 seconds on a throttled mid-range profile ([0034](../decisions/0034-cost-and-load-limits.md)).
 
