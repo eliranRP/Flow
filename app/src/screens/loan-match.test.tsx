@@ -20,6 +20,8 @@ const db = vi.hoisted(() => ({
   /** Every table read, by table name. */
   reads: [] as string[],
   rpcs: [] as Array<{ name: string; args: unknown }>,
+  /** mcp_loan_payments rows by loan id (FLOW-106). */
+  payments: new Map<string, unknown[]>(),
   saveError: null as { message: string; code?: string } | null,
   saveHold: null as Promise<void> | null,
   readError: null as { message: string } | null,
@@ -104,6 +106,10 @@ vi.mock("../lib/supabase", () => ({
         const finish = () => ({ data: null, error: db.saveError });
         return db.saveHold ? db.saveHold.then(finish) : Promise.resolve(finish());
       }
+      if (name === "mcp_loan_payments") {
+        const loanId = (args as { p_loan_id: string }).p_loan_id;
+        return Promise.resolve({ data: db.payments.get(loanId) ?? [], error: null });
+      }
       return Promise.resolve({ data: null, error: null });
     },
   }),
@@ -160,6 +166,7 @@ beforeEach(() => {
   db.splits = [];
   db.reads = [];
   db.rpcs = [];
+  db.payments = new Map();
   db.saveError = null;
   db.saveHold = null;
   db.readError = null;
@@ -387,14 +394,55 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
   });
 
-  it("refuses a payment above the loan balance before it calls the server", async () => {
+  it("disables a loan whose balance is below the payment's principal, before any save (FLOW-106)", async () => {
     db.balances = [{ loan_id: "loan-1", balance_minor: 100 }];
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
-    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => { expect(screen.getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument(); });
+    const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
+    expect(radio).toBeDisabled();
+    expect(within(radio).getByText("התשלום גבוה מיתרת ההלוואה")).toBeInTheDocument();
+    fireEvent.click(radio);
     expect(saves()).toHaveLength(0);
+  });
+
+  it("says what one tap writes: the schedule row for the line's date (FLOW-106)", async () => {
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    expect(within(screen.getByRole("radio", { name: /הלוואת דוגמה/ })).getByText("לפי הלוח · ₪599.55")).toBeInTheDocument();
+  });
+
+  it("writes a catch-up line as that many installments when it equals them to the cent (FLOW-106)", async () => {
+    // Two schedule rows of 100,000.00 at 6% over 360 months: 599.55 each.
+    db.txn = { ...db.txn, amount_original: 119_910 };
+    renderSplit({ docDate: "2026-03-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
+    expect(within(radio).getByText("2 תשלומים לפי הלוח · ₪1,199.10")).toBeInTheDocument();
+    fireEvent.click(radio);
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    const parts = saves()[0]?.p_parts ?? [];
+    expect(parts.map((part) => part.part)).toEqual(["interest", "escrow", "principal"]);
+    expect(parts.reduce((sum, part) => sum + Number(part.amount_minor), 0)).toBe(119_910);
+    expect(Number(parts[0]?.amount_minor)).toBeGreaterThan(99_000);
+  });
+
+  it("starts the installments after the rows already paid (FLOW-106)", async () => {
+    db.payments = new Map([["loan-1", [{ transaction_id: "txn-0", doc_date: "2026-02-01", needs_review: false, interest_minor: 50_000, escrow_minor: 0, principal_minor: 9_955, fees_minor: 0 }]]]);
+    db.txn = { ...db.txn, amount_original: 119_910 };
+    renderSplit({ docDate: "2026-04-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    // Row 1 is paid, so the two installments are rows 2 and 3: less interest than rows 1 and 2.
+    const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
+    expect(within(radio).getByText("2 תשלומים לפי הלוח · ₪1,199.10")).toBeInTheDocument();
+    fireEvent.click(radio);
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    const interest = Number(saves()[0]?.p_parts[0]?.amount_minor);
+    expect(interest).toBeLessThan(99_950);
+    expect(interest).toBeGreaterThan(99_800);
   });
 
   it("skips the split reads when get_transaction says the line has no split (FLOW-114)", async () => {
@@ -413,14 +461,15 @@ describe("LoanTransactionSplit", () => {
     expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
-  it("does not offer a paid-off loan for a payment after the day it ended", async () => {
+  it("disables a paid-off loan for a payment after the day it ended, naming the day (FLOW-106)", async () => {
     const paidOff = { ...db.loans[0], status: "paid_off", closed_on: "2026-01-15" };
     db.loans = [paidOff as (typeof db.loans)[number]];
     renderSplit({ docDate: "2026-02-01" });
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
-    expect(within(matchButton()).queryByText("הלוואת דוגמה")).not.toBeInTheDocument();
     fireEvent.click(matchButton());
-    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+    const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
+    expect(radio).toBeDisabled();
+    expect(within(radio).getByText("נפרעה ב־15/01/2026")).toBeInTheDocument();
   });
 
   it("still offers a paid-off loan for a payment on or before the day it ended", async () => {
@@ -431,14 +480,36 @@ describe("LoanTransactionSplit", () => {
     expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
   });
 
-  it("does not offer a demand loan: it has no schedule to split by (decision 0132)", async () => {
+  it("offers a demand loan: the accrued interest, the rest to principal (FLOW-106, decision 0132)", async () => {
     const demand = { ...db.loans[0], kind: "demand", term_months: null, payment_minor: null };
     db.loans = [demand as unknown as (typeof db.loans)[number]];
-    renderSplit({ docDate: "2026-02-01" });
+    // 100,000.00 at 6% for the 30 days from 2026-02-01: 493.15.
+    renderSplit({ docDate: "2026-03-03" });
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
-    expect(within(matchButton()).queryByText("הלוואת דוגמה")).not.toBeInTheDocument();
     fireEvent.click(matchButton());
-    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+    const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
+    expect(within(radio).getByText("ריבית צבורה ₪493.15 · השאר לקרן")).toBeInTheDocument();
+    fireEvent.click(radio);
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
+    const parts = saves()[0]?.p_parts ?? [];
+    expect(parts.map((part) => [part.part, part.amount_minor])).toEqual([["interest", 49_315], ["escrow", 0], ["principal", 50_685]]);
+  });
+
+  it("disables a demand loan before its start, or with a later payment attached (FLOW-106)", async () => {
+    const demand = { ...db.loans[0], kind: "demand", term_months: null, payment_minor: null };
+    db.loans = [demand as unknown as (typeof db.loans)[number]];
+    const early = renderSplit({ docDate: "2026-01-20" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    expect(within(screen.getByRole("radio", { name: /הלוואת דוגמה/ })).getByText("לפני תחילת ההלוואה")).toBeInTheDocument();
+    early.unmount();
+    db.payments = new Map([["loan-1", [{ transaction_id: "txn-9", doc_date: "2026-04-01", needs_review: false, interest_minor: 1_000, escrow_minor: 0, principal_minor: 1_000, fees_minor: 0 }]]]);
+    renderSplit({ docDate: "2026-03-03" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const radio = screen.getByRole("radio", { name: /הלוואת דוגמה/ });
+    expect(radio).toBeDisabled();
+    expect(within(radio).getByText("יש תשלום מאוחר יותר")).toBeInTheDocument();
   });
 
   it("splits an interest-only payment by its schedule and rate rows", async () => {
