@@ -327,6 +327,17 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     expect(lines[0]?.querySelector(".ui-review-reason-text")?.textContent).toBe(JEV_FILLED);
   });
 
+  it("shows the label without a הצעת Jev pill only when Jev is off (FLOW-706)", () => {
+    const plain = { ...jev, projectJev: false, categoryJev: false };
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} jevFilled={{ onUndo: () => undefined, alone: true }} />);
+    expect(container.querySelector(".ui-review-filled .ui-review-reason-text")?.textContent).toBe(JEV_FILLED);
+    expect(screen.getByRole("button", { name: `${JEV_FILLED_UNDO} את המילוי של Jev` })).toBeInTheDocument();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} jevFilled={{ onUndo: () => undefined }} />);
+    expect(container.querySelector(".ui-review-filled")).toBeNull();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={plain} pending jevFilled={{ onUndo: () => undefined, alone: true }} />);
+    expect(container.querySelector(".ui-review-filled")).toBeNull();
+  });
+
   it("marks בטל busy while the undo runs", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
     expect(screen.getByRole("button", { name: /בטל/ })).toHaveAttribute("aria-busy", "true");

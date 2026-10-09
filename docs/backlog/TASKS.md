@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-334 H1 (sticky compact bar) + H2 (labelled Back) in ScreenHeader, and FLOW-322 except the transaction detail hint and Home, PR #259 (FLOW-124/125 merged #253) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-331: the + tab opens quick actions (new project, new loan, connect a bank); #231 follow-ups (SegmentedControl busy and numeric labels, clip-check stall); filing the #231 review leftovers | Next unclaimed UI task |
+| UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-333 split editor C1, C3a, C3b, C3c, C4, C5, C7, C9 (#261) | toast e2e settle-wait flake (lane manager), then next small ready bug |
@@ -109,7 +109,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
 | 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | done (#239; owner chose the swipe, 2026-10-08) |
 | 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
-| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | ready (app only, #231 review) |
+| 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | claimed (UI lane 4, 2026-10-09) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -1093,7 +1093,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-706"></a>
 ### FLOW-706 · Jev fills can't be undone from the app while Jev is off
-- **Type:** BUG · **Status:** ready · **Depends on:** — · **Source:** #231 code review
+- **Type:** BUG · **Status:** claimed (UI lane 4, 2026-10-09) · **Depends on:** — · **Source:** #231 code review
 - **What:** Decision 0145 says fills already made stay undoable after the owner turns Jev off. The app reads `jev_prefills` only inside the Jev suggestion read, which runs only while the connector is on, so with Jev off a filled line shows no "✦ מולא ע״י Jev" and no בטל (MCP `undo_jev_prefill` still works). App only, no server change: read the newest standing fill per open line even when the connector is off, show the label with בטל, and keep the stored values (no visual fill).
 - **Acceptance:** a queue test with the connector off and a standing fill shows the label and בטל calls `undo_jev_prefill`; design review.
 
