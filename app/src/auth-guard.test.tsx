@@ -1,5 +1,5 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -185,7 +185,9 @@ describe("auth guard when Supabase is configured", () => {
       emit("SIGNED_IN", session);
     });
     await settle();
-    expect(await screen.findByRole("heading", { name: "לאישור" })).toBeInTheDocument();
+    // The loading title gives way to the ready one (and the role can land between), so wait for a
+    // heading that is still in the page, not for the first one found.
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "לאישור" })).toBeInTheDocument(); });
     first.unmount();
     auth.handlers.length = 0;
 

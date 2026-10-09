@@ -198,8 +198,9 @@ describe("review queue list", () => {
     renderAt("/review");
     const link = await screen.findByRole("link", { name: "הצגת הכול" });
     expect(link).toHaveAttribute("href", "/review/all");
-    const meter = screen.getByRole("meter", { name: "התקדמות התור" });
-    const banner = screen.getByText(/שויכו אוטומטית היום/);
+    // FLOW-601: the meter waits for the role (list_my_companies), so it can land after the link.
+    const meter = await screen.findByRole("meter", { name: "התקדמות התור" });
+    const banner = await screen.findByText(/שויכו אוטומטית היום/);
     const card = screen.getByRole("heading", { name: "מחסן הנמל" });
     expect(link.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link.parentElement).toHaveClass("ui-review-meter");
