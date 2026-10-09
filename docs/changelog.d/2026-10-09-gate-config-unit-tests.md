@@ -1,0 +1,1 @@
+The pre-push gate's unit and Storybook test runs no longer run every test when a change only touches package scripts other than the test ones, tsconfig include lists, or the lockfile entries of tools the app and the shared package do not use. They still run every test when a dependency, a test script, a compiler option or the app's or shared package's lockfile entries change.
