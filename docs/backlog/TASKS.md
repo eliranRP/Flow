@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-115 loan setup follow-ups (errors say what to type, dimmed kept preview, close waits for save, loading skeleton, always-enabled save) (FLOW-322 `/notifications` and FLOW-334 leftovers merged #272) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
+| UI lane 4 | FLOW-339 C6-6: Search shows only the count under the title, and a row hint drops a whole part (C6-3 merged #292) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-339 Settings → Loans balance at the list amount size, cents on one line (#293) | Next small ready bug |
