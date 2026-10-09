@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-347 Search and loans items + FLOW-349 one shared תקופה sheet, PR #345 (FLOW-502 app side merged #340) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-506 shared demo card and tab bar | Next small ready item from the lane manager |
+| Backlog bug fixes | FLOW-414 loan tools for the bookkeeping agent (FLOW-506 merged #356) | Next small ready item from the lane manager |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -123,6 +123,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (UI lane 4, #345) |
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | ready |
+| 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (Backlog bug fixes, PR pending) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -390,6 +391,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
 - [x] (Backlog bug fixes, 2026-10-09: the row always has a hint and the placeholder is the hinted row's height, 94.6px; the jump was really 72 → 94.6px in the one-loan case) The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
 - [x] (Backlog bug fixes, 2026-10-09: the sheet says "אין הלוואה בדולר."; a loan with no balance row shows its principal) Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
+
+<a id="flow-414"></a>
+### FLOW-414 · Loan tools: interest kept out of profit, interest-only term, field-named errors
+- **Type:** BUG · **Status:** done (Backlog bug fixes, decision 0166) · **Source:** the Flow MCP agent's requests, relayed by the lane manager 2026-10-09 (bookkeeping priority)
+- [x] `update_loan` refused a kept-out category for interest or escrow ("category does not fit the loan part"), so a rehab or flip hard-money loan's interest could not stay out of profit as a carrying cost. Interest and escrow now take any expense category, counted or kept out, as fees do; principal still needs a kept-out one, and a built-in loan category in use keeps its side (decision 0166). The app's part-category picker follows.
+- [x] `add_loan` with `kind: "interest_only"` and `interest_only_months` equal to `term_months` (12 of 12) was reported as a bare `validation`. It passes on main (zod, the schedule and the SQL check all allow it); a test now locks it in, and the field-named errors below show what a refused payload got wrong (months sent as text, for example).
+- [x] `add_loan`, `update_loan` and `attach_loan_payment` errors name the failing field and what it takes (`interest_only_months: required with kind interest_only`, `parts.escrow: an amount of zero or more, at most two decimals, not rounded`); every tool names an unknown or identity argument.
 
 ## MCP
 
