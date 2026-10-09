@@ -3,19 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useHoldWrites, useWriteGate } from "../use-is-viewer";
-import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
-import { useFlowSearch, useHomePreview, usePreviewSearch } from "../preview";
+import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useReviewQuery } from "../use-books";
 import { reviewFocusPath } from "../review-paths";
 import { assertNoError, useWrite } from "../use-write";
 import { useJevReview } from "./jev-review-card";
 import { withJev } from "./jev-review";
-import { Button } from "../ui/button";
-import { useGoBack } from "../ui/back";
-import { CameraIcon, PencilIcon } from "../ui/icons";
-import { ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_SPLIT_NOTE, type ChangeChoice } from "../ui/change-sheet";
 import { ScreenState } from "../ui/screen-state";
 import { RouteSheet } from "../ui/route-sheet";
@@ -404,40 +399,5 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       }}
       onCreateProject={createProject}
     />
-  );
-}
-
-export function AddForm() {
-  const search = usePreviewSearch();
-  const goBack = useGoBack();
-  const writeGate = useWriteGate("/");
-  if (writeGate === "wait") return null;
-  if (writeGate !== "show") return writeGate;
-  return (
-    <RouteSheet
-      title="הוספה"
-      closeTo={`/${search}`}
-      returnFocusRef={addTriggerRef}
-    >
-      <p className="t-hint">הצילום וההזנה הידנית יגיעו בהמשך.</p>
-      <div className="ui-add-rows">
-        <ListRow
-          variant="button"
-          disabled
-          title="צילום חשבונית"
-          hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
-          wrapHint
-          icon={<CameraIcon size={26} />}
-        />
-        <ListRow
-          variant="button"
-          disabled
-          title="הזנה ידנית"
-          hint="סכום, פרויקט וקטגוריה – רק במקרה הצורך"
-          icon={<PencilIcon size={26} />}
-        />
-      </div>
-      <Button variant="ghost" full onClick={() => { goBack(`/${search}`); }}>ביטול</Button>
-    </RouteSheet>
   );
 }

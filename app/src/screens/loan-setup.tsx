@@ -15,6 +15,7 @@ import { useSheetHistory } from "../ui/back";
 import { formatDisplay } from "../ui/date-math";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
+import { useOpenFromQuery } from "../open-from-query";
 import { useHoldWrites } from "../use-is-viewer";
 import {
   LOAN_CURRENCY_MARK,
@@ -400,11 +401,12 @@ export function LoanSettingsSection({
     setOpenState(next);
   }, [clearDraft]);
   // Back in the picker view returns to the form, like Escape and חזרה.
+  const adoptNew = useRef(false);
   const setSheet = useSheetHistory("loan-new", open, setOpen, () => {
     if (view !== "project") return true;
     backToForm();
     return false;
-  });
+  }, adoptNew);
   const [editing, setEditing] = useState<LoanBalanceRow | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const editBusy = useRef(false);
@@ -451,6 +453,12 @@ export function LoanSettingsSection({
     else clearDraft();
     setSheet(next);
   }
+
+  // FLOW-331: + → הלוואה חדשה lands on /settings/loans with ?new=loan.
+  useOpenFromQuery("loan", !holdWrites && currency != null, (sameEntry) => {
+    adoptNew.current = sameEntry;
+    setLoanSheet(true);
+  });
 
   function openPicker() {
     setFormHeight(formRef.current?.offsetHeight ?? null);

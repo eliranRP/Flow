@@ -217,6 +217,7 @@ export function JevSettingsCard({
                 label="מצב"
                 value={auto ? "auto" : "shadow"}
                 options={MODE_OPTIONS}
+                busy={busy}
                 describedBy={modeHintId}
                 disabled={readOnly}
                 onChange={(mode) => {
@@ -230,7 +231,8 @@ export function JevSettingsCard({
                   <SegmentedControl
                     label="סף ביטחון"
                     value={offered ? String(threshold) : ""}
-                    options={JEV_THRESHOLDS.map((value) => ({ value: String(value), label: percent(value) }))}
+                    options={JEV_THRESHOLDS.map((value) => ({ value: String(value), label: percent(value), numeric: true }))}
+                    busy={busy}
                     describedBy={offered ? undefined : thresholdHintId}
                     disabled={readOnly}
                     onChange={(value) => {

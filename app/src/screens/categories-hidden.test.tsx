@@ -73,6 +73,16 @@ describe("categories hidden footer", () => {
     expect(screen.queryByText("עבודה")).not.toBeInTheDocument();
   });
 
+  it("opens a category's lines in search, with its ⋯ beside the link, not inside it (FLOW-322)", () => {
+    renderScreen(<CategoriesScreen sample={sample} />);
+    const row = screen.getByRole("link", { name: /חומרים/ });
+    expect(row).toHaveAttribute("href", "/search?dir=expense&category=c1");
+    const more = screen.getByRole("button", { name: "עוד, חומרים" });
+    expect(row).not.toContainElement(more);
+    fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
+    expect(screen.getByRole("link", { name: /תקבול/ })).toHaveAttribute("href", "/search?dir=income&category=c5");
+  });
+
   it("saves unhide through set_category_hidden", async () => {
     rpc.calls.length = 0;
     renderScreen(<CategoriesScreen />);

@@ -176,7 +176,7 @@ jobs:
 
   # The every-story smoke opens each story once. Its 8 tests are split across two runners.
   check-stories:
-    name: check (stories ${{ matrix.shard }}/2)
+    name: check (stories ${{ matrix.shard }}/4)
     needs: [plan]
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
@@ -184,7 +184,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -220,8 +220,8 @@ jobs:
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
       - run: pnpm build-storybook
-      - name: Every static story (shard ${{ matrix.shard }}/2)
-        run: pnpm test:storybook:smoke --grep "every static story" --shard=${{ matrix.shard }}/2
+      - name: Every static story (shard ${{ matrix.shard }}/4)
+        run: pnpm test:storybook:smoke --grep "every static story" --shard=${{ matrix.shard }}/4
 
   # always(), not !cancelled(): a skipped required check counts as passing, so the gate must run and fail.
   check:
@@ -243,10 +243,10 @@ jobs:
           test "$STORYBOOK" = success
           test "$STORIES" = success
 
-  # The main Playwright suite is split across two runners. Each starts its own local Supabase.
+  # The main Playwright suite is split across three runners (FLOW-812). Each starts its own local Supabase.
   # Shard 1 also runs the database checks.
   e2e-shard:
-    name: e2e (${{ matrix.shard }}/2)
+    name: e2e (${{ matrix.shard }}/3)
     needs: [plan]
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
@@ -254,7 +254,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
@@ -332,11 +332,11 @@ jobs:
           set -euo pipefail
           db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
           SUPABASE_DB_URL="$db_url" bash scripts/check-sumit-cron.sh
-      - name: Main Playwright suite against local Supabase (shard ${{ matrix.shard }}/2)
+      - name: Main Playwright suite against local Supabase (shard ${{ matrix.shard }}/3)
         run: |
           set -euo pipefail
           eval "$(bash scripts/ci-local-supabase-env.sh)"
-          pnpm test:e2e --shard=${{ matrix.shard }}/2
+          pnpm test:e2e --shard=${{ matrix.shard }}/3
 
   # always(), not !cancelled(): see the check gate.
   e2e:

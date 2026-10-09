@@ -1,13 +1,15 @@
 import { shekelsToAgorot, type Dashboard, type ProjectRow } from "@flow/shared";
 import { projectAmountFigures, projectMarginHint } from "../by-currency";
-import { useState, type ReactNode, type SubmitEvent } from "react";
+import { useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useHoldWrites } from "../use-is-viewer";
+import { useOpenFromQuery } from "../open-from-query";
 import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useBooks, useDashboardQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
+import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
@@ -30,7 +32,15 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
   const dashboard = useDashboardQuery(sample == null);
   const books = useBooks();
   const holdWrites = useHoldWrites();
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const adopt = useRef(false);
+  // Back closes the sheet. A quick action opened over this page adopts its entry (one Back closes).
+  const setOpen = useSheetHistory("project-new", open, setOpenState, undefined, adopt);
+  // FLOW-331: + → פרויקט חדש lands here with ?new=project.
+  useOpenFromQuery("project", !holdWrites, (sameEntry) => {
+    adopt.current = sameEntry;
+    setOpen(true);
+  });
   const [query, setQuery] = useState(initialQuery);
   const [expanded, setExpanded] = useState(false);
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard);
@@ -58,11 +68,11 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
       <ScreenState
         title="פרויקטים"
         subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
-        // FLOW-323: the search icon sits in the bar's end corner, as on Home, with פרויקט חדש before it; the title stacks under.
+        // FLOW-323: the search icon sits in the bar's end corner, as on Home; the title stacks under.
+        // FLOW-331: פרויקט חדש moved to the + tab's quick actions; the empty state keeps its button.
         stacked
         trailing={(
           <span className="ui-head-actions">
-            {holdWrites ? null : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
             <SearchEntry to={`/search${search}`} />
           </span>
         )}

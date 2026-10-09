@@ -11,7 +11,8 @@ async function addPart(page: Page, category: string, project: string, reversal =
   await page.getByRole("button", { name: "הוספת חלק" }).click();
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
   await expect(categories).toBeVisible();
-  if (reversal) await categories.getByRole("button", { name: "הוצאה שהוחזרה" }).click();
+  // A refund line opens its reversal section expanded (FLOW-333 C3c).
+  if (reversal) await expect(categories.getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: category }).click();
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects).toBeVisible();
@@ -35,6 +36,9 @@ test("an expense splits 30% and ₪500, the rest stays on the line, and ✕ save
   await page.getByRole("radio", { name: "%" }).click();
   await page.getByLabel("אחוז, חשמל").fill("30");
   await addPart(page, "ביטוח", "פרויקט רעננה");
+  // A new part takes the last typed unit (FLOW-333 C3b), and the picker hands focus to its field (C3a).
+  await expect(page.getByLabel("אחוז, ביטוח")).toBeFocused();
+  await page.getByRole("radiogroup", { name: "יחידה, ביטוח" }).getByRole("radio", { name: "₪" }).click();
   await page.getByLabel("סכום, ביטוח").fill("500");
   const rest = page.getByRole("button", { name: /^השאר,/ });
   await expect(rest).toContainText("₪2,860");
@@ -53,7 +57,7 @@ test("a refund's reversal part needs a project before it saves", async ({ page }
   await page.goto("/e2e/split-category?line=refund");
   await page.getByRole("button", { name: "הוספת חלק" }).click();
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
-  await categories.getByRole("button", { name: "הוצאה שהוחזרה" }).click();
+  await expect(categories.getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: "חומרי בניין" }).click();
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects.getByText("חלק החזר צריך פרויקט.")).toBeVisible();

@@ -200,7 +200,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 |---|---|---|
 | Button | primary, secondary (tint), ghost, destructive. Default, pressed, disabled | One primary per screen. Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
 | + button | 48px circle. Default, pressed | Opens Add. Sits in the tab bar |
-| Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"` | With Back or a leading control, Back sits alone on the bar and the kicker, title and subtitle stack under it on the start side (mockups 07, 14). A compact title (the transaction) and `layout="inline"` stay on the bar. FLOW-326 |
+| Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"`; compact bar shown | With Back or a leading control, Back sits alone on the bar and the title and subtitle stack under it on the start side (FLOW-326). With a kicker, the kicker is Back's label ("‹ הגדרות", `label` in `accent-text`, cut at about 16 characters) and there is no kicker line ([0156](../decisions/0156-labelled-back-and-compact-bar.md)). On a stacked page with Back, a 44px compact bar (Back and the title in `title-3`, one line, `line` hairline) pins to the top once the large title scrolls off; month heads pin under it. A compact title (the transaction) and `layout="inline"` stay on the bar and get no compact bar. FLOW-326, FLOW-334 |
 | Period pill | tinted, or white/dark on the band | Opens the period sheet. Home and the project band use the period bar instead |
 | Period bar (`PeriodBar`) | preset selected; custom range (no preset selected, first preset keeps the tab stop); later arrow `aria-disabled` | Home and the project band ([0141](../decisions/0141-period-bar.md), FLOW-411): five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) on a band-tone segmented control, then a stepper. The later arrow keeps its slot at the current window. The period label opens the period sheet |
 | Chips | suggested (tint + ✦), outlined choice, selected (violet + check), disabled, status | Hit area 44px even if drawn 36px |
@@ -368,7 +368,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 - Mockups: [04-add-light.png](../../design/screens/04-add-light.png), [04-add-dark.png](../../design/screens/04-add-dark.png).
 - Entry: the + button.
-- Steps: the sheet opens over the screen that opened it. A direct `/add` still shows Home underneath. Photo, bank report, or manual entry. [0020](../decisions/0020-capture-from-the-phone.md). Phase 0 shows only the title and one hint ([0045](../decisions/0045-phase-0-design-gaps.md)). Closing returns focus to +.
+- Steps: the sheet opens over the screen that opened it. A direct `/add` still shows Home underneath. Until capture ships ([0020](../decisions/0020-capture-from-the-phone.md)), three quick actions (FLOW-331): פרויקט חדש (the project sheet on Projects), הלוואה חדשה (the new-loan sheet on Loans), חיבור בנק (the Mercury sheet on Connections; "מחובר" as the hint line when connected, "צריך לחבר מחדש" in warning when it needs it). No hints and no line about features to come. A tap replaces the sheet's entry, so Back from the target does not reopen it. Closing returns focus to +.
 - Cancel: ✕, scrim, swipe down, or back. Guide §3.3.
 - Success: processing screens [ld-05](../../design/states/ld-05-upload-processing-light.png) (bank) and [ld-06](../../design/states/ld-06-invoice-reading-light.png) (invoice), then results or the new row.
 - Error: [er-01-bank-file](../../design/states/er-01-bank-file-light.png) wrong file. [er-02-invoice-blurry](../../design/states/er-02-invoice-blurry-light.png) unreadable photo. Each has a dark twin.
@@ -487,7 +487,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 ### 14a Connections
 
 - Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/connections`, template A with the tab bar (הגדרות stays current).
-- Header: kicker הגדרות, title חיבורים, Back to `/settings`.
+- Header: Back labelled הגדרות to `/settings`, title חיבורים.
 - Steps: "ספרים ובנק" holds SUMIT and Mercury; "עזרים" holds תיוג חכם (Jev) and עוזר AI. Each row is the shared `ConnectorRow`: the one-word status and its one sheet, unchanged from [0082](../decisions/0082-settings-redesign.md) §3–§8. `?sheet=sumit|mercury|assistant` opens that sheet once; the old `/settings?sheet=` links redirect here.
 - States: loading keeps the real titles over skeleton hints; an error is the row's inline ניסיון חוזר; the page is never empty. With no company the page stays open and SUMIT and Mercury offer פרטי העסק.
 - Viewer: static rows, no chevrons.
@@ -495,7 +495,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 ### 14b Loans
 
 - Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/loans`, template A with the tab bar. `/settings/loans/:id` is kept for FLOW-110's detail page.
-- Header: kicker הגדרות, title הלוואות, Back to `/settings`. No company goes back to Settings.
+- Header: Back labelled הגדרות to `/settings`, title הלוואות. No company goes back to Settings.
 - Steps: each loan's name, its hint (project, or ממתין לבדיקה in the warning tone), and the balance with small cents (".00" included); then the הלוואה חדשה row. A row tap opens the project sheet (FLOW-119).
 - States: two skeleton rows while loading; the error layout "לא הצלחנו לטעון את ההלוואות" with ניסיון חוזר and no new-loan row; the empty state "אין הלוואות עדיין" with one primary הלוואה חדשה.
 - Viewer: the balances as static rows, no chevrons and no הלוואה חדשה; the empty state says "כשיתווספו הלוואות הן יופיעו כאן." with no button.

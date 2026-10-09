@@ -283,7 +283,7 @@ describe("SUMIT status row", () => {
       expect(screen.getByRole("button", { name: "ניסיון חוזר: SUMIT" })).toHaveFocus();
       expect(screen.getByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toHaveAttribute("aria-busy", "true");
     });
-    const elsewhere = screen.getByRole("button", { name: "חזרה" });
+    const elsewhere = screen.getByRole("button", { name: "חזרה להגדרות" });
     elsewhere.focus();
     expect(elsewhere).toHaveFocus();
     hang = true;
@@ -360,7 +360,7 @@ describe("SUMIT status row", () => {
     const retry = await screen.findByRole("button", { name: "ניסיון חוזר: SUMIT" });
     attempt = new Promise((resolve) => { release = resolve; });
     fireEvent.click(retry);
-    const elsewhere = screen.getByRole("button", { name: "חזרה" });
+    const elsewhere = screen.getByRole("button", { name: "חזרה להגדרות" });
     elsewhere.focus();
     release({ data: null, error: { message: "down" } });
     await waitFor(() => {
@@ -931,7 +931,7 @@ describe("SUMIT status row", () => {
     const retry = await screen.findByRole("button", { name: "ניסיון חוזר: SUMIT" });
     attempt = new Promise((resolve) => { release = resolve; });
     fireEvent.click(retry);
-    const elsewhere = screen.getByRole("button", { name: "חזרה" });
+    const elsewhere = screen.getByRole("button", { name: "חזרה להגדרות" });
     elsewhere.focus();
     release({ data: sumit({ connected: true, sumit_company_id: 1001 }), error: null });
     const row = await screen.findByRole("button", { name: "SUMIT" });

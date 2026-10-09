@@ -114,12 +114,31 @@
   gap: var(--space-2);
 }
 
-.ui-lsplit-entry > .ui-field:first-child {
-  inline-size: 4.75rem;
+/* FLOW-333 C1: a part's entry takes its own full-width line, so ₪9,999,999.99 fits at 320. */
+.ui-lsplit-end-entry {
+  flex: 1 0 100%;
+  align-items: stretch;
+  margin-inline-start: 0;
+}
+
+.ui-lsplit-end-entry .ui-lsplit-resolved {
+  align-self: flex-end;
+}
+
+.ui-lsplit-entry > .ui-field:first-child,
+.ui-lsplit-entry .ui-seg-input {
+  flex: none;
+  inline-size: auto;
 }
 
 .ui-lsplit-entry > .ui-field:last-child {
-  inline-size: 6rem;
+  flex: 1 1 0;
+  inline-size: auto;
+}
+
+/* FLOW-333 C7: each ₪ / % button is a full touch target. */
+.ui-lsplit-entry .ui-seg-btn {
+  min-inline-size: var(--touch-min);
 }
 
 .ui-lsplit-resolved {
@@ -156,10 +175,11 @@
   margin: var(--space-2) var(--space-4) 0;
 }
 
+/* FLOW-333 C4: הוספת חלק sits in the sticky bar, at the start of the totals line. */
 .ui-lsplit-add {
   display: flex;
-  margin: 0;
-  padding: var(--space-1) var(--space-4) var(--space-2);
+  flex: none;
+  align-self: center;
 }
 
 .ui-lsplit-clear {
@@ -173,8 +193,17 @@
 
 .ui-lsplit-totals {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-4);
+}
+
+/* The two sums keep their width; past 320 with eight-figure sums they wrap under the link. */
+.ui-lsplit-sums {
+  display: flex;
+  flex: none;
+  gap: var(--space-4);
+  margin-inline-start: auto;
 }
 
 .ui-lsplit-total {

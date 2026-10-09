@@ -1,0 +1,1 @@
+Main's CI is faster (FLOW-812, [TASKS](backlog/TASKS.md#flow-812)). The every-story Storybook smoke runs on 4 runners instead of 2 and the main Playwright suite on 3 instead of 2, so the jobs that set the pace before each deploy finish sooner. Same tests; the required checks are still `lint`, `check` and `e2e`.

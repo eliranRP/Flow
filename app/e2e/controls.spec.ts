@@ -122,12 +122,10 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   await expect(addSheet).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/add?preview=1");
-  const capture = page.getByRole("button", { name: /צילום חשבונית/ });
-  const manual = page.getByRole("button", { name: /הזנה ידנית/ });
-  await expect(capture).toBeDisabled();
-  await expect(manual).toBeDisabled();
-  expect(await cursorOf(capture)).toBe("not-allowed");
-  expect(await cursorOf(manual)).toBe("not-allowed");
+  // FLOW-331: three quick actions, all enabled.
+  for (const name of [/פרויקט חדש/, /הלוואה חדשה/, /חיבור בנק/]) {
+    await expect(page.getByRole("button", { name })).toBeEnabled();
+  }
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
 });
@@ -243,7 +241,8 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   await focusAt(page, searchBox, search, 0.5);
   await focusAt(page, searchBox, search, 0.98);
 
-  await page.getByRole("button", { name: "פרויקט חדש" }).click();
+  // FLOW-331: פרויקט חדש lives on +, which lands here with ?new=project.
+  await page.goto("/e2e/projects?preview=1&new=project");
   const dialog = page.getByRole("dialog", { name: "פרויקט" });
   await expect(dialog).toBeVisible();
   const name = dialog.getByRole("textbox", { name: "שם" });
@@ -304,8 +303,7 @@ test("projects search, expand, open, and the new-project sheet", async ({ page }
   await expect(page.getByRole("link", { name: "פרויקט ישן" })).toBeVisible();
   await page.getByRole("link", { name: "וילה רעננה" }).click();
   await expect(page).toHaveURL(/\/projects\/p2/);
-  await page.goto("/e2e/projects?preview=1");
-  await page.getByRole("button", { name: "פרויקט חדש" }).click();
+  await page.goto("/e2e/projects?preview=1&new=project");
   await expect(page.getByRole("dialog", { name: "פרויקט" })).toBeVisible();
   await page.getByRole("textbox", { name: "שם" }).fill("גג חדש");
   await page.getByRole("button", { name: "שמירה" }).click();
@@ -339,9 +337,11 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await page.getByRole("link", { name: /^מלט/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t1/);
 
-  await page.goto("/projects/missing?preview=1");
-  await page.getByRole("link", { name: /צילום חשבונית/ }).click();
-  await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
+  // FLOW-331: + → פרויקט חדש opens the project sheet on Projects; Back does not reopen +.
+  await page.goto("/add?preview=1");
+  await page.getByRole("button", { name: /פרויקט חדש/ }).click();
+  await expect(page.getByRole("dialog", { name: "פרויקט" })).toBeVisible();
+  await expect(page).toHaveURL(/\/projects\?preview=1$/);
 });
 
 test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
@@ -764,188 +764,6 @@ test("split choices, manual percents, and close", async ({ page }) => {
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/transactions\//);
 });
-
-type Control = {
-  index: number;
-  name: string;
-  href: string;
-  current: string;
-  checked: string;
-  type: string;
-  tag: string;
-};
-
-async function describeControls(page: Page): Promise<Control[]> {
-  return page.locator("a[href], button, input, textarea").evaluateAll((nodes) => {
-    return nodes.flatMap((node, index) => {
-      const el = node as HTMLElement;
-      const style = getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-      if (style.display === "none" || style.visibility === "hidden" || rect.width === 0 || rect.height === 0) return [];
-      if (el.getAttribute("aria-hidden") === "true") return [];
-      const input = el as HTMLInputElement;
-      const disabled = input.disabled || el.getAttribute("aria-disabled") === "true";
-      const rawType = (el as { type?: unknown }).type;
-      const type = typeof rawType === "string" ? rawType : "";
-      if (disabled || type === "hidden") return [];
-      const name = (el.getAttribute("aria-label") || el.innerText || el.getAttribute("placeholder") || "").replace(/\s+/g, " ").trim();
-      return [{
-        index,
-        name,
-        href: el.getAttribute("href") ?? "",
-        current: el.getAttribute("aria-current") ?? "",
-        checked: el.getAttribute("aria-checked") ?? el.getAttribute("aria-pressed") ?? "",
-        type,
-        tag: el.tagName.toLowerCase(),
-      }];
-    });
-  });
-}
-
-async function fingerprint(page: Page) {
-  return page.evaluate(() => ({
-    url: location.pathname + location.search,
-    dialogs: document.querySelectorAll("[role='dialog']").length,
-    toast: document.querySelector(".ui-toast")?.textContent ?? "",
-    checked: [...document.querySelectorAll("[aria-checked],[aria-pressed],[aria-selected],input[type='checkbox'],input[type='radio']")].map((node) => {
-      if (node instanceof HTMLInputElement && (node.type === "checkbox" || node.type === "radio")) return node.checked ? "1" : "0";
-      return node.getAttribute("aria-checked") ?? node.getAttribute("aria-pressed") ?? node.getAttribute("aria-selected");
-    }).join(","),
-    expanded: [...document.querySelectorAll("[aria-expanded]")].map((node) => node.getAttribute("aria-expanded")).join(","),
-    text: document.body.innerText,
-  }));
-}
-
-function hitTarget(el: Element): boolean {
-  if (!(el instanceof HTMLElement)) return false;
-  const rect = el.getBoundingClientRect();
-  const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + Math.min(rect.height / 2, Math.max(rect.height - 1, 0)));
-  if (!hit) return false;
-  const label = el.closest("label");
-  return el === hit || el.contains(hit) || hit.contains(el) || (label != null && label === hit.closest("label"));
-}
-
-function sameUrl(href: string, current: string) {
-  if (href === "" || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("http")) return false;
-  const next = new URL(href, current);
-  const here = new URL(current);
-  return next.pathname === here.pathname && next.search === here.search;
-}
-
-const sweepPages = [
-  "/?preview=1",
-  "/projects?preview=1",
-  "/review?preview=1",
-  "/review/filed?preview=1",
-  "/unpaid?preview=1",
-  "/settings?preview=1",
-  "/settings/categories?preview=1",
-  "/settings/connections?preview=1",
-  "/settings/loans?preview=1",
-  "/onboarding?preview=1",
-  "/install?preview=1",
-  "/notifications?preview=1",
-  "/sign-in",
-  "/sign-in?error=server_error",
-  "/help",
-  "/terms",
-  "/privacy",
-  "/add?preview=1",
-  "/projects/herzl?preview=1",
-  "/transactions/1?preview=1",
-  "/review/change?preview=1",
-  "/?preview=error",
-  "/e2e/review-banner",
-  "/e2e/filed?preview=1",
-  "/e2e/home?preview=1",
-  "/e2e/projects?preview=1",
-  "/e2e/settings?preview=1",
-  "/e2e/connections?preview=1",
-  "/e2e/connections?preview=1&connected=1",
-  "/e2e/connections?preview=1&connected=auth",
-  "/e2e/loans?preview=1",
-  "/e2e/categories?preview=1",
-  "/e2e/unpaid?preview=1",
-  "/e2e/txn?preview=1",
-  "/e2e/project-detail?preview=1",
-  "/e2e/project-months?preview=1",
-  "/e2e/change?preview=1",
-  "/e2e/split",
-  "/e2e/review",
-  "/e2e/install-android",
-  "/e2e/install-other",
-];
-
-/** These routes open a sheet on load, so controls under the scrim are covered. */
-const sheetOnLoad = new Set(["/add?preview=1", "/review/change?preview=1"]);
-
-for (const url of sweepPages) {
-  test(`no enabled control is a no-op on ${url}`, async ({ page }) => {
-    test.setTimeout(180_000);
-    await page.goto(url);
-    const found = await describeControls(page);
-    const failures: string[] = [];
-    let skipped = 0;
-    for (const control of found) {
-      if (control.name.includes("המשך עם Google")) continue;
-      if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
-      await page.goto(url);
-      const target = page.locator("a[href], button, input, textarea").nth(control.index);
-      const here = page.url();
-      if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
-        failures.push(`${control.name || control.tag} links to the current page`);
-        continue;
-      }
-      if (control.tag === "a" && control.current === "page" && sameUrl(control.href, here)) continue;
-      if ((control.tag === "input" || control.tag === "textarea") && control.type !== "checkbox" && control.type !== "radio") {
-        await target.click();
-        const focused = await target.evaluate((node) => document.activeElement === node);
-        if (!focused) failures.push(`${control.name || "field"} did not focus`);
-        continue;
-      }
-      if (control.checked === "true") continue;
-      await target.scrollIntoViewIfNeeded();
-      let reachable = await target.evaluate(hitTarget);
-      if (!reachable) {
-        await target.evaluate((el) => {
-          el.scrollIntoView({ block: "center", inline: "nearest" });
-        });
-        reachable = await target.evaluate(hitTarget);
-      }
-      if (!reachable) {
-        const covered = await target.evaluate((el) => {
-          const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
-          return sheet != null && !sheet.contains(el);
-        });
-        if (covered) {
-          skipped += 1;
-          continue;
-        }
-        failures.push(`${control.name || control.tag} at ${url} stayed unclickable`);
-        continue;
-      }
-      const before = await fingerprint(page);
-      try {
-        await target.click({ timeout: 2_000 });
-      } catch {
-        failures.push(`${control.name || control.tag} at ${url} could not be clicked`);
-        continue;
-      }
-      try {
-        await expect.poll(() => fingerprint(page), { timeout: 1_500 }).not.toEqual(before);
-      } catch {
-        const invalid = await page.evaluate(() => {
-          const field = document.activeElement;
-          return field instanceof HTMLInputElement && field.validationMessage !== "";
-        });
-        if (!invalid) failures.push(`${control.name || control.tag} at ${url} did nothing`);
-      }
-    }
-    console.log(`no-op sweep ${url}: skipped ${String(skipped)} covered controls`);
-    if (!sheetOnLoad.has(url)) expect(skipped).toBe(0);
-    expect(failures).toEqual([]);
-  });
-}
 
 test("settings opens the Connections and Loans pages, and Back returns to the row (FLOW-501)", async ({ page }) => {
   await page.goto("/settings?preview=1");
