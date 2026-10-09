@@ -603,6 +603,56 @@ Deno.test("set_loan_rate forwards the rate in ppm, null removes it, and undo tak
   }
 });
 
+Deno.test("set_loan_index takes a signed margin and null unlinks; set_index_rate forwards the index rate in ppm (FLOW-137)", async () => {
+  const { calls, rpc } = rpcOf((name) => ({ status: 200, json: { ok: true, data: { undo_kind: name === "mcp_set_index_rate" ? "index_rate" : "loan_index" } } }));
+  assertEquals((await callTool("set_loan_index", { idempotency_key: "i-1", loan_id: LOAN, rate_index: "il_prime", margin_percent: "0.75" }, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_loan_index",
+    body: { p_idempotency_key: "i-1", p_loan_id: LOAN, p_rate_index: "il_prime", p_margin_ppm: 7_500 },
+  });
+  await callTool("set_loan_index", { idempotency_key: "i-2", loan_id: LOAN, rate_index: "il_prime", margin_percent: -0.25 }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_margin_ppm, -2_500);
+  await callTool("set_loan_index", { idempotency_key: "i-3", loan_id: LOAN, rate_index: null, margin_percent: null }, ["write"], rpc);
+  assertEquals([calls.at(-1)?.body.p_rate_index, calls.at(-1)?.body.p_margin_ppm], [null, null]);
+  assertEquals((await callTool("set_index_rate", { idempotency_key: "p-1", rate_index: "il_prime", effective_date: "2027-01-01", annual_rate_percent: "6.25" }, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_index_rate",
+    body: { p_idempotency_key: "p-1", p_rate_index: "il_prime", p_effective_date: "2027-01-01", p_annual_rate_ppm: 62_500 },
+  });
+  await callTool("undo", { idempotency_key: "p-2", kind: "index_rate", id: CATEGORY }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "p-2", p_kind: "index_rate", p_id: CATEGORY } });
+  await callTool("undo", { idempotency_key: "i-4", kind: "loan_index", id: LOAN }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_kind, "loan_index");
+  const before = calls.length;
+  for (const bad of [
+    { rate_index: "us_prime", margin_percent: 1 },
+    { rate_index: "il_prime", margin_percent: null },
+    { rate_index: null, margin_percent: 1 },
+    { rate_index: "il_prime", margin_percent: 101 },
+    { rate_index: "il_prime", margin_percent: "-101" },
+    { rate_index: "il_prime" },
+  ]) {
+    const refused = await callTool("set_loan_index", { idempotency_key: "i-bad", loan_id: LOAN, ...bad }, ["write"], rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
+  }
+  for (const bad of [
+    { rate_index: "il_prime", effective_date: "2027-02-30", annual_rate_percent: 5 },
+    { rate_index: "il_prime", effective_date: "2027-01-01", annual_rate_percent: -1 },
+    { rate_index: "il_prime", effective_date: "2027-01-01", annual_rate_percent: null },
+    { rate_index: "us_prime", effective_date: "2027-01-01", annual_rate_percent: 5 },
+    { effective_date: "2027-01-01", annual_rate_percent: 5 },
+  ]) {
+    const refused = await callTool("set_index_rate", { idempotency_key: "p-bad", ...bad }, ["write"], rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before);
+  for (const message of ["no loan linked to this index", "no linked loan is open on this date"]) {
+    const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
+    const refused = await callTool("set_index_rate", { idempotency_key: "p-db", rate_index: "il_prime", effective_date: "2027-01-01", annual_rate_percent: 5 }, ["write"], db.rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
+  }
+});
+
 Deno.test("get_loan_schedule on a demand loan lists the payments and the interest accrued to as_of", async () => {
   const payments = [
     paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 30_000n, principalMinor: 1_000_000n }, { doc_date: "2026-01-31" }),
@@ -660,6 +710,11 @@ Deno.test("loan kind tools are described", () => {
   assertEquals(Object.keys(spec(write, "set_loan_rate")?.inputSchema.properties ?? {}), ["idempotency_key", "loan_id", "effective_date", "annual_rate_percent"]);
   for (const words of ["rate before the loan start", "undo is kind loan_rate", "recasts the payment"]) {
     assertEquals(spec(write, "set_loan_rate")?.description.includes(words), true, words);
+  }
+  assertEquals(Object.keys(spec(write, "set_loan_index")?.inputSchema.properties ?? {}), ["idempotency_key", "loan_id", "rate_index", "margin_percent"]);
+  assertEquals(Object.keys(spec(write, "set_index_rate")?.inputSchema.properties ?? {}), ["idempotency_key", "rate_index", "effective_date", "annual_rate_percent"]);
+  for (const words of ["undo is kind index_rate", "all or nothing", "no loan linked to this index"]) {
+    assertEquals(spec(write, "set_index_rate")?.description.includes(words), true, words);
   }
   for (const name of ["add_loan", "update_loan"]) {
     assertEquals(Object.keys(spec(write, name)?.inputSchema.properties ?? {}).slice(-3), ["kind", "interest_only_months", "amortization_months"]);
