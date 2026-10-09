@@ -66,6 +66,11 @@ const preview: Preview = {
           styles: { width: "390px", height: "700px" },
           type: "mobile",
         },
+        "flow320-short": {
+          name: "Flow 320 short",
+          styles: { width: "320px", height: "693px" },
+          type: "mobile",
+        },
       },
       defaultViewport: "flow390",
     },
