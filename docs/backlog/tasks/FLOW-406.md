@@ -8,7 +8,7 @@
   - [x] 1a (#354): `parent_id`, the rules, the `group_name` backfill and mirror, `set_category_parent`, refusals on a parent, `list_categories` fields, MCP `set_category_parent` and `parent_id` on the create tools.
   - [x] 1b (#363): roll-up reads: `get_project` `category_rollups*` and `parent_id`, `project_category_months` `parents[]`, `get_breakdown` by parent (MCP `level`), search parent match with `category_exact`.
 - [x] Server 2 (#383): `project_groups`, `projects.group_id`, `company_pnl.groups[]`, `get_project_group`, the group RPCs, MCP `list_project_groups`, `get_project_group`, `create_project_group` and `set_project_group` with undo.
-- [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
+- [x] Server 3 (#408): `private.starter_categories` (rentals, renovation, general) and `apply_starter_categories`, owner only, locked once the books start.
 - [ ] Screens (UI lane 3), after the server PRs.
   - [x] Settings → Categories drill-in (cat-b, cat-b-2), #378 (owner OK on the real-app shots, 2026-10-09).
   - [x] Project page: sub-categories fold under their parent (list_categories' parent_id), #378.
