@@ -1,0 +1,1 @@
+A sheet's panel no longer scrolls on its own. When a pick turned a tall picker back into the short summary, a scroll-into-view or scroll anchoring could leave the panel scrolled about 67px, which hid the header's top padding under a toast and made the toast e2e spec flaky. The panel now clips (`overflow: clip`) and only the sheet body scrolls.
