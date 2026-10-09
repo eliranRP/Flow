@@ -396,7 +396,7 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(matchButton()).toHaveFocus(); });
   });
 
-  it("keeps the match sheet open on a dismiss while the match saves (FLOW-115)", async () => {
+  it("keeps the match sheet open on ✕, Escape and Back while the match saves (FLOW-115)", async () => {
     let release!: () => void;
     db.saveHold = new Promise<void>((resolve) => { release = resolve; });
     renderSplit();
@@ -407,6 +407,7 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(saves()).toHaveLength(1); });
     fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     fireEvent.keyDown(dialog, { key: "Escape" });
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await new Promise((r) => { setTimeout(r, 50); });
     expect(screen.getByRole("dialog", { name: "שיוך להלוואה" })).toBeInTheDocument();
     act(() => { release(); });

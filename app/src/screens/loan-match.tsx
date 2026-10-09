@@ -135,6 +135,7 @@ export function LoanMatchOffer({
                 label={loan.name}
                 description={byId.get(loan.id)?.description}
                 busy={loan.id === savingId}
+                value={loan.id}
                 disabled={savingId != null && loan.id !== savingId}
                 disabledReason={byId.get(loan.id)?.disabledReason ?? (loan.balanceMinor <= 0n ? "ההלוואה נפרעה" : undefined)}
                 selected={false}
@@ -329,7 +330,8 @@ export function LoanTransactionSplit({
   // category offers it once they have (FLOW-134).
   const keyedPrincipal = direction !== "income" && loanPart === "principal";
   const [sheetOpen, setSheetOpen] = useState(false);
-  const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
+  // FLOW-115: Back waits for a save too, like ✕ and Escape below. `match` is read when Back runs.
+  const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen, () => !match.isPending);
   const matchRowRef = useRef<HTMLButtonElement>(null);
   const [handedOff, setHandedOff] = useState(false);
   const query = useLoanMatchRead(transactionId, split, on && !writesHeld);
@@ -344,6 +346,12 @@ export function LoanTransactionSplit({
     failure: failureText,
     success: "התשלום שויך להלוואה",
     keys: LOAN_WRITE_KEYS,
+    // FLOW-115: on a failure, a toast retry's included, focus goes back to the loan that was tapped,
+    // still in the sheet. The busy mark may already be gone, so the row is found by its loan id.
+    onError: (_error, loanId) => {
+      const row = document.querySelector<HTMLElement>(`.ui-pick-row[data-value="${CSS.escape(loanId)}"]`);
+      (row ?? matchRowRef.current)?.focus({ preventScroll: true });
+    },
     onSuccess: () => {
       setHandedOff(true);
       setSheet(false);
@@ -375,7 +383,10 @@ export function LoanTransactionSplit({
         busy={query.isFetching}
         onRetry={() => {
           retried.current = true;
-          void query.refetch();
+          void query.refetch().then((result) => {
+            // A retry that fails again must not pull focus on a later background success.
+            if (result.isError) retried.current = false;
+          });
         }}
       />
     );
@@ -414,16 +425,7 @@ export function LoanTransactionSplit({
       offers={offers}
       onMatch={(loanId) => {
         if (match.isPending) return;
-        // FLOW-115: on a failure focus goes back to the loan that was tapped, still in the sheet. The
-        // busy mark may already be gone, so the row is found by its loan's name.
-        const name = offered.find((item) => item.id === loanId)?.name;
-        match.mutate(loanId, {
-          onError: () => {
-            const rows = [...document.querySelectorAll<HTMLElement>(".ui-pick-row[role=\"radio\"]")];
-            const row = rows.find((item) => item.getAttribute("aria-label") === name);
-            (row ?? matchRowRef.current)?.focus({ preventScroll: true });
-          },
-        });
+        match.mutate(loanId);
       }}
     />
   );

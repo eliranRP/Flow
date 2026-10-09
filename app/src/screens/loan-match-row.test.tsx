@@ -406,6 +406,22 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     await waitFor(() => { expect(db.reads.filter((table) => table === "loan_splits").length).toBeGreaterThan(reads); });
   });
 
+  it("keeps what was typed when a correction fails (FLOW-115)", async () => {
+    db.splits = STORED.map((part) => ({ ...part, needs_review: true, ...(part.part === "principal" ? { amount_minor: 405_000 } : {}) }));
+    db.saveError = { message: "התשלום גבוה מיתרת ההלוואה", code: "P0001" };
+    renderRow({ split: { ...SPLIT, needs_review: true } });
+    const dialog = await openSheet();
+    await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
+    fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4100" } });
+    fireEvent.change(within(dialog).getByLabelText("סכום, ריבית"), { target: { value: "1680" } });
+    const reads = db.reads.filter((table) => table === "loan_splits").length;
+    fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(db.reads.filter((table) => table === "loan_splits").length).toBeGreaterThan(reads); });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,100");
+    expect(within(dialog).getByLabelText("סכום, ריבית")).toHaveValue("1,680");
+  });
+
   it("keeps the usual failure words on a split that does not wait for review", async () => {
     db.saveError = { message: "boom" };
     renderRow();

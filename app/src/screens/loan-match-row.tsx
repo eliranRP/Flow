@@ -125,6 +125,11 @@ export function LoanCategoryRow({
     failure: (error) => loanSaveFailureText(error, correcting.current ? "לא הצלחנו לשמור את התיקון." : undefined),
     success: "הפיצול נשמר",
     keys: LOAN_WRITE_KEYS,
+    // A failed correction, a toast retry's included, reads the stored parts again: another write may
+    // have moved them. The typed draft stays; the read refreshes the flag and the line's change.
+    onError: () => {
+      if (correcting.current) void stored.refetch();
+    },
     onSuccess: () => { setSheet(false); },
     run: async (parts) => {
       if (readOnly || shown == null) throw new Error("preview");
@@ -294,14 +299,7 @@ export function LoanCategoryRow({
             };
           });
           correcting.current = reviewWaits;
-          save.mutate(parts, {
-            // A failed correction reads the stored parts again: another write may have moved them.
-            onError: () => {
-              if (!correcting.current) return;
-              touched.current = false;
-              void stored.refetch();
-            },
-          });
+          save.mutate(parts);
         }}
         onUnmatch={() => {
           if (unmatch.isPending || save.isPending) return;
