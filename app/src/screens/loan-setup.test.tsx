@@ -336,13 +336,17 @@ describe("LoanSetupForm", () => {
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "6." } });
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("6.");
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    // FLOW-115: שמירה stays tappable; a tap shows what to type.
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
     expect(screen.queryByText("כתבו ריבית עד 100%.")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "" } });
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
     expect(screen.getByText("₪599.55")).toBeInTheDocument();
     expect(screen.queryByText("הסכום צריך להיות גדול מ־0.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(screen.getByText("כתבו את הסכום המקורי.")).toBeInTheDocument();
+    expect(screen.getByText("כתבו את הריבית השנתית.")).toBeInTheDocument();
   });
 
   it("dims the kept preview while a field is incomplete, and says 0 is too small (FLOW-115)", () => {

@@ -270,13 +270,15 @@ export function loanFieldErrors(draft: LoanDraft, preview: LoanPreview): LoanFie
   if (draft.name.trim() === "") errors.name = "כתבו את שם המלווה.";
 
   const principal = amountState(draft.principal);
+  if (principal === "empty") errors.principal = "כתבו את הסכום המקורי.";
   // FLOW-115: each message says what to type; a 0 is not a missing amount.
   if (principal === "minus") errors.principal = MINUS;
   else if (principal === "zero") errors.principal = "הסכום צריך להיות גדול מ־0.";
   else if (principal === "large") errors.principal = TOO_LARGE;
 
   const rate = draft.rate.trim();
-  if (rate.startsWith("-")) errors.rate = "כתבו ריבית בלי מינוס.";
+  if (rate === "") errors.rate = "כתבו את הריבית השנתית.";
+  else if (rate.startsWith("-")) errors.rate = "כתבו ריבית בלי מינוס.";
   else if (rate !== "" && !rate.endsWith(".") && ratePpmOf(rate) == null) errors.rate = RATE_RANGE;
 
   if (draft.term.trim() === "") errors.term = "כתבו את מספר החודשים.";

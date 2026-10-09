@@ -204,13 +204,14 @@ export function LoanSetupForm({
           <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
         </div>
       ) : null}
+      {/* FLOW-115: the currency belongs to the amount, --space-2 under it; a message-height slot keeps the field rhythm. */}
+      <div className="ui-loan-amount">
       <MoneyField
         label="סכום מקורי"
         value={principal}
         prefix={mark}
         disabled={busy}
         keepMinus
-        reserveMessage
         enterKeyHint="next"
         error={shownError("principal")}
         onBlur={() => { touch("principal"); }}
@@ -224,6 +225,8 @@ export function LoanSetupForm({
         disabled={busy}
         onChange={setCurrency}
       />
+      <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
+      </div>
       <PercentField
         label="ריבית שנתית"
         value={rate}
@@ -262,6 +265,8 @@ export function LoanSetupForm({
           <bdi className="ui-num" dir="ltr">{formatDisplay(startDate)}</bdi>
           <CalendarIcon size={20} />
         </button>
+        {/* Same rhythm as the fields around it, which reserve their message line. */}
+        <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
       </div>
       <DateSheet
         open={dateOpen}
@@ -345,7 +350,8 @@ export function LoanSetupForm({
           {shownError("payment") ?? ""}
         </p>
       ) : null}
-      <Button type="submit" buttonRef={saveButtonRef} busy={busy} disabled={!ready && !invalid}>שמירה</Button>
+      {/* FLOW-115: always tappable; a tap shows each field's error, and each says what to type. */}
+      <Button type="submit" buttonRef={saveButtonRef} busy={busy}>שמירה</Button>
     </form>
   );
 }

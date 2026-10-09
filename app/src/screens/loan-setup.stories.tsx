@@ -6,6 +6,8 @@ const meta = {
   title: "Screens/Loan setup",
   component: LoanSetupForm,
   args: { companyCurrency: "ILS" },
+  // The sheet's side gutter, so a PNG shows what ships (design lead, FLOW-115).
+  decorators: [(Story) => <div className="ui-page-pad"><Story /></div>],
 } satisfies Meta<typeof LoanSetupForm>;
 
 export default meta;
