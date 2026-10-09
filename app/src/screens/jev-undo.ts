@@ -20,10 +20,10 @@ export function jevUndoFailure(error: Error): WriteFailure {
 type JevUndoTarget = { transactionId: string; fill: JevAutoFill | null };
 
 /**
- * בטל on "מולא ע״י Jev": calls `undo_jev_prefill`, then refetches the queue. The line stays in
+ * ביטול on "מולא ע״י Jev": calls `undo_jev_prefill`, then refetches the queue. The line stays in
  * לאישור with its values before. Until the Jev read refetches, the fill taken back is held here so
  * the card does not paint Jev's values again. An older fill that still stands (another field) is
- * not held: the refetch shows it, with its own בטל.
+ * not held: the refetch shows it, with its own ביטול.
  */
 export function useJevUndo() {
   const [undone, setUndone] = useState<ReadonlyMap<string, JevAutoFill | null>>(() => new Map());
