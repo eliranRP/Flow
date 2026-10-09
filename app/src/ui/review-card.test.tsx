@@ -362,6 +362,9 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     // Stored rows: Jev fills nothing, so nothing is held.
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ project: "פרויקט שמור", category: "קטגוריה שמורה" }} pending />);
     expect(container.querySelector(".ui-review-reason-slot")).toBeNull();
+    // A shared cost: Jev fills no project there, so an empty project row holds nothing.
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "קטגוריה שמורה" }} reason="unallocated_shared" pending onProject={() => undefined} />);
+    expect(container.querySelector(".ui-review-reason-slot")).toBeNull();
     // A split_mismatch card shows one split row, never Jev's.
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={waiting} reason="split_mismatch" splitParts={2} pending />);
     expect(container.querySelector(".ui-review-reason-slot")).toBeNull();

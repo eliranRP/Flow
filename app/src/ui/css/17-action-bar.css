@@ -88,7 +88,7 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
      line before it ends in an ellipsis. */
   .ui-review-ai .ui-row-title-text {
     display: -webkit-box;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     white-space: normal;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
