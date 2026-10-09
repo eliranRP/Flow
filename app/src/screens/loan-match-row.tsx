@@ -9,7 +9,7 @@ import { useSheetHistory } from "../ui/back";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { minorToInput } from "./loan-form";
-import { LOAN_AMOUNT_CHANGED_HINT, LOAN_BUSY_HINT, LOAN_ROW_CLASS_NAME, showMoney, useLoanMatchRead } from "./loan-match";
+import { LOAN_BUSY_HINT, loanAmountChangedHint, LOAN_ROW_CLASS_NAME, showMoney, useLoanMatchRead } from "./loan-match";
 import {
   LOAN_WRITE_KEYS,
   isAlreadyUnmatched,
@@ -119,10 +119,17 @@ export function LoanCategoryRow({
     const corrected = correctedDraft(read);
     if (corrected) setDraft(corrected);
   }, [stored.data, stored.dataUpdatedAt, opens]);
+  // FLOW-115: a save on a flagged split is a correction, with its own failure line.
+  const correcting = useRef(false);
   const save = useWrite<SavePart[]>({
-    failure: (error) => loanSaveFailureText(error),
+    failure: (error) => loanSaveFailureText(error, correcting.current ? "לא הצלחנו לשמור את התיקון." : undefined),
     success: "הפיצול נשמר",
     keys: LOAN_WRITE_KEYS,
+    // A failed correction, a toast retry's included, reads the stored parts again: another write may
+    // have moved them. The typed draft stays; the read refreshes the flag and the line's change.
+    onError: () => {
+      if (correcting.current) void stored.refetch();
+    },
     onSuccess: () => { setSheet(false); },
     run: async (parts) => {
       if (readOnly || shown == null) throw new Error("preview");
@@ -225,13 +232,15 @@ export function LoanCategoryRow({
     : feesIndex >= 0 && amounts[feesIndex] === 0n
       ? "חסר סכום עמלות."
       : lineMinor != null && totalMinor !== lineMinor
-        ? <>הסה״כ צריך להיות <bdi className="ui-num" dir="ltr">{showMoney(lineMinor, shownCurrency)}</bdi>.</>
+        ? totalMinor < lineMinor
+          ? <>חסרים <bdi className="ui-num" dir="ltr">{showMoney(lineMinor - totalMinor, shownCurrency)}</bdi> כדי להגיע לסכום השורה.</>
+          : <>יש <bdi className="ui-num" dir="ltr">{showMoney(totalMinor - lineMinor, shownCurrency)}</bdi> יותר מסכום השורה.</>
         : currencyMismatch
           ? "המטבע של השורה לא מתאים להלוואה."
           : undefined;
-  const amountChanged = storedData != null
-    && storedData.parts.reduce((sum, part) => sum + part.amountMinor, 0n) !== storedData.lineMinor;
-  const note = reviewWaits ? (amountChanged ? LOAN_AMOUNT_CHANGED_HINT : LOAN_BUSY_HINT) : undefined;
+  const storedSum = storedData?.parts.reduce((sum, part) => sum + part.amountMinor, 0n) ?? null;
+  const amountChange = storedData != null && storedSum != null ? storedData.lineMinor - storedSum : 0n;
+  const note = reviewWaits ? (amountChange !== 0n ? loanAmountChangedHint(amountChange, shownCurrency) : LOAN_BUSY_HINT) : undefined;
   const canSave = problem == null && storedData != null && !save.isPending && !unmatch.isPending;
   function openSheet() {
     if (split == null) return;
@@ -289,6 +298,7 @@ export function LoanCategoryRow({
               ...(before?.categoryId ? { category_id: before.categoryId } : {}),
             };
           });
+          correcting.current = reviewWaits;
           save.mutate(parts);
         }}
         onUnmatch={() => {
