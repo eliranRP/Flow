@@ -16,24 +16,29 @@ test("a Jev suggestion prefills the review card, and off leaves it unchanged", a
   await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
 });
 
-test("a waiting card keeps the settled height for a fill, a note, and a complete row", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 1400 });
-  await page.goto("/e2e/jev-review?layout=1");
-  for (const id of ["filled", "note", "sumit"]) {
-    const waiting = page.locator(`[data-layout="${id}"] [data-phase="waiting"] .ui-review`);
-    const settled = page.locator(`[data-layout="${id}"] [data-phase="settled"] .ui-review`);
-    await expect(waiting).toBeVisible();
-    const waitingBox = await waiting.boundingBox();
-    const settledBox = await settled.boundingBox();
-    expect(waitingBox?.height).toBe(settledBox?.height);
+test("a waiting card keeps the settled height for a fill, an auto fill, one row, and a complete row", async ({ page }) => {
+  // FLOW-704: the ✦ line under the rows is held (text hidden) while Jev's read waits.
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 2000 });
+    await page.goto("/e2e/jev-review?layout=1");
+    for (const id of ["filled", "auto", "note", "sumit"]) {
+      const waiting = page.locator(`[data-layout="${id}"] [data-phase="waiting"] .ui-review`);
+      const settled = page.locator(`[data-layout="${id}"] [data-phase="settled"] .ui-review`);
+      await expect(waiting).toBeVisible();
+      const waitingBox = await waiting.boundingBox();
+      const settledBox = await settled.boundingBox();
+      expect(waitingBox?.height, `${id} at ${String(width)}`).toBe(settledBox?.height);
+    }
   }
+  await expect(page.locator("[data-layout=sumit] .ui-review-reason-slot")).toHaveCount(0);
+  await expect(page.locator("[data-layout=filled] [data-phase=waiting] .ui-review-reason-slot")).toBeHidden();
   await expect(page.locator(".ui-review-note")).toHaveCount(0);
   await expect(page.locator("[data-phase=waiting]").getByText("אין הצעה, הקישו לבחירה")).toHaveCount(0);
   await expect(page.locator("[data-phase=waiting]").getByText("חסר קטגוריה, הקישו לבחירה")).toHaveCount(0);
   // 0091: only a shared cost has a note, so no layout here reserves a note slot.
   await expect(page.locator("[data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
   await expect(page.locator("[data-phase=settled]").getByText("חסר קטגוריה, הקישו לבחירה")).toHaveCount(0);
-  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
+  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeVisible();
 });
 
 test("a long suggestion keeps הצעת Jev and the chevron inside the row at 320", async ({ page }) => {
@@ -51,7 +56,13 @@ test("a long suggestion keeps הצעת Jev and the chevron inside the row at 320
     inside(await tag.boundingBox(), "הצעת Jev");
     const row = tag.locator("xpath=ancestor::button[1]");
     inside(await row.locator(".ui-row-chevron").boundingBox(), "the chevron");
-    const cut = await row.locator(".ui-row-title-text").evaluate((node) => node.scrollWidth > node.clientWidth);
+    // FLOW-352 1: the value wraps to two lines at 320, then ends in an ellipsis.
+    const title = row.locator(".ui-row-title-text");
+    const { cut, lines } = await title.evaluate((node) => {
+      const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
+      return { cut: node.scrollHeight > node.clientHeight, lines: Math.round(node.clientHeight / lineHeight) };
+    });
     expect(cut).toBe(true);
+    expect(lines).toBe(2);
   }
 });
