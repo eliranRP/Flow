@@ -292,18 +292,44 @@ if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
     rm -f "$supabase_exit"
     # Starts in the background while the static checks run. An instance that is already up is reset,
     # so it carries this branch's migrations and no rows from an earlier run.
+    # A stack that is still starting (another run's start, or containers coming back after a restart)
+    # fails the first reset or start: wait for its database to answer, then try once more.
     (
+      up() {
+        if supabase status >/dev/null 2>&1; then
+          supabase db reset >>"$supabase_log" 2>&1
+        else
+          supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >>"$supabase_log" 2>&1
+        fi
+      }
       rc=0
-      if supabase status >/dev/null 2>&1; then
-        supabase db reset >"$supabase_log" 2>&1 || rc=$?
-      else
-        supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >"$supabase_log" 2>&1 || rc=$?
+      if ! up; then
+        echo "local-ci: local Supabase was not ready; waiting for it and trying again." >>"$supabase_log"
+        # The CLI refuses a database container whose health check still reads "starting".
+        for _ in $(seq 1 60); do
+          health="$(docker inspect -f '{{.State.Health.Status}}' supabase_db_flow 2>/dev/null || echo missing)"
+          [[ "$health" == healthy || "$health" == missing ]] && break
+          sleep 2
+        done
+        up || rc=$?
       fi
       echo "$rc" >"${supabase_exit}.tmp"
       mv "${supabase_exit}.tmp" "$supabase_exit"
     ) >/dev/null 2>&1 &
   fi
 fi
+# flow-mcp answers 503 in a cloud container until the edge runtime's npm cache is seeded from the host.
+edge_ready() {
+  local api
+  api="$(supabase status -o env | sed -n 's/^API_URL=//p' | head -n 1 | tr -d '"')"
+  [[ "$(curl -s -o /dev/null -w '%{http_code}' "$api/functions/v1/flow-mcp" || true)" == 405 ]] && return 0
+  bash scripts/seed-edge-cache.sh || echo "local-ci: could not seed the edge runtime cache." >&2
+  for _ in $(seq 1 15); do
+    [[ "$(curl -s -o /dev/null -w '%{http_code}' "$api/functions/v1/flow-mcp" || true)" == 405 ]] && return 0
+    sleep 2
+  done
+  echo "local-ci: flow-mcp still does not answer after seeding its cache." >&2
+}
 wait_supabase() {
   phase "e2e: waiting for local Supabase"
   while [[ ! -f "$supabase_exit" ]]; do sleep 2; done
@@ -514,6 +540,7 @@ if (( ! full )); then
   if (( db_change )); then
     wait_supabase
     phase "database: the flow-mcp smoke, db types, and ${#db_specs[@]} pgTAP files that name the change"
+    edge_ready
     bash scripts/mcp-function-smoke.sh
     (( ${#db_specs[@]} == 0 )) || supabase test db "${db_specs[@]}"
     bash scripts/check-db-types.sh
@@ -539,6 +566,7 @@ pnpm test:storybook:smoke
 wait_supabase
 
 phase "e2e: database checks"
+edge_ready
 bash scripts/mcp-function-smoke.sh
 supabase test db supabase/tests/database
 bash scripts/check-db-types.sh

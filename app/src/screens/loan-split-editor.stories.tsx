@@ -123,9 +123,11 @@ export const ExactOver: Story = {
     const body = sheet();
     await fireEvent.click(await body.findByRole("radio", { name: "סכומים מדויקים" }));
     await fireEvent.change(body.getByLabelText("סכום, קרן"), { target: { value: "200" } });
-    await expect(body.getByText(/יותר מסכום השורה/)).toBeVisible();
+    await expect(body.getByText(/עודף/)).toBeVisible();
   },
 };
+export const ExactOver320: Story = { ...ExactOver, ...light320 };
+export const ExactOverDark320: Story = { ...ExactOver, ...dark390, ...light320 };
 
 /** A demand loan: its accrued interest, no installments. */
 export const Demand: Story = { args: { demand: true, lineMinor: 100_000 } };

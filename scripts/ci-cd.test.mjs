@@ -637,3 +637,20 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
   assert.match(install, /git config core\.hooksPath \.githooks\n/);
 });
+
+test("the gate seeds the edge runtime's npm cache and waits for a local Supabase that is still starting", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
+  const seed = readFileSync(new URL("./seed-edge-cache.sh", import.meta.url), "utf8");
+  // Every flow-mcp smoke runs after edge_ready, which seeds the cache when the function is not up.
+  const smokes = local.split("\n").flatMap((line, index, lines) =>
+    line.trim() === "bash scripts/mcp-function-smoke.sh" ? [lines[index - 1].trim()] : []);
+  assert.deepEqual(smokes, ["edge_ready", "edge_ready"]);
+  assert.match(local, /edge_ready\(\) \{[\s\S]*?bash scripts\/seed-edge-cache\.sh/);
+  assert.match(install, /bash scripts\/seed-edge-cache\.sh \|\|/);
+  // Caching must not rewrite the functions' deno.lock files, or local-ci refuses the dirty tree.
+  assert.match(seed, /deno cache --quiet --no-lock /);
+  // A failed first reset or start waits for the database, then tries once more.
+  const retry = local.indexOf("if ! up; then");
+  assert.ok(retry > 0 && local.indexOf("{{.State.Health.Status}}", retry) > retry && local.indexOf("up || rc=$?", retry) > retry);
+});

@@ -982,6 +982,9 @@ isOneToOne: false
 "answer_push_prompt":
 { Args: { "p_yes": boolean }; Returns: Json
                            },
+"apply_starter_categories":
+{ Args: { "p_set": string }; Returns: Json
+                           },
 "approve_review_item":
 { Args: { "p_category_id": string,"p_check_shown"?: boolean,"p_id": string,"p_project_id": string,"p_remember"?: boolean,"p_shown_category_id"?: string,"p_shown_project_id"?: string }; Returns: Json
                            },

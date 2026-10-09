@@ -126,6 +126,8 @@ export function LoanSplitEditor({
                 : principal > loan.balanceMinor
                   ? "התשלום גבוה מיתרת ההלוואה."
                   : undefined;
+  // FLOW-353: in exact parts the summary row says what is missing or over, so no line repeats it below.
+  const exactGap = mode === "exact" && !exactCheck.invalid && exactCheck.leftMinor !== 0n;
   const canSave = problem == null && !saving;
   const save = () => {
     if (!canSave || loan == null) return;
@@ -257,7 +259,10 @@ export function LoanSplitEditor({
             ))}
             <div className="ui-loan-parts-total">
               <span>{`חולקו ${money(exactCheck.totalMinor)}`}</span>
-              <bdi className="ui-num" dir="ltr">{`נשאר ${money(exactCheck.leftMinor > 0n ? exactCheck.leftMinor : 0n)}`}</bdi>
+              <span id={exactGap ? problemId : undefined} role="status" className={exactCheck.leftMinor < 0n ? "ui-split-bad" : undefined}>
+                {exactCheck.leftMinor > 0n ? "חסרים " : exactCheck.leftMinor < 0n ? "עודף " : "נשאר "}
+                <bdi className="ui-num" dir="ltr">{money(exactCheck.leftMinor < 0n ? -exactCheck.leftMinor : exactCheck.leftMinor)}</bdi>
+              </span>
             </div>
           </div>
         )}
@@ -278,7 +283,7 @@ export function LoanSplitEditor({
             ) : null}
           </>
         ) : null}
-        {problem ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
+        {problem && !exactGap ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
       </div>
     </Sheet>
   );
