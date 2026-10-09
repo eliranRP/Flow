@@ -674,6 +674,38 @@ describe("assistant settings", () => {
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
   });
 
+  it("a second tap on the backdrop under the help leaves the shown-once code sheet open", async () => {
+    vi.stubEnv("VITE_FLOW_MCP_URL", "https://example.com/functions/v1/flow-mcp");
+    renderAssistant(
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        initialSecret={{ id: "mcp-1", secret: SAMPLE_ASSISTANT_SECRET, scope: ["read", "write"] }}
+      />,
+    );
+    const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
+    fireEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
+    await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
+    const scrims = () => [...document.querySelectorAll<HTMLElement>("[data-vaul-overlay]")];
+    await waitFor(() => { expect(scrims()).toHaveLength(2); });
+    // FLOW-310: two taps in a row. The first closes the help; the second lands on the backdrop
+    // left underneath, the code sheet's, which keeps "closeOnBackdrop" off while the code shows.
+    const [codeScrim, helpScrim] = scrims();
+    if (!codeScrim || !helpScrim) throw new Error("scrim missing");
+    const tap = (scrim: HTMLElement, pointerId: number) => {
+      fireEvent.pointerDown(scrim, { button: 0, pointerId, pointerType: "touch" });
+      fireEvent.pointerUp(scrim, { button: 0, pointerId, pointerType: "touch" });
+      fireEvent.click(scrim);
+    };
+    tap(helpScrim, 1);
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "איך מחברים ב־Claude" })).not.toBeInTheDocument(); });
+    tap(codeScrim, 2);
+    await act(async () => {
+      await new Promise((resolve) => { window.setTimeout(resolve, 400); });
+    });
+    expect(screen.getByRole("dialog", { name: "הקוד מוכן" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue(SAMPLE_ASSISTANT_SECRET)).toBeInTheDocument();
+  });
+
   it("keeps the code step and the expired step until the sheet has closed", async () => {
     vi.useFakeTimers();
     const code = renderAssistant(

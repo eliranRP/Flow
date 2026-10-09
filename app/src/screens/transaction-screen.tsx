@@ -510,17 +510,25 @@ export function TransactionScreen({
               size="display"
             />
           </p>
+          {/* FLOW-339: the VAT sits on the amount's line, with no minus; only a guessed rate says so.
+              FLOW-351: each part keeps its words together and carries the "·" before it, so a narrow
+              line breaks before a separator and never leaves the date alone after one. */}
           <p className="t-hint">
-            {vatShown ? "לפני מע״מ · " : null}
-            {/* FLOW-339: the VAT sits on the amount's line, with no minus; only a guessed rate says so. */}
+            {vatShown ? <span className="ui-nowrap">לפני מע״מ</span> : null}
             {vatShown && txn.vat_amount !== 0n ? (
               <>
-                {txn.vat_status === "assumed" ? "מע״מ משוער " : "מע״מ "}
-                <bdi dir="ltr">{formatMoney(absAgorot(txn.vat_amount), txn.currency, { agorot: true })}</bdi>
-                {" · "}
+                {" "}
+                <span className="ui-nowrap">
+                  {txn.vat_status === "assumed" ? "· מע״מ משוער " : "· מע״מ "}
+                  <bdi dir="ltr">{formatMoney(absAgorot(txn.vat_amount), txn.currency, { agorot: true })}</bdi>
+                </span>
               </>
             ) : null}
-            <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
+            {vatShown ? " " : null}
+            <span className="ui-nowrap">
+              {vatShown ? "· " : null}
+              <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
+            </span>
           </p>
           {reviewLabel || paymentLabel || pnlPill ? (
             <div className="ui-status-row">
