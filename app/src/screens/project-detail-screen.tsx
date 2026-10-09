@@ -23,6 +23,7 @@ import { BackButton } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandHero, SectionHead } from "../ui/layout";
+import { TextLink } from "../ui/text-link";
 import { List, ListRow } from "../ui/list-row";
 import { FocusTitle } from "../ui/focus-title";
 import { BudgetBar } from "../ui/progress-bar";
@@ -226,13 +227,14 @@ export function ProjectDetailScreen({
   if (section === "transactions") {
     return (
       <div className="flex min-h-full flex-1 flex-col">
-        <ScreenHeader title="תנועות" kicker={project.name} subtitle={periodWords} backTo={sectionHref("overview")} />
-        <ProjectTransactions
-          transactions={project.transactions}
-          search={search}
-          allHref={`/search${withParams(periodQuery, { project: project.id })}`}
-          live={sample == null}
+        <ScreenHeader
+          title="תנועות"
+          kicker={project.name}
+          subtitle={periodWords}
+          backTo={sectionHref("overview")}
+          below={<TextLink to={`/search${withParams(periodQuery, { project: project.id })}`} tone="quiet">כל התנועות</TextLink>}
         />
+        <ProjectTransactions transactions={project.transactions} search={search} live={sample == null} />
       </div>
     );
   }

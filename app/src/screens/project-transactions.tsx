@@ -8,8 +8,6 @@ import { DocumentIcon } from "../ui/icons";
 import { rowSource } from "../ui/line-marks";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
-import { SectionHead } from "../ui/layout";
-import { TextLink } from "../ui/text-link";
 import { loanRowProps, useLoanMarks } from "./loan-marks";
 import { PROJECT_RECENT_CAP } from "./project-overview";
 import { KEPT_OUT_SHORT } from "./screen-shared";
@@ -60,13 +58,10 @@ function projectLineHint(txn: ProjectLine, whole: string | null): string {
 export function ProjectTransactions({
   transactions,
   search,
-  allHref,
   live,
 }: {
   transactions: readonly ProjectLine[];
   search: string;
-  /** Every line of the project, in Search with the project chip set (FLOW-402). */
-  allHref: string;
   live: boolean;
 }) {
   const location = useLocation();
@@ -76,9 +71,6 @@ export function ProjectTransactions({
   const marks = useLoanMarks(heldIds, live);
   return (
     <>
-      <SectionHead title="אחרונות">
-        <TextLink to={allHref} tone="quiet">כל התנועות</TextLink>
-      </SectionHead>
       {held.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בתקופה הזו" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
       ) : (
