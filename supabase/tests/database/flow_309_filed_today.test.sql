@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(6);
+select plan(7);
 
 do $users$
 begin
@@ -75,6 +75,11 @@ select is(
   (select count(*)::integer from private.filed_today_rows()),
   1,
   'an open review row stays off filed today');
+-- FLOW-309: the queue banner counts exactly the rows שויכו היום lists.
+select is(
+  (public.list_review() -> 0 ->> 'auto_approved_today')::integer,
+  jsonb_array_length(public.list_auto_assigned_today()),
+  'the banner count matches the filed-today list');
 
 -- Once that open row leaves review with no owner action, the line counts as filed.
 reset role;
