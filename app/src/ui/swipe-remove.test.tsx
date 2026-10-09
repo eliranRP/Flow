@@ -79,7 +79,7 @@ describe("SwipeRemove", () => {
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
 
-  it("follows the finger over מחיקה and settles back on a short move", () => {
+  it("follows the finger over הסרה and settles back on a short move", () => {
     setReducedMotion(false);
     const onRemove = vi.fn();
     render(<Part onRemove={onRemove} />);
@@ -153,6 +153,6 @@ describe("SwipeRemove", () => {
 
   it("keeps the delete mark out of the accessibility tree", () => {
     render(<Part onRemove={vi.fn()} />);
-    expect(screen.queryByText("מחיקה")?.closest("[aria-hidden='true']")).not.toBeNull();
+    expect(screen.queryByText("הסרה")?.closest("[aria-hidden='true']")).not.toBeNull();
   });
 });

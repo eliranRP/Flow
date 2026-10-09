@@ -1,6 +1,7 @@
 /*
   FLOW-325 (plan §10): a split part swiped toward the start side is removed (swipe-remove.tsx).
-  The row slides over a red "מחיקה" that waits under it on the end side; the card clips both.
+  The row slides over a neutral "הסרה" that waits under it on the end side: dropping a part before
+  the editor saves deletes nothing, so red and the bin stay for real deletes. The card clips both.
   The vertical scroll and pinch-zoom stay with the browser.
 */
 .ui-sremove {
@@ -19,9 +20,10 @@
   justify-content: flex-end;
   gap: var(--space-2);
   padding-inline: var(--space-5);
-  background: var(--color-error);
-  color: var(--color-surface);
-  font-weight: 600;
+  border-radius: var(--radius-input);
+  /* No surface-2 token: the light neutral fill both themes have (#F1EEF6 light, #2A2438 dark). */
+  background: var(--color-disabled-bg);
+  color: var(--color-text-secondary);
   /* Hidden at rest; after a release it stays shown until the row has slid back over it. */
   visibility: hidden;
   transition: visibility 0s linear var(--dur-fast);

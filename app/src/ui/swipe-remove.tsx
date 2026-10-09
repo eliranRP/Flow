@@ -1,7 +1,6 @@
 import { useEffect, useRef, type MouseEvent, type ReactNode, type TouchEvent } from "react";
 import { blocksEdgeBack } from "./edge-back";
 import { inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
-import { TrashIcon } from "./icons";
 
 /**
  * FLOW-325 (plan §10): a row swiped toward the start side (right, in RTL) is removed, as on an
@@ -11,7 +10,7 @@ import { TrashIcon } from "./icons";
  * - a start within 24px of either screen edge is left to the edge swipe-back;
  * - a start inside a field, a sheet or a sideways list, or while a sheet is open, is left alone;
  * - nothing is decided until the finger moved 10px; a mostly vertical move goes to the page scroll;
- * - the row follows the finger over a red "מחיקה" and is removed past 30% of its width, or on a
+ * - the row follows the finger over a neutral "הסרה" and is removed past 30% of its width, or on a
  *   flick; short of that it settles back. Toward the end side it only gives a little;
  * - with reduced motion the row stays put and is removed on release;
  * - while the page is pinch-zoomed the row does not swipe.
@@ -165,8 +164,7 @@ export function SwipeRemove({
     >
       {/* Under the row, shown only while it moves; the row's ✕ is the named control. */}
       <div className="ui-sremove-under" aria-hidden="true">
-        <TrashIcon size={20} />
-        <span>מחיקה</span>
+        <span>הסרה</span>
       </div>
       <div ref={row} className="ui-sremove-row">
         {children}

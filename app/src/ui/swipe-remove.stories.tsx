@@ -7,7 +7,7 @@ import { SwipeRemove } from "./swipe-remove";
 
 /**
  * FLOW-325 (plan §10): on a touch screen, a split part swiped toward the start side (right) is
- * removed, as its ✕ does. The row follows the finger over a red "מחיקה" and goes past 30% of its
+ * removed, as its ✕ does. The row follows the finger over a neutral "הסרה" and goes past 30% of its
  * width or on a flick; short of that it settles back.
  */
 const PARTS = [
@@ -50,7 +50,7 @@ type Story = StoryObj<typeof meta>;
 const dark = { globals: { theme: "dark" } };
 const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
-/** At rest: the parts with their ✕; the red mark under each row stays hidden. */
+/** At rest: the parts with their ✕; the "הסרה" mark under each row stays hidden. */
 export const Parts: Story = {
   play: async ({ canvasElement }) => {
     const frame = canvasElement.querySelector<HTMLElement>(".ui-sremove");
@@ -63,7 +63,7 @@ export const Parts: Story = {
 };
 export const PartsDark: Story = { ...Parts, name: "Parts, dark", ...dark };
 
-/** Mid-swipe: the first part has moved 120px toward the start side over "מחיקה". */
+/** Mid-swipe: the first part has moved 120px toward the start side over "הסרה". */
 export const Dragging: Story = {
   play: async ({ canvasElement }) => {
     const frame = canvasElement.querySelector<HTMLElement>(".ui-sremove");
