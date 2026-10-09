@@ -17,7 +17,7 @@ import {
   writeGroupBy,
 } from "../breakdown";
 import { useHeldOrder } from "../list-hold";
-import { periodLabel } from "../period";
+import { periodPillLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useBooks, useBreakdownLinesQuery, useBreakdownQuery } from "../use-books";
@@ -58,7 +58,7 @@ function PeriodControl({ sheet, setSheet }: { sheet: boolean; setSheet: (open: b
   return (
     <PeriodPicker
       tone="page"
-      pill={periodLabel(books.period)}
+      pill={periodPillLabel(books.period)}
       open={sheet}
       onOpenChange={setSheet}
       period={books.period}

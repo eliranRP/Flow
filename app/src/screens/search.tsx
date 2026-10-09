@@ -3,7 +3,7 @@ import type { SearchRow } from "@flow/shared";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import * as searchE2eFixture from "../dev/search-e2e-fixture";
-import { periodLabel } from "../period";
+import { periodPillLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import {
@@ -348,7 +348,7 @@ function SearchChips({
       {/* FLOW-347: תקופה first, so it is never the cut chip; the row's end fades while more wait. */}
       <ChipScroller className="ui-search-chips" label="סינון" scrollerRef={chipsRef}>
         <Chip pressed={period.kind !== "all"} onClick={() => { setPeriodOpen(true); }}>
-          {period.kind === "all" ? "תקופה" : periodLabel(period)}
+          {period.kind === "all" ? "תקופה" : periodPillLabel(period)}
         </Chip>
         <Chip pressed={filters.direction === "expense"} onClick={() => { toggleDirection("expense"); }}>הוצאות</Chip>
         <Chip pressed={filters.direction === "income"} onClick={() => { toggleDirection("income"); }}>הכנסות</Chip>

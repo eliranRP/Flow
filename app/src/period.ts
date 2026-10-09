@@ -217,6 +217,16 @@ export function periodLabel(period: PeriodChoice, now = new Date(), scope: Perio
   }
 }
 
+/**
+ * The period pill's and the Search chip's words (FLOW-351): the shared תקופה sheet's own row name
+ * (חודש, 3 חודשים, 6 חודשים, שנה, הכול) while the window ends now; a window stepped back names its
+ * months or year.
+ */
+export function periodPillLabel(period: PeriodChoice, now = new Date()): string {
+  if (period.kind === "custom") return "טווח מותאם";
+  return isCurrentPeriod(period, now) ? presetLabel(period.kind) : windowLabel(period, now);
+}
+
 /** The period as an adverbial phrase: החודש, בספטמבר 2026, ב־3 חודשים, ב־2026, מתחילת הפרויקט. */
 export function periodPhrase(period: PeriodChoice, now = new Date(), scope: PeriodScope = "company"): string {
   switch (period.kind) {
