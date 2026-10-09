@@ -98,3 +98,14 @@ describe("categories hidden footer", () => {
     });
   });
 });
+
+describe("categories focus return (FLOW-310)", () => {
+  it("returns focus to קטגוריה חדשה after Escape on its sheet, with the ring marked", async () => {
+    renderScreen(<CategoriesScreen sample={sample} />);
+    fireEvent.click(screen.getByRole("button", { name: "קטגוריה חדשה" }));
+    fireEvent.keyDown(await screen.findByRole("dialog", { name: "קטגוריה חדשה" }), { key: "Escape" });
+    const opener = screen.getByRole("button", { name: "קטגוריה חדשה", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).toHaveAttribute("data-focus-ring");
+  });
+});

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-04
 **Status:** Accepted
-**Amended by:** [0111](0111-setup-card-close.md). Point 3: the Home card closes with a ✕ "סגירת ההגדרה" instead of הסתרה, the toast is "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות.", and closing the card also stops the one automatic resume. [0162](0162-setup-state-on-the-server.md): point 5, the flags also live on the server in `setup_states`.
+**Amended by:** [0111](0111-setup-card-close.md). Point 3: the Home card closes with a ✕ "סגירת ההגדרה" instead of הסתרה, the toast is "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות.", and closing the card also stops the one automatic resume. [0163](0163-setup-state-on-the-server.md): point 5, the flags also live on the server in `setup_states`.
 
 ## Context
 

@@ -48,9 +48,10 @@ import { LineSplitScreen } from "./screens/line-split";
 import { DevLineSplit } from "./dev/line-split-e2e";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
+import { LoanDetailScreen } from "./screens/loan-detail-screen";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
 import { useKeyboardInset } from "./ui/keyboard-inset";
-import { DevCategories, DevChange, DevConnections, DevExpense, DevFiled, DevHome, DevInstall, DevLoans, DevMissingBills, DevProject, DevProjectCategory, DevProjectDetail, DevProjectMonths, DevProjects, DevReview, DevReviewBanner, DevSettings, DevSplit, DevTransaction, DevTransactionGate, DevTxnList, DevUnpaid } from "./dev-routes";
+import { DevCategories, DevChange, DevConnections, DevExpense, DevFiled, DevHome, DevInstall, DevLoanDetail, DevLoans, DevMissingBills, DevProject, DevProjectCategory, DevProjectDetail, DevProjectMonths, DevProjects, DevReview, DevReviewBanner, DevSettings, DevSplit, DevTransaction, DevTransactionGate, DevTxnList, DevUnpaid } from "./dev-routes";
 
 export function App() {
   useKeyboardInset();
@@ -129,6 +130,7 @@ function AppRoutes() {
               <Route path="/e2e/settings" element={<DevSettings />} />
               <Route path="/e2e/connections" element={<DevConnections />} />
               <Route path="/e2e/loans" element={<DevLoans />} />
+              <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
               <Route path="/e2e/categories" element={<DevCategories />} />
               <Route path="/e2e/unpaid" element={<DevUnpaid />} />
               <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
@@ -182,8 +184,9 @@ function AppRoutes() {
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="settings/categories" element={<CategoriesScreen />} />
               <Route path="settings/connections" element={<ConnectionsScreen />} />
-              {/* FLOW-110 adds settings/loans/:loanId, a loan's detail page. */}
               <Route path="settings/loans" element={<LoansScreen />} />
+              {/* FLOW-106 B / FLOW-110: one loan's page. */}
+              <Route path="settings/loans/:loanId" element={<LoanDetailScreen />} />
             </Route>
           </Route>
         </Routes>

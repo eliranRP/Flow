@@ -69,5 +69,6 @@ export { ExpectedMonthParties, ExpectedMonthSheet } from "./expected-month-sheet
 export { CardSwipe } from "./card-swipe";
 export { InvestmentCard, currencyWord, currentEquityNote, forcedEquityNote } from "./investment-card";
 export type { EquityNote, InvestmentField, InvestmentFigures, InvestmentRow, MinorInCurrency } from "./investment-card";
+export { DisclosureGroup } from "./disclosure-group";
 export { LoanPartsSheet, LOAN_PART_LABEL, LOAN_PART_ORDER, loanPartsCount, loanPaymentTitle } from "./loan-parts-sheet";
 export type { LoanPartField, LoanPartKey } from "./loan-parts-sheet";

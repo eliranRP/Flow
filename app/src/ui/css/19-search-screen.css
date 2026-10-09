@@ -87,12 +87,15 @@ html[data-kb="open"] .ui-search-dock {
   font-weight: var(--type-title-3-weight);
 }
 
-/* A result's line 2 (date · project · category), cut at the end like the suggestion. */
+/* A result's line 2 (date · project · category): whole parts as many as fit (.ui-hint-parts). */
 .ui-statement-details {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 0 1 auto;
+}
+
+/* A state to act on stays on the line: it wraps only below 3em, and shortens with "…" instead. */
+.ui-statement-details > .ui-hint-part-keep {
+  flex: 1 1 3em;
+  max-inline-size: max-content;
 }
 
 .ui-statement-accent {
