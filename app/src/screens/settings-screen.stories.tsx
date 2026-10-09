@@ -273,6 +273,7 @@ export const Loans: Story = {
 };
 export const Loans320: Story = { ...Loans, name: "Loans, 320", ...at320 };
 export const LoansDark: Story = { ...Loans, name: "Loans, dark", ...dark };
+export const LoansDark320: Story = { ...Loans, name: "Loans, dark, 320", ...dark, ...at320 };
 
 export const LoansEmpty: Story = {
   name: "Loans, empty",
