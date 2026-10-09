@@ -1,0 +1,1 @@
+FLOW-807 follow-up: the review screen test file `review-all.test.tsx` (1,376 lines) is split into `review-all.test.tsx` (list paths, queue list, amounts), `review-all-bar.test.tsx` (the pinned review bar) and `review-all-skipped.test.tsx` (the דולגו section and the empty queue's link to it). Every test moved unchanged; the same 43 tests run.

@@ -1,7 +1,19 @@
 // The live smoke's write guard: which requests may go through. Everything else is aborted.
 
-// List screens only. Detail RPCs stay on the owner and are not called.
-export const readRpcs = new Set(["get_dashboard", "get_line_meta", "list_categories", "list_review", "list_unpaid", "sumit_status"]);
+// List screens only, plus the reads those screens make on load: the company currency on
+// Settings, and the Jev reasons and flags for the open review lines (both `stable`). Detail
+// RPCs stay on the owner and are not called.
+export const readRpcs = new Set([
+  "get_dashboard",
+  "get_line_meta",
+  "jev_suggestions",
+  "list_categories",
+  "list_review",
+  "list_unpaid",
+  "mcp_company_loan_currency",
+  "review_anomalies",
+  "sumit_status",
+]);
 
 export function rpcName(url: string): string | null {
   return /\/rest\/v1\/rpc\/([a-z0-9_]+)/.exec(url)?.[1] ?? null;

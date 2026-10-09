@@ -168,6 +168,15 @@ export function ppmFromPercent(value: unknown): number | ToolResult {
   }
 }
 
+/** A percent that may be negative (a loan's margin over its index), -100 to 100, up to 4 decimals, in ppm. */
+export function signedPpmFromPercent(value: unknown): number | ToolResult {
+  if (typeof value !== "number" && typeof value !== "string") return fail("validation", "validation");
+  const text = decimalText(value).trim();
+  if (!text.startsWith("-")) return ppmFromPercent(text);
+  const ppm = ppmFromPercent(text.slice(1));
+  return typeof ppm === "number" ? (ppm === 0 ? 0 : -ppm) : ppm;
+}
+
 export function scheduleLimitOf(value: unknown, fallback: number): number | ToolResult {
   if (value == null) return fallback;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > LOAN_TERM_MONTHS_MAX) {
