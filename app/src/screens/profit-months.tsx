@@ -177,14 +177,12 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
   // A month with no project income has no overhead share: its figure is before overhead (0129).
   const beforeOverhead = afterOverhead && month.overhead_weighted !== true;
   // One line of whole parts at 320: a part that does not fit drops with its "·" (design lead, #259).
-  const hint: ReactNode[] = currencies.flatMap((row) => [
-    <span key={`${row.currency}-in`}>
-      הכנסות{" "}
-      {/* Muted like the rest of the hint: green is for an income amount in the amount slot (0120). */}
-      <bdi dir="ltr" className="ui-num">{formatAmountText(row.income_minor, row.currency)}</bdi>
-    </span>,
+  // Only "הוצאות" shows, and only when the month has income: profit and expenses imply the income,
+  // and with no income the profit already is minus the expenses (design lead, money terms #367).
+  const hint: ReactNode[] = currencies.flatMap((row) => row.income_minor === 0n ? [] : [
     <span key={`${row.currency}-out`}>
       הוצאות{" "}
+      {/* Muted like the rest of the hint: the amount slot carries the colour (0120). */}
       <bdi dir="ltr" className="ui-num">{formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}</bdi>
     </span>,
   ]);
@@ -200,7 +198,7 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
       variant="project"
       title={title}
       tag={month.open ? <StatusPill>חודש פתוח</StatusPill> : undefined}
-      hintParts={hint}
+      hintParts={hint.length > 0 ? hint : undefined}
       label={label}
       agorot={profit}
       currency={main?.currency ?? "ILS"}
