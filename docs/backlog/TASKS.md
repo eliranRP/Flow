@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
-| Dev lane 2 | FLOW-811: CI and deploy follow-ups (row-hash baseline script, composite foreign key indexes) | FLOW-812 faster CI (claim looks stale), more Flow MCP agent requests |
+| Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-322 `/notifications` removal and FLOW-334 leftovers (period pill under the title, category lines total, onboarding gap), PR #272 (FLOW-334 H1/H2 merged #259) | Settings, project screens, and other areas outside the review and transaction screens |
@@ -1035,9 +1035,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, #156) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (item 1 #156, item 2 this PR) · **Depends on:** —
 - [x] The cron path doesn't take the connector claim, so cron and manual runs can overlap; the Mercury cron path doesn't release its claim when it skips. (Both cron paths claim; a skip or a throw releases it, `_shared/cron_claim.ts`; a SUMIT request that finds a manual run busy goes back to the queue.)
-- [ ] From the original plan: a schema-drift check on the SUMIT payload with a fallback and alert, and an optional debounced webhook behind a flag.
+- [x] From the original plan: a schema-drift check on the SUMIT payload with a fallback and alert, and an optional debounced webhook behind a flag. (Drift check: more than 1 in 20 rows that do not map, or a page without its data or row list, stops the sync before it writes; the last good ledger stays, `sumit_status` shows `sync_schema_drift`, the log names the fields; decision [0161](../decisions/0161-sumit-schema-drift.md). Not built: a `documents/list` second source, whose amount and VAT fields no real response has shown, and the webhook, which needs a new public function, SUMIT triggers on the customer's plan and a flag. Follow-up for a UI lane: a Hebrew line for `sync_schema_drift` in `app/src/sumit-copy.ts`.)
 
 ## Multi-company and team
 
