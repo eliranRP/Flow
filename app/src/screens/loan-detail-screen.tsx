@@ -180,7 +180,7 @@ export function LoanDetailScreen({
 function LoanDetailLoading({ back }: { back: string }) {
   return (
     <div aria-busy="true">
-      <ScreenHeader title="" kicker="הלוואות" backTo={back} />
+      <ScreenHeader barOnly kicker="הלוואות" backTo={back} />
       <p className="sr-only" role="status">טוען…</p>
       <div className="ui-page-pad ui-loan-head">
         <Skeleton width="md" />
