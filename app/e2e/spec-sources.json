@@ -36,6 +36,7 @@
       "screens/SignInScreen.tsx",
       "screens/HelpScreen.tsx",
       "screens/PlaceholderScreen.tsx",
+      "screens/add-sheet.tsx",
       "ui/install-screen.tsx",
       "ui/tab-bar.tsx"
     ],

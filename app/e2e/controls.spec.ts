@@ -765,7 +765,6 @@ test("split choices, manual percents, and close", async ({ page }) => {
   await expect(page).toHaveURL(/\/transactions\//);
 });
 
-
 test("settings opens the Connections and Loans pages, and Back returns to the row (FLOW-501)", async ({ page }) => {
   await page.goto("/settings?preview=1");
   const connections = page.getByRole("link", { name: "חיבורים" });
