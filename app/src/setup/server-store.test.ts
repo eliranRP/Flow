@@ -80,6 +80,20 @@ describe("setup flags on the server", () => {
     await loadSetupStore(user, company);
     expect(readSetupStore(user, company)).toEqual(skippedTwo);
     expect(server.reads).toBe(1);
+    expect(server.upserts).toHaveLength(0);
+  });
+
+  it("after a failed read, a later write stays local and does not replace the row", async () => {
+    server.error = { message: "offline" };
+    await loadSetupStore(user, company);
+    writeSetupStore(user, company, { ...emptySetupStore(), run_started_at: "2026-10-09T02:00:00.000Z" });
+    expect(server.upserts).toHaveLength(0);
+  });
+
+  it("a new device with no row and no local flags uploads nothing", async () => {
+    await loadSetupStore(user, company);
+    expect(server.reads).toBe(1);
+    expect(server.upserts).toHaveLength(0);
   });
 
   it("uploads every write once a company exists, and none before", () => {

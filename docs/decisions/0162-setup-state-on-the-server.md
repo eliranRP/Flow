@@ -11,7 +11,7 @@ The first-run setup flags (skips, the run and resume stamps, the closed Home car
 
 1. `setup_states` holds one row per owner and company: `state` is the same object the app already keeps (an object of at most 4 kB), with `updated_at`. Row level security lets only the owner read and write their own row, for their own company. A viewer gets no row and cannot write one, since a viewer never runs setup.
 2. `localStorage` stays the copy the screens read without waiting. Every write with a company also uploads the whole object; the last write wins. Before a company exists nothing is uploaded, as step 0 always opens then.
-3. Once per page load the app reads the row. A row replaces the local copy. With no row, local flags from before this change are uploaded once. A write made in this tab before the read answered wins over the row and is uploaded. A failed read or write keeps the local copy and the run goes on.
+3. Once per page load the app reads the row. A row replaces the local copy. With no row, local flags from before this change are uploaded once. A write made in this tab before the read answered wins over the row and is uploaded. A failed read or write keeps the local copy and the run goes on; after a failed read, writes stay local for the rest of that page load, so a new phone's empty copy never replaces the row, and the next load reads again.
 4. The one automatic resume waits for that read, so a new phone does not open a step the owner already skipped or finished elsewhere.
 5. The resume is considered once per page load per user, so signing in as another user in the same tab gets its own resume.
 

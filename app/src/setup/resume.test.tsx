@@ -47,6 +47,7 @@ const dashboard = {
 };
 
 const calls = vi.hoisted(() => ({ rpc: [] as string[], from: [] as string[] }));
+const auth = vi.hoisted(() => ({ emit: null as ((event: string, next: unknown) => void) | null }));
 const gate = vi.hoisted(() => ({ ownerId: "user-1", setupRow: null as { state: unknown } | null }));
 
 function chain(data: unknown) {
@@ -66,6 +67,7 @@ function chain(data: unknown) {
 const supabase = {
   auth: {
     onAuthStateChange: (callback: (event: string, next: Session | null) => void) => {
+      auth.emit = callback as (event: string, next: unknown) => void;
       callback("INITIAL_SESSION", session);
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
@@ -250,6 +252,27 @@ describe("setup resume", () => {
     await expect(
       waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
     ).rejects.toThrow();
+  });
+
+  it("considers the one resume per user, so another sign-in in the same tab gets its own", async () => {
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    const other = "user-2";
+    writeSetupStore(other, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    gate.ownerId = other;
+    await act(async () => {
+      await router.navigate("/");
+    });
+    await act(async () => {
+      auth.emit?.("SIGNED_IN", { ...session, user: { ...session.user, id: other, email: "other@example.com" } });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    expect(readSetupStore(other, "company-1").run_resumed_at).not.toBeNull();
   });
 
   it("ignores viewers on Home", async () => {

@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(9);
+select plan(11);
 
 do $users$
 begin
@@ -52,10 +52,24 @@ select throws_ok(
   null,
   'the owner cannot write a row for another company'
 );
+select throws_ok(
+  $$update public.setup_states set company_id = (select id from f506 where label = 'other')$$,
+  '42501',
+  null,
+  'the owner cannot move their row to another company'
+);
 reset role;
 
 select tests.authenticate_as('f506_other');
 select is((select count(*) from public.setup_states)::integer, 0, 'another owner reads no row of this company');
+update public.setup_states set state = '{}'::jsonb;
+reset role;
+select is(
+  (select state->>'card_dismissed_at' from public.setup_states),
+  '2026-10-09T01:00:00.000Z',
+  'another owner''s update touches no row'
+);
+select tests.authenticate_as('f506_other');
 select throws_ok(
   $$insert into public.setup_states (user_id, company_id) select auth.uid(), id from f506 where label = 'company'$$,
   '42501',

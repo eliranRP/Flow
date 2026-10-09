@@ -13,6 +13,8 @@ import type { SetupStore } from "./storage";
 const loaded = new Set<string>();
 /** Keys written in this tab before their server read settled. */
 const pending = new Set<string>();
+/** Keys whose server read failed in this page load: writes stay local, so a new phone's empty copy never replaces the row. */
+const failed = new Set<string>();
 
 const serverKey = (userId: string, companyId: string) => `${userId}.${companyId}`;
 
@@ -20,6 +22,7 @@ const serverKey = (userId: string, companyId: string) => `${userId}.${companyId}
 export function resetSetupServerForTests(): void {
   loaded.clear();
   pending.clear();
+  failed.clear();
 }
 
 /** The local copy, passed in so this module does not import storage back. */
@@ -32,6 +35,7 @@ export type LocalSetupCopy = {
 
 /** Uploads the whole object. Fire and forget: a refused or failed write keeps the local copy. */
 export function uploadSetupState(userId: string, companyId: string, store: SetupStore): void {
+  if (failed.has(serverKey(userId, companyId))) return;
   if (!loaded.has(serverKey(userId, companyId))) pending.add(serverKey(userId, companyId));
   try {
     const supabase = getSupabase();
@@ -65,7 +69,10 @@ export async function loadSetupState(userId: string, companyId: string, local: L
       .eq("company_id", companyId)
       .eq("user_id", userId)
       .maybeSingle();
-    if (error) return true;
+    if (error) {
+      failed.add(key);
+      return true;
+    }
     const row = data as { state?: unknown } | null;
     if (pending.has(key) || row == null || row.state == null) {
       const current = local.read();
@@ -78,6 +85,7 @@ export async function loadSetupState(userId: string, companyId: string, local: L
     local.write(local.parse(JSON.stringify(row.state)));
     return true;
   } catch {
+    failed.add(key);
     return true;
   } finally {
     loaded.add(key);
