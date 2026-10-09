@@ -64,7 +64,8 @@
   outline: none;
 }
 
-/* The card's last row scrolls clear of the step row (its hairline included). */
+/* The card's last row scrolls clear of the step row (its hairline included). With FullScreen's
+   safe-bottom padding this adds up to the row's height, so the row goes flat at the end of the scroll. */
 .ui-txn-stepped {
   padding-block-end: calc(var(--touch-min) + var(--space-1) + var(--space-2) + 1px);
 }
