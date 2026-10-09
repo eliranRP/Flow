@@ -5,6 +5,8 @@ import { type JevShown } from "./jev-review";
 import { focusReviewEmptyAction, takeReviewFocus } from "./review-focus";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
+import { ReviewPushPrompt } from "./review-push-prompt";
+import type { NotificationPrefs, PushSupport } from "../push";
 import { ReviewIcon } from "../ui/icons";
 import { skippedListPath, useSkippedReviewQuery } from "./review-skipped";
 import { ReviewSkippedLink } from "../ui/review-skipped-list";
@@ -147,6 +149,8 @@ export function ReviewEmpty({
   homeLabel,
   backTo,
   skippedLink = false,
+  pushPrompt = false,
+  pushSample,
 }: {
   search: string;
   filtered?: boolean;
@@ -155,6 +159,10 @@ export function ReviewEmpty({
   backTo?: string;
   /** FLOW-309, owner pick 2026-10-08: "N פריטים דולגו" under the action when cards were skipped. */
   skippedLink?: boolean;
+  /** FLOW-502: the one-time "תזכורת בערב" card under the action. */
+  pushPrompt?: boolean;
+  /** Stories: the card's prefs and this browser's support, instead of the live read. */
+  pushSample?: { prefs: NotificationPrefs; support: PushSupport };
 }) {
   const skipped = useSkippedReviewQuery(skippedLink && !filtered);
   // FLOW-309: the last card left with focus in its action bar; the action takes it (after the title's).
@@ -178,6 +186,7 @@ export function ReviewEmpty({
             <ReviewSkippedLink count={skippedCount} to={skippedListPath(reviewListPath(search))} />
           </>
         )}
+        aside={pushPrompt && !filtered ? <ReviewPushPrompt sample={pushSample?.prefs} support={pushSample?.support} /> : null}
       />
     </div>
   );

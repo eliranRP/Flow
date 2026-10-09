@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
+| UI lane 4 | FLOW-502 web push, app side (option A): the review reminder card, Settings → התראות, the push worker (FLOW-704 "no key" merged #329) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
@@ -995,6 +995,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
 - **What:** A pre-permission card after a user gesture (iOS needs the app on the Home Screen first), service-worker push, server send from an edge function, per-user opt-in. Start with the evening review nudge, then the Sunday summary. Add it to setup step 5 once it ships. About 2–3 PRs.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
+- [x] Option A approved by the owner (#324): one quiet card on the review empty state, Settings → התראות with three switches (תנועה חדשה, off by default; תזכורת ערב; סיכום שבועי, ראשון בבוקר).
+- [ ] Server (dev lane 2): `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs` (null leaves a switch), `answer_push_prompt`, and the send function. The worker reads a `{ title, body, url, tag }` JSON payload. The VAPID public key is `VITE_VAPID_PUBLIC_KEY` at build time.
+- [ ] App (UI lane 4, PR #TBD): the push worker (`public/push-sw.js`, imported by the generated worker), the review card asked once, the Settings row, and `/settings/notifications`. It merges after the server PR.
+- [ ] Setup step 5 offers it once it ships.
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow

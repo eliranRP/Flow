@@ -20,7 +20,7 @@ import { JEV_DEFAULT, jevSwitchOn, useJevIntegrationQuery, type JevCardState } f
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
+import { AlertIcon, BellIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -28,6 +28,8 @@ import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
 import { Skeleton } from "../ui/skeleton";
 import { useBlockedPreview } from "./screen-shared";
+import { NO_PREFS, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
+import { notificationsHint } from "./notifications-screen";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -58,6 +60,8 @@ export type SettingsSample = {
   loanProjects?: LoanProjectChoice[];
   /** FLOW-501. The Loans page and the Settings הלוואות hint. */
   loans?: LoanRowsSample;
+  /** FLOW-502. The Settings התראות hint. */
+  notifications?: NotificationPrefs;
 };
 
 /** FLOW-501. Invented loans for `?preview=1`. */
@@ -115,7 +119,7 @@ function assistantTally(sample: AssistantSample): ConnectorTally["state"] {
 }
 
 /** The page Back returns to, so Settings can put focus back on its row. */
-let settingsOpened: "connections" | "loans" | null = null;
+let settingsOpened: "connections" | "loans" | "notifications" | null = null;
 
 /**
  * `/settings` (0082, amended by 0116): the account rows, then one quiet group
@@ -158,6 +162,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const jev = useJevIntegrationQuery(liveCompany);
   const assistant = useAssistantStatusQuery(liveCompany);
   const loans = useLoanBalances(liveCompanyId);
+  const notificationsQuery = useNotificationPrefsQuery(sample == null && preview === "off");
   const [renameOpen, setRenameOpen] = useState(false);
   const businessRowRef = useRef<HTMLButtonElement>(null);
   const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
@@ -274,6 +279,15 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const loansLoading = loanSample === "loading" || (loanSample == null && (loans.isLoading || (dashboard.isFetching && signedInCompanyId == null)));
   const loansFailed = loanSample === "error" || (loanSample == null && loans.isError);
   const loanCount = Array.isArray(loanSample) ? loanSample.length : (loans.data ?? []).length;
+  // FLOW-502: per user, so it shows without a company too. A preview reads the sample, never the server.
+  const notificationsSample = sample ? (sample.notifications ?? NO_PREFS) : preview !== "off" ? NO_PREFS : undefined;
+  const notificationsData = notificationsSample ?? notificationsQuery.data;
+  const notificationsLoading = notificationsSample == null && notificationsQuery.isPending;
+  const notificationsRowHint: ReactNode = notificationsLoading
+    ? <Skeleton width="sm" />
+    : notificationsData != null
+      ? notificationsHint(notificationsData)
+      : null;
   const loansRowHint: ReactNode = loansLoading
     ? <Skeleton width="sm" />
     : loansFailed
@@ -369,6 +383,14 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
             skeleton={loansLoading}
           />
         )}
+        <SettingsPageRow
+          page="notifications"
+          href={`/settings/notifications${search}`}
+          title="התראות"
+          icon={<BellIcon />}
+          hint={notificationsRowHint}
+          skeleton={notificationsLoading}
+        />
       </List>
       {noCompany ? null : (
         <>
@@ -444,7 +466,7 @@ function SettingsPageRow({
   skeleton = false,
   warning = false,
 }: {
-  page: "connections" | "loans";
+  page: "connections" | "loans" | "notifications";
   href: string;
   title: string;
   icon: ReactNode;
