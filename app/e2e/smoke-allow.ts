@@ -22,6 +22,7 @@ export const readRpcs = new Set([
   "list_skipped_review",
   "list_unpaid",
   "mcp_company_loan_currency",
+  "mcp_loan_payments",
   "project_category_months",
   "project_waiting",
   "review_anomalies",

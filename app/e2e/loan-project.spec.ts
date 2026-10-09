@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-// FLOW-119. Pick, change and clear a loan's project.
+// FLOW-119. Pick, change and clear a loan's project (on the loan's page since FLOW-106 B).
 test.use({ viewport: { width: 390, height: 844 } });
 
 function localStatus(): { url: string; anon: string; service: string; jwt: string } | null {
@@ -128,7 +128,8 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await sheet.getByRole("button", { name: "שמירה" }).click();
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה נשמרה" })).toBeVisible();
   await expect.poll(storedProject).toBe(projectA);
-  const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט: פרויקט א$`) });
+  // FLOW-106 B: the row opens the loan's page, where the project sheet now lives.
+  const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) });
   await expect(row).toBeVisible();
 
   await page.goto(`/projects/${projectA}`);
@@ -136,16 +137,18 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await expect(page.getByText(lender)).toBeVisible();
 
   await page.goto("/settings/loans");
-  await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט: פרויקט א$`) }).click();
+  await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) }).click();
+  await expect(page.getByRole("heading", { name: lender })).toBeVisible();
+  await page.getByRole("button", { name: /^פרויקט פרויקט א/ }).click();
   await pickProject(page, "פרויקט ב");
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה שויכה לפרויקט" })).toBeVisible();
   await expect.poll(storedProject).toBe(projectB);
 
-  await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט: פרויקט ב$`) }).click();
+  await page.getByRole("button", { name: /^פרויקט פרויקט ב/ }).click();
   await pickProject(page, "ללא פרויקט");
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה הוסרה מהפרויקט" })).toBeVisible();
   await expect.poll(storedProject).toBeNull();
-  await expect(page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט: ללא פרויקט$`) })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^פרויקט ללא פרויקט/ })).toBeVisible();
 
   await page.goto(`/projects/${projectB}`);
   await expect(page.getByRole("heading", { name: "הוצאות לפי קטגוריה" })).toBeVisible();

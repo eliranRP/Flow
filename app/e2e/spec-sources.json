@@ -55,9 +55,23 @@
       "screens/connections-screen.tsx",
       "screens/jev-settings.tsx"
     ],
+    "loan-detail.spec.ts": [
+      "screens/loan-detail-screen.tsx",
+      "screens/loan-detail-sheets.tsx",
+      "screens/loan-detail-data.ts",
+      "screens/loan-detail-store.ts",
+      "screens/loan-copy.ts",
+      "screens/loan-list.tsx",
+      "screens/loan-setup.tsx",
+      "dev/loan-detail-sample.ts",
+      "ui/date-sheet.tsx",
+      "ui/month-grid.tsx",
+      "ui/disclosure-group.tsx"
+    ],
     "loan-project.spec.ts": [
       "screens/settings-screen.tsx",
       "screens/loan-setup.tsx",
+      "screens/loan-detail-screen.tsx",
       "screens/loan-project-picker.tsx",
       "screens/project-detail-screen.tsx",
       "screens/projects-screen.tsx"

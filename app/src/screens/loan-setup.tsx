@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
 import { BackIcon, CalendarIcon, ChevronDownIcon, InfoIcon, LoanIcon, PlusIcon, RefreshIcon } from "../ui/icons";
 import { EmptyState } from "../ui/empty-state";
@@ -12,6 +13,8 @@ import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
+import { useToast } from "../ui/toast";
+import { usePreviewSearch } from "../preview";
 import { formatDisplay } from "../ui/date-math";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
@@ -32,8 +35,8 @@ import {
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
-import { LoanBalanceList, useLoanBalances, type LoanBalanceRow } from "./loan-match";
-import { type LoanProjectField, LoanProjectPicker, LoanProjectSheet, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
+import { LoanGroupedList, groupLoans, useLoanList, type LoanListRow } from "./loan-list";
+import { type LoanProjectField, LoanProjectPicker, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
 export { type LoanProjectChoice, type LoanProjectField, type LoanProjectSource, LoanProjectPicker } from "./loan-project-picker";
@@ -349,7 +352,7 @@ export function LoanSetupForm({
 }
 
 /** Sample balances for stories and preview. Live omits it and reads `loans`. */
-export type LoanRowsSample = readonly LoanBalanceRow[] | "loading" | "error";
+export type LoanRowsSample = readonly LoanListRow[] | "loading" | "error";
 
 export const LOANS_EMPTY_TITLE = "אין הלוואות עדיין";
 export const LOANS_EMPTY_OWNER = "הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.";
@@ -359,7 +362,8 @@ export const LOANS_ERROR_TITLE = "לא הצלחנו לטעון את ההלווא
 /**
  * The body of `/settings/loans` (FLOW-501): the balances, then הלוואה חדשה.
  * A viewer reads the balances as static rows and gets no new-loan row (U10).
- * A row tap opens the project sheet (FLOW-119) until FLOW-110's detail page.
+ * Open loans come first, then "נסגרו (N)", collapsed (FLOW-106). A row opens the loan's page,
+ * where its project now lives (FLOW-106 B moved the FLOW-119 sheet there).
  */
 export function LoanSettingsSection({
   companyId,
@@ -377,6 +381,13 @@ export function LoanSettingsSection({
   sample?: LoanRowsSample;
 }) {
   const source: LoanProjectSource = projects ?? { rows: [] };
+  const navigate = useNavigate();
+  const location = useLocation();
+  const search = usePreviewSearch();
+  const toast = useToast();
+  const savedId = useRef<string | null>(null);
+  // The page sits under this list's path: /settings/loans/:id, or /e2e/loans/:id in the dev fixture.
+  const loanHref = (id: string) => `${location.pathname.replace(/\/$/, "")}/${encodeURIComponent(id)}${search}`;
   const [open, setOpenState] = useState(false);
   const [view, setView] = useState<"form" | "project">("form");
   const [draftProject, setDraftProject] = useState<string | null>(null);
@@ -407,14 +418,7 @@ export function LoanSettingsSection({
     backToForm();
     return false;
   }, adoptNew);
-  const [editing, setEditing] = useState<LoanBalanceRow | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
-  const editBusy = useRef(false);
-  // Back during a save waits for it, like ✕ and Escape (0075).
-  const setEditSheet = useSheetHistory("loan-project", editOpen, setEditOpen, () => !editBusy.current);
-  const loanRows = useRef(new Map<string, HTMLButtonElement>());
-  const editReturn = useRef<HTMLElement | null>(null);
-  const balances = useLoanBalances(sample == null ? companyId : null);
+  const balances = useLoanList(sample == null ? companyId : null);
   const holdWrites = useHoldWrites();
   const emptyButton = useRef<HTMLButtonElement>(null);
   const query = useQuery({
@@ -433,17 +437,25 @@ export function LoanSettingsSection({
       if (code === "23503") return "הפרויקט לא נמצא.";
       return "לא הצלחנו לשמור את ההלוואה.";
     },
-    success: "ההלוואה נשמרה",
     keys: ["loans", "project"],
     onSuccess: () => {
       clearDraft();
       setSheet(false);
+      const id = savedId.current;
+      // FLOW-106 B: the toast opens the new loan's page, where its categories are set.
+      toast.show({
+        message: "ההלוואה נשמרה",
+        ...(id == null ? {} : { action: "פתיחה", onAction: () => { void navigate(loanHref(id)); } }),
+      });
     },
     run: async (row) => {
       if (holdWrites) throw new Error("preview");
       const supabase = getSupabase();
       if (!supabase || companyId == null) throw new Error("supabase");
-      assertNoError(await supabase.from("loans").insert({ ...row, company_id: companyId }));
+      savedId.current = null;
+      const inserted = await supabase.from("loans").insert({ ...row, company_id: companyId }).select("id").single();
+      assertNoError(inserted);
+      savedId.current = typeof inserted.data?.id === "string" ? inserted.data.id : null;
     },
   });
 
@@ -475,8 +487,9 @@ export function LoanSettingsSection({
   const picking = view === "project";
   const loading = sample === "loading" || (sample == null && balances.isLoading);
   const failed = sample === "error" || (sample == null && balances.isError);
-  const rows: readonly LoanBalanceRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
-  const empty = !loading && !failed && rows.length === 0;
+  const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
+  // Only closed loans: the empty state shows, with "הלוואות שנסגרו (N)" under it (§3.1).
+  const empty = !loading && !failed && groupLoans(rows).open.length === 0;
   const newLoanReturn = empty ? emptyButton : rowRef;
 
   return (
@@ -506,31 +519,26 @@ export function LoanSettingsSection({
             </Button>
           )}
         />
-      ) : empty ? (
-        <EmptyState
-          icon={<LoanIcon />}
-          title={LOANS_EMPTY_TITLE}
-          body={holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
-          action={holdWrites ? undefined : (
-            <Button variant="pill" icon={<PlusIcon />} buttonRef={emptyButton} onClick={() => { setLoanSheet(true); }}>
-              הלוואה חדשה
-            </Button>
-          )}
-        />
       ) : (
-        <LoanBalanceList
-          rows={rows}
-          onOpen={holdWrites ? undefined : (row) => {
-            if (blocked?.()) return;
-            editReturn.current = loanRows.current.get(row.id) ?? null;
-            setEditing(row);
-            setEditSheet(true);
-          }}
-          rowRef={(id, node) => {
-            if (node) loanRows.current.set(id, node);
-            else loanRows.current.delete(id);
-          }}
-        />
+        <>
+          {empty ? (
+            <EmptyState
+              icon={<LoanIcon />}
+              title={LOANS_EMPTY_TITLE}
+              body={holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
+              action={holdWrites ? undefined : (
+                <Button variant="pill" icon={<PlusIcon />} buttonRef={emptyButton} onClick={() => { setLoanSheet(true); }}>
+                  הלוואה חדשה
+                </Button>
+              )}
+            />
+          ) : null}
+          {/* A viewer reads the loan's page too, as static rows. */}
+          <LoanGroupedList
+            rows={rows}
+            onOpen={(row) => { void navigate(loanHref(row.id)); }}
+          />
+        </>
       )}
       {holdWrites || failed || empty ? null : (
         <List>
@@ -603,16 +611,6 @@ export function LoanSettingsSection({
           </>
         )}
       </Sheet>
-      {holdWrites ? null : (
-        <LoanProjectSheet
-          loan={editing}
-          open={editOpen}
-          onOpenChange={setEditSheet}
-          source={source}
-          returnFocusRef={editReturn}
-          busyRef={editBusy}
-        />
-      )}
     </>
   );
 }

@@ -62,3 +62,4 @@ export { CurrencySheet, CURRENCY_CHOICES, currencyChoiceLabel } from "./currency
 export { PeriodSwipe } from "./period-swipe";
 export { InvestmentCard, currencyWord, currentEquityNote, forcedEquityNote } from "./investment-card";
 export type { EquityNote, InvestmentField, InvestmentFigures, InvestmentRow, MinorInCurrency } from "./investment-card";
+export { DisclosureGroup } from "./disclosure-group";
