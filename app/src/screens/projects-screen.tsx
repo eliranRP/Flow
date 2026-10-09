@@ -1,9 +1,10 @@
-import { shekelsToAgorot, type Dashboard, type ProjectRow } from "@flow/shared";
+import { shekelsToAgorot, type Dashboard, type ProjectGroupRow, type ProjectRow } from "@flow/shared";
 import { projectAmountFigures, projectMarginHint } from "../by-currency";
 import { useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
 import { getSupabase } from "../lib/supabase";
+import { groupAsProjectRow, groupHref, projectCountLabel, splitByGroup } from "../project-groups";
 import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
@@ -84,6 +85,7 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
       >
         <ProjectsBody
           projects={data?.projects ?? []}
+          groups={data?.groups ?? []}
           query={query}
           setQuery={setQuery}
           expanded={expanded}
@@ -108,6 +110,7 @@ function projectMargin(project: ProjectRow): ReactNode | undefined {
 
 function ProjectsBody({
   projects,
+  groups,
   query,
   setQuery,
   expanded,
@@ -115,15 +118,20 @@ function ProjectsBody({
   search,
 }: {
   projects: Dashboard["projects"];
+  groups: NonNullable<Dashboard["groups"]>;
   query: string;
   setQuery: (value: string) => void;
   expanded: boolean;
   setExpanded: (value: boolean) => void;
   search: string;
 }) {
-  const finished = projects.filter((project) => project.status === "finished");
-  const active = projects.filter((project) => project.status !== "finished");
   const needle = query.trim();
+  // FLOW-406 (proj-b): a group is one row that opens its projects; a search reaches every project by name.
+  const split = splitByGroup({ projects, groups });
+  const listedGroups = needle === "" ? split.groups : split.groups.filter((entry) => entry.group.name.includes(needle));
+  const pool = needle === "" ? split.loose : projects;
+  const finished = pool.filter((project) => project.status === "finished");
+  const active = pool.filter((project) => project.status !== "finished");
   /** Every active project by default; a query searches finished ones too (after the active ones), so none is out of reach. */
   const shown = expanded || needle !== "" ? [...active, ...finished] : active;
   const visible = shown.filter((project) =>
@@ -137,7 +145,7 @@ function ProjectsBody({
       <div className="ui-page-pad ui-stack">
         <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם או סטטוס" />
       </div>
-      {visible.length === 0 ? (
+      {visible.length === 0 && listedGroups.length === 0 ? (
         // FLOW-342 (A): a name that is no project is likely a supplier or a line, so the miss is one row into search.
         <List>
           <ListRow
@@ -150,23 +158,12 @@ function ProjectsBody({
         </List>
       ) : (
         <List>
-          {visible.map((project) => {
-            const amounts = projectAmountFigures(project);
-            const single = amounts.length === 1 ? amounts[0] : undefined;
-            return (
-            <ListRow
-              key={project.id}
-              variant="project"
-              title={project.name}
-              hint={project.status === "finished" ? "הסתיים" : (projectMargin(project) ?? project.state_label ?? undefined)}
-              agorot={single?.minor ?? project.profit_agorot}
-              currency={single?.currency}
-              amounts={amounts.length > 1 ? amounts : undefined}
-              loss={(single?.minor ?? project.profit_agorot) < 0n}
-              href={`/projects/${project.id}${search}`}
-            />
-            );
-          })}
+          {listedGroups.map(({ group, projects: members }) => (
+            <ProjectGroupRow key={`group-${group.id}`} group={group} count={members.length} search={search} />
+          ))}
+          {visible.map((project) => (
+            <ProjectRowItem key={project.id} project={project} search={search} alignWithChevron={listedGroups.length > 0} />
+          ))}
         </List>
       )}
       {!expanded && needle === "" && finished.length > 0 ? (
@@ -179,6 +176,45 @@ function ProjectsBody({
         </p>
       ) : null}
     </>
+  );
+}
+
+/** One project's row on the Projects tab and on a group's page. */
+export function ProjectRowItem({ project, search, alignWithChevron = false }: { project: ProjectRow; search: string; alignWithChevron?: boolean }) {
+  const amounts = projectAmountFigures(project);
+  const single = amounts.length === 1 ? amounts[0] : undefined;
+  return (
+    <ListRow
+      variant="project"
+      title={project.name}
+      hint={project.status === "finished" ? "הסתיים" : (projectMargin(project) ?? project.state_label ?? undefined)}
+      agorot={single?.minor ?? project.profit_agorot}
+      currency={single?.currency}
+      amounts={amounts.length > 1 ? amounts : undefined}
+      loss={(single?.minor ?? project.profit_agorot) < 0n}
+      href={`/projects/${project.id}${search}`}
+      // Beside a group row's chevron, the amounts keep one column (FLOW-408).
+      chevronSpace={alignWithChevron}
+    />
+  );
+}
+
+/** FLOW-406 (proj-b): a group as one row, its profit summed by the server, opening the group's page. */
+function ProjectGroupRow({ group, count, search }: { group: ProjectGroupRow; count: number; search: string }) {
+  const amounts = projectAmountFigures(groupAsProjectRow(group));
+  const single = amounts.length === 1 ? amounts[0] : undefined;
+  return (
+    <ListRow
+      variant="project"
+      title={group.name}
+      hint={projectCountLabel(count)}
+      agorot={single?.minor ?? group.profit_agorot}
+      currency={single?.currency}
+      amounts={amounts.length > 1 ? amounts : undefined}
+      loss={(single?.minor ?? group.profit_agorot) < 0n}
+      href={groupHref(group.id, search)}
+      chevron
+    />
   );
 }
 

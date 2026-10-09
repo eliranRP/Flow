@@ -8,6 +8,31 @@ import type { ChangeChoice } from "./change-sheet-copy";
 
 const skeletonKeys = ["a", "b", "c", "d", "e"] as const;
 
+/** The rest's heading under the project groups (FLOW-406, picker). */
+export const PICK_REST_HEADING = "שאר הפרויקטים";
+
+/**
+ * FLOW-406 (picker): with any grouped project, each group's projects under its name, in the order
+ * its first project is listed, then שאר הפרויקטים. Null when no project has a group.
+ */
+export function groupSections(listed: readonly ChangeChoice[]): { heading: string; index: number; options: ChangeChoice[] }[] | null {
+  if (!listed.some((option) => option.group != null && option.group !== "")) return null;
+  const byGroup = new Map<string, ChangeChoice[]>();
+  const rest: ChangeChoice[] = [];
+  for (const option of listed) {
+    if (option.group == null || option.group === "") {
+      rest.push(option);
+      continue;
+    }
+    const list = byGroup.get(option.group) ?? [];
+    list.push(option);
+    byGroup.set(option.group, list);
+  }
+  const sections = [...byGroup.entries()].map(([heading, options]) => ({ heading, options }));
+  if (rest.length > 0) sections.push({ heading: PICK_REST_HEADING, options: rest });
+  return sections.map((section, index) => ({ ...section, index }));
+}
+
 export function Picker({
   kind,
   searchable,
@@ -68,6 +93,7 @@ export function Picker({
   const reversalForced = reversalListed.some((option) => option.id === selectedId) || (needle !== "" && reversalListed.length > 0);
   const reversalShown = reversal != null && (reversal.open || reversalForced);
   const reversalVisible = reversal != null && (needle === "" || reversalListed.length > 0);
+  const sections = kind === "project" && needle === "" ? groupSections(listed) : null;
   function row(option: ChangeChoice) {
     return (
       <RadioRow
@@ -109,7 +135,33 @@ export function Picker({
         </div>
       ) : (
         <>
-          {listed.length > 0 || (noneLabel != null && needle === "") ? (
+          {sections != null ? (
+            <>
+              {noneLabel != null ? (
+                <div role="radiogroup" aria-label="פרויקט">
+                  <RadioRow
+                    key="none"
+                    layout="picker"
+                    label={noneLabel}
+                    selected={selectedId === ""}
+                    busy={savingId === ""}
+                    disabled={savingId != null && savingId !== ""}
+                    onSelect={() => {
+                      onSelect("");
+                    }}
+                  />
+                </div>
+              ) : null}
+              {sections.map((section) => (
+                <div key={section.index} className="ui-pick-group">
+                  <p className="t-label ui-pick-group-head" id={`${sectionId}-${String(section.index)}`}>{section.heading}</p>
+                  <div role="radiogroup" aria-labelledby={`${sectionId}-${String(section.index)}`}>
+                    {section.options.map(row)}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : listed.length > 0 || (noneLabel != null && needle === "") ? (
             <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
               {noneLabel != null && needle === "" ? (
                 <RadioRow

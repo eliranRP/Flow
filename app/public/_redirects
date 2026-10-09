@@ -55,6 +55,8 @@
 /settings/loans/ /settings/loans 301
 /settings/loans/:loanId /app-shell 200
 /settings/loans/:loanId/ /settings/loans/:loanId 301
+/projects/groups/:groupId /app-shell 200
+/projects/groups/:groupId/ /projects/groups/:groupId 301
 /projects/:projectId/categories/:categoryId /app-shell 200
 /projects/:projectId/categories/:categoryId/ /projects/:projectId/categories/:categoryId 301
 /projects/:projectId/months /app-shell 200
