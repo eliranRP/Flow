@@ -1,0 +1,1 @@
+The assistant can now check an outside ledger export against Flow in one read. The new `match_lines` tool takes up to 500 rows of a date and an amount. It pairs each row with the Flow line of the same amount whose document or payment date is closest, within a few days. It also lists the rows with no line and the Flow lines in that period that no row took.
