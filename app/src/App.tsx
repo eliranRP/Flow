@@ -94,7 +94,12 @@ const DevUnpaid = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default:
 // The dev server serves each module on request, so a screen loaded on its tap would wait for a
 // chain of requests there. In dev every screen and fixture is fetched at start, as before FLOW-804.
 if (import.meta.env.DEV) {
-  void Promise.all([preloadScreens(), devRoutes(), devLineSplit(), devBreakdown(), jevReviewCard()]).catch(() => undefined);
+  // The e2e sweeps wait for this mark, so a screen or sheet never mounts between their look and their tap.
+  void Promise.all([preloadScreens(), devRoutes(), devLineSplit(), devBreakdown(), jevReviewCard()])
+    .catch(() => undefined)
+    .then(() => {
+      document.documentElement.dataset.screensLoaded = "1";
+    });
 }
 
 export function App() {
