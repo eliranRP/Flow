@@ -14,6 +14,6 @@ export { ProjectCategoryScreen } from "./project-category-screen";
 export { UNPAID_MARKED, UnpaidScreen } from "./unpaid-screen";
 export { linePnlState, TransactionScreen } from "./transaction-screen";
 export { SplitScreen } from "./split-screen";
-export { type ConnectorTally, type ConnectionsHint, connectionsHint, loansCountHint, SettingsScreen, LoansScreen, NotificationsScreen } from "./settings-screen";
+export { type ConnectorTally, type ConnectionsHint, connectionsHint, loansCountHint, SettingsScreen, LoansScreen } from "./settings-screen";
 export { ConnectionsScreen } from "./connections-screen";
 export { CategoriesScreen } from "./categories-screen";

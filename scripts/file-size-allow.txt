@@ -1,0 +1,4 @@
+# Files allowed over the CONTRIBUTING size limit (code 800 lines, tests 1,200), checked by
+# scripts/check-file-size.mjs. Each line: <lines> <path> # why. The count is a cap: the file may
+# shrink but not grow. Remove the line once the file is under its limit.
+958 docs/module-1-project-pnl/wireframes/source/gen.py # generates the module 1 low-fi wireframe HTML; a design doc tool, not app code

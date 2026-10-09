@@ -159,7 +159,7 @@ export function ReviewEmpty({
   const skippedCount = skippedLink && !filtered && !skipped.isError ? (skipped.data?.length ?? 0) : 0;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
+      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
       <EmptyState
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
