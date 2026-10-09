@@ -7,10 +7,24 @@ import test from "node:test";
 
 const script = new URL("./ci-deploy-plan.sh", import.meta.url).pathname;
 
+/**
+ * The environment without git's repository overrides. A pre-push hook runs with GIT_DIR (and
+ * often GIT_WORK_TREE and GIT_INDEX_FILE) set, and git obeys them over `cwd`: the temp repo's
+ * config and commits would land in the repo being pushed.
+ */
+export function isolatedEnv(env = process.env) {
+  const clean = { ...env };
+  for (const key of Object.keys(clean)) {
+    if (key.startsWith("GIT_")) delete clean[key];
+  }
+  return clean;
+}
+
 /** A repo with `merges` commits after the deployed one, and a fake gh that reports deployments. */
 function setup({ merges, deployments }) {
   const dir = mkdtempSync(join(tmpdir(), "ci-deploy-plan-"));
-  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" }).trim();
+  const env = isolatedEnv();
+  const git = (...args) => execFileSync("git", ["-C", dir, ...args], { cwd: dir, encoding: "utf8", env }).trim();
   git("init", "-q", "-b", "main");
   git("config", "user.email", "ci@example.com");
   git("config", "user.name", "CI");
@@ -42,7 +56,7 @@ esac
     spawnSync("bash", [script], {
       cwd: dir,
       encoding: "utf8",
-      env: { ...process.env, FLOW_GH: gh, GITHUB_OUTPUT: output, GITHUB_REPOSITORY: "example/flow", GITHUB_EVENT_NAME: event, GITHUB_STEP_SUMMARY: "" },
+      env: { ...env, FLOW_GH: gh, GITHUB_OUTPUT: output, GITHUB_REPOSITORY: "example/flow", GITHUB_EVENT_NAME: event, GITHUB_STEP_SUMMARY: "" },
     });
   return { dir, run, output: () => readFileSync(output, "utf8") };
 }
@@ -102,5 +116,39 @@ test("no known good deploy runs CI and the deploy", () => {
     assert.equal(ctx.output(), "run=true\n");
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
+  }
+});
+
+test("a hook's GIT_DIR does not send the temp repo's config or commits to the outer repo", () => {
+  const outer = mkdtempSync(join(tmpdir(), "ci-deploy-plan-outer-"));
+  const saved = { dir: process.env.GIT_DIR, tree: process.env.GIT_WORK_TREE, index: process.env.GIT_INDEX_FILE };
+  const outerGit = (...args) =>
+    execFileSync("git", ["-C", outer, ...args], { encoding: "utf8", env: isolatedEnv() }).trim();
+  let ctx;
+  try {
+    outerGit("init", "-q", "-b", "main");
+    outerGit("-c", "user.name=Outer", "-c", "user.email=outer@example.com", "commit", "-q", "--allow-empty", "-m", "outer");
+    const head = outerGit("rev-parse", "HEAD");
+    // As in a pre-push hook run from the outer repo.
+    process.env.GIT_DIR = join(outer, ".git");
+    process.env.GIT_WORK_TREE = outer;
+    process.env.GIT_INDEX_FILE = join(outer, ".git", "index");
+    ctx = setup({ merges: 2, deployments: (sha) => [{ id: 7, sha, state: "success" }] });
+    assert.equal(ctx.run().status, 0);
+    for (const [key, value] of [["GIT_DIR", saved.dir], ["GIT_WORK_TREE", saved.tree], ["GIT_INDEX_FILE", saved.index]]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    assert.equal(outerGit("rev-parse", "HEAD"), head);
+    assert.equal(outerGit("rev-list", "--count", "HEAD"), "1");
+    assert.equal(spawnSync("git", ["-C", outer, "config", "--local", "user.name"], { env: isolatedEnv() }).status, 1);
+    assert.equal(outerGit("config", "--local", "core.bare"), "false");
+  } finally {
+    for (const [key, value] of [["GIT_DIR", saved.dir], ["GIT_WORK_TREE", saved.tree], ["GIT_INDEX_FILE", saved.index]]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    if (ctx) rmSync(ctx.dir, { recursive: true, force: true });
+    rmSync(outer, { recursive: true, force: true });
   }
 });
