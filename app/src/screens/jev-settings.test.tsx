@@ -119,11 +119,11 @@ describe("Jev settings card", () => {
     expect(parseJevThreshold("1.01")).toBeNull();
   });
 
-  it("says פעיל · אין מפתח when Jev is on and the server holds no key, and כבוי when off (FLOW-704)", async () => {
+  it("says אין מפתח when Jev is on and the server holds no key, and כבוי when off (FLOW-704)", async () => {
     db.keyStatus = "missing";
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
     const { unmount } = renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByText("פעיל · אין מפתח")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("אין מפתח")).toBeInTheDocument());
     expect(await readySwitch()).toBeChecked();
     unmount();
     db.row = { enabled: false, mode: "shadow", threshold: 0.9 };

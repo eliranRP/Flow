@@ -66,7 +66,7 @@ export function jevSwitchOn(state: Pick<JevCardState, "enabled" | "mode" | "stat
 
 export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "status" | "keyMissing">): string {
   if (state.status === "error") return "שגיאה";
-  if (jevSwitchOn(state) && state.keyMissing === true) return "פעיל · אין מפתח";
+  if (jevSwitchOn(state) && state.keyMissing === true) return "אין מפתח";
   if (jevSwitchOn(state)) return state.mode === "auto" ? "פעיל · מילוי אוטומטי" : "פעיל · הצעות בלבד";
   return "כבוי";
 }
