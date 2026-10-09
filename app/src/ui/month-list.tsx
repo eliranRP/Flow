@@ -19,6 +19,12 @@ type MonthListProps<T> = {
   cents?: boolean;
   /** The list is titled as a cost (a category's lines): expense totals carry no minus (DESIGN-RULES §3.7, FLOW-339). */
   cost?: boolean;
+  /**
+   * One labeled figure per month: "נטו ₪13,206" (income minus expenses, − only when negative), and
+   * each other currency on a muted line under it ("ועוד −$429.90 בדולר"). Never converted (FLOW-504).
+   * Real agorot only, no ".00". Search, option C (FLOW-339).
+   */
+  net?: boolean;
 };
 
 /**
@@ -38,6 +44,7 @@ export function MonthList<T>({
   days = false,
   cents = false,
   cost = false,
+  net = false,
 }: MonthListProps<T>) {
   const baseId = useId();
   const groups = groupByMonth(rows, dateOf, amountOf, cents);
@@ -77,6 +84,7 @@ export function MonthList<T>({
           days={days}
           cents={cents}
           cost={cost}
+          net={net}
         />
       ))}
     </List>
@@ -99,6 +107,7 @@ function MonthSection<T>({
   days,
   cents,
   cost = false,
+  net = false,
 }: {
   id: string;
   group: MonthGroup<T>;
@@ -111,18 +120,19 @@ function MonthSection<T>({
   days: boolean;
   cents: boolean;
   cost?: boolean;
+  net?: boolean;
 }) {
+  // A currency that rounds to zero draws no line, so it can't take the first slot.
+  const shown = group.totals.filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n);
   return (
     <div className="ui-month" role={head ? "group" : undefined} aria-labelledby={head ? id : undefined}>
       {head ? (
         <div className="ui-month-head">
           <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
-          {showTotals ? (
+          {showTotals && net && shown.length > 0 ? <MonthNet totals={shown} /> : null}
+          {showTotals && !net ? (
             <p className="ui-month-totals t-label">
-              {group.totals
-                // A currency that rounds to zero draws no line, so it can't take the first slot.
-                .filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n)
-                .map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0} />)}
+              {shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0} />)}
             </p>
           ) : null}
         </div>
@@ -155,6 +165,34 @@ function Rows<T>({
           <h3 className="ui-day-head">{day.title}</h3>
           {day.rows.map((row) => <Fragment key={keyOf(row)}>{renderRow(row)}</Fragment>)}
         </Fragment>
+      ))}
+    </>
+  );
+}
+
+const CURRENCY_WORD: Record<string, string> = { ILS: "בשקלים", USD: "בדולר", EUR: "באירו" };
+
+function netText(total: MonthTotal): string {
+  return formatAmountText(total.incomeMinor - total.expenseMinor, total.currency, { detail: true });
+}
+
+/** The month's net, labeled, in the first currency; each other currency on a muted line under it. */
+function MonthNet({ totals }: { totals: readonly MonthTotal[] }) {
+  const [first, ...rest] = totals;
+  if (first == null) return null;
+  return (
+    <>
+      <p className="ui-month-totals t-label">
+        <span className="ui-month-line">
+          נטו <bdi dir="ltr" className="ui-num">{netText(first)}</bdi>
+        </span>
+      </p>
+      {rest.map((total) => (
+        <p key={total.currency} className="ui-month-more t-hint">
+          {"ועוד "}
+          <bdi dir="ltr" className="ui-num">{netText(total)}</bdi>
+          {` ${CURRENCY_WORD[total.currency] ?? `ב־${total.currency}`}`}
+        </p>
       ))}
     </>
   );

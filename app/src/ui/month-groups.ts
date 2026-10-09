@@ -96,7 +96,8 @@ function addTo(totals: MonthTotal[], amount: MonthAmount, cents: boolean): void 
     total = { currency: amount.currency, incomeMinor: 0n, expenseMinor: 0n };
     totals.push(total);
   }
-  if (amount.direction === "income") total.incomeMinor += shown;
+  // As the row draws it: the amount's sign wins, so an income credit counts as money out (decision 0120).
+  if (amount.direction === "income" && amount.minor >= 0n) total.incomeMinor += shown;
   else total.expenseMinor += shown;
 }
 
