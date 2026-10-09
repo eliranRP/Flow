@@ -52,10 +52,10 @@ describe("projectDraftFrom (FLOW-346)", () => {
     expect(projectDraftFrom(null, [])).toEqual({ parts: [], restProjectId: null });
   });
 
-  it("opens a saved split with the first project as the rest and the others in exact amounts", () => {
+  it("opens a saved split with the largest project as the rest and the others in exact amounts", () => {
     const draft = projectDraftFrom(null, [
-      { project_id: "a", amount_net: -2_066_316n },
       { project_id: "b", amount_net: -800_000n },
+      { project_id: "a", amount_net: -2_066_316n },
     ]);
     expect(draft.restProjectId).toBe("a");
     expect(draft.parts.map((item) => [item.projectId, item.unit, item.value])).toEqual([["b", "amount", "8000"]]);

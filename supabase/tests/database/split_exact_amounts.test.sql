@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(18);
+select plan(21);
 
 select tests.create_supabase_user('exactsplit_owner', 'exactsplit-owner@example.com');
 
@@ -157,6 +157,68 @@ select is(
 );
 
 reset role;
+
+-- A sync that pulls the same line again keeps exact parts to the cent.
+create function pg_temp.exactsplit_sync() returns void language plpgsql as $fn$
+begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform public.upsert_connector_lines(
+    (select id from exactsplit where label = 'company'),
+    'sumit',
+    jsonb_build_object(
+      'lines', jsonb_build_array(jsonb_build_object(
+        'source', 'sumit',
+        'external_id', 'exactsplit-synced',
+        'direction', 'expense',
+        'line_status', 'posted',
+        'doc_kind', 'expense',
+        'pnl_role', 'overhead',
+        'currency', 'ILS',
+        'amount_original', 100000000,
+        'amount_negated', true,
+        'doc_date', '2026-09-20',
+        'description', 'Synced work',
+        'vat', jsonb_build_object('amount', 0, 'status', 'unknown'),
+        'provider_meta', '{}'::jsonb
+      )),
+      'removed_ids', '[]'::jsonb,
+      'complete', false
+    ),
+    null,
+    null
+  );
+end
+$fn$;
+
+select lives_ok($$select pg_temp.exactsplit_sync()$$, 'a synced line comes in');
+insert into exactsplit (label, id)
+select 'synced', id from public.transactions where external_id = 'exactsplit-synced';
+
+select tests.authenticate_as('exactsplit_owner');
+select lives_ok(
+  format(
+    $sql$select public.save_split(%L::uuid, jsonb_build_array(
+      jsonb_build_object('project_id', %L, 'amount_minor', 1234567),
+      jsonb_build_object('project_id', %L, 'amount_minor', abs((select amount_net from public.transactions where id = %L::uuid)) - 1234567)))$sql$,
+    (select id from exactsplit where label = 'synced'),
+    (select id from exactsplit where label = 'north'),
+    (select id from exactsplit where label = 'south'),
+    (select id from exactsplit where label = 'synced')
+  ),
+  'the synced line splits in exact amounts'
+);
+reset role;
+
+select pg_temp.exactsplit_sync();
+select is(
+  (select abs(a.amount_net) from public.allocations a
+   where a.transaction_id = (select id from exactsplit where label = 'synced')
+     and a.project_id = (select id from exactsplit where label = 'north')),
+  1234567::bigint,
+  'pulling the same line again keeps the exact part'
+);
 
 select is(
   private.mcp_shares_for_save(jsonb_build_array(

@@ -215,7 +215,8 @@ describe("split discard", () => {
       finish = () => { resolve(undefined); };
     }));
     renderSplit(onSave);
-    fireEvent.click(await screen.findByRole("button", { name: "סגירה" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, מחסן הנמל" }), { target: { value: "300" } });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(onSave).toHaveBeenCalledOnce();
     expect(screen.getByRole("textbox", { name: "סכום, מחסן הנמל" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));

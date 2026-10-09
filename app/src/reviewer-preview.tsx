@@ -1,3 +1,4 @@
+import { amountText } from "./line-split";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
@@ -440,7 +441,9 @@ function ReviewerUnsplit() {
           sampleAmount={unsplitNet}
           sampleProjects={projects}
           sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
-          sampleRestProject={null}
+          // Opens like the saved six-way split: the first project keeps the rest, the others are exact parts.
+          sampleRestProject={unsplitProjects[0].id}
+          sampleParts={unsplitProjects.slice(1).map((project) => ({ projectId: project.id, value: amountText(unsplitShare(project.bp)) }))}
           backTo="/reviewer"
           onSave={(rows) => {
             pendingSave.current = true;

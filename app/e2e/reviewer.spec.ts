@@ -390,8 +390,14 @@ test("a split returns to one project and the project totals follow", async ({ pa
   const alon = page.getByRole("article", { name: "בית הספר אלון" });
   const namal = page.getByRole("article", { name: "מחסן הנמל" });
   await expect(alon.getByText("₪533.44")).toBeVisible();
-  // The whole line on one project: the rest takes it all, with no parts.
-  await pickRest(page, "בית הספר אלון");
+  // The editor opens on the saved split; with every part removed, the rest takes the whole line.
+  await expect(page.getByRole("button", { name: /^השאר, בית הספר אלון/ })).toBeVisible();
+  const removeButtons = page.getByRole("button", { name: /^הסרת החלק / });
+  await expect(removeButtons).toHaveCount(5);
+  for (let left = 5; left > 0; left -= 1) {
+    await removeButtons.first().click();
+    await expect(removeButtons).toHaveCount(left - 1);
+  }
   await page.getByRole("button", { name: "סגירה" }).click();
   await toast(page, "השיוך נשמר");
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(0);

@@ -150,7 +150,7 @@ export const assignSchema = z.object({
 const splitShareSchema = z.object({
   project_id: UUID_TEXT,
   share: z.number().int().min(1).max(100).optional(),
-  amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
+  amount_minor: z.number().int().min(1).max(99_999_999_999_999).optional(),
 }).strict().refine((item) => (item.share === undefined) !== (item.amount_minor === undefined));
 const SPLIT_SHARES = z.array(splitShareSchema).min(2).max(50);
 // Projects are unique, and every share is one kind: whole percents that sum to 100, or exact

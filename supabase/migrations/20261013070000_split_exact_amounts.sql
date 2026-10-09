@@ -28,7 +28,6 @@ declare
   count_shares integer := 0;
   amount_count integer := 0;
   amount_total bigint := 0;
-  seen uuid[] := '{}'::uuid[];
   prior_project uuid;
   prior_category uuid;
   prior_role public.pnl_role;
@@ -68,7 +67,7 @@ begin
       or ((item ? 'share_bp')::integer + (item ? 'amount_minor')::integer) <> 1
       or (item ? 'amount_minor' and (
         jsonb_typeof(item->'amount_minor') is distinct from 'number'
-        or (item->>'amount_minor') !~ '^[0-9]{1,15}$'))
+        or (item->>'amount_minor') !~ '^[0-9]{1,14}$'))
     then
       raise exception 'validation';
     end if;
@@ -253,7 +252,7 @@ begin
     seen := seen || project;
     if item ? 'amount_minor' then
       if jsonb_typeof(item->'amount_minor') <> 'number'
-        or (item->>'amount_minor') !~ '^[0-9]{1,15}$'
+        or (item->>'amount_minor') !~ '^[0-9]{1,14}$'
         or (item->>'amount_minor')::bigint < 1
       then
         raise exception 'validation';
@@ -291,5 +290,52 @@ end;
 $$;
 
 revoke all on function private.mcp_shares_for_save(jsonb) from public, anon, authenticated;
+
+-- Syncs (upsert_connector_lines and the older import paths) rescaled every assigned line's
+-- allocations from share_bp on each pull, which would round exact parts to 0.01% of the line.
+-- They now rescale only when the stored parts no longer add up to the line (its amount changed).
+create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
+returns integer
+language sql
+immutable
+as $$ select (length(p_def) - length(replace(p_def, p_anchor, ''))) / length(p_anchor); $$;
+
+do $patch$
+declare
+  fn record;
+  def text;
+  patched text;
+  pattern constant text := 'set amount_net = \(net \* share_bp\) / 10000(\s+)where transaction_id = (txn|row\.id);';
+  total integer := 0;
+begin
+  for fn in
+    select p.oid::regprocedure as sig
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname in ('public', 'private')
+      and p.prosrc ~ pattern
+  loop
+    def := pg_get_functiondef(fn.sig);
+    patched := regexp_replace(
+      def,
+      pattern,
+      'set amount_net = (net * share_bp) / 10000\1where transaction_id = \2\1  and (select coalesce(sum(split_part_row.amount_net), 0) from public.allocations split_part_row where split_part_row.transaction_id = \2) is distinct from net;',
+      'g'
+    );
+    if patched = def then
+      raise exception '% did not take the exact-split patch', fn.sig;
+    end if;
+    execute patched;
+    total := total + 1;
+  end loop;
+  if pg_temp.anchor_count(
+    pg_get_functiondef('public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text)'::regprocedure),
+    'where split_part_row.transaction_id = txn) is distinct from net;'
+  ) <> 1 then
+    raise exception 'upsert_connector_lines is not the expected definition';
+  end if;
+  raise notice 'exact-split rescale guard in % functions', total;
+end
+$patch$;
 
 commit;

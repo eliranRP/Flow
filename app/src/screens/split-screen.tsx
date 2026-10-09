@@ -139,9 +139,7 @@ export function SplitScreen({
         restProjectId: sampleRestProject === undefined ? (projects[0]?.id ?? null) : sampleRestProject,
       }
     : saved;
-  const baseline = sample
-    ? sharesKey([{ project_id: initial.restProjectId ?? "", amount_minor: Number(lineMinor) }])
-    : sharesKey(checkProjectSplit(saved.parts, saved.restProjectId, lineMinor).shares);
+  const baseline = sharesKey(checkProjectSplit(initial.parts, initial.restProjectId, lineMinor).shares);
   return (
     <ProjectSplitEditor
       key={transactionId}

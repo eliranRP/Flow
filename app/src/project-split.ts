@@ -104,7 +104,7 @@ export function newProjectPartKey(): string {
 }
 
 /**
- * The saved split as editor rows: the first project keeps the rest, every other share becomes
+ * The saved split as editor rows: the largest project keeps the rest, every other share becomes
  * an exact part. A line on one project opens with no parts and that project as the rest.
  */
 export function projectDraftFrom(
@@ -113,14 +113,17 @@ export function projectDraftFrom(
 ): { parts: ProjectPart[]; restProjectId: string | null } {
   const rows = (allocations ?? []).filter((row) => row.amount_net !== 0n);
   if (rows.length >= 2) {
-    const [first, ...others] = rows;
+    // The largest project keeps the rest (the first one on a tie), whatever order the line lists them in.
+    const size = (row: { amount_net: bigint }) => (row.amount_net < 0n ? -row.amount_net : row.amount_net);
+    const largest = rows.reduce((best, row) => (size(row) > size(best) ? row : best));
+    const others = rows.filter((row) => row !== largest);
     return {
-      restProjectId: first?.project_id ?? null,
+      restProjectId: largest.project_id,
       parts: others.map((row) => ({
         key: newProjectPartKey(),
         projectId: row.project_id,
         unit: "amount",
-        value: amountText(row.amount_net < 0n ? -row.amount_net : row.amount_net),
+        value: amountText(size(row)),
       })),
     };
   }

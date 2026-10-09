@@ -498,8 +498,9 @@ describe("the project split on a line split by category (FLOW-325)", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
+    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, פרויקט רעננה" }), { target: { value: "300" } });
     await act(async () => {
-      fireEvent.click(await screen.findByRole("button", { name: "סגירה" }));
+      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
       await Promise.resolve();
     });
     expect(await screen.findByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.")).toBeInTheDocument();
