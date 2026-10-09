@@ -31,7 +31,9 @@ import {
   hideCategorySchema,
   invalid,
   INVESTMENT_KEYS,
+  inviteMemberSchema,
   moveCategoryLinesSchema,
+  removeMemberSchema,
   renameCategorySchema,
   renameCompanySchema,
   reorderLoansSchema,
@@ -40,6 +42,7 @@ import {
   setCategoryRehabSchema,
   setCompanyCurrencySchema,
   setInvoicePaidSchema,
+  setMemberRoleSchema,
   setJevModeSchema,
   setLinePnlSchema,
   setLinesPnlSchema,
@@ -170,6 +173,32 @@ export async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_name: parsed.data.name,
+    };
+  } else if (name === "invite_member") {
+    const parsed = inviteMemberSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_invite_member";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_email: parsed.data.email,
+      p_role: parsed.data.role,
+    };
+  } else if (name === "set_member_role") {
+    const parsed = setMemberRoleSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_member_role";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_user_id: parsed.data.member_id,
+      p_role: parsed.data.role,
+    };
+  } else if (name === "remove_member") {
+    const parsed = removeMemberSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_remove_member";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_user_id: parsed.data.member_id,
     };
   } else if (name === "add_loan") {
     return addLoanWrite(args, rpc);

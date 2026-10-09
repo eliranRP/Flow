@@ -9,6 +9,29 @@
 import { jwtClaims } from "./jwt.ts";
 
 type Row = { id: string; owner_id: string };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** FLOW-601: the company the app shows (its x-flow-company header), or null. */
+export function companyHint(req: Request): string | null {
+  const value = req.headers.get("x-flow-company")?.trim() ?? "";
+  return UUID.test(value) ? value.toLowerCase() : null;
+}
+
+type RpcClient = {
+  rpc: (fn: "owner_company_for", args: { p_user: string; p_hint?: string }) => PromiseLike<{ data: unknown; error: unknown }>;
+};
+
+/**
+ * FLOW-601: the company this user owns and has open (the app's header first, then the one they
+ * last switched to). A user may own several companies or only edit one, so this is never a
+ * lookup by owner_id alone. Null for a company they do not own.
+ */
+export async function ownedCompany(admin: RpcClient, userId: string, hint: string | null): Promise<string | null> {
+  const result = await admin.rpc("owner_company_for", hint ? { p_user: userId, p_hint: hint } : { p_user: userId });
+  return result.error || typeof result.data !== "string" ? null : result.data;
+}
+
 export type OwnerDeps = {
   getUserId: () => Promise<string | null>;
   ownedBy: (userId: string) => Promise<string | null>;

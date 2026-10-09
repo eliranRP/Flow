@@ -114,6 +114,7 @@ function readTools() {
       project_id: { type: "string" },
     }),
     toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid), and document_url: the SUMIT document link on pay.sumit.co.il (null until a sync reads it). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
+    toolSpec("list_team", "The company's team: members (the owner first, then editors and viewers, each with user_id, name from their Google profile or else the email, email, role owner, editor or viewer, and you for the token's own user), role (this user's), can_manage (true for the owner), and for the owner the pending invites (id, email, role, created_at).", {}),
   ];
 }
 
@@ -257,6 +258,20 @@ function writeTools() {
     toolSpec("rename_company", "Rename this company. 2 to 100 characters (code points) after trimming, with no control character. Undo restores the prior name.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
+    }, true),
+    toolSpec("invite_member", "Invite someone to this company by email (owner only), as Settings → צוות → הזמנה does. role is viewer (read only, the default) or editor (can file, split and change lines, but not the team, the company's name or currency, connectors or Jev settings). No email is sent: they see the invite after signing in with Google with that email, and join or decline it. Inviting an email with a pending invite again changes its role and returns existing true (no undo). The owner's own email or a member's is refused (already a member). Returns id, email (lower case), role, status, existing and undo_kind; undo is kind invite with the invite id and cancels it while it is still pending.", {
+      idempotency_key: { type: "string" },
+      email: { type: "string" },
+      role: { type: "string", enum: ["editor", "viewer"] },
+    }, true),
+    toolSpec("set_member_role", "Change a member's role (owner only): editor or viewer. member_id is the member's user_id from list_team. Returns user_id, role, prior_role and undo_kind; undo is kind member_role with the user id, a conflict once the role changed again.", {
+      idempotency_key: { type: "string" },
+      member_id: { type: "string" },
+      role: { type: "string", enum: ["editor", "viewer"] },
+    }, true),
+    toolSpec("remove_member", "Remove a member from this company (owner only); they lose access at once. member_id is the member's user_id from list_team; the owner is not a member. Returns user_id, prior_role and undo_kind; undo is kind member_remove with the user id and adds them back with that role.", {
+      idempotency_key: { type: "string" },
+      member_id: { type: "string" },
     }, true),
     toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set. project_id (optional) files the loan under a project of this company; another company's project is refused. kind (default amortizing): interest_only needs interest_only_months (1 to term_months; those months pay interest only, then it amortizes over the months left, and when they equal the term the principal is due in the last month); balloon needs amortization_months (term_months to 600; the payment is the annuity over them and the rest is due at the term); demand takes no term_months, payment or escrow (interest accrues daily on actual/365 between payments; a 0% rate is allowed).", {
       idempotency_key: { type: "string" },
@@ -422,7 +437,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode", "loan_index", "index_rate"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {

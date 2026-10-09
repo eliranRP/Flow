@@ -59,6 +59,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
 | `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
+| `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
+| `undo` `kind: "invite"` | `id` | the invite id `invite_member` returned |
+| `undo` `kind: "member_role"`, `kind: "member_remove"` | `id` | the member's user id |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -775,6 +778,38 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 ```
 
 Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. A `parts[]` row goes back to the parts from before, or to none. A `parts[]` or `set_lines_pnl` row undoes only the batch's own write: when a later `split_line` (or `set_line_pnl`) on that line is still live, the row is `conflict` and the later write stays; undo that one first. A row whose own write was already undone is `not_found`. Batches stored before [FLOW-133](../backlog/TASKS.md#flow-133) still undo the newest write on the line. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+
+## Team · FLOW-601
+
+A company has an owner and members, each an editor or a viewer ([0166](../decisions/0166-team-members.md)). An editor's token could do every bookkeeping write here; the team, the company's name and currency, connectors and Jev settings stay the owner's. A token is for the owner's company it was made in.
+
+### list_team
+
+No arguments. Output `data`: `{ "company_id", "role", "can_manage", "members": [{ "user_id", "name", "email", "role", "you" }], "invites": [{ "id", "email", "role", "created_at" }] }`. Members list the owner first. `name` is the Google profile name, else the email. `invites` are the pending ones, and only the owner sees them.
+
+### invite_member
+
+```json
+{ "idempotency_key": "inv-1", "email": "new.member@example.com", "role": "viewer" }
+```
+
+The owner only. `role` is `viewer` (the default) or `editor`. No email is sent: the person sees the invite in the app after signing in with Google with that email, and joins or declines it there. The email is stored in lower case. The owner's or a member's email is `refused` / `already a member`; a malformed one is `refused` / `invalid email`; more than 50 pending invites is `refused` / `too many invites`. An email with a pending invite gets that invite back with the new role and `existing: true`, and no undo. Output `data`: `{ "id", "email", "role", "status": "pending", "existing", "undo_kind": "invite" }`. Undo with `kind: "invite"` and the invite id cancels it while it is still pending, else `conflict`.
+
+### set_member_role
+
+```json
+{ "idempotency_key": "role-1", "member_id": "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f", "role": "editor" }
+```
+
+The owner only. `member_id` is the member's `user_id` from `list_team` (`user_id` itself is a reserved argument). Not a member is `refused` / `member not found`. Output `data`: `{ "user_id", "role", "prior_role", "undo_kind": "member_role" }`. Undo puts `prior_role` back, a `conflict` once the role changed again.
+
+### remove_member
+
+```json
+{ "idempotency_key": "rm-1", "member_id": "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f" }
+```
+
+The owner only; the member loses access at once. Output `data`: `{ "user_id", "prior_role", "undo_kind": "member_remove" }`. Undo adds them back with that role, a `conflict` if they are a member again.
 
 ## Not in tools/list
 
