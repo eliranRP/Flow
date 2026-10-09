@@ -8,7 +8,7 @@ Decision [0083](../decisions/0083-jev-connector.md). J-1 stores the setting and 
 | --- | --- |
 | `jev_api_key` | TypeSafe Jev API bearer key. One project-wide server secret in Vault. Not a per-company key. Not the SUMIT key. Not an Edge Function env var. |
 
-`public.read_jev_api_key()` is the only read. Execute is `service_role` only, because the tagging job runs as an Edge Function. The function also requires `auth.jwt()->>'role'` to be `service_role`. The production Vault already holds `jev_api_key`. Do not select `decrypted_secret` to check that.
+`public.read_jev_api_key()` is the only read. Execute is `service_role` only, because the tagging job runs as an Edge Function. The function also requires `auth.jwt()->>'role'` to be `service_role`. The production Vault already holds `jev_api_key`. Do not select `decrypted_secret` to check that. To check it, call `public.jev_key_status()` as a signed-in owner: it returns `ok` or `missing` and never the key (FLOW-704, migration `20261013060000_jev_key_status.sql`). The app's Jev Settings row reads it for its "no key" state.
 
 Backlog: an owner-only RPC that returns `has_key` and the last `jev-tag` run or error. The Settings card does not show a missing key until that exists. Do not add it while another migration is in the slot.
 

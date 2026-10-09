@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-404 `rehab_by_category` from the rehab CTE; FLOW-309 `reopen_review` and the stale `missing_category` label (#300 review) (#308, in review); first the red-main fix (storybook: loans list bigint args, project row focus outline) | The next non-UI item |
-| Dev lane 2 | FLOW-704 server: `jev_key_status` RPC for the Jev Settings "no key" row; FLOW-509 follow-ups (runbook, read-only scope note, surviving mutations), PR #TBD | The lane manager's next non-UI item |
+| Dev lane 2 | FLOW-704 server: `jev_key_status` RPC for the Jev Settings "no key" row; FLOW-509 follow-ups (runbook, read-only scope note, surviving mutations), PR #321 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
 | UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
@@ -1064,10 +1064,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id (moot: `transactions_external_uidx` is unique, and #91 removed that read); test stored-line selects against the local DB. (FLOW-509 PR: stored treasury lines carry `provider_meta.account_id`; the session counts the treasury accounts it listed. Both sync functions use `createClient<Database>`. The wildcards take one `[A-Za-z0-9_-]{1,128}` segment and the literal templates are refused. The remaining `maybeSingle()` reads are keyed by the `(company_id, provider)` primary key or `limit(1)`. The stored-line selects are not run against the local DB: the PostgREST filters need the edge runtime, left as a follow-up. With two or more treasury accounts, a line stored before it carried `account_id` can no longer be voided by a cancel: accepted.)
 - [ ] Show "N new lines" after a manual refresh (the counts are returned now).
 - [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
-- [ ] Six surviving mutations in the client resume and own-account paths.
-- [ ] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy.
+- [x] Six surviving mutations in the client resume and own-account paths. (#321: `resume_own_account_test.ts` covers the cursor field checks, the treasury resume reaching only the resumed account, and the card, missing-account and overlong-id checks. A rerun kills 14 of 15 mutants; the survivor swaps the bad-JSON fallback for `timestampFromCursor`, which already returns null for anything starting with `{`.)
+- [x] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy. (#321: `docs/runbooks/mercury-sync.md`.)
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
-- [ ] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it.
+- [x] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it. (#321: "The token's scope" in `docs/runbooks/mercury-sync.md`.)
 
 <a id="flow-511"></a>
 ### FLOW-511 · Easy opt-out from the Home setup card
@@ -1165,7 +1165,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done since 20261012110000, checked 2026-10-09 by dev lane 1: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
 - [x] Delete the old shared connector key once per launch, not on every read.
 - [x] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות.
-- [ ] Jev Settings row: a "no key" status once a key-status RPC exists.
+- [ ] Jev Settings row: a "no key" status once a key-status RPC exists. (Server part in #321: `public.jev_key_status()` returns `ok` or `missing`; the app row is UI lane 4's.)
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 - [x] The review card marks a project or category Jev filled with "✦ הצעת Jev" (the shared `JevTag`) instead of הצעה (2026-10-08, #141).
 - [x] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill. (שינוי שיוך and its picker say "✦ הצעת Jev"; a review list row reads "✦ Jev · project · category", and only "✦" when בהמתנה leaves no room.)
