@@ -10,7 +10,7 @@ Last full sync: 2026-10-07.
 
 ## Lanes now
 
-Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Update it in the next PR that touches TASKS.md when a lane starts, stops, or changes what it owns.
+Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Only the lane manager edits it (in tasks/index-source.md, in its own commits) when a lane starts, stops, or changes what it owns; a lane's PR changes only its own task files.
 
 | Lane | Owns now | Next |
 | --- | --- | --- |

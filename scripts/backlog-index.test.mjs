@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
-import { buildIndex, parseTask, shortStatus } from "./backlog-index.mjs";
+import { buildIndex, parseTask, readTasks, shortStatus } from "./backlog-index.mjs";
 
 const task = (id, title, type, status) =>
   `<a id="${id.toLowerCase()}"></a>\n# ${id} · ${title}\n- **Type:** ${type} · **Status:** ${status} · **Depends on:** —\n- **What:** x\n`;
@@ -53,6 +56,19 @@ test("shortStatus keeps the word and a done task's PR", () => {
   assert.equal(shortStatus("done (#12, server; app #14)"), "done (#12)");
   assert.equal(shortStatus("in-progress (UI lane 2)"), "in-progress");
   assert.equal(shortStatus("ready"), "ready");
+  assert.equal(shortStatus("ready | soon"), "ready \\| soon");
+});
+
+test("buildIndex escapes a pipe in a title or type", () => {
+  const piped = new Map(tasks);
+  piped.set("FLOW-901", parseTask("FLOW-901", task("FLOW-901", "Widget | reads", "BUG | NIT", "ready")));
+  assert.match(buildIndex(source, piped), /\| Widget \\\| reads \| BUG \\\| NIT \| ready \|/);
+});
+
+test("parseTask and buildIndex refuse a missing status line and malformed rows", () => {
+  assert.throws(() => parseTask("FLOW-1", "# FLOW-1 · x\n- **What:** y\n"), /needs a "- \*\*Type:\*\*/);
+  assert.throws(() => buildIndex(source.replace("| 1b | FLOW-901 |", "| 1b | FLOW-901 | note |"), tasks), /a priority row must read/);
+  assert.throws(() => buildIndex(source.replace("| FLOW-903 | 2026-10-09 |", "| FLOW-903 |"), tasks), /a parked row must read/);
 });
 
 test("buildIndex expands the queue, the areas and the parked table, with one anchor per task", () => {
@@ -69,4 +85,18 @@ test("buildIndex refuses a task listed twice, a missing file, and an unlisted ta
   assert.throws(() => buildIndex(source.replace("- FLOW-902", "- FLOW-902\n- FLOW-901"), tasks), /listed twice/);
   assert.throws(() => buildIndex(source.replace("| 1 | FLOW-902 |", "| 1 | FLOW-999 |"), tasks), /FLOW-999/);
   assert.throws(() => buildIndex(source.replace("- FLOW-902\n", ""), tasks), /does not list FLOW-902/);
+  assert.throws(() => buildIndex(source.replace("| 1b | FLOW-901 |", "| 1b | FLOW-902 |"), tasks), /priority queue twice/);
+});
+
+test("readTasks refuses a file in tasks/ that is not FLOW-<id>.md", () => {
+  const dir = mkdtempSync(join(tmpdir(), "backlog-tasks-"));
+  try {
+    writeFileSync(join(dir, "index-source.md"), source);
+    writeFileSync(join(dir, "FLOW-901.md"), task("FLOW-901", "Widget reads", "BUG", "ready"));
+    assert.deepEqual([...readTasks(dir).keys()], ["FLOW-901"]);
+    writeFileSync(join(dir, "flow-904.md"), task("FLOW-904", "Lower case", "BUG", "ready"));
+    assert.throws(() => readTasks(dir), /flow-904\.md: a task file must be named FLOW-<id>\.md/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

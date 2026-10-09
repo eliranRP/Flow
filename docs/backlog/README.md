@@ -1,6 +1,6 @@
 # Backlog guide for agents
 
-This folder is where several AI agents (and people) share the Flow backlog. Each task is its own file, `tasks/FLOW-<id>.md`, and [TASKS.md](TASKS.md) is the index built from them: the lanes, the priority queue, and one table per area. Never edit TASKS.md by hand. Change a task file (or, for the lane manager, [tasks/index-source.md](tasks/index-source.md)), then run `node scripts/backlog-index.mjs` and commit both; lint and CI fail when TASKS.md is out of date. A new task is a new file plus its id under its area in index-source.md. This file tells you how to work on it:
+This folder is where several AI agents (and people) share the Flow backlog. Each task is its own file, `tasks/FLOW-<id>.md`, and [TASKS.md](TASKS.md) is the index built from them: the lanes, the priority queue, and one table per area. Never edit TASKS.md by hand. Change a task file (or, for the lane manager, [tasks/index-source.md](tasks/index-source.md)), then run `node scripts/backlog-index.mjs` and commit both; local CI (the pre-push hook) and CI fail when TASKS.md is out of date. On a merge conflict in TASKS.md, take either side and run the script again. A new task is a new file plus its id under its area in index-source.md. This file tells you how to work on it:
 
 1. [Quick start](#quick-start-for-a-new-agent): what to do in your first ten minutes.
 2. [The cycle](#the-cycle): the steps every task goes through, who does each one, and when a step is done.
@@ -37,7 +37,7 @@ Every task goes through these steps, in this order. Work on one small task per c
 | 8 | Deploy check (per batch) | Coordinator | The `ci` run on `main` that deploys the batch: after every 5 merges, or a manual run | The `deploy` job result and `build.txt` on the Pages site | The last line of `build.txt` is the batch's last merge sha, and any migration is recorded |
 | 9 | Prod check (per batch) | Coordinator | The live app and the MCP tools, for every task in the batch | A short note of what was checked | The changed screen or tool works on a real company, read-only, and the numbers match the PR |
 | 10 | Tell the data agent | Coordinator | What went live | A message to the MCP/data agent | The message is sent, with the new or changed tools |
-| 11 | Close the task | Coordinator | The merged PR | The task moved to Done; follow-ups added as new tasks | TASKS.md is updated in the next PR that touches it |
+| 11 | Close the task | Coordinator | The merged PR | The task moved to Done; follow-ups added as new tasks | The task file says `done (#PR)` in the next PR that touches it, and TASKS.md is regenerated |
 
 ```mermaid
 flowchart TD
@@ -56,9 +56,9 @@ flowchart TD
 Limits that apply to the whole cycle:
 
 - **Push and stop.** The builder pushes once lint, typecheck, and the touched tests pass, and the pre-push check passes. Then it stops. It does not watch CI, re-run jobs, take screenshots, or run mutation tests. The coordinator does that.
-- **One fix round.** After the fix round, reviewers check only what changed. A new Should found after that goes to TASKS.md, unless it is a real bug, a security issue, a control that does nothing, red CI, or a broken owner rule.
+- **One fix round.** After the fix round, reviewers check only what changed. A new Should found after that becomes a new task file, unless it is a real bug, a security issue, a control that does nothing, red CI, or a broken owner rule.
 - **At most 2 builder runs per task.** A third run needs the coordinator's written reason in the PR. If a builder is stuck for more than 10 minutes, stop it and send a smaller brief.
-- **Only Blocking and Should findings block a merge.** Nits go to TASKS.md as `BACKLOG NIT`.
+- **Only Blocking and Should findings block a merge.** Nits become new task files (`docs/backlog/tasks/FLOW-<id>.md`, type `BACKLOG NIT`).
 - **Fixes first.** A fix round for a PR in review goes before any new build.
 - **Local CI on every push.** Every agent runs `bash scripts/cloud-agent-install.sh` before its first push. It turns on the pre-push hook in `.githooks/`, which runs `scripts/local-ci.sh` and stops a push that fails. Never push with `--no-verify`. `FLOW_LOCAL_CI=full git push` runs the whole suite (about 12 minutes) when a change needs it, for example a migration or an e2e spec.
 - **Re-running the full gate after a main merge.** A PR that needs the full gate runs it before its first push. After it merges `main` in, it runs the full gate again only when `main`'s new commits touch files the PR changes; otherwise the default gate is enough before merging (lane manager, 2026-10-09).
@@ -146,7 +146,7 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 
 - Ask only what changes the goal, an output the owner will notice, or a step nobody can undo. For anything else, pick the reasonable default, say which, and keep going.
 - Ask as a choice card (2 to 4 short options, one marked recommended), not as plain text, whenever the tool exists. Raise every question so the project coordinator can also show it in the main project chat.
-- Write the answer into the task in TASKS.md (for `PLAN FIRST`: "approved option X by the owner, date").
+- Write the answer into the task's file, `tasks/FLOW-<id>.md` (for `PLAN FIRST`: "approved option X by the owner, date").
 
 ### Merging and after the merge
 
@@ -368,14 +368,14 @@ You never change the repo.
 - **Involved:** before step 1, only for PLAN FIRST tasks.
 - **Responsibilities:** describe the user's problem; give 2 or 3 options and recommend one; draw a mockup in the approved design system (light and dark, 320px); list the data and MCP tools needed; propose the smallest first PR; list the owner's questions.
 - **Must not:** start a build; put the feature in Settings by default; use real data in the mockup.
-- **Output:** a plan document and mockup for the coordinator, who asks the owner and records the approval in TASKS.md.
+- **Output:** a plan document and mockup for the coordinator, who asks the owner and records the approval in the task's file.
 
 ```text
 You are the Flow plan reviewer for FLOW-<id> (PLAN FIRST).
 Produce: the user's problem; 2 or 3 options with a recommendation; a mockup in the approved design system
 (light and dark, 320px wide); the data and MCP tools needed; the smallest first PR; the owner's open questions.
 Keep wording short and icon-based. Don't put the feature in Settings by default. Use invented sample data only.
-Nothing is built until the owner approves. Hand the plan to the coordinator, who records the approval in TASKS.md.
+Nothing is built until the owner approves. Hand the plan to the coordinator, who records the approval in the task's file.
 ```
 
 ### Writing a brief

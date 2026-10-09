@@ -12,7 +12,7 @@
 // task's anchor, so links to TASKS.md#flow-<id> keep working.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const DIR = "docs/backlog";
 const TASKS_DIR = `${DIR}/tasks`;
@@ -74,11 +74,14 @@ export function buildIndex(source, tasks) {
     }
     if (/^\| # \| Id \|$/.test(line)) {
       out.push("| # | Id | Title | Type | Status |", "| --- | --- | --- | --- | --- |");
+      const queued = new Set();
       i += 1;
       while (i + 1 < lines.length && lines[i + 1].startsWith("|")) {
         i += 1;
         const row = /^\| ([^| ]+) \| (FLOW-\d+) \|$/.exec(lines[i]);
         if (!row) throw new Error(`index-source.md: a priority row must read "| <n> | FLOW-<id> |": ${lines[i]}`);
+        if (queued.has(row[2])) throw new Error(`${row[2]} is in the priority queue twice in index-source.md`);
+        queued.add(row[2]);
         const task = need(row[2], "the priority queue");
         out.push(`| ${row[1]} | [${task.id}](#${task.id.toLowerCase()}) | ${cell(task.title)} | ${cell(task.type)} | ${shortStatus(task.status)} |`);
       }
@@ -118,29 +121,32 @@ export function readTasks(dir) {
   for (const file of readdirSync(dir).sort()) {
     const match = /^(FLOW-\d+)\.md$/.exec(file);
     if (match) tasks.set(match[1], parseTask(match[1], readFileSync(join(dir, file), "utf8")));
+    else if (file !== "index-source.md") throw new Error(`tasks/${file}: a task file must be named FLOW-<id>.md (index-source.md is the only other file there)`);
   }
   return tasks;
 }
 
-function main() {
-  const check = process.argv.includes("--check");
-  const index = buildIndex(readFileSync(SOURCE, "utf8"), readTasks(TASKS_DIR));
+/** Writes TASKS.md under a repo root, or with check, only compares it. Returns the exit code and the message. */
+export function run(root, check) {
+  const index = buildIndex(readFileSync(join(root, SOURCE), "utf8"), readTasks(join(root, TASKS_DIR)));
+  const out = join(root, OUT);
   if (check) {
-    const current = existsSync(OUT) ? readFileSync(OUT, "utf8") : "";
+    const current = existsSync(out) ? readFileSync(out, "utf8") : "";
     if (current !== index) {
-      console.error(`${OUT} is out of date. Run \`node scripts/backlog-index.mjs\` and commit it (edit tasks/*.md, not TASKS.md).`);
-      process.exit(1);
+      return { code: 1, message: `${OUT} is out of date. Run \`node scripts/backlog-index.mjs\` and commit it (edit tasks/*.md, not TASKS.md).` };
     }
-    console.log(`${OUT} is up to date.`);
-    return;
+    return { code: 0, message: `${OUT} is up to date.` };
   }
-  writeFileSync(OUT, index);
-  console.log(`Wrote ${OUT}.`);
+  writeFileSync(out, index);
+  return { code: 0, message: `Wrote ${OUT}.` };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   try {
-    main();
+    // The repo root from this file, so the script works from any folder.
+    const { code, message } = run(fileURLToPath(new URL("..", import.meta.url)), process.argv.includes("--check"));
+    (code === 0 ? console.log : console.error)(message);
+    process.exitCode = code;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

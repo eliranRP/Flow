@@ -12,7 +12,7 @@ Last full sync: 2026-10-07.
 
 ## Lanes now
 
-Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Update it in the next PR that touches TASKS.md when a lane starts, stops, or changes what it owns.
+Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Only the lane manager edits it (in tasks/index-source.md, in its own commits) when a lane starts, stops, or changes what it owns; a lane's PR changes only its own task files.
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
@@ -122,11 +122,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | done (#314) |
 | 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | done (#336) |
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (#345) |
-| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | done |
+| 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | done (#359) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | done (#345) |
 | 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first" |
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (#358) |
-| 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done |
+| 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress |
 | 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 79 | [FLOW-353](#flow-353) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI | ready |
@@ -174,7 +174,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-110"></a>[FLOW-110](tasks/FLOW-110.md) | Loans list and detail | PLAN FIRST | server done | — |
 | <a id="flow-114"></a>[FLOW-114](tasks/FLOW-114.md) | Loans server follow-ups | BACKLOG NIT | ready | — |
 | <a id="flow-115"></a>[FLOW-115](tasks/FLOW-115.md) | Loan screens UI follow-ups | BACKLOG NIT | ready | — |
-| <a id="flow-414"></a>[FLOW-414](tasks/FLOW-414.md) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done | Backlog bug fixes |
+| <a id="flow-414"></a>[FLOW-414](tasks/FLOW-414.md) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) | Backlog bug fixes |
 
 ## MCP
 
@@ -240,7 +240,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-344"></a>[FLOW-344](tasks/FLOW-344.md) | Loan setup preview while the form is incomplete | PLAN FIRST | done (#314) | — |
 | <a id="flow-345"></a>[FLOW-345](tasks/FLOW-345.md) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | done (#336) | UI lane 2 |
 | <a id="flow-347"></a>[FLOW-347](tasks/FLOW-347.md) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | done in part (#345) | UI lane 4 |
-| <a id="flow-348"></a>[FLOW-348](tasks/FLOW-348.md) | Jev switched on with no key | SMALL UI | done | UI lane 3 |
+| <a id="flow-348"></a>[FLOW-348](tasks/FLOW-348.md) | Jev switched on with no key | SMALL UI | done (#359) | UI lane 3 |
 | <a id="flow-349"></a>[FLOW-349](tasks/FLOW-349.md) | One set of period choices everywhere | SMALL UI | done (#345) | UI lane 4 |
 | <a id="flow-350"></a>[FLOW-350](tasks/FLOW-350.md) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (#358) | UI lane 4 |
 | <a id="flow-351"></a>[FLOW-351](tasks/FLOW-351.md) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | in-progress | UI lane 4 |

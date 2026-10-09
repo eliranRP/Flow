@@ -6,7 +6,7 @@ Write in English. Use Hebrew only to quote a UI label, and keep the English mean
 
 ## Backlog
 
-Each task is its own file, `docs/backlog/tasks/FLOW-<id>.md`. Edit that file, never [docs/backlog/TASKS.md](docs/backlog/TASKS.md): the index is generated. Run `node scripts/backlog-index.mjs` and commit the task file and TASKS.md together; local CI and CI fail when the index is out of date. A new task also gets a `- FLOW-<id>` line under its area in `docs/backlog/tasks/index-source.md`. The Lanes now table in that file belongs to the lane manager ([how the team works](docs/backlog/README.md)).
+Each task is its own file, `docs/backlog/tasks/FLOW-<id>.md`. Edit that file, never [docs/backlog/TASKS.md](docs/backlog/TASKS.md): the index is generated. Run `node scripts/backlog-index.mjs` and commit the task file and TASKS.md together; local CI and CI fail when the index is out of date. On a merge conflict in TASKS.md, take either side and run the script again. A new task also gets a `- FLOW-<id>` line under its area in `docs/backlog/tasks/index-source.md`. The Lanes now table in that file belongs to the lane manager ([how the team works](docs/backlog/README.md)).
 
 ## Changelog
 
