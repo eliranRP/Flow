@@ -1,0 +1,1 @@
+Two more tests (the Connections skeleton and the change sheet's save) wait for their heading or sheet by asking the page again on every try, so a screen that swaps its loading heading for the loaded one can't fail them; the helper is roleShows in app/src/test-waits.ts.
