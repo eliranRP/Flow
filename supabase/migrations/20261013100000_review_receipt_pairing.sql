@@ -1,5 +1,5 @@
 -- FLOW-309, option A (owner's pick 2026-10-09): a connector invoice and its receipt are one
--- review card. Decision 0164.
+-- review card. Decision 0165.
 --
 -- Matching rule: a receipt pairs with an invoice when both are income lines from the same
 -- connector, in the same company, neither is removed or void, and the receipt's
@@ -43,10 +43,10 @@ alter table public.review_queue
   add column paired_category_id uuid;
 
 comment on column public.review_queue.paired_project_id is
-  'FLOW-309. The project the pairing gave the receipt. A receipt the owner refiled since is theirs: it stops following. Decision 0164.';
+  'FLOW-309. The project the pairing gave the receipt. A receipt the owner refiled since is theirs: it stops following. Decision 0165.';
 
 comment on column public.review_queue.paired_with is
-  'FLOW-309. On a receipt''s row: the invoice row it was settled with. Reopening that row undoes the receipt too. Decision 0164.';
+  'FLOW-309. On a receipt''s row: the invoice row it was settled with. Reopening that row undoes the receipt too. Decision 0165.';
 
 create index review_queue_paired_with_idx on public.review_queue (paired_with)
   where paired_with is not null;
@@ -688,7 +688,7 @@ begin
     raise exception 'sync_review_queue is not the expected definition';
   end if;
   def := replace(def, posted_anchor, $n$    and t.line_status = 'posted'
-    -- FLOW-309: a receipt waits with its invoice (decision 0164).
+    -- FLOW-309: a receipt waits with its invoice (decision 0165).
     and not (t.doc_kind = 'receipt' and t.linked_external_id is not null and private.receipt_waits(t.id))
     and (
       -- FLOW-121$n$);
@@ -712,7 +712,7 @@ begin
     raise exception 'filed_today_rows is not the expected definition';
   end if;
   execute replace(def, anchor, anchor || $n$
-      -- FLOW-309: a receipt that waits with its invoice (decision 0164).
+      -- FLOW-309: a receipt that waits with its invoice (decision 0165).
       and not (
         filed.doc_kind = 'receipt' and filed.linked_external_id is not null
         and private.receipt_waits(filed.id)

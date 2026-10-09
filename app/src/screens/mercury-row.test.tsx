@@ -198,7 +198,7 @@ describe("Mercury status row", () => {
     expect(field).toHaveValue("");
   });
 
-  it("saves ייבוא מ after the connection exists (FLOW-505)", async () => {
+  it("saves ייבוא מ from here when the connect function does not report it (FLOW-505)", async () => {
     mockLive(null);
     const calls: Array<[string, unknown]> = [];
     const live = rpc.impl;
@@ -216,6 +216,40 @@ describe("Mercury status row", () => {
     expect(saved.p_provider).toBe("mercury");
     expect(saved.p_from).toMatch(/^\d{4}-01-01$/);
     expect(invokeEdge).toHaveBeenCalledOnce();
+  });
+
+  it("sends ייבוא מ with the connect call so the first sync honours it", async () => {
+    mockLive(null);
+    invokeEdge.mockResolvedValue({ connected: true, accounts: 1, import_from_saved: true });
+    const names: string[] = [];
+    const live = rpc.impl;
+    rpc.impl = (name, args) => { names.push(name); return live(name, args); };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const dialog = screen.getByRole("dialog", { name: "חיבור Mercury" });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(screen.getByText("Mercury מחובר. המפתח נשאר בשרת.")).toBeInTheDocument(); });
+    const body = invokeEdge.mock.calls[0]?.[1] as { importFrom?: unknown };
+    expect(body.importFrom).toMatch(/^\d{4}-01-01$/);
+    expect(names).not.toContain("set_import_from");
+  });
+
+  it("says the date was not saved when the connect function reports it failed", async () => {
+    mockLive(null);
+    invokeEdge.mockResolvedValue({ connected: true, accounts: 1, import_from_saved: false });
+    const names: string[] = [];
+    const live = rpc.impl;
+    rpc.impl = (name, args) => { names.push(name); return live(name, args); };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const dialog = screen.getByRole("dialog", { name: "חיבור Mercury" });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    expect(await screen.findByText("Mercury מחובר, אבל תאריך הייבוא לא נשמר.")).toBeInTheDocument();
+    expect(names).not.toContain("set_import_from");
   });
 
   it("leaves ייבוא מ alone when it was not changed", async () => {

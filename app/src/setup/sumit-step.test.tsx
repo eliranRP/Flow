@@ -117,7 +117,7 @@ describe("setup SUMIT connect", () => {
     restore();
   });
 
-  it("saves ייבוא מ for SUMIT once connected (FLOW-505)", async () => {
+  it("saves ייבוא מ for SUMIT from here when the connect function does not report it (FLOW-505)", async () => {
     const restore = reducedMotion();
     invoke.mockResolvedValue({ data: {}, error: null });
     rpc.mockClear();
@@ -133,6 +133,44 @@ describe("setup SUMIT connect", () => {
     const saved = rpc.mock.calls.find(([name]) => name === "set_import_from")?.[1] as { p_provider: string; p_from: string } | undefined;
     expect(saved?.p_provider).toBe("sumit");
     expect(saved?.p_from).toMatch(/^\d{4}-01-01$/);
+    restore();
+  });
+
+  it("sends ייבוא מ with the SUMIT connect call so the first sync honours it", async () => {
+    const restore = reducedMotion();
+    invoke.mockClear();
+    invoke.mockResolvedValue({ data: { connected: true, import_from_saved: true }, error: null });
+    rpc.mockClear();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={vi.fn()} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(onConnected).toHaveBeenCalledOnce(); });
+    const sent = invoke.mock.calls.find(([name]) => name === "sumit-connect")?.[1] as { body: { importFrom?: unknown } } | undefined;
+    expect(sent?.body.importFrom).toMatch(/^\d{4}-01-01$/);
+    expect(rpc.mock.calls.map(([name]) => name)).not.toContain("set_import_from");
+    restore();
+  });
+
+  it("says the date was not saved when the SUMIT connect function reports it failed", async () => {
+    const restore = reducedMotion();
+    invoke.mockResolvedValue({ data: { connected: true, import_from_saved: false }, error: null });
+    rpc.mockClear();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={vi.fn()} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(onConnected).toHaveBeenCalledOnce(); });
+    expect(await screen.findByText("SUMIT מחובר, אבל תאריך הייבוא לא נשמר.")).toBeInTheDocument();
+    expect(rpc.mock.calls.map(([name]) => name)).not.toContain("set_import_from");
     restore();
   });
 

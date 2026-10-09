@@ -476,13 +476,13 @@ isOneToOne: false
                   ]
                 },"notification_prefs": {
                   Row: {
-                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_summary": boolean
+                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_sent_on": string | null,"weekly_summary": boolean
                   }
                   Insert: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Update: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Relationships: [
                     
@@ -1225,6 +1225,11 @@ isOneToOne: false
                            },
 "project_waiting":
 { Args: { "p_project": string }; Returns: Json
+                           },
+"push_claim_targets":
+{ Args: { "p_kind": string }; Returns: {
+              "auth": string,"endpoint": string,"fresh": number,"p256dh": string,"user_id": string,"waiting": number
+            }[]
                            },
 "push_evening_targets":
 { Args: Record<PropertyKey, never>; Returns: {
