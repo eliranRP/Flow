@@ -15,6 +15,7 @@ export const readRpcs = new Set([
   "get_profit_months",
   "get_project",
   "get_transaction",
+  "jev_key_status",
   "jev_suggestions",
   "list_auto_assigned_today",
   "list_categories",

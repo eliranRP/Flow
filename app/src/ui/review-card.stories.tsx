@@ -32,7 +32,7 @@ type CardArgs = {
   missingBoth?: boolean;
   /** FLOW-703: Jev answered "no project". */
   projectNoneJev?: boolean;
-  /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no בטל. */
+  /** FLOW-702: the auto job's fill stands. "label" is a viewer's card, with no ביטול. */
   filled?: "undo" | "label" | "busy" | "off";
 };
 
@@ -261,7 +261,43 @@ const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<Rev
   transaction_id: "t1", kind, jev_score: score, ...extra,
 });
 export const FlagDuplicateLoud: Story = { name: "Flag: duplicate, loud", args: { ...jevCard, flags: [flag("duplicate", 0.86, { other_doc_date: "2026-10-03" })] } };
-export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 4.2, typical_amount_minor: 120_000 })] } };
+/** 2026-10-09 option A: "↑ 240%" right after the amount and "בדרך כלל ₪2,500" under it; no flag row beside the pill. */
+export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
+export const FlagSpikeLoud320: Story = { ...narrow, name: "Flag: amount spike, loud, 320", args: FlagSpikeLoud.args };
+export const FlagSpikeLoudDark: Story = { ...dark, name: "Flag: amount spike, loud, dark", args: FlagSpikeLoud.args };
+export const FlagSpikeQuiet: Story = { name: "Flag: amount spike, quiet", args: { ...jevCard, flags: [flag("amount_spike", 0.4, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
+export const FlagSpikeQuiet320: Story = { ...narrow, name: "Flag: amount spike, quiet, 320", args: FlagSpikeQuiet.args };
+export const FlagSpikeQuietDark: Story = { ...dark, name: "Flag: amount spike, quiet, dark", args: FlagSpikeQuiet.args };
+/** With no ratio there is no pill: the quiet line stays, and the usual amount still sits under the amount. */
+export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ratio", args: { ...jevCard, flags: [flag("amount_spike", null, { typical_amount_minor: 250_000 })] } };
+/** At 320 a long amount may leave no room: the pill drops under it, and the amount is never cut. */
+export const FlagSpikeLong320: Story = {
+  ...narrow,
+  name: "Flag: amount spike, long amount, 320",
+  args: { ...jevCard, netAgorot: "-123456700", flags: [flag("amount_spike", 0.4, { ratio: 12.5, typical_amount_minor: 9_876_500 })] },
+  play: async ({ canvasElement }) => {
+    const amount = canvasElement.querySelector<HTMLElement>(".ui-review-amount > .t-display");
+    const pill = canvasElement.querySelector<HTMLElement>(".ui-review-spike");
+    await expect(amount).not.toBeNull();
+    await expect(pill).not.toBeNull();
+    await document.fonts.ready;
+    const amountBox = (amount as HTMLElement).getBoundingClientRect();
+    const cardEl = canvasElement.querySelector(".ui-review") as HTMLElement;
+    const outer = cardEl.getBoundingClientRect();
+    const style = getComputedStyle(cardEl);
+    // The card's content box: an amount spilling into the padding counts as cut.
+    const card = { left: outer.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth), right: outer.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth) };
+    const pillBox = (pill as HTMLElement).getBoundingClientRect();
+    // The amount is never cut, and the pill stays inside the card: beside the amount when it fits, else under it.
+    await expect(amountBox.left).toBeGreaterThanOrEqual(card.left - 0.5);
+    await expect(amountBox.right).toBeLessThanOrEqual(card.right + 0.5);
+    await expect(pillBox.left).toBeGreaterThanOrEqual(card.left - 0.5);
+    await expect(pillBox.right).toBeLessThanOrEqual(card.right + 0.5);
+    const beside = pillBox.top < amountBox.bottom - 1;
+    if (beside) await expect(pillBox.right <= amountBox.left || pillBox.left >= amountBox.right).toBe(true);
+    else await expect(pillBox.top).toBeGreaterThanOrEqual(amountBox.bottom - 1);
+  },
+};
 export const FlagNewPartyLoudIncome: Story = { name: "Flag: new party, loud, income", args: { ...jevCard, direction: "income", netAgorot: "4800000", flags: [flag("new_party_large", 0.9)] } };
 export const FlagDuplicateQuiet: Story = { name: "Flag: duplicate, quiet", args: { ...jevCard, flags: [flag("duplicate", 0.4, { other_doc_date: "2026-10-03" })] } };
 export const FlagSpikeQuietIncome: Story = { name: "Flag: amount spike, quiet, income", args: { ...jevCard, direction: "income", flags: [flag("amount_spike", 0.5, { ratio: 3 })] } };
@@ -272,9 +308,9 @@ export const FlagLoudDark: Story = { ...dark, name: "Flag: loud, dark", args: Fl
 export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: FlagDuplicateQuiet.args };
 export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };
 
-// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with בטל at the end, one line, no reason.
+// FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with ביטול at the end, one line, no reason.
 /**
- * FLOW-339 C6-3: בטל's 44px hit area grows down and sideways from the filled line, never up into the
+ * FLOW-339 C6-3: ביטול's 44px hit area grows down and sideways from the filled line, never up into the
  * category row, so a tap at the row's bottom edge opens the row and never undoes the fill.
  */
 export const JevFilled: Story = {

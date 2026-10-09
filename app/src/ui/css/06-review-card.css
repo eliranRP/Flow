@@ -288,6 +288,30 @@
   gap: var(--space-3);
 }
 
+/* 2026-10-09 (option A): an amount spike puts "↑ N%" right after the amount, in the status pill
+   shape with warning text on its own light tint. When the row is short the pill drops under the
+   amount; the amount is never cut. "בדרך כלל ₪X" under it is a plain hint, like the VAT line. */
+.ui-review-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ui-review-amount > .t-display {
+  flex: none;
+  white-space: nowrap;
+}
+
+.ui-review-spike {
+  flex: none;
+  background: color-mix(in srgb, var(--color-warning) 16%, var(--color-surface));
+  color: var(--color-warning);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-title-3-weight);
+  white-space: nowrap;
+}
+
 /* Short phones (320×693): keep the primary action above the tab bar. */
 @media (max-height: 720px) {
   .ui-review {
