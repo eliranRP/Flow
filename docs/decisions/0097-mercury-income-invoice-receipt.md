@@ -31,4 +31,5 @@ Migration `20261007010000_mercury_income_doc_kind.sql` relabels stored rows: `so
 - SUMIT receipt-to-invoice linking (`list_unpaid`, `open_gross_agorot`) matches `receipt` with a `linked_external_id`. Mercury lines have no link, so nothing changes there.
 - Review (0091) queues posted connector income by direction, not `doc_kind`. Income review cards show "הכנסה", not the doc-kind label.
 - A Mercury deposit and a SUMIT invoice for the same income can both count on the invoiced basis. That known limitation from the connector contract stays.
+- The relabel's update runs `transactions_fill_category`, as any later update or sync of the line does. A Mercury income line stored with no category, because no visible income default existed then, gets the default as a suggestion (`category_suggested`), and review still asks about it. Accepted (2026-10-09).
 - MCP-first ([0095](0095-mcp-first.md)) exemption: data labeling only, no new user action. MCP totals already read `company_pnl`.
