@@ -17,7 +17,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
-| UI lane 1 | FLOW-339: the band label with a profit in one currency and a loss in another, and the project overhead switch's label (FLOW-340 C merged #338) | The FLOW-106 split editor and match-sheet items; company "לפי חודש" |
+| UI lane 1 | FLOW-106 screens: the loan match sheet says what one tap writes (schedule row, catch-up installments, demand loans), then the split editor (FLOW-339 merged #362) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-325 §10 option A (the פיצול לפי קטגוריות link in שינוי: `ui/change-picker.tsx`, `ui/change-sheet.tsx`, `screens/change-form.tsx`, `approve-review.ts`) + FLOW-347 שויכו היום heads (`ui/month-list.tsx`, `css/11-month-lists.css` `.ui-group-*`) | Next UI task for the review and transaction screens |
 | UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
@@ -126,6 +126,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
+| 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -358,7 +359,8 @@ Everything else follows by area, roughly in priority order inside each area.
   - [x] Copy for every loan refusal (`loan-copy.ts`, checked against the migrations).
   - [x] The loan page `/settings/loans/:id`: balance and status, סוג, ריבית and שינויי ריבית, פרויקט (moved from the list), מצב with the close date from the last payment, קטגוריות לחלקים.
   - [x] The list: open loans, then paid-off and closed under a collapsed "נסגרו (N)"; a row opens the loan page; the new-loan toast has פתיחה.
-  - [ ] The split editor through `save_loan_split` (fees, N installments, exact parts), demand loans and the installments hint in the match sheet, and moving loan-match.tsx `createSplit`/`correctSplit` to `save_loan_split`: wait for the loan-match PR (#252), which owns loan-match.tsx and transaction-screen.tsx.
+  - [x] (UI lane 1, 2026-10-09) The match sheet says what one tap writes on each loan: "לפי הלוח · $x", "N תשלומים לפי הלוח · $x" when the line equals 2 to 12 unpaid rows to the cent (that tap writes them together), and demand loans with "ריבית צבורה $x · השאר לקרן". A loan that cannot take the line shows off with its reason (closed or paid off before the line's date, before a demand loan's start, a later demand payment attached, above the balance). The match already saves through `save_loan_split`.
+  - [ ] The split editor "חלוקת התשלום" (fees, N installments, exact parts), opened from "חלוקה אחרת" under the match sheet and from "עריכת החלוקה" on a matched line.
   - [ ] The kind field on the new-loan form (the kind is set on the loan page for now).
   - [ ] The locked line in Categories for a category a loan uses (categories-screen is in #259).
 
@@ -962,6 +964,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
 - [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
+<a id="flow-346"></a>
+### FLOW-346 · Split between projects works like the split by categories, in exact amounts
+- **Type:** SMALL UI · **Status:** done (#325) · **Source:** owner's ask in the project thread (2026-10-09): "make it look similar ... clean simple and easy ... remove the features we have today and keep it the same way we did for category"
+- **What:** The project split takes exact amounts or percents per project with a rest row, in the category editor's layout; the presets and the manual percent list go. `save_split` and MCP `assign_expense_split` take `amount_minor` shares (decision 0169).
+- **Acceptance:** the design lead signs off against DESIGN-RULES; the owner sees 390px screenshots before merge; a design log entry.
 
 ## Projects and reports
 

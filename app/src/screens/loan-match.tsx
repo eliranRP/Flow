@@ -1,12 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import {
-  allocateLoanSplit,
-  buildLoanSchedule,
-  loanTakesPaymentOn,
-  scheduleRowForDate,
-  type TransactionLoanSplit,
-} from "@flow/shared";
+import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon } from "../ui/icons";
 import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
@@ -26,8 +20,8 @@ import {
   useLoanSplitView,
   type LoadedMatch,
   type LoanChoice,
-  type SavePart,
 } from "./loan-match-api";
+import { loanOffer, sortedOffers, type LoanOffer } from "./loan-match-offer";
 
 export type LoanBalanceRow = {
   id: string;
@@ -85,6 +79,7 @@ export function LoanMatchOffer({
   matchButtonRef,
   readOnly = false,
   returnFocus = true,
+  offers,
   onMatch,
 }: {
   lineCurrency: string;
@@ -99,13 +94,20 @@ export function LoanMatchOffer({
   readOnly?: boolean;
   /** False once a match landed: focus goes to the new loan row, not back to this one. */
   returnFocus?: boolean;
+  /** FLOW-106 §3.4: what one tap writes per loan, or why the loan cannot take the line. */
+  offers?: readonly LoanOffer[];
   onMatch: (loanId: string) => void;
 }) {
   const setSheet = onSheetOpenChange;
   const localRowRef = useRef<HTMLButtonElement>(null);
   const rowRef = matchButtonRef ?? localRowRef;
   if (readOnly) return null;
-  const selectableLoans = loans.filter((loan) => loan.currency === lineCurrency);
+  const inCurrency = loans.filter((loan) => loan.currency === lineCurrency);
+  const byId = new Map((offers ?? []).map((offer) => [offer.loanId, offer]));
+  const order = offers == null ? null : sortedOffers(offers).map((offer) => offer.loanId);
+  const selectableLoans = order == null
+    ? inCurrency
+    : [...inCurrency].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   return (
     <>
       <List>
@@ -131,9 +133,10 @@ export function LoanMatchOffer({
                 key={loan.id}
                 layout="picker"
                 label={loan.name}
+                description={byId.get(loan.id)?.description}
                 busy={loan.id === savingId}
                 disabled={savingId != null && loan.id !== savingId}
-                disabledReason={loan.balanceMinor <= 0n ? "ההלוואה נפרעה" : undefined}
+                disabledReason={byId.get(loan.id)?.disabledReason ?? (loan.balanceMinor <= 0n ? "ההלוואה נפרעה" : undefined)}
                 selected={false}
                 onSelect={() => { onMatch(loan.id); }}
               />
@@ -352,7 +355,10 @@ export function LoanTransactionSplit({
       if (!loaded) throw new Error("supabase");
       const loan = loaded.loans.find((item) => item.id === loanId);
       if (!loan) throw new Error("supabase");
-      await api.save(transactionId, loan.id, matchParts(docDate, loaded, loan));
+      if (loan.currency !== loaded.currency) throw new Error("loan_split_currency");
+      const parts = offerFor(loaded, loan, transactionId, docDate).parts;
+      if (parts == null) throw new Error("date");
+      await api.save(transactionId, loan.id, parts);
     },
   });
   // A viewer cannot match, and a matched line shows as the category row instead.
@@ -380,10 +386,13 @@ export function LoanTransactionSplit({
   const offerMatch = keyedPrincipal
     || (categoryId != null && loaded.loans.some((item) => item.categoryIds?.principal === categoryId));
   if (!offerMatch) return null;
-  // A paid-off or closed loan is offered only for payments on or before the day it ended.
-  // A demand loan has no schedule to split by; MCP attach_loan_payment splits it (0132).
-  const offered = loaded.loans.filter((item) => loanTakesPaymentOn(item, docDate) && item.kind !== "demand");
+  // FLOW-106 §3.4: every loan in the line's currency shows. One that cannot take the line (closed
+  // before its date, paid off, a demand loan with a later payment) is disabled with the reason.
   const lineCurrency = loaded.currency;
+  const offered = loaded.loans;
+  const offers = offered
+    .filter((item) => item.currency === lineCurrency)
+    .map((item) => offerFor(loaded, item, transactionId, docDate));
   const matchHint = loanMatchHint(offered, lineCurrency);
   const savingId = match.isPending ? match.variables : null;
   return (
@@ -402,6 +411,7 @@ export function LoanTransactionSplit({
       }}
       returnFocus={!handedOff}
       matchButtonRef={matchRowRef}
+      offers={offers}
       onMatch={(loanId) => {
         if (match.isPending) return;
         // FLOW-115: on a failure focus goes back to the loan that was tapped, still in the sheet. The
@@ -485,37 +495,12 @@ export function useLoanBalances(companyId: string | null) {
 }
 
 
-/** The schedule row's parts for the line's date, checked here first, then sent in one save_loan_split. */
-function matchParts(docDate: string, loaded: LoadedMatch, loan: LoanChoice): SavePart[] {
-  if (loan.currency !== loaded.currency) throw new Error("loan_split_currency");
-  if (loan.balanceMinor <= 0n) throw new Error("loan_split_over_balance");
-  if (loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) throw new Error("date");
-  const schedule = buildLoanSchedule({
-    principalMinor: BigInt(loan.principalMinor),
-    annualRatePpm: loan.annualRatePpm,
-    termMonths: loan.termMonths,
-    startDate: loan.startDate,
-    paymentMinor: BigInt(loan.paymentMinor),
-    escrowMinor: BigInt(loan.escrowMinor),
-    kind: loan.kind,
-    interestOnlyMonths: loan.interestOnlyMonths ?? null,
-    amortizationMonths: loan.amortizationMonths ?? null,
-    rates: loan.rates ?? [],
-  });
-  const row = scheduleRowForDate(schedule.rows, docDate);
-  if (!row) throw new Error("date");
-  const parts = allocateLoanSplit({
+/** What one tap writes for this loan on this line (loan-match-offer.ts). */
+function offerFor(loaded: LoadedMatch, loan: LoanChoice, transactionId: string, docDate: string): LoanOffer {
+  return loanOffer(loan, loaded.payments?.[loan.id] ?? [], {
+    transactionId,
+    docDate,
     lineMinor: loaded.lineMinor,
-    interestMinor: row.interestMinor,
-    escrowMinor: row.escrowMinor,
-    principalMinor: row.principalMinor,
+    currency: loaded.currency,
   });
-  const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
-  if (principalPart > loan.balanceMinor) throw new Error("loan_split_over_balance");
-  // The server files each part under the loan's category, else the keyed default (0128).
-  return parts.map((part) => ({
-    part: part.part,
-    amount_minor: Number(part.amountMinor),
-    scheduled_minor: Number(part.scheduledMinor),
-  }));
 }

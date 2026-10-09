@@ -94,27 +94,38 @@ const devReviewItems = [
   },
 ];
 
+/** The saved rows, in a node outside React so they stay readable after the screen leaves. */
+function splitSavedNode(): HTMLElement {
+  let node = document.getElementById("e2e-split-saved");
+  if (node == null) {
+    node = document.createElement("div");
+    node.id = "e2e-split-saved";
+    node.hidden = true;
+    document.body.append(node);
+  }
+  return node;
+}
+
 export function DevSplit() {
   const [params] = useSearchParams();
-  const [saved, setSaved] = useState("");
   const fail = params.get("save") === "fail";
+  useEffect(() => {
+    splitSavedNode().textContent = "";
+  }, []);
   return (
-    <>
-      <SplitScreen
-        sampleAmount={1001n}
-        sampleProjects={[
-          { id: "a", name: "שיפוץ הרצל 12", incomeAgorot: 3_000n },
-          { id: "b", name: "שיפוץ דירה ביאליק 8 חולון", incomeAgorot: 1_000n },
-          { id: "c", name: "פרגולה בית כהן", incomeAgorot: 1_000n },
-        ]}
-        onSave={(rows) => {
-          if (fail) throw new Error("save");
-          setSaved(JSON.stringify(rows));
-          return undefined;
-        }}
-      />
-      <div id="e2e-split-saved" hidden>{saved}</div>
-    </>
+    <SplitScreen
+      sampleAmount={1001n}
+      sampleProjects={[
+        { id: "a", name: "שיפוץ הרצל 12" },
+        { id: "b", name: "שיפוץ דירה ביאליק 8 חולון" },
+        { id: "c", name: "פרגולה בית כהן" },
+      ]}
+      onSave={(rows) => {
+        if (fail) throw new Error("save");
+        splitSavedNode().textContent = JSON.stringify(rows);
+        return undefined;
+      }}
+    />
   );
 }
 
