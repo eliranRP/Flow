@@ -5,10 +5,10 @@ export function overheadHint(
   on: boolean,
   detail: { available: boolean; shareAgorot?: bigint | null; currency?: string; scope?: "project" | "company" },
 ): string {
-  if (!on) return "כבוי · מציג רווח לפני כלליות";
-  if (detail.scope === "company") return "דלוק · כל פרויקט מציג רווח אחרי חלקו בכלליות";
-  if (!detail.available) return "דלוק · אין הכנסות בפרויקטים, אז אי אפשר לחלק את הכלליות";
-  return `דלוק · החלק בכלליות הוא ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
+  if (!on) return "כבוי · מציג רווח לפני הוצאות כלליות";
+  if (detail.scope === "company") return "דלוק · כל פרויקט מציג רווח אחרי חלקו בהוצאות הכלליות";
+  if (!detail.available) return "דלוק · אין הכנסות בפרויקטים, אז אי אפשר לחלק את ההוצאות הכלליות";
+  return `דלוק · החלק בהוצאות הכלליות הוא ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
 }
 
 export function shownProfit(

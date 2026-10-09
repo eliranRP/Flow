@@ -102,7 +102,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   }
   return (
     <ScreenState
-      title="חשבוניות שלא שולמו"
+      title="חשבוניות פתוחות"
       backTo={`/${search}`}
       phase={phase.kind === "ready" && all.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void unpaid.refetch(); }}
@@ -114,7 +114,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
             <bdi key={total.currency} dir="ltr">{formatAmountText(total.minor, total.currency)}</bdi>
           ))}
         </p>
-        <p className="t-label text-text-secondary">ממתין לתשלום · טרם נגבה</p>
+        <p className="t-label text-text-secondary">לגבייה</p>
       </div>
       <List>
         {rows.map((row) => {

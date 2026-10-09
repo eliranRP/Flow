@@ -295,13 +295,13 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 }
 
 /**
- * Line 2 of a result holds a status only (FLOW-339 option C): "מחוץ לרווח" on a kept-out line
+ * Line 2 of a result holds a status only (FLOW-339 option C): "לא נספר ברווח" on a kept-out line
  * (decision 0141 log), "ממתינה לאישור" on a line waiting for review. No date, project, category or
  * split: the month head dates the row, and the row's own screen shows the rest. בהמתנה is the chip.
  */
 export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "waiting_review">): StatementDetail[] {
   const details: StatementDetail[] = [];
-  if (row.kept_out) details.push({ text: "מחוץ לרווח" });
+  if (row.kept_out) details.push({ text: "לא נספר ברווח" });
   if (row.waiting_review) details.push({ text: "ממתינה לאישור", keep: true });
   return details;
 }

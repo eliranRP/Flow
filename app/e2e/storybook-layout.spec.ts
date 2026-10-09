@@ -140,10 +140,10 @@ async function layoutProblems(page: Page): Promise<string[]> {
 test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW-321)", async ({ page }) => {
   test.setTimeout(120_000);
   const cases = [
-    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות לא שולמו"], 2],
-    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית אחת לא שולמה"], 2],
+    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות פתוחות"], 2],
+    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית פתוחה אחת"], 2],
     ["screens-routes--home-attention-review-only", ["7 פריטים ממתינים לאישור"], 0],
-    ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות לא שולמו"], 0],
+    ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות פתוחות"], 0],
     ["components-banner--rows-long-hebrew", [], 2],
   ] as const;
   const failures: string[] = [];

@@ -70,8 +70,8 @@ function countWords(count: number, one: string, many: string): string {
 }
 
 /**
- * The "לפי חודש" row on the project: "6 חודשים · 2 ברווח, 3 בהפסד, 1 בתהליך". The open month is
- * counted as בתהליך, not as a profit or a loss; a month with no lines is not counted.
+ * The "לפי חודש" row on the project: "6 חודשים · 2 ברווח, 3 בהפסד, 1 חודש פתוח". The open month is
+ * counted as חודש פתוח, not as a profit or a loss; a month with no lines is not counted.
  */
 export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "ILS"): string | undefined {
   if (data == null) return undefined;
@@ -90,7 +90,7 @@ export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "
   const parts = [
     profit > 0 ? `${String(profit)} ברווח` : null,
     loss > 0 ? `${String(loss)} בהפסד` : null,
-    open > 0 ? `${String(open)} בתהליך` : null,
+    open > 0 ? `${String(open)} חודש פתוח` : null,
   ].filter((part): part is string => part != null);
   const head = countWords(total, "חודש אחד", "חודשים");
   return parts.length === 0 ? head : `${head} · ${parts.join(", ")}`;
@@ -191,7 +191,7 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
   if (beforeOverhead) hint.push("לפני הוצאות כלליות");
   const label = [
     title,
-    month.open ? "בתהליך" : null,
+    month.open ? "חודש פתוח" : null,
     ...currencies.map((row) => `${row.profit_minor < 0n ? "הפסד" : "רווח"} ${formatAmountText(row.profit_minor, row.currency)}, נכנס ${formatAmountText(row.income_minor, row.currency)}, יצא ${formatAmountText(row.expense_minor < 0n ? -row.expense_minor : row.expense_minor, row.currency)}`),
     beforeOverhead ? "לפני הוצאות כלליות" : null,
   ].filter((part): part is string => part != null).join(", ");
@@ -199,7 +199,7 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
     <ListRow
       variant="project"
       title={title}
-      tag={month.open ? <StatusPill>בתהליך</StatusPill> : undefined}
+      tag={month.open ? <StatusPill>חודש פתוח</StatusPill> : undefined}
       hintParts={hint}
       label={label}
       agorot={profit}

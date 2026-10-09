@@ -18,7 +18,7 @@ import {
 
 describe("category write refusals (FLOW-134)", () => {
   it("says why a loan's category keeps its P&L state", () => {
-    expect(pnlFailureText(new Error("loan category is fixed"))).toBe("זו קטגוריה של הלוואה, ולכן המצב שלה ברווח והפסד קבוע.");
+    expect(pnlFailureText(new Error("loan category is fixed"))).toBe("זו קטגוריה של הלוואה, ולכן המצב שלה ברווח קבוע.");
     expect(pnlFailureText(new Error("category not found"))).toBe("לא הצלחנו לעדכן את הקטגוריה.");
   });
 

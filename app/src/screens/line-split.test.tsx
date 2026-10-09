@@ -130,7 +130,7 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספת חלק" }));
     const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     // FLOW-333 C3c: on a refund line the reversal section starts open.
-    expect(within(sheet).getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(sheet).getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
     const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();

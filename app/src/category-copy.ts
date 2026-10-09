@@ -3,7 +3,7 @@
 /** set_category_excluded_from_pnl refuses a keyed loan part category (loan_part set): its P&L side is fixed. */
 export function pnlFailureText(error: Error): string {
   if (error.message.includes("loan category is fixed")) {
-    return "זו קטגוריה של הלוואה, ולכן המצב שלה ברווח והפסד קבוע.";
+    return "זו קטגוריה של הלוואה, ולכן המצב שלה ברווח קבוע.";
   }
   return "לא הצלחנו לעדכן את הקטגוריה.";
 }

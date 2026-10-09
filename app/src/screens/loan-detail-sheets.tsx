@@ -232,7 +232,7 @@ export function LoanPartSheet({
               key={row.id}
               layout="picker"
               label={row.name}
-              description={part === "fees" && row.excludedFromPnl ? "מחוץ לרווח והפסד" : undefined}
+              description={part === "fees" && row.excludedFromPnl ? "לא נספר ברווח" : undefined}
               selected={row.id === current}
               busy={saving?.id === row.id}
               disabled={saving != null && saving.id !== row.id}

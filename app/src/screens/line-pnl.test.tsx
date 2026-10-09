@@ -47,7 +47,7 @@ function show(sample: NonNullable<TransactionDetail>, client = new QueryClient()
 }
 
 function pnlSwitch() {
-  return screen.getByRole("switch", { name: "ברווח והפסד" });
+  return screen.getByRole("switch", { name: "נספר ברווח" });
 }
 
 describe("linePnlState", () => {
@@ -71,33 +71,33 @@ describe("linePnlState", () => {
 describe("one line out of the P&L", () => {
   it("takes the line out with the switch row, shows the pill, and undoes from the toast", async () => {
     show(base);
-    expect(screen.queryByText("מחוץ לרווח")).toBeNull();
+    expect(screen.queryByText("לא נספר ברווח")).toBeNull();
     expect(pnlSwitch()).toBeChecked();
     // On: no hint (design review).
     expect(pnlSwitch()).not.toHaveAttribute("aria-describedby");
     fireEvent.click(pnlSwitch());
-    expect(await screen.findByText("ספק לדוגמה · מחוץ לרווח והפסד")).toBeTruthy();
-    expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
+    expect(await screen.findByText("ספק לדוגמה · לא נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     expect(screen.getByText("רק השורה הזו. הקטגוריה לא משתנה.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
-    expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
-    await waitFor(() => { expect(screen.queryByText("מחוץ לרווח")).toBeNull(); });
+    expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
+    await waitFor(() => { expect(screen.queryByText("לא נספר ברווח")).toBeNull(); });
   });
 
   it("brings one line of a kept-out category back in and marks it", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });
-    expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
-    expect(screen.getByText("הקטגוריה חומרים מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
+    expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("הקטגוריה חומרים לא נספרת ברווח. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
     fireEvent.click(pnlSwitch());
-    expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
-    expect(screen.queryByText("מחוץ לרווח")).toBeNull();
-    expect(within(document.querySelector(".ui-status-row") as HTMLElement).getByText("ברווח והפסד")).toBeTruthy();
+    expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
+    expect(screen.queryByText("לא נספר ברווח")).toBeNull();
+    expect(within(document.querySelector(".ui-status-row") as HTMLElement).getByText("נספר ברווח")).toBeTruthy();
   });
 
   it("locks a loan line; with no loan split it counts by its category (FLOW-329)", () => {
     show({ ...base, pnl_fixed: true, pnl_state: "mixed" });
-    expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "נספר ברווח" })).toBeNull();
     expect(screen.getByText("תשלום הלוואה · לפי הקטגוריה")).toBeTruthy();
     expect(screen.queryByText(/לפי הפיצול/)).toBeNull();
     expect(screen.queryByText("חלקית ברווח")).toBeNull();
@@ -124,7 +124,7 @@ describe("one line out of the P&L", () => {
       splits: [part("s-1", "principal"), part("s-2", "interest"), part("s-3", "escrow")],
     });
     show({ ...base, pnl_state: "mixed" }, client);
-    expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "נספר ברווח" })).toBeNull();
     expect(screen.queryByRole("link", { name: /לפי הקטגוריות בפיצול/ })).toBeNull();
     expect(screen.getByText("לפי חלקי ההלוואה")).toBeTruthy();
     expect(screen.queryByText("חלקית ברווח")).toBeNull();
@@ -134,17 +134,17 @@ describe("one line out of the P&L", () => {
     // The line's own category counts, but some of its parts are kept out.
     show({ ...base, pnl_state: "mixed" });
     expect(screen.getByText("חלקית ברווח")).toBeTruthy();
-    expect(screen.queryByRole("switch", { name: "ברווח והפסד" })).toBeNull();
-    expect(screen.getByRole("link", { name: /ברווח והפסד, לפי הקטגוריות בפיצול/ })).toHaveAttribute("href", "/transactions/t-1/split-category");
+    expect(screen.queryByRole("switch", { name: "נספר ברווח" })).toBeNull();
+    expect(screen.getByRole("link", { name: /נספר ברווח, לפי הקטגוריות בפיצול/ })).toHaveAttribute("href", "/transactions/t-1/split-category");
   });
 
   it("marks a split line whose parts are all kept out, and brings it back in with true", async () => {
     show({ ...base, pnl_state: "out" });
-    expect(screen.getByText("מחוץ לרווח")).toBeTruthy();
-    expect(screen.getByText("הקטגוריות בפיצול מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
+    expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("הקטגוריות בפיצול לא נספרות ברווח. אפשר להחזיר רק את השורה הזו.")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     fireEvent.click(pnlSwitch());
-    expect(await screen.findByText("ספק לדוגמה · ברווח והפסד")).toBeTruthy();
+    expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
   });
 });
 

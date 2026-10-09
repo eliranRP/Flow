@@ -101,7 +101,7 @@ export function RehabSheet({
           <BigNumber agorot={figures.rehabMinor} currency={figures.currency} />
         </span>
         <p className="t-hint">כל העלויות מתחילת הפרויקט, בלי חלקי הלוואה</p>
-        <OtherLines list={figures.rehabOther} note="לא נכנס להון המאולץ" />
+        <OtherLines list={figures.rehabOther} note="לא נכנס להשבחה הצפויה" />
       </div>
       {loading ? (
         <List className="ui-invest-list">
@@ -191,7 +191,7 @@ export function LoansSheet({
       {other.length > 0 ? (
         <>
           <h3 className="ui-invest-list-head t-label">במטבע אחר</h3>
-          <p className="t-hint">לא נכנסות להון הנוכחי.</p>
+          <p className="t-hint">לא נכנסות להון העצמי בנכס.</p>
           <div className="ui-invest-loans"><ProjectLoanList rows={other} /></div>
         </>
       ) : null}

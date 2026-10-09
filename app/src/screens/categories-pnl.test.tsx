@@ -75,13 +75,13 @@ describe("categories kept out of the P&L", () => {
   it("marks kept-out rows and shows the legend", async () => {
     renderScreen(<CategoriesScreen />);
     await screen.findByText("חומרים");
-    expect(screen.getAllByRole("img", { name: "מחוץ לרווח והפסד" })).toHaveLength(2);
+    expect(screen.getAllByRole("img", { name: "לא נספר ברווח" })).toHaveLength(2);
     expect(screen.getByText("פיקדונות").className).not.toContain("ui-row-title-muted");
-    expect(screen.getByText("מחוץ לרווח והפסד", { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText("לא נספר ברווח", { selector: "p" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
-    expect(screen.queryByRole("img", { name: "מחוץ לרווח והפסד" })).not.toBeInTheDocument();
-    expect(screen.queryByText("מחוץ לרווח והפסד", { selector: "p" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "לא נספר ברווח" })).not.toBeInTheDocument();
+    expect(screen.queryByText("לא נספר ברווח", { selector: "p" })).not.toBeInTheDocument();
   });
 
   it("keeps a category out on tap, and ביטול puts it back", async () => {
@@ -89,12 +89,12 @@ describe("categories kept out of the P&L", () => {
     const more = await screen.findByRole("button", { name: "עוד, חומרים" });
     fireEvent.click(more);
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא נספר ברווח" }));
 
     await waitFor(() => {
       expect(pnlCalls()).toEqual([{ p_id: "c1", p_excluded: true }]);
     });
-    expect(await screen.findByText("חומרים · מחוץ לרווח והפסד")).toBeInTheDocument();
+    expect(await screen.findByText("חומרים · לא נספר ברווח")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "חומרים" })).not.toBeInTheDocument();
     });
@@ -109,7 +109,7 @@ describe("categories kept out of the P&L", () => {
         { p_id: "c1", p_excluded: false },
       ]);
     });
-    expect(await screen.findByText("חומרים · ברווח והפסד")).toBeInTheDocument();
+    expect(await screen.findByText("חומרים · נספר ברווח")).toBeInTheDocument();
   });
 
   it("brings a kept-out category back into the P&L", async () => {
@@ -126,7 +126,7 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, תשלומי הלוואה" }));
     let sheet = await screen.findByRole("dialog", { name: "תשלומי הלוואה" });
-    expect(within(sheet).getByText("קטגוריית הלוואה · תמיד מחוץ לרווח והפסד")).toBeInTheDocument();
+    expect(within(sheet).getByText("קטגוריית הלוואה · לא נספרת ברווח")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
     fireEvent.keyDown(sheet, { key: "Escape" });
     await waitFor(() => {
@@ -135,7 +135,7 @@ describe("categories kept out of the P&L", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "עוד, ריבית משכנתא" }));
     sheet = await screen.findByRole("dialog", { name: "ריבית משכנתא" });
-    expect(within(sheet).getByText("חלק מתשלום הלוואה · תמיד ברווח והפסד")).toBeInTheDocument();
+    expect(within(sheet).getByText("חלק מתשלום הלוואה · תמיד נספרת ברווח")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
   });
 
@@ -144,7 +144,7 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, החזר הלוואה" }));
     const sheet = await screen.findByRole("dialog", { name: "החזר הלוואה" });
-    expect(within(sheet).getByText("קטגוריית הלוואה · תמיד מחוץ לרווח והפסד")).toBeInTheDocument();
+    expect(within(sheet).getByText("קטגוריית הלוואה · לא נספרת ברווח")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
   });
 
@@ -153,10 +153,10 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא נספר ברווח" }));
     expect(await screen.findByText("לא הצלחנו לעדכן את הקטגוריה.")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
-    expect(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" })).toBeEnabled();
+    expect(within(sheet).getByRole("button", { name: "לא נספר ברווח" })).toBeEnabled();
   });
 
   it("says why when a loan's use of the category refuses the change (FLOW-134)", async () => {
@@ -164,8 +164,8 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
-    expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן המצב שלה ברווח והפסד קבוע.")).toBeInTheDocument();
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא נספר ברווח" }));
+    expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן המצב שלה ברווח קבוע.")).toBeInTheDocument();
   });
 
   it("waits for the save when the sheet is dismissed mid-write", async () => {
@@ -174,7 +174,7 @@ describe("categories kept out of the P&L", () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
-    const action = within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" });
+    const action = within(sheet).getByRole("button", { name: "לא נספר ברווח" });
     fireEvent.click(action);
     // FLOW-405: the P&L action is a sheet row, busy with a spinner while it saves.
     await waitFor(() => { expect(action).toHaveAttribute("aria-busy", "true"); });
@@ -183,7 +183,7 @@ describe("categories kept out of the P&L", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.getByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
     release();
-    expect(await screen.findByText("חומרים · מחוץ לרווח והפסד")).toBeInTheDocument();
+    expect(await screen.findByText("חומרים · לא נספר ברווח")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "חומרים" })).not.toBeInTheDocument();
     });
@@ -197,7 +197,7 @@ describe("categories kept out of the P&L", () => {
         />
       </ViewerPreview>,
     );
-    expect(screen.getByRole("img", { name: "מחוץ לרווח והפסד" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "לא נספר ברווח" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /עוד, פיקדונות/ })).not.toBeInTheDocument();
   });
 });

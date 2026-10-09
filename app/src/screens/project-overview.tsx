@@ -24,11 +24,11 @@ function figures(rows: readonly ProjectCurrencyRow[], pick: (row: ProjectCurrenc
   return rows.map((row) => formatAmountText(pick(row), row.currency)).join(" · ");
 }
 
-/** "הון נוכחי ₪850,000"; "" when there is data but no equity yet; null with nothing to show (FLOW-340 C). */
+/** "הון עצמי בנכס ₪850,000"; "" when there is data but no equity yet; null with nothing to show (FLOW-340 C). */
 export function investmentFigure(data: ProjectInvestment): string | null {
   const figures = data.figures;
   if (data.isOverhead || figures == null) return null;
-  if (figures.currentEquityMinor != null) return `הון נוכחי ${formatAmountText(figures.currentEquityMinor, figures.currency)}`;
+  if (figures.currentEquityMinor != null) return `הון עצמי בנכס ${formatAmountText(figures.currentEquityMinor, figures.currency)}`;
   const entered = figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null || figures.rehabMinor !== 0n;
   return entered ? "" : null;
 }

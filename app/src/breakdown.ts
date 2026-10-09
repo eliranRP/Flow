@@ -13,7 +13,7 @@ export function isGroupBy(value: string | null | undefined): value is BreakdownG
 }
 
 export function directionLabel(direction: BreakdownDirection): string {
-  return direction === "income" ? "נכנס" : "יצא";
+  return direction === "income" ? "הכנסות" : "הוצאות";
 }
 
 export function groupByOptions(direction: BreakdownDirection): Array<{ value: BreakdownGroupBy; label: string }> {

@@ -180,7 +180,7 @@ export const TransactionPnlCategoryOut: Story = {
   ),
 };
 
-/** FLOW-124: one line of a kept-out category brought back in shows the "ברווח והפסד" pill. */
+/** FLOW-124: one line of a kept-out category brought back in shows the "נספר ברווח" pill. */
 export const TransactionPnlForcedIn: Story = {
   name: "P&L forced back in",
   render: () => (

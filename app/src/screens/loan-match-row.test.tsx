@@ -459,7 +459,7 @@ describe("the transaction card with a matched payment", () => {
     showLive();
     await screen.findByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ });
     expect(await screen.findByText("לפי חלקי ההלוואה")).toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /ברווח והפסד/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /נספר ברווח/ })).not.toBeInTheDocument();
   });
 
   it("gives a viewer the row and a read-only sheet", async () => {
