@@ -20,7 +20,7 @@ const mercuryRow = vi.hoisted(() => ({
     Promise.resolve({ data: null, error: null }),
 }));
 
-const invokeEdge = vi.hoisted(() => vi.fn((_name: string, _body: Record<string, unknown>) => Promise.resolve(undefined)));
+const invokeEdge = vi.hoisted(() => vi.fn((_name: string, _body: Record<string, unknown>) => Promise.resolve<unknown>(undefined)));
 
 vi.mock("../edge", () => ({
   invokeEdge: (name: string, body: Record<string, unknown>) => invokeEdge(name, body),
@@ -251,6 +251,15 @@ describe("Mercury status row", () => {
     if (row == null) throw new Error("missing row");
     expect(row.querySelector("button")).toBeNull();
     expect(row).toHaveTextContent("מחובר");
+  });
+
+  it("says how many lines a full refresh brought in (FLOW-509)", async () => {
+    mockLive(mercury({ connected: true }));
+    invokeEdge.mockResolvedValue({ ok: true, lines: 5, complete: true, inserted: 3, updated: 2, removed: 0 });
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Mercury" })).getByRole("button", { name: "רענון עכשיו" }));
+    await waitFor(() => { expect(screen.getByText("הרענון הסתיים. 3 תנועות חדשות.")).toBeInTheDocument(); });
   });
 
   it("sends one refresh when רענון עכשיו is tapped twice", async () => {

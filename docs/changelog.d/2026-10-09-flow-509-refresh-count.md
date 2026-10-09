@@ -1,0 +1,1 @@
+Tapping "רענון עכשיו" on Mercury now says how many lines came in, for example "הרענון הסתיים. 3 תנועות חדשות." or "אין תנועות חדשות.". A refresh that stops early, because there was more to read than one run takes, still says "הרענון הסתיים." and the next run carries on.
