@@ -78,9 +78,11 @@ vi.mock("../lib/supabase", () => ({
         }
         if (table === "loan_balances") {
           return {
-            select: () => Promise.resolve({
-              data: db.balanceError ? null : db.loans.map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
-              error: db.balanceError,
+            select: () => ({
+              eq: () => Promise.resolve({
+                data: db.balanceError ? null : db.loans.map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
+                error: db.balanceError,
+              }),
             }),
           };
         }
