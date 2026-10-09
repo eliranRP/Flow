@@ -1,0 +1,1 @@
+A loan's interest (and escrow) can now go to a category kept out of profit, so a rehab or flip loan's interest can count as part of the project's cost instead of an expense; the loan page's category picker offers those categories too. The bookkeeping tools also say which field was wrong when they refuse a loan or a loan payment.

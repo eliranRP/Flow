@@ -76,13 +76,13 @@ isOneToOne: false
                   ]
                 },"categories": {
                   Row: {
-                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"group_name": string | null,"hidden": boolean,"id": string,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab": boolean | null,"sort_order": number,"updated_at": string
+                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"group_name": string | null,"hidden": boolean,"id": string,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"parent_id": string | null,"rehab": boolean | null,"sort_order": number,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"parent_id"?: string | null,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"parent_id"?: string | null,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -91,6 +91,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "categories_parent_fkey"
+      columns: ["company_id","parent_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"companies": {
@@ -982,6 +988,8 @@ isOneToOne: false
                            },
 "create_category":
 { Args: { "p_kind": string,"p_name": string }; Returns: string
+                           } |
+{ Args: { "p_kind": string,"p_name": string,"p_parent_id": string }; Returns: string
                            },
 "create_company":
 { Args: { "p_name": string,"p_vat_registered": boolean }; Returns: string
@@ -1144,6 +1152,8 @@ isOneToOne: false
                            },
 "mcp_create_category":
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
+                           } |
+{ Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string,"p_parent_id": string }; Returns: Json
                            },
 "mcp_create_project":
 { Args: { "p_idempotency_key": string,"p_name": string,"p_status"?: string }; Returns: Json
@@ -1204,6 +1214,9 @@ isOneToOne: false
                            },
 "mcp_set_category_group":
 { Args: { "p_category_id": string,"p_group_name": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_set_category_parent":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_parent_id": string }; Returns: Json
                            },
 "mcp_set_category_pnl":
 { Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
@@ -1397,6 +1410,9 @@ isOneToOne: false
                            },
 "set_category_hidden":
 { Args: { "p_hidden": boolean,"p_id": string }; Returns: undefined
+                           },
+"set_category_parent":
+{ Args: { "p_category_id": string,"p_parent_id": string }; Returns: Json
                            },
 "set_category_rehab":
 { Args: { "p_category_id": string,"p_rehab": boolean }; Returns: Json

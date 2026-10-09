@@ -140,6 +140,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "move_category_lines",
     "set_company_currency",
     "rename_category",
+    "set_category_parent",
     "set_category_group",
     "set_jev_mode",
     "undo_jev_prefill",
