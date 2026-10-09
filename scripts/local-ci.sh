@@ -177,17 +177,35 @@ mark_fork() {
     [[ -z "$fork" ]] || { echo "$fork"; return; }
   done
 }
+# When main did change one of those areas, only the phases that area can affect run again (base_only):
+# database (a migration, the seed) the database step, with every pgTAP file on a database branch, and
+# the e2e specs; flow-mcp its Deno tests and the smoke; shared the typecheck, unit tests and builds.
+# A mark with no fork, or a fork no longer under main, runs the whole gate.
 base_risk=0
+base_only=0
+base_areas=""
 if (( skips )) && [[ -n "$patch_id" ]] && has_mark "patch-$patch_id"; then
-  if node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork"; then
+  risk_out="$(node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork")" && {
     mode="same patch"
     echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
     echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
     exit 0
-  fi
+  }
+  grep -v '^areas=' <<<"$risk_out" || true
   base_risk=1
-  echo "local-ci: the same patch passed on an older main, but main changed the database surface since; running the gate, with every pgTAP file."
+  base_areas="$(sed -n 's/^areas=//p' <<<"$risk_out" | tr ',' ' ')"
+  if [[ -n "$base_areas" && "$base_areas" != all ]]; then
+    base_only=1
+    mode="base risk"
+    echo "local-ci: the same patch passed on an older main; re-running only what main's change reaches: $base_areas."
+  else
+    echo "local-ci: the same patch passed, but the mark can't show what main changed since; running the gate."
+  fi
 fi
+# Whether this run re-checks area $1: always, unless only main's risky areas are re-run.
+base_area() {
+  (( ! base_only )) || [[ " $base_areas " == *" $1 "* ]]
+}
 # Only docs or Markdown against main: lint and the file-size check, nothing else.
 if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
   mode="docs"
@@ -269,7 +287,15 @@ if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.to
   db_change=1
   db_list="$(node scripts/pgtap-specs.mjs <<<"$pr_files")"
   [[ -z "$db_list" ]] || mapfile -t db_specs <<<"$db_list"
-  (( ! base_risk )) || db_specs=(supabase/tests/database)
+  if (( base_risk )) && base_area database; then db_specs=(supabase/tests/database); fi
+  # Main moved only flow-mcp or the shared package: the smoke and the types check, no pgTAP.
+  if (( base_only )) && ! base_area database; then db_specs=(); fi
+  if (( base_only )) && ! base_area database && ! base_area flow-mcp; then db_change=0; fi
+fi
+# The e2e specs read the database: they run again only when main moved it.
+if (( base_only )) && ! base_area database; then
+  e2e_specs=()
+  e2e_left=1
 fi
 
 supabase_exit=""
@@ -459,7 +485,18 @@ run_parts() {
     exit 1
   fi
 }
-if (( skips )); then
+if (( base_only )); then
+  # Lint reads only this branch's unchanged sources. The static part holds flow-mcp's Deno tests.
+  parts=()
+  if base_area database || base_area flow-mcp; then parts+=(static); fi
+  if base_area shared; then parts+=(unit "$typecheck_key=typecheck" "$build_key=build"); fi
+  (( ${#parts[@]} == 0 )) || run_parts "${parts[@]}"
+  rm -rf "$logs"
+  if base_area shared; then
+    phase "check: app unit tests"
+    app_tests unit
+  fi
+elif (( skips )); then
   # The server tests are short and run beside the static checks.
   run_parts "$lint_key=lint" static unit "$typecheck_key=typecheck" "$build_key=build"
   rm -rf "$logs"
@@ -475,7 +512,9 @@ else
 fi
 
 phase "check: Storybook"
-if (( skips )); then
+if (( base_only )); then
+  echo "local-ci: Storybook skipped: this branch's stories passed, and main changed none of their inputs it can reach."
+elif (( skips )); then
   app_tests storybook
 else
   pnpm --filter @flow/app exec playwright install chromium
@@ -541,7 +580,11 @@ storybook_smoke() {
 
 if (( ! full )); then
   phase "check: Storybook smoke (layout specs and the stories this change reaches)"
-  storybook_smoke
+  if (( base_only )); then
+    echo "local-ci: Storybook smoke skipped (base risk only)."
+  else
+    storybook_smoke
+  fi
   if (( db_change )); then
     wait_supabase
     phase "database: the flow-mcp smoke, db types, and ${#db_specs[@]} pgTAP files that name the change"

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { riskyChanges } from "./gate-base-risk.mjs";
+import { riskAreas, riskyChanges } from "./gate-base-risk.mjs";
 
 const SCRIPT = fileURLToPath(new URL("./gate-base-risk.mjs", import.meta.url));
 
@@ -62,6 +62,7 @@ test("the #364-then-#383 shape is not skipped: main changed a migration under an
     const result = run(dir, fork, moved);
     assert.equal(result.status, 1);
     assert.match(result.stdout, /20261013175142_team_members\.sql/);
+    assert.match(result.stdout, /\nareas=database\n$/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -85,8 +86,25 @@ test("a mark with no fork, or a fork not under main, is not trusted", () => {
   try {
     const head = commit("README.md", "x\n", "main");
     assert.equal(run(dir, "", head).status, 1);
+    assert.match(run(dir, "", head).stdout, /\nareas=all\n$/);
     assert.equal(run(dir, "f".repeat(40), head).status, 1);
+    assert.match(run(dir, "f".repeat(40), head).stdout, /\nareas=all\n$/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("riskAreas names each area main touched, in a fixed order", () => {
+  assert.deepEqual(riskAreas(["app/src/a.tsx", "docs/x.md"]), []);
+  assert.deepEqual(
+    riskAreas([
+      "packages/shared/src/dashboard.ts",
+      "supabase/functions/flow-mcp/tools.ts",
+      "supabase/seed.sql",
+      "supabase/migrations/20261013212342_starter_categories.sql",
+    ]),
+    ["database", "flow-mcp", "shared"],
+  );
+  assert.deepEqual(riskAreas(["supabase/seed.sql"]), ["database"]);
+  assert.deepEqual(riskAreas(["packages/shared/src/index.ts"]), ["shared"]);
 });
