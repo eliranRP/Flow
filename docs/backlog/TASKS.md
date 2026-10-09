@@ -61,7 +61,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | done (#98) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
-| 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
+| 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | PLAN FIRST | plan-first (owner: the user picks the basis, 2026-10-09) |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | MCP side done (#132 #151 #157 #162); screens in progress (PR #343) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | done (parts 1-4: #137, #143, #149, #160) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
@@ -248,9 +248,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals
-- **Type:** SMALL CYCLE · **Status:** on-hold (owner decision) · **Depends on:** —
-- **What:** The app shows the invoiced basis ([0060](../decisions/0060-library-review-calls.md)) while MCP `get_totals`, `list_projects` and `get_project` default to cash. Proposal: move all three to invoiced together, so the tools never disagree with each other. It changes behaviour for existing MCP clients. Also decide what to do with `get_home` (cash, only used at sign-in): align it or remove it.
-- **Acceptance:** owner decision recorded; one PR switches the defaults together, tools echo the basis, TOOLS.md updated.
+- **Type:** PLAN FIRST · **Status:** plan-first (owner, 2026-10-09: the user chooses whether the תזרים counts by invoice date or by payment date; the MCP totals default to the same choice, so the app and the tools never disagree; needs a plan and 390px mockups for the owner's card) · **Depends on:** —
+- **What:** The app shows the invoiced basis ([0060](../decisions/0060-library-review-calls.md)) while MCP `get_totals`, `list_projects` and `get_project` default to cash. The owner's answer (2026-10-09): the user chooses the basis, invoice date or payment date, and the MCP defaults follow the same choice, so the app and the tools never disagree. It changes behaviour for existing MCP clients. Also decide what to do with `get_home` (cash, only used at sign-in): align it or remove it.
+- **Acceptance:** plan and 390px mockups approved by the owner; then the basis choice, MCP defaults that follow it, tools that echo the basis, TOOLS.md updated.
 
 <a id="flow-105"></a>
 ### FLOW-105 · Link a loan to a project
@@ -372,7 +372,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
-- [ ] Backfill existing loan lines into `loans` / `loan_splits`. (Checked 2026-10-09, dev lane 1: not a plain migration. A line has no link to a loan except a `loan_splits` row, so a backfill must pick the loan for each line by amount, date and currency, and split a payment that differs from the schedule; both need judgment per line. Left for the owner or the Flow MCP agent through `attach_loan_payment` or the app's loan match, line by line; no migration.)
+- [ ] Backfill existing loan lines into `loans` / `loan_splits`. (Checked 2026-10-09, dev lane 1: not a plain migration. A line has no link to a loan except a `loan_splits` row, so a backfill must pick the loan for each line by amount, date and currency, and split a payment that differs from the schedule; both need judgment per line. Left for the owner or the Flow MCP agent through `attach_loan_payment` or the app's loan match, line by line; no migration. Owner, 2026-10-09: the Flow MCP agent decides and runs it.)
 - [x] Server follow-up from #252: `save_loan_split` takes `category_id` only on the fees part, so an edit of a split, or the undo of an unmatch, files interest, escrow and principal under the loan's categories or the keyed defaults again. Let it accept `category_id` on every part (checked by `private.loan_part_category_ok`, decision 0128), so a part the owner moved to another fitting category keeps it. (Migration `20261013000000`; the app sends each stored part's category on an edit and on the undo of an unmatch.)
 - [x] A company with a hidden or kept-out `מסים וביטוח` category fails on escrow. (Obsolete: the default parts resolve by `categories.loan_part`, not by name or visibility.)
 - [x] Date formatting for years below 1000. (Four digits, and real leap years for years 0 to 99.)
@@ -965,7 +965,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-406"></a>
 ### FLOW-406 · Sub-categories and project groups
-- **Type:** PLAN FIRST · **Status:** on-hold (owner: not this cycle) · **Depends on:** FLOW-405
+- **Type:** PLAN FIRST · **Status:** plan-first (owner said plan now, 2026-10-09: a plan and 390px mockups for his card before any build) · **Depends on:** FLOW-405
 - **What:** One level of sub-categories with a parent rollup; project groups (unit, building, portfolio); industry templates in setup that seed categories.
 - **Acceptance:** owner's go, then a plan.
 
@@ -1071,7 +1071,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row. (Mercury too.)
 - [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
-- [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop.
+- [x] The viewer note also sits under the project overhead switch; owner to confirm or drop. (Owner, 2026-10-09: keep it.)
 - [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)
 - [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
@@ -1236,29 +1236,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** A `health()` RPC and a daily health-check workflow (stuck queues, cron runs, last sync), usage alerts against the free-tier limits, and a move-to-paid-plan runbook.
 - **Acceptance:** an alert on a simulated stuck queue.
 
-<a id="flow-803"></a>
-### FLOW-803 · Security review pass
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
-- **What:** CSP and XSS audit, RLS and storage policy review, service-role usage audit, redaction check, a key-rotation drill.
-- **Acceptance:** checklist signed off; findings filed as tasks.
-
 <a id="flow-804"></a>
 ### FLOW-804 · Performance pass
 - **Type:** PLAN FIRST · **Status:** plan in review (dev lane 1, [plan](../qa/flow-804-performance-plan.md), waits on the owner's pick) · **Depends on:** —
 - **What:** A bundle budget with a CI check (Home route target), Lighthouse CI, real-user timings, and Hebrew mobile flows in Playwright.
 - **Acceptance:** Home usable within 2 seconds on a throttled mid-range profile ([0034](../decisions/0034-cost-and-load-limits.md)).
-
-<a id="flow-805"></a>
-### FLOW-805 · Offline action queue
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
-- **What:** Queue writes made offline and replay them with a client operation id, applied exactly once.
-- **Acceptance:** plan approved; replay tests.
-
-<a id="flow-806"></a>
-### FLOW-806 · Privacy policy, terms and account deletion
-- **Type:** PLAN FIRST · **Status:** on-hold (owner and legal review) · **Depends on:** FLOW-801
-- **What:** Hebrew privacy policy and terms, and a deletion flow with tombstones.
-- **Acceptance:** reviewed text live.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
@@ -1341,7 +1323,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-904"></a>
 ### FLOW-904 · Sync the CI deny-list secret
-- **Type:** SMALL CYCLE · **Status:** blocked (needs the owner's GitHub access) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#322; owner, 2026-10-09: the secret list was already up to date) · **Depends on:** —
 - **What:** Merge the maintained deny-list into the CI secret without dropping existing entries.
 - **Acceptance:** CI deny-list test still green; nothing printed.
 
@@ -1353,12 +1335,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-906"></a>
 ### FLOW-906 · Confirm the public help contact
-- **Type:** BACKLOG NIT · **Status:** on-hold (owner) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (owner, 2026-10-09: the help contact stays public) · **Depends on:** —
 - **What:** Confirm that the help contact in `app/src/config.ts`, one story and three docs is meant to be public, or replace it.
 
 <a id="flow-907"></a>
 ### FLOW-907 · Data clean-up after PR B
-- **Type:** MCP · **Status:** blocked on the owner's approval · **Depends on:** FLOW-101 (done, #70)
+- **Type:** MCP · **Status:** done (data agent, 2026-10-09: 3 deposit and closing returns, $3,412.39, moved to a kept-out category with the owner's ok; all three loan categories are in use, so none was hidden) · **Depends on:** FLOW-101 (done, #70)
 - **What:** Data work for the MCP/data agent, no code: re-check company totals after FLOW-101; hide default loan categories a company doesn't use (the interest category is the target for split interest, so check after PR B); move deposit and closing returns filed as refunds into a kept-out category if the owner approves.
 - **Acceptance:** the data agent reports before and after totals to the coordinator.
 
@@ -1369,12 +1351,33 @@ Features the owner parked for later. Nobody claims, plans, or builds them, and t
 | Id | Title | Parked |
 | --- | --- | --- |
 | [FLOW-306](#flow-306) | Invoice photo capture | 2026-10-09 |
+| [FLOW-803](#flow-803) | Security review pass | 2026-10-09 |
+| [FLOW-805](#flow-805) | Offline action queue | 2026-10-09 |
+| [FLOW-806](#flow-806) | Privacy policy, terms and account deletion | 2026-10-09 |
 
 <a id="flow-306"></a>
 ### FLOW-306 · Invoice photo capture
 - **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09; the A/B mockup card waits until the owner brings it back) · **Depends on:** —
 - **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
 - **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
+
+<a id="flow-803"></a>
+### FLOW-803 · Security review pass
+- **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09) · **Depends on:** —
+- **What:** CSP and XSS audit, RLS and storage policy review, service-role usage audit, redaction check, a key-rotation drill.
+- **Acceptance:** checklist signed off; findings filed as tasks.
+
+<a id="flow-805"></a>
+### FLOW-805 · Offline action queue
+- **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09) · **Depends on:** —
+- **What:** Queue writes made offline and replay them with a client operation id, applied exactly once.
+- **Acceptance:** plan approved; replay tests.
+
+<a id="flow-806"></a>
+### FLOW-806 · Privacy policy, terms and account deletion
+- **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09; with FLOW-801 backups, which deletion depends on) · **Depends on:** FLOW-801
+- **What:** Hebrew privacy policy and terms, and a deletion flow with tombstones.
+- **Acceptance:** reviewed text live.
 
 ## Done
 
