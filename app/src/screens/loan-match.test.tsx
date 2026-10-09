@@ -599,7 +599,7 @@ describe("LoanTransactionSplit", () => {
     const principal = within(editor).getByLabelText("סכום, קרן");
     expect(principal).toHaveValue("500");
     fireEvent.change(principal, { target: { value: "400" } });
-    expect(within(editor).getByText("חסרים ₪100 כדי להגיע לסכום השורה.")).toBeInTheDocument();
+    expect(editor.querySelector(".ui-loan-parts-total [role='status']")).toHaveTextContent("חסרים ₪100");
     expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
     fireEvent.change(within(editor).getByLabelText("סכום, ריבית"), { target: { value: "600" } });
     fireEvent.click(within(editor).getByRole("button", { name: "שמירה" }));
