@@ -62,20 +62,14 @@ export function restoreFailureText(error: Error): string {
   return "לא הצלחנו לבטל את המחיקה.";
 }
 
-/** The toast after "העברת כל התנועות", from move_category_lines' lines. */
+/** The toast after a move, from move_category_lines' lines. */
 export function movedToast(lines: number, from: string, into: string): string {
   if (lines === 0) return `לא היו תנועות להעביר מ${from}`;
   if (lines === 1) return `תנועה אחת הועברה מ${from} אל ${into}`;
   return `${String(lines)} תנועות הועברו מ${from} אל ${into}`;
 }
 
-/** The move row's hint and the picker's title, from the source's line count. */
-export function moveHint(name: string, lines: number | undefined): string {
-  if (lines === 0) return "אין תנועות להעביר.";
-  const count = lines == null ? "התנועות" : lines === 1 ? "תנועה אחת" : `${String(lines)} תנועות`;
-  return `${count} ${lines === 1 ? "עוברת" : "עוברות"} לקטגוריה אחרת. ${name} נשארת.`;
-}
-
+/** The move picker's title, from the source's line count. */
 export function moveTitle(lines: number | undefined): string {
   if (lines == null) return "העברת התנועות אל";
   if (lines === 1) return "העברת תנועה אחת אל";
