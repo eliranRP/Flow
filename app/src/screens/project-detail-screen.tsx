@@ -1,50 +1,45 @@
-import { formatAmountText, type ExpectedMonths, type ProfitMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
-import { projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
+import { projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useLocation, useParams } from "react-router-dom";
-import { ProjectLoanList } from "./loan-match";
-import { loanRowProps, useLoanMarks } from "./loan-marks";
+import { useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { allTime, periodPhrase } from "../period";
+import { periodPhrase } from "../period";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
 import { PeriodBar } from "../ui/period-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
-import { profitMonthsSummary } from "./profit-months";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useProjectQuery, useProfitMonthsQuery } from "../use-books";
-import { useHeldOrder } from "../list-hold";
-import { txnListState } from "../txn-nav";
+import { useProjectQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
-import { CalendarIcon, DocumentIcon, MoreIcon } from "../ui/icons";
-import { BandFigures, BandHero, SectionHead } from "../ui/layout";
+import { DocumentIcon, MoreIcon } from "../ui/icons";
+import { BandHero, SectionHead } from "../ui/layout";
+import { TextLink } from "../ui/text-link";
 import { List, ListRow } from "../ui/list-row";
-import { rowSource } from "../ui/line-marks";
-import { MonthList } from "../ui/month-list";
 import { FocusTitle } from "../ui/focus-title";
 import { BudgetBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
-import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
-import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
+import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
-import { ProjectCategories, withParam } from "./project-categories";
+import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
+import { investmentFigure, openLoans, ProjectOverviewRows } from "./project-overview";
+import { ProjectTransactions } from "./project-transactions";
+import { toProjectInvestment } from "./project-investment-data";
 
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
@@ -123,20 +118,28 @@ function projectRowProfit(
   return row.profit_minor;
 }
 
+/** FLOW-340 C: the overview, or one of the screens its rows open. */
+export type ProjectSection = "overview" | "expenses" | "investment" | "loans" | "transactions";
+
+function withParams(search: string, params: Record<string, string>): string {
+  const next = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  for (const [key, value] of Object.entries(params)) next.set(key, value);
+  return `?${next.toString()}`;
+}
+
 export function ProjectDetailScreen({
   sample,
-  sampleMonths,
   example,
   categoryTo,
   sampleInvestment,
   sampleCategories,
   sampleExpected,
+  section = "overview",
+  sectionTo,
 }: {
   sample?: NonNullable<ProjectDetail>;
-  /** FLOW-404. The השקעה card of a sample project; without it a sample project shows no card. */
+  /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
   sampleInvestment?: ProjectInvestment;
-  /** The "לפי חודש" row's counts for a sample project (dev routes and Storybook). */
-  sampleMonths?: ProfitMonths;
   example?: ReactNode;
   /** Dev fixtures send a category row here. Production builds the project route. */
   categoryTo?: string;
@@ -144,25 +147,22 @@ export function ProjectDetailScreen({
   sampleCategories?: { groups: Record<string, string>; months: ProjectCategoryMonthRow[] };
   /** FLOW-403. The "צפוי" months of a sample project (dev routes and Storybook). */
   sampleExpected?: ExpectedMonths;
+  /** FLOW-340 C. Which screen of the project this route draws. */
+  section?: ProjectSection;
+  /** Dev fixtures send the overview's rows (and the sections' Back) here. Production builds the project routes. */
+  sectionTo?: (section: ProjectSection) => string;
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
   // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
   const [period, setPeriod] = useProjectPeriod();
   const detail = useProjectQuery(sample ? "" : projectId, period);
-  // FLOW-337: the "לפי חודש" row counts the whole project, as its page lists it.
-  const months = useProfitMonthsQuery(sample ? "" : projectId, allTime());
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
-  const location = useLocation();
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
-  const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
-  const heldIds = heldTransactions.map((txn) => txn.id);
-  const listFrom = `${location.pathname}${location.search}`;
-  const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null);
   useEffect(() => {
     if (sample) return;
     if (detail.data) setOverheadOn(detail.data.after_overhead === true);
@@ -188,6 +188,79 @@ export function ProjectDetailScreen({
   if (!project) {
     return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
+  const periodQuery = withPeriodSearch(search, period);
+  const sectionHref = (target: ProjectSection) => sectionTo?.(target)
+    ?? (target === "overview" ? `/projects/${project.id}${periodQuery}` : `/projects/${project.id}/${target}${periodQuery}`);
+  const periodWords = periodPhrase(period, undefined, "project");
+  if (section === "expenses") {
+    const expenses = absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot);
+    return (
+      <div className="flex min-h-full flex-1 flex-col">
+        <ScreenHeader title="הוצאות" kicker={project.name} subtitle={periodWords} backTo={sectionHref("overview")} />
+        {project.budget_agorot != null && period.kind === "all" ? (
+          <div className="ui-page-pad ui-project-budget">
+            <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
+          </div>
+        ) : null}
+        <ProjectCategories
+          project={project}
+          search={search}
+          categorySearch={periodQuery}
+          categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
+          period={sample ? undefined : period}
+          sampleGroups={sampleCategories?.groups}
+          sampleMonths={sampleCategories?.months}
+        />
+        {/* FLOW-403: expected months under the categories (plan option A3). */}
+        <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
+      </div>
+    );
+  }
+  if (section === "investment") {
+    return (
+      <div className="flex min-h-full flex-1 flex-col">
+        <ScreenHeader title="השקעה" kicker={project.name} backTo={sectionHref("overview")} />
+        <ProjectInvestmentSection project={project} sample={sampleInvestment} />
+      </div>
+    );
+  }
+  if (section === "transactions") {
+    return (
+      <div className="flex min-h-full flex-1 flex-col">
+        <ScreenHeader
+          title="תנועות"
+          kicker={project.name}
+          subtitle={periodWords}
+          backTo={sectionHref("overview")}
+          below={
+            // FLOW-402: every line of the project, in Search with the project chip set.
+            <TextLink to={`/search${withParams(search, { project: project.id })}`} tone="quiet">כל התנועות</TextLink>
+          }
+        />
+        <ProjectTransactions transactions={project.transactions} search={search} live={sample == null} />
+      </div>
+    );
+  }
+  if (section === "loans") {
+    return (
+      <div className="flex min-h-full flex-1 flex-col">
+        <ScreenHeader title="הלוואות" kicker={project.name} backTo={sectionHref("overview")} />
+        <List>
+          {(project.loans ?? []).map((loan) => (
+            <ListRow
+              key={loan.id}
+              variant="item"
+              title={loan.name}
+              hint={loan.balance_minor <= 0n ? "נפרעה" : undefined}
+              meta={<bdi className="ui-num ui-project-row-figure" dir="ltr">{formatAmountText(loan.balance_minor, loan.currency)}</bdi>}
+              href={`/settings/loans/${loan.id}${search}`}
+              chevron
+            />
+          ))}
+        </List>
+      </div>
+    );
+  }
   const currencyRows = projectRows(project, companyCurrency);
   const singleCurrency = currencyRows.length === 1;
   const profitRows = currencyRows.map((row) => ({
@@ -203,12 +276,40 @@ export function ProjectDetailScreen({
       return margin < 0 ? `−${String(Math.abs(margin))}%` : `${String(margin)}%`;
     })()
     : null;
-  const expenses = absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot);
   // A loss is named in the label: red on the violet band does not read (DESIGN-RULES 3.5).
   const bandLoss = singleCurrency && (profitRows[0]?.profit ?? 0n) < 0n;
-  const periodWords = periodPhrase(period, undefined, "project");
   const stateLine = projectStateLine(project);
-  const periodQuery = withPeriodSearch(search, period);
+  const loans = openLoans(project);
+  const onlyLoan = loans.length === 1 ? loans[0] : undefined;
+  const projectSearch = withParams(periodQuery, { project: project.id });
+  const investmentData = sampleInvestment ?? toProjectInvestment(project);
+  const investmentShown = investmentFigure(investmentData) != null;
+  const overhead = (
+    <Toggle
+      label="אחרי חלק בהוצאות כלליות"
+      hint={overheadHint(overheadOn, {
+        available: project.overhead_weighted === true,
+        shareAgorot: project.base_currency != null && project.base_currency !== "ILS"
+          ? project.overhead_share_minor
+          : project.overhead_share_agorot,
+        currency: project.base_currency ?? "ILS",
+      })}
+      checked={overheadOn}
+      disabled={holdWrites}
+      onChange={(checked) => {
+        if (holdWrites) return;
+        if (sample) {
+          setOverheadOn(checked);
+          return;
+        }
+        if (blocked()) return;
+        const previous = overheadOn;
+        setOverheadOn(checked);
+        wantedOverhead.current = checked;
+        saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
+      }}
+    />
+  );
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -223,7 +324,17 @@ export function ProjectDetailScreen({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
-        trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
+        trailing={holdWrites ? <ReservedMenuSlot /> : (
+          <ProjectMenu
+            projectId={project.id}
+            name={project.name}
+            budget={project.budget_agorot ?? null}
+            finished={project.status === "finished"}
+            overhead={overhead}
+            // FLOW-340 C: with no investment data the overview hides its row, so the menu keeps the way in.
+            investmentTo={investmentShown || investmentData.isOverhead ? undefined : sectionHref("investment")}
+          />
+        )}
       >
         <BandHero className="ui-band-hero-project">
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
@@ -241,6 +352,7 @@ export function ProjectDetailScreen({
                 </>
               )}
             </p>
+            {/* FLOW-340 C: the band holds the profit only; income and expenses are the first rows below. */}
             <div className="t-display ui-project-profits">
               {profitRows.map(({ row, profit: rowProfit }) => (
                 <p key={row.currency}>
@@ -248,109 +360,23 @@ export function ProjectDetailScreen({
                 </p>
               ))}
             </div>
-            {currencyRows.map((row) => (
-              <BandFigures
-                key={row.currency}
-                income={formatAmountText(row.income_minor, row.currency)}
-                expense={formatAmountText(projectExpenseMinor(row), row.currency)}
-              />
-            ))}
           </PeriodSwipe>
         </BandHero>
       </TopBand>
-      {/* FLOW-337: "לפי חודש" lists every month of the project, whatever the band's period. */}
-      <List className="ui-project-months">
-        <ListRow
-          variant="item"
-          href={`/projects/${project.id}/months${periodQuery}`}
-          icon={<CalendarIcon />}
-          title="לפי חודש"
-          hint={profitMonthsSummary(sampleMonths ?? months.data ?? null, companyCurrency)}
-          chevron
-        />
-      </List>
-      {project.budget_agorot != null && period.kind === "all" ? (
-        <div className="ui-page-pad ui-project-budget">
-          <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
-        </div>
-      ) : null}
-      {(project.loans ?? []).length > 0 ? (
-        <>
-          <SectionHead title="הלוואות" />
-          <ProjectLoanList rows={project.loans ?? []} />
-        </>
-      ) : null}
-      <SectionHead title="הוצאות לפי קטגוריה" />
-      <ProjectCategories
+      <ProjectOverviewRows
         project={project}
-        search={search}
-        categorySearch={periodQuery}
-        categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
-        period={sample ? undefined : period}
-        sampleGroups={sampleCategories?.groups}
-        sampleMonths={sampleCategories?.months}
+        investmentData={investmentData}
+        currencyRows={currencyRows}
+        links={{
+          income: `/search${withParams(projectSearch, { dir: "income" })}`,
+          expenses: sectionHref("expenses"),
+          investment: sectionHref("investment"),
+          // One loan opens its own page (#305); several open the project's list.
+          loans: onlyLoan == null ? sectionHref("loans") : `/settings/loans/${onlyLoan.id}${search}`,
+          transactions: sectionHref("transactions"),
+          months: `/projects/${project.id}/months${periodQuery}`,
+        }}
       />
-      {/* FLOW-403: expected months under the categories (plan option A3); its own block, one line here. */}
-      <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
-      {/* FLOW-335: the switch sits under the categories, so the band's first row is in reach sooner. */}
-      <div className="ui-page-pad ui-project-overhead">
-        <Toggle
-          label="אחרי חלק בהוצאות כלליות"
-          hint={overheadHint(overheadOn, {
-            available: project.overhead_weighted === true,
-            shareAgorot: project.base_currency != null && project.base_currency !== "ILS"
-              ? project.overhead_share_minor
-              : project.overhead_share_agorot,
-            currency: project.base_currency ?? "ILS",
-          })}
-          checked={overheadOn}
-          disabled={holdWrites}
-          onChange={(checked) => {
-            if (holdWrites) return;
-            if (sample) {
-              setOverheadOn(checked);
-              return;
-            }
-            if (blocked()) return;
-            const previous = overheadOn;
-            setOverheadOn(checked);
-            wantedOverhead.current = checked;
-            saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
-          }}
-        />
-      </div>
-      <ProjectInvestmentSection project={project} sample={sampleInvestment} />
-      <SectionHead title="תנועות">
-        {/* FLOW-402: every line of the project, in the search with the project chip set. */}
-        <TextLink to={`/search${withParam(search, "project", project.id)}`} tone="quiet">כל התנועות</TextLink>
-      </SectionHead>
-      {heldTransactions.length === 0 ? (
-        <EmptyState icon={<DocumentIcon />} title="אין תנועות בתקופה הזו" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
-      ) : (
-        <MonthList
-          rows={heldTransactions}
-          keyOf={(txn) => txn.id}
-          dateOf={(txn) => txn.doc_date}
-          amountOf={projectMonthAmount}
-          complete={heldTransactions.length < PROJECT_RECENT_CAP}
-          renderRow={(txn) => {
-            const shown = projectLineRow(txn);
-            return (
-            <ListRow
-              variant="transaction"
-              title={txn.description}
-              {...loanRowProps(projectMarks.get(txn.id), projectLineHint(txn, shown.whole))}
-              agorot={shown.agorot}
-              sign={shown.sign}
-              currency={txn.currency ?? "ILS"}
-              source={rowSource(txn.source)}
-              href={`/transactions/${txn.id}${search}`}
-              state={txnListState(heldIds, txn.id, listFrom)}
-            />
-            );
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -359,47 +385,6 @@ export function ProjectDetailScreen({
 export function projectStateLine(project: Pick<NonNullable<ProjectDetail>, "state_label" | "status">): string | null {
   const label = project.state_label ?? (project.status === "finished" ? "הסתיים" : null);
   return label == null || label === "" || label === "פעיל" ? null : label;
-}
-
-type ProjectLine = NonNullable<ProjectDetail>["transactions"][number];
-
-/**
- * What a project line adds to its month head. A kept-out line adds nothing (0099). A split line
- * adds this project's share, `parts_minor`, taken as it comes: signed in the line's own terms, a
- * reversal part already minus (decision 0138). Plus is the line's own way, so the share moves
- * money the way the line does; a share the reversals push below zero moves it the other way.
- */
-export function projectMonthAmount(txn: ProjectLine): { minor: bigint; currency: string; direction: "income" | "expense" } {
-  const direction = txn.direction === "income" ? "income" : "expense";
-  const currency = txn.currency ?? "ILS";
-  if (txn.kept_out === true) return { minor: 0n, currency, direction };
-  if (txn.parts_minor != null) {
-    const share = txn.parts_minor;
-    if (share >= 0n) return { minor: direction === "income" ? share : -share, currency, direction };
-    const other = direction === "income" ? "expense" : "income";
-    return { minor: other === "income" ? -share : share, currency, direction: other };
-  }
-  return { minor: txn.amount_net, currency, direction };
-}
-
-/**
- * The row's amount: a split line leads with this project's part, and its hint says "מתוך" the whole
- * line, so a $250 part of a $3,170 payment never reads as $3,170 landing here (owner, 2026-10-09).
- */
-export function projectLineRow(txn: ProjectLine): { agorot: bigint; sign: "in" | "out"; whole: string | null } {
-  if (txn.parts_minor == null || txn.kept_out === true) {
-    return { agorot: txn.amount_net, sign: txn.direction === "income" ? "in" : "out", whole: null };
-  }
-  const part = projectMonthAmount(txn);
-  const whole = txn.amount_net < 0n ? -txn.amount_net : txn.amount_net;
-  return { agorot: part.minor, sign: part.direction === "income" ? "in" : "out", whole: `מתוך ${formatAmountText(whole, txn.currency ?? "ILS")}` };
-}
-
-/** "מחוץ לרווח · מתוך $3,170 · category · date". The marker leads, so a kept-out line reads as one at a glance. */
-function projectLineHint(txn: ProjectLine, whole: string | null): string {
-  return [txn.kept_out === true ? KEPT_OUT_SHORT : null, whole, txn.category, formatDayMonth(txn.doc_date)]
-    .filter((part): part is string => part != null && part !== "")
-    .join(" · ");
 }
 
 function LegacyEmptyProject() {
@@ -432,11 +417,17 @@ function ProjectMenu({
   name,
   budget,
   finished,
+  overhead,
+  investmentTo,
 }: {
   projectId: string;
   name: string;
   budget: bigint | null;
   finished: boolean;
+  /** FLOW-340 C: the overhead switch left the page body for this menu. */
+  overhead?: ReactNode;
+  /** FLOW-340 C: set when the overview hides its השקעה row, so the data can still be added. */
+  investmentTo?: string;
 }) {
   const blocked = useBlockedPreview();
   const [menu, setMenu] = useState(false);
@@ -469,6 +460,12 @@ function ProjectMenu({
         <MoreIcon />
       </IconButton>
       <Sheet open={menu} onOpenChange={setMenu} title="עוד">
+        {overhead}
+        {investmentTo == null ? null : (
+          <List>
+            <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
+          </List>
+        )}
         <Button
           variant="secondary"
           onClick={() => {
@@ -496,6 +493,3 @@ function ProjectMenu({
     </>
   );
 }
-
-/** get_project returns at most this many recent transactions, so a full page may hide older rows of its last month. */
-const PROJECT_RECENT_CAP = 40;

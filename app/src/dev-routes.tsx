@@ -526,8 +526,12 @@ function DevStepTransaction({ n }: { n: number }) {
 
 export function DevProjectDetail() {
   const [params] = useSearchParams();
+  const section = params.get("section");
   return (
     <ProjectDetailScreen
+      // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample.
+      section={section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
+      sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
       sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       sample={{
         id: "p1",

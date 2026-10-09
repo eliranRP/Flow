@@ -334,11 +334,15 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toHaveCount(0);
-  const overhead = page.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
+  // FLOW-340 C: the overhead switch lives in the ⋯ menu.
+  await page.getByRole("button", { name: "עוד" }).click();
+  const overhead = page.getByRole("dialog", { name: "עוד" }).getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
-  // FLOW-411: the lines show on open, with no extra tap and no jump to Settings.
+  // FLOW-411: the lines show on open, with no extra tap and no jump to Settings (FLOW-340 C: on the expenses screen).
+  await page.goto("/e2e/project-detail?preview=1&section=expenses");
   await expect(page.getByRole("link", { name: "כל הקטגוריות" })).toHaveCount(0);
+  await page.goto("/e2e/project-detail?preview=1&section=transactions");
   await page.getByRole("link", { name: /^מלט/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t1/);
 
@@ -719,12 +723,30 @@ test("a preview toast stays clear of שמירה in the new-category sheet", asyn
   }).toBe(false);
 });
 
-test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {
+test("the project page lists one row per section and each opens its screen (FLOW-340 C)", async ({ page }) => {
   await page.goto("/e2e/project-detail?preview=1");
+  for (const name of ["הכנסות", "הוצאות", "תנועות", "לפי חודש"]) {
+    await expect(page.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
+  }
+  await page.getByRole("link", { name: /^הוצאות/ }).click();
+  await expect(page).toHaveURL(/section=expenses/);
+  await expect(page.getByRole("heading", { name: "הוצאות" })).toBeVisible();
+  await page.getByRole("button", { name: /^חזרה/ }).first().click();
+  await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1$/);
+  await page.getByRole("link", { name: /^תנועות/ }).click();
+  await expect(page).toHaveURL(/section=transactions/);
+  await expect(page.getByRole("heading", { name: "תנועות" })).toBeVisible();
+  await page.goto("/e2e/project-detail?preview=1");
+  await page.getByRole("link", { name: /^הכנסות/ }).click();
+  await expect(page).toHaveURL(/\/search\?.*dir=income/);
+});
+
+test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {
+  await page.goto("/e2e/project-detail?preview=1&section=expenses");
   await page.getByRole("link", { name: /^חומרים/ }).click();
   await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
   await expect(page.getByText("מלט")).toBeVisible();
-  await page.goto("/e2e/project-detail?preview=1");
+  await page.goto("/e2e/project-detail?preview=1&section=expenses");
   await page.getByRole("link", { name: /ממתינה לאישור/ }).click();
   await expect(page).toHaveURL(/project=p1/);
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
