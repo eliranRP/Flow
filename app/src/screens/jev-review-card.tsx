@@ -39,7 +39,7 @@ import {
   type JevQueueData,
   type JevReviewState,
 } from "./jev-review";
-import type { ReviewFlag } from "../review-copy";
+import { jevReasonText, type ReviewFlag } from "../review-copy";
 
 export const JEV_REVIEW_SAMPLE: JevPrefill = {
   suggestionId: "s1",
@@ -274,7 +274,8 @@ type LayoutSuggestion = {
   categoryJev?: boolean;
 };
 
-const LAYOUT_WHY = ["כמו בהוצאות קודמות מהספק הזה"] as const;
+/** The longest reason Jev gives, so the held line is checked against the widest case. */
+const LAYOUT_WHY = jevReasonText({ reason: "usual_for_party", partyFilings: 12, matchingFilings: 10 }, "expense");
 
 /**
  * Each case waits with the rows as they stand and settles on Jev's answer. FLOW-704: a card Jev fills

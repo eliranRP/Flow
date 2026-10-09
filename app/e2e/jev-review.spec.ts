@@ -38,7 +38,7 @@ test("a waiting card keeps the settled height for a fill, an auto fill, one row,
   // 0091: only a shared cost has a note, so no layout here reserves a note slot.
   await expect(page.locator("[data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
   await expect(page.locator("[data-phase=settled]").getByText("חסר קטגוריה, הקישו לבחירה")).toHaveCount(0);
-  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
+  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeVisible();
 });
 
 test("a long suggestion keeps הצעת Jev and the chevron inside the row at 320", async ({ page }) => {
