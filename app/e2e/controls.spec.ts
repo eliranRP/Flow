@@ -628,7 +628,7 @@ test("a category save with no client reports the failure without a retry", async
   await expect(note.locator("button", { hasText: "ניסיון חוזר" })).toHaveCount(0);
 });
 
-test("install, notifications, onboarding, and legal screens", async ({ page }) => {
+test("install, onboarding, and legal screens", async ({ page }) => {
   await page.goto("/install?preview=1");
   await page.getByRole("button", { name: "הבנתי" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
@@ -641,9 +641,6 @@ test("install, notifications, onboarding, and legal screens", async ({ page }) =
   await expect(page.getByText("שיתוף ואז הוספה למסך הבית")).toBeVisible();
   await expect(page.getByText("ההתקנה באייפון עובדת רק מספארי.")).toHaveCount(0);
   await page.getByRole("button", { name: "הבנתי" }).click();
-  await expect(page).toHaveURL(/\/settings\?preview=1$/);
-  await page.goto("/notifications?preview=1");
-  await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
 
   await page.goto("/onboarding?preview=1");

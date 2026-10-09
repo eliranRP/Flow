@@ -325,6 +325,55 @@ Guide §11.1.
 - English only in the wordmark "Flow" and the example-data tag.
 - Sample figures must show **נתוני דוגמה · Example data**. Real data must not. Guide §11.2.
 
+### 3.7 Patterns from the design log
+
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycle 6 (2026-10-09). The id in brackets names the log entry.
+
+**Headers and navigation**
+
+- A stacked page with Back pins a compact bar once its large title scrolls off. The bar is 44px under the safe area and shows Back and the title in `title-3` on one line with an ellipsis, over a `line` hairline on the page background, with a 120ms fade (none with reduced motion). Month heads pin under it. There is no bar on inline headers, tab roots, or screens with their own leading control. [0156](../decisions/0156-labelled-back-and-compact-bar.md) (FLOW-334 H1).
+- With Back and a kicker, the kicker becomes Back's label ("‹ הגדרות"), in `label` and `accent-text`, cut at about 16 characters. It shows only when Back really goes there (FLOW-334 H2).
+- A review queue's header uses `layout="inline"` even with Back, so the card and its pinned bar stay off the tab bar at 375×667. הצג הכול sits on the start side of the counter row, and a card opened from the list leaves it out (FLOW-327).
+- A linked transaction row carries the trailing chevron. A row that opens something keeps one trailing control: when ⋯ holds the end slot, the title and count are the link and ⋯ is its own 44px button (FLOW-326, FLOW-334).
+- An app-wide gesture borrows the screen's own control for its action, never a second route of its own (FLOW-332). A swipe on a band figure follows the direction of the arrows it duplicates (FLOW-335).
+- Search is entered from a 44×44 thin outline magnifier (SVG, stroke 1.6, no fill) at the end corner of a header or band, named "חיפוש תנועות". On the search screen the field and its chips sit in a dock above the keyboard and results fill the space above. Matched text gets the `.ui-match` tint, never colour alone (FLOW-323).
+
+**Pinned bars, notes and toasts**
+
+- A screen's repeated action sits in a pinned `ActionBar`, above the tab bar (`place="tabbar"`) or on the screen edge with the safe area (`place="edge"`). The content scrolls above it with bottom padding of the bar's height. That screen's toasts sit `--space-2` above the bar, never over it (FLOW-327).
+- A note above a pinned bar is one line (the `slim` banner): title, link, close. When they don't fit, the link wraps under the title (review slim banner).
+- A pinned bar takes as few rows as its content needs. A currency's figures are one unit: 8px inside a pair, 24px between currencies, and a pair that doesn't fit wraps whole, start-aligned (FLOW-313).
+- An entry field that can hold a long amount gets the row's full width. When the list it grows pushes the add action down, the action moves into the sticky bar. A warning shows in one place only (FLOW-333).
+
+**Rows, figures and empty values**
+
+- A transaction row's meta line is one line. It shows whole parts in order, as many as fit, and a part that does not fit drops with its "·". Only a lone first part too long on its own ends in an ellipsis. Breakdown lines put the date first (FLOW-124).
+- One signal per row: an icon with a hidden word, not a chip. A status chip is not a button. A group folds in place with a down chevron (FLOW-401).
+- A header figure comes from the same lines the screen lists. A missing figure is "—", not ₪0, and with no lines there is no count (FLOW-334, FLOW-401).
+- An amount in another currency than the project's is listed apart ("ועוד $120,000 בדולר") and never added in. The company currency's row comes first in every per-currency list (FLOW-404, FLOW-504).
+- A figure that needs a missing input names it ("חסר שווי אחרי שיפוץ", in the link colour for the owner, muted for a viewer). When the parts don't add up to the total, show the total and say the breakdown is not available rather than rows that disagree (FLOW-404).
+- A list titled as a cost (שיפוץ) carries no minus, and its rows add up to the total above them (FLOW-404).
+
+**Sheets and settings**
+
+- A short read-only list that belongs to one card opens as a bottom sheet, not a pushed page. An edit sheet focuses its title, not the field. A link or retry in a sheet uses the 44px text-link size, with a retry on its own line (FLOW-404).
+- A sheet lists only actions that work today, with no "coming soon" and no disabled-only rows. A quick action that opens a sheet on another screen lands with a one-shot `?new=<what>` (FLOW-331).
+- A destructive row sits last in a sheet, after a 1px line or in its own group. A refused one stays visible, disabled, with its reason. A delete confirm that can lose data offers the safe path as a quiet link under ביטול (FLOW-405, FLOW-335).
+- A rename is a one-field sheet with שמירה in the action slot and an undo toast, with no confirm (category rename).
+- A reversible per-item setting is a labelled switch row, not an overflow menu item. It shows a hint only in the state that needs one and is locked with one reason when something else decides it. ⋯ appears only when it holds something (FLOW-329).
+- A setting with two to four short fixed values inside a card is a `SegmentedControl` that applies on tap. A setting with a few fixed choices that converts nothing is a sheet of radio rows that apply on tap with an undo toast. A dependent setting is hidden, not disabled, while it means nothing (FLOW-702, FLOW-504).
+- A busy control (a save in flight) uses the disabled look until it settles, keeping focus and its selection. A disabled text link is grey with a not-allowed cursor and no press fill (FLOW-331, FLOW-327).
+
+**Review card and Jev**
+
+- The label column has one width (`--review-label-w`). Every pill ends at the chevron column with at least `--space-2` before the value. Under 25rem of card width the הצעת Jev pill shows only ✦, with its words as the accessible name (FLOW-327).
+- When the card needs a choice, the main button names the next pick. An anomaly flag is loud at a Jev score of 0.7 or more and quiet below it, at most one per card, as the last block (FLOW-327).
+- A value an automatic job filled says who filled it and how to undo it, in one line with no reason. Turning the job off keeps that line and its undo, with no new suggestion (FLOW-331, FLOW-702).
+
+**Band**
+
+- The band's preset track is at most 10% white with white labels. Pressed darkens, never lightens. A label that opens a sheet ends in a 16px ▼. Home's hero explanation is "הכנסות פחות הוצאות" with no dates (FLOW-335).
+
 ---
 
 ## 4. Screen index

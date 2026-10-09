@@ -1,0 +1,1 @@
+The breakdown's period pill sits under the title, where the thumb reaches it, and a project category's lines show their total and count under the title. The business details form has more room under its title (FLOW-334).

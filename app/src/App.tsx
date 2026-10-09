@@ -29,7 +29,6 @@ import {
   ChangeForm,
   ConnectionsScreen,
   LoansScreen,
-  NotificationsScreen,
   OnboardingScreen,
   FiledTodayScreen,
   ProjectCategoryScreen,
@@ -178,7 +177,8 @@ function AppRoutes() {
               <Route path="review/filed" element={<FiledTodayScreen />} />
               <Route path="unpaid" element={<UnpaidScreen />} />
               <Route path="missing-bills" element={<MissingBillsScreen />} />
-              <Route path="notifications" element={<NotificationsScreen />} />
+              {/* FLOW-322: the placeholder notifications page is gone; an old link lands on Settings. */}
+              <Route path="notifications" element={<Navigate to="/settings" replace />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="settings/categories" element={<CategoriesScreen />} />
               <Route path="settings/connections" element={<ConnectionsScreen />} />

@@ -2,6 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import { useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
+import { lineCountHint } from "../breakdown";
 import { periodFromSearch, periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -74,17 +75,25 @@ export function ProjectCategoryScreen({
     return <ScreenHeader title="קטגוריה" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
   const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
-  const projectName = [sample?.projectName ?? first?.project_name ?? "", period ? periodLabel(period, undefined, "project") : ""]
-    .filter((part) => part !== "")
-    .join(" · ");
   const rowCurrency = sample?.currency ?? first?.currency ?? "ILS";
   const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
   const rowIds = rows.map((row) => row.id);
   const more = sample?.pageSize != null ? !sampleOpen && allRows.length > sample.pageSize : !sample && category.hasNextPage;
+  // FLOW-334: the total and count of the lines listed, "שיפוץ הרצל 12 · ₪4 · תנועה אחת". The count
+  // waits for the last page; no lines, no figures (the header figure rule, #259).
+  const total = sample ? allRows.reduce((sum, row) => sum + row.amount_net, 0n) : first?.total_agorot ?? 0n;
+  const subtitle = [
+    sample?.projectName ?? first?.project_name ?? "",
+    period ? periodLabel(period, undefined, "project") : "",
+    allRows.length > 0 ? formatAmountText(total, rowCurrency) : "",
+    allRows.length > 0 && !more ? lineCountHint(allRows.length, false) : "",
+  ]
+    .filter((part) => part !== "")
+    .join(" · ");
   return (
     <div>
-      <ScreenHeader title={name} subtitle={projectName} backTo={backOverride ?? back} />
+      <ScreenHeader title={name} subtitle={subtitle} backTo={backOverride ?? back} />
       <UsualLine usual={sample ? sample.usual ?? null : usualFor(months.data, categoryId, rowCurrency)} currency={rowCurrency} />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
