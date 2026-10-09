@@ -145,6 +145,8 @@ export const filedTodaySchema = z.object({
   supplier_name: z.string().nullable(),
   project_name: z.string().nullable(),
   category_name: z.string().nullable(),
+  /** The line's currency (FLOW-408). Older payloads omit it; the list then shows shekels. */
+  currency: z.string().optional().catch(undefined),
   /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
   source: z.string().optional().catch(undefined),
   /** The line is out of the P&L (FLOW-124, decision 0135). Older payloads omit it. */
@@ -434,6 +436,8 @@ export const projectWaitingRowSchema = z.object({
   category_id: z.string().nullable(),
   category_name: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  /** The line's currency (FLOW-408). Older payloads omit it; the list then shows shekels. */
+  currency: z.string().optional().catch(undefined),
   /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
   source: z.string().optional().catch(undefined),
   /** Its parts on this project are out of the P&L (FLOW-124). Older payloads omit it. */
