@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useSheetHistory } from "./back";
 import { Button } from "./button";
 import { Chip } from "./chip";
@@ -21,6 +21,23 @@ type DateSheetProps = {
    */
   shortcuts?: boolean;
   disabled?: boolean;
+  /** The first day that can be picked. Earlier days are disabled, and `reason` says why. */
+  min?: string | null;
+  /** The last day that can be picked, on top of the future rule. */
+  max?: string | null;
+  /** One quiet line under the title that explains `min` (FLOW-106: the last attached payment). */
+  reason?: ReactNode;
+  /** The button's word. Default בחירה; a loan's close date says החלה. */
+  applyLabel?: string;
+  /**
+   * A sheet that saves keeps itself open: `onApply` returns false (or a promise of false) when
+   * the save was refused, and `error` says why under the date. Default: close on apply.
+   */
+  onApplyResult?: (iso: string) => boolean | Promise<boolean>;
+  /** The save is running: the button spins and the days stay still. */
+  busy?: boolean;
+  /** A refusal for the picked day, shown under it in the error colour. */
+  error?: string | null;
 };
 
 /** One day, shown as DD/MM/YYYY on the field that opens this sheet. */
@@ -33,15 +50,28 @@ export function DateSheet({
   allowFuture = false,
   shortcuts = true,
   disabled = false,
+  min = null,
+  max = null,
+  reason,
+  applyLabel = "בחירה",
+  onApplyResult,
+  busy = false,
+  error = null,
 }: DateSheetProps) {
-  const setOpen = useSheetHistory("loan-date", open, onOpenChange);
+  const setOpen = useSheetHistory("loan-date", open, (next) => {
+    if (!next && busy) return;
+    onOpenChange(next);
+  });
   const today = israelToday();
+  const errorId = useId();
   const [pending, setPending] = useState(value);
   const [cursor, setCursor] = useState(() => monthOf(value));
-  const nextDisabled = !allowFuture && (
+  const nextDisabled = (!allowFuture && (
     cursor.year > Number(today.slice(0, 4)) ||
     (cursor.year === Number(today.slice(0, 4)) && cursor.month >= Number(today.slice(5, 7)) - 1)
-  );
+  )) || (max != null && monthIndex(cursor) >= monthIndex(monthOf(max)));
+  const prevDisabled = min != null && monthIndex(cursor) <= monthIndex(monthOf(min));
+  const outside = (iso: string) => (!allowFuture && iso > today) || (min != null && iso < min) || (max != null && iso > max);
 
   useEffect(() => {
     if (!open) return;
@@ -50,9 +80,20 @@ export function DateSheet({
   }, [open, value]);
 
   function choose(iso: string) {
-    if (!allowFuture && iso > today) return;
+    if (busy || outside(iso)) return;
     setPending(iso);
     setCursor(monthOf(iso));
+  }
+
+  async function apply() {
+    if (busy || outside(pending)) return;
+    if (onApplyResult) {
+      const closed = await onApplyResult(pending);
+      if (closed) setOpen(false);
+      return;
+    }
+    onApply(pending);
+    setOpen(false);
   }
 
   return (
@@ -63,20 +104,23 @@ export function DateSheet({
       action={
         <Button
           full
-          disabled={disabled}
+          disabled={disabled || outside(pending)}
+          busy={busy}
+          aria-describedby={error ? errorId : undefined}
           onClick={() => {
-            onApply(pending);
-            setOpen(false);
+            void apply();
           }}
         >
-          בחירה
+          {applyLabel}
         </Button>
       }
     >
+      {reason != null ? <p className="t-hint ui-date-reason">{reason}</p> : null}
       {shortcuts ? (
         <div className="flex flex-wrap gap-2">
           <Chip
             pressed={pending === today}
+            kind={outside(today) ? "disabled" : "choice"}
             onClick={() => {
               choose(today);
             }}
@@ -85,6 +129,7 @@ export function DateSheet({
           </Chip>
           <Chip
             pressed={pending === shiftDays(today, -1)}
+            kind={outside(shiftDays(today, -1)) ? "disabled" : "choice"}
             onClick={() => {
               choose(shiftDays(today, -1));
             }}
@@ -96,7 +141,7 @@ export function DateSheet({
       <div className="ui-band-row">
         <IconButton
           label="חודש קודם"
-          disabled={disabled}
+          disabled={disabled || prevDisabled}
           onClick={() => {
             setCursor((current) => shiftMonth(current, -1));
           }}
@@ -121,14 +166,21 @@ export function DateSheet({
         today={today}
         value={pending}
         allowFuture={allowFuture}
+        min={min}
+        max={max}
         onPick={choose}
       />
       <p className="t-label">{dayLabel(pending)}</p>
       <p className="t-hint">
         <bdi className="ui-num" dir="ltr">{formatDisplay(pending)}</bdi>
       </p>
+      {error ? <p id={errorId} className="ui-field-message ui-date-error" role="alert">{error}</p> : null}
     </Sheet>
   );
+}
+
+function monthIndex(cursor: { year: number; month: number }): number {
+  return cursor.year * 12 + cursor.month;
 }
 
 function monthOf(iso: string): { year: number; month: number } {

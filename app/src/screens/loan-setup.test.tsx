@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -39,14 +39,20 @@ vi.mock("../lib/supabase", () => ({
       from: (table: string) => {
         if (table === "loans") {
           return {
-            insert: (row: Record<string, unknown>) => {
-              db.inserts.push(row);
-              const finish = () => ({ data: null, error: db.insertError });
-              if (db.hold) return db.hold.then(() => finish());
-              return Promise.resolve(finish());
-            },
+            insert: (row: Record<string, unknown>) => ({
+              select: () => ({
+                single: () => {
+                  db.inserts.push(row);
+                  const finish = () => ({ data: db.insertError ? null : { id: `new-${String(db.inserts.length)}` }, error: db.insertError });
+                  if (db.hold) return db.hold.then(() => finish());
+                  return Promise.resolve(finish());
+                },
+              }),
+            }),
             select: () => ({
-              eq: () => Promise.resolve({ data: db.loans, error: null }),
+              eq: () => ({
+                order: () => Promise.resolve({ data: db.loans.map((loan) => ({ kind: "amortizing", status: "open", closed_on: null, ...loan })), error: null }),
+              }),
             }),
             update: (row: Record<string, unknown>) => ({
               eq: (_column: string, id: string) => ({
@@ -72,9 +78,11 @@ vi.mock("../lib/supabase", () => ({
         }
         if (table === "loan_balances") {
           return {
-            select: () => Promise.resolve({
-              data: db.balanceError ? null : db.loans.map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
-              error: db.balanceError,
+            select: () => ({
+              eq: () => Promise.resolve({
+                data: db.balanceError ? null : db.loans.map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
+                error: db.balanceError,
+              }),
             }),
           };
         }
@@ -299,6 +307,17 @@ describe("LoanSetupForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(screen.getByText("כתבו את הסכום המקורי.")).toBeInTheDocument();
     expect(screen.getByText("כתבו את הריבית השנתית.")).toBeInTheDocument();
+  });
+
+  it("moves focus to the first field to fix on a failed שמירה (FLOW-343)", async () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
+    fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
+    const save = screen.getByRole("button", { name: "שמירה" });
+    save.focus();
+    fireEvent.click(save);
+    // The amount comes before the rate in the form, so it takes focus.
+    await waitFor(() => { expect(screen.getByLabelText("סכום מקורי")).toHaveFocus(); });
   });
 
   it("dims the kept preview while a field is incomplete, and says 0 is too small (FLOW-115)", () => {

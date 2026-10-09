@@ -549,8 +549,9 @@ export function SplitScreen({
       <h2 className="ui-split-question t-title-3">איך לפצל?</h2>
       <fieldset className="ui-split-body" disabled={busy}>
         <div className="ui-split-card" role="radiogroup" aria-label="איך לפצל?">
-          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} busy={busy && method === "equal"} disabled={busy && method !== "equal"} onSelect={() => { setMethod("equal"); }} />
-          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} disabled={busy && method !== "chosen"} onSelect={() => { setMethod("chosen"); }} />
+          {/* FLOW-343: a picked row whose sentence the footer already says drops its own copy. */}
+          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={method === "equal" ? undefined : allLine} selected={method === "equal"} busy={busy && method === "equal"} disabled={busy && method !== "equal"} onSelect={() => { setMethod("equal"); }} />
+          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={method === "chosen" ? undefined : chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} disabled={busy && method !== "chosen"} onSelect={() => { setMethod("chosen"); }} />
           <RadioRow
             marker="start"
             label="לפי הכנסות"

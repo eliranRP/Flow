@@ -72,4 +72,7 @@ export const MatchRowDark: Story = { ...dark390 };
 export const MatchRow320: Story = { ...light320 };
 /** Two loans: the picker lists both; the paid-off one is off with its reason. */
 export const Picker: Story = { args: { loanCount: 2, open: true } };
+/** FLOW-115: the only loans are in another currency, so the sheet names the line's currency. */
+export const PickerOtherCurrency: Story = { args: { lineCurrency: "ILS", open: true } };
+export const PickerOtherCurrency320Dark: Story = { args: { lineCurrency: "ILS", open: true }, globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const PickerSaving: Story = { args: { loanCount: 2, open: true, savingId: "loan-1" } };

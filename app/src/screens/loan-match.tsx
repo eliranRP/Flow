@@ -13,6 +13,7 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { RadioRow } from "../ui/radio-row";
 import { TextLink } from "../ui/text-link";
+import { currencyWord } from "../ui/investment-card";
 import { useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
@@ -116,7 +117,7 @@ export function LoanMatchOffer({
       </List>
       <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={returnFocus ? rowRef : undefined}>
         {selectableLoans.length === 0 ? (
-          <p className="t-hint">אין עדיין הלוואה.</p>
+          <p className="t-hint">{loans.length === 0 ? "אין עדיין הלוואה." : `אין הלוואה ${currencyWord(lineCurrency)}.`}</p>
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
             {selectableLoans.map((loan) => (
@@ -409,9 +410,9 @@ export function useLoanBalances(companyId: string | null) {
     queryFn: async (): Promise<LoanBalanceRow[]> => {
       const supabase = getSupabase();
       if (!supabase || companyId == null) return [];
-      const loans = await supabase.from("loans").select("id, name, currency, project_id").eq("company_id", companyId);
+      const loans = await supabase.from("loans").select("id, name, currency, project_id, principal_minor").eq("company_id", companyId);
       assertNoError(loans);
-      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency");
+      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency").eq("company_id", companyId);
       assertNoError(balances);
       const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
       const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
@@ -427,7 +428,8 @@ export function useLoanBalances(companyId: string | null) {
           id: loan.id,
           name: loan.name,
           currency: balance?.currency ?? loan.currency,
-          balanceMinor: BigInt(balance?.balance_minor ?? 0),
+          // No balance row yet (a loan saved after the view was read): nothing is paid, so the principal is left.
+          balanceMinor: BigInt(balance?.balance_minor ?? loan.principal_minor),
           flaggedParts: balance?.flagged_parts ?? 0,
           projectId: loan.project_id,
           projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),
