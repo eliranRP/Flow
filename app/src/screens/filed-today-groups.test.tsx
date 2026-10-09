@@ -84,9 +84,12 @@ describe("FiledTodayScreen by project", () => {
     expect(within(projectA).getByText("₪10,000.00")).toHaveClass("ui-income");
     expect(within(projectA).getByText("−₪4,340.50")).toBeInTheDocument();
     const projectB = screen.getByRole("group", { name: "Project B" });
-    // A one-line group's head says the count only: its total would repeat the row's amount.
+    // FLOW-347: every head takes one shape, a one-line group's too: the count, then the total.
     const headB = projectB.querySelector(".ui-month-totals");
-    expect(headB).toHaveTextContent(/^תנועה אחת$/);
+    expect(headB).toHaveTextContent(/^תנועה אחת, הוצאות −₪1,200\.00$/);
+    const none = screen.getByRole("group", { name: FILED_NO_PROJECT }).querySelector(".ui-month-totals");
+    expect(none?.firstElementChild).toHaveClass("ui-group-count");
+    expect(none).toHaveTextContent(/^תנועה אחת, הוצאות −₪25\.00$/);
   });
 
   it("keeps only the category in each row's hint", () => {

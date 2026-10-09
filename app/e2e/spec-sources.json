@@ -140,7 +140,9 @@
     ],
     "review-field-save.spec.ts": [
       "screens/review-screen.tsx",
-      "screens/review-queue.tsx"
+      "screens/review-queue.tsx",
+      "screens/change-form.tsx",
+      "ui/change-picker.tsx"
     ],
     "review-fit.spec.ts": [
       "screens/review-screen.tsx",
