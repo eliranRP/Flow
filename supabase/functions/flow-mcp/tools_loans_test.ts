@@ -202,7 +202,9 @@ Deno.test("update_loan trims the name and rejects explicit nulls before the data
   assertEquals(calls[0]?.body.p_patch, { name: "Example Bank" });
   for (const field of ["name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow"]) {
     const result = await callTool("update_loan", { idempotency_key: `up-null-${field}`, loan_id: LOAN, [field]: null }, ["write"], rpc);
-    assertEquals(result.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+    assertEquals(result.isError, true);
+    // FLOW-414: the refusal names the field.
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.message.startsWith(`${field}: `), true, field);
   }
   const blank = await callTool("update_loan", { idempotency_key: "up-blank", loan_id: LOAN, name: "   " }, ["write"], rpc);
   assertEquals(blank.isError, true);
@@ -453,7 +455,7 @@ Deno.test("update_loan sends fees_category_id, and the loan tool descriptions na
   assertEquals(cleared.isError, false);
   assertEquals(calls[1]?.body.p_patch, { fees_category_id: null });
   const bad = await callTool("update_loan", { idempotency_key: "fc-3", loan_id: LOAN, fees_category_id: "nope" }, ["write"], rpc);
-  assertEquals(bad.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+  assertEquals(bad.structuredContent, { ok: false, error: { code: "validation", message: "fees_category_id: wrong format" } });
   assertEquals(calls.length, 2);
 
   const write = toolsFor(["write"]);
@@ -499,6 +501,19 @@ Deno.test("add_loan takes the kind fields and computes each kind's payment", asy
     assertEquals(preview[0], { ...preview[0], principal_minor: 0, interest_minor: 60_000 });
   }
 
+  // FLOW-414: interest-only for the whole term (12 of 12) is allowed, with an example payment.
+  for (const payment of [undefined, "600.00"]) {
+    const whole = addLoanRpc();
+    const wholeOut = await callTool("add_loan", {
+      idempotency_key: "k-io-whole", name: "Example Hard Money", principal: "120000", annual_rate_percent: 6,
+      term_months: 12, start_date: "2026-01-01", kind: "interest_only", interest_only_months: 12,
+      ...(payment === undefined ? {} : { payment }),
+    }, ["write"], whole.rpc);
+    assertEquals(wholeOut.isError, false, JSON.stringify(wholeOut.structuredContent));
+    const wholeBody = whole.calls.find((call) => call.name === "mcp_add_loan")?.body;
+    assertEquals([wholeBody?.p_kind, wholeBody?.p_term_months, wholeBody?.p_interest_only_months], ["interest_only", 12, 12]);
+  }
+
   const balloon = addLoanRpc();
   assertEquals((await callTool("add_loan", {
     idempotency_key: "k-b", name: "Example Note", principal: "100000", annual_rate_percent: 6,
@@ -526,16 +541,23 @@ Deno.test("add_loan refuses kind fields that do not go together", async () => {
   const { calls, rpc } = addLoanRpc();
   const base = { idempotency_key: "k-bad", name: "Example Note", principal: "1000", annual_rate_percent: 5, start_date: "2026-01-01" };
   for (const [extra, message] of [
-    [{ term_months: 12, interest_only_months: 3 }, "validation"],
-    [{ term_months: 12, kind: "interest_only" }, "validation"],
-    [{ term_months: 12, kind: "balloon" }, "validation"],
+    [{ term_months: 12, interest_only_months: 3 }, "interest_only_months: only with kind interest_only"],
+    [{ term_months: 12, kind: "interest_only" }, "interest_only_months: required with kind interest_only"],
+    [{ term_months: 12, kind: "balloon" }, "amortization_months: required with kind balloon"],
     [{ term_months: 12, kind: "balloon", amortization_months: 6 }, "amortization_months"],
     [{ term_months: 12, kind: "interest_only", interest_only_months: 13 }, "interest_only_months"],
-    [{ kind: "demand", term_months: 12 }, "validation"],
-    [{ kind: "demand", payment: "10" }, "validation"],
-    [{ kind: "demand", escrow: "1" }, "validation"],
-    [{}, "validation"],
-    [{ kind: "revolving", term_months: 12 }, "validation"],
+    [{ kind: "demand", term_months: 12 }, "term_months: not with kind demand"],
+    [{ kind: "demand", payment: "10" }, "payment: not with kind demand"],
+    [{ kind: "demand", escrow: "1" }, "escrow: not with kind demand"],
+    [{}, "term_months: required unless kind is demand"],
+    [{ term_months: "12", kind: "interest_only", interest_only_months: 12 }, "term_months: expected number, received string"],
+    [{ term_months: 12, principal: "0" }, "principal: an amount above zero, at most two decimals"],
+    [{ term_months: 12, annual_rate_percent: "101" }, "annual_rate_percent: a percent from 0 to 100, at most four decimals"],
+    [{ term_months: 12, rate: 5 }, "rate: unknown field"],
+    // The bookkeeping agent's refused call (FLOW-414): a name over 80 characters.
+    [{ term_months: 12, ["bad key\u0000"]: 1 }, "a field: unknown field"],
+    [{ term_months: 12, name: `Example Hard Money \u2014 Site A/B ${"x".repeat(60)}` }, "name: Too big: expected string to have <=80 characters"],
+    [{ kind: "revolving", term_months: 12 }, 'kind: Invalid option: expected one of "amortizing"|"interest_only"|"balloon"|"demand"'],
   ] as const) {
     const out = await callTool("add_loan", { ...base, ...extra }, ["write"], rpc);
     assertEquals(out.structuredContent, { ok: false, error: { code: "validation", message } }, JSON.stringify(extra));
@@ -563,8 +585,16 @@ Deno.test("update_loan sets the kind and clears what the new kind does not have"
     { kind: "demand", term_months: 12 },
     { kind: "nope" },
   ]) {
-    assertEquals(await patchOf(bad), { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
+    const out = await patchOf(bad) as { ok: boolean; error?: { code: string } };
+    assertEquals(out.ok, false, JSON.stringify(bad));
+    assertEquals(out.error?.code, "validation", JSON.stringify(bad));
   }
+  assertEquals(await patchOf({ kind: "interest_only" }), {
+    ok: false, error: { code: "validation", message: "interest_only_months: required with kind interest_only" },
+  });
+  assertEquals(await patchOf({ kind: "demand", term_months: 12 }), {
+    ok: false, error: { code: "validation", message: "term_months: not with kind demand" },
+  });
   assertEquals(calls.length, before);
 });
 

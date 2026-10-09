@@ -11,6 +11,18 @@
   border-top: 1px solid var(--color-line);
 }
 
+/*
+ * The bar as a picture (FLOW-506): in the flow, its slots only, no safe-area space.
+ * Its own root class, so toast and action-bar lookups for .ui-tabbar never find it.
+ */
+.ui-tabbar-picture {
+  position: relative;
+  width: 100%;
+  height: var(--tabbar-content);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+}
+
 .ui-tabbar-slots {
   display: flex;
   align-items: flex-start;

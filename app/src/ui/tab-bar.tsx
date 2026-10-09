@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { addTriggerRef } from "../add-trigger";
 import { usePreviewSearch } from "../preview";
@@ -35,13 +36,57 @@ export function tabSection(pathname: string): Section | null {
   return null;
 }
 
+/** A slot's icon, its count badge, and its label: the same in the live bar and its picture. */
+function TabFace({ icon, label, badge }: { icon: ReactNode; label: string; badge?: string | null }) {
+  return (
+    <>
+      <span className="ui-tab-icon">
+        {icon}
+        {badge != null ? (
+          <span className="ui-count-badge">
+            <bdi dir="ltr">{badge}</bdi>
+          </span>
+        ) : null}
+      </span>
+      <span className="ui-tab-label">{label}</span>
+    </>
+  );
+}
+
+function countBadge(count: number): string | null {
+  if (count <= 0) return null;
+  return count > 99 ? "99+" : String(count);
+}
+
+/**
+ * The tab bar as a picture (FLOW-506): the same slots, icons and badge, with no links, no router
+ * and no add trigger. It sits in the flow, not fixed, and is hidden from assistive tech.
+ */
+export function TabBarPicture({ section = null, reviewCount = 0 }: { section?: TabSection | null; reviewCount?: number }) {
+  const current = (name: TabSection) => (section === name ? "page" : undefined);
+  return (
+    <div className="ui-tabbar-picture" aria-hidden="true">
+      <div className="ui-tabbar-slots">
+        <span className={slot} aria-current={current("home")}><TabFace icon={<HomeIcon />} label="בית" /></span>
+        <span className={slot} aria-current={current("projects")}><TabFace icon={<ProjectsIcon />} label="פרויקטים" /></span>
+        <span className={`${slot} ui-tab-slot-fab`}>
+          <span className="ui-fab">
+            <PlusIcon />
+          </span>
+        </span>
+        <span className={slot} aria-current={current("review")}><TabFace icon={<ReviewIcon />} label="לאישור" badge={countBadge(reviewCount)} /></span>
+        <span className={slot} aria-current={current("settings")}><TabFace icon={<SettingsIcon />} label="הגדרות" /></span>
+      </div>
+    </div>
+  );
+}
+
 export function TabBar({ label = "ניווט ראשי", section: pinned, reviewCount = 0, fabPressed = false, allowAdd = true }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();
   const goBack = useGoBack();
   const section = pinned === undefined ? tabSection(location.pathname) : pinned;
   const onAdd = location.pathname === "/add";
-  const badge = reviewCount > 99 ? "99+" : String(reviewCount);
   const fab = (
     <span className={fabPressed ? "ui-fab ui-fab-pressed" : "ui-fab"}>
       <PlusIcon />
@@ -51,16 +96,10 @@ export function TabBar({ label = "ניווט ראשי", section: pinned, reviewC
     <nav className="ui-tabbar" aria-label={label}>
       <div className="ui-tabbar-slots">
         <Link to={`/${search}`} className={slot} aria-current={section === "home" ? "page" : undefined}>
-          <span className="ui-tab-icon">
-            <HomeIcon />
-          </span>
-          <span className="ui-tab-label">בית</span>
+          <TabFace icon={<HomeIcon />} label="בית" />
         </Link>
         <Link to={`/projects${search}`} className={slot} aria-current={section === "projects" ? "page" : undefined}>
-          <span className="ui-tab-icon">
-            <ProjectsIcon />
-          </span>
-          <span className="ui-tab-label">פרויקטים</span>
+          <TabFace icon={<ProjectsIcon />} label="פרויקטים" />
         </Link>
         {onAdd ? (
           <button
@@ -97,21 +136,10 @@ export function TabBar({ label = "ניווט ראשי", section: pinned, reviewC
           aria-current={section === "review" ? "page" : undefined}
           aria-label={reviewCount > 0 ? reviewAwaitingLabel(reviewCount) : undefined}
         >
-          <span className="ui-tab-icon">
-            <ReviewIcon />
-            {reviewCount > 0 ? (
-              <span className="ui-count-badge">
-                <bdi dir="ltr">{badge}</bdi>
-              </span>
-            ) : null}
-          </span>
-          <span className="ui-tab-label">לאישור</span>
+          <TabFace icon={<ReviewIcon />} label="לאישור" badge={countBadge(reviewCount)} />
         </Link>
         <Link to={`/settings${search}`} className={slot} aria-current={section === "settings" ? "page" : undefined}>
-          <span className="ui-tab-icon">
-            <SettingsIcon />
-          </span>
-          <span className="ui-tab-label">הגדרות</span>
+          <TabFace icon={<SettingsIcon />} label="הגדרות" />
         </Link>
       </div>
     </nav>

@@ -390,6 +390,8 @@ export function DevCategories() {
     <CategoriesScreen
       sample={[
         { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false, count: 2 },
+        // A second visible expense category, so חומרים has somewhere to move (FLOW-347).
+        { id: "c4", name: "קבלנים", kind: "expense", hidden: false, is_default: false, count: 1 },
         { id: "c2", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
         { id: "c3", name: "עבודה", kind: "income", hidden: false, is_default: false, count: 1 },
       ]}

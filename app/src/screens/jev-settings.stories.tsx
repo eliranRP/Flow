@@ -5,6 +5,7 @@ const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "ready" };
 const on: JevCardState = { ...JEV_DEFAULT, enabled: true, status: "ready" };
 const auto: JevCardState = { ...JEV_DEFAULT, enabled: true, mode: "auto", status: "ready" };
 const noKey: JevCardState = { ...on, keyMissing: true };
+const offNoKey: JevCardState = { ...off, keyMissing: true };
 const autoOdd: JevCardState = { ...auto, threshold: 0.92 };
 const failed: JevCardState = { ...JEV_DEFAULT, status: "error" };
 const loading: JevCardState = { ...JEV_DEFAULT, status: "loading" };
@@ -33,8 +34,10 @@ export const OnDark: Story = { args: { state: on, optionsOpen: true }, ...dark39
 export const On320: Story = { args: { state: on, optionsOpen: true }, ...light320 };
 export const OnDark320: Story = { args: { state: on, optionsOpen: true }, ...dark320 };
 
-/** FLOW-704: switched on, but the server holds no Jev key. */
+/** FLOW-348 A: no Jev key on the server locks the switch off with one line, whatever was stored. */
 export const OnNoKey: Story = { args: { state: noKey }, ...light390 };
+export const OnNoKeyDark: Story = { args: { state: noKey }, ...dark390 };
+export const OffNoKey: Story = { args: { state: offNoKey }, ...light390 };
 export const OnNoKey320: Story = { args: { state: noKey }, ...light320 };
 export const OnNoKeyDark320: Story = { args: { state: noKey }, ...dark320 };
 

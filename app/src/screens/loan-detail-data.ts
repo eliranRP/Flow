@@ -182,9 +182,10 @@ export function paymentHint(payment: LoanPayment, loan: Pick<LoanDetail, "kind" 
 /**
  * The categories a part can take, as private.loan_part_category_ok allows them: an expense
  * category whose loan_part is empty or the same part (fees also take the keyed interest
- * category); interest and escrow need one counted in the P&L, principal one kept out, and
- * fees take either. The keyed category of the part itself is the default row, so it is left
- * out here. Hidden categories are left out unless the loan names one.
+ * category); principal needs one kept out of the P&L, and interest, escrow and fees take
+ * either (decision 0166: a hard-money loan's interest can stay out of profit). The keyed
+ * category of the part itself is the default row, so it is left out here. Hidden categories
+ * are left out unless the loan names one.
  */
 export function partCategoryOptions(categories: readonly LoanCategory[], part: LoanSplitPart, currentId: string | null = null): LoanCategory[] {
   return categories.filter((category) => {
@@ -195,8 +196,7 @@ export function partCategoryOptions(categories: readonly LoanCategory[], part: L
       || category.loanPart === part
       || (part === "fees" && category.loanPart === "interest");
     if (!partFits) return false;
-    if (part === "fees") return true;
-    return category.excludedFromPnl === (part === "principal");
+    return part !== "principal" || category.excludedFromPnl;
   });
 }
 

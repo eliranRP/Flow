@@ -28,6 +28,7 @@ import {
   fail,
   majorString,
   minorFromMajor,
+  named,
   minorFromMajorNonNegative,
   ok,
   ppmFromPercent,
@@ -38,7 +39,12 @@ import {
   type ToolRpc,
   WRITE_REFUSED,
 } from "./tools_args.ts";
-import { addLoanSchema, attachLoanSchema, invalid, updateLoanSchema } from "./tools_schemas.ts";
+import { addLoanSchema, attachLoanSchema, invalidFields, updateLoanSchema } from "./tools_schemas.ts";
+
+// What an amount or percent field takes, for a refusal that names it (FLOW-414).
+const ABOVE_ZERO = "an amount above zero, at most two decimals";
+const ZERO_OR_MORE = "an amount of zero or more, at most two decimals";
+const PERCENT = "a percent from 0 to 100, at most four decimals";
 
 type LoanRow = {
   id: string;
@@ -176,13 +182,13 @@ export function demandTermsOf(loan: LoanRow) {
 
 export async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = addLoanSchema.safeParse(args);
-  if (!parsed.success) return invalid(parsed.error);
+  if (!parsed.success) return invalidFields(parsed.error);
   const kind = parsed.data.kind ?? "amortizing";
-  const principalMinor = minorFromMajor(parsed.data.principal);
+  const principalMinor = named(minorFromMajor(parsed.data.principal), "principal", ABOVE_ZERO);
   if (typeof principalMinor !== "bigint") return principalMinor;
-  const ratePpm = ppmFromPercent(parsed.data.annual_rate_percent);
+  const ratePpm = named(ppmFromPercent(parsed.data.annual_rate_percent), "annual_rate_percent", PERCENT);
   if (typeof ratePpm !== "number") return ratePpm;
-  const escrowMinor = minorFromMajorNonNegative(parsed.data.escrow, 0n);
+  const escrowMinor = named(minorFromMajorNonNegative(parsed.data.escrow, 0n), "escrow", ZERO_OR_MORE);
   if (typeof escrowMinor !== "bigint") return escrowMinor;
   // A demand loan has no term and no fixed payment (decision 0132).
   let paymentMinor: bigint | null = null;
@@ -209,7 +215,7 @@ export async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc):
         return fail("validation", "validation");
       }
     } else {
-      const given = minorFromMajor(parsed.data.payment);
+      const given = named(minorFromMajor(parsed.data.payment), "payment", ABOVE_ZERO);
       if (typeof given !== "bigint") return given;
       paymentMinor = given;
     }
@@ -266,28 +272,28 @@ export async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc):
 
 export async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = updateLoanSchema.safeParse(args);
-  if (!parsed.success) return invalid(parsed.error);
+  if (!parsed.success) return invalidFields(parsed.error);
   const patch: Record<string, unknown> = {};
   if (parsed.data.name != null) patch.name = parsed.data.name;
   if (parsed.data.principal != null) {
-    const minor = minorFromMajor(parsed.data.principal);
+    const minor = named(minorFromMajor(parsed.data.principal), "principal", ABOVE_ZERO);
     if (typeof minor !== "bigint") return minor;
     patch.principal_minor = Number(minor);
   }
   if (parsed.data.annual_rate_percent != null) {
-    const ppm = ppmFromPercent(parsed.data.annual_rate_percent);
+    const ppm = named(ppmFromPercent(parsed.data.annual_rate_percent), "annual_rate_percent", PERCENT);
     if (typeof ppm !== "number") return ppm;
     patch.annual_rate_ppm = ppm;
   }
   if (parsed.data.term_months != null) patch.term_months = parsed.data.term_months;
   if (parsed.data.start_date != null) patch.start_date = parsed.data.start_date;
   if (parsed.data.payment != null) {
-    const minor = minorFromMajor(parsed.data.payment);
+    const minor = named(minorFromMajor(parsed.data.payment), "payment", ABOVE_ZERO);
     if (typeof minor !== "bigint") return minor;
     patch.payment_minor = Number(minor);
   }
   if (parsed.data.escrow != null) {
-    const minor = minorFromMajorNonNegative(parsed.data.escrow);
+    const minor = named(minorFromMajorNonNegative(parsed.data.escrow), "escrow", ZERO_OR_MORE);
     if (typeof minor !== "bigint") return minor;
     patch.escrow_minor = Number(minor);
   }
@@ -310,7 +316,7 @@ export async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRp
       patch.escrow_minor = 0;
     }
   }
-  if (Object.keys(patch).length === 0) return fail("validation", "validation");
+  if (Object.keys(patch).length === 0) return fail("validation", "arguments: nothing to change");
   const result = await rpc("mcp_update_loan", {
     p_idempotency_key: parsed.data.idempotency_key,
     p_loan_id: parsed.data.loan_id,
@@ -328,10 +334,11 @@ function hasSubCent(value: number | string): boolean {
   return /\.\d{3,}$/.test(decimalText(value).trim().replace(/[\s,]/g, ""));
 }
 
-/** An exact amount: two decimals at most, above zero when `positive`. */
-function exactMinorOf(value: number | string, positive: boolean): bigint | ToolResult {
-  if (hasSubCent(value)) return fail("validation", "validation");
-  return positive ? minorFromMajor(value) : minorFromMajorNonNegative(value);
+/** An exact amount: two decimals at most, above zero when `positive`. A refusal names `field`. */
+function exactMinorOf(value: number | string, positive: boolean, field: string): bigint | ToolResult {
+  const takes = `${positive ? ABOVE_ZERO : ZERO_OR_MORE}, not rounded`;
+  if (hasSubCent(value)) return fail("validation", `${field}: ${takes}`);
+  return named(positive ? minorFromMajor(value) : minorFromMajorNonNegative(value), field, takes);
 }
 
 function exactLoanPartsOf(parts: {
@@ -340,14 +347,14 @@ function exactLoanPartsOf(parts: {
   principal: number | string;
   fees?: number | string;
 }): ExactLoanParts | ToolResult {
-  const interest = exactMinorOf(parts.interest, false);
+  const interest = exactMinorOf(parts.interest, false, "parts.interest");
   if (typeof interest !== "bigint") return interest;
-  const escrow = exactMinorOf(parts.escrow, false);
+  const escrow = exactMinorOf(parts.escrow, false, "parts.escrow");
   if (typeof escrow !== "bigint") return escrow;
-  const principal = exactMinorOf(parts.principal, false);
+  const principal = exactMinorOf(parts.principal, false, "parts.principal");
   if (typeof principal !== "bigint") return principal;
   if (parts.fees === undefined) return { interest, escrow, principal, fees: null };
-  const fees = exactMinorOf(parts.fees, true);
+  const fees = exactMinorOf(parts.fees, true, "parts.fees");
   if (typeof fees !== "bigint") return fees;
   return { interest, escrow, principal, fees };
 }
@@ -380,11 +387,11 @@ async function principalAlreadyAttached(
 
 export async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = attachLoanSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success) return invalidFields(parsed.error);
   // Amounts are checked before anything is read: fees above zero, exact parts zero or more.
   let feesMinor = 0n;
   if (parsed.data.fees !== undefined) {
-    const fees = exactMinorOf(parsed.data.fees, true);
+    const fees = exactMinorOf(parsed.data.fees, true, "fees");
     if (typeof fees !== "bigint") return fees;
     feesMinor = fees;
   }
