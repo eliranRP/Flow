@@ -197,7 +197,7 @@ test("a preview load error returns to the empty preview", async ({ page }) => {
   await page.goto("/?preview=error");
   await page.getByRole("button", { name: "ניסיון חוזר" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
   await page.goto("/unpaid?preview=error");
   await page.getByRole("button", { name: "ניסיון חוזר" }).click();
   await expect(page).toHaveURL(/\/unpaid\?preview=1$/);
@@ -280,8 +280,10 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   expect(prefixInside).toBe(true);
 
   await page.goto("/e2e/split");
-  await page.getByRole("button", { name: "פיצול ידני" }).click();
-  const share = page.locator("input[name^='split-pct-']").first();
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
+  await page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }).getByRole("radio", { name: "%" }).click();
+  const share = page.locator("input[id^='psplit-pct-']").first();
   const shareBox = share.locator("xpath=ancestor::*[contains(@class,'ui-percent-control')]");
   await focusAt(page, shareBox, share, 0.02);
   await focusAt(page, shareBox, share, 0.5);
@@ -327,8 +329,10 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await page.goto("/e2e/project-detail?preview=1");
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "סיום הפרויקט" }).click();
-  await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toBeVisible();
-  await page.getByRole("button", { name: "אישור" }).click();
+  // FLOW-334: either way can be undone, so the confirm repeats the action and is not red.
+  const finish = page.getByRole("dialog", { name: "לסיים את הפרויקט?" });
+  await expect(finish).toBeVisible();
+  await finish.getByRole("button", { name: "סיום הפרויקט" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toHaveCount(0);
@@ -388,7 +392,7 @@ test("unpaid marks a row paid in one tap, keeps it listed, and clears the mark",
   await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
   // FLOW-335: the total sits on the start (right) side, lined up with the title, not on the end side.
   const totalBox = await page.locator(".ui-unpaid-totals bdi").first().boundingBox();
-  const titleBox = await page.getByRole("heading", { name: "חשבוניות שלא שולמו" }).boundingBox();
+  const titleBox = await page.getByRole("heading", { name: "חשבוניות פתוחות" }).boundingBox();
   expect(Math.abs((totalBox?.x ?? 0) + (totalBox?.width ?? 0) - ((titleBox?.x ?? 0) + (titleBox?.width ?? 0)))).toBeLessThan(4);
   await expect(page.getByRole("button", { name: /רענון מ־SUMIT/ })).toHaveCount(0);
   await page.getByRole("button", { name: "סימון כשולם" }).click();
@@ -528,7 +532,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
-  const overhead = page.getByRole("switch", { name: "רווח אחרי כלליות" });
+  const overhead = page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   await expect(page.getByRole("button", { name: "התנתקות" })).toHaveCount(0);
@@ -549,7 +553,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
-  await expect(page.getByRole("switch", { name: "רווח אחרי כלליות" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "הלוואות" })).toHaveCount(0);
   await page.goto("/e2e/connections?preview=1&nocompany=1");
   const sumit = page.getByRole("button", { name: "SUMIT" });
@@ -647,7 +651,7 @@ test("install, onboarding, and legal screens", async ({ page }) => {
   await page.getByRole("button", { name: "לא עכשיו" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
   await page.goto("/e2e/install-other");
-  await expect(page.getByText("שיתוף ואז הוספה למסך הבית")).toBeVisible();
+  await expect(page.getByText("בוחרים שיתוף ואז ״הוספה למסך הבית״")).toBeVisible();
   await expect(page.getByText("ההתקנה באייפון עובדת רק מספארי.")).toHaveCount(0);
   await page.getByRole("button", { name: "הבנתי" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
@@ -760,32 +764,27 @@ test("a toast dismisses on tap", async ({ page }) => {
   await expect(note).toHaveCount(0);
 });
 
-test("split choices, manual percents, and close", async ({ page }) => {
+test("split parts, units, the hold, and close", async ({ page }) => {
   await page.goto("/e2e/split");
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("בחרו איך לפצל")).toBeVisible();
-  await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
-  await page.getByRole("button", { name: "הצגת הפירוט" }).click();
-  await expect(page.getByRole("button", { name: "הסתרת הפירוט" })).toBeVisible();
-  await page.getByRole("radio", { name: "לפי הכנסות" }).click();
-  await expect(page.getByText(/לפי הכנסות · 3 פרויקטים/)).toBeVisible();
-  await page.getByRole("radio", { name: "שווה בין פרויקטים שאבחר" }).click();
-  await page.getByRole("button", { name: "שיפוץ הרצל 12" }).click();
-  await expect(page.getByRole("button", { name: "שיפוץ הרצל 12" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "פיצול ידני" }).click();
-  const field = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
+  await expect(page.getByText("נשאר לשורה")).toBeVisible();
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "שיפוץ דירה ביאליק 8 חולון" }).click();
+  await page.getByRole("radiogroup", { name: "יחידה, שיפוץ דירה ביאליק 8 חולון" }).getByRole("radio", { name: "%" }).click();
+  const field = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
   await field.fill("120");
   await expect(page.getByText("עד 100%")).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/e2e\/split$/);
-  await expect(page.getByText("עד 100%")).toBeVisible();
-  await page.getByRole("button", { name: "חזרה לאפשרויות" }).click();
-  await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toBeVisible();
-  await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
+  await expect(page.getByRole("button", { name: "ביטול השינוי" })).toBeVisible();
+  await field.fill("40");
+  await page.getByRole("button", { name: /^הסרת החלק/ }).click();
+  await expect(page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" })).toHaveCount(0);
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
+  await page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" }).fill("50");
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.locator("#e2e-split-saved")).not.toHaveText("");
-  await expect(page).toHaveURL(/\/e2e\/split$/);
-  await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/transactions\//);
 });
 

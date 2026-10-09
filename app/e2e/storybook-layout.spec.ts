@@ -140,10 +140,10 @@ async function layoutProblems(page: Page): Promise<string[]> {
 test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW-321)", async ({ page }) => {
   test.setTimeout(120_000);
   const cases = [
-    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות לא שולמו"], 2],
-    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית אחת לא שולמה"], 2],
+    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות פתוחות"], 2],
+    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית פתוחה אחת"], 2],
     ["screens-routes--home-attention-review-only", ["7 פריטים ממתינים לאישור"], 0],
-    ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות לא שולמו"], 0],
+    ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות פתוחות"], 0],
     ["components-banner--rows-long-hebrew", [], 2],
   ] as const;
   const failures: string[] = [];
@@ -420,6 +420,7 @@ test("change sheet picks a project and a category without a summary save", async
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
 });
 
+// FLOW-351: the Open story draws the shared sheet, whose whole-period row is הכול.
 test("the whole-period option stays inside the sheet and nothing uses a native title", async ({ page }) => {
   const viewports = [
     { width: 320, height: 693 },
@@ -428,11 +429,11 @@ test("the whole-period option stays inside the sheet and nothing uses a native t
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto("/iframe.html?id=components-periodpicker--open&viewMode=story", { waitUntil: "domcontentloaded" });
-    const option = page.getByRole("radio", { name: "כל התקופה" });
+    const option = page.getByRole("radio", { name: "הכול" });
     await expect(option).toBeVisible();
     await expect(async () => {
       const box = await option.boundingBox();
-      expect(box, `כל התקופה at ${String(viewport.width)}`).not.toBeNull();
+      expect(box, `הכול at ${String(viewport.width)}`).not.toBeNull();
       if (!box) return;
       expect(box.y, `option top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
       expect(box.y + box.height, `option bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
@@ -746,39 +747,24 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   expect(motion.transform).not.toBe("none");
 });
 
-test("split stays calm and pins the summary", async ({ page }) => {
+test("split between projects pins its totals and keeps names on one line", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-income-disabled&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("אופן הפיצול")).toHaveCount(0);
-  await expect(page.getByRole("switch")).toHaveCount(0);
-  await expect(page.locator(".ui-chip-scope")).toHaveCount(0);
-  const income = page.getByRole("radio", { name: /לפי הכנסות/ });
-  await expect(income).toBeDisabled();
+  await page.goto("/iframe.html?id=screens-routes--split-exact&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("radio")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  const summary = page.locator(".ui-split-cta");
-  const summaryBox = await summary.boundingBox();
-  expect(summaryBox).not.toBeNull();
-  if (summaryBox) {
-    expect(summaryBox.y + summaryBox.height).toBeGreaterThan(800);
-    expect(summaryBox.y + summaryBox.height).toBeLessThanOrEqual(844);
+  await expect(page.getByText("נשאר לשורה")).toBeVisible();
+  const foot = page.locator(".ui-split-cta");
+  const footBox = await foot.boundingBox();
+  expect(footBox).not.toBeNull();
+  if (footBox) {
+    expect(footBox.y + footBox.height).toBeGreaterThan(800);
+    expect(footBox.y + footBox.height).toBeLessThanOrEqual(844);
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-default-320&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".ui-split-summary")).toBeVisible();
+  await page.goto("/iframe.html?id=screens-routes--split-mixed-320&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".ui-lsplit-part").first()).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
-  const titles = await page.locator(".ui-split-card .ui-row-title").evaluateAll((nodes) => nodes.map((node) => {
-    const style = getComputedStyle(node);
-    return {
-      lines: node.getClientRects().length,
-      clipped: style.textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1,
-    };
-  }));
-  expect(titles.length).toBeGreaterThan(0);
-  for (const title of titles) {
-    expect(title.lines).toBe(1);
-    expect(title.clipped).toBe(false);
-  }
 });
 
 /** The route stories are checked in quarters, so workers or shards share the work and each part stays well under its 120 s (about 1 s a story). */

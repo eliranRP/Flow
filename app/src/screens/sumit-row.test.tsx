@@ -24,7 +24,11 @@ vi.mock("../lib/supabase", () => ({
       },
       signOut: () => Promise.resolve({ error: null }),
     },
-    rpc: (name: string, args?: unknown) => rpc.impl(name, args),
+    // create_company answers the new company's id, as the RPC does, unless a test says otherwise.
+    rpc: async (name: string, args?: unknown) => {
+      const answer = await rpc.impl(name, args);
+      return name === "create_company" && answer.error == null && answer.data == null ? { data: "company-1", error: null } : answer;
+    },
     functions: { invoke: () => Promise.resolve({ data: null, error: null }) },
     // Settings also reads the Jev row. A missing table answer is the off switch.
     from: () => ({

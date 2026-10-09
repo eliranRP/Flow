@@ -4,6 +4,7 @@
 // The signed pass uses the credential row. The signing key has no user identity.
 
 import { corsHeadersFor } from "../_shared/http.ts";
+import { companyHint } from "../_shared/owner.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 
@@ -412,12 +413,15 @@ async function handleMint(req: Request, deps: Deps, userId: string): Promise<Res
   const secret = mintSecret();
   const tokenHash = await hmacSecret(secret, pepper.bytes);
   const expires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+  // FLOW-601: the key is for the company the app shows (x-flow-company), when the user owns it.
+  const hint = companyHint(req);
   const stored = await rpc(deps, "store_mcp_credential", {
     p_user: userId,
     p_token_hash: tokenHash,
     p_scope: scope,
     p_pepper_kid: pepper.kid,
     p_expires_at: expires,
+    ...(hint ? { p_hint: hint } : {}),
   });
   if (stored.status >= 400) {
     const message = (stored.json as { message?: unknown } | null)?.message;

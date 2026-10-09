@@ -92,17 +92,10 @@
   min-block-size: var(--control-height);
 }
 
-.ui-setup-steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* Step 5 uses the install screen's numbered steps (FLOW-506); the step body already has the side gutter. */
+.ui-install-steps.ui-setup-steps {
   margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ui-setup-steps li {
-  min-block-size: var(--touch-min);
+  padding-inline: 0;
 }
 
 .ui-setup-card {
@@ -148,4 +141,10 @@
 
 .ui-setup-card-advanced {
   color: var(--color-text-secondary);
+}
+
+/* FLOW-502: the evening reminder card on step 5 spans the body like the steps above it. */
+.ui-setup-body .ui-prompt-card {
+  max-inline-size: none;
+  margin: var(--space-2) 0 0;
 }

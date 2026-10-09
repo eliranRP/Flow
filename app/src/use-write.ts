@@ -40,6 +40,8 @@ export function useWrite<T = void>(options: {
   success?: string | (() => string);
   failure: string | ((error: Error) => WriteFailure);
   onSuccess?: (payload: T) => void;
+  /** Runs on every failure, a toast retry's included, before the toast. */
+  onError?: (error: Error, payload: T) => void;
   /** Where לפיצול goes when the database refuses one project on a shared cost. */
   onSplit?: () => void;
   /** Runs before a retry, while the toast action is still focused. */
@@ -69,6 +71,7 @@ export function useWrite<T = void>(options: {
     },
     onError: (error, payload) => {
       const failure = error instanceof Error ? error : new Error("failed");
+      options.onError?.(failure, payload);
       if (options.silent?.(failure) === true) return;
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
       const retryable = failureRetries(reported, failure);

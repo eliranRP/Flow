@@ -54,7 +54,7 @@ function readTools() {
     toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag; category_suggested is true while the category is only a guess, and a guessed kept-out category still counts. pnl_state is in, out, or mixed: a line split by category with a part kept out, or a loan payment counted by its parts, is mixed. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
-    toolSpec("search_expenses", "Search pending review rows, filed rows, or both (income too). id is the ledger id. meta is the line's bank details (see get_expense). query matches the description, supplier or customer, in any case. Optional filters: from and to (YYYY-MM-DD, by document date, both ends included), direction (income or expense), project_id (the line's project, a share of a shared cost on it, or a split part on it; none for lines on no project), category_id (the line's category, or a split or loan split part in it; none for lines with no category and no parts), and the amount: amount finds one figure, amount_min and amount_max a range (both ends included; not with amount), each the bank amount without its sign in major units of the line's own currency, so 6245.12 finds a $6,245.12 payment or deposit. filed and all rows, newest first, also have currency, amount_gross (the signed bank amount, in minor units), amount_original, line_status, customer_name, waiting_review, kept_out, split_parts (line split parts, 0 when whole) and loan_matched. pending rows are list_review rows; with a filter they come newest first.", {
+    toolSpec("search_expenses", "Search pending review rows, filed rows, or both (income too). id is the ledger id. meta is the line's bank details (see get_expense). query matches the description, supplier or customer, in any case. Optional filters: from and to (YYYY-MM-DD, by document date, both ends included), direction (income or expense), project_id (the line's project, a share of a shared cost on it, or a split part on it; none for lines on no project), category_id (the line's category, or a split or loan split part in it; none for lines with no category and no parts; a parent category also matches its sub-categories' lines unless category_exact is true), and the amount: amount finds one figure, amount_min and amount_max a range (both ends included; not with amount), each the bank amount without its sign in major units of the line's own currency, so 6245.12 finds a $6,245.12 payment or deposit. filed and all rows, newest first, also have currency, amount_gross (the signed bank amount, in minor units), amount_original, line_status, customer_name, waiting_review, kept_out, split_parts (line split parts, 0 when whole) and loan_matched. pending rows are list_review rows; with a filter they come newest first.", {
       scope: { type: "string", enum: ["pending", "filed", "all"] },
       query: { type: "string" },
       limit: { type: "integer" },
@@ -64,6 +64,7 @@ function readTools() {
       direction: { type: "string", enum: ["income", "expense"] },
       project_id: { type: "string" },
       category_id: { type: "string" },
+      category_exact: { type: "boolean" },
       amount: { type: ["number", "string"] },
       amount_min: { type: ["number", "string"] },
       amount_max: { type: ["number", "string"] },
@@ -83,11 +84,12 @@ function readTools() {
       as_of: { type: "string" },
     }),
     syncStatusSpec(),
-    toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is cash or invoiced (default cash, like get_totals). Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default the company currency): that group's lines, newest first, in rows[] with has_more. excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part.", {
+    toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is cash or invoiced (default cash, like get_totals). Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default the company currency): that group's lines, newest first, in rows[] with has_more. excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part. level parent (with group_by category, FLOW-406) folds each sub-category into its parent: key is the parent's id and its lines are its own and its sub-categories'; the default level category keeps one group per category.", {
       direction: { type: "string", enum: ["income", "expense"] },
       from: { type: "string" },
       to: { type: "string" },
       group_by: { type: "string", enum: ["category", "project", "payer"] },
+      level: { type: "string", enum: ["category", "parent"] },
       basis: { type: "string", enum: ["cash", "invoiced"] },
       group: { type: "string" },
       currency: { type: "string" },
@@ -114,6 +116,7 @@ function readTools() {
       project_id: { type: "string" },
     }),
     toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid), and document_url: the SUMIT document link on pay.sumit.co.il (null until a sync reads it). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
+    toolSpec("list_team", "The company's team: members (the owner first, then editors and viewers, each with user_id, name from their Google profile or else the email, email, role owner, editor or viewer, and you for the token's own user), role (this user's), can_manage (true for the owner), and for the owner the pending invites (id, email, role, created_at).", {}),
   ];
 }
 
@@ -138,8 +141,9 @@ const SHARES_SPEC = {
     properties: {
       project_id: { type: "string" },
       share: { type: "integer" },
+      amount_minor: { type: "integer" },
     },
-    required: ["project_id", "share"],
+    required: ["project_id"],
     additionalProperties: false,
   },
 };
@@ -168,7 +172,7 @@ function writeTools() {
       category_id: { type: "string" },
       remember: { type: "boolean" },
     }, true),
-    toolSpec("assign_expense_split", "Split one expense across projects. Each share is a whole percent; shares must sum to 100. Optional category_id sets the category like assign_expense.", {
+    toolSpec("assign_expense_split", "Split one expense across projects. Each share is a whole percent (share; shares sum to 100) or an exact amount in cents (amount_minor; all shares then give amount_minor and sum to the line exactly: parts must sum to the line, parts exceed the line). Optional category_id sets the category like assign_expense.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },
@@ -259,6 +263,20 @@ function writeTools() {
     toolSpec("rename_company", "Rename this company. 2 to 100 characters (code points) after trimming, with no control character. Undo restores the prior name.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
+    }, true),
+    toolSpec("invite_member", "Invite someone to this company by email (owner only), as Settings → צוות → הזמנה does. role is viewer (read only, the default) or editor (can file, split and change lines, but not the team, the company's name or currency, connectors or Jev settings). No email is sent: they see the invite after signing in with Google with that email, and join or decline it. Inviting an email with a pending invite again changes its role and returns existing true (no undo). The owner's own email or a member's is refused (already a member). Returns id, email (lower case), role, status, existing and undo_kind; undo is kind invite with the invite id and cancels it while it is still pending.", {
+      idempotency_key: { type: "string" },
+      email: { type: "string" },
+      role: { type: "string", enum: ["editor", "viewer"] },
+    }, true),
+    toolSpec("set_member_role", "Change a member's role (owner only): editor or viewer. member_id is the member's user_id from list_team. Returns user_id, role, prior_role and undo_kind; undo is kind member_role with the user id, a conflict once the role changed again.", {
+      idempotency_key: { type: "string" },
+      member_id: { type: "string" },
+      role: { type: "string", enum: ["editor", "viewer"] },
+    }, true),
+    toolSpec("remove_member", "Remove a member from this company (owner only); they lose access at once. member_id is the member's user_id from list_team; the owner is not a member. Returns user_id, prior_role and undo_kind; undo is kind member_remove with the user id and adds them back with that role.", {
+      idempotency_key: { type: "string" },
+      member_id: { type: "string" },
     }, true),
     toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set. project_id (optional) files the loan under a project of this company; another company's project is refused. kind (default amortizing): interest_only needs interest_only_months (1 to term_months; those months pay interest only, then it amortizes over the months left, and when they equal the term the principal is due in the last month); balloon needs amortization_months (term_months to 600; the payment is the annuity over them and the rest is due at the term); demand takes no term_months, payment or escrow (interest accrues daily on actual/365 between payments; a 0% rate is allowed).", {
       idempotency_key: { type: "string" },
@@ -429,7 +447,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {

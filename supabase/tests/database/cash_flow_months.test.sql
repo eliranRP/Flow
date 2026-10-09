@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(66);
+select plan(71);
 
 do $users$
 begin
@@ -13,6 +13,8 @@ begin
   perform tests.create_supabase_user('cfm_other', 'cfm-other@example.com');
   perform tests.create_supabase_user('cfm_demo', 'cfm-demo@example.com');
   perform tests.create_supabase_user('cfm_viewer', 'cfm-viewer@example.com');
+  perform tests.create_supabase_user('cfm_editor', 'cfm-editor@example.com');
+  perform tests.create_supabase_user('cfm_member', 'cfm-member@example.com');
 end
 $users$;
 
@@ -400,7 +402,33 @@ select throws_ok(
   '42501', 'forbidden', 'a viewer cannot switch a category'
 );
 
--- 61-65. Another company sees and changes nothing of this one.
+-- 61-65. A team editor switches lines, not the basis; a viewer member writes nothing (0167).
+reset role;
+insert into public.company_members (company_id, user_id, role) values
+  (pg_temp.id('co'), tests.get_supabase_uid('cfm_editor'), 'editor'),
+  (pg_temp.id('co'), tests.get_supabase_uid('cfm_member'), 'viewer');
+
+select tests.authenticate_as('cfm_editor');
+select is(
+  public.set_transaction_cash(pg_temp.id('rent'), false) ->> 'in_cash_override',
+  'false',
+  'an editor switches a line'
+);
+select is(
+  public.set_transaction_cash(pg_temp.id('rent'), null) ->> 'prior_in_cash_override',
+  'false',
+  'and switches it back'
+);
+select throws_ok($$select public.set_cash_basis('invoice')$$, '42501', 'forbidden', 'an editor cannot change the basis');
+
+select tests.authenticate_as('cfm_member');
+select is(public.cash_months(1, '2026-06-15') ->> 'basis', 'paid', 'a viewer member reads the cash view');
+select throws_ok(
+  $$select public.set_transaction_cash(pg_temp.id('rent'), false)$$, '42501', 'forbidden',
+  'a viewer member cannot switch a line'
+);
+
+-- 66-70. Another company sees and changes nothing of this one.
 select tests.authenticate_as('cfm_other');
 select lives_ok($$select public.create_company('Other Example LLC', false)$$, 'another company');
 select is(
@@ -424,7 +452,7 @@ select throws_ok(
   'or its category'
 );
 
--- 66. Signed out, nothing.
+-- 71. Signed out, nothing.
 select tests.clear_authentication();
 select is(
   (select count(*)::integer from (values

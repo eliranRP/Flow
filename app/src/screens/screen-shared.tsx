@@ -70,8 +70,8 @@ export function withChoice(options: ChangeChoice[], id: string, name: string | n
   return [{ id, name }, ...options];
 }
 
-export const KEPT_OUT = "מחוץ לרווח והפסד";
-export const KEPT_OUT_SHORT = "מחוץ לרווח";
+export const KEPT_OUT = "לא נספר ברווח";
+export const KEPT_OUT_SHORT = "לא נספר ברווח";
 /** FLOW-124: a line split by category with some parts kept out. */
 export const MIXED_SHORT = "חלקית ברווח";
 

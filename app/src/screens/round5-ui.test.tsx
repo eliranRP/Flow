@@ -186,7 +186,7 @@ describe("transaction status chips", () => {
   it("shows a queued expense as waiting and an unpaid invoice as uncollected", () => {
     const { unmount } = renderTxn({ ...expense, review_status: "open", paid: false, open_gross_agorot: null });
     expect(screen.getByText("ממתין לאישור")).toBeInTheDocument();
-    expect(screen.queryByText("טרם נגבה")).not.toBeInTheDocument();
+    expect(screen.queryByText("לגבייה")).not.toBeInTheDocument();
     expect(screen.queryByText("שולם")).not.toBeInTheDocument();
     unmount();
 
@@ -200,12 +200,12 @@ describe("transaction status chips", () => {
       supplier_name: null,
     });
     expect(screen.getByText("מאושר")).toBeInTheDocument();
-    expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
+    expect(screen.getByText("לגבייה")).toBeInTheDocument();
   });
 
   it("puts the VAT on the amount's line with no minus, and no empty invoice row (FLOW-339)", () => {
     renderTxn(expense);
-    expect(screen.getByText(/^לפני מע״מ ·/)).toHaveTextContent("לפני מע״מ · מע״מ משוער ₪1,800 · 12/09/2026");
+    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · מע״מ משוער ₪1,800 · 12/09/2026");
     expect(screen.queryByText(/−₪1,800/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
     // FLOW-322: no document row or hint promises what the detail does not show (an invoice number, the bank line).
@@ -214,13 +214,13 @@ describe("transaction status chips", () => {
 
   it("names a document's VAT without a status word", () => {
     renderTxn({ ...expense, vat_status: "source" });
-    expect(screen.getByText(/^לפני מע״מ ·/)).toHaveTextContent("לפני מע״מ · מע״מ ₪1,800 · 12/09/2026");
+    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · מע״מ ₪1,800 · 12/09/2026");
     expect(screen.queryByText(/לפי המסמך/)).not.toBeInTheDocument();
   });
 
   it("hides the VAT amount when a shekel line has no VAT", () => {
     renderTxn({ ...expense, amount_gross: -1_000_000n, vat_amount: 0n, vat_status: "source" });
-    expect(screen.getByText(/^לפני מע״מ ·/)).toHaveTextContent("לפני מע״מ · 12/09/2026");
+    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · 12/09/2026");
   });
 
   it("hides VAT and invoice rows for a USD expense", () => {
@@ -260,7 +260,7 @@ describe("transaction status chips", () => {
     renderTxn({ ...expense, review_status: null, paid: null, open_gross_agorot: null });
     expect(screen.queryByText("ממתין לאישור")).not.toBeInTheDocument();
     expect(screen.queryByText("מאושר")).not.toBeInTheDocument();
-    expect(screen.queryByText("טרם נגבה")).not.toBeInTheDocument();
+    expect(screen.queryByText("לגבייה")).not.toBeInTheDocument();
     expect(screen.queryByText("שולם")).not.toBeInTheDocument();
   });
 });
@@ -371,130 +371,86 @@ describe("transaction detail pickers (FLOW-320)", () => {
   });
 });
 
-describe("split monthly rule", () => {
-  it("hides the monthly toggle and waits for a choice", () => {
-    render(
+describe("split between projects (FLOW-346)", () => {
+  function sample(props: Partial<Parameters<typeof SplitScreen>[0]> = {}) {
+    return render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
           <BooksProvider>
-          <MemoryRouter>
-            <SplitScreen
-              sampleProjects={[
-                { id: "p1", name: "חולון", incomeAgorot: 2n },
-                { id: "p2", name: "וילה", incomeAgorot: 1n },
-              ]}
-              sampleAmount={10_000n}
-              sampleMeta="מלט"
-            />
-          </MemoryRouter>
+            <MemoryRouter initialEntries={["/split"]}>
+              <Routes>
+                <Route
+                  path="/split"
+                  element={
+                    <SplitScreen
+                      sampleProjects={[
+                        { id: "a", name: "חולון" },
+                        { id: "b", name: "וילה" },
+                      ]}
+                      sampleAmount={2_866_316n}
+                      sampleMeta="מוסך"
+                      sampleRestProject="a"
+                      backTo="/back"
+                      {...props}
+                    />
+                  }
+                />
+                <Route path="/back" element={<h1>חזרה</h1>} />
+              </Routes>
+            </MemoryRouter>
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.queryByRole("switch", { name: "לפצל כך כל חודש" })).not.toBeInTheDocument();
-    expect(screen.queryByText("כלל חודשי יגיע בהמשך")).not.toBeInTheDocument();
-    expect(screen.queryByText("אופן הפיצול")).not.toBeInTheDocument();
-    expect(screen.queryByText("נותר לשייך")).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
-    const idle = screen.getByText("בחרו איך לפצל");
-    expect(idle).toBeInTheDocument();
-    expect(idle).not.toHaveClass("ui-split-summary-idle");
-    expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" }));
-    expect(screen.queryByText("בחרו איך לפצל")).not.toBeInTheDocument();
+  }
+
+  it("opens like the split by categories: the rest holds the line, no ways to choose", () => {
+    sample();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByText("איך לפצל?")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "השאר, חולון, שינוי" })).toBeInTheDocument();
+    expect(screen.getByText("הוספת חלק")).toBeInTheDocument();
+    expect(screen.getByText("נשאר לשורה")).toBeInTheDocument();
   });
 
-  it("disables save while a manual split is only partly allocated", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-          <MemoryRouter>
-            <SplitScreen
-              sampleMethod="manual"
-              sampleShares={{ p1: "40" }}
-              sampleProjects={[
-                { id: "p1", name: "חולון", incomeAgorot: 2n },
-                { id: "p2", name: "וילה", incomeAgorot: 1n },
-              ]}
-              sampleAmount={10_000n}
-              sampleMeta="מלט"
-            />
-          </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
-    expect(screen.getByText(/נשארו/)).toHaveClass("t-hint");
-    expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
+  it("leaves an untouched split without saving", async () => {
+    const onSave = vi.fn(() => undefined);
+    sample({ onSave });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
-    expect(screen.getByText(/נשארו/)).toBeInTheDocument();
-    const share = screen.getByRole("textbox", { name: "אחוז, חולון" });
-    expect(share).toHaveAttribute("autocomplete", "off");
-    expect(share.getAttribute("name") ?? "").toBe("split-pct-p1");
-    fireEvent.click(screen.getByText("וילה"));
-    expect(screen.getByRole("textbox", { name: "אחוז, וילה" })).toHaveFocus();
+    expect(await screen.findByRole("heading", { name: "חזרה" })).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("shows each typed percent of the amount, and the invalid summary, when the total is not 100%", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-          <MemoryRouter>
-            <SplitScreen
-              sampleMethod="manual"
-              sampleShares={{ a: "70", b: "50" }}
-              sampleProjects={[
-                { id: "a", name: "חולון" },
-                { id: "b", name: "וילה" },
-              ]}
-              sampleAmount={100_000n}
-              sampleMeta="חשמל"
-            />
-          </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
-    expect(screen.getByText("₪700")).toBeInTheDocument();
-    expect(screen.getByText("₪500")).toBeInTheDocument();
-    expect(screen.queryByText("₪300")).not.toBeInTheDocument();
-    expect(screen.queryByText(/−₪/)).not.toBeInTheDocument();
-    expect(screen.getByText(/צריך 100%/)).toBeInTheDocument();
+  it("saves exact cents: the part as typed, the rest on its project", async () => {
+    const onSave = vi.fn(() => undefined);
+    sample({ onSave, sampleParts: [{ projectId: "b", value: "8000" }] });
+    expect(screen.getAllByText("₪20,663.16").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום, וילה" }), { target: { value: "8000.01" } });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(onSave).toHaveBeenCalledOnce(); });
+    expect(onSave).toHaveBeenCalledWith([
+      { project_id: "b", amount_minor: 800_001 },
+      { project_id: "a", amount_minor: 2_066_315 },
+    ]);
   });
 
-  it("says an even split is shared when the shekel parts are not exactly equal", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-          <MemoryRouter>
-            <SplitScreen
-              sampleMethod="chosen"
-              sampleChosen={["a", "b", "c"]}
-              sampleProjects={[
-                { id: "a", name: "חולון" },
-                { id: "b", name: "וילה" },
-                { id: "c", name: "רעננה" },
-                { id: "d", name: "כפר סבא" },
-              ]}
-              sampleAmount={100_000n}
-              sampleMeta="חשמל"
-            />
-          </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
-    // FLOW-343: said once, in the pinned footer, not again under the picked choice.
-    expect(screen.getAllByText("₪1,000 מתפצל שווה בין 3 פרויקטים")).toHaveLength(1);
-    expect(screen.getByText("₪1,000 מתפצל שווה בין 3 פרויקטים")).toHaveClass("ui-split-summary");
-    expect(screen.queryByText(/לכל אחד מ־3/)).not.toBeInTheDocument();
+  it("holds a split past the line once, then discards it", async () => {
+    const onSave = vi.fn(() => undefined);
+    sample({ onSave, sampleParts: [{ projectId: "b", value: "30000" }] });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toBeInTheDocument();
+    expect(screen.getByText("עוברים את השורה")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByRole("heading", { name: "חזרה" })).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("saves only the shares", async () => {
+  it("names a project twice on the part", () => {
+    sample({ sampleParts: [{ projectId: "a", value: "100" }] });
+    expect(screen.getByText("הפרויקט הזה כבר בפיצול.")).toBeInTheDocument();
+  });
+
+  it("reopens a saved split and sends exact amounts to save_split", async () => {
     rpc.calls.length = 0;
     rpc.impl = (name) => {
       if (name === "get_dashboard") {
@@ -515,9 +471,9 @@ describe("split monthly rule", () => {
             prev_income_agorot: null,
             prev_expense_agorot: null,
             prev_net_agorot: null,
-            active_projects: 1,
+            active_projects: 2,
             review_count: 0,
-            projects: [project("p1", "חולון")],
+            projects: [project("p1", "חולון"), project("p2", "וילה")],
           },
           error: null,
         });
@@ -529,20 +485,25 @@ describe("split monthly rule", () => {
             description: "מלט",
             direction: "expense",
             doc_date: "2026-09-12",
-            amount_gross: -100,
-            amount_net: -100,
+            amount_gross: -10_000,
+            amount_net: -10_000,
             vat_amount: 0,
             vat_status: "unknown",
             source: "manual",
+            pnl_role: "shared",
+            project_id: null,
             project_name: null,
             category_name: null,
             supplier_name: null,
             customer_name: null,
+            allocations: [
+              { project_id: "p1", share_bp: 7000, amount_net: -7_000 },
+              { project_id: "p2", share_bp: 3000, amount_net: -3_000 },
+            ],
           },
           error: null,
         });
       }
-      if (name === "save_split") return Promise.resolve({ data: null, error: null });
       return Promise.resolve({ data: null, error: null });
     };
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -550,24 +511,29 @@ describe("split monthly rule", () => {
       <QueryClientProvider client={client}>
         <ToastProvider>
           <BooksProvider>
-          <MemoryRouter initialEntries={["/transactions/tx/split"]}>
-            <Routes>
-              <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-            </Routes>
-          </MemoryRouter>
+            <MemoryRouter initialEntries={["/transactions/tx/split"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+              </Routes>
+            </MemoryRouter>
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
+    const field = await screen.findByRole("textbox", { name: "סכום, וילה" });
+    expect(field).toHaveValue("30");
+    expect(screen.getByRole("button", { name: "השאר, חולון, שינוי" })).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: "25.5" } });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "save_split")).toBe(true);
     });
-    const saved = rpc.calls.find((call) => call.name === "save_split");
-    expect(saved?.args).toEqual({
+    expect(rpc.calls.find((call) => call.name === "save_split")?.args).toEqual({
       p_transaction_id: "tx",
-      p_shares: [{ project_id: "p1", share_bp: 10000 }],
+      p_shares: [
+        { project_id: "p2", amount_minor: 2_550 },
+        { project_id: "p1", amount_minor: 7_450 },
+      ],
     });
   });
 });

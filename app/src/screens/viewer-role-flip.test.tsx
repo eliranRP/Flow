@@ -225,14 +225,14 @@ describe("inner write gates after the role changes", () => {
 
     it("keeps a category out of profit for an owner", async () => {
       const dialog = await openMenu();
-      fireEvent.click(within(dialog).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "לא לספור ברווח" }));
       await vi.waitFor(() => { expect(rpc).toHaveBeenCalledWith("set_category_excluded_from_pnl", expect.anything()); });
     });
 
     it("writes nothing from an open menu once the role is viewer", async () => {
       const dialog = await openMenu();
       flip("viewer");
-      fireEvent.click(within(dialog).getByRole("button", { name: "מחוץ לרווח והפסד" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "לא לספור ברווח" }));
       fireEvent.click(within(dialog).getByRole("switch", { name: "נספרת בשיפוץ" }));
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(rpc).not.toHaveBeenCalled();
@@ -286,7 +286,7 @@ describe("inner write gates after the role changes", () => {
   describe("Settings switches", () => {
     it("locks the overhead and Jev switches once the role is viewer, and a tap changes nothing", () => {
       renderAt(<><SettingsScreen sample={disconnected} /><ConnectionsScreen sample={disconnected} /></>, "/settings");
-      const overhead = screen.getByRole("switch", { name: "רווח אחרי כלליות" });
+      const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
       const jev = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
       expect(overhead).toBeEnabled();
       expect(jev).toBeEnabled();

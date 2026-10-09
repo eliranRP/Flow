@@ -306,7 +306,7 @@ Guide §6.4 and §11.3. Do not use `Intl.NumberFormat('he-IL', {style:'currency'
 
 Figures read in a row get a spoken pause between them (hidden text, not a visible separator). A list that changes its grouping keeps its rows mounted where it can, so focus is not lost (FLOW-313).
 
-Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, נכנס, יצא, the comparison under those rows, the pending count, the unpaid total, and up to 5 projects (FLOW-411). [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
+Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, הכנסות, הוצאות, the comparison under those rows, the pending count, the unpaid total, and up to 5 projects (FLOW-411). [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
 
 P&L figures are before VAT. [0041](../decisions/0041-amounts-before-vat.md), [0043](../decisions/0043-assumed-vat-on-expenses.md).
 
@@ -316,7 +316,7 @@ Guide §11.1.
 
 - Short, friendly, direct, second person. One line where possible.
 - Gender-neutral: plural imperatives ("העלו") and noun buttons ("אישור", "שמירה", "ביטול"). Avoid "אתה" / "את".
-- Plain words: רווח, הכנסות, הוצאות, לא שולמו, כלליות.
+- Plain words: רווח, הכנסות, הוצאות, חשבוניות פתוחות, הוצאות כלליות. Every money word comes from the table below.
 - Splitting a line is always "פיצול" (verb לפצל, past פוצלו), never "חלוקה". Owner pick, 2026-10-08 (FLOW-328).
 - No exclamation marks, no emoji, no ALL-CAPS English.
 - Hebrew punctuation: ״ ׳, en dash with spaces, middle dot.
@@ -325,9 +325,34 @@ Guide §11.1.
 - English only in the wordmark "Flow" and the example-data tag.
 - Sample figures must show **נתוני דוגמה · Example data**. Real data must not. Guide §11.2.
 
+#### Money terms
+
+One word per idea, in plain Hebrew that an accountant would also accept. Owner pick, 2026-10-09 (glossary card, "לאשר הכול"). New copy, MCP replies and docs use these words.
+
+| Idea | Write | Not | Plain meaning |
+| --- | --- | --- | --- |
+| Profit | רווח · רווח החודש | רווח נקי | Income minus expenses, before tax. "נקי" means after tax. |
+| Cash flow | תזרים · תזרים החודש | | Money into the bank minus money out, loans included. |
+| The two rows under profit | הכנסות · הוצאות | נכנס · יצא | נכנס · יצא are for the cash view only, so the words say which view is open. |
+| Kept out of the P&L | לא נספר ברווח (on cash: לא נספר בתזרים) | מחוץ לרווח, מחוץ לרווח והפסד | A line that is not part of the profit, like a loan received or principal. |
+| Counted | נספר ברווח | ברווח והפסד | The line is part of the profit. |
+| Company overhead | הוצאות כלליות | כלליות | Company costs that belong to no single project. |
+| Basis (FLOW-103) | לפי תאריך החשבונית · לפי תאריך התשלום | בסיס מצטבר, בסיס מזומן | Which date puts a line in a month. |
+| Month not over | חודש פתוח | בתהליך | No final profit or loss yet. |
+| Margin | רווחיות | | Profit as a percent of income. |
+| ARV minus purchase and rehab | השבחה צפויה | הון מאולץ | The value the rehab adds. |
+| Value today minus loans | הון עצמי בנכס | הון נוכחי | How much of the property is yours. |
+| Purchase price | מחיר רכישה | מחיר קנייה | |
+| Customer invoices not paid yet | חשבוניות פתוחות · לגבייה | לא שולמו, טרם נגבה | Sent to a customer, no money in yet. |
+| Refund from a supplier | החזר מספק | הוצאה שהוחזרה | Lowers expenses. |
+| Refund to a customer or tenant | החזר ללקוח | הכנסה שהוחזרה | Lowers income. |
+| Loan parts | קרן · ריבית · מסים וביטוח | | Principal is not an expense. Interest and escrow are. |
+| Default income category | הכנסה מלקוחות | תקבול מלקוח | A receipt (תקבול) is any money in, a loan too. Income is what counts in profit. |
+| Loan received / owner money | קבלת הלוואה · השקעת בעלים · משיכות בעלים | תקבולי הלוואות, הון בעלים | None of these is income or an expense. |
+
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8 and 9 (2026-10-09), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11 (2026-10-09), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -381,6 +406,13 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8
 - An icon that is the same on every row may drop below 360px to give the name its line (FLOW-347).
 - A figure's tax and date ride on its one meta line ("לפני מע״מ · מע״מ ₪1,530 · 21/09/2026"). Status words show only when they change what the number means ("מע״מ משוער") (FLOW-339).
 - At 320 a pill beside an amount wraps under the amount; the amount is never cut or wrapped (FLOW-327).
+- A summary page lists one row per topic with one figure each, and each row drills down. Detail such as bars, cards and long lists lives on the row's own screen (FLOW-340 C).
+- A line that doesn't count toward profit fades its icon, name and amount wherever it is listed. Its kept-out hint keeps full muted contrast, so it still passes AA (FLOW-340 C, cycle 11).
+- A repeated head keeps one shape down a list. A short name or a single line does not move the figures (FLOW-325).
+- In a list where only some rows open, the rows that don't open keep the chevron's space, so the amounts line up (FLOW-334).
+- A row that leads to the review queue looks like Home's review row, with the inbox icon and tint, never like a list item (FLOW-334).
+- A link that writes before it navigates shows busy in place and ignores presses until the write settles. It stays put when the write fails (FLOW-325).
+- The bin icon and red mark real deletes only (FLOW-334).
 
 **Sheets and settings**
 
@@ -400,6 +432,9 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8
 - A setup step with two ways in keeps one primary button and puts the other as a full-width secondary under it, never a second primary (FLOW-503).
 - A choice between "all" and "from a date" is a two-option `SegmentedControl` with the date field under it only while the date option is on; the field reserves its message line (FLOW-505).
 - A demo or storyboard draws the shared component, or its presentational picture, never a hand-built copy (FLOW-506).
+- A sheet whose form can grow pins its main action in the sheet's foot. A destructive secondary stays in the body (FLOW-350).
+- A menu's actions are rows, not a row list plus a separate button (FLOW-334).
+- A picker row whose tap writes something says what it writes in its description. A row that can't be picked stays listed, off, and says why in the same place. Pickable rows come first (FLOW-106).
 
 **Review card and Jev**
 
@@ -409,11 +444,13 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6, 7, 8
 - When a queue card leaves with focus in its action bar, focus goes to the next card's first button, or to the empty state's action; a tap that didn't focus the bar moves nothing. The queue's blocks stay on the 8px step, trimmed only on short phones (FLOW-309).
 - Jev's fill is named with ✦ and the word Jev wherever the value shows; only "✦" when there is no room, never הצעה. With Jev on and no key, its Settings row says "אין מפתח" (FLOW-704).
 - A value an automatic job filled says who filled it and how to undo it, in one line with no reason. Turning the job off keeps that line and its undo, with no new suggestion (FLOW-331, FLOW-702).
+- A connector invoice its receipt paid shows one muted line under the amount, under the VAT line: ✓ "שולם · קבלה dd/mm", or "שולם חלקית · קבלה dd/mm" with no ✓. With no receipts there is no line. The supplier name wraps to three lines before it ends in an ellipsis (FLOW-309, #371).
 
 **Band**
 
 - The band's preset track is at most 10% white with white labels. Pressed darkens, never lightens. A label that opens a sheet ends in a 16px ▼. Home's hero explanation is "הכנסות פחות הוצאות" with no dates (FLOW-335).
 - A figure on the band stays white, a minus included. A loss is named in the label ("הפסד ..."), never by red on violet (FLOW-338).
+- A label over several currencies' figures never says רווח over a loss. When the signs differ it names both: "רווח והפסד" (FLOW-339).
 
 ---
 
@@ -486,7 +523,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Income empty: [es-07](../../design/states/es-07-categories-income-light.png).
 - Entry: Settings → קטגוריות.
 - Steps: expense and income segments. Rename, reorder, hide (23), merge (22a then 22b). Delete only when the category has no transactions. [0008](../decisions/0008-flat-categories-hide-or-merge.md).
-- Kept out of the P&L: a ⊘ mark in `--color-text-muted` right after the name (`role="img"`, label "מחוץ לרווח והפסד"). The name keeps `--color-text`, so the row does not read as hidden, and only the name truncates. A legend line under the list explains ⊘ when the segment has a kept-out row. The row sheet's third button toggles the flag on tap, with a hint line under it and a ביטול toast. The three loan categories show a locked line instead. [0106](../decisions/0106-kept-out-toggle.md).
+- Kept out of the P&L: a ⊘ mark in `--color-text-muted` right after the name (`role="img"`, label "לא נספר ברווח"). The name keeps `--color-text`, so the row does not read as hidden, and only the name truncates. A legend line under the list explains ⊘ when the segment has a kept-out row. The row sheet's third button toggles the flag on tap, with a hint line under it and a ביטול toast. The three loan categories show a locked line instead. [0106](../decisions/0106-kept-out-toggle.md).
 - Back: chevron to Settings.
 - Success: undo toast after hide or merge.
 
@@ -519,7 +556,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Mockups: [10-transaction-detail-light.png](../../design/screens/10-transaction-detail-light.png), [10-transaction-detail-dark.png](../../design/screens/10-transaction-detail-dark.png).
 - Entry: a transaction row.
 - Steps: amount before VAT, VAT beside it, source, links. [0041](../decisions/0041-amounts-before-vat.md). Assumed VAT may show a subtle hint. [0043](../decisions/0043-assumed-vat-on-expenses.md).
-- Loan split: "פיצול התשלום" lists ריבית, מסים וביטוח, קרן with a 24px icon each, amounts with a minus in the text colour, and a "סה״כ" row equal to the line. When the P&L counts by parts: "נספר ברווח <amount>" under the heading and "מחוץ לרווח" with an eye-off icon on a kept-out part. Transaction rows add "3 חלקים", or "ממתין לבדיקה" in the warning tone. [0107](../decisions/0107-loan-split-on-the-transaction.md). Mockup: [Loan split breakdown](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) option A.
+- Loan split: "פיצול התשלום" lists ריבית, מסים וביטוח, קרן with a 24px icon each, amounts with a minus in the text colour, and a "סה״כ" row equal to the line. When the P&L counts by parts: "נספר ברווח <amount>" under the heading and "לא נספר ברווח" with an eye-off icon on a kept-out part. Transaction rows add "3 חלקים", or "ממתין לבדיקה" in the warning tone. [0107](../decisions/0107-loan-split-on-the-transaction.md). Mockup: [Loan split breakdown](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) option A.
 - Split (FLOW-325): a "פיצול" section with two rows, "בין פרויקטים" (11) and "לפי קטגוריות" (11a). A line split by category lists its parts instead (category, the project in the hint, the amount and its percent at the end, "השאר · <category>" for the rest) and a "סה״כ" row, as the loan split does; a part row opens 11a. The project and category rows then say "מפוצל · N חלקים · לא נספר כאן". An open review (other than `split_mismatch`) or a loan split keeps "לפי קטגוריות" visible but off, with the reason under it; a line of zero hides it. A viewer sees the parts only.
 - Back: chevron. Delete opens 20. What delete removes is still an open question. [0030](../decisions/0030-confirmation-sheets.md).
 - Prev and next (FLOW-303): opened from a list, the top bar is Back · title · ˄ ˅ ⋯. ˄ is the row above and ˅ the row below, in the order the list showed; the chevrons are not mirrored. A move replaces the history entry, so Back returns to the list at its scroll spot. At a list end the button stays, `aria-disabled` in `disabled-text`, with a hidden hint. While a card loads or fails, ⋯ keeps its slot and the title sits under the bar. A deep link or a one-row list shows no arrows. No position on screen; screen readers hear "תנועה N מתוך M". Swipe is FLOW-314. Mockup: flow-303 option A.
@@ -544,7 +581,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - One parts card with no row hairlines. A part row: the category (and החזר on a reversal) over its project in the muted line ("<line project> · פרויקט השורה" when it has none); at the end a 2-option `%` / `₪` segmented control, the field, and under it the resolved figure (the cents for a percent, the share for an amount). A quiet ✕ removes the part. Tapping the text opens the picker on the category, then straight on the project.
 - The rest row is tinted, inside the card, read-only: "השאר · <category>", "<project> · נשאר בשורה", and the live amount and percent. A tap changes its category or project. Over the line it shows the overrun with a minus in the bad colour and "לא נשאר".
 - The resolved cents come from the server preview (`save_line_split(..., p_preview => true)`), debounced; nothing on the screen mirrors the per-part rounding. "הוספת חלק" is a text link with a plus, off at 49 parts.
-- Refunds: on an inflow the category picker adds "הוצאה שהוחזרה"; a reversal part's project line says "פרויקט · חובה בהחזר" in the error colour until a project is picked, and its project picker does not offer the line's project.
+- Refunds: on an inflow the category picker adds "החזר מספק"; a reversal part's project line says "פרויקט · חובה בהחזר" in the error colour until a project is picked, and its project picker does not offer the line's project.
 - The sticky footer shows "פוצלו" and "נשאר לשורה" (or "עוברים את השורה" in the bad colour). No שמירה: ✕ and back save a valid change and toast "הפיצול נשמר" with ביטול; an invalid one shows the hold sentence with ביטול השינוי, and a second dismiss discards. "הסרת הפיצול" is a quiet bad-coloured link under the card, behind a confirm sheet.
 - Every refusal has Hebrew copy (`app/src/line-split-copy.ts`); a reason about the line (open review, loan split, a line of zero, something changed) is a banner under the amount.
 
@@ -608,7 +645,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 ### 17 Install prompt
 
-17a stays the later Android offer: the benefit rows, התקנה, and לא עכשיו. That `beforeinstallprompt` path is also step 5, where התקנה appears only after the event. Without it, step 5 shows the three ⋮ rows. 17b stays the later iPhone offer and shares `install-screen.tsx` with step 5. Both use the iOS 26 rows: מקישים ••• בספארי, שיתוף ואז הוספה למסך הבית, מקישים הוספה. "ההתקנה באייפון עובדת רק מספארי." and "פותחים את הקישור הזה בספארי" are retired. Step 5's primary is סיום. The later offer keeps הבנתי. The Hebrew labels (•••, שיתוף, הוספה למסך הבית, Open as Web App drawn as פתיחה כאפליקציה, הוספה, and Compact, Bottom, and Top tab layouts) need a check on a real device before release. The host is `location.host`, and in production `https://flow-app-dx5.pages.dev`.
+17a stays the later Android offer: the benefit rows, התקנה, and לא עכשיו. That `beforeinstallprompt` path is also step 5, where התקנה appears only after the event. Without it, step 5 shows the three ⋮ rows. 17b stays the later iPhone offer and shares `install-screen.tsx` with step 5. Both use the iOS 26 rows: מקישים ••• בספארי, בוחרים שיתוף ואז ״הוספה למסך הבית״, מקישים הוספה. "ההתקנה באייפון עובדת רק מספארי." and "פותחים את הקישור הזה בספארי" are retired. Step 5's primary is סיום. The later offer keeps הבנתי. The Hebrew labels (•••, שיתוף, הוספה למסך הבית, Open as Web App drawn as פתיחה כאפליקציה, הוספה, and Compact, Bottom, and Top tab layouts) need a check on a real device before release. The host is `location.host`, and in production `https://flow-app-dx5.pages.dev`.
 
 - Android: [17a-install-android-light.png](../../design/screens/17a-install-android-light.png), [17a-install-android-dark.png](../../design/screens/17a-install-android-dark.png). "התקנה" / "לא עכשיו" on the later offer.
 - iPhone: [17b-install-iphone-light.png](../../design/screens/17b-install-iphone-light.png), [17b-install-iphone-dark.png](../../design/screens/17b-install-iphone-dark.png). The iOS 26 rows, then "הבנתי" on the later offer.

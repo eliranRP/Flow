@@ -85,14 +85,14 @@ export function FlowLines({
   return (
     <div className="ui-flow">
       <FlowLine
-        label="נכנס"
+        label="הכנסות"
         rows={incomeRows}
         income
         href={links?.income}
         name={links ? flowLinkName("income", links.period, incomeRows) : undefined}
       />
       <FlowLine
-        label="יצא"
+        label="הוצאות"
         rows={expenseRows}
         expense
         href={links?.expense}

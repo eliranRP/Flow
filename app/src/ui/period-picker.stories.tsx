@@ -1,28 +1,23 @@
 import { useState } from "react";
-import { fn } from "@storybook/test";
 import type { Meta, StoryObj } from "@storybook/react";
-import { allTime, type PeriodChoice } from "../period";
+import { allTime, periodPillLabel, type PeriodChoice } from "../period";
 import { PeriodPicker, PresetPeriodSheet, RangeSheet } from "./period-picker";
 import { longHebrew } from "./story-support";
 import { TopBand } from "./top-band";
 
-function Demo({ initialOpen, pill }: { initialOpen: boolean; pill: string }) {
+/** FLOW-351: the pill opens the shared sheet (FLOW-349), as Home and the breakdown do. */
+function Demo({ initialOpen, pill }: { initialOpen: boolean; pill?: string }) {
   const [open, setOpen] = useState(initialOpen);
-  const [label, setLabel] = useState(pill);
+  const [period, setPeriod] = useState<PeriodChoice>(allTime());
   return (
     <TopBand
       trailing={
         <PeriodPicker
-          pill={label}
+          pill={pill ?? periodPillLabel(period)}
           open={open}
           onOpenChange={setOpen}
-          onCustom={fn()}
-          options={[
-            { label: "החודש", hint: "ספטמבר 2026", selected: label === "החודש", onSelect: () => { setLabel("החודש"); } },
-            { label: "חודש קודם", hint: "אוגוסט 2026", selected: label === "חודש קודם", onSelect: () => { setLabel("חודש קודם"); } },
-            { label: "מתחילת השנה", hint: "2026", selected: label === "מתחילת השנה", onSelect: () => { setLabel("מתחילת השנה"); } },
-            { label: "כל התקופה", hint: "כל החשבוניות", selected: label === "כל התקופה", onSelect: () => { setLabel("כל התקופה"); } },
-          ]}
+          period={period}
+          onChange={setPeriod}
         />
       }
     />
@@ -44,11 +39,11 @@ const args = {
   options: [{ label: "כל התקופה", onSelect: () => undefined }],
 };
 
-export const Closed: Story = { args, render: () => <Demo initialOpen={false} pill="כל התקופה" /> };
+export const Closed: Story = { args, render: () => <Demo initialOpen={false} /> };
 export const Open: Story = {
   args: { ...args, open: true },
   parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <Demo initialOpen pill="כל התקופה" />,
+  render: () => <Demo initialOpen />,
 };
 export const LongHebrew: Story = { args: { ...args, pill: longHebrew }, render: () => <Demo initialOpen={false} pill={longHebrew} /> };
 export const Range: Story = {

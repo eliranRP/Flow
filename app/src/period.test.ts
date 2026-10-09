@@ -11,6 +11,7 @@ import {
   monthPeriod,
   periodFromSearch,
   periodLabel,
+  periodPillLabel,
   periodPhrase,
   periodSearch,
   presetPeriod,
@@ -91,15 +92,25 @@ describe("period labels", () => {
     expect(periodLabel(thisMonth(now), now)).toBe("החודש");
     expect(periodLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
     expect(periodLabel(presetPeriod("months3", now), now)).toBe("3 חודשים");
-    expect(heroProfitLabel(thisMonth(now), 1n, now)).toBe("רווח נקי החודש");
-    expect(heroProfitLabel(thisMonth(now), 0n, now)).toBe("רווח נקי החודש");
+    expect(heroProfitLabel(thisMonth(now), 1n, now)).toBe("רווח החודש");
+    expect(heroProfitLabel(thisMonth(now), 0n, now)).toBe("רווח החודש");
     expect(heroProfitLabel(monthPeriod("2026-09", now), -1n, now)).toBe("הפסד בספטמבר 2026");
     expect(heroProfitLabel(thisMonth(now), "mixed", now)).toBe("רווח והפסד החודש");
-    expect(heroProfitLabel(presetPeriod("months3", now), 1n, now)).toBe("רווח נקי ב־3 חודשים");
-    expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח נקי ב־2026");
-    expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח נקי בכל התקופה");
-    expect(heroProfitLabel(customRange("2026-01-01", "2026-02-01"), 1n, now)).toBe("רווח נקי בטווח שנבחר");
+    expect(heroProfitLabel(presetPeriod("months3", now), 1n, now)).toBe("רווח ב־3 חודשים");
+    expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח ב־2026");
+    expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח בכל התקופה");
+    expect(heroProfitLabel(customRange("2026-01-01", "2026-02-01"), 1n, now)).toBe("רווח בטווח שנבחר");
     expect(periodPhrase(allTime(), now, "project")).toBe("מתחילת הפרויקט");
+  });
+
+  it("names the pill with the shared sheet's row while the window ends now (FLOW-351)", () => {
+    expect(periodPillLabel(thisMonth(now), now)).toBe("חודש");
+    expect(periodPillLabel(presetPeriod("months3", now), now)).toBe("3 חודשים");
+    expect(periodPillLabel(presetPeriod("months6", now), now)).toBe("6 חודשים");
+    expect(periodPillLabel(presetPeriod("year", now), now)).toBe("שנה");
+    expect(periodPillLabel(allTime(), now)).toBe("הכול");
+    expect(periodPillLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
+    expect(periodPillLabel(customRange("2026-01-01", "2026-02-01"), now)).toBe("טווח מותאם");
   });
 
   it("explains income less expenses without the dates, and compares with the window before", () => {

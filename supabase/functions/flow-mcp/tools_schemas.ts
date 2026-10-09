@@ -26,6 +26,7 @@ export const READ_TOOL_NAMES = [
   "get_missing_bills",
   "get_expected_months",
   "list_unpaid",
+  "list_team",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -45,6 +46,9 @@ export const WRITE_TOOL_NAMES = [
   "set_category_pnl",
   "set_overhead_project",
   "rename_company",
+  "invite_member",
+  "set_member_role",
+  "remove_member",
   "add_loan",
   "update_loan",
   "attach_loan_payment",
@@ -78,12 +82,12 @@ export const ALLOWED: Record<string, Set<string>> = {
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
-  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "direction", "amount", "amount_min", "amount_max"]),
+  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "category_exact", "direction", "amount", "amount_min", "amount_max"]),
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit", "as_of"]),
   get_sync_status: new Set(["job_id"]),
-  get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
+  get_breakdown: new Set(["direction", "from", "to", "group_by", "level", "basis", "group", "currency", "excluded", "limit", "offset"]),
   get_jev_status: new Set(),
   get_jev_accuracy: new Set(["from", "to"]),
   get_profit_months: new Set(["from", "to", "basis", "project_id"]),
@@ -92,6 +96,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_missing_bills: new Set(),
   get_expected_months: new Set(["months", "project_id"]),
   list_unpaid: new Set(),
+  list_team: new Set(),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -105,6 +110,9 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
   set_overhead_project: new Set(["idempotency_key", "project_id"]),
   rename_company: new Set(["idempotency_key", "name"]),
+  invite_member: new Set(["idempotency_key", "email", "role"]),
+  set_member_role: new Set(["idempotency_key", "member_id", "role"]),
+  remove_member: new Set(["idempotency_key", "member_id"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
@@ -148,20 +156,26 @@ export const assignSchema = z.object({
   category_id: UUID_TEXT,
   remember: z.boolean().optional(),
 }).strict();
+// A share is a whole percent (share) or, since FLOW-346, an exact amount_minor (cents).
 const splitShareSchema = z.object({
   project_id: UUID_TEXT,
-  share: z.number().int().min(1).max(100),
-}).strict();
+  share: z.number().int().min(1).max(100).optional(),
+  amount_minor: z.number().int().min(1).max(99_999_999_999_999).optional(),
+}).strict().refine((item) => (item.share === undefined) !== (item.amount_minor === undefined));
 const SPLIT_SHARES = z.array(splitShareSchema).min(2).max(50);
-// Projects are unique and the whole percents sum to 100.
-function sharesAreValid(shares: { project_id: string; share: number }[]): boolean {
+// Projects are unique, and every share is one kind: whole percents that sum to 100, or exact
+// amounts (the database checks that they sum to the line).
+function sharesAreValid(shares: { project_id: string; share?: number; amount_minor?: number }[]): boolean {
   const seen = new Set<string>();
   let total = 0;
   for (const item of shares) {
-    if (seen.has(item.project_id)) return false;
-    seen.add(item.project_id);
-    total += item.share;
+    const id = item.project_id.toLowerCase();
+    if (seen.has(id)) return false;
+    seen.add(id);
+    total += item.share ?? 0;
   }
+  const amounts = shares.filter((item) => item.amount_minor !== undefined).length;
+  if (amounts > 0) return amounts === shares.length;
   return total === 100;
 }
 export const assignExpenseSplitSchema = z.object({
@@ -216,7 +230,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -237,6 +251,22 @@ function companyNameIsValid(name: string): boolean {
   const points = Array.from(name);
   return points.length >= 2 && points.length <= 100;
 }
+// FLOW-601. The database lower-cases and checks the email; this only bounds it.
+export const inviteMemberSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  email: z.string().trim().min(3).max(254),
+  role: z.enum(["editor", "viewer"]).default("viewer"),
+}).strict();
+// member_id is the member's user id from list_team (user_id is reserved for the token's identity).
+export const setMemberRoleSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  member_id: UUID_TEXT,
+  role: z.enum(["editor", "viewer"]),
+}).strict();
+export const removeMemberSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  member_id: UUID_TEXT,
+}).strict();
 export const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().transform(plainSpaces)

@@ -61,6 +61,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
 | `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
+| `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
+| `undo` `kind: "invite"` | `id` | the invite id `invite_member` returned |
+| `undo` `kind: "member_role"`, `kind: "member_remove"` | `id` | the member's user id |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -104,6 +107,8 @@ Input: `{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "basis": "cash", "from":
 
 Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `excluded_income_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `count`; FLOW-121), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `line_status`, `category`, `parts_minor`, `kept_out`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`, `status`, `closed_on`, `kind`), the loans filed under this project (FLOW-105; empty when none; `status`, `closed_on` and `kind` since [0132](../decisions/0132-loan-kinds-rates.md), as in `list_loans`). `loans` is read apart from the P&L and changes none of its numbers. `investment` (FLOW-404, [0143](../decisions/0143-project-investment.md)) is in the project's investment currency, in its minor units (cents for USD): `currency` (default `ILS`; see `set_project_investment`), `purchase_minor`, `arv_minor`, `value_minor` and `value_date` (null until set), `rehab_minor`, `rehab_by_category[]` (`category_id`, `name`, `hidden`, `amount_minor`, largest first; `category_id` and `name` null for lines with no category; the rows add up to `rehab_minor`), `rehab_other_currencies[]` (`currency`, `amount_minor`), `loan_balance_minor`, `loan_balance_other_currencies[]` (`currency`, `balance_minor`; a currency whose open loans add up to 0 is left out), `forced_equity_minor` (ARV − purchase − rehab) and `current_equity_minor` (value − loan balance). Each equity is null while a figure it needs is null, and also while rehab (forced) or an open loan (current) has a currency other than the project's, rather than leave it out. Rehab is all time on the cash basis, whatever `from`, `to` and `basis` say: posted, paid expense lines filed to the project, plus its share of shared lines, whose category counts as rehab (`list_categories` `in_rehab`, see `set_category_rehab`); the project's currency in `rehab_minor`, other currencies in `rehab_other_currencies`. A line with no category counts. A loan payment's parts, fees included, are loan parts and stay out unless the category they sit in is switched on. Rehab follows the category as stored: a line's own `set_line_pnl` switch does not change it, and a guessed kept-out category (`category_suggested`) is out of rehab even while it still counts in `direct_*`. On the overhead project rehab is 0, since its own lines count as overhead. `loan_balance_minor` sums the open loans in the project's currency filed under it; open loans in other currencies are in `loan_balance_other_currencies` and not added in. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
 
+Sub-categories (FLOW-406, [0164](../decisions/0164-sub-categories-and-groups.md)): each row of `categories`, `categories_by_currency` and `excluded_categories_by_currency` has `parent_id` (null for a top-level category), and the rows stay one per category, so they still add up to the project's cost with each line once. `category_rollups[]` (`id`, `name`, `amount_agorot`, `own_amount_agorot`, `children`, `has_shared_share`) and `category_rollups_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `own_amount_minor`, `children`, `has_shared_share`) add one row per parent with sub-categories in that list: the parent's own row plus its children's rows, with `own_*` the parent's own lines (the "בלי תת-קטגוריה" row) and `children` the number of child rows summed. `excluded_category_rollups_by_currency[]` does the same for `excluded_categories_by_currency`. Each category keeps its own P&L switch, so an in-P&L roll-up sums only the rows that are in the P&L. Roll-up rows come base currency first, then by amount. Don't add a roll-up row to the category rows; it is the same money.
+
 Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Income filed to the project that is out of the P&L (a kept-out income category, or a line taken out with `set_line_pnl`) is left out of `income_*` and listed by category in `excluded_income_by_currency`, on the same basis as `income_agorot`, in positive minor units with its line `count`. A line whose category is only a guess (`category_suggested`) counts in the P&L even when that category is kept out, until the category is confirmed; a loan category stays kept out either way ([0114](../decisions/0114-kept-out-guesses.md)). `categories`, `categories_by_currency` and `excluded_categories_by_currency` list only confirmed lines, so a guessed line is in `direct_*` but in none of the category lists until it is confirmed. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category. Each `count` in `other_currencies[]` and `pending_other_currencies[]` counts only lines in the P&L.
 
 `transactions[]` is the 40 newest lines filed to the project, shared with it, or with a part of a split by category (`split_line`) filed to it, by `doc_date`, then `created_at`, then `id`, all newest first, so the list is the same on every call. It is not the P&L. It includes lines with `line_status` `pending` (unsettled bank lines), which no total counts until they post. Each row carries its `line_status` (`pending` or `posted`), so a pending row can be told apart (FLOW-209). Each row also carries `parts_minor`: for a line split by category, the sum of its parts filed under this project (a part with no project keeps the line's project), in the line's currency, signed against the line's own kind (its category's kind, or its direction when it has no category): a part of that kind counts plus, a reversal part (the other kind) counts minus ([0138](../decisions/0138-line-split-review-followups.md)); `0` when the line is split but none of its parts is on this project (so it is still listed, holding nothing here); `null` when the line has no split by category (FLOW-312). A shared line shows its full `amount_net`, not this project's share; the share is in `shared_*`. A line in a kept-out category is listed too, with `kept_out` true: no part of it counts in this project's P&L (its category is kept out, or the owner took the line out with `set_line_pnl`). A posted line follows the P&L's own rows; a pending line follows its category and override. The app leaves `kept_out` lines out of the project page's month sums.
@@ -129,7 +134,7 @@ Output `data`: `project_id`, `today`, `this_month` (`YYYY-MM-DD`, the first day 
 - `missing`: expected is set, today is past `typical_day` and nothing came yet;
 - otherwise null.
 
-Rows come base currency first, then by currency, then by this month's cost, highest first. Amounts are positive minor units of the row's currency. A category in a group still has its own row; fold rows by `group_name` to show the group.
+Rows come base currency first, then by currency, then by this month's cost, highest first. Amounts are positive minor units of the row's currency. A category in a group still has its own row, with `parent_id` (FLOW-406). `parents[]` (`id`, `name`, `currency`, `this_month_minor`, `own_this_month_minor`, `children`, `months_minor[]`) adds one row per parent with sub-categories and currency, its own row and its children's summed month by month, for folding, base currency first. Flags stay per category.
 
 ### list_categories
 
@@ -180,7 +185,7 @@ Filters, all optional ([FLOW-323](../backlog/TASKS.md#flow-323), [0140](../decis
 - `from` and `to` (`YYYY-MM-DD`) bound the document date, both ends included.
 - `direction` is `income` or `expense`.
 - `project_id` matches the line's project, a share of a shared cost on it, or a split part on it. `none` lists lines on no project.
-- `category_id` matches the line's category, or a split or loan split part in it. `none` lists lines with no category and no parts.
+- `category_id` matches the line's category, or a split or loan split part in it. `none` lists lines with no category and no parts. A parent category also matches its sub-categories' lines (FLOW-406); `category_exact: true` matches its own lines only (with an id, not `none`).
 - `amount` finds one figure; `amount_min` and `amount_max` a range, both ends included (not together with `amount`). Each is the line's bank amount (gross) without its sign, in major units of the line's own currency: `6245.12` finds a $6,245.12 payment or deposit, and a shekel line of ₪6,245.12 too. A minimum above the maximum, a negative amount, or an `amount` of 0 is `validation` ([FLOW-211](../backlog/TASKS.md#flow-211), [0155](../decisions/0155-review-list-speed-search-amount.md)). `filed` and `all` rows also carry `amount_gross`, the signed bank amount in minor units.
 
 `query` matches the description, the supplier or the customer, in any case. `filed` and `all` rows come newest first. They also carry `currency`, `amount_original`, `line_status`, `customer_name`, `waiting_review`, `kept_out` (as in [0135](../decisions/0135-line-state-in-lists.md)), `split_parts` (the line split's part count, 0 when whole) and `loan_matched`. With a filter or a `query`, `pending` lets `search_transactions` pick the page, and the rows stay `list_review` rows, newest first. Without either, it lists `list_review` as before.
@@ -193,7 +198,7 @@ Input: `{ "scope": "all", "query": "מלט", "from": "2026-06-01", "to": "2026-0
 
 ### get_breakdown
 
-`get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. `basis` defaults to `cash`. Omit both dates for all time; one date alone is `validation`.
+`get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. `level` is `category` (default) or `parent` (FLOW-406, with `group_by` `category` only): by parent, a sub-category's lines count under its parent, so `key` is the parent's id and its `group` lines are its own and its sub-categories'. `totals` are the same either way, and the output's `group_by` reads `parent`. A line split between two sub-categories of one parent is one row in the parent's lines, with `category_name` null, as for any line split across categories. `basis` defaults to `cash`. Omit both dates for all time; one date alone is `validation`.
 
 Without `group`: output `data` is `direction`, `basis`, `group_by`, `from`, `to`, `totals[]` (`currency`, `amount_minor`, `count`), `groups[]` (`key`, `name`, `currency`, `amount_minor`, `count`, `shared`), `excluded[]` (kept-out lines, not in the totals), and `review_count`. `totals` equal `get_totals`' `income_minor` / `expense_minor`. On `cash`, an unpaid supplier invoice is left out of every row, like `get_totals`. Under `project`, `key` is a project id, `overhead`, or `unassigned`; a shared cost is split by its allocations and the project's row has `shared: true`. A null `name` means no category, payer, or project (key `none` or `unassigned`). Passing `currency`, `limit`, or `offset` here is `validation`.
 
@@ -237,7 +242,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 ### assign_expense_split
 
-Splits one expense across 2 to 50 projects. Each `shares[]` row has `project_id` and `share` (whole percent). The shares must sum to 100, projects must be unique, and each project must belong to the company. A finished project and a hidden category are accepted, so a late bill can still land on a sold property. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. The idempotency key compares the shares as a set, so the same shares in another order replay the stored response. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`, and a category that was a suggestion before the write is a suggestion again after undo.
+Splits one expense across 2 to 50 projects. Each `shares[]` row has `project_id` and either `share` (whole percent) or `amount_minor` (exact cents, FLOW-346). Percent shares must sum to 100; amount shares (every row then gives `amount_minor`) must sum to the line exactly (`parts must sum to the line`, `parts exceed the line`) and are stored to the cent. Projects must be unique, and each project must belong to the company. A finished project and a hidden category are accepted, so a late bill can still land on a sold property. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. The idempotency key compares the shares as a set, so the same shares in another order replay the stored response. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`, and a category that was a suggestion before the write is a suggestion again after undo.
 
 ```json
 {
@@ -792,6 +797,38 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 ```
 
 Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. A `parts[]` row goes back to the parts from before, or to none. A `parts[]` or `set_lines_pnl` row undoes only the batch's own write: when a later `split_line` (or `set_line_pnl`) on that line is still live, the row is `conflict` and the later write stays; undo that one first. A row whose own write was already undone is `not_found`. Batches stored before [FLOW-133](../backlog/TASKS.md#flow-133) still undo the newest write on the line. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+
+## Team · FLOW-601
+
+A company has an owner and members, each an editor or a viewer ([0167](../decisions/0167-team-members.md)). An editor's token could do every bookkeeping write here; the team, the company's name and currency, connectors and Jev settings stay the owner's. A token is for the owner's company it was made in.
+
+### list_team
+
+No arguments. Output `data`: `{ "company_id", "role", "can_manage", "members": [{ "user_id", "name", "email", "role", "you" }], "invites": [{ "id", "email", "role", "created_at" }] }`. Members list the owner first. `name` is the Google profile name, else the email. `invites` are the pending ones, and only the owner sees them.
+
+### invite_member
+
+```json
+{ "idempotency_key": "inv-1", "email": "new.member@example.com", "role": "viewer" }
+```
+
+The owner only. `role` is `viewer` (the default) or `editor`. No email is sent: the person sees the invite in the app after signing in with Google with that email, and joins or declines it there. The email is stored in lower case. The owner's or a member's email is `refused` / `already a member`; a malformed one is `refused` / `invalid email`; more than 50 pending invites is `refused` / `too many invites`. An email with a pending invite gets that invite back with the new role and `existing: true`, and no undo. Output `data`: `{ "id", "email", "role", "status": "pending", "existing", "undo_kind": "invite" }`. Undo with `kind: "invite"` and the invite id cancels it while it is still pending, else `conflict`.
+
+### set_member_role
+
+```json
+{ "idempotency_key": "role-1", "member_id": "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f", "role": "editor" }
+```
+
+The owner only. `member_id` is the member's `user_id` from `list_team` (`user_id` itself is a reserved argument). Not a member is `refused` / `member not found`. Output `data`: `{ "user_id", "role", "prior_role", "undo_kind": "member_role" }`. Undo puts `prior_role` back, a `conflict` once the role changed again.
+
+### remove_member
+
+```json
+{ "idempotency_key": "rm-1", "member_id": "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f" }
+```
+
+The owner only; the member loses access at once. Output `data`: `{ "user_id", "prior_role", "undo_kind": "member_remove" }`. Undo adds them back with that role, a `conflict` if they are a member again.
 
 ## Not in tools/list
 

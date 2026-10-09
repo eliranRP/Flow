@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { allocateLoanSplitWithFees, type LoanKind, type LoanRate, type LoanSplitPart, type LoanStatus, type TransactionLoanSplit } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, type WriteFailure } from "../use-write";
+import { readLoanPayments, type LoanCategory, type LoanPayment } from "./loan-detail-data";
 
 /**
  * FLOW-114. Every query a loan match, a split edit or an unmatch changes: the split itself,
@@ -66,6 +67,8 @@ export type LoadedMatch = {
   byParts: boolean;
   loans: LoanChoice[];
   categoryIds: Partial<Record<LoanSplitPart, string>>;
+  /** FLOW-106: each loan's attached payments (mcp_loan_payments), for the line's currency only. */
+  payments?: Record<string, LoanPayment[]>;
 };
 
 /** One part as save_loan_split takes it. Any part may name its category (decisions 0128, 0130). */
@@ -100,6 +103,10 @@ export type LoanMatchApi = {
   save: (transactionId: string, loanId: string, parts: SavePart[]) => Promise<void>;
   /** One clear_loan_split call. */
   clear: (transactionId: string) => Promise<ClearedSplit>;
+  /** FLOW-106: the categories a fees part can take, for the split editor. */
+  readCategories?: () => Promise<LoanCategory[]>;
+  /** FLOW-106: "לשמור להלוואה הזו" keeps the fees category on the loan. */
+  setFeesCategory?: (loanId: string, categoryId: string) => Promise<void>;
 };
 
 /** Sample stories hold the split locally, so a save or an unmatch shows on the card. */
@@ -125,6 +132,28 @@ export const liveLoanMatchApi: LoanMatchApi = {
     const result = await supabase.rpc("clear_loan_split", { p_transaction_id: transactionId });
     assertNoError(result);
     return parseCleared(result.data);
+  },
+  readCategories: async () => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("supabase");
+    const result = await supabase
+      .from("categories")
+      .select("id, name, kind, loan_part, excluded_from_pnl, hidden")
+      .order("sort_order");
+    assertNoError(result);
+    return (result.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      kind: row.kind,
+      loanPart: row.loan_part,
+      excludedFromPnl: row.excluded_from_pnl,
+      hidden: row.hidden,
+    }));
+  },
+  setFeesCategory: async (loanId, categoryId) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("supabase");
+    assertNoError(await supabase.from("loans").update({ fees_category_id: categoryId }).eq("id", loanId));
   },
 };
 
@@ -329,7 +358,7 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
         .eq("transaction_id", transactionId),
     supabase
       .from("loans")
-      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id, kind, interest_only_months, amortization_months, loan_rates(effective_date, annual_rate_ppm)")
+      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id, fees_category_id, kind, interest_only_months, amortization_months, loan_rates(effective_date, annual_rate_ppm)")
       .eq("company_id", companyId),
     supabase
       .from("categories")
@@ -351,6 +380,18 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
   assertNoError(balances);
   assertNoError(counted);
   const pnl = readCounted(counted.data);
+  // FLOW-106 §3.4: what one tap writes depends on the payments already attached (the catch-up
+  // installments, a demand loan's accrued interest). Only an unmatched line's match sheet needs them.
+  const payments: Record<string, LoanPayment[]> = {};
+  if ((splits.data ?? []).length === 0) {
+    const matching = (loans.data ?? []).filter((loan) => loan.currency === txn.data.currency);
+    const read = await Promise.all(matching.map(async (loan) => {
+      const result = await supabase.rpc("mcp_loan_payments", { p_loan_id: loan.id });
+      assertNoError(result);
+      return [loan.id, readLoanPayments(result.data)] as const;
+    }));
+    for (const [loanId, rows] of read) payments[loanId] = rows;
+  }
   const balanceByLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, BigInt(row.balance_minor ?? 0)]));
   const categoryIds: Partial<Record<LoanSplitPart, string>> = {};
   for (const category of categories.data ?? []) {
@@ -393,9 +434,12 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
         interest: loan.interest_category_id,
         escrow: loan.escrow_category_id,
         principal: loan.principal_category_id,
+        // Test doubles and older rows may leave it out.
+        fees: loan.fees_category_id ?? null,
       },
     })),
     categoryIds,
+    payments,
   };
 }
 

@@ -1,13 +1,14 @@
 import { projectDetailSchema } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvestmentCard, INVESTMENT_ERROR } from "../ui/investment-card";
 import { FILLED } from "../ui/investment-card.stories-support";
 import { shiftDays, israelToday } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
+import { categoryBack } from "./project-category-screen";
 import { ProjectDetailScreen } from "./project-detail-screen";
 import {
   EMPTY_HOLD,
@@ -174,11 +175,11 @@ describe("the card", () => {
 });
 
 describe("the project page", () => {
-  it("shows הון נוכחי on the overview row, and the card on its own screen (FLOW-340 C)", async () => {
+  it("shows הון עצמי בנכס on the overview row, and the card on its own screen (FLOW-340 C)", async () => {
     rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? payload() : [], error: null });
     const overview = renderPage();
     const row = await screen.findByRole("link", { name: /^השקעה/ });
-    expect(row).toHaveTextContent("הון נוכחי ₪850,000");
+    expect(row).toHaveTextContent("הון עצמי בנכס ₪850,000");
     expect(row).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment\?period=/));
     overview.unmount();
     renderPage("/projects/p1/investment");
@@ -213,8 +214,8 @@ describe("the project page", () => {
       return Promise.resolve({ data: name === "get_project" ? payload({ purchase_minor: purchase }) : [], error: null });
     };
     renderPage("/projects/p1/investment");
-    fireEvent.click(await screen.findByRole("button", { name: /מחיר קנייה/ }));
-    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "1300000" } });
+    fireEvent.click(await screen.findByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר רכישה" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("₪1,300,000")).toBeInTheDocument();
   });
@@ -223,8 +224,8 @@ describe("the project page", () => {
 describe("the edit sheet", () => {
   it("saves only the edited figure on שמירה", async () => {
     renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר קנייה/ }));
-    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "1300000" } });
+    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר רכישה" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(saves()).toHaveLength(1); });
     expect(saves()[0]?.args).toEqual({ p_project_id: "p1", p_patch: { purchase_minor: 130_000_000 } });
@@ -243,38 +244,38 @@ describe("the edit sheet", () => {
   it("keeps the sheet open on a failed save and names the figure", async () => {
     rpc.impl = () => Promise.resolve({ data: null, error: { message: "boom" } });
     renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר קנייה/ }));
-    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "1300000" } });
+    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר רכישה" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(await screen.findByText("לא הצלחנו לשמור את מחיר קנייה.")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "מחיר קנייה" })).toBeInTheDocument();
+    expect(await screen.findByText("לא הצלחנו לשמור את מחיר רכישה.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "מחיר רכישה" })).toBeInTheDocument();
   });
 
   it("says when the save is refused", async () => {
     rpc.impl = () => Promise.resolve({ data: null, error: { message: "forbidden", code: "42501" } });
     renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר קנייה/ }));
-    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "1300000" } });
+    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר רכישה" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText(INVESTMENT_REFUSED)).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "מחיר קנייה" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "מחיר רכישה" })).toBeInTheDocument();
   });
 
   it("holds an emptied figure on the first close and discards it on the second", async () => {
     renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר קנייה/ }));
-    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "מחיר רכישה" }), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(await screen.findByText(EMPTY_HOLD)).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "מחיר קנייה" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "מחיר רכישה" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    await waitFor(() => { expect(screen.queryByRole("textbox", { name: "מחיר קנייה" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("textbox", { name: "מחיר רכישה" })).not.toBeInTheDocument(); });
     expect(saves()).toHaveLength(0);
   });
 
   it("clears a figure with null on מחיקה", async () => {
     renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר קנייה/ }));
+    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.click(await screen.findByRole("button", { name: "מחיקה" }));
     await waitFor(() => { expect(saves()).toHaveLength(1); });
     expect(saves()[0]?.args).toEqual({ p_project_id: "p1", p_patch: { purchase_minor: null } });
@@ -351,9 +352,39 @@ describe("the rehab sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
     expect(await screen.findByText("לא נספרות בשיפוץ")).toBeInTheDocument();
     expect(screen.getByText("בלי קטגוריה")).toBeInTheDocument();
-    expect(screen.getByText("מחוץ לרווח והפסד")).toBeInTheDocument();
+    expect(screen.getByText("לא נספר ברווח")).toBeInTheDocument();
     expect(screen.getByText("חלק מתשלום הלוואה")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "מה נספר בשיפוץ? בהגדרות הקטגוריות" })).toHaveAttribute("href", "/settings/categories");
+  });
+
+  it("opens a counted category's lines all time on the cash basis (FLOW-404)", async () => {
+    serveRehab();
+    renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    const materials = await screen.findByRole("link", { name: /חומרים/ });
+    expect(materials).toHaveAttribute("href", "/projects/p1/categories/c-mat?period=all&basis=cash");
+    // A line with no category opens nothing, and keeps the chevron's space so the amounts line up.
+    const none = screen.getByText("בלי קטגוריה").closest(".ui-row");
+    expect(none?.tagName).not.toBe("A");
+    expect(none?.querySelector(".ui-row-chevron-space")).not.toBeNull();
+  });
+
+  it("brings Back from the lines to the investment screen on its period", async () => {
+    serveRehab();
+    function BackProbe() {
+      const location = useLocation();
+      return <p data-testid="back">{categoryBack("p1", "", location.state)}</p>;
+    }
+    wrap(
+      <Routes>
+        <Route path="/projects/:projectId/investment" element={<ProjectInvestmentSection project={parsed()} />} />
+        <Route path="/projects/:projectId/categories/:categoryId" element={<BackProbe />} />
+      </Routes>,
+      "/projects/p1/investment?period=month&at=2026-09",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /חומרים/ }));
+    expect(await screen.findByTestId("back")).toHaveTextContent("/projects/p1/investment?period=month&at=2026-09");
   });
 
   it("says loading while it reads", async () => {
@@ -439,7 +470,7 @@ describe("investment helpers", () => {
     ];
     const result = rehabBreakdown(rows, categories, "ILS", 1_000n);
     expect(result.counted.map((line) => [line.name, line.minor])).toEqual([["חומרים", 900n], ["בלי קטגוריה", 100n]]);
-    expect(result.left).toEqual([expect.objectContaining({ name: "רכישת נכס", reason: "מחוץ לרווח והפסד" })]);
+    expect(result.left).toEqual([expect.objectContaining({ name: "רכישת נכס", reason: "לא נספר ברווח" })]);
     expect(result.addsUp).toBe(true);
     expect(rehabBreakdown(rows, categories, "ILS", 999n).addsUp).toBe(false);
   });

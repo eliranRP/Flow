@@ -59,9 +59,11 @@
 }
 
 /* FLOW-347: under 360px the bank icon (the same on every row) gives its 36px to the name, so a
-   short name like "משכנתא דוגמה" stays on one line next to its balance. */
+   short name like "משכנתא דוגמה" stays on one line next to its balance. The הלוואה חדשה row
+   drops its icon too, so its words start on the same edge as the names above (FLOW-351). */
 @media (max-width: 359px) {
-  .ui-loan-list .ui-row-icon {
+  .ui-loan-list .ui-row-icon,
+  .ui-loan-new .ui-row-icon {
     display: none;
   }
 }
@@ -148,6 +150,17 @@
   overflow-wrap: anywhere;
   text-overflow: clip;
   white-space: normal;
+}
+
+/* A list whose row names are their identity (a customer or a supplier): the name wraps up to two
+   lines, then ends in an ellipsis (DESIGN-RULES: names wrap before they truncate). */
+.ui-list-wrap-title .ui-row-title {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* A transaction row's secondary line: one line, cut at its end (design lead, FLOW-125 review). */

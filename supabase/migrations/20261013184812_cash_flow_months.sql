@@ -544,12 +544,10 @@ declare
   cid uuid;
   prior boolean;
 begin
-  -- The owner's own company comes first, so an owner who is also listed as a viewer is not refused.
+  -- An owner or an editor writes (decision 0167); a viewer member or the demo viewer is refused.
   cid := private.current_company_id();
   if cid is null then
-    if exists (
-      select 1 from public.company_viewers v where v.user_id = (select auth.uid())
-    ) then
+    if private.is_read_only() then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';
@@ -583,9 +581,7 @@ declare
 begin
   cid := private.current_company_id();
   if cid is null then
-    if exists (
-      select 1 from public.company_viewers v where v.user_id = (select auth.uid())
-    ) then
+    if private.is_read_only() then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';
@@ -620,11 +616,10 @@ declare
   cid uuid;
   prior text;
 begin
-  cid := private.current_company_id();
+  -- A company setting, like the currency: the owner's only. An editor or a viewer is refused.
+  cid := private.owner_company_id();
   if cid is null then
-    if exists (
-      select 1 from public.company_viewers v where v.user_id = (select auth.uid())
-    ) then
+    if private.readable_company_id() is not null then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';

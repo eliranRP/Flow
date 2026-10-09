@@ -130,7 +130,7 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספת חלק" }));
     const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     // FLOW-333 C3c: on a refund line the reversal section starts open.
-    expect(within(sheet).getByRole("button", { name: "הוצאה שהוחזרה" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(sheet).getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
     const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
@@ -482,9 +482,10 @@ describe("the project split on a line split by category (FLOW-325)", () => {
                     <SplitScreen
                       sampleAmount={100_000n}
                       sampleProjects={[
-                        { id: "p1", name: "פרויקט הרצליה", incomeAgorot: 1n },
-                        { id: "p2", name: "פרויקט רעננה", incomeAgorot: 1n },
+                        { id: "p1", name: "פרויקט הרצליה" },
+                        { id: "p2", name: "פרויקט רעננה" },
                       ]}
+                      sampleParts={[{ projectId: "p2", value: "250" }]}
                       backTo="/back"
                       onSave={onSave}
                     />
@@ -497,7 +498,7 @@ describe("the project split on a line split by category (FLOW-325)", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, פרויקט רעננה" }), { target: { value: "300" } });
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
       await Promise.resolve();

@@ -26,7 +26,7 @@ The owner asked for a monthly view of all money in and out (FLOW-413), and made 
    - `cash_month_lines(p_month, p_side 'in'|'out'|'excluded', p_currency, p_limit, p_offset)`: the lines behind a figure, newest first, in `get_breakdown_lines`' row shape plus `side` and `cash_month_date`. A line split's parts on one side are one row; a loan payment has a row per part.
    - `list_categories` returns `in_cash`; `get_transaction` returns `in_cash_override` and `cash_state` (in, out, or mixed for a line split across categories in and out). `cash_state` describes the line's switch; it does not say the line shows in a given month (an income invoice is never cash on the paid basis).
    - Both reads take the signed-in company (owner, or a viewer of a demo company), like `get_breakdown`.
-6. **Writes**, owner only, each returning the prior value for ביטול: `set_category_cash(p_category_id, p_in_cash)`, `set_transaction_cash(p_id, p_in_cash | null)`, `set_cash_basis(p_basis)`.
+6. **Writes**, each returning the prior value for ביטול: `set_category_cash(p_category_id, p_in_cash)` and `set_transaction_cash(p_id, p_in_cash | null)` for the owner or an editor (bookkeeping, [0167](0167-team-members.md)); `set_cash_basis(p_basis)` for the owner only, a company setting like the currency. A viewer writes nothing.
 7. **Nothing is converted.** Each currency is its own row, as in the P&L (0146).
 
 ## Alternatives rejected

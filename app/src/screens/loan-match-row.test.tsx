@@ -209,9 +209,12 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     const dialog = await openSheet();
     fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4000" } });
     // The amount sits in its own LTR span (bdi).
-    expect(dialog.querySelector(".ui-loan-parts-problem")).toHaveTextContent("הסה״כ צריך להיות ₪6,200.");
-    expect(dialog.querySelector(".ui-loan-parts-problem bdi")).toHaveTextContent("₪6,200");
+    // FLOW-115: the line prints only the difference, in its own LTR span (bdi).
+    expect(dialog.querySelector(".ui-loan-parts-problem")).toHaveTextContent("חסרים ₪150 כדי להגיע לסכום השורה.");
+    expect(dialog.querySelector(".ui-loan-parts-problem bdi")).toHaveTextContent("₪150");
     expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4300" } });
+    expect(dialog.querySelector(".ui-loan-parts-problem")).toHaveTextContent("יש ₪150 יותר מסכום השורה.");
   });
 
   it("toasts the server's balance check and keeps the sheet and its values", async () => {
@@ -387,7 +390,44 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     const dialog = await openSheet();
     // 6,200 less the 40 fees: interest 1,630 and escrow 380 as scheduled; principal takes the rest.
     await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
-    expect(within(dialog).getByText("סכום השורה השתנה. בדקו את החלקים ושמרו.")).toBeInTheDocument();
+    // FLOW-115: the waiting line says why and prints only the change.
+    expect(within(dialog).getByText("סכום השורה עלה ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו.")).toBeInTheDocument();
+  });
+
+  it("says a correction failed in its own words and reads the parts again (FLOW-115)", async () => {
+    db.splits = STORED.map((part) => ({ ...part, needs_review: true, ...(part.part === "principal" ? { amount_minor: 405_000 } : {}) }));
+    db.saveError = { message: "boom" };
+    renderRow({ split: { ...SPLIT, needs_review: true } });
+    const dialog = await openSheet();
+    await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
+    const reads = db.reads.filter((table) => table === "loan_splits").length;
+    fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("לא הצלחנו לשמור את התיקון.")).toBeInTheDocument();
+    await waitFor(() => { expect(db.reads.filter((table) => table === "loan_splits").length).toBeGreaterThan(reads); });
+  });
+
+  it("keeps what was typed when a correction fails (FLOW-115)", async () => {
+    db.splits = STORED.map((part) => ({ ...part, needs_review: true, ...(part.part === "principal" ? { amount_minor: 405_000 } : {}) }));
+    db.saveError = { message: "התשלום גבוה מיתרת ההלוואה", code: "P0001" };
+    renderRow({ split: { ...SPLIT, needs_review: true } });
+    const dialog = await openSheet();
+    await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
+    fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4100" } });
+    fireEvent.change(within(dialog).getByLabelText("סכום, ריבית"), { target: { value: "1680" } });
+    const reads = db.reads.filter((table) => table === "loan_splits").length;
+    fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(db.reads.filter((table) => table === "loan_splits").length).toBeGreaterThan(reads); });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,100");
+    expect(within(dialog).getByLabelText("סכום, ריבית")).toHaveValue("1,680");
+  });
+
+  it("keeps the usual failure words on a split that does not wait for review", async () => {
+    db.saveError = { message: "boom" };
+    renderRow();
+    const dialog = await openSheet();
+    fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("לא הצלחנו לשמור את הפיצול.")).toBeInTheDocument();
   });
 
   it("corrects a flagged split again on every open", async () => {
@@ -459,7 +499,7 @@ describe("the transaction card with a matched payment", () => {
     showLive();
     await screen.findByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ });
     expect(await screen.findByText("לפי חלקי ההלוואה")).toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /ברווח והפסד/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /נספר ברווח/ })).not.toBeInTheDocument();
   });
 
   it("gives a viewer the row and a read-only sheet", async () => {

@@ -1,12 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type RefObject } from "react";
-import {
-  allocateLoanSplit,
-  buildLoanSchedule,
-  loanTakesPaymentOn,
-  scheduleRowForDate,
-  type TransactionLoanSplit,
-} from "@flow/shared";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon } from "../ui/icons";
 import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
@@ -26,8 +20,9 @@ import {
   useLoanSplitView,
   type LoadedMatch,
   type LoanChoice,
-  type SavePart,
 } from "./loan-match-api";
+import { loanOffer, sortedOffers, type LoanOffer } from "./loan-match-offer";
+import { LoanSplitEditor, type LoanSplitSave } from "./loan-split-editor";
 
 export type LoanBalanceRow = {
   id: string;
@@ -50,8 +45,14 @@ export const LOAN_ROW_CLASS_NAME = "ui-loan-row";
  * "may". Saving the split runs the balance check again.
  */
 export const LOAN_BUSY_HINT = "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. שמירת הפיצול תבדוק את היתרה מחדש.";
-/** The re-sync flagged the parts because the line's amount changed; the client can tell this one apart. */
-export const LOAN_AMOUNT_CHANGED_HINT = "סכום השורה השתנה. בדקו את החלקים ושמרו.";
+/**
+ * The re-sync flagged the parts because the line's amount changed; the client can tell this one apart.
+ * FLOW-115: the line says why and prints only the change, not both amounts.
+ */
+export function loanAmountChangedHint(changeMinor: bigint, currency: string): string {
+  const change = showMoney(changeMinor < 0n ? -changeMinor : changeMinor, currency);
+  return `סכום השורה ${changeMinor < 0n ? "ירד" : "עלה"} ב־${change}, אז החלקים צריכים בדיקה. בדקו ושמרו.`;
+}
 
 function asCurrency(currency: string): LoanCurrency | null {
   if (currency === "ILS" || currency === "USD") return currency;
@@ -79,7 +80,9 @@ export function LoanMatchOffer({
   matchButtonRef,
   readOnly = false,
   returnFocus = true,
+  offers,
   onMatch,
+  onOther,
 }: {
   lineCurrency: string;
   loans: readonly LoanChoice[];
@@ -93,13 +96,22 @@ export function LoanMatchOffer({
   readOnly?: boolean;
   /** False once a match landed: focus goes to the new loan row, not back to this one. */
   returnFocus?: boolean;
+  /** FLOW-106 §3.4: what one tap writes per loan, or why the loan cannot take the line. */
+  offers?: readonly LoanOffer[];
   onMatch: (loanId: string) => void;
+  /** FLOW-106: "חלוקה אחרת" (fees, several installments, exact parts) opens the split editor. */
+  onOther?: () => void;
 }) {
   const setSheet = onSheetOpenChange;
   const localRowRef = useRef<HTMLButtonElement>(null);
   const rowRef = matchButtonRef ?? localRowRef;
   if (readOnly) return null;
-  const selectableLoans = loans.filter((loan) => loan.currency === lineCurrency);
+  const inCurrency = loans.filter((loan) => loan.currency === lineCurrency);
+  const byId = new Map((offers ?? []).map((offer) => [offer.loanId, offer]));
+  const order = offers == null ? null : sortedOffers(offers).map((offer) => offer.loanId);
+  const selectableLoans = order == null
+    ? inCurrency
+    : [...inCurrency].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   return (
     <>
       <List>
@@ -125,15 +137,28 @@ export function LoanMatchOffer({
                 key={loan.id}
                 layout="picker"
                 label={loan.name}
+                description={byId.get(loan.id)?.description}
                 busy={loan.id === savingId}
+                value={loan.id}
                 disabled={savingId != null && loan.id !== savingId}
-                disabledReason={loan.balanceMinor <= 0n ? "ההלוואה נפרעה" : undefined}
+                disabledReason={byId.get(loan.id)?.disabledReason ?? (loan.balanceMinor <= 0n ? "ההלוואה נפרעה" : undefined)}
                 selected={false}
                 onSelect={() => { onMatch(loan.id); }}
               />
             ))}
           </div>
         )}
+        {onOther != null && (offers ?? []).some((offer) => offer.parts != null) ? (
+          <TextLink
+            className="ui-loan-other"
+            tone="quiet"
+            chevron={false}
+            disabled={savingId != null}
+            onClick={onOther}
+          >
+            חלוקה אחרת
+          </TextLink>
+        ) : null}
       </Sheet>
     </>
   );
@@ -320,14 +345,51 @@ export function LoanTransactionSplit({
   // category offers it once they have (FLOW-134).
   const keyedPrincipal = direction !== "income" && loanPart === "principal";
   const [sheetOpen, setSheetOpen] = useState(false);
-  const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
+  // FLOW-115: Back waits for a save too, like ✕ and Escape below. `match` is read when Back runs.
+  const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen, () => !match.isPending);
   const matchRowRef = useRef<HTMLButtonElement>(null);
   const [handedOff, setHandedOff] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const setEditor = useSheetHistory("loan-split-editor", editorOpen, setEditorOpen);
   const query = useLoanMatchRead(transactionId, split, on && !writesHeld);
+  // FLOW-115: after a retry lands, focus moves from the retry link (now gone) to the שיוך row.
+  const retried = useRef(false);
+  useEffect(() => {
+    if (!retried.current || !query.isSuccess) return;
+    retried.current = false;
+    matchRowRef.current?.focus({ preventScroll: true });
+  }, [query.isSuccess, query.dataUpdatedAt]);
+  const categories = useQuery({
+    queryKey: ["categories", "loan-parts"],
+    enabled: editorOpen && api.readCategories != null,
+    retry: false,
+    queryFn: () => (api.readCategories ?? (() => Promise.resolve([])))(),
+  });
+  const other = useWrite<LoanSplitSave>({
+    failure: failureText,
+    success: "התשלום שויך להלוואה",
+    keys: [...LOAN_WRITE_KEYS, "categories"],
+    onSuccess: () => {
+      setHandedOff(true);
+      setEditor(false);
+      focusLoanRow();
+    },
+    run: async ({ loanId, parts, keepFeesCategoryId }) => {
+      if (writesHeld) throw new Error("preview");
+      if (keepFeesCategoryId != null) await api.setFeesCategory?.(loanId, keepFeesCategoryId);
+      await api.save(transactionId, loanId, parts);
+    },
+  });
   const match = useWrite<string>({
     failure: failureText,
     success: "התשלום שויך להלוואה",
     keys: LOAN_WRITE_KEYS,
+    // FLOW-115: on a failure, a toast retry's included, focus goes back to the loan that was tapped,
+    // still in the sheet. The busy mark may already be gone, so the row is found by its loan id.
+    onError: (_error, loanId) => {
+      const row = document.querySelector<HTMLElement>(`.ui-pick-row[data-value="${CSS.escape(loanId)}"]`);
+      (row ?? matchRowRef.current)?.focus({ preventScroll: true });
+    },
     onSuccess: () => {
       setHandedOff(true);
       setSheet(false);
@@ -339,7 +401,10 @@ export function LoanTransactionSplit({
       if (!loaded) throw new Error("supabase");
       const loan = loaded.loans.find((item) => item.id === loanId);
       if (!loan) throw new Error("supabase");
-      await api.save(transactionId, loan.id, matchParts(docDate, loaded, loan));
+      if (loan.currency !== loaded.currency) throw new Error("loan_split_currency");
+      const parts = offerFor(loaded, loan, transactionId, docDate).parts;
+      if (parts == null) throw new Error("date");
+      await api.save(transactionId, loan.id, parts);
     },
   });
   // A viewer cannot match, and a matched line shows as the category row instead.
@@ -354,7 +419,13 @@ export function LoanTransactionSplit({
       <LoanReadError
         label="שיוך להלוואה"
         busy={query.isFetching}
-        onRetry={() => { void query.refetch(); }}
+        onRetry={() => {
+          retried.current = true;
+          void query.refetch().then((result) => {
+            // A retry that fails again must not pull focus on a later background success.
+            if (result.isError) retried.current = false;
+          });
+        }}
       />
     );
   }
@@ -364,13 +435,19 @@ export function LoanTransactionSplit({
   const offerMatch = keyedPrincipal
     || (categoryId != null && loaded.loans.some((item) => item.categoryIds?.principal === categoryId));
   if (!offerMatch) return null;
-  // A paid-off or closed loan is offered only for payments on or before the day it ended.
-  // A demand loan has no schedule to split by; MCP attach_loan_payment splits it (0132).
-  const offered = loaded.loans.filter((item) => loanTakesPaymentOn(item, docDate) && item.kind !== "demand");
+  // FLOW-106 §3.4: every loan in the line's currency shows. One that cannot take the line (closed
+  // before its date, paid off, a demand loan with a later payment) is disabled with the reason.
   const lineCurrency = loaded.currency;
+  const offered = loaded.loans;
+  const offers = offered
+    .filter((item) => item.currency === lineCurrency)
+    .map((item) => offerFor(loaded, item, transactionId, docDate));
   const matchHint = loanMatchHint(offered, lineCurrency);
   const savingId = match.isPending ? match.variables : null;
+  const pickable = offers.filter((offer) => offer.parts != null)
+    .flatMap((offer) => loaded.loans.filter((item) => item.id === offer.loanId));
   return (
+    <>
     <LoanMatchOffer
       lineCurrency={lineCurrency}
       loans={offered}
@@ -379,21 +456,37 @@ export function LoanTransactionSplit({
       savingId={savingId}
       sheetOpen={sheetOpen}
       onSheetOpenChange={(next) => {
+        // FLOW-115: a dismiss during the save waits for it, as the parts sheet does (0075).
+        if (!next && match.isPending) return;
         if (next) setHandedOff(false);
         setSheet(next);
       }}
       returnFocus={!handedOff}
       matchButtonRef={matchRowRef}
+      offers={offers}
+      onOther={() => {
+        setSheet(false);
+        setEditor(true);
+      }}
       onMatch={(loanId) => {
         if (match.isPending) return;
-        match.mutate(loanId, {
-          onError: () => {
-            const row = document.querySelector<HTMLElement>(".ui-pick-row[aria-busy=\"true\"]");
-            (row ?? matchRowRef.current)?.focus({ preventScroll: true });
-          },
-        });
+        match.mutate(loanId);
       }}
     />
+    <LoanSplitEditor
+      open={editorOpen}
+      onOpenChange={setEditor}
+      loans={pickable}
+      payments={loaded.payments ?? {}}
+      line={{ transactionId, docDate, lineMinor: loaded.lineMinor, currency: lineCurrency }}
+      categories={categories.data}
+      saving={other.isPending}
+      returnFocusRef={handedOff ? undefined : matchRowRef}
+      onSave={(save) => {
+        if (!other.isPending) other.mutate(save);
+      }}
+    />
+    </>
   );
 }
 
@@ -463,37 +556,12 @@ export function useLoanBalances(companyId: string | null) {
 }
 
 
-/** The schedule row's parts for the line's date, checked here first, then sent in one save_loan_split. */
-function matchParts(docDate: string, loaded: LoadedMatch, loan: LoanChoice): SavePart[] {
-  if (loan.currency !== loaded.currency) throw new Error("loan_split_currency");
-  if (loan.balanceMinor <= 0n) throw new Error("loan_split_over_balance");
-  if (loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) throw new Error("date");
-  const schedule = buildLoanSchedule({
-    principalMinor: BigInt(loan.principalMinor),
-    annualRatePpm: loan.annualRatePpm,
-    termMonths: loan.termMonths,
-    startDate: loan.startDate,
-    paymentMinor: BigInt(loan.paymentMinor),
-    escrowMinor: BigInt(loan.escrowMinor),
-    kind: loan.kind,
-    interestOnlyMonths: loan.interestOnlyMonths ?? null,
-    amortizationMonths: loan.amortizationMonths ?? null,
-    rates: loan.rates ?? [],
-  });
-  const row = scheduleRowForDate(schedule.rows, docDate);
-  if (!row) throw new Error("date");
-  const parts = allocateLoanSplit({
+/** What one tap writes for this loan on this line (loan-match-offer.ts). */
+function offerFor(loaded: LoadedMatch, loan: LoanChoice, transactionId: string, docDate: string): LoanOffer {
+  return loanOffer(loan, loaded.payments?.[loan.id] ?? [], {
+    transactionId,
+    docDate,
     lineMinor: loaded.lineMinor,
-    interestMinor: row.interestMinor,
-    escrowMinor: row.escrowMinor,
-    principalMinor: row.principalMinor,
+    currency: loaded.currency,
   });
-  const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
-  if (principalPart > loan.balanceMinor) throw new Error("loan_split_over_balance");
-  // The server files each part under the loan's category, else the keyed default (0128).
-  return parts.map((part) => ({
-    part: part.part,
-    amount_minor: Number(part.amountMinor),
-    scheduled_minor: Number(part.scheduledMinor),
-  }));
 }

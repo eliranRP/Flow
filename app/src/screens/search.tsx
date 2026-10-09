@@ -3,7 +3,7 @@ import type { SearchRow } from "@flow/shared";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import * as searchE2eFixture from "../dev/search-e2e-fixture";
-import { periodLabel } from "../period";
+import { periodPillLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import {
@@ -295,13 +295,13 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 }
 
 /**
- * Line 2 of a result holds a status only (FLOW-339 option C): "מחוץ לרווח" on a kept-out line
+ * Line 2 of a result holds a status only (FLOW-339 option C): "לא נספר ברווח" on a kept-out line
  * (decision 0141 log), "ממתינה לאישור" on a line waiting for review. No date, project, category or
  * split: the month head dates the row, and the row's own screen shows the rest. בהמתנה is the chip.
  */
 export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "waiting_review">): StatementDetail[] {
   const details: StatementDetail[] = [];
-  if (row.kept_out) details.push({ text: "מחוץ לרווח" });
+  if (row.kept_out) details.push({ text: "לא נספר ברווח" });
   if (row.waiting_review) details.push({ text: "ממתינה לאישור", keep: true });
   return details;
 }
@@ -348,7 +348,7 @@ function SearchChips({
       {/* FLOW-347: תקופה first, so it is never the cut chip; the row's end fades while more wait. */}
       <ChipScroller className="ui-search-chips" label="סינון" scrollerRef={chipsRef}>
         <Chip pressed={period.kind !== "all"} onClick={() => { setPeriodOpen(true); }}>
-          {period.kind === "all" ? "תקופה" : periodLabel(period)}
+          {period.kind === "all" ? "תקופה" : periodPillLabel(period)}
         </Chip>
         <Chip pressed={filters.direction === "expense"} onClick={() => { toggleDirection("expense"); }}>הוצאות</Chip>
         <Chip pressed={filters.direction === "income"} onClick={() => { toggleDirection("income"); }}>הכנסות</Chip>

@@ -44,8 +44,21 @@ function focusInCard(): boolean {
  * FLOW-502 option A: one quiet card under the review empty state, asked once per user.
  * כן asks the browser for permission (from the tap), subscribes this device and turns on the
  * evening reminder; לא עכשיו only records the answer. An iPhone tab gets the Home Screen note.
+ * Setup step 5 shows the same card with the same asked-once answer (`focusAfter`, `iphoneTab`).
  */
-export function ReviewPushPrompt({ sample, support }: { sample?: NotificationPrefs; support?: PushSupport } = {}) {
+export function ReviewPushPrompt({
+  sample,
+  support,
+  focusAfter = focusReviewEmptyAction,
+  iphoneTab = "note",
+}: {
+  sample?: NotificationPrefs;
+  support?: PushSupport;
+  /** Where focus goes when the card closes with focus in it. */
+  focusAfter?: () => void;
+  /** "hide": the page already teaches the Home Screen (setup step 5), so an iPhone tab is not asked. */
+  iphoneTab?: "note" | "hide";
+} = {}) {
   const [can] = useState<PushSupport>(() => support ?? pushSupport());
   const preview = useHomePreview();
   const live = sample == null && preview === "off" && can !== "not-configured";
@@ -65,12 +78,13 @@ export function ReviewPushPrompt({ sample, support }: { sample?: NotificationPre
   useEffect(() => {
     if (answered && refocus.current) {
       refocus.current = false;
-      focusReviewEmptyAction();
+      focusAfter();
     }
-  }, [answered]);
+  }, [answered, focusAfter]);
 
   const data = sample ?? prefs.data;
   if (answered || can === "unsupported" || can === "not-configured" || data == null) return null;
+  if (can === "ios-home-screen" && iphoneTab === "hide") return null;
   if (data.prompt_answered || (data.evening_reminder && data.has_subscription)) return null;
 
   function hide() {

@@ -116,9 +116,9 @@ export function linePnlState(
 /** The switch row's one line of scope, shown only while the line is out (DESIGN-RULES §2.1). */
 function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
   if (!pnl.out) return undefined;
-  if (pnl.partsOut) return "הקטגוריות בפיצול מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.";
+  if (pnl.partsOut) return "הקטגוריות בפיצול לא נספרות ברווח. אפשר לספור ברווח רק את השורה הזו.";
   if (pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
-  return `הקטגוריה ${categoryName} מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.`;
+  return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.`;
 }
 
 export function TransactionScreen({
@@ -206,7 +206,7 @@ export function TransactionScreen({
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
       toast.show({
-        message: `${done.party} · ${done.out ? KEPT_OUT : "ברווח והפסד"}`,
+        message: `${done.party} · ${done.out ? KEPT_OUT : "נספר ברווח"}`,
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -428,7 +428,7 @@ export function TransactionScreen({
   );
   const shownReversal = sample == null && isReversal(categories.data ?? [], categoryId || txn.category_id, txnDirection);
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
-  const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
+  const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "לגבייה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
   const sampleChanged = sample != null && sampleOverride !== undefined;
   const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
@@ -442,7 +442,7 @@ export function TransactionScreen({
     <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
   ) : pnl.mixed ? (
     <StatusPill icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusPill>
-  ) : pnl.forcedIn ? <StatusPill>ברווח והפסד</StatusPill> : null;
+  ) : pnl.forcedIn ? <StatusPill>נספר ברווח</StatusPill> : null;
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
   // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
   const lineSplitHint = lineSplitRowHint(lineSplit);
@@ -460,17 +460,17 @@ export function TransactionScreen({
   // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
   // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
   const pnlRow = loanLine ? (
-    <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint={loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · לפי הקטגוריה"} />
+    <ListRow variant="static" title="נספר ברווח" icon={<LockIcon />} hint={loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · לפי הקטגוריה"} />
   ) : pnl.mixed ? (
     splitCategoryTo ? (
-      <ListRow variant="item" href={splitCategoryTo} title="ברווח והפסד" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" label="ברווח והפסד, לפי הקטגוריות בפיצול, פיצול לפי קטגוריות" chevron />
+      <ListRow variant="item" href={splitCategoryTo} title="נספר ברווח" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" label="נספר ברווח, לפי הקטגוריות בפיצול, פיצול לפי קטגוריות" chevron />
     ) : (
-      <ListRow variant="static" title="ברווח והפסד" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" />
+      <ListRow variant="static" title="נספר ברווח" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" />
     )
   ) : (
     // FLOW-329: one tap takes the line out of the P&L or brings it back.
     <Toggle
-      label="ברווח והפסד"
+      label="נספר ברווח"
       hint={pnlHint}
       icon={<ChartIcon />}
       checked={!pnl.out}
@@ -510,17 +510,25 @@ export function TransactionScreen({
               size="display"
             />
           </p>
+          {/* FLOW-339: the VAT sits on the amount's line, with no minus; only a guessed rate says so.
+              FLOW-351: each part keeps its words together and carries the "·" before it, so a narrow
+              line breaks before a separator and never leaves the date alone after one. */}
           <p className="t-hint">
-            {vatShown ? "לפני מע״מ · " : null}
-            {/* FLOW-339: the VAT sits on the amount's line, with no minus; only a guessed rate says so. */}
+            {vatShown ? <span className="ui-nowrap">לפני מע״מ</span> : null}
             {vatShown && txn.vat_amount !== 0n ? (
               <>
-                {txn.vat_status === "assumed" ? "מע״מ משוער " : "מע״מ "}
-                <bdi dir="ltr">{formatMoney(absAgorot(txn.vat_amount), txn.currency, { agorot: true })}</bdi>
-                {" · "}
+                {" "}
+                <span className="ui-nowrap">
+                  {txn.vat_status === "assumed" ? "· מע״מ משוער " : "· מע״מ "}
+                  <bdi dir="ltr">{formatMoney(absAgorot(txn.vat_amount), txn.currency, { agorot: true })}</bdi>
+                </span>
               </>
             ) : null}
-            <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
+            {vatShown ? " " : null}
+            <span className="ui-nowrap">
+              {vatShown ? "· " : null}
+              <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
+            </span>
           </p>
           {reviewLabel || paymentLabel || pnlPill ? (
             <div className="ui-status-row">
