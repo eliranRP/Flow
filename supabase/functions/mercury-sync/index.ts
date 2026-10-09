@@ -173,7 +173,7 @@ async function syncCompany(
   kek: Uint8Array,
   force: boolean,
   alreadyClaimed: boolean,
-): Promise<{ ok: boolean; lines: number; skipped?: boolean; inserted?: number; updated?: number; removed?: number; newest_date?: string | null }> {
+): Promise<{ ok: boolean; lines: number; skipped?: boolean; complete?: boolean; inserted?: number; updated?: number; removed?: number; newest_date?: string | null }> {
   const connection = await admin
     .from("connector_connections")
     .select("key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, sync_cursor, import_from, last_sync_at, last_error, next_attempt_at, sync_claimed_at, settings")
@@ -336,6 +336,8 @@ async function syncCompany(
       return {
         ok: true,
         lines: plan.lines.length,
+        // The app counts new lines only after a run that read everything (FLOW-509).
+        complete: plan.complete,
         inserted: counts?.inserted ?? 0,
         updated: counts?.updated ?? 0,
         removed: counts?.removed ?? 0,

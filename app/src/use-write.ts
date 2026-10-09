@@ -36,7 +36,8 @@ function failureRetries(failure: WriteFailure, error: Error): boolean {
 export function useWrite<T = void>(options: {
   run: (payload: T) => Promise<void>;
   keys: string[];
-  success?: string;
+  /** A function reads the toast after the write, so it can say what the write returned. */
+  success?: string | (() => string);
   failure: string | ((error: Error) => WriteFailure);
   onSuccess?: (payload: T) => void;
   /** Where לפיצול goes when the database refuses one project on a shared cost. */
@@ -62,7 +63,8 @@ export function useWrite<T = void>(options: {
     },
     onSuccess: async (_data, payload) => {
       await invalidate(options.keys);
-      if (options.success) toast.show({ message: options.success, ...(options.place ? { place: options.place } : {}) });
+      const success = typeof options.success === "function" ? options.success() : options.success;
+      if (success) toast.show({ message: success, ...(options.place ? { place: options.place } : {}) });
       options.onSuccess?.(payload);
     },
     onError: (error, payload) => {
