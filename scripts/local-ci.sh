@@ -232,15 +232,15 @@ branch_changes() {
 }
 
 # Where this branch left main, when every app input the branch changes is an app, e2e, shared or
-# _shared .ts/.tsx source, a migration (a test globs them) or app CSS (no test imports it): the vitest
-# module graph finds the tests and stories those reach. Anything else (setup, config, the design
-# package, scripts, lockfile, a deleted or renamed file) runs all (scripts/storybook-stories.mjs,
-# relatedRun).
+# _shared .ts/.tsx source, a migration (a test globs them), app CSS (no test imports it), or a
+# manifest, tsconfig or lockfile whose change the tests don't read: the vitest module graph finds the
+# tests and stories those reach. Anything else (setup, config, the design package, scripts, a
+# dependency, a deleted or renamed file) runs all (scripts/storybook-stories.mjs, relatedRun).
 changed_base() {
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
   [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
-    | node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1
+    | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
   echo "$pr_fork"
 }
 
