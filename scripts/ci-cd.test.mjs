@@ -172,6 +172,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
     assert.ok(unitStep.includes(`\n          ${part}\n`), part);
   }
   assert.equal((job("check-core").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);
+  assert.match(job("check-core"), /run: \|\n {10}pnpm test:connectors\n {10}node scripts\/check-deny-list\.mjs\n/);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
   assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
   assert.match(job("e2e-shard"), /bash scripts\/cd-preflight.sh/);
@@ -207,6 +208,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /--env-file/);
   assert.match(deploy, /functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq/);
   assert.match(deploy, /functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq/);
+  assert.match(deploy, /functions deploy push-send --project-ref sxqpnetmtufkzowutduq/);
   assert.match(job("check-core"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
