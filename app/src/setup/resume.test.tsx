@@ -7,6 +7,7 @@ import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { resetSetupResumeForTests, SetupLanding, SetupResume } from "./route";
 import { emptySetupStore, markSessionEntered, readSetupStore, writeSetupStore } from "./storage";
+import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
 
@@ -48,7 +49,7 @@ const dashboard = {
 
 const calls = vi.hoisted(() => ({ rpc: [] as string[], from: [] as string[] }));
 const auth = vi.hoisted(() => ({ emit: null as ((event: string, next: unknown) => void) | null }));
-const gate = vi.hoisted(() => ({ ownerId: "user-1", setupRow: null as { state: unknown } | null }));
+const gate = vi.hoisted(() => ({ ownerId: "user-1", signedIn: "user-1", setupRow: null as { state: unknown } | null }));
 
 function chain(data: unknown) {
   const result = { data, error: null };
@@ -67,13 +68,17 @@ function chain(data: unknown) {
 const supabase = {
   auth: {
     onAuthStateChange: (callback: (event: string, next: Session | null) => void) => {
-      auth.emit = callback as (event: string, next: unknown) => void;
+      auth.emit = (event, next) => {
+        gate.signedIn = (next as Session | null)?.user.id ?? "";
+        (callback as (event: string, next: unknown) => void)(event, next);
+      };
       callback("INITIAL_SESSION", session);
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
   },
   rpc: (name: string) => {
     calls.rpc.push(name);
+    if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(gate.signedIn, gate.ownerId), error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "sumit_status") {
       return Promise.resolve({
@@ -142,6 +147,7 @@ describe("setup resume", () => {
     calls.rpc.length = 0;
     calls.from.length = 0;
     gate.ownerId = userId;
+    gate.signedIn = userId;
     gate.setupRow = null;
     resetSetupResumeForTests();
     localStorage.clear();
@@ -151,7 +157,7 @@ describe("setup resume", () => {
   it("does not load the dashboard or leave a cold /review", async () => {
     renderAt("/review");
     await waitFor(() => {
-      expect(calls.from).toContain("companies");
+      expect(calls.rpc).toContain("list_my_companies");
     });
     expect(calls.rpc).not.toContain("get_dashboard");
     expect(screen.getByText("/review")).toBeInTheDocument();
@@ -279,7 +285,7 @@ describe("setup resume", () => {
     gate.ownerId = "other";
     const { router } = renderAt("/");
     await waitFor(() => {
-      expect(calls.from).toContain("companies");
+      expect(calls.rpc).toContain("list_my_companies");
     });
     await expect(
       waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),

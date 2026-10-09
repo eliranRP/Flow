@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@flow/shared";
+import { withCompanyHeader } from "./company-header";
 /** True for an absolute URL with a host. No zod here: this file is on Home's first load (FLOW-804). */
 function isUrl(value: string): boolean {
   try {
@@ -33,6 +34,8 @@ export const supabase: SupabaseClient<Database> | null =
           detectSessionInUrl: true,
           persistSession: true,
         },
+        // FLOW-601: every API call names the company the app shows (x-flow-company).
+        global: { fetch: withCompanyHeader() },
       })
     : null;
 

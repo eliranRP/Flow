@@ -8,6 +8,7 @@ import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupStepScreen } from "./route";
 import { readSetupStore, setupStorageKey } from "./storage";
+import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
 const companyId = "company-1";
@@ -68,6 +69,7 @@ const supabase = {
     },
   },
   rpc: (name: string) => {
+    if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(userId, gate.owner), error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "sumit_status") {
       return Promise.resolve({

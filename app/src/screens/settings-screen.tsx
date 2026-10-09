@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
 import { useLoanBalances, type LoanBalanceRow } from "./loan-match";
 import { useAuth } from "../auth";
-import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { MY_COMPANIES_KEY } from "../team-queries";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -212,7 +213,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
       if (error) throw error;
       clearJevConnectorFlag(session?.user.id ?? null);
       queryClient.removeQueries({ queryKey: ["jev-connector"] });
-      queryClient.removeQueries({ queryKey: ["company-owner"] });
+      queryClient.removeQueries({ queryKey: [MY_COMPANIES_KEY] });
     },
   });
 

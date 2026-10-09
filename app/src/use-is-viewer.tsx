@@ -1,13 +1,16 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useId, useRef, type ReactElement, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext, useEffect, useId, type ReactElement, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./auth";
-import { getSupabase } from "./lib/supabase";
+import { shownCompanyFor } from "./lib/company-header";
 import { usePreviewSearch } from "./preview";
-import { readRoleCache, writeRoleCache, type KnownRole } from "./company-role-cache";
+import { readRoleCache } from "./company-role-cache";
+import { MY_COMPANIES_KEY, useMyCompaniesQuery } from "./team-queries";
 import { TextLink } from "./ui/text-link";
 
-const ViewerContext = createContext<boolean | null>(null);
+type PinnedRole = "owner" | "editor" | "viewer";
+
+const PinnedRoleContext = createContext<PinnedRole | null>(null);
 const ViewerNoteContext = createContext<string | null>(null);
 
 /** One quiet line. Settings puts it under the header. Review puts it where the actions were. */
@@ -15,61 +18,31 @@ export const VIEWER_NOTE = "צפייה בלבד · שינויים נעשים ע�
 
 /** Pins the viewer role for a story or a test. No session and no companies read. */
 export function ViewerPreview({ children }: { children: ReactNode }) {
-  return <ViewerContext.Provider value={true}>{children}</ViewerContext.Provider>;
+  return <PinnedRoleContext.Provider value="viewer">{children}</PinnedRoleContext.Provider>;
 }
 
-export type CompanyRole = "loading" | "viewer" | "owner" | "unknown";
-
-function roleFromRow(userId: string, data: { id?: unknown; owner_id?: unknown } | null): KnownRole {
-  const companyId = typeof data?.id === "string" ? data.id : "";
-  const ownerId = typeof data?.owner_id === "string" ? data.owner_id : null;
-  const role = ownerId == null || ownerId === userId ? "owner" : "viewer";
-  return { companyId, role };
+/** Pins a role for a story or a test (FLOW-601: an editor writes the books, not the owner's settings). */
+export function RolePreview({ role, children }: { role: PinnedRole; children: ReactNode }) {
+  return <PinnedRoleContext.Provider value={role}>{children}</PinnedRoleContext.Provider>;
 }
+
+export type CompanyRole = "loading" | "viewer" | "editor" | "owner" | "unknown";
 
 /**
- * Viewer when this session can read a company it does not own.
- * The role stays loading until that read settles. A failed read uses the last
- * role saved for this user. The cache is keyed by user only: a user reads one
- * company (their own, or the demo one as a viewer), and the failed read is
- * the one that would name the company. The server refuses a viewer's writes
- * either way. With nothing saved, the role is unknown: write controls stay
- * hidden, and a later focus or reconnect tries again. A missing company row
- * is an owner with no company yet.
+ * The signed-in user's role in the company the app shows, from `list_my_companies` (FLOW-601):
+ * owner, editor, or viewer (a viewer member or the demo viewer). No company yet is an owner, so
+ * setup can create one. The role stays loading until that read settles. A failed read uses the
+ * last role saved for this user when it was for the company shown now; the server refuses a
+ * viewer's writes either way. With nothing saved, the role is unknown: write controls stay
+ * hidden, and a later focus or reconnect tries again.
  */
 export function useCompanyRole(): CompanyRole {
-  const pinned = useContext(ViewerContext);
-  const { status, session } = useAuth();
-  const userId = session?.user.id ?? null;
-  const client = useQueryClient();
-  const previousUser = useRef<string | null | undefined>(undefined);
-  useEffect(() => {
-    const previous = previousUser.current;
-    if (previous !== undefined && previous !== userId && previous != null) {
-      client.removeQueries({ queryKey: ["company-owner", previous] });
-    }
-    previousUser.current = userId;
-  }, [client, userId]);
-  const supabase = getSupabase();
-  const canReadOwner = supabase != null && typeof supabase.from === "function";
-  const owner = useQuery({
-    queryKey: ["company-owner", userId],
-    enabled: pinned !== true && status === "authed" && userId != null && canReadOwner,
-    retry: false,
-    queryFn: async ({ signal }): Promise<KnownRole> => {
-      const read = getSupabase();
-      if (!read || typeof read.from !== "function" || userId == null) return { companyId: "", role: "owner" };
-      const { data, error } = await read.from("companies").select("id, owner_id").maybeSingle();
-      if (error) throw error;
-      // A sign-out clears the cache and aborts this read. A late answer saves no role.
-      signal.throwIfAborted();
-      const known = roleFromRow(userId, data);
-      writeRoleCache(userId, known.companyId, known.role);
-      return known;
-    },
-  });
-  const failed = owner.isError;
-  const refetch = owner.refetch;
+  const pinned = useContext(PinnedRoleContext);
+  const { status } = useAuth();
+  const companies = useMyCompaniesQuery(pinned == null);
+  const { userId, canRead } = companies;
+  const failed = companies.isError;
+  const refetch = companies.refetch;
   useEffect(() => {
     if (!failed) return;
     const retry = () => { void refetch(); };
@@ -80,11 +53,17 @@ export function useCompanyRole(): CompanyRole {
       window.removeEventListener("online", retry);
     };
   }, [failed, refetch]);
-  if (pinned === true) return "viewer";
-  // No session yet, so there is no owner_id to wait for.
-  if (status !== "authed" || userId == null || !canReadOwner) return "owner";
-  if (owner.data) return owner.data.role;
-  if (failed) return readRoleCache(userId)?.role ?? "unknown";
+  if (pinned != null) return pinned;
+  // No session yet, so there is no company to wait for.
+  if (status !== "authed" || userId == null || !canRead) return "owner";
+  if (companies.data) return companies.data.role ?? "owner";
+  if (failed) {
+    const saved = readRoleCache(userId);
+    const shown = shownCompanyFor(userId);
+    // A role saved for another company than the one shown now says nothing about this one.
+    if (saved != null && (shown == null || saved.companyId === shown)) return saved.role;
+    return "unknown";
+  }
   return "loading";
 }
 
@@ -93,16 +72,25 @@ export function useRetryCompanyRole(): () => void {
   const client = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
-  return () => { void client.refetchQueries({ queryKey: ["company-owner", userId] }); };
+  return () => { void client.refetchQueries({ queryKey: [MY_COMPANIES_KEY, userId] }); };
 }
 
-/** True only once the read says this session does not own the company. */
+/** True only once the read says this session only reads the company (a viewer member or the demo viewer). */
 export function useIsViewer(): boolean {
   return useCompanyRole() === "viewer";
 }
 
-/** Hide write affordances while the role is unknown and for a viewer. */
+/** Hide write affordances while the role is unknown and for a viewer. An editor writes the books. */
 export function useHoldWrites(): boolean {
+  const role = useCompanyRole();
+  return role !== "owner" && role !== "editor";
+}
+
+/**
+ * FLOW-601: the owner's own settings (the team, the company's name and currency, connectors,
+ * Jev, the MCP key) stay read-only for an editor as well as a viewer.
+ */
+export function useHoldOwnerSettings(): boolean {
   return useCompanyRole() !== "owner";
 }
 

@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "./auth";
-import { useCompanyRole, useIsViewer, useWriteGate, VIEWER_NOTE, ViewerNote, ViewerPreview, ViewerScope } from "./use-is-viewer";
+import { myCompaniesFor } from "./team-test-support";
+import { shownCompanyFor } from "./lib/company-header";
+import { RolePreview, useCompanyRole, useHoldOwnerSettings, useHoldWrites, useIsViewer, useWriteGate, VIEWER_NOTE, ViewerNote, ViewerPreview, ViewerScope } from "./use-is-viewer";
 
 const viewerId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
@@ -18,6 +20,7 @@ const state = vi.hoisted((): {
   calls: number;
   gate: Promise<void> | null;
   failAt: number;
+  memberRole: "viewer" | "editor";
 } => ({
   userId: "11111111-1111-4111-8111-111111111111",
   ownerId: "22222222-2222-4222-8222-222222222222",
@@ -26,6 +29,7 @@ const state = vi.hoisted((): {
   calls: 0,
   gate: null,
   failAt: 0,
+  memberRole: "viewer",
 }));
 
 const auth = vi.hoisted(() => ({
@@ -57,21 +61,18 @@ const supabase = vi.hoisted(() => ({
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
   },
-  from: () => ({
-    select: () => ({
-      maybeSingle: async () => {
-        state.calls += 1;
-        if (state.gate) await state.gate;
-        if (state.failAt > 0 && state.calls >= state.failAt) {
-          return { data: null, error: { message: "denied" } };
-        }
-        return {
-          data: state.ownerId == null ? null : { id: state.companyId, owner_id: state.ownerId },
-          error: state.error,
-        };
-      },
-    }),
-  }),
+  rpc: async (name: string) => {
+    if (name !== "list_my_companies") return { data: null, error: null };
+    state.calls += 1;
+    if (state.gate) await state.gate;
+    if (state.failAt > 0 && state.calls >= state.failAt) {
+      return { data: null, error: { message: "denied" } };
+    }
+    return {
+      data: state.error ? null : myCompaniesFor(state.userId, state.ownerId, { companyId: state.companyId, role: state.memberRole }),
+      error: state.error,
+    };
+  },
 }));
 
 vi.mock("./lib/supabase", () => ({
@@ -105,7 +106,7 @@ function renderProbe(node: ReactNode = <Probe />) {
 }
 
 function ownerKeys(client: QueryClient): ReadonlyArray<readonly unknown[]> {
-  return client.getQueryCache().getAll().map((query) => query.queryKey).filter((key) => key[0] === "company-owner");
+  return client.getQueryCache().getAll().map((query) => query.queryKey).filter((key) => key[0] === "my-companies");
 }
 
 function cachedRole(userId: string): { companyId: string; role: string } | undefined {
@@ -125,6 +126,7 @@ describe("useIsViewer", () => {
     state.calls = 0;
     state.gate = null;
     state.failAt = 0;
+    state.memberRole = "viewer";
     auth.handlers.length = 0;
   });
 
@@ -132,7 +134,7 @@ describe("useIsViewer", () => {
     const { client } = renderProbe();
     expect(await screen.findByText("viewer")).toBeInTheDocument();
     expect(state.calls).toBe(1);
-    expect(ownerKeys(client)).toContainEqual(["company-owner", viewerId]);
+    expect(ownerKeys(client)).toContainEqual(["my-companies", viewerId]);
     expect(ownerKeys(client).some((key) => key.length === 1)).toBe(false);
     expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
   });
@@ -325,7 +327,7 @@ describe("useIsViewer", () => {
       expect(state.calls).toBe(1);
       expect(screen.getByText("owner")).toBeInTheDocument();
     });
-    await client.invalidateQueries({ queryKey: ["company-owner", viewerId] });
+    await client.invalidateQueries({ queryKey: ["my-companies", viewerId] });
     await waitFor(() => {
       expect(state.calls).toBeGreaterThanOrEqual(2);
     });
@@ -344,8 +346,8 @@ describe("useIsViewer", () => {
       expect(screen.queryByText("viewer")).not.toBeInTheDocument();
     });
     const keys = ownerKeys(client);
-    expect(keys).toContainEqual(["company-owner", ownerId]);
-    expect(keys).not.toContainEqual(["company-owner", viewerId]);
+    expect(keys).toContainEqual(["my-companies", ownerId]);
+    expect(keys).not.toContainEqual(["my-companies", viewerId]);
     expect(screen.getByRole("button", { name: "הוספה" })).toBeInTheDocument();
   });
 
@@ -380,8 +382,81 @@ describe("useIsViewer", () => {
     expect(await screen.findByText("viewer")).toBeInTheDocument();
     emit(null);
     await waitFor(() => {
-      expect(ownerKeys(client)).not.toContainEqual(["company-owner", viewerId]);
+      expect(ownerKeys(client)).not.toContainEqual(["my-companies", viewerId]);
     });
     expect(screen.getByText("owner")).toBeInTheDocument();
+  });
+  describe("FLOW-601 roles from list_my_companies", () => {
+    function Flags() {
+      const role = useCompanyRole();
+      const holdWrites = useHoldWrites();
+      const holdOwner = useHoldOwnerSettings();
+      const viewer = useIsViewer();
+      const gate = useWriteGate("/");
+      return (
+        <ul>
+          <li>{role}</li>
+          <li>{holdWrites ? "books held" : "books open"}</li>
+          <li>{holdOwner ? "owner settings held" : "owner settings open"}</li>
+          <li>{viewer ? "is viewer" : "not viewer"}</li>
+          <li>{gate === "show" ? "gate open" : gate === "wait" ? "gate wait" : "gate redirect"}</li>
+        </ul>
+      );
+    }
+
+    it("an editor writes the books but not the owner's settings", async () => {
+      state.memberRole = "editor";
+      renderProbe(<MemoryRouter><Flags /></MemoryRouter>);
+      expect(await screen.findByText("editor")).toBeInTheDocument();
+      expect(screen.getByText("books open")).toBeInTheDocument();
+      expect(screen.getByText("owner settings held")).toBeInTheDocument();
+      expect(screen.getByText("not viewer")).toBeInTheDocument();
+      expect(screen.getByText("gate open")).toBeInTheDocument();
+      expect(cachedRole(viewerId)).toEqual({ companyId: state.companyId, role: "editor" });
+    });
+
+    it("an owner holds nothing and a viewer member holds both", async () => {
+      state.ownerId = viewerId;
+      const { unmount } = renderProbe(<MemoryRouter><Flags /></MemoryRouter>);
+      expect(await screen.findByText("owner")).toBeInTheDocument();
+      expect(screen.getByText("books open")).toBeInTheDocument();
+      expect(screen.getByText("owner settings open")).toBeInTheDocument();
+      unmount();
+      state.ownerId = ownerId;
+      renderProbe(<MemoryRouter><Flags /></MemoryRouter>);
+      expect(await screen.findByText("viewer")).toBeInTheDocument();
+      expect(screen.getByText("books held")).toBeInTheDocument();
+      expect(screen.getByText("owner settings held")).toBeInTheDocument();
+      expect(screen.getByText("gate redirect")).toBeInTheDocument();
+    });
+
+    it("shows the company the read opened from then on", async () => {
+      renderProbe();
+      expect(await screen.findByText("viewer")).toBeInTheDocument();
+      expect(shownCompanyFor(viewerId)).toBe(state.companyId);
+      expect(JSON.parse(localStorage.getItem("flow-shown-company") ?? "{}")).toEqual({ [viewerId]: state.companyId });
+    });
+
+    it("does not use a role saved for another company than the one shown", async () => {
+      localStorage.setItem("flow-company-role", JSON.stringify({
+        [viewerId]: { companyId: state.companyId, role: "owner" },
+      }));
+      localStorage.setItem("flow-shown-company", JSON.stringify({ [viewerId]: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" }));
+      state.error = { message: "denied" };
+      renderProbe();
+      expect(await screen.findByText("unknown")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+    });
+
+    it("pins an editor for a story without a companies read", () => {
+      renderProbe(
+        <RolePreview role="editor">
+          <MemoryRouter><Flags /></MemoryRouter>
+        </RolePreview>,
+      );
+      expect(screen.getByText("editor")).toBeInTheDocument();
+      expect(screen.getByText("owner settings held")).toBeInTheDocument();
+      expect(state.calls).toBe(0);
+    });
   });
 });
