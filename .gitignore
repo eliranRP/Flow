@@ -1,5 +1,6 @@
 node_modules
 dist
+perf-dist
 storybook-static
 app/bundle-graph.json
 .vite

@@ -13,7 +13,7 @@ import {
   type UnpaidRow,
 } from "@flow/shared";
 import { demoDataSchema, pnlFromDemo } from "@flow/shared/testing";
-import raw from "../../../packages/shared/fixtures/demo-data.json";
+import raw from "../../../packages/shared/fixtures/demo-data.json" with { type: "json" };
 
 const demo = demoDataSchema.parse(raw);
 const full = pnlFromDemo(demo);
