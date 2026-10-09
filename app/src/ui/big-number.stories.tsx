@@ -38,6 +38,21 @@ export const OnBand: Story = {
     </header>
   ),
 };
+/** FLOW-338: a figure marked as a loss stays white on the band too; the label says הפסד. */
+export const OnBandLoss: Story = {
+  args: { agorot: "-1240000", size: "display", loss: true },
+  render: ({ agorot }) => (
+    <header className="ui-band">
+      <div className="ui-band-hero">
+        <p className="ui-band-label t-label">הפסד באוקטובר</p>
+        <p className="t-display">
+          <BigNumber agorot={BigInt(agorot)} loss />
+        </p>
+      </div>
+    </header>
+  ),
+};
+export const OnBandLossDark: Story = { ...OnBandLoss, globals: { theme: "dark" } };
 export const DetailAgorot: Story = { args: { agorot: "-10050", presentation: "detail", size: "display" } };
 export const Loss: Story = { args: { agorot: "-2940000", loss: true, size: "list" } };
 export const LargeAmount: Story = { args: { agorot: String(largeAgorot), size: "hero" } };

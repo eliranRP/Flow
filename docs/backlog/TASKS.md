@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-706: undo a Jev fill from the review card while Jev is off (app only; FLOW-331 merged #245) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-325 kept-out reversal part (picker and the P&L refusal copy) + FLOW-334 split items (hint word, footer gutter, card inset) | Next small ready bug |
+| Backlog bug fixes | FLOW-338 project band loss drawn white on the band (CSS scope, no screen change) | Next small ready bug |
 | File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (#257), then `screens/review-all.test.tsx` into `review-all`, `review-all-bar` and `review-all-skipped` (#263), then `screens/books-states.test.tsx` into `books-states`, `books-states-split` and `books-states-card` (#268), then `screens/round5-ui.test.tsx` into `round5-ui`, `round5-ui-settings` and `round5-ui-category` (#276), then `screens/sumit-row.test.tsx` into `sumit-row` and `sumit-row-nav` (#277), then the pgTAP file `mcp_cycle3a.test.sql` into `mcp_cycle3a`, `mcp_cycle3a_gates` and `mcp_cycle3a_sync` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | Guard: `scripts/check-file-size.mjs` fails local CI and CI when a file goes over the limits, with `scripts/file-size-allow.txt` for exceptions |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -110,7 +110,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | done (#239; owner chose the swipe, 2026-10-08) |
 | 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
 | 62 | [FLOW-706](#flow-706) | Jev fills can't be undone from the app while Jev is off | BUG | claimed (UI lane 4, 2026-10-09) |
-| 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | ready |
+| 63 | [FLOW-338](#flow-338) | Project band shows a loss in red on violet | BUG | done |
 | 64 | [FLOW-339](#flow-339) | Phone polish after the October 8 builds (cycle 6) | SMALL UI | ready |
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
@@ -816,7 +816,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-338"></a>
 ### FLOW-338 · Project band shows a loss in red on violet
-- **Type:** BUG · **Status:** ready · **Depends on:** — · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
+- **Type:** BUG · **Status:** done (this PR) · **Depends on:** — · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** On the project page the band's loss figure is drawn with `.ui-loss` (rgb(195,48,43) in light, salmon in dark) on the violet band, about 1.6:1. DESIGN-RULES §3.5 says the hero stays the on-band white including a minus, and the label names the loss. Stop passing `loss` to the band figure (`project-detail-screen.tsx`), or scope `.ui-band .ui-loss { color: var(--color-on-band) }`.
 - **Acceptance:** a band-loss story in light and dark; contrast check on the band; a design log entry.
 
