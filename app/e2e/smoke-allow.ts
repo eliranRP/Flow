@@ -1,17 +1,20 @@
 // The live smoke's write guard: which requests may go through. Everything else is aborted.
 
-// List screens only, plus the reads screens make on load: the company currency on Settings,
-// the late bills on Home and the expected months on a project (FLOW-403). Detail RPCs stay on
-// the owner and are not called.
+// List screens only, plus the reads those screens make on load: the company currency on
+// Settings, the Jev reasons and flags for the open review lines, the late bills on Home and the
+// expected months on a project (FLOW-403; all `stable`). Detail RPCs stay on the owner and are
+// not called.
 export const readRpcs = new Set([
   "expected_months",
   "get_dashboard",
   "get_line_meta",
+  "jev_suggestions",
   "list_categories",
   "list_review",
   "list_unpaid",
   "mcp_company_loan_currency",
   "missing_bills",
+  "review_anomalies",
   "sumit_status",
 ]);
 
