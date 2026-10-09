@@ -7,6 +7,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { ReviewAllList, ReviewEmpty as ReviewEmptyState, ReviewQueue } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
+import { pinReviewLine } from "../review-pin";
 import { bareReview, sampleReview, SeedSkipped } from "../ui/screen-stories-support";
 
 const meta = {
@@ -169,6 +170,58 @@ export const ReviewQueueSkipToast: Story = {
     await canvas.findByText("דילגנו על הפריט");
   },
 };
+
+/**
+ * FLOW-309: the short-phone worst case at 320x693: a supplier that wraps, Jev's reason line and the
+ * plural filed-today banner. The card ends above the pinned bar, and the bar sits on the tab bar.
+ */
+const shortPhone = { parameters: { viewport: { defaultViewport: "flow320-short" } } };
+const fitRow: ReviewRow = { ...jevRow, supplier_name: "חומרי בניין ואינסטלציה השרון בע״מ" };
+function ReviewFitStory() {
+  return (
+    <StoryRoute entry="/review" tabs reviewCount={4}>
+      <ReviewQueue rows={[fitRow]} search="" sample sampleJev={jevSuggested} />
+    </StoryRoute>
+  );
+}
+export const ReviewFit320Short: Story = { ...shortPhone, render: () => <ReviewFitStory /> };
+export const ReviewFit320ShortDark: Story = { ...shortPhone, ...darkTheme, render: () => <ReviewFitStory /> };
+
+/** FLOW-309: "10 מתוך 12" after nine skips. The counter reserves the total's digits, so nothing moved. */
+const countRows: ReviewRow[] = Array.from({ length: 12 }, (_, n) => ({
+  ...plainRow, id: `r${String(n + 1)}`, transaction_id: `t${String(n + 1)}`, supplier_name: `ספק לדוגמה ${String(n + 1)}`,
+}));
+function ReviewCounterStory() {
+  const [rows, setRows] = useState(countRows);
+  return (
+    <StoryRoute entry="/review" tabs reviewCount={rows.length}>
+      <ReviewQueue
+        rows={rows}
+        search=""
+        sample
+        previewWrite={{
+          run: () => Promise.resolve(),
+          onDone: (id) => { setRows((current) => current.filter((row) => row.id !== id)); },
+          onUndo: () => { setRows(countRows); },
+        }}
+      />
+    </StoryRoute>
+  );
+}
+const skipToTen: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  for (let step = 2; step <= 10; step += 1) {
+    await userEvent.click(await canvas.findByRole("button", { name: "דלג" }));
+    await canvas.findByText(`ספק לדוגמה ${String(step)}`, {}, { timeout: 3000 });
+  }
+};
+/** The pinned line is module state (review-pin.ts); the story before may have left one. */
+const unpin: NonNullable<Story["loaders"]> = [() => {
+  pinReviewLine(null);
+  return Promise.resolve({});
+}];
+export const ReviewCounter10At320: Story = { ...narrowView, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
+export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
 /** FLOW-309: the skipped cards at the end of הצג הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [

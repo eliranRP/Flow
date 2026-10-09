@@ -1,4 +1,5 @@
 import type { ReviewRow } from "@flow/shared";
+import type { JevQueueData } from "../screens/jev-review";
 
 /**
  * In-memory review queue for Playwright. Imported only from a
@@ -7,6 +8,8 @@ import type { ReviewRow } from "@flow/shared";
  */
 let e2eOpen: ReviewRow[] | null = null;
 let e2eGone: ReviewRow[] = [];
+/** FLOW-309: `&rows=N` seeds N cards (5 by default), so the counter can step 9→10 or the queue can empty. */
+let seedSize = 5;
 const listeners = new Set<() => void>();
 
 function notify(): void {
@@ -14,14 +17,15 @@ function notify(): void {
 }
 
 function seed(): ReviewRow[] {
-  const names = [
+  const names: Array<readonly [string, string]> = [
     ["r1", "מחסן הנמל"],
     ["r2", "עגורני החוף"],
     ["r3", "ברזל הדרום"],
     ["r4", "צבע הדרום"],
     ["r5", "חשמל הצפון"],
-  ] as const;
-  return names.map(([id, supplier]) => ({
+  ];
+  for (let n = names.length + 1; n <= seedSize; n += 1) names.push([`r${String(n)}`, `ספק בדיקה ${String(n)}`]);
+  return names.slice(0, seedSize).map(([id, supplier]) => ({
     id,
     transaction_id: `t-${id}`,
     description: supplier,
@@ -41,13 +45,19 @@ function seed(): ReviewRow[] {
   }));
 }
 
-function ensure(): ReviewRow[] {
-  if (e2eOpen == null) e2eOpen = seed();
+/** `size` is the page's request; without one, the queue already seeded stands (dismiss, restore). */
+function ensure(size?: number): ReviewRow[] {
+  if (e2eOpen == null || (size != null && size !== seedSize)) {
+    seedSize = size ?? 5;
+    e2eGone = [];
+    e2eOpen = seed();
+  }
   return e2eOpen;
 }
 
-export function currentRows(): ReviewRow[] {
-  return ensure();
+/** The size belongs to the seeded queue: a page with another `rows` (or none, 5) seeds afresh. */
+export function currentRows(size?: number): ReviewRow[] {
+  return ensure(size != null && size > 0 ? size : 5);
 }
 
 export function subscribe(listener: () => void): () => void {
@@ -103,3 +113,28 @@ export function e2ePreviewWrite(): {
     onUndo: restoreE2eReview,
   };
 }
+
+/**
+ * FLOW-309: `&fit=1` turns the first card into the short-phone worst case: a supplier name that
+ * wraps at 320, Jev's reason line, and the plural filed-today banner. Invented names.
+ */
+export const E2E_FIT_SUPPLIER = "חומרי בניין ואינסטלציה השרון בע״מ";
+
+export function e2eFitRows(rows: ReviewRow[]): ReviewRow[] {
+  return rows.map((row) => row.id === "r1"
+    ? { ...row, supplier_name: E2E_FIT_SUPPLIER, project_suggested: true, category_suggested: true, auto_approved_today: 12 }
+    : { ...row, auto_approved_today: 12 });
+}
+
+export const e2eFitJev: JevQueueData = {
+  connectorOn: true,
+  byId: {
+    "t-r1": {
+      suggestionId: "s-fit",
+      transactionId: "t-r1",
+      project: { id: "p1", name: "הרצל" },
+      category: { id: "c1", name: "חומרים" },
+      why: { reason: "usual_for_party", partyFilings: 5, matchingFilings: 4 },
+    },
+  },
+};

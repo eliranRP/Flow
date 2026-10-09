@@ -42,9 +42,12 @@ export function ReviewScreen() {
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
-  const e2eRows = useE2eReviewRows(e2eList);
+  const e2eRows = useE2eReviewRows(e2eList, Number(params.get("rows") ?? "") || undefined);
+  // FLOW-309: `&fit=1` is the short-phone worst case (a wrapping supplier, Jev's reason, the banner).
+  const e2eFit = e2eList && reviewE2e != null && params.get("fit") === "1";
+  const e2eShown = useMemo(() => (e2eFit && reviewE2e != null ? reviewE2e.e2eFitRows(e2eRows) : e2eRows), [e2eFit, e2eRows]);
   const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
-  const source = e2eList ? e2eRows : (review.data ?? EMPTY_REVIEW);
+  const source = e2eList ? e2eShown : (review.data ?? EMPTY_REVIEW);
   const activeRows = useMemo(() => {
     if (projectFilter == null || preview !== "off") return source;
     const held = waiting.data;
@@ -144,6 +147,7 @@ export function ReviewScreen() {
       rows={ordered}
       search={search}
       previewWrite={e2eWrite}
+      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : undefined}
       listPlace={listPlace(rows, ordered, fromList)}
       backTo={fromList ? reviewListPath(search) : undefined}
       setupHandoff={setupRun ? { fromCard: setupFromCard } : undefined}
