@@ -1,0 +1,1 @@
+A viewer's review queue showed a bare number next to a visit meter, as if they were working through it. It now says how many lines wait ("4 ממתינים", or "1 ממתינה") with no meter. The owner's "1 מתוך 4" and meter are unchanged.
