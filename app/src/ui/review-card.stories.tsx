@@ -64,8 +64,8 @@ function CardView({
       reason={reason}
       meta={meta}
       currency={currency}
-      onProject={projectJev || categoryJev ? () => undefined : undefined}
-      onCategory={projectJev || categoryJev ? () => undefined : undefined}
+      onProject={projectJev || categoryJev || filled != null ? () => undefined : undefined}
+      onCategory={projectJev || categoryJev || filled != null ? () => undefined : undefined}
       splitParts={splitParts}
       jevWhy={jevWhy}
       flag={reviewFlagView(flags, { direction, currency })}
