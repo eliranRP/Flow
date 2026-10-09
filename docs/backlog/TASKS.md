@@ -4,7 +4,7 @@ Open tasks only. How to claim and finish a task is in the [backlog guide](README
 
 Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI change, design review), `PLAN FIRST` (plan and mockup, owner approval before any build), `BUG`, `MCP` (flow-mcp work), `BACKLOG NIT` (reviewer follow-ups, batch several per PR).
 
-Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `blocked`, `done`.
+Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
 Last full sync: 2026-10-07.
 
@@ -15,20 +15,20 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-809 Storybook preview per PR head (Cloudflare Pages, sample data only) | FLOW-309 and FLOW-704 server follow-ups |
-| Dev lane 2 | FLOW-505 server: `import_from` cutoff in both sync functions, `set_import_from` widening backfill, `import_from` in `sumit_status`, PR #327 | The lane manager's next non-UI item |
+| Dev lane 2 | FLOW-502 server PR 1: push subscriptions and per-user prefs, the send function with the evening reminder and its cron; the void-line insert count in `upsert_connector_lines`, PR #335 | FLOW-502 PR 2 (new-line and Sunday summary sends) |
 | UI lane 1 | FLOW-342 option A (owner's pick 2026-10-09), PR #314 on `claude/project-thread-0wt3o6`: the Projects tab drops its header magnifier; a project-name miss offers "חיפוש בתנועות"; FLOW-344 B, the loan preview hides until the form is valid (FLOW-106 + FLOW-110 merged #305) | FLOW-340 C, the short project page (waits on the owner's look before merge); the FLOW-106 split editor and match-sheet items; company "לפי חודש" |
 | UI lane 2 | FLOW-334 leftovers (שויכו היום grouped by project, tint empty and error actions, review-cycle fixtures) + FLOW-325 §10 splitting from the review card; FLOW-309 merged #304 | Next UI task for the review and transaction screens |
-| UI lane 3 | FLOW-341: one move row and a hide switch on the category ⋯ sheet (option A) (FLOW-310 clip review merged #309) | Settings, project screens, and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-505 B: "ייבוא מ" (מההתחלה or מתאריך) in both connect sheets (server merged #327), PR #332; the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-704 Jev Settings "no key" status (`jev_key_status`, #321) (FLOW-339 Search C merged #320) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-509 the Mercury refresh toast says how many lines came in | Next small ready bug |
+| Backlog bug fixes | FLOW-506 setup demo CSS stops reaching into components | FLOW-503 Mercury in the setup flow (after #332), then the FLOW-506 shared demo card and tab bar |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake.
+Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id | Title | Type | Status |
 | --- | --- | --- | --- | --- |
@@ -52,8 +52,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | done (#118) |
 | 13c | [FLOW-206](#flow-206) | Bulk setup without rate-limit stalls | MCP | done (#119) |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | done (#91) |
-| 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
-| 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
+| 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | done (#322) |
+| 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | done (#322) |
 | 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | done (#83) |
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | done (#95) |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | done (#86) |
@@ -784,7 +784,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] H3 (owner chose to drop it, 2026-10-08; with profit by period, PR #199) Home's "יצא −₪4" keeps the minus while the rule drops it on figures labelled expenses (`ui/hero.tsx:127`); mockup 01 has none. Build: no minus on Home's יצא, kept only when refunds beat costs.
 - [x] (#286) Split hints still say "מתחלק שווה" (`split-screen.tsx` `evenSentence` and the chosen line); use "מתפצל שווה" and update the tests.
 - [ ] (from #310 review) `.ui-btn-retry` (filled) is still used by `loan-detail-screen.tsx` and `loan-setup.tsx`; switch both to the tint retry and delete the class. At 320 the first שויכו היום group head sits about 8px under the title; give it a little more air. The heads show cents inline while rows show them small.
-- [ ] Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
+- [x] (Backlog bug fixes, 2026-10-09, #334, approved by the design lead (2026-10-09): the ✕ in every sheet head lends 8px above and below, so the head is 33.7px, the title's height, not 48px; on the change sheet the amount line now sits 4px under the title's box, not 11px) Change sheet: 22px between the title and the supplier line against about 10px in mockup 06; the 44px ✕ sets `.ui-sheet-head`'s height (`css/08-tabbar-empty.css`). Give the ✕ a −8px block margin.
 - [x] (#286) Split footers (`.ui-split-cta`, `css/12-split.css`) still use a 20px gutter; use `--space-side`.
 - [x] (#286) Split choices sit 16px in from the title in light mode, where the card's surface doesn't show; `margin-inline: calc(var(--space-side) - var(--space-4))` on `.ui-split-card`.
 - [x] (UI lane 3, 2026-10-09: `margin-top: var(--space-5)` on the form) Onboarding: 10px between the stacked subtitle and "שם העסק", 46px below the field; `margin-top: var(--space-5)` on the onboarding form.
@@ -1017,6 +1017,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** ready for a lane (owner picked option A, 2026-10-09: one quiet card on the review screen's empty state, "תזכורת בערב כשיש תנועות לאישור?" with כן / לא עכשיו, asked once; and Settings → התראות with three switches: תנועה חדשה "כשנכנסת תנועה מהבנק" (off by default, the owner's addition), תזכורת ערב, סיכום שבועי "ראשון בבוקר"; mockups in the project's mockups/plan-first/flow-502/) · **Depends on:** —
 - **What:** A pre-permission card after a user gesture (iOS needs the app on the Home Screen first), service-worker push, server send from an edge function, per-user opt-in. Start with the evening review nudge, then the Sunday summary. Add it to setup step 5 once it ships. About 2–3 PRs.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
+- [x] Server part 1 (#335): `push_subscriptions` and per-user `notification_prefs`; `push_subscribe`, `push_unsubscribe`, `get_notification_prefs`, `set_notification_prefs`, `answer_push_prompt`; the `push-send` function (Web Push with VAPID, no library) and the `flow-push-evening` cron at 20:00 Israel time for owners with open review lines. Runbook [push.md](../runbooks/push.md).
+- [ ] Owner step: make the VAPID key pair and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` as function secrets and `VITE_VAPID_PUBLIC_KEY` in the app build.
+- [ ] App (UI lane 4): the service worker, the review-screen card asked once, Settings → התראות with three switches.
+- [ ] Server part 2: send תנועה חדשה after a sync and סיכום שבועי on Sunday morning.
 
 <a id="flow-503"></a>
 ### FLOW-503 · Mercury in the setup flow
@@ -1032,18 +1036,20 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-505"></a>
 ### FLOW-505 · Import-range picker for connectors
-- **Type:** PLAN FIRST · **Status:** ready for a UI lane (owner picked option B, 2026-10-09: an inline segmented control [מההתחלה | מתאריך] labelled "ייבוא מ" in the SUMIT and Mercury connect sheets, with the date field under it when מתאריך is on; mockup in the project's mockups/plan-first/flow-505/b.png) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (option B: server #327, app #332; one follow-up below) · **Depends on:** —
 - **What:** A range picker ("from the start" or a date) for SUMIT and Mercury imports. Narrowing the range keeps older rows and only stops syncing them.
 - **Acceptance:** mockup approved.
 - [x] Server side (#327): `set_import_from(provider, date | null)` stores the start (it existed since the connector engine); `sumit_status()` returns `import_from`, and Mercury's is on `connector_connection_status`. `upsert_connector_lines` does not add a line dated before it, for both connectors, and keeps the rows already stored, which still take updates so a pending line can settle (the SUMIT sweep already spared them); a run whose lines are all older is not an empty sweep. A Mercury run that stops at the page cap also drops older lines. A wider range clears Mercury's cursor so the next sync reads from the new start; SUMIT reads every document each run. A Mercury run already in flight when the range widens ends with `sync_cursor_conflict`; the next run starts from the new date, and the error shows on the sheet until a run completes.
-- [ ] App: the ייבוא מ control (option B) in the SUMIT and Mercury sheets (UI lane 3).
+- [x] (UI lane 3, 2026-10-09, option B) App: `ImportFromField` (app/src/ui) in the SUMIT and Mercury connect sheets, in Settings and in setup; `set_import_from` runs once the connection exists, only when the choice changed; a reconnect opens on the stored date (#332).
+- [ ] (lane 2's #332 review) The connection row exists before `set_import_from` runs, so a sync tick in that window imports from the start once (the rows stay after narrowing). Pass `importFrom` to the `mercury-connect` and `sumit-connect` edge functions so the first sync already honours it.
 
 <a id="flow-506"></a>
 ### FLOW-506 · Setup flow follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
 - [ ] Demos use hand-built copies of the review card and tab bar; extract a shared presentational piece (the demo TabBar also writes the shared add-trigger ref and needs a router).
 - [x] (Backlog bug fixes, 2026-10-09: `demoVat` takes the standard rate on the before-VAT amount, and the formatter prints it; the demos still read ₪1,530 and ₪421) Demo VAT amounts are hard-coded strings; derive them from the formatter.
-- [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; demo CSS reaches into component internals; `data-setup-visible` exists only for tests.
+- [ ] Demo card styling (border, radius, padding, divider; a smaller muted ✦ הצעה heading); phone content sits about 15px too high without the status-bar space; `data-setup-visible` exists only for tests.
+- [x] (Backlog bug fixes, 2026-10-09: `Skeleton` takes `still` and `AppIcon` takes `size="tile"`; two dead rules (`.ui-review`, `.ui-setup-pressed`) are gone; nothing on screen changes) Demo CSS reaches into component internals.
 - [x] One list row puts the minus after the amount; it should come before the currency sign. (Not reproducible on 2026-10-09: every demo and setup story draws −₪ first; the SUMIT demo rows use the shared transaction row.)
 - [ ] The setup business step forks the onboarding company form; install rows duplicate the install screen; unify.
 - [x] Setup skip flags live in localStorage and restart on a new device; move them to a server table ([0089](../decisions/0089-setup-runner.md)). (`setup_states`, owner only; the server row wins on load unless this tab wrote first, and the one resume waits for it; decision [0163](../decisions/0163-setup-state-on-the-server.md).)
@@ -1312,13 +1318,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-901"></a>
 ### FLOW-901 · Deny-list test coverage gaps
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#322) · **Depends on:** —
 - **What:** The fixture deny-list test misses connector rule files, subfolders and non-`.ts` top-level files; entries over 6 words never match; n-grams should cover 4+ words and strip punctuation. Extend it to scan `docs/`, stories and e2e too.
 - **Acceptance:** a planted invented name in each new path fails the test.
 
 <a id="flow-902"></a>
 ### FLOW-902 · Replace the deny-listed supplier word
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#322)
+- **Outcome:** the repo-wide check found no supplier word. Every hit was the owner's first name, which he keeps in the repo, so the check allows it. · **Depends on:** —
 - **What:** One deny-listed supplier word still appears in about 30 places (demo data, docs, e2e). Replace it with invented names and keep the matching test arguments in sync.
 - **Acceptance:** 0 deny-list hits; tests pass.
 
@@ -1353,11 +1360,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Future features
 
-Features the owner wants later, not now. They are `on-hold`: nobody claims or plans them until the owner says go.
+Features the owner parked for later. Nobody claims, plans, or builds them, and the lane manager doesn't schedule them, until the owner brings one back; then it moves to its area and the priority queue with a new status.
+
+| Id | Title | Parked |
+| --- | --- | --- |
+| [FLOW-306](#flow-306) | Invoice photo capture | 2026-10-09 |
 
 <a id="flow-306"></a>
 ### FLOW-306 · Invoice photo capture
-- **Type:** PLAN FIRST · **Status:** on-hold (owner, 2026-10-09: a future feature, not now) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** future (owner, 2026-10-09; the A/B mockup card waits until the owner brings it back) · **Depends on:** —
 - **What:** From the original plan: photograph or pick an expense invoice, compress on the phone, upload to private storage, extract supplier, amount, VAT, date and invoice number, check for a duplicate, and match a bank line. Needs a model and cost decision.
 - **Acceptance:** plan approved; field accuracy measured on invented sample invoices.
 
