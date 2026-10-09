@@ -66,7 +66,10 @@ describe("partCategoryOptions follows private.loan_part_category_ok", () => {
 describe("rates", () => {
   it("formats ppm with at least two decimals and up to four", () => {
     expect(formatRatePpm(112_500)).toBe("11.25%");
-    expect(formatRatePpm(60_000)).toBe("6.00%");
+    expect(formatRatePpm(60_000)).toBe("6%");
+    expect(formatRatePpm(105_000)).toBe("10.5%");
+    expect(formatRatePpm(0)).toBe("0%");
+    expect(rateInput(60_000)).toBe("6");
     expect(formatRatePpm(8_250)).toBe("0.825%");
     expect(formatRatePpm(112_042)).toBe("11.2042%");
     expect(rateInput(112_500)).toBe("11.25");
@@ -84,7 +87,7 @@ describe("rates", () => {
   it("shows the rate in force and where it comes from", () => {
     expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-10-09")).toBe("11.25% · מ־01/09/2026");
     expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-07-01")).toBe("10.75% · מ־01/06/2026");
-    expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-04-01")).toBe("10.50% · מההתחלה");
+    expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-04-01")).toBe("10.5% · מההתחלה");
   });
 });
 

@@ -178,14 +178,6 @@ export function ChevronDownIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-export function ChevronUpIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg size={size} stroke={2.25}>
-      <polyline points="6 15 12 9 18 15" />
-    </Svg>
-  );
-}
-
 /** Four-point spark from the design grid. The עוזר AI row uses it. */
 export function SparkIcon(props: IconProps) {
   return (

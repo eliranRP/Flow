@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import type { TransactionDetail } from "@flow/shared";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
 import { scrollPageToTop, sheetStack } from "./ui/back";
-import { IconButton } from "./ui/icon-button";
-import { ChevronDownIcon, ChevronUpIcon } from "./ui/icons";
+import { TxnStepRow } from "./ui/txn-step-row";
 
 /** The list a card was opened from: its rows in the order shown, and its address. */
 export type TxnList = { ids: readonly string[]; from: string };
@@ -159,43 +159,70 @@ export function useTxnNavKeys(nav: TxnNav | null): void {
   }, [move, open]);
 }
 
-/** ˄ ˅ in the card's top bar. At a list end the button stays, marked unavailable. */
-export function TxnNavButtons({ nav }: { nav: TxnNav }) {
-  const hintId = useId();
-  const prevRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
-  const nextRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
+/** The name a row goes by: its supplier, else its customer, else its bank description. */
+export function txnParty(row: Pick<NonNullable<TransactionDetail>, "supplier_name" | "customer_name" | "description">): string {
+  return row.supplier_name ?? row.customer_name ?? row.description;
+}
+
+/** Focus may move to the row only from where a card move leaves it: nowhere, the screen title, or the row. */
+function focusIsFree(row: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  if (active == null || active === document.body) return true;
+  if (active.classList.contains("ui-focus-title")) return true;
+  return row?.contains(active) ?? false;
+}
+
+/**
+ * FLOW-345 option D: the step row (ui/txn-step-row) wired to the walk. A button move keeps focus on the
+ * pressed word on the next card; at an end, where that word is hidden, focus waits on the counter
+ * instead. Focus that has gone elsewhere (a field, a sheet) is left alone. `ready` turns true when a
+ * card that was loading shows: its title takes focus then, and the pressed word takes it back.
+ */
+export function TxnStepNav({ nav, ready = true }: { nav: TxnNav; ready?: boolean }) {
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  const countRef = useRef<HTMLParagraphElement>(null);
   const via = nav.via;
-  useEffect(() => {
-    // Runs after the title takes focus, so a button move keeps the finger's place.
-    if (via === "next") nextRef.current?.focus({ preventScroll: true });
-    else if (via === "prev") prevRef.current?.focus({ preventScroll: true });
-  }, [via]);
   const atStart = nav.prev == null;
   const atEnd = nav.next == null;
+  useEffect(() => {
+    // Runs after the title takes focus, so a button move keeps the finger's place.
+    if (via !== "next" && via !== "prev") return;
+    const count = countRef.current;
+    if (!focusIsFree(count?.closest<HTMLElement>(".ui-txn-step") ?? null)) return;
+    const hidden = via === "next" ? atEnd : atStart;
+    const target = hidden ? count : via === "next" ? nextRef.current : prevRef.current;
+    target?.focus({ preventScroll: true });
+  }, [via, atStart, atEnd, ready]);
+  const move = nav.move;
   return (
-    <div className="ui-txn-nav" role="group" aria-label="מעבר בין תנועות">
-      <IconButton
-        ref={prevRef}
-        label="התנועה הקודמת"
-        aria-disabled={atStart ? true : undefined}
-        aria-describedby={atStart ? `${hintId}-start` : undefined}
-        onClick={() => { nav.move("prev", "prev"); }}
-      >
-        <ChevronUpIcon size={20} />
-      </IconButton>
-      <IconButton
-        ref={nextRef}
-        label="התנועה הבאה"
-        aria-disabled={atEnd ? true : undefined}
-        aria-describedby={atEnd ? `${hintId}-end` : undefined}
-        onClick={() => { nav.move("next", "next"); }}
-      >
-        <ChevronDownIcon size={20} />
-      </IconButton>
-      {atStart ? <span id={`${hintId}-start`} className="sr-only">זו התנועה הראשונה ברשימה</span> : null}
-      {atEnd ? <span id={`${hintId}-end`} className="sr-only">זו התנועה האחרונה ברשימה</span> : null}
-    </div>
+    <TxnStepRow
+      index={nav.index + 1}
+      total={nav.total}
+      atStart={atStart}
+      atEnd={atEnd}
+      prevRef={prevRef}
+      nextRef={nextRef}
+      countRef={countRef}
+      onPrev={() => { move("prev", "prev"); }}
+      onNext={() => { move("next", "next"); }}
+    />
   );
+}
+
+/**
+ * FLOW-345: the neighbour's name for the edge that peeks in mid-swipe, read from the cache the
+ * neighbour prefetch warms. It only watches the cache: it never fetches and never adds an entry
+ * (not even for a list end), so it stays null until that read lands (the edge is then plain).
+ */
+export function useNeighbourParty(id: string | null): string | null {
+  const client = useQueryClient();
+  const preview = useHomePreview();
+  const cache = client.getQueryCache();
+  const subscribe = useCallback((onChange: () => void) => cache.subscribe(onChange), [cache]);
+  const txn = useSyncExternalStore(subscribe, () =>
+    id == null ? undefined : client.getQueryData<TransactionDetail>(transactionQueryOptions(preview, id).queryKey));
+  return txn == null ? null : txnParty(txn);
 }
 
 const AnnounceContext = createContext<(text: string) => void>(() => undefined);
