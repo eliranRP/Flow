@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { ChevronDownIcon, PlusIcon, SplitIcon } from "./icons";
+import { ChevronDownIcon, PlusIcon, SplitIcon, TagIcon } from "./icons";
 import { RadioRow } from "./radio-row";
 import { SearchField } from "./search-field";
 import { Skeleton } from "./skeleton";
@@ -26,6 +26,7 @@ export function Picker({
   onSelect,
   onCreate,
   onSplit,
+  splitCategory,
 }: {
   kind: "project" | "category";
   searchable: boolean;
@@ -53,6 +54,11 @@ export function Picker({
   onSelect: (id: string) => void;
   onCreate?: () => void;
   onSplit?: () => void;
+  /**
+   * FLOW-325 §10 (option A): "פיצול לפי קטגוריות" under the project split. Pressing it approves
+   * the line and opens the parts editor. Omitted for a viewer and where the line cannot be split.
+   */
+  splitCategory?: { busy: boolean; onPress: () => void };
 }) {
   const needle = query.trim();
   const sectionId = useId();
@@ -153,8 +159,19 @@ export function Picker({
       )}
       {kind === "project" && !loading ? (
         <div className="ui-change-links">
-          <TextLink icon={<PlusIcon size={16} />} chevron={false} onClick={onCreate}>פרויקט חדש</TextLink>
-          {splitLink && onSplit ? <TextLink icon={<SplitIcon size={16} />} chevron={false} onClick={onSplit}>פיצול בין פרויקטים</TextLink> : null}
+          <TextLink icon={<PlusIcon size={16} />} chevron={false} disabled={splitCategory?.busy === true} onClick={onCreate}>פרויקט חדש</TextLink>
+          {splitLink && onSplit ? <TextLink icon={<SplitIcon size={16} />} chevron={false} disabled={splitCategory?.busy === true} onClick={onSplit}>פיצול בין פרויקטים</TextLink> : null}
+          {splitCategory ? (
+            <TextLink
+              icon={<TagIcon size={16} />}
+              chevron={false}
+              busy={splitCategory.busy}
+              disabled={savingId != null && !splitCategory.busy}
+              onClick={splitCategory.onPress}
+            >
+              פיצול לפי קטגוריות
+            </TextLink>
+          ) : null}
         </div>
       ) : null}
     </div>
