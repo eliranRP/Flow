@@ -126,6 +126,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 75 | [FLOW-350](#flow-350) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI | done (UI lane 4, #358) |
 | 76 | [FLOW-414](#flow-414) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG | done (#361) |
 | 77 | [FLOW-351](#flow-351) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI | ready |
+| 78 | [FLOW-352](#flow-352) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI | ready |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI | done (#325) |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -963,6 +964,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Loans at 320: loan rows drop their icon under 360px but "הלוואה חדשה" keeps it, so its title starts about 36px further in and breaks the shared start edge. Drop it at the same width, or keep the plus as a start-edge glyph that lines up with the names (loan-setup.tsx:582-590).
 - [ ] Storybook: the Components/PeriodPicker "Open" story still draws the old period list through the options fallback (period-picker.tsx:127). Point it at the shared sheet or drop it.
 - **Acceptance:** shots at 320, 390 and 375x667, light and dark; design lead sign-off.
+
+<a id="flow-352"></a>
+### FLOW-352 · Phone polish after the October 9 evening deploy (cycle 11)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** item 1 after #371, item 4 after #372 (same files)
+- **Source:** cycle 11 phone review of deploy 23d1fd5, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-11/shots/`.
+- [ ] Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
+- [ ] Picker sheets: `.ui-radio-desc` uses the label style (weight 500, secondary grey), so the line under an option reads as heavy as the option name. Use the row hint style: weight 400, `--color-text-muted` (css/12-split.css:163-171). Shots of 3-4 pickers before and after.
+- [ ] Labelled Back ("‹ וילה לדוגמה", "‹ הגדרות", "‹ הלוואות"): the chevron ends 8px in from the title and rows, against the shared start edge from #355. Apply the icon Back's offset (css/27-compact-header.css:9). Project sub-screens, settings sub-screens and the loan part sheet.
+- [ ] Kept-out rows fade at 50% opacity, which drops the "מחוץ לרווח" line to about 2.1:1 and the name to 3.4:1 in light mode. Fade the icon, name and amount to about 0.6 and keep the hint at full muted grey (about 5.8:1) (css/02-fields-sheets.css:197-199). Design lead's call within the owner's pick C; the rows still read as faded.
+- **Acceptance:** shots at 320 and 390, light and dark; design lead sign-off.
 
 <a id="flow-346"></a>
 ### FLOW-346 · Split between projects works like the split by categories, in exact amounts

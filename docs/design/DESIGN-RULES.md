@@ -382,7 +382,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 11
 - A figure's tax and date ride on its one meta line ("לפני מע״מ · מע״מ ₪1,530 · 21/09/2026"). Status words show only when they change what the number means ("מע״מ משוער") (FLOW-339).
 - At 320 a pill beside an amount wraps under the amount; the amount is never cut or wrapped (FLOW-327).
 - A summary page lists one row per topic with one figure each, and each row drills down. Detail such as bars, cards and long lists lives on the row's own screen (FLOW-340 C).
-- A line that doesn't count toward profit fades whole wherever it is listed, and its hint still names it as kept out (FLOW-340 C).
+- A line that doesn't count toward profit fades its icon, name and amount wherever it is listed. Its kept-out hint keeps full muted contrast, so it still passes AA (FLOW-340 C, cycle 11).
 - A repeated head keeps one shape down a list. A short name or a single line does not move the figures (FLOW-325).
 - In a list where only some rows open, the rows that don't open keep the chevron's space, so the amounts line up (FLOW-334).
 - A row that leads to the review queue looks like Home's review row, with the inbox icon and tint, never like a list item (FLOW-334).
