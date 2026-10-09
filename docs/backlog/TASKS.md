@@ -121,6 +121,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
+| 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | plan-first (owner card) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -1005,6 +1006,13 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-412 · Category drill-down on the cash basis
 - **Type:** BACKLOG NIT · **Status:** in-progress (#163) · **Depends on:** —
 - [x] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review. (#163: `p_basis`, default invoiced; the app passes its basis.)
+
+<a id="flow-413"></a>
+### FLOW-413 · Monthly cash-flow view (תזרים חודשי)
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** [FLOW-103](#flow-103), planned together with it
+- **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out. Loan principal and loan proceeds count too, so rent minus the mortgage shows the true cash; today the profit view leaves the loan out and rent alone looks positive. The user can take chosen transactions or categories out of the view. The profit view stays as is.
+- **Mockups:** `mockups/plan-first/flow-413/` in the project files (A inside Home, B its own page), with the card.
+- **Acceptance:** the owner's pick on the card, then a plan with dev lane 2 for the reads (loan principal and proceeds per month).
 
 ## Onboarding, Settings and connectors
 
