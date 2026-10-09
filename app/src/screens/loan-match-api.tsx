@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { allocateLoanSplitWithFees, type LoanKind, type LoanRate, type LoanSplitPart, type LoanStatus, type TransactionLoanSplit } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, type WriteFailure } from "../use-write";
+import { readLoanPayments, type LoanPayment } from "./loan-detail-data";
 
 /**
  * FLOW-114. Every query a loan match, a split edit or an unmatch changes: the split itself,
@@ -66,6 +67,8 @@ export type LoadedMatch = {
   byParts: boolean;
   loans: LoanChoice[];
   categoryIds: Partial<Record<LoanSplitPart, string>>;
+  /** FLOW-106: each loan's attached payments (mcp_loan_payments), for the line's currency only. */
+  payments?: Record<string, LoanPayment[]>;
 };
 
 /** One part as save_loan_split takes it. Any part may name its category (decisions 0128, 0130). */
@@ -351,6 +354,18 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
   assertNoError(balances);
   assertNoError(counted);
   const pnl = readCounted(counted.data);
+  // FLOW-106 §3.4: what one tap writes depends on the payments already attached (the catch-up
+  // installments, a demand loan's accrued interest). Only an unmatched line's match sheet needs them.
+  const payments: Record<string, LoanPayment[]> = {};
+  if ((splits.data ?? []).length === 0) {
+    const matching = (loans.data ?? []).filter((loan) => loan.currency === txn.data.currency);
+    const read = await Promise.all(matching.map(async (loan) => {
+      const result = await supabase.rpc("mcp_loan_payments", { p_loan_id: loan.id });
+      assertNoError(result);
+      return [loan.id, readLoanPayments(result.data)] as const;
+    }));
+    for (const [loanId, rows] of read) payments[loanId] = rows;
+  }
   const balanceByLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, BigInt(row.balance_minor ?? 0)]));
   const categoryIds: Partial<Record<LoanSplitPart, string>> = {};
   for (const category of categories.data ?? []) {
@@ -396,6 +411,7 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
       },
     })),
     categoryIds,
+    payments,
   };
 }
 

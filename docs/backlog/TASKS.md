@@ -17,7 +17,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
 | Dev lane 2 | FLOW-406 server 1a: sub-categories (`categories.parent_id`, the rule trigger, the `group_name` backfill, `set_category_parent`, MCP category writes), PR #354 (plan merged #352) | FLOW-406 server 1b: roll-up reads |
 | Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
-| UI lane 1 | FLOW-106 screens: the loan split editor through `save_loan_split` (fees, N installments, exact parts), demand loans and the installments hint in the match sheet (FLOW-339 merged #362) | The kind field on the new-loan form; company "לפי חודש" |
+| UI lane 1 | FLOW-106 screens: the loan match sheet says what one tap writes (schedule row, catch-up installments, demand loans), then the split editor (FLOW-339 merged #362) | The kind field on the new-loan form; company "לפי חודש" |
 | UI lane 2 | FLOW-325 §10 option A (the פיצול לפי קטגוריות link in שינוי: `ui/change-picker.tsx`, `ui/change-sheet.tsx`, `screens/change-form.tsx`, `approve-review.ts`) + FLOW-347 שויכו היום heads (`ui/month-list.tsx`, `css/11-month-lists.css` `.ui-group-*`) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-347 Categories move row + FLOW-348 A Jev switch locked with no key (FLOW-505 follow-up merged #341); the project page batch (#326, closed) returns on FLOW-340 C's screens | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-350 cycle 9 polish (SUMIT sheet pin, date sheet chevrons and round day, iPhone note link, invented sample names), PR #358 | The FLOW-704 card shrink after UI lane 2's review-card PR |
@@ -358,7 +358,8 @@ Everything else follows by area, roughly in priority order inside each area.
   - [x] Copy for every loan refusal (`loan-copy.ts`, checked against the migrations).
   - [x] The loan page `/settings/loans/:id`: balance and status, סוג, ריבית and שינויי ריבית, פרויקט (moved from the list), מצב with the close date from the last payment, קטגוריות לחלקים.
   - [x] The list: open loans, then paid-off and closed under a collapsed "נסגרו (N)"; a row opens the loan page; the new-loan toast has פתיחה.
-  - [ ] The split editor through `save_loan_split` (fees, N installments, exact parts), demand loans and the installments hint in the match sheet, and moving loan-match.tsx `createSplit`/`correctSplit` to `save_loan_split`: wait for the loan-match PR (#252), which owns loan-match.tsx and transaction-screen.tsx.
+  - [x] (UI lane 1, 2026-10-09) The match sheet says what one tap writes on each loan: "לפי הלוח · $x", "N תשלומים לפי הלוח · $x" when the line equals 2 to 12 unpaid rows to the cent (that tap writes them together), and demand loans with "ריבית צבורה $x · השאר לקרן". A loan that cannot take the line shows off with its reason (closed or paid off before the line's date, before a demand loan's start, a later demand payment attached, above the balance). The match already saves through `save_loan_split`.
+  - [ ] The split editor "חלוקת התשלום" (fees, N installments, exact parts), opened from "חלוקה אחרת" under the match sheet and from "עריכת החלוקה" on a matched line.
   - [ ] The kind field on the new-loan form (the kind is set on the loan page for now).
   - [ ] The locked line in Categories for a category a loan uses (categories-screen is in #259).
 
