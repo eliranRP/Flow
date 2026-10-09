@@ -143,8 +143,18 @@
   color: var(--color-text-secondary);
 }
 
-/* FLOW-502: the evening reminder card on step 5 spans the body like the steps above it. */
-.ui-setup-body .ui-prompt-card {
+/* FLOW-502, FLOW-353: the evening reminder card on step 5 sits above the demo, so its answers stay
+   above the pinned סיום; it spans the side gutters like the step body. */
+.ui-setup-ask {
+  padding-inline: var(--space-side);
+  margin-block-start: var(--space-5);
+}
+
+.ui-setup-ask:empty {
+  display: none;
+}
+
+.ui-setup-ask .ui-prompt-card {
   max-inline-size: none;
-  margin: var(--space-2) 0 0;
+  margin: 0;
 }

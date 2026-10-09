@@ -30,6 +30,7 @@ import { MoneyField, PercentField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
+import { SwipeRemove } from "../ui/swipe-remove";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { Amount, LINE_SPLIT_MAX_PARTS, money, Percent } from "./line-split-parts";
@@ -240,6 +241,12 @@ function ProjectSplitEditor({
     setLastEdited(key);
   }
 
+  /** The part's ✕, or a swipe toward the start side (FLOW-325 §10). */
+  function removePart(key: string) {
+    setParts((list) => list.filter((item) => item.key !== key));
+    setLastEdited(null);
+  }
+
   function discard() {
     leaving.current = true;
     goBack(fallback);
@@ -440,87 +447,86 @@ function ProjectSplitEditor({
                 : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor }) : undefined;
               const fieldError = issue === "percent over" ? "עד 100%" : undefined;
               return (
-                <div key={part.key} className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
-                  <div className="ui-lsplit-text">
-                    <button
-                      type="button"
-                      className="ui-lsplit-pick ui-hit"
-                      aria-label={`${name}, שינוי`}
-                      aria-describedby={message ? messageId : undefined}
-                      onClick={(event) => { openPicker({ kind: "part", key: part.key }, event.currentTarget); }}
-                    >
-                      <span className="ui-lsplit-title">
-                        {/* The full name is in the button's label. */}
-                        <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
-                      </span>
-                    </button>
-                    <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${name}`} onClick={() => {
-                      setParts((list) => list.filter((item) => item.key !== part.key));
-                      setLastEdited(null);
-                    }}>
-                      <CloseIcon size={18} />
-                    </IconButton>
-                  </div>
-                  <div className="ui-lsplit-end ui-lsplit-end-entry">
-                    <div className="ui-lsplit-entry">
-                      <SegmentedControl
-                        label={`יחידה, ${name}`}
-                        showLabel={false}
-                        radius="input"
-                        value={part.unit}
-                        options={[{ value: "percent", label: "%" }, { value: "amount", label: currency === "USD" ? "$" : "₪" }]}
-                        disabled={busy}
-                        onChange={(unit) => {
-                          if (unit === part.unit) return;
-                          // Keep the same money: the cents become the amount, or the share the percent.
-                          const value = unit === "amount"
-                            ? (cents != null ? amountText(cents) : "")
-                            : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
-                          update(part.key, { unit, value });
-                          setTypedUnit(unit);
-                        }}
-                      />
-                      {part.unit === "percent" ? (
-                        <PercentField
-                          hideLabel
-                          id={`psplit-pct-${part.key}`}
-                          label={`אחוז, ${name}`}
-                          value={part.value}
-                          decimals={2}
-                          disabled={busy}
-                          error={fieldError}
-                          describedBy={message ? messageId : undefined}
-                          enterKeyHint={index === parts.length - 1 ? "done" : "next"}
-                          onValueChange={(value) => {
-                            update(part.key, { value });
-                            setTypedUnit(part.unit);
-                          }}
-                        />
-                      ) : (
-                        <MoneyField
-                          hideLabel
-                          id={`psplit-amt-${part.key}`}
-                          label={`סכום, ${name}`}
-                          prefix={currency === "USD" ? "$" : "₪"}
-                          value={part.value}
-                          disabled={busy}
-                          describedBy={message ? messageId : undefined}
-                          enterKeyHint={index === parts.length - 1 ? "done" : "next"}
-                          onValueChange={(value) => {
-                            update(part.key, { value });
-                            setTypedUnit(part.unit);
-                          }}
-                        />
-                      )}
+                <SwipeRemove key={part.key} disabled={busy} onRemove={() => { removePart(part.key); }}>
+                  <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
+                    <div className="ui-lsplit-text">
+                      <button
+                        type="button"
+                        className="ui-lsplit-pick ui-hit"
+                        aria-label={`${name}, שינוי`}
+                        aria-describedby={message ? messageId : undefined}
+                        onClick={(event) => { openPicker({ kind: "part", key: part.key }, event.currentTarget); }}
+                      >
+                        <span className="ui-lsplit-title">
+                          {/* The full name is in the button's label. */}
+                          <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
+                        </span>
+                      </button>
+                      <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${name}`} onClick={() => { removePart(part.key); }}>
+                        <CloseIcon size={18} />
+                      </IconButton>
                     </div>
-                    <span className="ui-lsplit-resolved t-label" aria-live="polite">
-                      {part.unit === "percent"
-                        ? (percent != null ? <Amount minor={cents ?? percentPartsMinor([percent], lineMinor)[0] ?? 0n} currency={currency} /> : null)
-                        : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
-                    </span>
+                    <div className="ui-lsplit-end ui-lsplit-end-entry">
+                      <div className="ui-lsplit-entry">
+                        <SegmentedControl
+                          label={`יחידה, ${name}`}
+                          showLabel={false}
+                          radius="input"
+                          value={part.unit}
+                          options={[{ value: "percent", label: "%" }, { value: "amount", label: currency === "USD" ? "$" : "₪" }]}
+                          disabled={busy}
+                          onChange={(unit) => {
+                            if (unit === part.unit) return;
+                            // Keep the same money: the cents become the amount, or the share the percent.
+                            const value = unit === "amount"
+                              ? (cents != null ? amountText(cents) : "")
+                              : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
+                            update(part.key, { unit, value });
+                            setTypedUnit(unit);
+                          }}
+                        />
+                        {part.unit === "percent" ? (
+                          <PercentField
+                            hideLabel
+                            id={`psplit-pct-${part.key}`}
+                            label={`אחוז, ${name}`}
+                            value={part.value}
+                            decimals={2}
+                            disabled={busy}
+                            error={fieldError}
+                            describedBy={message ? messageId : undefined}
+                            enterKeyHint={index === parts.length - 1 ? "done" : "next"}
+                            onValueChange={(value) => {
+                              update(part.key, { value });
+                              setTypedUnit(part.unit);
+                            }}
+                          />
+                        ) : (
+                          <MoneyField
+                            hideLabel
+                            id={`psplit-amt-${part.key}`}
+                            label={`סכום, ${name}`}
+                            prefix={currency === "USD" ? "$" : "₪"}
+                            value={part.value}
+                            disabled={busy}
+                            describedBy={message ? messageId : undefined}
+                            enterKeyHint={index === parts.length - 1 ? "done" : "next"}
+                            onValueChange={(value) => {
+                              update(part.key, { value });
+                              setTypedUnit(part.unit);
+                            }}
+                          />
+                        )}
+                      </div>
+                      <span className="ui-lsplit-resolved t-label" aria-live="polite">
+                        {part.unit === "percent"
+                          ? (percent != null ? <Amount minor={cents ?? percentPartsMinor([percent], lineMinor)[0] ?? 0n} currency={currency} /> : null)
+                          : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
+                      </span>
+                    </div>
+                    {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
                   </div>
-                  {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
-                </div>
+                </SwipeRemove>
               );
             })}
             <button

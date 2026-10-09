@@ -21,6 +21,7 @@ import { HomeBooks } from "./screens/HomeScreen";
 import {
   CategoriesScreen,
   ConnectionsScreen,
+  DEV_FILED_ROWS,
   LoansScreen,
   ReviewQueue,
   FiledTodayScreen,
@@ -235,7 +236,8 @@ export function DevReviewBanner() {
         supplier_name: "מנופים לדוגמה בע״מ",
         project_name: "שיפוץ הרצל 12",
         category_name: "חומרים",
-        auto_approved_today: 39,
+        // FLOW-309: the banner counts the rows the list it opens shows, as live does.
+        auto_approved_today: DEV_FILED_ROWS.length,
       }]}
     />
   );

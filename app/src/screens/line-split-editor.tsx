@@ -44,6 +44,7 @@ import { MoneyField, PercentField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
 import { ReversalTag } from "../ui/suggest-tag";
+import { SwipeRemove } from "../ui/swipe-remove";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { Amount, LINE_SPLIT_KEYS, LINE_SPLIT_MAX_PARTS, type LineInfo, type LineSplitApi, money, partProjectLabel, Percent } from "./line-split-parts";
@@ -178,6 +179,12 @@ export function LineSplitEditor({
   function update(key: string, change: Partial<PartDraft>) {
     setParts((list) => list.map((part) => (part.key === key ? { ...part, ...change } : part)));
     setLastEdited(key);
+  }
+
+  /** The part's ✕, or a swipe toward the start side (FLOW-325 §10). */
+  function removePart(key: string) {
+    setParts((list) => list.filter((item) => item.key !== key));
+    setLastEdited(null);
   }
 
   function discard() {
@@ -431,91 +438,90 @@ export function LineSplitEditor({
                 : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor })
                   : undefined;
               return (
-                <div key={part.key} className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
-                  <div className="ui-lsplit-text">
-                    <button
-                      type="button"
-                      className="ui-lsplit-pick ui-hit"
-                      aria-label={`${name}${reversal ? ", החזר" : ""}, ${project}, שינוי`}
-                      aria-describedby={message ? messageId : undefined}
-                      onClick={(event) => { openPicker({ kind: "part", key: part.key }, needsProject ? "project" : "category", event.currentTarget); }}
-                    >
-                      <span className="ui-lsplit-title">
-                        {/* The full name is in the button's label. */}
-                        <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
-                        {reversal ? <ReversalTag /> : null}
-                      </span>
-                      <span className={needsProject ? "ui-lsplit-project ui-lsplit-project-error" : "ui-lsplit-project"}>{project}</span>
-                    </button>
-                    <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${name}`} onClick={() => {
-                      setParts((list) => list.filter((item) => item.key !== part.key));
-                      setLastEdited(null);
-                    }}>
-                      <CloseIcon size={18} />
-                    </IconButton>
-                  </div>
-                  <div className="ui-lsplit-end ui-lsplit-end-entry">
-                    <div className="ui-lsplit-entry">
-                      <SegmentedControl
-                        label={`יחידה, ${name}`}
-                        showLabel={false}
-                        radius="input"
-                        value={part.unit}
-                        options={[{ value: "percent", label: "%" }, { value: "amount", label: "₪" }]}
-                        disabled={busy || blocked}
-                        onChange={(unit) => {
-                          if (unit === part.unit) return;
-                          // Keep the same money: the resolved cents become the amount (the percent of
-                          // the line, rounded, before a preview), or the share the percent.
-                          const value = unit === "amount"
-                            ? (cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "")
-                            : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
-                          update(part.key, { unit, value });
-                          setTypedUnit(unit);
-                        }}
-                      />
-                      {part.unit === "percent" ? (
-                        <PercentField
-                          hideLabel
-                          id={`lsplit-pct-${part.key}`}
-                          label={`אחוז, ${name}`}
-                          value={part.value}
-                          decimals={2}
-                          disabled={busy || blocked}
-                          error={fieldError}
-                          describedBy={message ? messageId : undefined}
-                          enterKeyHint={index === parts.length - 1 ? "done" : "next"}
-                          onValueChange={(value) => {
-                            update(part.key, { value });
-                            setTypedUnit(part.unit);
-                          }}
-                        />
-                      ) : (
-                        <MoneyField
-                          hideLabel
-                          id={`lsplit-amt-${part.key}`}
-                          label={`סכום, ${name}`}
-                          prefix={currency === "USD" ? "$" : "₪"}
-                          value={part.value}
-                          disabled={busy || blocked}
-                          describedBy={message ? messageId : undefined}
-                          enterKeyHint={index === parts.length - 1 ? "done" : "next"}
-                          onValueChange={(value) => {
-                            update(part.key, { value });
-                            setTypedUnit(part.unit);
-                          }}
-                        />
-                      )}
+                <SwipeRemove key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
+                  <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
+                    <div className="ui-lsplit-text">
+                      <button
+                        type="button"
+                        className="ui-lsplit-pick ui-hit"
+                        aria-label={`${name}${reversal ? ", החזר" : ""}, ${project}, שינוי`}
+                        aria-describedby={message ? messageId : undefined}
+                        onClick={(event) => { openPicker({ kind: "part", key: part.key }, needsProject ? "project" : "category", event.currentTarget); }}
+                      >
+                        <span className="ui-lsplit-title">
+                          {/* The full name is in the button's label. */}
+                          <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
+                          {reversal ? <ReversalTag /> : null}
+                        </span>
+                        <span className={needsProject ? "ui-lsplit-project ui-lsplit-project-error" : "ui-lsplit-project"}>{project}</span>
+                      </button>
+                      <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${name}`} onClick={() => { removePart(part.key); }}>
+                        <CloseIcon size={18} />
+                      </IconButton>
                     </div>
-                    <span className="ui-lsplit-resolved t-label" aria-live="polite">
-                      {part.unit === "percent"
-                        // The server's cents once previewed; until then, or while the split can't be previewed, the local share.
-                        ? (cents != null ? <Amount minor={cents} currency={currency} /> : percent != null ? <Amount minor={percentMinorOf(percent, lineMinor)} currency={currency} /> : null)
-                        : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
-                    </span>
+                    <div className="ui-lsplit-end ui-lsplit-end-entry">
+                      <div className="ui-lsplit-entry">
+                        <SegmentedControl
+                          label={`יחידה, ${name}`}
+                          showLabel={false}
+                          radius="input"
+                          value={part.unit}
+                          options={[{ value: "percent", label: "%" }, { value: "amount", label: "₪" }]}
+                          disabled={busy || blocked}
+                          onChange={(unit) => {
+                            if (unit === part.unit) return;
+                            // Keep the same money: the resolved cents become the amount (the percent of
+                            // the line, rounded, before a preview), or the share the percent.
+                            const value = unit === "amount"
+                              ? (cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "")
+                              : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
+                            update(part.key, { unit, value });
+                            setTypedUnit(unit);
+                          }}
+                        />
+                        {part.unit === "percent" ? (
+                          <PercentField
+                            hideLabel
+                            id={`lsplit-pct-${part.key}`}
+                            label={`אחוז, ${name}`}
+                            value={part.value}
+                            decimals={2}
+                            disabled={busy || blocked}
+                            error={fieldError}
+                            describedBy={message ? messageId : undefined}
+                            enterKeyHint={index === parts.length - 1 ? "done" : "next"}
+                            onValueChange={(value) => {
+                              update(part.key, { value });
+                              setTypedUnit(part.unit);
+                            }}
+                          />
+                        ) : (
+                          <MoneyField
+                            hideLabel
+                            id={`lsplit-amt-${part.key}`}
+                            label={`סכום, ${name}`}
+                            prefix={currency === "USD" ? "$" : "₪"}
+                            value={part.value}
+                            disabled={busy || blocked}
+                            describedBy={message ? messageId : undefined}
+                            enterKeyHint={index === parts.length - 1 ? "done" : "next"}
+                            onValueChange={(value) => {
+                              update(part.key, { value });
+                              setTypedUnit(part.unit);
+                            }}
+                          />
+                        )}
+                      </div>
+                      <span className="ui-lsplit-resolved t-label" aria-live="polite">
+                        {part.unit === "percent"
+                          // The server's cents once previewed; until then, or while the split can't be previewed, the local share.
+                          ? (cents != null ? <Amount minor={cents} currency={currency} /> : percent != null ? <Amount minor={percentMinorOf(percent, lineMinor)} currency={currency} /> : null)
+                          : (amount != null ? <Percent value={shareOfLine(amount, lineMinor)} /> : null)}
+                      </span>
+                    </div>
+                    {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
                   </div>
-                  {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
-                </div>
+                </SwipeRemove>
               );
             })}
             <button

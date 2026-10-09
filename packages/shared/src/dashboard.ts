@@ -52,6 +52,31 @@ export const projectRowSchema = z.object({
   profit_before_shared_agorot: agorotSchema,
   profit_agorot: agorotSchema,
   by_currency: z.array(projectByCurrencyRowSchema).optional().default([]),
+  /** FLOW-406 (0164). The project's group, null for none. Older payloads omit it. */
+  group_id: z.string().nullable().optional(),
+});
+
+/** FLOW-406 (decision 0164): a project group, summed from its projects' rows in SQL. */
+export const projectGroupRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  sort_order: z.number().int(),
+  project_count: z.number().int().nonnegative(),
+  income_agorot: agorotSchema,
+  direct_agorot: agorotSchema,
+  shared_agorot: agorotSchema,
+  profit_before_shared_agorot: agorotSchema,
+  profit_agorot: agorotSchema,
+  by_currency: z.array(projectByCurrencyRowSchema).optional().default([]),
+});
+
+/** get_project_group: one group's figures and its projects' rows, for the drill-in. */
+export const projectGroupDetailSchema = projectGroupRowSchema.extend({
+  basis: basisSchema,
+  from: z.string().nullable(),
+  to: z.string().nullable(),
+  base_currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
+  projects: z.array(projectRowSchema),
 });
 
 export const dashboardSchema = z.object({
@@ -73,6 +98,8 @@ export const dashboardSchema = z.object({
   active_projects: z.number(),
   review_count: z.number(),
   projects: z.array(projectRowSchema),
+  /** FLOW-406 (0164). Every project group, an empty one too. Older payloads omit it. */
+  groups: z.array(projectGroupRowSchema).optional(),
   after_overhead: z.boolean().optional(),
   excluded_income_agorot: agorotSchema.optional(),
   excluded_expense_agorot: agorotSchema.optional(),
@@ -659,6 +686,8 @@ export type SearchPage = z.infer<typeof searchPageSchema>;
 export type SearchRow = SearchPage["expenses"][number];
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
+export type ProjectGroupRow = z.infer<typeof projectGroupRowSchema>;
+export type ProjectGroupDetail = z.infer<typeof projectGroupDetailSchema>;
 export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
 export type ReviewRow = z.infer<typeof reviewRowSchema>;
 export type ReviewReceipt = z.infer<typeof reviewReceiptSchema>;

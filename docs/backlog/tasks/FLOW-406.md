@@ -7,7 +7,7 @@
 - [x] Server 1 (dev lane 2): `categories.parent_id`, the rule trigger, the `group_name` backfill, roll-up reads, category MCP tools.
   - [x] 1a (#354): `parent_id`, the rules, the `group_name` backfill and mirror, `set_category_parent`, refusals on a parent, `list_categories` fields, MCP `set_category_parent` and `parent_id` on the create tools.
   - [x] 1b (#363): roll-up reads: `get_project` `category_rollups*` and `parent_id`, `project_category_months` `parents[]`, `get_breakdown` by parent (MCP `level`), search parent match with `category_exact`.
-- [ ] Server 2 (dev lane 2): `project_groups`, `company_pnl.groups[]`, `get_project_group`, group MCP tools.
+- [x] Server 2 (#383): `project_groups`, `projects.group_id`, `company_pnl.groups[]`, `get_project_group`, the group RPCs, MCP `list_project_groups`, `get_project_group`, `create_project_group` and `set_project_group` with undo.
 - [ ] Server 3 (dev lane 2): starter categories and `apply_starter_categories`.
 - [ ] Screens (UI lane 3), after the server PRs.
   - [x] Settings → Categories drill-in (cat-b, cat-b-2), #378 (owner OK on the real-app shots, 2026-10-09).

@@ -23,6 +23,7 @@ import {
   categorySchema,
   createCategoriesSchema,
   createCategorySchema,
+  createProjectGroupSchema,
   createProjectSchema,
   createProjectsSchema,
   deleteCategorySchema,
@@ -51,6 +52,7 @@ import {
   setLoanIndexSchema,
   setLoanRateSchema,
   setOverheadProjectSchema,
+  setProjectGroupSchema,
   setProjectInvestmentSchema,
   splitLineSchema,
   syncBankSchema,
@@ -395,6 +397,20 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
       p_parent_id: parsed.data.parent_id,
+    };
+  } else if (name === "create_project_group") {
+    const parsed = createProjectGroupSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_create_project_group";
+    body = { p_idempotency_key: parsed.data.idempotency_key, p_name: parsed.data.name };
+  } else if (name === "set_project_group") {
+    const parsed = setProjectGroupSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_set_project_group";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_project_id: parsed.data.project_id,
+      p_group_id: parsed.data.group_id,
     };
   } else if (name === "set_company_currency") {
     const parsed = setCompanyCurrencySchema.safeParse(args);
