@@ -295,6 +295,15 @@
   text-underline-offset: 2px;
 }
 
+/* FLOW-502: a link inside a sentence of hint text: the sentence's own size, the link colour, and
+   still a 44px target (the line grows to hold it). */
+.ui-text-link-inline {
+  font-size: inherit;
+  font-weight: var(--type-label-weight);
+  line-height: inherit;
+  vertical-align: middle;
+}
+
 .ui-text-link:is(:focus-visible, [data-focus-ring]:focus) {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;

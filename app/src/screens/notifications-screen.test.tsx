@@ -94,7 +94,9 @@ describe("Settings → התראות", () => {
 
   it("on an iPhone tab says to add Flow to the Home Screen and keeps off switches off", () => {
     renderAt(<NotificationsScreen sample={{ ...NO_PREFS, weekly_summary: true }} support="ios-home-screen" />);
-    expect(screen.getByText(IOS_HOME_NOTE)).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === IOS_HOME_NOTE)).toBeInTheDocument();
+    // "למסך הבית" leads to the install steps.
+    expect(screen.getByRole("link", { name: "למסך הבית" })).toHaveAttribute("href", "/install");
     const off = screen.getByRole("switch", { name: "תנועה חדשה" });
     expect(off).toBeDisabled();
     expect(off).toHaveAccessibleDescription(`כשנכנסת תנועה מהבנק ${IOS_HOME_NOTE}`);
