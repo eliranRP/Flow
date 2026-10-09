@@ -36,6 +36,13 @@ describe("missing bills", () => {
     expect(href.searchParams.get("q")).toHaveLength(100);
   });
 
+  it("names a supplier with no name ללא שם, so the row is never blank", () => {
+    const first = SAMPLE_MISSING_BILLS[0];
+    if (first == null) throw new Error("sample");
+    const [row] = missingBillViews([{ ...first, supplier_name: "" }], "", now);
+    expect(row?.name).toBe("ללא שם");
+  });
+
   it("titles the Home row with a count only, singular for one", () => {
     expect(missingBillsTitle(1)).toBe("חשבון אחד לא הגיע");
     expect(missingBillsTitle(3)).toBe("3 חשבונות לא הגיעו");

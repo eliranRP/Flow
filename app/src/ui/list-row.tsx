@@ -196,7 +196,7 @@ export function ListRow(props: ListRowProps) {
           <ChevronIcon />
         </span>
       ) : null}
-      {props.external === true && props.href != null ? <span className="sr-only">(נפתח בלשונית חדשה)</span> : null}
+      {props.external === true && props.href != null ? <span className="sr-only">{NEW_TAB}</span> : null}
     </>
   );
 
@@ -273,7 +273,7 @@ export function ListRow(props: ListRowProps) {
       target="_blank"
       rel="noopener noreferrer"
       className={className}
-      aria-label={described ? rowName(props) : props.label}
+      aria-label={externalName(described ? rowName(props) : props.label)}
       aria-describedby={described}
     >
       {body}
@@ -294,6 +294,13 @@ export function ListRow(props: ListRowProps) {
     </div>
   );
   return withAction(props, row);
+}
+
+const NEW_TAB = "(נפתח בלשונית חדשה)";
+
+/** An outside link's own name keeps the new-tab note the hidden span gives the content. */
+function externalName(name: string | undefined): string | undefined {
+  return name == null ? undefined : `${name} ${NEW_TAB}`;
 }
 
 function rowName(props: { label?: string; title: ReactNode }): string | undefined {

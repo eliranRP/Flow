@@ -421,4 +421,14 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(avatar).toHaveAttribute("data-avatar", "icon");
     expect(avatar?.querySelector("svg")).not.toBeNull();
   });
+
+  it("keeps the new-tab note in an outside link's name, also when the row has its own label (FLOW-335)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="project" title="לקוח" label="לקוח, 01/09" agorot={100n} loss={false} href="https://pay.sumit.co.il/x" external />
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole("link", { name: "לקוח, 01/09 (נפתח בלשונית חדשה)" });
+    expect(link).toHaveAttribute("target", "_blank");
+  });
 });

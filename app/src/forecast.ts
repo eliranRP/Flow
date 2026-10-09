@@ -48,7 +48,7 @@ export function missingBillHref(name: string, search: string): string {
 export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date()): MissingBillView[] {
   return rows.map((row) => ({
     id: `${row.supplier_id}:${row.currency}`,
-    name: row.supplier_name,
+    name: row.supplier_name === "" ? "ללא שם" : row.supplier_name,
     due: `עד ${formatDayMonth(row.expected_by, now)}`,
     minor: abs(row.typical_amount_minor),
     currency: row.currency,

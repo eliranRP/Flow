@@ -56,5 +56,7 @@ describe("unpaid document link (FLOW-335)", () => {
     expect(unpaidDocumentUrl({ document_url: "https://pay.sumit.co.il.example.com/doc" })).toBeNull();
     expect(unpaidDocumentUrl({ document_url: "https://example.com/?https://pay.sumit.co.il/" })).toBeNull();
     expect(unpaidDocumentUrl({ document_url: "javascript:alert(1)" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: "https://pay.sumit.co.il:8443/doc" })).toBeNull();
+    expect(unpaidDocumentUrl({ document_url: " https://pay.sumit.co.il/doc" })).toBeNull();
   });
 });
