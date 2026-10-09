@@ -48,15 +48,22 @@
 }
 
 /* A loan's name is the row's identity: at 320 it wraps to two lines instead of losing the name
-   to an ellipsis; the hint keeps two lines too (FLOW-339, design lead). */
-.ui-loan-list .ui-row-title,
-.ui-loan-list .ui-row-hint {
+   to an ellipsis (FLOW-339, design lead). The hint is one line of whole parts (FLOW-347). */
+.ui-loan-list .ui-row-title {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+/* FLOW-347: under 360px the bank icon (the same on every row) gives its 36px to the name, so a
+   short name like "משכנתא דוגמה" stays on one line next to its balance. */
+@media (max-width: 359px) {
+  .ui-loan-list .ui-row-icon {
+    display: none;
+  }
 }
 
 /* FLOW-107. A part kept out of the profit: icon and words, muted, never only colour. */
