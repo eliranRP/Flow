@@ -1,7 +1,8 @@
 import { type ReviewRow } from "@flow/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { type JevShown } from "./jev-review";
+import { focusReviewEmptyAction, takeReviewFocus } from "./review-focus";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { ReviewIcon } from "../ui/icons";
@@ -23,7 +24,7 @@ export const reviewLineFocus: {
 /** Dev-only fixture. A production build folds this to null and drops the module. */
 export const reviewE2e = import.meta.env.DEV ? reviewE2eFixture : null;
 
-export function useE2eReviewRows(active: boolean): ReviewRow[] {
+export function useE2eReviewRows(active: boolean, size?: number): ReviewRow[] {
   const [, bump] = useState(0);
   useEffect(() => {
     if (!import.meta.env.DEV || !active || reviewE2e == null) return;
@@ -32,7 +33,7 @@ export function useE2eReviewRows(active: boolean): ReviewRow[] {
     });
   }, [active]);
   if (!import.meta.env.DEV || !active || reviewE2e == null) return EMPTY_REVIEW;
-  return reviewE2e.currentRows();
+  return reviewE2e.currentRows(size);
 }
 
 export function reviewListPath(search: string): string {
@@ -156,6 +157,13 @@ export function ReviewEmpty({
   skippedLink?: boolean;
 }) {
   const skipped = useSkippedReviewQuery(skippedLink && !filtered);
+  // FLOW-309: the last card left with focus in its action bar; the action takes it (after the title's).
+  // A ref, so StrictMode's second run of the effect still knows (the title focuses itself again).
+  const handed = useRef<boolean | null>(null);
+  useEffect(() => {
+    handed.current ??= takeReviewFocus();
+    if (handed.current) focusReviewEmptyAction();
+  }, []);
   const skippedCount = skippedLink && !filtered && !skipped.isError ? (skipped.data?.length ?? 0) : 0;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">

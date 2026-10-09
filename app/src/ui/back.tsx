@@ -210,6 +210,21 @@ export function ScrollMemory() {
 
 let pushingLayer = false;
 
+/** The router's browser entry. MemoryRouter (tests) writes none. */
+function onBrowserEntry(): boolean {
+  const entry: unknown = window.history.state;
+  return isRecord(entry) && typeof entry.key === "string" && typeof entry.idx === "number";
+}
+
+/**
+ * The sheet stack as it stands now. The browser entry changes at once on a push, while the
+ * router's location follows in a transition, so a close right after an open reads the entry
+ * (FLOW-310). MemoryRouter (tests) writes no browser entry, so its location state is the stack.
+ */
+export function liveSheetStack(locationState: unknown): string[] {
+  return sheetStack(onBrowserEntry() ? window.history.state : locationState);
+}
+
 /** Tests start from a sheet push that is not still marked in flight. */
 export function resetSheetHistoryLock(): void {
   pushingLayer = false;
@@ -323,7 +338,7 @@ export function useSheetHistory(
       return true;
     }
     const current = locationRef.current;
-    const stack = sheetStack(current.state);
+    const stack = liveSheetStack(current.state);
     const index = stack.indexOf(name);
     if (index === -1) {
       onOpenChange(false);

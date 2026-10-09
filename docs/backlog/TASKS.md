@@ -14,15 +14,15 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-114 server follow-ups (`save_loan_split` category on every part; the loan line backfill checked and logged, no migration), FLOW-133 dblink undo tests, FLOW-309 income `missing_category` reason | The next non-UI item |
-| Dev lane 2 | Free: FLOW-506/507/508 non-UI follow-ups done in #289 | The lane manager's next non-UI item |
+| Dev lane 1 | FLOW-310 logic items: sheet history (✕ at open; reload covered) and keyboard (layout-viewport fallback, stale Vaul lift) | The next non-UI item |
+| Dev lane 2 | FLOW-509 Mercury connector hardening (server only), after FLOW-506/507/508 in #289 | The lane manager's next non-UI item |
 | UI lane 1 | FLOW-106 screens + FLOW-110 (layout B, owner's pick 2026-10-09; no reorder), PR #TBD on `claude/project-thread-0wt3o6`: the loan page `/settings/loans/:id`, delete with ביטול (`restore_loan`), the payments section (`mcp_loan_payments`), closed loans under "נסגרו (N)" (FLOW-403 merged #260) | The FLOW-106 split editor and match-sheet items after #252; navigation (331, 334, rest of 322), company "לפי חודש" |
-| UI lane 2 | FLOW-314 follow-ups (slide-in once, band-figure edge px) + FLOW-333 C14 (loud flag on short phones); FLOW-314 merged #291 | Next UI task for the review and transaction screens |
+| UI lane 2 | FLOW-309 review queue small items (steady counter, focus to the next אישור, short-phone spacing at 320×693, the mid-swap stuck card, e2e at 320); FLOW-314 follow-ups + C14 merged #296 | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-310 sheet focus, stacked-sheet fade, ListRow markup, toast over a tall sheet (#298); FLOW-341 card to the owner after 06:00Z | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-6: Search shows only the count under the title, and a row hint shows whole parts (C6-3 merged #292) | #231 follow-ups in the Jev and settings area |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-507 a viewer's expired SUMIT and Mercury rows read neutral (#301) | Next small ready bug |
+| Backlog bug fixes | FLOW-115 loan with no balance row is not paid off; currency empty state | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -384,7 +384,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Loan match: the waiting line should say why and print only the difference; disable the other rows while the correction is busy; its own failure copy; refresh the parts after a failed correction; next step for a currency mismatch; an empty match sheet offers הלוואה חדשה; hide or disable loans in another currency; long loan names need a second line or hint at 320; whole units on the Settings balances; link the "ממתין לבדיקה" row to the waiting line; skeleton rows to stop cold-open shifts.
 - [ ] Loan match sheet: a dismiss during a save should wait for the save; focus stays in the sheet while a loan saves and returns to the row on failure; the error row title for viewers; focus after a successful retry.
 - [ ] The split skeleton is sized for the hinted row, so with 2+ loans and no hint the content moves up about 19px on load.
-- [ ] Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
+- [x] (Backlog bug fixes, 2026-10-09: the sheet says "אין הלוואה בדולר."; a loan with no balance row shows its principal) Empty state when the only loans are in another currency; a loan without a balance row shows as paid off.
 
 ## MCP
 
@@ -598,15 +598,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-309"></a>
 ### FLOW-309 · Review queue follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** ready (UI lane 2 has the counter, focus, spacing, e2e and mid-swap items, 2026-10-09) · **Depends on:** —
 - [ ] Unit-test the live refresh of filed-today and the transaction on approve and undo; restore the toast fade-ramp assertion.
 - [ ] Decide whether the queue banner counts every filed-today row (it should match the list); align the preview's filed-today list with live.
 - [ ] Fixtures for a single-project item with `project_suggested` false; a real soft-keyboard test.
-- [ ] Counter shifts sideways at 9→10 and 99→100 (tabular digits, reserve width).
-- [ ] Focus falls to body after a successful אישור or ביטול; move it to the next card's אישור.
-- [ ] Banner and card spacing: keep the 8px step and trim only on short screens; at 320×693 a wrapping supplier plus a reason line pushes שינוי/דלג under the tab bar; a one-line banner saves 44px.
-- [ ] e2e for the plural title at 320 and for אישור clearing the tab bar at 320×693.
-- [ ] A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
+- [x] (UI lane 2, #304: tabular digits, and each number reserves the total's digits; at 320 the counter and its bar stay put from 1 to 10 of 12, e2e `review-fit.spec.ts`. Only the total itself crossing 9→10 or 99→100 still widens it once) Counter shifts sideways at 9→10 and 99→100 (tabular digits, reserve width).
+- [x] (UI lane 2, #304: with focus in the bar, focus goes to the next card's first button after אישור or דלג, to לדף הבית when the queue empties, and back to the returning card's אישור after ביטול on the toast; a tap that never focused the bar moves nothing, and a tap's focus draws no ring) Focus falls to body after a successful אישור or ביטול; move it to the next card's אישור.
+- [x] (UI lane 2, #304: the banner sits 8px under the counter row above 720px tall, 4px in the short-phone block. Measured at 320x693 with a two-line supplier, Jev's two-line reason and the wrapped plural banner: the card ends 21px above the pinned bar, שינוי and דלג 8px above the tab bar (the pinned bar, #278 and #296 already fit it); the page scrolls 10px. The plural title can't share a line with לרשימה at 320 without new copy (242px for 188)) Banner and card spacing: keep the 8px step and trim only on short screens; at 320×693 a wrapping supplier plus a reason line pushes שינוי/דלג under the tab bar; a one-line banner saves 44px.
+- [ ] Follow-up from #304: at 320x693 with the wrapped plural banner the review page still scrolls 10px under the pinned bar (everything fits at scroll 0); a one-line banner at 320 would need new copy (title and לרשימה need 242px of 188).
+- [x] (UI lane 2, #304: `app/e2e/review-fit.spec.ts` on `/review?preview=1&e2e=list&fit=1`; also the counter from 9 to 10 and the focus path) e2e for the plural title at 320 and for אישור clearing the tab bar at 320×693.
+- [x] (UI lane 2, #304: `review-swap.ts` swaps on the head's id, a card that comes back while leaving settles, any changed field of the card on screen shows, and the refs are written after render; unit tests in `review-queue-swap.test.tsx`) A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
 - [ ] Tests: the project-picker toast pad path; click through from 'בחירת קטגוריה' to the picker; assert `open.search` is empty; a test that fails if the effect deps revert.
 - [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
 - [x] Income always reports `missing_project` even when the category is missing too. (Server, migration `20261013010000`: income with no project and a category the owner has not picked waits as `missing_category`; picking an in-P&L income category queues `missing_project`, a kept-out one queues nothing, and undo takes the queued row back. Open connector-income rows are relabelled once.) (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
@@ -620,11 +621,11 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
 - **Type:** BACKLOG NIT · **Status:** partly done (#298: focus return, stacked fade, ListRow markup, toast fallback); the open boxes are left · **Depends on:** —
-- [ ] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload.
+- [ ] Sheet history: ✕ tapped the instant a sheet mounts leaves a dead Back step; under heavy slowdown Escape on a stacked confirm can leave a stale entry; a reload with a sheet open leaves a dead entry; the status sheet isn't restored after a hard reload. (Dev lane 1, 2026-10-09: ✕ at mount fixed: a close reads the stack from the browser entry, which a push writes at once, not from the router location that follows in a transition. The reload case was already handled by `DropRestoredSheet`, now also covered on real browser entries (`sheet-history-browser.test.tsx`). Left: the Escape case did not reproduce in jsdom, so it needs a device trace before a fix; whether a reload should reopen the status sheet instead of dropping it is a call for the owner or the design lead.)
 - [x] Stacked sheets: the sheet underneath snaps from dimmed to full in one frame when the top one closes. (Not reproduced, no regression test: a one-off per-frame probe of the Connections ניתוק confirm saw the top scrim fade 1.00→0 over about 220ms after Escape, ✕ and Back; #298.)
 - [x] After Escape on a ניתוק confirm, focus lands on ניתוק with no visible ring; ✕ and Escape on Settings sheets don't return focus to the opening row. (#298: Escape marks the returned control's ring until it blurs; route sheets do the same; Categories' create, merge, hide and move sheets return focus to their opener.)
 - [ ] Decide whether Back should be blocked on the shown-once code step like a backdrop tap ([0082](../decisions/0082-settings-redesign.md) §8); confirm a quick double tap on the help backdrop can't close the code sheet.
-- [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung.
+- [ ] Keyboard: a fallback when the layout viewport shrinks too (browsers that ignore `interactive-widget`); Vaul's keyboard state flips on multi-step viewport resizes; reduce `--sheet-gap` while the keyboard is open at 320. Real-device QA on iPhone Safari and PWA, Android Chrome and Samsung. (Dev lane 1, 2026-10-09: the first two done in `keyboard-inset.ts`: while a field has focus, the keyboard is measured against the layout height from before it, and while the keyboard is closed a drawer lift Vaul left behind is dropped after Vaul's own listener. Left: `--sheet-gap` at 320 (a visual change for the design lead) and the real-device QA.)
 - [x] Money field: the gap between the `₪`/`$` prefix and the digits grows with the number's length. (The prefix sits beside a hidden copy of the digits; 0.35em at any length.)
 - [x] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row. (Already true on main; #298 adds a test that locks it.)
 - [x] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment. (Already true on main: the toast waits for the sheet pad before it shows. The committed e2e/toast.spec.ts samples every frame at 320×693 and 390×844 with `--safe-top` 0, 20 and 47 and fails if the toast covers ✕; 31/31 pass, #298.)

@@ -152,11 +152,11 @@ export function useLoanList(companyId: string | null) {
       if (!supabase || companyId == null) return [];
       const loans = await supabase
         .from("loans")
-        .select("id, name, currency, project_id, kind, status, closed_on")
+        .select("id, name, currency, project_id, kind, status, closed_on, principal_minor")
         .eq("company_id", companyId)
         .order("name");
       assertNoError(loans);
-      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency");
+      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency").eq("company_id", companyId);
       assertNoError(balances);
       const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
       const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
@@ -172,7 +172,8 @@ export function useLoanList(companyId: string | null) {
           id: loan.id,
           name: loan.name,
           currency: balance?.currency ?? loan.currency,
-          balanceMinor: BigInt(balance?.balance_minor ?? 0),
+          // A balance row missing from the read: nothing counted against it, so the principal is left.
+          balanceMinor: BigInt(balance?.balance_minor ?? loan.principal_minor),
           flaggedParts: balance?.flagged_parts ?? 0,
           projectId: loan.project_id,
           projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),

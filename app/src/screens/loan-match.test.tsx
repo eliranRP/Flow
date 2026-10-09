@@ -191,6 +191,13 @@ describe("LoanMatchOffer", () => {
     expect(onMatch).toHaveBeenCalledWith("loan-1");
   });
 
+  it("names the line's currency when every loan is in another one (FLOW-115)", () => {
+    render(<OfferHarness lineCurrency="USD" />);
+    fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
+    expect(screen.getByText("אין הלוואה בדולר.")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
   it("hides matching for a viewer", () => {
     render(<OfferHarness readOnly />);
     expect(screen.queryByRole("button", { name: /שיוך להלוואה/ })).not.toBeInTheDocument();
@@ -288,6 +295,15 @@ describe("LoanTransactionSplit", () => {
     // The server files each part under the loan's category, else the keyed default (0128).
     expect(call?.p_parts.some((part) => "category_id" in part)).toBe(false);
     expect(db.rpcs.filter((item) => item.name === "clear_loan_split_review")).toHaveLength(0);
+  });
+
+  it("matches a loan with no balance row yet: it is not read as paid off (FLOW-115)", async () => {
+    db.balances = [];
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(saves()).toHaveLength(1); });
   });
 
   it("says the loan closed before the payment date (FLOW-136)", async () => {
