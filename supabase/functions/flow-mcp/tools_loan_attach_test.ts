@@ -225,15 +225,22 @@ Deno.test("attach_loan_payment refuses fees larger than the line and fees that a
     fees: "100.01",
   }, ["write"], rpc);
   assertEquals(over.structuredContent, { ok: false, error: { code: "refused", message: "fees exceed the line" } });
-  for (const fees of [0, "0.00", "-5", "abc", true]) {
+  for (const fees of [0, "0.00", "-5", "abc"]) {
     const out = await callTool("attach_loan_payment", {
       idempotency_key: "fees-bad",
       transaction_id: LOAN_TXN,
       loan_id: LOAN,
       fees,
     }, ["write"], rpc);
-    assertEquals(out.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+    assertEquals(out.structuredContent, {
+      ok: false,
+      error: { code: "validation", message: "fees: an amount above zero, at most two decimals, not rounded" },
+    });
   }
+  const notAmount = await callTool("attach_loan_payment", {
+    idempotency_key: "fees-bad", transaction_id: LOAN_TXN, loan_id: LOAN, fees: true,
+  }, ["write"], rpc);
+  assertEquals(notAmount.structuredContent, { ok: false, error: { code: "validation", message: "fees: expected a number or text" } });
   assertEquals(calls.some((call) => call.name === "mcp_attach_loan_payment"), false);
 });
 
@@ -311,7 +318,21 @@ Deno.test("attach_loan_payment validates installments, fees and parts before rea
   ];
   for (const extra of bad) {
     const out = await callTool("attach_loan_payment", { ...base, ...extra }, ["write"], rpc);
-    assertEquals(out.structuredContent, { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(extra));
+    assertEquals(out.isError, true, JSON.stringify(extra));
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation", JSON.stringify(extra));
+  }
+  // FLOW-414: each refusal names its field.
+  for (const [extra, message] of [
+    [{ installments: 0 }, "installments: Too small: expected number to be >=1"],
+    [{ parts: exact, installments: 2 }, "parts: not with installments or fees"],
+    [{ fees_category_id: INCOME_CATEGORY }, "fees_category_id: only with fees"],
+    [{ fees: "10.00", fees_category_id: "not-a-uuid" }, "fees_category_id: wrong format"],
+    [{ parts: { ...exact, extra: "1" } }, "parts.extra: unknown field"],
+    [{ parts: { ...exact, escrow: "1.234" } }, "parts.escrow: an amount of zero or more, at most two decimals, not rounded"],
+    [{ parts: { ...exact, principal: "-1" } }, "parts.principal: an amount of zero or more, at most two decimals, not rounded"],
+  ] as const) {
+    const out = await callTool("attach_loan_payment", { ...base, ...extra }, ["write"], rpc);
+    assertEquals(out.structuredContent, { ok: false, error: { code: "validation", message } }, JSON.stringify(extra));
   }
   assertEquals(calls.length, 0);
 });

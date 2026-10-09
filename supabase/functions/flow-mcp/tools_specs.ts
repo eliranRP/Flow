@@ -203,10 +203,11 @@ function writeTools() {
       name: { type: "string" },
       status: { type: "string", enum: ["active", "finished"] },
     }, true),
-    toolSpec("create_category", "Create a category in the owner's company.", {
+    toolSpec("create_category", "Create a category in the owner's company. parent_id (optional) puts it under a parent category of the same kind, as a sub-category (one level; not a loan category).", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       kind: { type: "string", enum: ["expense", "income"] },
+      parent_id: { type: ["string", "null"] },
     }, true),
     toolSpec("create_projects", "Create up to 100 projects in one write, for a company setup. Partial success is allowed: each row returns ok with its id, or a code; a name that is already taken returns existing_id. undo_batch with the returned batch_key removes the rows that were created.", {
       idempotency_key: { type: "string" },
@@ -232,6 +233,7 @@ function writeTools() {
           properties: {
             name: { type: "string" },
             kind: { type: "string", enum: ["expense", "income"] },
+            parent_id: { type: ["string", "null"] },
           },
           required: ["name", "kind"],
           additionalProperties: false,
@@ -273,7 +275,7 @@ function writeTools() {
       interest_only_months: { type: "integer" },
       amortization_months: { type: "integer" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). fees_category_id files the fees part of later payments when the attach names none: any expense category, counted in the P&L or kept out, that is not a built-in loan category, or the built-in interest one (category does not fit the loan part); null clears it, and there is no default. Payments already attached keep their categories. kind changes the loan's kind (interest_only needs interest_only_months, balloon amortization_months; demand clears the term, payment and escrow; another kind from demand needs term_months and payment); interest_only_months and amortization_months alone change that field. Undo restores the previous project, status, closed_on, categories and kind.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow take any expense category, counted in the P&L or kept out (a kept-out one keeps that part out of profit, such as a hard-money loan's interest carried as a project cost), principal needs one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). fees_category_id files the fees part of later payments when the attach names none: any expense category, counted in the P&L or kept out, that is not a built-in loan category, or the built-in interest one (category does not fit the loan part); null clears it, and there is no default. Payments already attached keep their categories. kind changes the loan's kind (interest_only needs interest_only_months, balloon amortization_months; demand clears the term, payment and escrow; another kind from demand needs term_months and payment); interest_only_months and amortization_months alone change that field. Undo restores the previous project, status, closed_on, categories and kind.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -405,7 +407,12 @@ function writeTools() {
       category_id: { type: "string" },
       name: { type: "string" },
     }, true),
-    toolSpec("set_category_group", "Put a category in a group (owner only), for example חשבונות, so a screen can fold the group's categories into one row; null or blank takes it out. Up to 40 letters, trimmed. Totals stay per category. Returns category_id, group_name, prior and undo_kind. Undo is kind category_group with the category id, a conflict once the group was changed again.", {
+    toolSpec("set_category_parent", "Put a category under a parent category (owner only), as a sub-category: one level, the same kind, and never a loan category; a parent keeps its own lines. null takes it out. Refusals: category_parent_nested (the parent has a parent, or the category has sub-categories), category_parent_kind, category_parent_loan_part. Returns category_id, parent_id, prior and undo_kind. Undo is kind category_parent with the category id, a conflict once the parent was changed again.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+      parent_id: { type: ["string", "null"] },
+    }, true),
+    toolSpec("set_category_group", "Older form of set_category_parent (FLOW-406): puts a category under the parent category with this name, making that parent when none has it (owner only); null or blank takes it out. Up to 40 letters, trimmed. Returns category_id, group_name, prior and undo_kind. Undo is kind category_group with the category id, a conflict once the group was changed again.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
       group_name: { type: ["string", "null"] },
@@ -422,7 +429,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "jev_mode", "loan_index", "index_rate"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "jev_mode", "loan_index", "index_rate"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {

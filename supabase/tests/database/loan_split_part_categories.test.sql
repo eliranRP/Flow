@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(12);
+select plan(13);
 
 do $users$
 begin
@@ -139,14 +139,18 @@ select public.save_loan_split(pg_temp.id('txn'), pg_temp.id('loan'), pg_temp.par
 select is(pg_temp.stored('interest'), pg_temp.id('default_interest'), 'with no category, interest goes to the keyed default');
 
 -- 4. A category that does not fit its part, or is not the company's, is refused.
-select is(pg_temp.refusal(pg_temp.parts(pg_temp.id('kept_out'), null, null)),
-  'category does not fit the loan part', 'interest cannot go to a kept-out category');
+select is(pg_temp.refusal(pg_temp.parts(pg_temp.id('income_cat'), null, null)),
+  'category does not fit the loan part', 'interest cannot go to an income category');
 select is(pg_temp.refusal(pg_temp.parts(null, null, pg_temp.id('interest_cat'))),
   'category does not fit the loan part', 'principal cannot go to a category in the P&L');
 select is(pg_temp.refusal(pg_temp.parts(null, pg_temp.id('income_cat'), null)),
   'category does not fit the loan part', 'escrow cannot go to an income category');
 select is(pg_temp.refusal(pg_temp.parts(pg_temp.id('elsewhere'), null, null)),
   'category not found', 'a category of another company is not found');
+
+-- 5. Interest and escrow may go to a kept-out category, as fees may (0166).
+select is(pg_temp.refusal(pg_temp.parts(pg_temp.id('kept_out'), pg_temp.id('kept_out'), null)),
+  'saved', 'interest and escrow may go to a kept-out category');
 
 select * from finish();
 rollback;

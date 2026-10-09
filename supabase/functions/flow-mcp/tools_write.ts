@@ -36,6 +36,7 @@ import {
   renameCompanySchema,
   reorderLoansSchema,
   setCategoryGroupSchema,
+  setCategoryParentSchema,
   setCategoryPnlSchema,
   setCategoryRehabSchema,
   setCompanyCurrencySchema,
@@ -121,6 +122,7 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_name: parsed.data.name,
       p_kind: parsed.data.kind,
+      ...(parsed.data.parent_id == null ? {} : { p_parent_id: parsed.data.parent_id }),
     };
   } else if (name === "create_projects") {
     const parsed = createProjectsSchema.safeParse(args);
@@ -355,6 +357,15 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
       p_group_name: parsed.data.group_name,
+    };
+  } else if (name === "set_category_parent") {
+    const parsed = setCategoryParentSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_set_category_parent";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+      p_parent_id: parsed.data.parent_id,
     };
   } else if (name === "set_company_currency") {
     const parsed = setCompanyCurrencySchema.safeParse(args);
