@@ -601,6 +601,8 @@ function hasDeniedGram(text: string): boolean {
  * The deny-list is the MERCURY_FIXTURE_DENYLIST Actions secret: one name per line, at most six words each.
  * It lists the real names and codes the recorded fixtures once held, so they never come back.
  * The Mercury test sources are scanned too, since their assertions name fixture counterparties.
+ * scripts/check-deny-list.mjs scans the whole repo against the same secret at any entry length;
+ * this narrower check stays so `pnpm test:connectors` alone still covers the fixtures.
  */
 Deno.test({
   name: "fixtures and Mercury tests contain none of the denied names",
