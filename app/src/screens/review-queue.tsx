@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
-import { useCategoriesQuery, useInvalidateBooks, useLineMetaQuery } from "../use-books";
+import { useCategoriesQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
 import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-review";
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { filedTodayBannerTitle } from "../filed-today-copy";
@@ -141,9 +141,11 @@ export function ReviewQueue({
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
   const metaLive = !sample && previewWrite == null;
-  const lineMeta = useLineMetaQuery(shownId, metaLive);
-  // Warm the next card's bank details so its meta line paints with the card.
-  useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
+  // FLOW-315: one read for the whole queue's bank details fills each card's cache, so every next
+  // card's meta line paints with it. The card's own read runs only when that one is not in flight
+  // (it failed, or the card is new to the queue). The details stay supplementary: the card never waits.
+  const metaPage = useLineMetaPageQuery(rows.map((item) => item.transaction_id), metaLive);
+  const lineMeta = useLineMetaQuery(shownId, metaLive && metaPage.fetchStatus !== "fetching");
   const jevUndo = useJevUndo();
   const jev = jevUndo.stateFor(shownId, jevQueue.stateFor(shownId));
   const flagsFor = useReviewFlags(

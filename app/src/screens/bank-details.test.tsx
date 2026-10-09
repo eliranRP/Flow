@@ -12,6 +12,7 @@ import { ReviewQueue, TransactionScreen } from "./flow-screens";
 const db = vi.hoisted(() => ({
   meta: [] as unknown,
   metaError: false,
+  failOnce: null as null | (() => boolean),
   calls: [] as Array<{ name: string; args: unknown }>,
 }));
 
@@ -41,6 +42,7 @@ vi.mock("../lib/supabase", () => ({
       db.calls.push({ name, args });
       if (name === "get_transaction") return Promise.resolve({ data: transaction, error: null });
       if (name === "get_line_meta") {
+        if (db.failOnce?.() === true) return Promise.resolve({ data: null, error: { message: "meta down" } });
         return Promise.resolve(db.metaError ? { data: null, error: { message: "meta down" } } : { data: db.meta, error: null });
       }
       return Promise.resolve({ data: [], error: null });
@@ -99,6 +101,7 @@ function renderDetail() {
 afterEach(() => {
   db.meta = [];
   db.metaError = false;
+  db.failOnce = null;
   db.calls = [];
   vi.restoreAllMocks();
 });
@@ -177,8 +180,13 @@ describe("BankDetails rows", () => {
     render(<BankDetails meta={{ ...empty, memo: "A long memo" }} party="x" direction="expense" />);
     const toggle = screen.getByRole("button", { name: /הערה/ });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // FLOW-315: a ▾ cue says the row opens, and turns over while it is open.
+    const cue = toggle.querySelector(".ui-bank-memo-cue");
+    expect(cue).not.toBeNull();
+    expect(cue).not.toHaveAttribute("data-open");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle.querySelector(".ui-bank-memo-cue")).toHaveAttribute("data-open");
   });
 });
 
@@ -217,4 +225,42 @@ describe("review card meta (FLOW-304)", () => {
     expect(screen.getByText("תנועות שמחכות לשיוך")).toBeInTheDocument();
     expect(db.calls.filter((call) => call.name === "get_line_meta").map((call) => call.args)).toEqual([{ p_ids: ["tx"] }]);
   });
+
+  it("reads the whole queue's details in one call, so the next card needs no read of its own (FLOW-315)", async () => {
+    db.meta = [
+      { ...empty, method: "card", card_last4: "4242" },
+      { ...empty, transaction_id: "tx2", method: "ach" },
+    ];
+    renderQueue([reviewRow, { ...reviewRow, id: "r2", transaction_id: "tx2", supplier_name: "Sample Tenant" }]);
+    expect(await screen.findByText("כרטיס שמסתיים ב־4242")).toHaveClass("sr-only");
+    // The next card's details came with that read: the old warm-up read of one other row is gone.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(db.calls.filter((call) => call.name === "get_line_meta").map((call) => call.args)).toEqual([{ p_ids: ["tx", "tx2"] }]);
+  });
+
+  it("falls back to the card's own read when the queue's read fails", async () => {
+    db.meta = [{ ...empty, method: "card", card_last4: "4242" }];
+    // The queue's read fails twice (its one retry included); the card's own read then succeeds.
+    let failures = 2;
+    db.failOnce = () => {
+      failures -= 1;
+      return failures >= 0;
+    };
+    renderQueue([reviewRow]);
+    expect(await screen.findByText("כרטיס שמסתיים ב־4242", undefined, { timeout: 4000 })).toHaveClass("sr-only");
+    expect(db.calls.filter((call) => call.name === "get_line_meta")).toHaveLength(3);
+  });
 });
+
+function renderQueue(rows: ReviewRow[]) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <MemoryRouter>
+          <ReviewQueue rows={rows} search="" />
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
