@@ -57,6 +57,8 @@ type Shared = {
   leave?: { current: () => Promise<boolean> };
   /** A split already has its projects. The sheet changes the category only. */
   categoryOnly?: boolean;
+  /** A payment matched to a loan keeps its category (FLOW-114, decision 0136): no category row. */
+  categoryLocked?: boolean;
   /** Shown on the project row when the id is still empty, such as a split label. */
   projectTitle?: string;
   /** Shown above the project list. A split uses it to say the shares will go. */
@@ -250,6 +252,7 @@ export function ChangeAssignment(props: Props) {
   }
 
   function openPicker(next: "project" | "category") {
+    if (next === "category" && props.categoryLocked) return;
     opener.current = next;
     setQuery("");
     setReversalOpen(props.reversalsOpen === true);
@@ -574,6 +577,7 @@ export function ChangeAssignment(props: Props) {
                 }}
               />
             )}
+            {props.categoryLocked ? null : (
             <ListRow
               variant="button"
               buttonRef={categoryBtn}
@@ -586,6 +590,7 @@ export function ChangeAssignment(props: Props) {
                 openPicker("category");
               }}
             />
+            )}
           </div>
           {props.hold ? <HoldLine onDiscard={discardHeld}>{props.hold}</HoldLine> : null}
           {showRemember ? (

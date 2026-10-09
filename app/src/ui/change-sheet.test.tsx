@@ -210,3 +210,36 @@ describe("ChangeAssignment opened on a picker", () => {
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
   });
 });
+
+describe("ChangeAssignment on a matched loan payment (FLOW-114)", () => {
+  it("offers no category row when the category is locked", async () => {
+    render(
+      <MemoryRouter>
+        <ChangeAssignment
+          host="overlay"
+          open
+          onOpenChange={() => undefined}
+          contained
+          start="summary"
+          categoryLocked
+          supplier="בנק לדוגמה"
+          amount="₪6,200"
+          direction="expense"
+          projects={[{ id: "p1", name: "פרויקט א" }]}
+          categories={fewCategories}
+          projectId=""
+          categoryId="c1"
+          onProjectId={() => undefined}
+          onCategoryId={() => undefined}
+          hold="בחרו פרויקט."
+          onCommitPick={() => Promise.resolve(undefined)}
+          onSplit={() => undefined}
+          onCreateProject={(name) => Promise.resolve({ id: "new", name })}
+        />
+      </MemoryRouter>,
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: /^פרויקט:/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /^קטגוריה:/ })).not.toBeInTheDocument();
+  });
+});
