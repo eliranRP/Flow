@@ -47,8 +47,11 @@ test("at 320x693 the worst-case card ends above the bar, and אישור, שינ�
   }
 });
 
-test("the counter and its bar stay put from 9 to 10", async ({ page }) => {
+test("the counter reserves no blank digit under 10, and stays put from 9 to 10 of 12", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 693 });
+  await page.goto("/review?preview=1&e2e=list");
+  await expect(page.locator(".ui-review-counter")).toHaveText("1 מתוך 5");
+  await expect(page.locator(".ui-review-counter [data-reserve]")).toHaveCount(0);
   await page.goto("/review?preview=1&e2e=list&rows=12");
   const counter = page.locator(".ui-review-counter");
   const meter = page.locator(".ui-review-meter .ui-meter-row");

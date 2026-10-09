@@ -192,11 +192,6 @@ const countRows: ReviewRow[] = Array.from({ length: 12 }, (_, n) => ({
   ...plainRow, id: `r${String(n + 1)}`, transaction_id: `t${String(n + 1)}`, supplier_name: `ספק לדוגמה ${String(n + 1)}`,
 }));
 function ReviewCounterStory() {
-  // The pinned line is module state (review-pin.ts); the story before may have left one.
-  useState(() => {
-    pinReviewLine(null);
-    return true;
-  });
   const [rows, setRows] = useState(countRows);
   return (
     <StoryRoute entry="/review" tabs reviewCount={rows.length}>
@@ -220,8 +215,13 @@ const skipToTen: Story["play"] = async ({ canvasElement }) => {
     await canvas.findByText(`ספק לדוגמה ${String(step)}`, {}, { timeout: 3000 });
   }
 };
-export const ReviewCounter10At320: Story = { ...narrowView, render: () => <ReviewCounterStory />, play: skipToTen };
-export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewCounterStory />, play: skipToTen };
+/** The pinned line is module state (review-pin.ts); the story before may have left one. */
+const unpin: NonNullable<Story["loaders"]> = [() => {
+  pinReviewLine(null);
+  return Promise.resolve({});
+}];
+export const ReviewCounter10At320: Story = { ...narrowView, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
+export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
 /** FLOW-309: the skipped cards at the end of הצג הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [

@@ -45,16 +45,19 @@ function seed(): ReviewRow[] {
   }));
 }
 
+/** `size` is the page's request; without one, the queue already seeded stands (dismiss, restore). */
 function ensure(size?: number): ReviewRow[] {
-  if (e2eOpen == null) {
-    if (size != null && size > 0) seedSize = size;
+  if (e2eOpen == null || (size != null && size !== seedSize)) {
+    seedSize = size ?? 5;
+    e2eGone = [];
     e2eOpen = seed();
   }
   return e2eOpen;
 }
 
+/** The size belongs to the seeded queue: a page with another `rows` (or none, 5) seeds afresh. */
 export function currentRows(size?: number): ReviewRow[] {
-  return ensure(size);
+  return ensure(size != null && size > 0 ? size : 5);
 }
 
 export function subscribe(listener: () => void): () => void {

@@ -167,8 +167,11 @@ export function ReviewQueue({
     if (takeReviewFocus()) barFocus.current = true;
     const path = window.location.pathname;
     return () => {
-      // Still on this screen: the queue went empty. Leaving for another screen hands nothing over.
-      if (barFocus.current && window.location.pathname === path) handReviewFocus();
+      // Still on this screen and focus fell with the bar: the queue went empty. Leaving for another
+      // screen, or focus the owner moved elsewhere, hands nothing over.
+      const active = document.activeElement;
+      const lost = active == null || active === document.body;
+      if (barFocus.current && lost && window.location.pathname === path) handReviewFocus();
     };
   }, []);
   const approveGuard = useRef(false);
@@ -333,12 +336,19 @@ export function ReviewQueue({
   // next card has settled, focus moves to the bar's first button.
   const barKind = shown?.reason === "split_mismatch";
   // A passive effect, so it runs after the header's own title focus when the queue comes back from
-  // empty (FLOW-309); that title is not a place the owner chose.
+  // empty (FLOW-309); that title is not a place the owner chose. Focus is moved only when it was
+  // lost (the page, or that title): focus the owner took outside the queue stays there.
   useEffect(() => {
-    if (!barFocus.current) return;
+    // No queue on screen (it shows the empty state itself): the effect below handles that.
+    const root = queueRoot.current;
+    if (!barFocus.current || root == null) return;
     const active = document.activeElement;
-    if (active != null && active !== document.body && !active.matches(".ui-focus-title") && queueRoot.current?.contains(active)) return;
-    const target = queueRoot.current?.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]");
+    const lost = active == null || active === document.body || isQueueTitle(active, root);
+    if (!lost) {
+      if (!root.contains(active)) barFocus.current = false;
+      return;
+    }
+    const target = root.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]");
     if (target == null) return;
     target.focus({ preventScroll: true });
     takeReviewFocus();
@@ -463,9 +473,17 @@ export function ReviewQueue({
       data-bar={holdWrites ? undefined : ""}
       ref={queueRoot}
       onFocusCapture={(event) => {
-        // The header's title focuses itself on mount; that is not where the owner went.
-        if (event.target instanceof Element && event.target.matches(".ui-focus-title")) return;
-        barFocus.current = event.target instanceof Element && event.target.closest(".ui-action-bar") != null;
+        // The header's title focuses itself on mount; that is not where the owner went. A sheet's
+        // title (portalled, so outside this root) still counts as leaving the bar.
+        if (isQueueTitle(event.target, queueRoot.current)) return;
+        barFocus.current = event.target instanceof Element
+          && (queueRoot.current?.contains(event.target) ?? false)
+          && event.target.closest(".ui-action-bar") != null;
+      }}
+      onBlurCapture={(event) => {
+        // Focus went somewhere outside the queue (the toast, the tab bar, a sheet): it is the owner's.
+        const next = event.relatedTarget;
+        if (next instanceof Element && !(queueRoot.current?.contains(next) ?? false)) barFocus.current = false;
       }}
     >
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
@@ -588,6 +606,12 @@ export function ReviewQueue({
     </div>
     </ViewerScope>
   );
+}
+
+/** The queue's own header title (it focuses itself on mount), not a sheet's title. */
+function isQueueTitle(node: EventTarget | null, root: HTMLElement | null): boolean {
+  return node instanceof Element && root != null && root.contains(node) && node.matches(".ui-focus-title")
+    && node.closest("[role='dialog'], [data-vaul-drawer]") == null;
 }
 
 function reviewVatLine(vat: bigint | undefined, currency?: string): string | null {

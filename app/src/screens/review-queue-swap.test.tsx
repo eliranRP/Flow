@@ -168,4 +168,28 @@ describe("FLOW-309: the review card swap", () => {
     // The header's title took focus on mount (no ring); nothing moved it to the bar.
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "לאישור" }));
   });
+
+  it("leaves focus on the toast when the owner moved it there before the swap landed", async () => {
+    const qc = client();
+    let listed = [row("a", "ספק א"), row("b", "ספק ב")];
+    const write = {
+      run: () => Promise.resolve(),
+      onDone: (id: string) => {
+        listed = listed.filter((item) => item.id !== id);
+        rerender(queue(qc, listed, write));
+      },
+      onUndo: () => undefined,
+    };
+    const { rerender } = render(queue(qc, listed, write));
+    const approve = screen.getByRole("button", { name: "אישור" });
+    approve.focus();
+    fireEvent.click(approve);
+    const undo = await screen.findByRole("button", { name: "ביטול" });
+    undo.focus();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "ספק ב" })).toBeInTheDocument();
+    });
+    await act(async () => { await new Promise((resolve) => { window.setTimeout(resolve, 50); }); });
+    expect(document.activeElement).toBe(undo);
+  });
 });

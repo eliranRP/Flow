@@ -1,7 +1,7 @@
 /**
  * FLOW-309: one number of the queue counter ("1 מתוך 12"). Digits are tabular, and the box reserves
- * `digits` zeros (a hidden `::before`, so the text stays the number alone), so 9→10 and 99→100 grow
- * inside a box that doesn't move. The digits hug "מתוך": the index sits at its box's left edge, the
+ * `digits` zeros (a hidden `::before`, so the text stays the number alone), so the index going 9→10 or 99→100
+ * grows inside a box that doesn't move. The digits hug "מתוך": the index sits at its box's left edge, the
  * total at its right edge.
  */
 export function ReviewCount({ value, digits, side }: { value: number; digits: number; side: "index" | "total" }) {
@@ -18,7 +18,10 @@ export function ReviewCount({ value, digits, side }: { value: number; digits: nu
   );
 }
 
-/** Digits to reserve: the total's, and at least two so a total of 9 reaching 10 doesn't move either. */
+/**
+ * Digits to reserve: the total's. The index never passes the total, so it never moves the counter;
+ * only the total itself crossing 9→10 or 99→100 (new lines arriving) widens it, which is rare.
+ */
 export function reviewCountDigits(total: number): number {
-  return Math.max(2, String(total).length);
+  return String(total).length;
 }
