@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { pickStories, reachesBuild, selectStories } from "./storybook-stories.mjs";
+import { pickStories, reachesBuild, relatedRun, selectStories } from "./storybook-stories.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const select = (...changed) => selectStories(changed, { root });
@@ -114,5 +114,35 @@ test("a dependency, storybook script, compiler option or app lockfile change rea
     assert.equal(reachesBuild("app/tsconfig.perf.json", { root: r.dir, base: r.base }), true, "a new tsconfig has no base side");
   } finally {
     fs.rmSync(r.dir, { recursive: true, force: true });
+  }
+});
+
+test("the vitest runs take the related tests for sources, migrations, e2e files and app CSS", () => {
+  assert.equal(
+    relatedRun([
+      "M\tapp/src/ui/hero.tsx",
+      "A\tapp/src/screens/home-skeleton.test.tsx",
+      "M\tapp/src/ui/css/07-band-home.css",
+      "M\tapp/e2e/controls.spec.ts",
+      "M\tpackages/shared/src/categories.ts",
+      "A\tsupabase/migrations/20261013000000_x.sql",
+    ]),
+    true,
+  );
+  assert.equal(relatedRun([]), true);
+});
+
+test("the vitest runs take every test for setup, config, design, scripts or a removed file", () => {
+  for (const line of [
+    "M\tapp/src/test-setup.ts",
+    "M\tapp/.storybook/preview.tsx",
+    "M\tapp/vite.config.ts",
+    "M\tdesign/system/implementation-tokens.css",
+    "M\tscripts/storybook-stories.mjs",
+    "M\tpnpm-lock.yaml",
+    "D\tapp/src/ui/hero.tsx",
+    "R100\tapp/src/ui/a.tsx\tapp/src/ui/b.tsx",
+  ]) {
+    assert.equal(relatedRun(["M\tapp/src/ui/hero.tsx", line]), false, line);
   }
 });
