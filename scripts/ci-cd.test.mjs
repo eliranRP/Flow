@@ -618,6 +618,12 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const picked = local.indexOf('playwright test --fully-parallel "${e2e_specs[@]}"');
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
   assert.match(local, /--full\) full=1 ;;/);
+  // The same-patch skip holds only when main left the database surface alone since the marked fork;
+  // otherwise the gate runs, and a database branch runs every pgTAP file.
+  assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));
+  const skip = local.indexOf('if node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork"; then');
+  assert.ok(skip > 0 && skip < local.indexOf('mode="same patch"'));
+  assert.ok(local.includes("(( ! base_risk )) || db_specs=(supabase/tests/database)"));
   // FLOW-813: --full and FLOW_LOCAL_CI_NO_SKIP never skip a part.
   assert.ok(local.includes('if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi'));
   assert.match(local, /green\(\) \{\n  \(\( skips \)\) && /);
