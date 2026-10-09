@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-339 Search option C (the owner's pick 2026-10-09): one-line rows, no ".00", "נטו" month heads (FLOW-704 app side merged #315) | The FLOW-704 card shrink after UI lane 2's review-card PR |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-408 lines keep their currency; FLOW-329 loan line hint (#311) | Next small ready bug |
+| Backlog bug fixes | FLOW-507 viewer review count without the meter | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -1031,9 +1031,9 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-507"></a>
 ### FLOW-507 · Viewer mode follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The viewer's review count is a bare number and the visit meter still shows; show a count with "ממתינים" and no meter.
+- [x] (Backlog bug fixes, 2026-10-09: "N ממתינות", "1 ממתינה", no meter) The viewer's review count is a bare number and the visit meter still shows; show a count with "ממתינים" and no meter.
 - [x] The viewer's static SUMIT row uses warning tone for an expired key; use the muted "לא מחובר כרגע" like the AI row. (Mercury too.)
-- [ ] Viewer category rows shrink from 73px to 53px; keep the owner's height.
+- [x] (Backlog bug fixes, 2026-10-09: not reproducible on main; since FLOW-322 the ⋯ sits beside the row, so owner and viewer rows are both 53px; story Categories viewer) Viewer category rows shrink from 73px to 53px; keep the owner's height.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop.
 - [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle). (Done: a viewer's `?sheet=sumit` or `?sheet=mercury` link opens no connect sheet, `viewer-inner-gates.test.tsx`. The SUMIT refresh and disconnect rows sit inside a sheet a viewer cannot open, so no screen reaches their inner gate.)

@@ -26,7 +26,7 @@ const darkTheme = { globals: { theme: "dark" } };
 /** FLOW-327: the card with its bar pinned on the tab bar. */
 function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: ReviewRow; viewer?: boolean }) {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4} viewer={viewer}>
+    <StoryRoute entry="/review" tabs reviewCount={1} viewer={viewer}>
       <ReviewQueue rows={[row]} search="" sample />
     </StoryRoute>
   );
