@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { type Dashboard } from "@flow/shared";
+import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
+import { useHomePreview } from "./preview";
+import { transactionQueryOptions } from "./use-books";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
@@ -446,29 +449,41 @@ export function DevTxnList() {
   );
 }
 
+function stepSample(n: number): NonNullable<TransactionDetail> {
+  return {
+    id: `t-step-${String(n)}`,
+    description: `תנועה ${String(n)}`,
+    direction: "expense",
+    doc_date: "2026-09-29",
+    amount_gross: BigInt(-n * 11_800),
+    amount_net: BigInt(-n * 10_000),
+    vat_amount: BigInt(-n * 1_800),
+    vat_status: "assumed",
+    source: "manual",
+    project_id: "p1",
+    project_name: "שיפוץ הרצל 12",
+    category_id: "c1",
+    category_name: "חומרים",
+    supplier_name: `ספק ${String(n)}`,
+    customer_name: null,
+    paid: true,
+    open_gross_agorot: null,
+    allocations: [],
+  };
+}
+
 function DevStepTransaction({ n }: { n: number }) {
+  // FLOW-345: the cache holds the neighbours, as the live card's prefetch leaves it, so a drag peeks their names.
+  const client = useQueryClient();
+  const preview = useHomePreview();
+  useEffect(() => {
+    for (const side of [n - 1, n + 1]) {
+      if (side >= 1 && side <= 24) client.setQueryData(transactionQueryOptions(preview, `t-step-${String(side)}`).queryKey, stepSample(side));
+    }
+  }, [client, preview, n]);
   return (
     <TransactionScreen
-      sample={{
-        id: `t-step-${String(n)}`,
-        description: `תנועה ${String(n)}`,
-        direction: "expense",
-        doc_date: "2026-09-29",
-        amount_gross: BigInt(-n * 11_800),
-        amount_net: BigInt(-n * 10_000),
-        vat_amount: BigInt(-n * 1_800),
-        vat_status: "assumed",
-        source: "manual",
-        project_id: "p1",
-        project_name: "שיפוץ הרצל 12",
-        category_id: "c1",
-        category_name: "חומרים",
-        supplier_name: `ספק ${String(n)}`,
-        customer_name: null,
-        paid: true,
-        open_gross_agorot: null,
-        allocations: [],
-      }}
+      sample={stepSample(n)}
       sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }]}
       sampleCategories={[{ id: "c1", name: "חומרים" }]}
     />

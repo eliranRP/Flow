@@ -1,11 +1,10 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
 import { scrollPageToTop, sheetStack } from "./ui/back";
-import { IconButton } from "./ui/icon-button";
-import { ChevronDownIcon, ChevronUpIcon } from "./ui/icons";
+import { ReviewCount, reviewCountDigits } from "./screens/review-count";
 
 /** The list a card was opened from: its rows in the order shown, and its address. */
 export type TxnList = { ids: readonly string[]; from: string };
@@ -159,43 +158,68 @@ export function useTxnNavKeys(nav: TxnNav | null): void {
   }, [move, open]);
 }
 
-/** ˄ ˅ in the card's top bar. At a list end the button stays, marked unavailable. */
-export function TxnNavButtons({ nav }: { nav: TxnNav }) {
-  const hintId = useId();
-  const prevRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
-  const nextRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
+/**
+ * FLOW-345 option D: הקודמת and הבאה in a quiet row pinned at the bottom of the card, in the thumb zone,
+ * with "3 מתוך 12" between them. At a list end that side's word is hidden but keeps its box, so the
+ * counter stays centred. A button move keeps focus on the pressed word on the next card; at an end,
+ * where that word is hidden, focus waits on the counter instead.
+ */
+export function TxnStepRow({ nav }: { nav: TxnNav }) {
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  const countRef = useRef<HTMLParagraphElement>(null);
   const via = nav.via;
-  useEffect(() => {
-    // Runs after the title takes focus, so a button move keeps the finger's place.
-    if (via === "next") nextRef.current?.focus({ preventScroll: true });
-    else if (via === "prev") prevRef.current?.focus({ preventScroll: true });
-  }, [via]);
   const atStart = nav.prev == null;
   const atEnd = nav.next == null;
+  useEffect(() => {
+    // Runs after the title takes focus, so a button move keeps the finger's place.
+    if (via !== "next" && via !== "prev") return;
+    const hidden = via === "next" ? atEnd : atStart;
+    const target = hidden ? countRef.current : via === "next" ? nextRef.current : prevRef.current;
+    target?.focus({ preventScroll: true });
+  }, [via, atStart, atEnd]);
+  const digits = reviewCountDigits(nav.total);
   return (
-    <div className="ui-txn-nav" role="group" aria-label="מעבר בין תנועות">
-      <IconButton
+    <div className="ui-txn-step" role="group" aria-label="מעבר בין תנועות" data-toast-floor="">
+      <button
         ref={prevRef}
-        label="התנועה הקודמת"
-        aria-disabled={atStart ? true : undefined}
-        aria-describedby={atStart ? `${hintId}-start` : undefined}
+        type="button"
+        className="ui-text-link ui-txn-step-btn"
+        aria-label="התנועה הקודמת"
+        style={atStart ? { visibility: "hidden" } : undefined}
         onClick={() => { nav.move("prev", "prev"); }}
       >
-        <ChevronUpIcon size={20} />
-      </IconButton>
-      <IconButton
+        הקודמת
+      </button>
+      <p ref={countRef} className="ui-txn-step-count" tabIndex={-1}>
+        <ReviewCount value={nav.index + 1} digits={digits} side="index" />
+        {" מתוך "}
+        <ReviewCount value={nav.total} digits={digits} side="total" />
+      </p>
+      <button
         ref={nextRef}
-        label="התנועה הבאה"
-        aria-disabled={atEnd ? true : undefined}
-        aria-describedby={atEnd ? `${hintId}-end` : undefined}
+        type="button"
+        className="ui-text-link ui-txn-step-btn"
+        aria-label="התנועה הבאה"
+        style={atEnd ? { visibility: "hidden" } : undefined}
         onClick={() => { nav.move("next", "next"); }}
       >
-        <ChevronDownIcon size={20} />
-      </IconButton>
-      {atStart ? <span id={`${hintId}-start`} className="sr-only">זו התנועה הראשונה ברשימה</span> : null}
-      {atEnd ? <span id={`${hintId}-end`} className="sr-only">זו התנועה האחרונה ברשימה</span> : null}
+        הבאה
+      </button>
     </div>
   );
+}
+
+/**
+ * FLOW-345: the neighbour's name for the edge that peeks in mid-swipe, read from the cache the
+ * neighbour prefetch warms. Never fetches; null until that read lands (the edge is then plain).
+ */
+export function useNeighbourParty(id: string | null): string | null {
+  const preview = useHomePreview();
+  const cached = useQuery({ ...transactionQueryOptions(preview, id ?? ""), enabled: false });
+  const txn = id == null ? null : cached.data;
+  if (txn == null) return null;
+  return txn.supplier_name ?? txn.customer_name ?? txn.description;
 }
 
 const AnnounceContext = createContext<(text: string) => void>(() => undefined);

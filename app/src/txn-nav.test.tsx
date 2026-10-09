@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { resetScrollToWarning } from "./ui/back";
-import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnNavButtons, txnListState, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "./txn-nav";
+import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnStepRow, txnListState, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "./txn-nav";
 
 function Card() {
   const { transactionId = "" } = useParams();
@@ -16,7 +16,7 @@ function Card() {
     <div>
       <h1>{transactionId}</h1>
       <p data-testid="path">{`${location.pathname}${location.search}`}</p>
-      {nav ? <TxnNavButtons nav={nav} /> : null}
+      {nav ? <TxnStepRow nav={nav} /> : null}
       <input aria-label="שדה" />
       <div contentEditable="true" data-testid="note" />
       <button type="button" onClick={() => { void navigate(-1); }}>back</button>
@@ -89,24 +89,53 @@ describe("prev and next on the card", () => {
   });
 
   it("moves down and up the list and keeps focus on the pressed button", () => {
-    renderCard("b", list);
+    renderCard("a", { txnList: { ids: ["a", "b", "c", "d"], from: "/x" } });
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/c");
     expect(screen.getByRole("button", { name: "התנועה הבאה" })).toHaveFocus();
-    expect(screen.getByRole("status")).toHaveTextContent("תנועה 3 מתוך 3. ספק c");
+    expect(screen.getByRole("status")).toHaveTextContent("תנועה 3 מתוך 4. ספק c");
     fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
     fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/a");
   });
 
-  it("marks the ends unavailable and stays put on a tap there", () => {
+  it("hides the word at a list end but keeps its box, so the counter stays centred (FLOW-345)", () => {
     renderCard("c", list);
-    const next = screen.getByRole("button", { name: "התנועה הבאה" });
-    expect(next).toHaveAttribute("aria-disabled", "true");
-    expect(next).toHaveAccessibleDescription("זו התנועה האחרונה ברשימה");
-    fireEvent.click(next);
+    expect(screen.queryByRole("button", { name: "התנועה הבאה" })).not.toBeInTheDocument();
+    const next = screen.getByText("הבאה");
+    expect(next.tagName).toBe("BUTTON");
+    expect(next).toHaveStyle({ visibility: "hidden" });
+    expect(next).not.toBeDisabled();
+    expect(next).not.toHaveAttribute("aria-disabled");
+    const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
+    expect(row.children).toHaveLength(3);
+    expect(row).toHaveTextContent("הקודמת3 מתוך 3הבאה");
+    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).toBeVisible();
+  });
+
+  it("shows the words, not arrows, with the place in the list between them (FLOW-345)", () => {
+    renderCard("b", list);
+    const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
+    expect(row.querySelector("svg")).toBeNull();
+    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).toHaveTextContent(/^הקודמת$/);
+    expect(screen.getByRole("button", { name: "התנועה הבאה" })).toHaveTextContent(/^הבאה$/);
+    expect(row).toHaveTextContent("2 מתוך 3");
+    // Start of the row (the right in RTL) is הקודמת, the end is הבאה.
+    expect(row.firstElementChild).toHaveTextContent("הקודמת");
+    expect(row.lastElementChild).toHaveTextContent("הבאה");
+  });
+
+  it("at the end it reached, focus waits on the counter instead of a hidden word (FLOW-345)", () => {
+    renderCard("b", list);
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/c");
-    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).not.toHaveAttribute("aria-disabled");
+    expect(document.querySelector(".ui-txn-step-count")).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
+    expect(screen.getByRole("button", { name: "התנועה הקודמת" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "התנועה הקודמת" }));
+    expect(screen.getByTestId("path")).toHaveTextContent("/transactions/a");
+    expect(document.querySelector(".ui-txn-step-count")).toHaveFocus();
   });
 
   it("moves with the arrow keys the right-to-left way", () => {
