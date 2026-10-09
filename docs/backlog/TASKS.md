@@ -20,7 +20,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 2 | FLOW-314 swipe between transactions on the card (handed over from UI lane 4; FLOW-333 C13 merged #278) | Next UI task for the review and transaction screens |
 | UI lane 3 | FLOW-339 phone polish in its area (category lines Back and no minus, breakdown minus, + sheet ✕; Loans is the bug fixes lane's); FLOW-341 card to the owner after 06:00Z (FLOW-115 merged #288) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-339 C6-3: the Jev undo hit area, a story test (FLOW-315 merged #283) | #231 follow-ups in the Jev and settings area |
-| UI/UX review cycle | Design lead; runs after each deploy batch (cycle 6 reviewed 3f718f2) | Next deploy batch |
+| UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-310 money field: the prefix keeps one gap to the digits (#297) | Next small ready bug |
 | File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
@@ -115,6 +115,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 65 | [FLOW-340](#flow-340) | A lighter השקעה card on the project page | PLAN FIRST | plan-first (owner card) |
 | 66 | [FLOW-341](#flow-341) | A shorter ⋯ sheet in Settings → Categories | PLAN FIRST | plan-first (owner card) |
 | 67 | [FLOW-342](#flow-342) | Two magnifiers on the Projects tab | PLAN FIRST | plan-first (owner card) |
+| 68 | [FLOW-343](#flow-343) | Phone polish after the October 9 builds (cycle 7) | SMALL UI | ready |
+| 69 | [FLOW-344](#flow-344) | Loan setup preview while the form is incomplete | PLAN FIRST | plan-first (owner card) |
+| 70 | [FLOW-345](#flow-345) | Card swipe: a cue at the list ends and arrows that match | PLAN FIRST | plan-first (owner card) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -861,6 +864,27 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-323 (#210) · **Source:** mobile UI/UX review cycle 6 (2026-10-09, deploy 3f718f2), shots in the project's reviews/ui-ux-cycle-6/
 - **What:** The Projects tab shows two identical magnifiers about 100px apart: the header icon opens transaction search and the field below filters projects. Options: (A) the field alone, and a project-name miss offers "חיפוש בתנועות"; (B) keep both and label the header icon.
 - **Acceptance:** owner's choice on a card; a design log entry.
+
+<a id="flow-343"></a>
+### FLOW-343 · Phone polish after the October 9 builds (cycle 7)
+- **Type:** SMALL UI · **Status:** ready · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- [ ] (high) Loan setup: a tap on שמירה with empty fields keeps focus on the button with the page scrolled down, so at 375 two of three errors sit above the fold. Move focus (and scroll) to the first empty field, as §2.8 says. Add a story and a test.
+- [ ] Split by categories, refund part with no project: the same missing project is said three times ("פרויקט · חובה בהחזר", "חלק החזר צריך פרויקט." and the footer). Keep it once, on the part's own line as the tap target (§3.7, a warning shows in one place only).
+- [ ] Split between projects, "שאבחר": the picked choice's hint and the pinned footer repeat "₪500 לכל אחד מ־2 פרויקטים". Show it once, in the footer.
+- [ ] Transaction card, the refusal for a kept-out refund part with no project (#286): shorten to "לחלק ההחזר אין פרויקט." with a "לפיצול" action on the toast.
+- **Acceptance:** shared components and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; design review.
+
+<a id="flow-344"></a>
+### FLOW-344 · Loan setup preview while the form is incomplete
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-115 (#288) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **What:** With the amount cleared, the preview keeps the last result (₪599.55 a month) and only turns muted, so it still reads as this loan's payment. Options: (A) "—" in place of the figure until the form is valid; (B) hide the preview until then.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
+
+<a id="flow-345"></a>
+### FLOW-345 · Card swipe: a cue at the list ends and arrows that match
+- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** FLOW-314 (#291) · **Source:** mobile UI/UX review cycle 7 (2026-10-09, deploy e1bec50), shots in the project's reviews/ui-ux-cycle-7/
+- **What:** At a list end a sideways drag doesn't move the card at all (160px drag, transform 0), so the gesture reads as broken, and mid-list a drag shows a blank page behind the card. The visible prev/next controls are vertical ˄ ˅ in the top corner while the swipe is sideways, against §3.7 (a swipe follows the arrows it repeats). Proposal: a resisted drag at the ends and the next card peeking in; the owner picks ‹ › arrows or keeps ˄ ˅.
+- **Acceptance:** owner's choice on a card with 390px PNGs; a design log entry.
 
 ## Projects and reports
 
