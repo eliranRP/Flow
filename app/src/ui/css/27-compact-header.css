@@ -126,5 +126,5 @@ html[data-compact-bar]:has(.ui-month-head) {
 .ui-page-below {
   display: flex;
   justify-content: flex-start;
-  margin-block-start: var(--space-2);
+  margin-block: var(--space-2) var(--space-3);
 }
