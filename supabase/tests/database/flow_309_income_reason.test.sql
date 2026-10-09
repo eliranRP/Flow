@@ -1,11 +1,12 @@
 -- FLOW-309 server item. Connector income with no project and a guessed category waits as
 -- missing_category, not missing_project. Picking the category then queues missing_project
--- (unless the category keeps the line out of the P&L), and undo takes that row back.
+-- (unless the category keeps the line out of the P&L), and undo or reopen takes that row back.
+-- A category set without resolving the card relabels the open row the same way.
 -- Invented data only. Amounts are agorot.
 
 begin;
 
-select plan(11);
+select plan(18);
 
 do $users$
 begin
@@ -42,7 +43,7 @@ select
   (select id from fir where label = 'co'), 'income', 'receipt', 'posted', 'ILS',
   v.amount, v.amount, v.amount, 0, 'source', '2026-06-10', '2026-06-10', 'sumit', v.ikey,
   (select id from fir where label = 'rent'), v.ikey
-from (values (5000, 'fir:a'), (6000, 'fir:b'), (7000, 'fir:c')) as v(amount, ikey);
+from (values (5000, 'fir:a'), (6000, 'fir:b'), (7000, 'fir:c'), (8000, 'fir:d'), (9000, 'fir:e')) as v(amount, ikey);
 insert into fir (label, id) select replace(idempotency_key, 'fir:', 'txn_'), id
 from public.transactions where idempotency_key like 'fir:%';
 -- The insert trigger clears category_suggested on a line with a category; mark the guess after.
@@ -122,15 +123,59 @@ select public.set_transaction_category(pg_temp.id('txn_c'), pg_temp.id('refunds'
 reset role;
 select is(pg_temp.open_reasons('txn_c'), 'missing_project', 'a reversal category on income waits for its project');
 
--- 5. Without resolving (p_resolve false), the row is left as it was.
+-- 5. Without resolving (p_resolve false), the card stays open but asks for the project now.
 select tests.authenticate_as('fir_owner');
-select public.set_transaction_category(pg_temp.id('txn_a'), pg_temp.id('rent'), false);
+insert into fir (label, id) values ('undo_a2', public.set_transaction_category(pg_temp.id('txn_a'), pg_temp.id('rent'), false));
 reset role;
-select is(pg_temp.open_reasons('txn_a'), 'missing_category',
-  'a category set without resolving queues no project row');
+select is(pg_temp.open_reasons('txn_a'), 'missing_project',
+  'a category set without resolving relabels the row to missing_project');
+
+-- Undoing that pick restores the guess and the category question, and a sync keeps it.
+select tests.authenticate_as('fir_owner');
+select public.undo_reassign(pg_temp.id('undo_a2'));
+reset role;
+select pg_temp.sync();
+reset role;
+select is(pg_temp.open_reasons('txn_a'), 'missing_category', 'undoing a pick made without resolving puts missing_category back');
+
+-- A kept-out category set without resolving leaves the category question.
+select tests.authenticate_as('fir_owner');
+select public.set_transaction_category(pg_temp.id('txn_d'), pg_temp.id('owner_in'), false);
+reset role;
+select is(pg_temp.open_reasons('txn_d'), 'missing_category', 'a kept-out category set without resolving keeps the label');
+
+-- resolve_review with a category and p_resolve false relabels too.
+insert into fir (label, id)
+select 'card_d', q.id from public.review_queue q
+where q.transaction_id = pg_temp.id('txn_d') and q.status = 'open';
+select tests.authenticate_as('fir_owner');
+select public.resolve_review(pg_temp.id('card_d'), 'changed', null, pg_temp.id('rent'), false, false);
+reset role;
+select is(pg_temp.open_reasons('txn_d'), 'missing_project', 'resolve_review without resolving relabels the row');
+
+-- 6. Reopening the category card takes back the project row the pick queued.
+insert into fir (label, id)
+select 'card_c', q.id from public.review_queue q
+where q.transaction_id = pg_temp.id('txn_c') and q.reason = 'missing_category';
+select tests.authenticate_as('fir_owner');
+select public.reopen_review(pg_temp.id('card_c'));
+reset role;
+select is(pg_temp.open_reasons('txn_c'), 'missing_category', 'reopen puts the category question back alone');
 select is(
   (select count(*)::integer from public.review_queue
-   where transaction_id in (pg_temp.id('txn_a'), pg_temp.id('txn_b'), pg_temp.id('txn_c')) and status = 'open' and reason is null),
+   where transaction_id = pg_temp.id('txn_c') and reason = 'missing_project'),
+  0, 'and removes the missing_project row the pick queued');
+
+-- 7. A row labelled before the category was set takes the project reason on the next sync.
+select is(pg_temp.open_reasons('txn_e'), 'missing_category', 'setup: the last line waits for its category');
+update public.transactions set category_assigned = true, category_suggested = false where id = pg_temp.id('txn_e');
+select pg_temp.sync();
+reset role;
+select is(pg_temp.open_reasons('txn_e'), 'missing_project', 'sync relabels a row whose category is now set');
+
+select is(
+  (select count(*)::integer from public.review_queue
+   where transaction_id in (select id from fir where label like 'txn_%') and status = 'open' and reason is null),
   0, 'no open row is left without a reason');
 
 select * from finish();

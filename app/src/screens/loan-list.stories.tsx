@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { sampleLoanStore } from "../dev/loan-detail-sample";
 import { LoanGroupedList, type LoanListRow } from "./loan-list";
@@ -6,11 +7,18 @@ import { LoanGroupedList, type LoanListRow } from "./loan-list";
 const ROWS: LoanListRow[] = sampleLoanStore().rows();
 const ONLY_CLOSED: LoanListRow[] = ROWS.filter((row) => row.status != null && row.status !== "open");
 
+/** Args stay plain JSON: Storybook cannot serialise bigint balances, so stories pick the rows by name. */
+type ListArgs = Omit<ComponentProps<typeof LoanGroupedList>, "rows"> & { rowSet?: "all" | "onlyClosed" };
+
+function List({ rowSet = "all", ...props }: ListArgs) {
+  return <LoanGroupedList rows={rowSet === "onlyClosed" ? ONLY_CLOSED : ROWS} {...props} />;
+}
+
 const meta = {
   title: "Screens/Loans list",
-  component: LoanGroupedList,
-  args: { rows: ROWS, onOpen: () => undefined },
-} satisfies Meta<typeof LoanGroupedList>;
+  component: List,
+  args: { rowSet: "all", onOpen: () => undefined },
+} satisfies Meta<typeof List>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -24,7 +32,7 @@ export const ClosedOpen: Story = { args: { closedOpen: true } };
 export const ClosedOpenDark: Story = { args: { closedOpen: true }, ...dark };
 export const ClosedOpen320: Story = { args: { closedOpen: true }, ...at320 };
 /** Every loan closed: the group says הלוואות שנסגרו under the empty state. */
-export const OnlyClosed: Story = { args: { rows: ONLY_CLOSED } };
-export const OnlyClosedDark320: Story = { args: { rows: ONLY_CLOSED }, ...dark, ...at320 };
+export const OnlyClosed: Story = { args: { rowSet: "onlyClosed" } };
+export const OnlyClosedDark320: Story = { args: { rowSet: "onlyClosed" }, ...dark, ...at320 };
 /** Without onOpen the rows are static (a viewer still opens the loan page, read-only). */
 export const StaticRows: Story = { args: { onOpen: undefined, closedOpen: true } };
