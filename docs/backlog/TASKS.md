@@ -121,7 +121,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 71 | [FLOW-347](#flow-347) | Phone polish after the October 9 morning builds (cycle 8) | SMALL UI | ready |
 | 72 | [FLOW-348](#flow-348) | Jev switched on with no key | SMALL UI | ready (owner picked A) |
 | 73 | [FLOW-349](#flow-349) | One set of period choices everywhere | SMALL UI | ready |
-| 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | plan-first (owner card) |
+| 74 | [FLOW-413](#flow-413) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST | owner picked "Cash first"; data plan next (dev lane 2, with FLOW-103) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -1009,10 +1009,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-413"></a>
 ### FLOW-413 · Monthly cash-flow view (תזרים חודשי)
-- **Type:** PLAN FIRST · **Status:** plan-first (owner card) · **Depends on:** [FLOW-103](#flow-103), planned together with it
-- **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out. Loan principal and loan proceeds count too, so rent minus the mortgage shows the true cash; today the profit view leaves the loan out and rent alone looks positive. The user can take chosen transactions or categories out of the view. The profit view stays as is.
-- **Mockups:** `mockups/plan-first/flow-413/` in the project files (A inside Home, B its own page), with the card.
-- **Acceptance:** the owner's pick on the card, then a plan with dev lane 2 for the reads (loan principal and proceeds per month).
+- **Type:** PLAN FIRST · **Status:** owner picked "Cash first" (2026-10-09); dev lane 2 writes the data plan with FLOW-103, then a UI lane builds; real-app shots go to the owner before the UI merges · **Depends on:** [FLOW-103](#flow-103), planned together with it
+- **What:** The owner asked on 2026-10-09 for a monthly view of all money in and out, and made it the main monthly view on Home. Today the profit view leaves the loan out, so rent alone looks positive.
+  - Money out: the full monthly loan payment (principal, interest and escrow), holding costs and utilities, purchase and renovation money.
+  - Money in: loan money received is left out by default, with a switch to count it.
+  - The user can take chosen categories (a "מה בתזרים" sheet) or single transactions (a "בתזרים" switch on the transaction page) out of the view.
+  - Profit stays a correct second view.
+- **Owner's pick:** "Cash first" (frames b and b-2). Home shows the month's cash with no switch: the figure, then נכנס and יצא rows that drill down, then a quiet "רווח החודש" row that opens today's profit view, then the earlier months.
+- **Mockups:** `mockups/plan-first/flow-413/` in the project files: b, b-2 (picked), exclude, tx; a and a-2 were the switch option.
+- **Acceptance:** a data plan with FLOW-103 (a cash read per month, an exclusion list per company, a per-line flag), then the UI; the owner sees real-app shots before the UI merges.
 
 ## Onboarding, Settings and connectors
 
