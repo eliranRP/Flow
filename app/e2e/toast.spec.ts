@@ -178,6 +178,19 @@ function assertVisiblePosition(samples: ToastFrame[]): void {
   expect(samples.every((sample) => sample.gapOk)).toBe(true);
 }
 
+/**
+ * FLOW-309 (the ramp check dropped in 263b1d25): after a pad move the toast fades in over
+ * `--dur-base`; with no pad move it appears at its settled position in one frame (0075).
+ * None of these flows pads the sheet today, so they check the one-frame case.
+ */
+function assertFade(samples: ToastFrame[]): void {
+  const start = samples[0]?.pad ?? 0;
+  const moved = samples.some((sample) => Math.abs(sample.pad - start) > 1);
+  const partial = samples.filter((sample) => sample.opacity > 0.05 && sample.opacity < 0.95);
+  if (moved) expect(partial.length).toBeGreaterThan(0);
+  else expect(partial).toHaveLength(0);
+}
+
 function assertAboveSheet(settled: SettledToast): void {
   expect(Math.abs(settled.toastBottom - (settled.sheetTop - GAP))).toBeLessThanOrEqual(1);
   expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
@@ -207,6 +220,7 @@ for (const viewport of viewports) {
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
+      assertFade(samples);
       // The category picker is a fit sheet (change-sheet.tsx), so the toast sits above it with no pad.
       assertAboveSheet(settled);
       expect(samples.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
@@ -223,6 +237,7 @@ for (const viewport of viewports) {
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
       assertAboveSheet(settled);
+      assertFade(samples);
     });
 
     test(`retry keeps the settled geometry at ${label}`, async ({ page }) => {
@@ -258,6 +273,7 @@ for (const viewport of viewports) {
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
+      assertFade(samples);
       const underHeader = await page.evaluate((inset) => {
         const header = document.querySelector("header.ui-page, header.ui-band");
         const space = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-4")) || 16;
