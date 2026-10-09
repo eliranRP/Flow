@@ -116,47 +116,7 @@
 }
 
 .ui-setup-tabs {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-around;
-  box-sizing: border-box;
-  block-size: 64px;
   margin-block-start: 16px;
-  padding-block-start: 8px;
-  border-block-start: 1px solid var(--color-line);
-  background: var(--color-surface);
-}
-
-.ui-setup-tab {
-  position: relative;
-  display: flex;
-  inline-size: 64px;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.ui-setup-tab[data-on="true"] {
-  color: var(--color-accent-text);
-}
-
-.ui-setup-badge {
-  position: absolute;
-  inset-block-start: -18px;
-  inset-inline-end: 14px;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  min-inline-size: 17px;
-  block-size: 17px;
-  padding-inline: 4px;
-  border-radius: 9999px;
-  background: var(--color-badge-bg);
-  color: var(--color-badge-text);
-  font-size: 11px;
 }
 
 .ui-setup-approve,
@@ -180,47 +140,11 @@
   z-index: 1;
 }
 
-.ui-setup-card,
-.ui-setup-fact {
+.ui-setup-approve-card {
   display: flex;
   min-inline-size: 0;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.ui-setup-fact p {
-  margin: 0;
-  min-inline-size: 0;
-}
-
-.ui-setup-offer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin: 0;
-  color: var(--color-accent-text);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.ui-setup-offer-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-inline-size: 0;
-  min-block-size: 36px;
-}
-
-.ui-setup-pill {
-  display: inline-flex;
-  align-items: center;
-  block-size: 28px;
-  padding-inline: 10px;
-  border-radius: 9999px;
-  background: var(--color-tint);
-  font-size: 15px;
-  font-weight: 600;
 }
 
 .ui-setup-drop {
@@ -255,6 +179,11 @@
 .ui-setup-hit {
   position: relative;
   min-inline-size: 0;
+}
+
+/* The action sits under the card at its width, as in the queue. */
+.ui-setup-approve-card > .ui-setup-hit {
+  margin-inline: var(--space-card-inset);
 }
 
 /* Shared pointer. The dot's centre is the tap point. The arrow's tip is (2, 2). Never mirrored. */

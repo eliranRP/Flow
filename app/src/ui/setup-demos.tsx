@@ -6,9 +6,11 @@ import { CheckRow } from "./check-row";
 import { Chip } from "./chip";
 import { DemoPlayer, useDemoPlayback } from "./demo-player";
 import { DemoPointer, easeStandard, POINTER_REACT_MS, type DemoPointerVariant, type PointerTimeline } from "./demo-pointer";
-import { AppIcon, CheckIcon, ChevronIcon, ShareIcon, SparkIcon, SquarePlusIcon } from "./icons";
+import { AppIcon, CheckIcon, ChevronIcon, ShareIcon, SquarePlusIcon } from "./icons";
 import { ListRow } from "./list-row";
+import { ReviewCard } from "./review-card";
 import { Skeleton } from "./skeleton";
+import { TabBarPicture } from "./tab-bar";
 import { TextField } from "./text-field";
 import { Toggle } from "./toggle";
 import "./setup-demos.css";
@@ -209,14 +211,7 @@ function SumitScene({ pointer }: SceneProps) {
         <SumitLine title="אבי חשמל" hint="הוצאה · 20/09" agorot={234_000n} sign="out" drop={line2} />
         <SumitLine title="וילה רעננה" hint="הכנסה · 19/09" agorot={4_500_000n} sign="in" drop={line3} />
         <div className="ui-setup-tabs ui-setup-drop" style={styleOf({ "--setup-drop": hello })}>
-          <span className="ui-setup-tab">בית</span>
-          <span className="ui-setup-tab" data-on="true">
-            לאישור
-            <span className="ui-setup-badge">
-              <bdi dir="ltr">12</bdi>
-            </span>
-          </span>
-          <span className="ui-setup-tab">הגדרות</span>
+          <TabBarPicture section="review" reviewCount={12} />
         </div>
       </div>
       <div
@@ -264,9 +259,6 @@ function JevScene({ pointer }: SceneProps) {
   const sparkAt = 1700;
   const pillsAt = JEV_POINTER.fadeOut.start;
   const frame = demoFrame(elapsed, [switchAt, sparkAt, pillsAt]);
-  const spark = played(elapsed, sparkAt, 200);
-  const project = played(elapsed, pillsAt, 200);
-  const category = played(elapsed, pillsAt + 150, 200);
   return (
     <div className="ui-setup-demo ui-setup-jev" data-demo-frame={frame}>
       <div className="ui-setup-switch">
@@ -276,16 +268,7 @@ function JevScene({ pointer }: SceneProps) {
       <div className="ui-setup-head">
         <p className="t-title-3">לאישור</p>
       </div>
-      <DemoFact
-        supplier="חומרי בניין הדר בע״מ"
-        date="21/09/2026"
-        agorot={850_000n}
-        spark={spark}
-        project={project > 0 ? "וילה רעננה" : undefined}
-        projectAmount={project}
-        category={category > 0 ? "חומרים" : undefined}
-        categoryAmount={category}
-      />
+      <DemoCard supplier="חומרי בניין הדר בע״מ" agorot={850_000n} project="וילה רעננה" category="חומרים" jev pending={elapsed <= pillsAt} />
       <DemoPointer elapsedMs={elapsed} timeline={JEV_POINTER} variant={pointer} />
     </div>
   );
@@ -406,8 +389,8 @@ function ApprovalScene({ pointer }: SceneProps) {
 
 function ApprovalCard({ supplier, agorot, project, category, tap }: { supplier: string; agorot: bigint; project: string; category: string; tap?: string }) {
   return (
-    <div className="ui-setup-card">
-      <DemoFact supplier={supplier} date="21/09/2026" agorot={agorot} spark={1} project={project} projectAmount={1} category={category} categoryAmount={1} />
+    <div className="ui-setup-approve-card">
+      <DemoCard supplier={supplier} agorot={agorot} project={project} category={category} />
       <div className="ui-setup-hit">
         <Button full icon={<CheckIcon />} data-tap={tap}>
           אישור
@@ -422,58 +405,18 @@ export function demoVat(netAgorot: bigint): bigint {
   return divHalfEven(netAgorot * BigInt(STANDARD_VAT_RATE_BP), 10_000n);
 }
 
-function DemoFact({
-  supplier,
-  date,
-  agorot,
-  spark,
-  project,
-  projectAmount,
-  category,
-  categoryAmount,
-}: {
-  supplier: string;
-  date: string;
-  agorot: bigint;
-  spark: number;
-  project?: string;
-  projectAmount: number;
-  category?: string;
-  categoryAmount: number;
-}) {
+/** The real review card, as a still frame: no handlers, a still skeleton while Jev reads (FLOW-506). */
+function DemoCard({ supplier, agorot, project, category, jev = false, pending = false }: { supplier: string; agorot: bigint; project: string; category: string; jev?: boolean; pending?: boolean }) {
   return (
-    <div className="ui-setup-fact">
-      <p className="t-title-3">{supplier}</p>
-      <p className="t-hint">
-        הוצאה · <bdi dir="ltr">{date}</bdi>
-      </p>
-      <p className="t-display">
-        <bdi dir="ltr">{formatAmount(agorot, "detail")}</bdi>
-      </p>
-      <p className="t-hint">
-        לפני מע״מ · מע״מ <bdi dir="ltr">{formatAmount(demoVat(agorot))}</bdi>
-      </p>
-      <p className="ui-setup-offer ui-setup-fade" data-setup-visible={spark >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": spark })}>
-        <SparkIcon size={16} /> הצעה
-      </p>
-      <OfferLine label="פרויקט" name={project} amount={projectAmount} />
-      <OfferLine label="קטגוריה" name={category} amount={categoryAmount} />
-    </div>
-  );
-}
-
-function OfferLine({ label, name, amount }: { label: string; name?: string; amount: number }) {
-  return (
-    <div className="ui-setup-offer-line">
-      <span className="t-label">{label}</span>
-      {name != null && amount > 0 ? (
-        <span className="ui-setup-pill ui-setup-fade" data-setup-visible={amount >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": amount })}>
-          {name}
-        </span>
-      ) : (
-        <span className="t-hint">—</span>
-      )}
-    </div>
+    <ReviewCard
+      supplier={supplier}
+      sourceLine="הוצאה · 21/09/2026"
+      netAgorot={-agorot}
+      vatLine={`לפני מע״מ · מע״מ ${formatAmount(demoVat(agorot))}`}
+      suggestion={{ project, category, projectSuggested: true, categorySuggested: true, projectJev: jev, categoryJev: jev }}
+      pending={pending}
+      still
+    />
   );
 }
 
