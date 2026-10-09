@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-813 next: a green cache shared across lanes, and lint skipped when its inputs already passed | The next non-UI item |
-| Dev lane 2 | Free: FLOW-510 SUMIT schema-drift check done in #273 | The lane manager's next non-UI item |
+| Dev lane 2 | FLOW-506 setup store on the server, resume keyed by user; FLOW-507 write-gate tests; FLOW-508 claim expiry (no UI change) | The lane manager's next non-UI item |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-114 loan match on the transaction card, PR #252 (owner picked B, one row; FLOW-404 card merged #223) | The transaction detail hint of 322, review card fit at 375x667 |
 | UI lane 3 | FLOW-322 `/notifications` removal and FLOW-334 leftovers (period pill under the title, category lines total, onboarding gap), PR #272 (FLOW-334 H1/H2 merged #259) | Settings, project screens, and other areas outside the review and transaction screens |
