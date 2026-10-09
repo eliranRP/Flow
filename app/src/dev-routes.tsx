@@ -38,7 +38,6 @@ const devLinks: Array<[string, string]> = [
   ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
   ["/settings/connections?preview=1", "חיבורים לדוגמה"],
   ["/settings/loans?preview=1", "הלוואות לדוגמה"],
-  ["/notifications?preview=1", "התראות לדוגמה"],
   ["/unpaid?preview=1", "חשבוניות לדוגמה"],
   ["/onboarding?preview=1", "הצטרפות לדוגמה"],
   ["/install?preview=1", "התקנה לדוגמה"],

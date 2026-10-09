@@ -50,7 +50,6 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
     ["קטגוריות לדוגמה", "חזרה", "/settings/categories?preview=1", /\/settings\?preview=1$/],
     ["חיבורים לדוגמה", "חזרה", "/settings/connections?preview=1", /\/settings\?preview=1$/],
     ["הלוואות לדוגמה", "חזרה", "/settings/loans?preview=1", /\/settings\?preview=1$/],
-    ["התראות לדוגמה", "חזרה", "/notifications?preview=1", /\/settings\?preview=1$/],
     ["חשבוניות לדוגמה", "חזרה", "/unpaid?preview=1", /\/\?preview=1$/],
     ["הצטרפות לדוגמה", "חזרה", "/onboarding?preview=1", /\/\?preview=1$/],
     ["התקנה לדוגמה", "סגירה", "/install?preview=1", /\/settings\?preview=1$/],
