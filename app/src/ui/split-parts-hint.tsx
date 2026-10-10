@@ -11,7 +11,7 @@ export type SplitHintPart = { name: string; amount: string };
  * The date shares the מתוך line or drops; it never sits alone. Amounts use tabular figures.
  * FLOW-425: amounts are never cut. Only names ellipsize; with "ועוד N", the first part's amount
  * drops before its name goes under about 3em. The מתוך line drops its date first; in a column too
- * narrow even for its total, the word "מתוך" ellipsizes, never the total.
+ * narrow even for "מתוך" and its total, the total wraps whole onto a line of its own.
  */
 export function SplitPartsHint({ parts, total, date }: { parts: readonly SplitHintPart[]; total: string; date?: string }) {
   const [first] = parts;
@@ -32,16 +32,20 @@ export function SplitPartsHint({ parts, total, date }: { parts: readonly SplitHi
           <span className="ui-split-hint-more">{`\u00a0· ועוד ${String(parts.length - 1)}`}</span>
         </span>
       )}
-      <HintParts
-        parts={[
-          <span key="total" className="ui-split-hint-part">
-            <span className="ui-split-hint-name">מתוך</span>
-            <PartAmount text={total} />
-          </span>,
-          ...(date ? [date] : []),
-        ]}
-        maxLines={1}
-      />
+      <span className="ui-split-hint-of">
+        <span className="ui-split-hint-total">
+          <span className="ui-split-hint-of-word">{"מתוך\u00a0"}</span>
+          <SplitAmount text={total} />
+        </span>
+        {date ? (
+          <span className="ui-split-hint-date">
+            <span className="ui-split-hint-date-in">
+              <span className="ui-hint-wrap-sep" aria-hidden="true"> · </span>
+              {date}
+            </span>
+          </span>
+        ) : null}
+      </span>
     </span>
   );
 }

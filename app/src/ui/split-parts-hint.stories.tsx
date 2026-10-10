@@ -165,9 +165,9 @@ function LongRows() {
   );
 }
 
-/** Each amount is inside the box that clips it, or wholly outside it (dropped), never part-way. */
+/** Each amount (and the date) is inside the box that clips it, or wholly outside it (dropped), never part-way. */
 function clippedAmounts(root: HTMLElement): string[] {
-  return [...root.querySelectorAll<HTMLElement>(".ui-split-hint-amount")].flatMap((amount) => {
+  return [...root.querySelectorAll<HTMLElement>(".ui-split-hint-amount, .ui-split-hint-date-in")].flatMap((amount) => {
     const box = amount.getBoundingClientRect();
     for (let el = amount.parentElement; el && el !== root; el = el.parentElement) {
       if (getComputedStyle(el).overflow === "visible") continue;
@@ -188,6 +188,9 @@ export const LongNames: Story = {
     await expect(canvas.getByText("$1,234.56")).toBeInTheDocument();
     await expect(canvas.getByText("· ועוד 2", { exact: false })).toBeInTheDocument();
     await expect(clippedAmounts(canvasElement)).toEqual([]);
+    // The word "מתוך" is never cut; in a narrow column the total wraps under it instead.
+    const words = [...canvasElement.querySelectorAll<HTMLElement>(".ui-split-hint-of-word")];
+    await expect(words.filter((word) => word.scrollWidth > word.clientWidth + 1)).toEqual([]);
   },
 };
 
