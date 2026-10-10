@@ -38,12 +38,16 @@ describe("PrefetchProjects (FLOW-804)", () => {
     fireEvent.pointerDown(view.getByText("הגדרות"));
     expect(query).not.toHaveBeenCalled();
     fireEvent.pointerDown(view.getByText("פרויקט"));
-    expect(query).toHaveBeenCalledTimes(1);
+    // The project and its cash (FLOW-417: the page opens on the cash).
+    expect(query).toHaveBeenCalledTimes(2);
     const options = query.mock.calls[0]?.[0] as { queryKey: unknown[]; staleTime: number };
     expect(options.queryKey.slice(0, 3)).toEqual(["project", "off", "p7"]);
     // period=all reads with no range, like the page it opens.
     expect(options.queryKey.slice(3)).toEqual([null, null]);
     expect(options.staleTime).toBeGreaterThan(0);
+    const cash = query.mock.calls[1]?.[0] as { queryKey: unknown[]; staleTime: number };
+    expect(cash.queryKey.slice(0, 4)).toEqual(["dashboard", "project-cash-months", "off", "p7"]);
+    expect(cash.staleTime).toBeGreaterThan(0);
   });
 
   it("reads nothing in preview", () => {

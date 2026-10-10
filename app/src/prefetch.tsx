@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { periodFromSearch } from "./period";
 import { useHomePreview } from "./preview";
+import { projectCashMonthsOptions } from "./project-cash";
 import { projectQueryOptions, useBooks } from "./use-books";
 
 /** A prefetched project counts as fresh this long, so Home and Projects do not read it again. */
@@ -31,6 +32,8 @@ export function PrefetchProjects() {
       // The page starts on the link's period, else Home's (useProjectPeriod).
       const linkPeriod = periodFromSearch(new URLSearchParams(search)) ?? period;
       client.query({ ...projectQueryOptions(preview, projectId, linkPeriod), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
+      // FLOW-417: the page opens on the project's cash, read beside the project.
+      client.query({ ...projectCashMonthsOptions(preview, projectId), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
     }
     function onPress(event: Event) {
       const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;

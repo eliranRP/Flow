@@ -152,6 +152,7 @@ describe("project overhead hero", () => {
                 path="/projects/:projectId"
                 element={
                   <ProjectDetailScreen
+                    section="profit"
                     sample={{
                       id: "a",
                       name: "וילה רעננה",
@@ -210,7 +211,7 @@ describe("project overhead hero", () => {
         <ToastProvider>
           <MemoryRouter initialEntries={["/projects/a"]}>
             <Routes>
-              <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailScreen section="profit" />} />
             </Routes>
           </MemoryRouter>
         </ToastProvider>
@@ -245,7 +246,7 @@ describe("project overhead hero", () => {
         <ToastProvider>
           <MemoryRouter initialEntries={["/projects/a"]}>
             <Routes>
-              <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailScreen section="profit" />} />
             </Routes>
           </MemoryRouter>
         </ToastProvider>

@@ -1,4 +1,4 @@
--- FLOW-417 (owner's option A "Like Home", 2026-10-10; decision 0172): a project opens on its cash.
+-- FLOW-417 (owner's option A "Like Home", 2026-10-10; decision 0173): a project opens on its cash.
 -- - private.project_cash_parts: private.cash_parts' parts that are the project's. A part filed or
 --   split to the project counts whole; a shared line counts its allocation's share (share_bp of
 --   the part's gross), so a project shows its own part of a bill, never the whole bank amount.

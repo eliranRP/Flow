@@ -36,6 +36,8 @@ const AddForm = lazy(() => screenLoaders.addForm().then((m) => ({ default: m.Add
 const OnboardingScreen = lazy(() => screenLoaders.onboarding().then((m) => ({ default: m.OnboardingScreen })));
 const ProjectsScreen = lazy(() => screenLoaders.projects().then((m) => ({ default: m.ProjectsScreen })));
 const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) => ({ default: m.ProjectDetailScreen })));
+const ProjectCashMonthScreen = lazy(() => screenLoaders.projectCash().then((m) => ({ default: m.ProjectCashMonthScreen })));
+const ProjectCashLinesScreen = lazy(() => screenLoaders.projectCash().then((m) => ({ default: m.ProjectCashLinesScreen })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const UnpaidScreen = lazy(() => screenLoaders.unpaid().then((m) => ({ default: m.UnpaidScreen })));
@@ -275,6 +277,10 @@ function AppRoutes() {
                 <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
                 <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
                 {/* FLOW-340 C: the screens the project page's rows open. */}
+                {/* FLOW-417: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
+                <Route path="projects/:projectId/profit" element={<ProjectDetailScreen section="profit" />} />
+                <Route path="projects/:projectId/cash/:month" element={<ProjectCashMonthScreen />} />
+                <Route path="projects/:projectId/cash/:month/:side/:currency" element={<ProjectCashLinesScreen />} />
                 <Route path="projects/:projectId/expenses" element={<ProjectDetailScreen section="expenses" />} />
                 <Route path="projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
                 <Route path="projects/:projectId/loans" element={<ProjectDetailScreen section="loans" />} />
