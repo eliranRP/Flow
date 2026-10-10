@@ -81,7 +81,15 @@ export type ListRowProps =
   | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
-  | { variant: "skeleton" }
+  | {
+    variant: "skeleton";
+    /** Holds the icon slot the loaded row has. */
+    icon?: boolean;
+    /** A short eyebrow over a long value, as an eyebrow row draws (FLOW-358). Default: long title over short hint. */
+    eyebrow?: boolean;
+    /** The end-side bar for an amount; false for a row with only a chevron or nothing at its end. */
+    end?: boolean;
+  }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; /** A refused delete keeps its reason at full contrast (FLOW-405). */ clearHint?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
@@ -126,11 +134,16 @@ export function ListRow(props: ListRowProps) {
   if (props.variant === "skeleton") {
     return (
       <div className="ui-row" aria-hidden="true">
+        {props.icon === true ? (
+          <span className="ui-row-icon">
+            <Skeleton className="ui-skel-icon" />
+          </span>
+        ) : null}
         <span className="ui-skel-copy">
-          <Skeleton width="md" />
-          <Skeleton width="sm" />
+          <Skeleton width={props.eyebrow === true ? "sm" : "md"} />
+          <Skeleton width={props.eyebrow === true ? "md" : "sm"} />
         </span>
-        <Skeleton width="sm" />
+        {props.end === false ? null : <Skeleton width="sm" />}
       </div>
     );
   }

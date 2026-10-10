@@ -1,0 +1,1 @@
+The loan page and the loans list load in the shape of their rows (FLOW-358): an icon slot, and on the loan page a short label over a long value with no bar at the end. `ListRow`'s skeleton variant takes `icon`, `eyebrow` and `end`. No migration.
