@@ -24,6 +24,7 @@ import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { CategoryMenuSheet } from "./category-sheet";
+import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns } from "./category-loan-use";
 import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
 /** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
@@ -111,11 +112,14 @@ function CategoryLine({
 
 export function CategoriesScreen({
   sample,
+  sampleLoans,
   hiddenOpen = false,
   parentId: parentProp,
   listPath = "/settings/categories",
 }: {
   sample?: ListedCategory[];
+  /** A story's loans, for the locked line of a loan's own category (FLOW-106 §3.5). */
+  sampleLoans?: LoanCategoryColumns[];
   /** Stories open the hidden list without a click. */
   hiddenOpen?: boolean;
   /** FLOW-406: the parent whose sub-categories this page lists (mockup cat-b-2). The route gives it. */
@@ -134,6 +138,7 @@ export function CategoriesScreen({
   const writeBlocked = () => holdWrites || blocked();
   const categories = useCategoriesQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null && preview === "off");
+  const loanUses = useCategoryLoanUses(dashboard.data?.company_id, sample == null ? undefined : (sampleLoans ?? []));
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
   const rows: ListedCategory[] = sample ?? categories.data ?? [];
   // FLOW-406: only a top-level, non-loan category has a page of sub-categories.
@@ -247,7 +252,9 @@ export function CategoriesScreen({
   const anyKeptOut = scope.some((category) => category.kind === kind && category.excluded_from_pnl === true);
   // Follow the refetched row, so the rehab switch shows the saved value while the sheet stays open.
   const menuRow = menu ? rows.find((row) => row.id === menu.id) ?? menu : null;
-  const menuLoanLine = menuRow ? loanCategoryLine(menuRow) : null;
+  // FLOW-106 §3.5: a category a loan names for interest, escrow or principal is locked like the keyed ones.
+  const menuLoanUse = menuRow ? loanUses.get(menuRow.id) : undefined;
+  const menuLoanLine = menuRow ? loanCategoryLine(menuRow) ?? (menuLoanUse ? loanUseLine(menuLoanUse) : null) : null;
   const previewNoCompany = sample == null && params.get("preview") === "empty";
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
   if (previewNoCompany || liveNoCompany) {

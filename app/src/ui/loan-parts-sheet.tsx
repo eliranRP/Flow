@@ -2,6 +2,7 @@ import { useId, type ReactNode, type RefObject } from "react";
 import { Button } from "./button";
 import { MoneyField } from "./money-field";
 import { Sheet } from "./sheet";
+import { TextLink } from "./text-link";
 
 /** The parts of a loan payment, in the order the sheet lists them (FLOW-114, option B). */
 export type LoanPartKey = "principal" | "interest" | "escrow" | "fees";
@@ -52,6 +53,8 @@ export function LoanPartsSheet({
   retrying = false,
   unmatchDisabled = false,
   readOnly = false,
+  onEdit,
+  editDisabled = false,
   returnFocusRef,
 }: {
   open: boolean;
@@ -84,6 +87,10 @@ export function LoanPartsSheet({
   unmatchDisabled?: boolean;
   /** A viewer: static amounts, no שמירה and no ביטול השיוך. */
   readOnly?: boolean;
+  /** FLOW-106 §3.4: "עריכת הפיצול" under the total opens the split editor on these parts. */
+  onEdit?: () => void;
+  /** עריכת הפיצול waits, such as while the loan is read. */
+  editDisabled?: boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const problemId = useId();
@@ -160,6 +167,11 @@ export function LoanPartsSheet({
         {problem ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
         {onRetry ? (
           <Button type="button" variant="secondary" className="ui-loan-parts-retry" busy={retrying} onClick={() => { if (!retrying) onRetry(); }}>ניסיון חוזר</Button>
+        ) : null}
+        {onEdit && !readOnly ? (
+          <TextLink className="ui-loan-other" tone="quiet" chevron={false} disabled={loading || busy || editDisabled} onClick={onEdit}>
+            עריכת הפיצול
+          </TextLink>
         ) : null}
       </div>
     </Sheet>

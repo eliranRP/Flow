@@ -35,10 +35,13 @@ function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
-function Screen() {
+/** FLOW-106 §3.5: an invented loan that keeps its escrow on ביטוח נכס and its fees on עמלות. */
+const loans = [{ name: "משכנתא לדוגמה", interest_category_id: null, escrow_category_id: "c5", principal_category_id: null }];
+
+function Screen({ withLoans = false }: { withLoans?: boolean } = {}) {
   return (
     <StoryRoute entry="/settings/categories" tabs>
-      <CategoriesScreen sample={categories} />
+      <CategoriesScreen sample={categories} sampleLoans={withLoans ? loans : undefined} />
     </StoryRoute>
   );
 }
@@ -62,6 +65,15 @@ export const MenuLoanUsed: Story = {
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "ביטוח נכס"); },
 };
 export const MenuLoanUsedDark: Story = { ...MenuLoanUsed, name: "Menu, a loan uses it, dark", ...dark };
+
+/** FLOW-106 §3.5: a loan names the category for escrow, so it is locked like the built-in loan ones. */
+export const MenuLoanOwnCategory: Story = {
+  name: "Menu, a loan's own escrow category (locked)",
+  render: () => <Screen withLoans />,
+  play: async ({ canvasElement }) => { await openMenu(canvasElement, "ביטוח נכס"); },
+};
+export const MenuLoanOwnCategory320: Story = { ...MenuLoanOwnCategory, name: "Menu, a loan's own category, 320", ...at320 };
+export const MenuLoanOwnCategoryDark: Story = { ...MenuLoanOwnCategory, name: "Menu, a loan's own category, dark", ...dark };
 
 export const MenuLoanCategory: Story = {
   name: "Menu, a built-in loan category",

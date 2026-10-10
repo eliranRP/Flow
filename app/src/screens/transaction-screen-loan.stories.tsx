@@ -84,6 +84,11 @@ function loanStoryApi({ currency = "ILS", saveFails = false }: { currency?: stri
       categoryIds: { principal: "c-loan" },
     }),
     readStored: () => Promise.resolve({ lineMinor: 620_000n, currency, loanCurrency: currency, parts: stored }),
+    readCategories: () => Promise.resolve([
+      { id: "c-fees", name: "עמלות בנק", kind: "expense", loanPart: null, excludedFromPnl: false, hidden: false },
+      { id: "c-other", name: "הוצאות אחרות", kind: "expense", loanPart: null, excludedFromPnl: false, hidden: false },
+    ]),
+    setFeesCategory: () => Promise.resolve(),
     save: () => (saveFails ? Promise.reject(new Error("loan balance exceeded")) : Promise.resolve()),
     clear: () => Promise.resolve({
       loanId: "loan-gefen",
@@ -132,6 +137,35 @@ export const TransactionLoanEditing: Story = {
     const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeEnabled());
   },
+};
+
+/**
+ * FLOW-106 §3.4: "עריכת הפיצול" under the parts' total opens the split editor on the stored parts,
+ * in סכומים מדויקים, for the loan the line is matched to.
+ */
+export const TransactionLoanEditSplit: Story = {
+  name: "Loan payment, edit the split",
+  render: () => <LoanMatchStory />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
+    const body = storyBody(canvasElement);
+    const sheet = await body.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    const edit = within(sheet).getByRole("button", { name: "עריכת הפיצול" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await userEvent.click(edit);
+    const editor = await body.findByRole("dialog", { name: "פיצול התשלום" });
+    await waitFor(() => expect(within(editor).getByLabelText("סכום, קרן")).toHaveValue("4,150"));
+  },
+};
+export const TransactionLoanEditSplit320: Story = {
+  ...TransactionLoanEditSplit,
+  name: "Loan payment, edit the split, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const TransactionLoanEditSplitDark: Story = {
+  ...TransactionLoanEditSplit,
+  name: "Loan payment, edit the split, dark",
+  globals: { theme: "dark" },
 };
 
 /** The server's balance check refuses the save: an error toast, and the sheet keeps the values. */

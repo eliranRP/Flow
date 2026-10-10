@@ -553,7 +553,7 @@ export function TransactionScreen({
             }} />
           )}
           {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
-          <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} active={sample == null} readOnly={holdWrites}>
+          <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} docDate={txn.doc_date} active={sample == null} readOnly={holdWrites}>
             {holdWrites ? (
               <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
             ) : (

@@ -20,6 +20,7 @@ import {
   minorOfInput,
   scheduleParts,
   schedulePlan,
+  type SchedulePlan,
   toSaveParts,
   type ExactDraft,
 } from "./loan-split-draft";
@@ -33,6 +34,11 @@ export type LoanSplitSave = {
   keepFeesCategoryId: string | null;
 };
 
+/** FLOW-106 §3.4: a matched split the editor opens on, as stored. */
+export type LoanSplitEdit = {
+  parts: ReadonlyArray<{ part: LoanSplitPart; amountMinor: bigint; scheduledMinor: bigint; categoryId: string | null }>;
+};
+
 function draftFrom(parts: ReadonlyArray<{ part: LoanSplitPart; amountMinor: bigint }>): ExactDraft {
   const draft: ExactDraft = {};
   for (const part of parts) draft[part.part] = minorToInput(part.amountMinor);
@@ -44,6 +50,8 @@ function draftFrom(parts: ReadonlyArray<{ part: LoanSplitPart; amountMinor: bigi
  * 1 to 12 installments with optional fees off the top (a demand loan: its accrued interest, and no
  * installments); סכומים מדויקים takes the lender's own parts. Fees name their category, and
  * "לשמור להלוואה הזו" keeps it on the loan. One שמירה, as the matched split's sheet has.
+ * With `edit` ("עריכת הפיצול" on a matched line) it opens on the stored parts in סכומים מדויקים,
+ * for the one loan the line is matched to, and keeps each part's scheduled figure and category.
  */
 export function LoanSplitEditor({
   open,
@@ -54,6 +62,7 @@ export function LoanSplitEditor({
   categories,
   saving = false,
   onSave,
+  edit,
   returnFocusRef,
 }: {
   open: boolean;
@@ -66,6 +75,8 @@ export function LoanSplitEditor({
   categories: readonly LoanCategory[] | undefined;
   saving?: boolean;
   onSave: (save: LoanSplitSave) => void;
+  /** A matched line's stored parts; `loans` is then its one loan. */
+  edit?: LoanSplitEdit;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const problemId = useId();
@@ -81,19 +92,22 @@ export function LoanSplitEditor({
     if (!open) return;
     const first = loans[0];
     setLoanId(first?.id ?? "");
-    setMode("schedule");
+    setMode(edit == null ? "schedule" : "exact");
     setCount(1);
     setFeesRaw("");
-    setExact({});
-    setFeesCategoryId(first?.categoryIds?.fees ?? null);
-    setKeep(first?.categoryIds?.fees == null);
+    setExact(edit == null ? {} : draftFrom(edit.parts));
+    const storedFees = edit?.parts.find((part) => part.part === "fees")?.categoryId ?? null;
+    setFeesCategoryId(storedFees ?? first?.categoryIds?.fees ?? null);
+    // An edit whose fees already name a category the loan doesn't keep was a "no" to keeping it.
+    setKeep(storedFees != null && storedFees !== (first?.categoryIds?.fees ?? null) ? false : first?.categoryIds?.fees == null);
     // The loans list is new on each render; the open is what resets the editor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   const loan = loans.find((item) => item.id === loanId) ?? loans[0];
   const loanPayments = loan == null ? [] : (payments[loan.id] ?? []);
   const demand = loan?.kind === "demand";
-  const plan = loan == null ? null : schedulePlan(loan, loanPayments, line, count);
+  // Editing keeps the stored scheduled figures: the schedule's own read would count this line as paid.
+  const plan = edit != null ? editPlan(edit) : loan == null ? null : schedulePlan(loan, loanPayments, line, count);
   const feesMinor = minorOfInput(feesRaw) ?? 0n;
   const scheduled = plan == null ? null : scheduleParts(plan, line.lineMinor, feesMinor);
   const exactCheck = checkExact(exact, line.lineMinor);
@@ -103,6 +117,8 @@ export function LoanSplitEditor({
   const fees = parts.find((part) => part.part === "fees")?.amountMinor ?? 0n;
   const principal = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
   const loanFeesCategory = loan?.categoryIds?.fees ?? null;
+  // The balance already counts the stored principal, so an edit may move up to it again.
+  const editedPrincipal = edit?.parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
   const feeOptions = categories == null ? [] : partCategoryOptions(categories, "fees", feesCategoryId);
   const currency = loan?.currency ?? line.currency;
   const money = (minor: bigint) => showMoney(minor, currency);
@@ -123,7 +139,7 @@ export function LoanSplitEditor({
                 : `יש ${money(-exactCheck.leftMinor)} יותר מסכום השורה.`)
               : fees > 0n && feesCategoryId == null
                 ? "בחרו לאן נרשמות העמלות."
-                : principal > loan.balanceMinor
+                : principal > loan.balanceMinor + editedPrincipal
                   ? "התשלום גבוה מיתרת ההלוואה."
                   : undefined;
   // FLOW-353: in exact parts the summary row says what is missing or over, so no line repeats it below.
@@ -134,7 +150,7 @@ export function LoanSplitEditor({
     const feesCategory = fees > 0n ? feesCategoryId : null;
     onSave({
       loanId: loan.id,
-      parts: toSaveParts(parts, feesCategory),
+      parts: keepCategories(toSaveParts(parts, feesCategory), edit),
       keepFeesCategoryId: feesCategory != null && keep && feesCategory !== loanFeesCategory ? feesCategory : null,
     });
   };
@@ -171,7 +187,7 @@ export function LoanSplitEditor({
           <bdi className="ui-num t-title-2" dir="ltr">{money(line.lineMinor)}</bdi>
           <span className="t-hint ui-lsedit-meta">{formatDisplay(line.docDate)}</span>
         </div>
-        {loans.length > 1 ? (
+        {loans.length > 1 && edit == null ? (
           <SelectField
             label="הלוואה"
             value={loanId}
@@ -186,6 +202,7 @@ export function LoanSplitEditor({
             }}
           />
         ) : null}
+        {edit != null ? null : (
         <SegmentedControl<Mode>
           label="אופן הפיצול"
           showLabel={false}
@@ -197,6 +214,7 @@ export function LoanSplitEditor({
           ]}
           onChange={switchMode}
         />
+        )}
         {mode === "schedule" ? (
           <>
             {demand ? null : (
@@ -287,4 +305,23 @@ export function LoanSplitEditor({
       </div>
     </Sheet>
   );
+}
+
+function editPlan(edit: LoanSplitEdit): SchedulePlan {
+  const scheduled = (part: LoanSplitPart) => edit.parts.find((item) => item.part === part)?.scheduledMinor ?? 0n;
+  return {
+    sum: { interestMinor: scheduled("interest"), escrowMinor: scheduled("escrow"), principalMinor: scheduled("principal") },
+    maxCount: 1,
+    dates: null,
+  };
+}
+
+/** An edit keeps the category each stored part named (decision 0128); fees take the field's. */
+function keepCategories(parts: SavePart[], edit: LoanSplitEdit | undefined): SavePart[] {
+  if (edit == null) return parts;
+  return parts.map((part) => {
+    if (part.part === "fees" || part.category_id != null) return part;
+    const categoryId = edit.parts.find((item) => item.part === part.part)?.categoryId;
+    return categoryId == null ? part : { ...part, category_id: categoryId };
+  });
 }

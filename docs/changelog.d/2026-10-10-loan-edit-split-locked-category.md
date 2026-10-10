@@ -1,0 +1,1 @@
+A matched loan payment's parts sheet has "עריכת הפיצול", which opens the split editor on the stored parts in exact amounts (FLOW-106). Settings → Categories locks a category a loan uses for interest, escrow or principal, with the line "קטגוריה של הלוואה · <loan> · ריבית" and no P&L action. No migration.
