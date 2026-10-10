@@ -251,6 +251,25 @@ export async function callTool(
     return ok(data);
   }
 
+  // FLOW-415 (decision 0172).
+  if (name === "get_recurring_changes") {
+    const result = await rpc("recurring_changes", {});
+    const data = result.json;
+    if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
+    return ok({ changes: data });
+  }
+
+  if (name === "get_line_recurring") {
+    const id = args.transaction_id;
+    if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");
+    const result = await rpc("payment_recurring", { p_id: id });
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(data);
+  }
+
   if (name === "get_breakdown") {
     const direction = args.direction;
     if (direction !== "income" && direction !== "expense") return fail("validation", "validation");
