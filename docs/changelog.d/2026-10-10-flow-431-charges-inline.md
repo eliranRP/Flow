@@ -1,0 +1,1 @@
+FLOW-431 (decision [0178](decisions/0178-party-charges.md)): the transaction screen shows the earlier charges inline under its switches instead of behind a chip: the usual amount and the change ("בדרך כלל $11.99 · עלה ב־92%"), 6 month bars, the 3 latest charges and "לכל החיובים" for the rest.
