@@ -292,11 +292,6 @@
   overflow: hidden;
 }
 
-/* FLOW-432: one line; a part that would open a second is clipped whole. */
-.ui-hint-wrap-1 {
-  max-block-size: calc(1em * var(--type-meta-line));
-}
-
 .ui-hint-wrap-in {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,5 @@
 import { HintParts } from "./hint-parts";
+import "./split-parts-hint.css";
 
 export type SplitHintPart = { name: string; amount: string };
 

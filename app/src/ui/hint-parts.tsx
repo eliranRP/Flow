@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  * and a narrow line wraps between whole parts. A separator never starts or ends a line: every part
  * after the first carries its "·" in a box at its start, and the box of a part that opens a line
  * sits in the clipped margin, so the break shows no dot. Screen readers skip the dots.
- * With `maxLines={1}`, a part that would open a second line is clipped whole, so put the part that may
+ * With `maxLines={1}` (its rule ships in split-parts-hint.css), a part that would open a second line is clipped whole, so put the part that may
  * go (a date) last (FLOW-432).
  */
 export function HintParts({ text, parts, maxLines }: { text?: string; parts?: readonly ReactNode[]; maxLines?: 1 }) {
