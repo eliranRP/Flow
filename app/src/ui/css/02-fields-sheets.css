@@ -178,8 +178,20 @@
 }
 
 /* A list whose row names are their identity (a customer or a supplier): the name wraps up to two
-   lines, then ends in an ellipsis (DESIGN-RULES: names wrap before they truncate). */
-.ui-list-wrap-title .ui-row-title {
+   lines, then ends in an ellipsis (DESIGN-RULES: names wrap before they truncate). A project row's
+   name is its identity too, on Home and the Projects tab (FLOW-358, §3.7). */
+.ui-list-wrap-title .ui-row-title,
+.ui-row-project .ui-row-title:not(.ui-row-title-with-tag) {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Under a project row's name the hint also stops at two lines, so a row stays a row (FLOW-358, §2.1). */
+.ui-row-project .ui-row-hint:not(.ui-row-hint-line, .ui-row-hint-wrap) {
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;

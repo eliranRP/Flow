@@ -1,0 +1,1 @@
+A project's ⋯ menu has a new "קבוצה" row: pick a group, take the project out with "בלי קבוצה", or make a new group, and undo from the toast (FLOW-360). No migration; it uses the existing group functions.
