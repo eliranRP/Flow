@@ -67,7 +67,11 @@ test("marking a loan paid off takes a date from the last payment on, then undo r
   await page.getByRole("dialog", { name: "מצב" }).getByRole("radio", { name: "נסגרה" }).click();
   await page.getByRole("dialog", { name: "תאריך סגירה" }).getByRole("button", { name: "החלה" }).click();
   await expect(toast(page, "סומנה כנסגרה")).toBeVisible();
-  await page.goto("/e2e/loans");
+  // Back twice in the app (a reload would reset the dev store): פרטי הלוואה, the loan, the list.
+  await page.getByRole("button", { name: "חזרה" }).first().click();
+  await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge$/);
+  await page.getByRole("button", { name: "חזרה" }).first().click();
+  await expect(page).toHaveURL(/\/e2e\/loans$/);
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toHaveCount(0);
   await page.getByRole("button", { name: "נסגרו (3)" }).click();
   await expect(page.getByRole("button", { name: /^הלוואת גישור, .*נסגרה · 01\/10\/2026$/ })).toBeVisible();
