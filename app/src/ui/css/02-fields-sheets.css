@@ -190,6 +190,16 @@
   -webkit-line-clamp: 2;
 }
 
+/* Under a project row's name the hint also stops at two lines, so a row stays a row (FLOW-358, §2.1). */
+.ui-row-project .ui-row-hint:not(.ui-row-hint-line, .ui-row-hint-wrap) {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 /* A transaction row's secondary line: one line, cut at its end (design lead, FLOW-125 review). */
 .ui-row-hint-line {
   overflow: hidden;
