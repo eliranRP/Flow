@@ -352,7 +352,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 15 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 16 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -494,6 +494,19 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 15
 - The band label never repeats what the period pill already says (FLOW-358).
 - Home shows money that needs a hand (review, open invoices, missing bills) whatever its main figure (FLOW-413).
 - A project's group is changed from the project, never from the Projects tab; the tab only shows groups (FLOW-360).
+
+**Cash, recurring and one editor (folded at cycle 16)**
+
+- A label names the period it shows: "רווח החודש" only for the current month, "רווח ב<month>" for any other (FLOW-362).
+- An empty state promises what its screen shows, and its line never ends on a lone word (FLOW-362, §2.8).
+- A figure that doesn't match the rows above it says what makes up the difference, on a row that opens its lines ("לא נספר ברווח", FLOW-418).
+- A drill-down summary row may carry one muted hint line under its label; a figure-only row has no chevron (FLOW-417).
+- One set of numbers has one editor; the other places show it static with one way in (FLOW-362).
+- A locked line that names something puts the kind on line 1 and the name on line 2, so the wrap never splits the name (FLOW-362).
+- A recurring charge names its pace and day in one hint line, "כל חודש ב־N", then "· אחרון dd/mm" or "· זוהה לבד" when known. Hint parts wrap whole, and a separator never starts or ends a line: the "·" before a wrapped part is dropped (FLOW-415).
+- A switch the line can't decide is a locked row whose hint names what decides it (FLOW-415).
+- A yes says what it turns on: a permission card names every push it starts (FLOW-502).
+- Month steppers are one quiet pager segment, never bare chevrons in the rows' drill-in column (FLOW-362).
 
 ---
 
