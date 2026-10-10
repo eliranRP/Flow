@@ -23,7 +23,6 @@ import { useDashboardQuery } from "../use-books";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import {
   LOAN_PART_LABEL,
-  LOAN_STATUS_LABEL,
   loanDeleteConsequence,
   loanDeletedToast,
   loanFailure,
@@ -445,7 +444,7 @@ function LoanDetailReady({
           {row("rate", "ריבית", <RateValue loan={loan} today={today} />, <PercentIcon />, () => { setRate(null); open("rate"); })}
           {payment == null || ended ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
           {row("project", "פרויקט", projectName ?? NO_PROJECT, <ProjectsIcon />, () => { open("project"); })}
-          {ended ? null : row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); }, undefined, statusRef)}
+          {row("status", "מצב", statusPill(loan), <InfoIcon size={24} />, () => { open("status"); }, undefined, statusRef)}
         </List>
 
         {/* No rate rows yet: the ריבית row above opens קביעת ריבית, so the section waits (mockup B6). */}
