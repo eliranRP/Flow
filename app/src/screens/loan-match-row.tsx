@@ -9,6 +9,7 @@ import { useSheetHistory } from "../ui/back";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { minorToInput } from "./loan-form";
+import { MatchedSplitEditor } from "./loan-split-edit";
 import { LOAN_BUSY_HINT, loanAmountChangedHint, LOAN_ROW_CLASS_NAME, showMoney, useLoanMatchRead } from "./loan-match";
 import {
   LOAN_WRITE_KEYS,
@@ -75,9 +76,12 @@ export function LoanCategoryRow({
   active,
   readOnly,
   currency: lineCurrency,
+  docDate,
   children,
 }: {
   transactionId: string;
+  /** The line's date, for the split editor's head. Without it "עריכת הפיצול" does not show. */
+  docDate?: string;
   /** get_transaction's loan_split. Undefined when the server did not send it. */
   split: TransactionLoanSplit | null | undefined;
   direction: string;
@@ -106,6 +110,17 @@ export function LoanCategoryRow({
   const touched = useRef(false);
   // Each open runs the needs-review correction again, even on cached stored parts.
   const [opens, setOpens] = useState(0);
+  // FLOW-106 §3.4: "עריכת הפיצול" opens the split editor on the stored parts.
+  const [editorOpen, setEditorOpen] = useState(false);
+  const setEditor = useSheetHistory("loan-split-editor", editorOpen, setEditorOpen);
+  const editable = docDate != null && !readOnly;
+  // The match read names the loan the editor needs (its balance and categories); read with the sheet.
+  const loaded = useQuery({
+    queryKey: ["loan-split", transactionId],
+    enabled: editable && (open || editorOpen),
+    retry: false,
+    queryFn: () => api.read(transactionId, false),
+  });
   const stored = useQuery({
     queryKey: ["loan-split", "stored", transactionId],
     enabled: open && !readOnly,
@@ -242,6 +257,9 @@ export function LoanCategoryRow({
   const amountChange = storedData != null && storedSum != null ? storedData.lineMinor - storedSum : 0n;
   const note = reviewWaits ? (amountChange !== 0n ? loanAmountChangedHint(amountChange, shownCurrency) : LOAN_BUSY_HINT) : undefined;
   const canSave = problem == null && storedData != null && !save.isPending && !unmatch.isPending;
+  const editLoan = loaded.data?.loans.find((item) => item.id === editing.loan_id);
+  // A flagged split keeps its own correction (עדכון החלוקה), not the editor.
+  const canEdit = editable && !reviewWaits;
   function openSheet() {
     if (split == null) return;
     touched.current = false;
@@ -305,7 +323,25 @@ export function LoanCategoryRow({
           if (unmatch.isPending || save.isPending) return;
           unmatch.mutate(undefined);
         }}
+        onEdit={canEdit ? () => {
+          if (storedData == null || editLoan == null) return;
+          setSheet(false);
+          setEditor(true);
+        } : undefined}
+        editDisabled={storedData == null || editLoan == null}
       />
+      {canEdit && storedData != null && editLoan != null ? (
+        <MatchedSplitEditor
+          open={editorOpen}
+          onOpenChange={setEditor}
+          transactionId={transactionId}
+          docDate={docDate}
+          loan={editLoan}
+          stored={storedData}
+          readOnly={readOnly}
+          returnFocusRef={rowRef}
+        />
+      ) : null}
     </>
   );
 }

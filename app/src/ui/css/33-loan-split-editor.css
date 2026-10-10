@@ -72,7 +72,7 @@
   font-weight: var(--type-amount-weight);
 }
 
-/* "פיצול אחר" under the match sheet's loans. */
+/* "פיצול אחר" under the match sheet's loans; "עריכת הפיצול" under a matched split's total (FLOW-106). */
 .ui-loan-other {
   margin-block-start: var(--space-2);
 }
