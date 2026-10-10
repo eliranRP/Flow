@@ -68,11 +68,12 @@ export const Years: Story = {
   name: "Project history, years",
   render: () => (
     <StoryRoute entry="/projects/p1/cash/history" tabs>
-      <ProjectCashHistoryScreen sample={sampleCashYears()} projectId="p1" />
+      <ProjectCashHistoryScreen sample={{ ...sampleCashYears(), project_name: "Cedar Ave 410" }} projectId="p1" />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(canvas.getByText("Cedar Ave 410")).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "שנים" })).toBeInTheDocument();
     const years = canvas.getAllByRole("link", { name: /^תזרים \d{4} / });
     await expect(years).toHaveLength(4);
@@ -84,7 +85,7 @@ export const Years320: Story = { ...Years, name: "Project history, years, 320", 
 
 function yearSample() {
   const months = sampleCashYearMonths();
-  return { months, years: sampleCashYears(), year: Number(months.months[0]?.month.slice(0, 4)) };
+  return { months, years: { ...sampleCashYears(), project_name: "Cedar Ave 410" }, year: Number(months.months[0]?.month.slice(0, 4)) };
 }
 
 export const Year: Story = {

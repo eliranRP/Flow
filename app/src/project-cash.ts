@@ -141,17 +141,23 @@ export function useProjectCashLinesQuery(projectId: string, month: string, side:
   });
 }
 
+/** Home's history read for one project, with the project's name for the band's top line. */
+export type ProjectCashYears = (NonNullable<CashYears> & { project_name: string | null }) | null;
+
 /** The project's history: the net since its first cash month and per year. */
 export function projectCashYearsOptions(preview: HomePreview, projectId: string) {
   return {
     queryKey: ["dashboard", "project-cash-years", preview, projectId] as const,
-    queryFn: async (): Promise<CashYears> => {
+    queryFn: async (): Promise<ProjectCashYears> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("project_cash_years", { p_project: projectId });
       if (error) throw error;
-      return (await loadReadSchemas()).cashYearsSchema.parse(data);
+      const years = (await loadReadSchemas()).cashYearsSchema.parse(data);
+      if (years == null) return null;
+      const name = data != null && typeof data === "object" && "project_name" in data ? data.project_name : null;
+      return { ...years, project_name: typeof name === "string" ? name : null };
     },
   };
 }

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(14);
+select plan(15);
 
 do $users$
 begin
@@ -80,6 +80,7 @@ select is(
   'every year from the project''s first cash month to this one, newest first'
 );
 select is(public.project_cash_years(pg_temp.id('cedar'), '2026-06-15') ->> 'first_month', '2024-04-01', 'the project''s first cash month');
+select is(public.project_cash_years(pg_temp.id('cedar'), '2026-06-15') ->> 'project_name', 'Cedar', 'the project''s name, for the band');
 
 -- 3-5. A year's figures: the transfer is out of the view, a shared bill counts the project's share,
 -- and a line after this month is not counted.

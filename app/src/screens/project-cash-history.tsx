@@ -1,4 +1,4 @@
-import type { CashMonths, CashYears } from "@flow/shared";
+import type { CashMonths } from "@flow/shared";
 import { Navigate, useParams } from "react-router-dom";
 import { cashHistoryLabel, cashYearMonths, cashYearSummaryRows, cashYearTitle, cashYearTotals, isCashYear, shownTotalRows } from "../cash";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -6,6 +6,7 @@ import {
   projectCashHistoryPath,
   projectCashYearMonthRows,
   projectCashYearRows,
+  type ProjectCashYears,
   useProjectCashYearMonthsQuery,
   useProjectCashYearsQuery,
 } from "../project-cash";
@@ -18,11 +19,12 @@ import { CashHistoryBand, CashHistoryNotReady } from "./cash-history";
 /**
  * The project page's "לכל החודשים" (owner, 2026-10-10: the project page like Home). Home's history
  * pages (FLOW-417) for one project: the net since its first cash month, then a row per year; a
- * year opens its months, and a month opens the project's month page.
+ * year opens its months, and a month opens the project's month page. The band names the project
+ * on a small line above Home's label (design lead).
  */
 
 /** /projects/:projectId/cash/history: the project's net since its first cash month, then each year. */
-export function ProjectCashHistoryScreen({ sample, projectId: sampleProjectId }: { sample?: NonNullable<CashYears>; projectId?: string } = {}) {
+export function ProjectCashHistoryScreen({ sample, projectId: sampleProjectId }: { sample?: NonNullable<ProjectCashYears>; projectId?: string } = {}) {
   const params = useParams();
   const projectId = sampleProjectId ?? params.projectId ?? "";
   const preview = useHomePreview();
@@ -49,6 +51,7 @@ export function ProjectCashHistoryScreen({ sample, projectId: sampleProjectId }:
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <CashHistoryBand
         back={back}
+        kicker={data.project_name ?? undefined}
         label={cashHistoryLabel(data.first_month)}
         figures={totals.map((row) => ({ agorot: row.net_minor, currency: row.currency, loss: row.net_minor < 0n }))}
       />
@@ -58,7 +61,7 @@ export function ProjectCashHistoryScreen({ sample, projectId: sampleProjectId }:
   );
 }
 
-type YearSample = { years: NonNullable<CashYears>; months: NonNullable<CashMonths> };
+type YearSample = { years: NonNullable<ProjectCashYears>; months: NonNullable<CashMonths> };
 
 /** /projects/:projectId/cash/year/2025: the project's year, its net, נכנס and יצא, then its months. */
 export function ProjectCashYearScreen({
@@ -109,6 +112,7 @@ function ProjectCashYearBody({ projectId, year, search, sample }: { projectId: s
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <CashHistoryBand
         back={back}
+        kicker={history.project_name ?? undefined}
         label={cashYearTitle(year)}
         figures={totals.map((row) => ({ agorot: row.net_minor, currency: row.currency, loss: row.net_minor < 0n }))}
       />

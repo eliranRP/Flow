@@ -31,6 +31,7 @@ const total = (inMinor: number, outMinor: number) => ({ currency: "ILS", in_mino
 
 // Invented figures only.
 const years = {
+  project_name: "Cedar Ave 410",
   basis: "paid",
   base_currency: "ILS",
   this_month: `${israelToday().slice(0, 7)}-01`,
@@ -89,6 +90,7 @@ describe("Project cash history (the project page like Home)", () => {
   it("shows the project's net since its first month, then a row per year opening the project's year", async () => {
     wrap("/projects/p1/cash/history");
     expect(await screen.findByText(`תזרים מאז מרץ ${String(lastYear)}`)).toBeInTheDocument();
+    expect(screen.getByText("Cedar Ave 410")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: `תזרים ${String(lastYear)} ₪1,000` })).toHaveAttribute("href", `/projects/p1/cash/year/${String(lastYear)}`);
     expect(rpc.calls).toEqual([{ name: "project_cash_years", args: { p_project: "p1" } }]);
   });
@@ -97,6 +99,7 @@ describe("Project cash history (the project page like Home)", () => {
     wrap(`/projects/p1/cash/year/${String(lastYear)}`);
     expect(await screen.findByRole("link", { name: `תזרים מרץ ${String(lastYear)} −₪1,000` })).toHaveAttribute("href", `/projects/p1/cash/${String(lastYear)}-03`);
     expect(rpc.calls.find((c) => c.name === "project_cash_year_months")?.args).toEqual({ p_project: "p1", p_year: lastYear });
+    expect(screen.getByText("Cedar Ave 410")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^תזרים פברואר/ })).toBeNull();
   });
 

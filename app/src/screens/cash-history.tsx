@@ -85,7 +85,18 @@ export function CashHistoryNotReady({
   return <Navigate to={back} replace />;
 }
 
-export function CashHistoryBand({ back, label, figures }: { back: string; label: string; figures: { agorot: bigint; currency: string; loss: boolean }[] }) {
+export function CashHistoryBand({
+  back,
+  label,
+  figures,
+  kicker,
+}: {
+  back: string;
+  label: string;
+  figures: { agorot: bigint; currency: string; loss: boolean }[];
+  /** FLOW-435: a project's history names the project above the label. */
+  kicker?: string;
+}) {
   const search = usePreviewSearch();
   return (
     <TopBand
@@ -93,7 +104,7 @@ export function CashHistoryBand({ back, label, figures }: { back: string; label:
       leading={<BackButton fallback={back} onBand label="חזרה" />}
       trailing={<SearchEntry to={`/search${search}`} onBand />}
     >
-      <Hero label={label} figures={figures} />
+      <Hero label={label} figures={figures} kicker={kicker} />
     </TopBand>
   );
 }

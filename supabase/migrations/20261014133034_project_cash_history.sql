@@ -2,7 +2,7 @@
 -- history for one project, on FLOW-419's project cash rules (decision 0176):
 -- - project_cash_years(p_project): cash_years' shape for one project. The net, in and out since
 --   the project's first cash month, and per year, newest first, through the end of this month.
---   A shared line counts the project's share.
+--   A shared line counts the project's share. project_name names the project on the history band.
 -- - project_cash_year_months(p_project, p_year): that year's months in project_cash_months' shape.
 --   It is project_cash_months anchored on the year's last month, so the two reads always agree.
 
@@ -24,6 +24,7 @@ declare
   last_day date;
   basis text;
   base text;
+  pname text;
   ids uuid[];
   result jsonb;
 begin
@@ -34,7 +35,8 @@ begin
   if p_project is null then
     raise exception 'validation';
   end if;
-  if not exists (select 1 from public.projects pr where pr.id = p_project and pr.company_id = cid) then
+  select pr.name into pname from public.projects pr where pr.id = p_project and pr.company_id = cid;
+  if not found then
     return null;
   end if;
   select c.cash_basis, c.base_currency into basis, base
@@ -86,6 +88,7 @@ begin
     select distinct v.currency from yearly v
   )
   select jsonb_build_object(
+    'project_name', pname,
     'basis', basis,
     'base_currency', base,
     'this_month', to_char(this_month, 'YYYY-MM-DD'),
