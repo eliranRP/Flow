@@ -130,16 +130,17 @@ Deno.test("the cash writes validate input and refuse read tokens", async () => {
   assertEquals(calls.length, 0);
 });
 
-Deno.test("the P&L reads default to the invoiced basis and echo it (FLOW-103)", async () => {
-  const { calls, rpc } = rpcOf((name) => {
-    if (name === "get_dashboard") return { status: 200, json: { basis: "invoiced", projects: [] } };
+Deno.test("the P&L reads default to the company's date choice and echo it (FLOW-103)", async () => {
+  const handler = (name: string) => {
+    if (name === "get_dashboard") return { status: 200, json: { basis: "cash", projects: [] } };
     if (name === "get_profit_months") return { status: 200, json: { months: [], by_currency: [] } };
     if (name === "get_breakdown") return { status: 200, json: { totals: [], groups: [], excluded: [] } };
     if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
     if (name === "get_breakdown_lines") return { status: 200, json: { rows: [], has_more: false } };
     if (name === "get_project_group") return { status: 200, json: { id: PROJECT, projects: [] } };
     return { status: 500, json: null };
-  });
+  };
+  const { calls, basisCalls, rpc } = rpcOf(handler, { basis: "cash" });
   const reads: [string, Record<string, unknown>][] = [
     ["get_totals", {}],
     ["list_projects", {}],
@@ -147,7 +148,7 @@ Deno.test("the P&L reads default to the invoiced basis and echo it (FLOW-103)", 
     ["get_project_group", { id: PROJECT }],
     ["get_breakdown", { direction: "expense" }],
     ["get_breakdown", { direction: "expense", group: "unassigned" }],
-    ["get_breakdown", { direction: "income", basis: "cash" }],
+    ["get_breakdown", { direction: "income", basis: "invoiced" }],
   ];
   const bases: unknown[] = [];
   for (const [name, args] of reads) {
@@ -155,9 +156,17 @@ Deno.test("the P&L reads default to the invoiced basis and echo it (FLOW-103)", 
     assertEquals(result.isError, false, name);
     if (result.structuredContent.ok) bases.push((result.structuredContent.data as { basis?: unknown }).basis);
   }
-  assertEquals(bases, ["invoiced", "invoiced", "invoiced", "invoiced", "invoiced", "invoiced", "cash"]);
+  assertEquals(bases, ["cash", "cash", "cash", "cash", "cash", "cash", "invoiced"]);
   assertEquals(
     calls.filter((call) => call.name !== "mcp_company_loan_currency").map((call) => call.body.p_basis),
-    ["invoiced", "invoiced", "invoiced", "invoiced", "invoiced", "invoiced", "cash"],
+    ["cash", "cash", "cash", "cash", "cash", "cash", "invoiced"],
   );
+  assertEquals(basisCalls.length, 6, "the company's choice is read only when the client names no basis");
+
+  // A failed read of the company's choice refuses the tool and reads nothing else.
+  const refused = rpcOf(handler, { basis: null });
+  const result = await callTool("get_totals", {}, ["read"], refused.rpc);
+  assertEquals(result.isError, true);
+  if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "refused");
+  assertEquals(refused.calls.length, 0);
 });

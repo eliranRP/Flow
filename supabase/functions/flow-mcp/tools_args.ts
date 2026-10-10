@@ -247,6 +247,25 @@ export async function companyCurrency(rpc: ToolRpc): Promise<string | ToolResult
   return result.json;
 }
 
+/** FLOW-103: a P&L tool's basis argument: cash, invoiced, or null for the company's choice. */
+export function basisArgOf(value: unknown): "cash" | "invoiced" | null | ToolResult {
+  if (value == null) return null;
+  if (value === "cash" || value === "invoiced") return value;
+  return fail("validation", "validation");
+}
+
+/**
+ * FLOW-103: the basis a P&L read counts on. The one the client asked for, else the company's date
+ * choice (company_pnl_basis: paid is cash, invoice is invoiced), so the tools count as the app does.
+ * Read after the arguments are checked, so a refused call reads nothing.
+ */
+export async function pnlBasis(rpc: ToolRpc, asked: "cash" | "invoiced" | null): Promise<"cash" | "invoiced" | ToolResult> {
+  if (asked != null) return asked;
+  const result = await rpc("company_pnl_basis", {});
+  if (result.status >= 400 || (result.json !== "cash" && result.json !== "invoiced")) return fail("refused", READ_REFUSED);
+  return result.json;
+}
+
 export function envelopeOf(json: unknown, refused = WRITE_REFUSED): ToolResult {
   if (json == null || typeof json !== "object" || Array.isArray(json)) return fail("refused", refused);
   const body = json as { ok?: unknown; data?: unknown; error?: { code?: unknown; message?: unknown } };

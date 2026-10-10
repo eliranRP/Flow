@@ -98,6 +98,8 @@ Deno.test("each user's token signs that user's row, and cannot read the other co
         return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 }), { status: 200 }));
       }
       if (name === "touch_mcp_credential") return Promise.resolve(new Response("null", { status: 200 }));
+      // FLOW-103: the company's date choice, read when a P&L tool gets no basis.
+      if (name === "company_pnl_basis") return Promise.resolve(new Response(JSON.stringify("invoiced"), { status: 200 }));
       if (name === "get_dashboard") {
         const authorization = headers.get("authorization") ?? "";
         const part = authorization.replace(/^Bearer\s+/i, "").split(".")[1] ?? "";
@@ -349,6 +351,7 @@ Deno.test("get_project reads only the token company's project", async () => {
         return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
       }
       if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      if (name === "company_pnl_basis") return Promise.resolve(new Response(JSON.stringify("invoiced")));
       const authorization = headers.get("authorization") ?? "";
       const payload = decodeJwtPart(authorization.replace(/^Bearer\s+/i, "").split(".")[1] ?? "");
       const sub = String(payload.sub);

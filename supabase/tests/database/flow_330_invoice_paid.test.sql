@@ -361,8 +361,8 @@ select is((select count(*)::int from public.invoice_paid_marks), 1, 'a viewer re
 -- 3. FLOW-412: the category drill-down on the cash basis.
 select tests.authenticate_as('ipm_owner');
 select is(
-  (public.list_project_category(pg_temp.txn('harbor'), pg_temp.txn('fittings'))->>'total_agorot')::bigint,
-  15000::bigint, 'invoiced (default): the paid expense and the unpaid supplier invoice'
+  (public.list_project_category(pg_temp.txn('harbor'), pg_temp.txn('fittings'), p_basis => 'invoiced')->>'total_agorot')::bigint,
+  15000::bigint, 'invoiced: the paid expense and the unpaid supplier invoice'
 );
 select is(
   (public.list_project_category(pg_temp.txn('harbor'), pg_temp.txn('fittings'), p_basis => 'cash')->>'total_agorot')::bigint,

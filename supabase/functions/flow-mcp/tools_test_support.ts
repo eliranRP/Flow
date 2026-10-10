@@ -12,13 +12,25 @@ export const PROJECT_B = "8c1a0b2e-1111-4000-8000-000000000002";
 
 export type Rpc = { name: string; body: Record<string, unknown> };
 
-export function rpcOf(handler: (name: string, body: Record<string, unknown>) => { status: number; json: unknown }) {
+/**
+ * The fake RPC. company_pnl_basis (FLOW-103: the company's date choice, read when a P&L tool gets
+ * no basis) answers `basis` and is counted in basisCalls, not calls, so calls stays the tool's own reads.
+ */
+export function rpcOf(
+  handler: (name: string, body: Record<string, unknown>) => { status: number; json: unknown },
+  { basis = "invoiced" }: { basis?: unknown } = {},
+) {
   const calls: Rpc[] = [];
+  const basisCalls: Rpc[] = [];
   const rpc = (name: string, body: Record<string, unknown>) => {
+    if (name === "company_pnl_basis") {
+      basisCalls.push({ name, body });
+      return Promise.resolve({ status: 200, json: basis });
+    }
     calls.push({ name, body });
     return Promise.resolve(handler(name, body));
   };
-  return { calls, rpc };
+  return { calls, basisCalls, rpc };
 }
 export const CATEGORY_NEW = "bbbbbbbb-bbbb-4000-8000-0000000000b1";
 
