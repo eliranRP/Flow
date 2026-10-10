@@ -201,7 +201,9 @@ select is(
   (select e - 'supplier_id' - 'project_id' - 'category_id' from jp_out, jsonb_array_elements(result) e
    where label = 'missing_20'),
   jsonb_build_object('supplier_name', 'שכירות', 'currency', 'ILS', 'typical_amount_minor', -500000,
-    'typical_day', 3, 'expected_by', '2026-04-08', 'months_seen', 6, 'last_doc_date', '2026-03-03'),
+    'typical_day', 3, 'expected_by', '2026-04-08', 'months_seen', 6, 'last_doc_date', '2026-03-03',
+    -- FLOW-415: the last bill's amount, the usual project's and category's names, and the rule.
+    'last_amount_minor', -500000, 'project_name', 'בניין צפון', 'category_name', 'חומרים', 'source', 'auto'),
   'a missing bill has the usual amount, day and the date it was due'
 );
 select is(
@@ -277,7 +279,7 @@ select ok(
   not has_function_privilege('anon', 'public.missing_bills(date)', 'execute')
   and not has_function_privilege('anon', 'public.expected_months(integer, uuid, date)', 'execute')
   and not has_function_privilege('anon', 'public.review_anomalies(uuid[])', 'execute')
-  and not has_function_privilege('authenticated', 'private.recurring_parties(uuid, date)', 'execute')
+  and not has_function_privilege('authenticated', 'private.recurring_parties(uuid, date, boolean)', 'execute')
   and not has_function_privilege('authenticated', 'private.line_anomalies(uuid, uuid[])', 'execute'),
   'anon calls none of them; the private parts are not callable'
 );

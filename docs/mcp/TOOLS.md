@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -39,6 +39,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category_cash"` | `id` | the category id `set_category_cash` returned |
 | `undo` `kind: "line_cash"` | `id` | the transaction id `set_line_cash` used |
 | `undo` `kind: "cash_basis"` | `id` | the company id `set_cash_basis` returned |
+| `set_line_recurring`, `get_line_recurring` | `transaction_id` | `get_recurring_changes` `changes[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
+| `undo` `kind: "line_recurring"` | `id` | the transaction id `set_line_recurring` used |
 | `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 | `detach_loan_payment` | `transaction_id` | `get_loan_schedule` payments, `get_expense.id` of a line with `loan_split` |
@@ -519,11 +521,19 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 
 ### get_missing_bills
 
-`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers (an expense line in at least 3 of the last 6 complete months and one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has `supplier_id`, `supplier_name`, `currency`, `typical_amount_minor` (median monthly net, negative), `typical_day`, `expected_by`, `months_seen`, `last_doc_date`, `project_id`, `category_id`.
+`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers (an expense line in at least 3 of the last 6 complete months and one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). A supplier the owner marked recurring ([set_line_recurring](#set_line_recurring)) counts too, and one marked not recurring never does ([0172](../decisions/0172-recurring-charges.md)). Each has `supplier_id`, `supplier_name`, `currency`, `typical_amount_minor` (median monthly net, negative), `typical_day`, `expected_by`, `months_seen`, `last_doc_date`, `last_amount_minor` (the last bill's net), `project_id`, `project_name`, `category_id`, `category_name`, and `source` (`auto`: the rule found it; `user`: the owner marked it).
 
 ### get_expected_months
 
-`expected_months`, optional `months` (1 to 12, default 3) and `project_id` ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data`: `today`, `project_id`, `months[]` (`month` YYYY-MM, `open`, `by_currency[]` with `currency`, `income_minor`, `expense_minor`; expenses negative) and `recurring[]` (`direction`, `party_id`, `name`, `currency`, `typical_amount_minor`, `typical_day`, `months_seen`, `seen_this_month`, `project_id`, `category_id`). This month counts only the recurring parties not seen yet; later months count all of them. With `project_id`, only parties whose usual project it is. A projection from past months, not booked lines.
+`expected_months`, optional `months` (1 to 12, default 3) and `project_id` ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data`: `today`, `project_id`, `months[]` (`month` YYYY-MM, `open`, `by_currency[]` with `currency`, `income_minor`, `expense_minor`; expenses negative) and `recurring[]` (`direction`, `party_id`, `name`, `currency`, `typical_amount_minor`, `typical_day`, `months_seen`, `seen_this_month`, `project_id`, `category_id`, `source`: `auto` or `user`). This month counts only the recurring parties not seen yet; later months count all of them. With `project_id`, only parties whose usual project it is. A projection from past months, not booked lines.
+
+### get_recurring_changes
+
+`recurring_changes`, no arguments ([FLOW-415](../backlog/TASKS.md#flow-415), [0172](../decisions/0172-recurring-charges.md)). Read tool. Output `data.changes[]`: recurring suppliers whose expense lines this month so far (posted and pending) differ from their usual monthly amount by 20% or more, either way, largest change first. Each has `supplier_id`, `supplier_name`, `currency`, `amount_minor` (this month's net so far, negative), `typical_amount_minor`, `change_percent` (signed and rounded: `38` is 38% more than usual, `-30` is 30% less), `typical_day`, `transaction_id` (the month's latest line), `project_id`, `project_name`, `category_id`, `category_name`, `source`.
+
+### get_line_recurring
+
+`payment_recurring`, `transaction_id` required ([0172](../decisions/0172-recurring-charges.md)). Read tool. Output `data`: `{ "transaction_id", "party", "recurring", "override", "detected", "typical_day", "typical_amount_minor" }`. `party` is the line's supplier (expense) or customer (income) with `direction`, `id`, `name`, `currency`, or `null` when it has neither. `recurring` is what counts: `override` (the owner's switch, `null` when the rule decides) and otherwise `detected` (the rule alone). `typical_day` and `typical_amount_minor` are `null` when not recurring. Another company's line is `refused`.
 
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
 
@@ -826,6 +836,14 @@ Counts a category's lines in the cash view or leaves them out, separate from `se
 ```
 
 Owner only. `basis` is `paid` or `invoice`. It is the company's one date choice ([0170](../decisions/0170-pnl-follows-company-basis.md)): the cash view, and every P&L read and tool called without a `basis` (`paid` as `cash`, `invoice` as `invoiced`), follow it. Output `data`: `{ "basis", "prior_basis", "undo_kind": "cash_basis", "id" }` (`id` is the company id). Undo `kind: "cash_basis"` with that id puts back the prior basis; `conflict` once it was changed again.
+
+### set_line_recurring
+
+```json
+{ "idempotency_key": "recurring-1", "transaction_id": "22222222-2222-4000-8000-000000000020", "recurring": false }
+```
+
+Marks the line's supplier (or customer) recurring (`true`) or not (`false`) in the line's currency, or leaves it to the rule again (`null`) ([FLOW-415](../backlog/TASKS.md#flow-415), [0172](../decisions/0172-recurring-charges.md)). The switch covers every line of that party in that currency and wins over the rule in `get_missing_bills`, `get_recurring_changes` and `get_expected_months`; a party marked recurring with no complete month yet takes its usual day and amount from its latest month. Output `data`: the [get_line_recurring](#get_line_recurring) state plus `"undo_kind": "line_recurring"`, `id` and `write_id`. Refused: `transaction not found` (also another company's line), `no supplier or customer`. Undo `kind: "line_recurring"` with the transaction id puts back the switch from before; `conflict` once it was changed since. Keeping one payment out of the cash view is [set_line_cash](#set_line_cash).
 
 ## Unpaid · FLOW-330
 

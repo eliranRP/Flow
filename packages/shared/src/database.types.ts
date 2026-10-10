@@ -688,6 +688,25 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"recurring_overrides": {
+                  Row: {
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"party_id": string,"recurring": boolean,"set_at": string,"set_by": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"party_id": string,"recurring": boolean,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"party_id"?: string,"recurring"?: boolean,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recurring_overrides_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"review_queue": {
                   Row: {
                     "company_id": string,"created_at": string,"doc_fingerprint": string | null,"id": string,"paired_category_id": string | null,"paired_project_id": string | null,"paired_with": string | null,"prior_allocations": Json | null,"prior_category_assigned": boolean | null,"prior_category_id": string | null,"prior_category_suggested": boolean | null,"prior_pnl_role": Database["public"]['Enums']["pnl_role"] | null,"prior_project_assigned": boolean | null,"prior_project_id": string | null,"prior_remembered_category_id": string | null,"prior_user_assigned": boolean | null,"reason": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["review_status"],"transaction_id": string | null,"updated_at": string,"written_remembered_category_id": string | null
@@ -1309,6 +1328,9 @@ isOneToOne: false
 "mcp_set_line_pnl":
 { Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_line_recurring":
+{ Args: { "p_idempotency_key": string,"p_recurring": boolean,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_set_lines_cash":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
@@ -1390,6 +1412,9 @@ isOneToOne: false
 "owner_company_for":
 { Args: { "p_hint"?: string,"p_user": string }; Returns: string
                            },
+"payment_recurring":
+{ Args: { "p_id": string,"p_today"?: string }; Returns: Json
+                           },
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
                            },
@@ -1417,6 +1442,9 @@ isOneToOne: false
                            },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
+                           },
+"recurring_changes":
+{ Args: { "p_today"?: string }; Returns: Json
                            },
 "remove_member":
 { Args: { "p_user_id": string }; Returns: Json
@@ -1516,6 +1544,9 @@ isOneToOne: false
                            },
 "set_overhead_project":
 { Args: { "p_project_id": string }; Returns: undefined
+                           },
+"set_payment_recurring":
+{ Args: { "p_id": string,"p_recurring": boolean }; Returns: Json
                            },
 "set_project_group":
 { Args: { "p_group_id": string,"p_project_id": string }; Returns: Json
