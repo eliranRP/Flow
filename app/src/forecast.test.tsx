@@ -180,6 +180,14 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     expect(rent?.worse).toBe(true);
   });
 
+  it("opens every one of this month's lines when several make the amount (FLOW-913)", () => {
+    const [rent] = arrivedViews([{ ...SAMPLE_RECURRING_THIS_MONTH[0], direction: "income", line_count: 3 } as (typeof SAMPLE_RECURRING_THIS_MONTH)[number]], [], "?preview=1");
+    expect(rent?.place).toBe("3 תשלומים");
+    expect(rent?.href).toMatch(/^\/search\?preview=1&q=.+&dir=income&period=month$/);
+    const [one] = arrivedViews([{ ...SAMPLE_RECURRING_THIS_MONTH[0], line_count: 1 } as (typeof SAMPLE_RECURRING_THIS_MONTH)[number]], [], "");
+    expect(one?.href).toBe(`/transactions/${SAMPLE_RECURRING_THIS_MONTH[0]?.transaction_id ?? ""}`);
+  });
+
   it("draws both sections, and hides a late row or a change with the eye-off button, with no chevron", () => {
     const onHide = vi.fn();
     render(

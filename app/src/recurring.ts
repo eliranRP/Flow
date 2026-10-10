@@ -79,7 +79,7 @@ export type ArrivedView = {
   worse: boolean;
   /** The key that hides the change for this user; null when there is nothing to hide. */
   alertKey: string | null;
-  /** The payment's page. */
+  /** The payment's page, or Search on the party this month when several lines make the amount. */
   href: string;
 };
 
@@ -94,17 +94,21 @@ export function arrivedViews(rows: readonly RecurringChange[], open: readonly Re
     const income = row.direction === "income";
     const key = row.alert_key ?? row.transaction_id;
     const live = row.changed === true && shown.has(key);
+    const several = (row.line_count ?? 1) > 1;
     return {
       id: `${row.direction ?? "expense"}:${row.party_id ?? row.supplier_id ?? row.transaction_id}:${row.currency}`,
       name: partyName(row),
       income,
-      place: missingBillPlace(row),
+      // FLOW-913: several lines this month have no one project; the row opens all of them.
+      place: several ? `${String(row.line_count)} תשלומים` : missingBillPlace(row),
       minor: abs(row.amount_minor),
       currency: row.currency,
       changePercent: live ? row.change_percent : null,
       worse: income ? row.change_percent < 0 : row.change_percent > 0,
       alertKey: live ? key : null,
-      href: `/transactions/${row.transaction_id}${search}`,
+      href: several
+        ? searchHref(partyName(row), search, { dir: income ? "income" : "expense", period: "month" })
+        : `/transactions/${row.transaction_id}${search}`,
     };
   });
 }

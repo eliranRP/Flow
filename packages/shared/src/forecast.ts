@@ -74,6 +74,8 @@ export const recurringChangeSchema = z.object({
   category_id: z.string().nullable().optional(),
   category_name: z.string().nullable().optional(),
   source: z.enum(["auto", "user"]).optional(),
+  /** FLOW-913: how many of this month's lines `amount_minor` sums (several rents from one party). */
+  line_count: z.number().int().optional(),
 });
 
 export const recurringChangesSchema = z.array(recurringChangeSchema).nullable().transform((rows) => rows ?? []);
