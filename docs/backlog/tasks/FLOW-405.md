@@ -1,6 +1,6 @@
 <a id="flow-405"></a>
 # FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** merged (#217, UI lane 3: the Settings → Categories screen; waits on the deploy check; server and MCP done in #207 and #222, decision [0144](../../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#217, UI lane 3: the Settings → Categories screen, in production; server and MCP done in #207 and #222, decision [0144](../../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 - [x] Mockup approved (2026-10-08; the project's plans/flow-405-category-mockup.html). The category ⋯ sheet gets two rows, drawn with the FLOW-404 switch. "העברת כל התנועות" shows the line count on the row and a hint that the category stays, and sits above מיזוג (whose hint says the category is hidden) and הסתרה. מחיקה comes last, after a line. A hidden category's sheet shows החזרה לרשימה, the move row and מחיקה.
