@@ -314,16 +314,25 @@ start_docker() {
       (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
     fi
   }
+  # The socket file appears before containerd serves it, and dockerd started then exits with
+  # "connection refused": ask containerd itself whether it answers.
+  containerd_serving() {
+    if command -v ctr >/dev/null 2>&1; then
+      sudo -n ctr --address "$sock" version >/dev/null 2>&1
+    else
+      grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null
+    fi
+  }
   if ! pgrep -x dockerd >/dev/null 2>&1; then
     # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
-    # none runs, and wait for it to say it booted.
+    # none runs. Either way, start dockerd only once containerd answers, for at most 30 seconds.
     if ! pgrep -x containerd >/dev/null 2>&1; then
       (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
-      for _ in $(seq 1 15); do
-        grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null && break
-        sleep 1
-      done
     fi
+    for _ in $(seq 1 30); do
+      containerd_serving && break
+      sleep 1
+    done
     start_dockerd
   fi
   for i in $(seq 1 30); do
