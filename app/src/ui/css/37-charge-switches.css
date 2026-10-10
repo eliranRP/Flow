@@ -38,3 +38,16 @@
   height: 100%;
   transform: none;
 }
+
+/* Design lead: the pace part of the hint marks what the tap changes, in accent text with the
+   sheet's 12px ▾ after its last word (§3.7). The rest of the hint stays muted. */
+.ui-pace-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-accent-text);
+}
+
+.ui-pace-cue svg {
+  flex: none;
+}

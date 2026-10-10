@@ -44,6 +44,9 @@ describe("ChargeSwitches (FLOW-415)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^חיוב קבוע/ }));
     expect(onPace).toHaveBeenCalledTimes(1);
     expect(onRecurring).not.toHaveBeenCalled();
+    // The pace part is the tap's cue, in accent with the sheet's ▾.
+    expect(document.querySelector(".ui-pace-cue")?.textContent).toBe("כל חודש");
+    expect(document.querySelector(".ui-pace-cue svg")).not.toBeNull();
     fireEvent.click(screen.getByRole("switch", { name: RECURRING }));
     expect(onRecurring).toHaveBeenCalledWith(false);
     expect(onPace).toHaveBeenCalledTimes(1);

@@ -1,7 +1,7 @@
 import type { RecurringPace } from "@flow/shared";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { HintParts } from "./hint-parts";
-import { LockIcon, RepeatIcon, TransferIcon } from "./icons";
+import { ChevronDownIcon, LockIcon, RepeatIcon, TransferIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Toggle } from "./toggle";
 
@@ -125,6 +125,18 @@ export function ChargeSwitches({
   );
 }
 
+/** Design lead: the pace part is the tap's cue, in accent text and ending in the sheet's ▾ (§3.7). */
+function paceCueParts(hint: string): ReactNode[] {
+  const [pace = "", ...rest] = hint.split(" · ");
+  return [
+    <span key="pace" className="ui-pace-cue">
+      {pace}
+      <ChevronDownIcon size={12} />
+    </span>,
+    ...rest,
+  ];
+}
+
 /**
  * The recurring row while it is on: a tap on its words opens the pace sheet, and the switch at the
  * end still turns it off. The same row box and switch as Toggle; the two targets never overlap.
@@ -151,7 +163,7 @@ function PaceSwitchRow({
         <span className="ui-row-icon"><RepeatIcon /></span>
         <span className="ui-row-text">
           <span className="ui-row-title">{label}</span>
-          <span id={hintId} className="ui-row-hint t-hint"><HintParts text={hint} /></span>
+          <span id={hintId} className="ui-row-hint t-hint"><HintParts parts={paceCueParts(hint)} /></span>
         </span>
       </button>
       <label className="ui-switch-hit">
