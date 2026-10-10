@@ -7,3 +7,4 @@
 - Rule (design lead's sign-off fix, FLOW-420 item 3): a recurring row's hint is two lines at most. Line 1 is "project · category", where only the project ends in an ellipsis and "· category" stays whole. Line 2 is the pace, as whole parts, so "אחרון dd/mm" drops first and 320 reads "כל חודש ב־2".
 - Departure from b-2: the הגיעו החודש hint is "project · category", not "project · dd/mm", because `recurring_this_month` sends no date.
 - Shots: /mnt/project-files/mockups/flow-415-c/ (390 and 320, light and dark). Signed off by the design lead on 2026-10-10.
+- Follow-up (UI lane 3's review nits): the shared "N חיובים קבועים השתנו" row draws the down arrow when every change is a drop, and the קבועים screen waits for הגיעו החודש before it shows "הכל הגיע", so the empty state never flashes.

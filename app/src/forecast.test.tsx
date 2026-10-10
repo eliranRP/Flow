@@ -151,6 +151,16 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     expect(row?.to).toBe("/missing-bills?preview=1#arrived");
     const { container } = render(<MemoryRouter><span>{row?.title}</span></MemoryRouter>);
     expect(container.textContent).toBe("2 חיובים קבועים השתנו");
+    // All drops: the down arrow; an empty party name falls back to the supplier's.
+    const drops = chargeChangeViews(
+      SAMPLE_RECURRING_THIS_MONTH.slice(0, 2).map((change) => ({ ...change, change_percent: -30, party_name: "", category_name: null })),
+      "",
+    );
+    expect(drops.map((change) => change.title)).toEqual(["אור חשמל ירד ב־30%", "ארנונה עירונית ירד ב־30%"]);
+    const [dropRow] = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: drops, search: "" });
+    const icon = render(<MemoryRouter><span>{dropRow?.icon}</span></MemoryRouter>);
+    const upIcon = render(<MemoryRouter><span>{row?.icon}</span></MemoryRouter>);
+    expect(icon.container.innerHTML).not.toBe(upIcon.container.innerHTML);
   });
 
   it("marks a change only while this user has not hidden it, red when it is bad news", () => {

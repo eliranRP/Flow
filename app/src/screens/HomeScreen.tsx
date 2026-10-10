@@ -124,6 +124,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const unpaid = useUnpaidQuery();
   // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
   const missing = useMissingBillsQuery();
+  const late = lateCounts(missing.data ?? []);
   // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
   const changes = useRecurringChangesQuery();
 
@@ -168,8 +169,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross: unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? []) : 0n,
         unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : [],
-        missingCount: lateCounts(missing.data ?? []).expense,
-        missingIncome: lateCounts(missing.data ?? []).income,
+        missingCount: late.expense,
+        missingIncome: late.income,
         changes: chargeChangeViews(changes.data ?? [], search),
         search,
       })}
@@ -634,7 +635,8 @@ export function attentionRows({
     rows.push({
       id: "changes",
       to: `${missingTo}${search}#arrived`,
-      icon: <TrendUpIcon size={24} stroke={1.9} />,
+      // All drops draw the down arrow; any rise draws the up one.
+      icon: changes.every((change) => change.down) ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: <><bdi dir="ltr">{String(changes.length)}</bdi> חיובים קבועים השתנו</>,
     });
   }
