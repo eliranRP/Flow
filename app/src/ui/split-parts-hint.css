@@ -27,13 +27,15 @@
 
 /* FLOW-425: amounts are never cut; only names ellipsize. A part that alone is wider than the line
    shrinks its name. The line box is 1em wider than the hint (its clipped separator margin), which
-   the first part's padding and the others' "·" box take, so 100% is the hint's width. */
+   every part's padding takes (the others' "·" box sits in it), so 100% is the hint's width. Its
+   name ellipsizes rather than wrapping (FLOW-429 lets other hints' parts wrap). */
 .ui-split-hint .ui-hint-wrap-part,
 .ui-split-hint-part {
   display: flex;
   min-width: 0;
   max-inline-size: 100%;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .ui-split-hint .ui-hint-wrap-sep,
