@@ -541,6 +541,16 @@ export function TrendUpIcon(props: IconProps) {
   );
 }
 
+/** FLOW-415. A charge below its usual amount; TrendUpIcon turned over. */
+export function TrendDownIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+      <polyline points="16 17 22 17 22 11" />
+    </Svg>
+  );
+}
+
 /** FLOW-304. A memo on a bank line. */
 export function NoteIcon(props: IconProps) {
   return (

@@ -810,6 +810,17 @@ async function checkFocusTitles(page: Page, part: number): Promise<void> {
   for (const story of stories) {
     await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
     await page.locator("#storybook-root").waitFor();
+    // A copy of a story made by spreading it (`{ ...Story, ...dark }`) keeps its play function but
+    // not the index's play-fn tag, so the filter above misses it, and its play ran while the
+    // check read focus (red main twice on project-group-removed-dark). Wait for the render to end
+    // and skip a story that played, as the filter means to.
+    const played = await page.waitForFunction((want) => {
+      const render = (window as { __STORYBOOK_PREVIEW__?: { currentRender?: { id?: string; phase?: string; story?: { playFunction?: unknown } } } })
+        .__STORYBOOK_PREVIEW__?.currentRender;
+      if (render?.id !== want || !["finished", "completed", "played", "errored", "aborted"].includes(render.phase ?? "")) return null;
+      return { played: typeof render.story?.playFunction === "function" };
+    }, story.id);
+    if (((await played.jsonValue()) as { played: boolean }).played) continue;
     await page.waitForFunction(() => {
       const titles = document.querySelectorAll(".ui-focus-title");
       if (titles.length === 0) return true;

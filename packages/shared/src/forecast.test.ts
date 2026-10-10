@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expectedMonthsSchema, missingBillsSchema } from "./forecast";
+import { expectedMonthsSchema, missingBillsSchema, paymentRecurringSchema, recurringChangesSchema } from "./forecast";
 
 describe("missingBillsSchema", () => {
   it("reads the RPC rows as bigint minor units", () => {
@@ -56,5 +56,44 @@ describe("expectedMonthsSchema", () => {
     expect(parsed.months[0]?.by_currency[0]?.expense_minor).toBe(-283_000n);
     expect(parsed.months[1]?.by_currency).toEqual([]);
     expect(parsed.recurring[0]?.name).toBe("");
+  });
+});
+
+describe("FLOW-415 recurring reads (decision 0172)", () => {
+  it("reads missing_bills' names, last amount and source", () => {
+    const [row] = missingBillsSchema.parse([
+      {
+        supplier_id: "s", supplier_name: "ספק לדוגמה", currency: "ILS", typical_amount_minor: -48_000, typical_day: 2,
+        expected_by: "2026-10-07", months_seen: 4, last_doc_date: "2026-09-02", last_amount_minor: -47_500,
+        project_id: "p", project_name: "פרויקט לדוגמה", category_id: "c", category_name: "מים", source: "user",
+      },
+    ]);
+    expect(row?.last_amount_minor).toBe(-47_500n);
+    expect([row?.project_name, row?.category_name, row?.source]).toEqual(["פרויקט לדוגמה", "מים", "user"]);
+  });
+
+  it("reads recurring_changes with a signed percent, and null as no rows", () => {
+    expect(recurringChangesSchema.parse(null)).toEqual([]);
+    const [row] = recurringChangesSchema.parse([
+      {
+        supplier_id: "s", supplier_name: null, currency: "ILS", amount_minor: -255_000, typical_amount_minor: -185_000,
+        change_percent: 38, typical_day: 4, transaction_id: "t", project_id: null, project_name: null,
+        category_id: "c", category_name: "חשמל", source: "auto",
+      },
+    ]);
+    expect(row?.amount_minor).toBe(-255_000n);
+    expect(row?.change_percent).toBe(38);
+    expect(row?.supplier_name).toBe("");
+  });
+
+  it("reads payment_recurring, with and without a party", () => {
+    const none = paymentRecurringSchema.parse({ transaction_id: "t", party: null, recurring: false, override: null, detected: false, typical_day: null, typical_amount_minor: null });
+    expect(none.party).toBeNull();
+    const set = paymentRecurringSchema.parse({
+      transaction_id: "t", party: { direction: "expense", id: "s", name: "ספק", currency: "ILS" },
+      recurring: true, override: true, detected: false, typical_day: 4, typical_amount_minor: -185_000, prior_override: null,
+    });
+    expect(set.typical_amount_minor).toBe(-185_000n);
+    expect(set.prior_override).toBeNull();
   });
 });

@@ -16,7 +16,7 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
   const bills = page.locator(".ui-missing-bills a");
   await expect(bills).toHaveCount(2);
   // FLOW-415: the row says when the bill usually comes and when the last one came.
-  const power = page.getByRole("link", { name: "אור חשמל, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850" });
+  const power = page.getByRole("link", { name: "אור חשמל, בניין הדקל · חשמל, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850" });
   await expect(power).toContainText("כ־");
   await power.click();
   await expect(page).toHaveURL(/\/search\?/);

@@ -15,6 +15,8 @@ type HeaderChrome = {
   trailing?: ReactNode;
   /** A stacked page's own control under the title, on the start side (the breakdown's period pill, FLOW-334). */
   below?: ReactNode;
+  /** A stacked title's own controls at the end of its line (a month page's chevrons, FLOW-362). */
+  titleAside?: ReactNode;
   /** Compact is the t-title-3 used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
@@ -47,6 +49,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     leading,
     trailing,
     below,
+    titleAside,
     size = "default",
     subtitleClassName,
   } = props;
@@ -72,7 +75,16 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         {trailing ?? action}
       </div>
       {stacked ? kickerLine : null}
-      {stacked && title != null ? <FocusTitle className="t-title-1">{title}</FocusTitle> : null}
+      {stacked && title != null ? (
+        titleAside != null ? (
+          <div className="ui-page-title-line">
+            <FocusTitle className="t-title-1">{title}</FocusTitle>
+            {titleAside}
+          </div>
+        ) : (
+          <FocusTitle className="t-title-1">{title}</FocusTitle>
+        )
+      ) : null}
       {compact ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
       {below != null ? <div className="ui-page-below">{below}</div> : null}

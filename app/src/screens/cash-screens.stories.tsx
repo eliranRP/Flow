@@ -29,7 +29,11 @@ export const CashHomeMonth: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
+    // FLOW-418: under רווח החודש, the rest of the month's figure with what it holds.
+    await expect(canvas.getByRole("link", { name: /^לא נספר ברווח ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
+    // FLOW-417: the whole history opens from under the last month.
+    await expect(canvas.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
   },
 };
 export const CashHomeMonthDark: Story = { ...CashHomeMonth, name: "Home cash, attention box, dark", ...dark };
@@ -63,8 +67,33 @@ export const CashMonth: Story = {
       </StoryRoute>
     );
   },
+  play: async ({ canvasElement }) => {
+    // FLOW-362: an earlier month's profit row names its month, not "רווח החודש".
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/^רווח ב/)).toBeInTheDocument();
+    await expect(canvas.queryByText("רווח החודש")).not.toBeInTheDocument();
+    // FLOW-362 (C15-6): earlier and later chevrons by the title.
+    await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(2);
+  },
 };
 export const CashMonthDark: Story = { ...CashMonth, name: "Cash, an earlier month, dark", ...dark };
+export const CashMonth320: Story = { ...CashMonth, name: "Cash, an earlier month, 320", ...at320 };
+
+export const CashMonthCurrent: Story = {
+  name: "Cash, this month (no later chevron)",
+  render: () => {
+    const data = sampleCashMonths();
+    return (
+      <StoryRoute entry="/" tabs>
+        <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[0]?.month ?? "")} />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(1);
+  },
+};
 
 export const CashLinesOut: Story = {
   name: "Cash, the month's יצא",
@@ -81,3 +110,26 @@ export const CashLinesOut: Story = {
   },
 };
 export const CashLinesOut320: Story = { ...CashLinesOut, name: "Cash, the month's יצא, 320", ...at320 };
+
+/** FLOW-418: the lines behind לא נספר ברווח, money in and out mixed. */
+export const CashLinesKept: Story = {
+  name: "Cash, the month's לא נספר ברווח",
+  render: () => {
+    const data = sampleCashMonths();
+    return (
+      <StoryRoute entry="/" tabs>
+        <CashLinesScreen
+          sample={{ months: data, lines: sampleCashLines("kept") }}
+          at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side: "kept", currency: "ILS" }}
+        />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    await expect(canvas.getByText("כסף שזז בבנק, אבל אינו הכנסה או הוצאה.")).toBeInTheDocument();
+  },
+};
+export const CashLinesKeptDark: Story = { ...CashLinesKept, name: "Cash, the month's לא נספר ברווח, dark", ...dark };
+export const CashLinesKept320: Story = { ...CashLinesKept, name: "Cash, the month's לא נספר ברווח, 320", ...at320 };

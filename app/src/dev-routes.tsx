@@ -18,8 +18,10 @@ import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
 import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
+import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
   CategoriesScreen,
@@ -41,7 +43,7 @@ import { LoanDetailScreen } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS } from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "./forecast-sample";
 
 const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
@@ -323,7 +325,10 @@ export function DevCash() {
         pending: 7,
         unpaidCount: 3,
         unpaidGross: 460_000n,
-        missingCount: 0,
+        // FLOW-415: `?recurring=1` adds the late bills and a charge above its usual amount.
+        missingCount: params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0,
+        missingTo: "/e2e/missing-bills",
+        changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
     />
@@ -336,10 +341,11 @@ export function DevCashMonth() {
   return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
 }
 
-/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס. */
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). */
 export function DevCashLines() {
   const [params] = useSearchParams();
-  const side = params.get("side") === "in" ? "in" : "out";
+  const asked = params.get("side");
+  const side = asked === "in" || asked === "kept" ? asked : "out";
   const data = sampleCashMonths();
   return (
     <CashLinesScreen
@@ -347,6 +353,18 @@ export function DevCashLines() {
       at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
+}
+
+/** FLOW-417: the cash history, years then months. `?currencies=two` adds a USD line. */
+export function DevCashHistory() {
+  const [params] = useSearchParams();
+  return <CashHistoryScreen sample={sampleCashYears(new Date(), params.get("currencies") === "two" ? "two" : "one")} />;
+}
+
+/** FLOW-417: last year's page: its net, נכנס, יצא and its months. */
+export function DevCashYear() {
+  const months = sampleCashYearMonths();
+  return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;
 }
 
 export function DevProjects() {

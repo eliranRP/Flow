@@ -333,6 +333,18 @@ export async function callTool(
 
   // FLOW-413 (decision 0168): money in and out per month, on the company's cash basis.
   if (name === "get_cash_months") {
+    // FLOW-417: year (with no months) reads that calendar year's months instead.
+    if (args.year != null) {
+      const year = args.year;
+      if (args.months != null || typeof year !== "number" || !Number.isInteger(year) || year < 1900 || year > 9999) {
+        return fail("validation", "validation");
+      }
+      const result = await rpc("cash_year_months", { p_year: year });
+      if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+        return fail(result.status === 400 ? "validation" : "refused", result.status === 400 ? "validation" : READ_REFUSED);
+      }
+      return ok(result.json as Review);
+    }
     const months = args.months == null ? 6 : args.months;
     if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 24) {
       return fail("validation", "validation");
@@ -344,12 +356,21 @@ export async function callTool(
     return ok(result.json as Review);
   }
 
+  // FLOW-417 (decision 0174): the net, in and out since the first cash month and per year.
+  if (name === "get_cash_years") {
+    const result = await rpc("cash_years", {});
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(result.json as Review);
+  }
+
   if (name === "get_cash_lines") {
     // A month is YYYY-MM or any YYYY-MM-DD in it, as get_cash_months returns it.
     const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
     if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
     const side = args.side;
-    if (side !== "in" && side !== "out" && side !== "excluded") return fail("validation", "validation");
+    if (side !== "in" && side !== "out" && side !== "excluded" && side !== "not_in_profit") return fail("validation", "validation");
     const currency = args.currency ?? null;
     if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
     const limit = limitOf(args.limit, 40);

@@ -272,8 +272,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-411
 - FLOW-412
 - FLOW-413
+- FLOW-418
 - FLOW-415
 - FLOW-416
+- FLOW-417
 
 ## Onboarding, Settings and connectors
 

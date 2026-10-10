@@ -1,4 +1,4 @@
-import { formatAmountText, type ExpectedMonths, type ExpectedParty, type MissingBill } from "@flow/shared";
+import { formatAmountText, type ExpectedMonths, type ExpectedParty, type MissingBill, type PaymentRecurring, type RecurringChange } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -45,26 +45,17 @@ export function usualDayText(typicalDay: number, lastDocDate: string | null | un
   return lastDocDate == null ? day : `${day} · אחרון ${formatDayMonth(lastDocDate, now)}`;
 }
 
-/** Names for the ids a late bill files to. A name not found leaves its half of the line out. */
-export type MissingBillNames = {
-  project?: (id: string) => string | undefined;
-  category?: (id: string) => string | undefined;
-};
-
-/** FLOW-415: "project · category", either half alone, or null. */
-export function missingBillPlace(row: Pick<MissingBill, "project_id" | "category_id">, names: MissingBillNames = {}): string | null {
-  const parts = [
-    row.project_id == null ? undefined : names.project?.(row.project_id),
-    row.category_id == null ? undefined : names.category?.(row.category_id),
-  ].filter((part): part is string => part != null && part !== "");
+/** FLOW-415: "project · category", either half alone, or null (decision 0172 sends the names). */
+export function missingBillPlace(row: Pick<MissingBill, "project_name" | "category_name">): string | null {
+  const parts = [row.project_name, row.category_name].filter((part): part is string => part != null && part !== "");
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date(), names: MissingBillNames = {}): MissingBillView[] {
+export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date()): MissingBillView[] {
   return rows.map((row) => ({
     id: `${row.supplier_id}:${row.currency}`,
     name: row.supplier_name === "" ? "ללא שם" : row.supplier_name,
-    place: missingBillPlace(row, names),
+    place: missingBillPlace(row),
     usual: usualDayText(row.typical_day, row.last_doc_date, now),
     minor: abs(row.typical_amount_minor),
     currency: row.currency,
@@ -77,27 +68,12 @@ export function missingBillsTitle(count: number): string {
   return count === 1 ? "חשבון אחד לא הגיע" : `${String(count)} חשבונות לא הגיעו`;
 }
 
-/**
- * FLOW-415 (layout A): one payment this month that is 20% or more off its usual amount, as Home's
- * attention card shows it (`recurring_changes`). The server picks the payments and computes the
- * change; the app only words it.
- */
-export type ChargeChange = {
-  transaction_id: string;
-  category_name: string | null;
-  currency: string;
-  /** This payment, signed. */
-  amount_minor: bigint;
-  /** The usual amount, signed. */
-  typical_amount_minor: bigint;
-  /** Whole percent, signed: 38 is up 38%. */
-  change_percent: number;
-};
-
 export type ChargeChangeView = {
   id: string;
   /** "חשמל עלה ב־38%" or "חשמל ירד ב־25%". */
   title: string;
+  /** A drop draws the down arrow. */
+  down: boolean;
   /** "₪2,550" and "₪1,850", unsigned. */
   now: string;
   usual: string;
@@ -105,13 +81,19 @@ export type ChargeChangeView = {
   href: string;
 };
 
-export function chargeChangeViews(rows: readonly ChargeChange[], search: string): ChargeChangeView[] {
+/**
+ * FLOW-415 (layout A): Home's rows for the recurring charges this month that are 20% or more off
+ * their usual amount (`recurring_changes`). The server picks them and computes the percent; the app
+ * only words it. No category falls back to the supplier's name.
+ */
+export function chargeChangeViews(rows: readonly RecurringChange[], search: string): ChargeChangeView[] {
   return rows.map((row) => {
-    const name = row.category_name == null || row.category_name === "" ? "ללא קטגוריה" : row.category_name;
+    const name = row.category_name != null && row.category_name !== "" ? row.category_name : row.supplier_name !== "" ? row.supplier_name : "ללא שם";
     const percent = row.change_percent;
     return {
       id: row.transaction_id,
       title: `${name} ${percent < 0 ? "ירד" : "עלה"} ב־${String(Math.abs(percent))}%`,
+      down: percent < 0,
       now: formatAmountText(abs(row.amount_minor), row.currency),
       usual: formatAmountText(abs(row.typical_amount_minor), row.currency),
       href: `/transactions/${row.transaction_id}${search}`,
@@ -218,6 +200,40 @@ export function useExpectedMonthsQuery(projectId: string, months = EXPECTED_MONT
       const { data, error } = await supabase.rpc("expected_months", { p_months: months, p_project_id: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
+    },
+  });
+}
+
+/** FLOW-415: Home's big changes. A failed read just hides the rows. */
+export function useRecurringChangesQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["recurring-changes", preview],
+    enabled: active && preview === "off",
+    queryFn: async (): Promise<RecurringChange[]> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("recurring_changes", {});
+      if (error) throw error;
+      return (await loadReadSchemas()).recurringChangesSchema.parse(data);
+    },
+  });
+}
+
+/** FLOW-415: one payment's recurring switch. */
+export function usePaymentRecurringQuery(transactionId: string, active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["payment-recurring", preview, transactionId],
+    enabled: active && preview === "off" && transactionId !== "",
+    queryFn: async (): Promise<PaymentRecurring> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("payment_recurring", { p_id: transactionId });
+      if (error) throw error;
+      return (await loadReadSchemas()).paymentRecurringSchema.parse(data);
     },
   });
 }
