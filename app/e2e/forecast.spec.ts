@@ -42,6 +42,16 @@ test("קבועים: a late row hides for this user with ✕ and comes back on ב
   await expect(page).toHaveURL(/\/transactions\/t-power-oct\?preview=1$/);
 });
 
+test("Home: with no alert in the box, לכל הקבועים still opens קבועים (FLOW-423)", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1&box=none");
+  const link = page.getByRole("link", { name: "לכל הקבועים" });
+  await link.scrollIntoViewIfNeeded();
+  expect((await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await link.click();
+  await expect(page).toHaveURL(/\/e2e\/missing-bills\?preview=1$/);
+  await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
+});
+
 test("Project: a צפוי month opens the sheet of its parties, and the sheet closes", async ({ page }) => {
   await page.goto("/e2e/project-detail?preview=1&section=expenses");
   const section = page.getByRole("region", { name: "צפוי" });
