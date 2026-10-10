@@ -145,6 +145,8 @@ describe("Home's cash (FLOW-413, frame b)", () => {
     expect(await screen.findByRole("button", { name: "חזרה לתזרים" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /בחירת תקופה/ })).toBeInTheDocument();
     const profit = rpc.calls.filter((c) => c.name === "get_dashboard").at(-1);
-    expect(profit?.args).toMatchObject({ p_basis: "invoiced", p_from: `${current}-01` });
+    expect(profit?.args).toMatchObject({ p_from: `${current}-01` });
+    // FLOW-103: no basis of its own, so the server counts on the company's choice (0170).
+    expect(profit?.args).not.toHaveProperty("p_basis");
   });
 });

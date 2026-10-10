@@ -227,8 +227,8 @@ describe("project overhead hero", () => {
       expect(screen.getByText("₪60,000")).toBeInTheDocument();
     });
     expect(calls).toEqual([{ p_on: true, p_project_id: "a" }]);
-    // The project screen asks for the same books basis as Home (decision 0060).
-    expect(projectArgs).toContainEqual(expect.objectContaining({ p_id: "a", p_basis: "invoiced" }));
+    // The project screen counts on the company's basis, like Home (FLOW-103, decision 0170).
+    expect(projectArgs).toContainEqual(expect.objectContaining({ p_id: "a", p_basis: null }));
     expect(screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toBeChecked();
   });
 
