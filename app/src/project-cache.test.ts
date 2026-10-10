@@ -28,70 +28,70 @@ describe("saved project reads (FLOW-804)", () => {
 
   it("gives back the read as it was saved, bigints and all, with its date", () => {
     const read = project();
-    saveProjectRead("herzl|invoiced||", read, 1_000);
-    const saved = savedProjectRead("herzl|invoiced||");
+    saveProjectRead("herzl||", read, 1_000);
+    const saved = savedProjectRead("herzl||");
     expect(saved?.at).toBe(1_000);
     expect(saved?.data).toEqual(read);
     expect(typeof saved?.data.income_agorot).toBe("bigint");
-    expect(savedProjectRead("herzl|invoiced|2026-01-01|2026-01-31")).toBeNull();
+    expect(savedProjectRead("herzl|2026-01-01|2026-01-31")).toBeNull();
   });
 
   it("shows a read only to the user and the company it was read for", () => {
-    saveProjectRead("herzl|invoiced||", project());
+    saveProjectRead("herzl||", project());
     setShownCompany(USER_A, COMPANY_B);
-    expect(savedProjectRead("herzl|invoiced||")).toBeNull();
+    expect(savedProjectRead("herzl||")).toBeNull();
     setShownCompany(USER_B, COMPANY_A);
-    expect(savedProjectRead("herzl|invoiced||")).toBeNull();
+    expect(savedProjectRead("herzl||")).toBeNull();
     setShownCompany(USER_A, null);
-    expect(savedProjectRead("herzl|invoiced||")).toBeNull();
+    expect(savedProjectRead("herzl||")).toBeNull();
     // Nothing is saved without a company to name.
-    saveProjectRead("levi|invoiced||", project("levi"));
+    saveProjectRead("levi||", project("levi"));
     setShownCompany(USER_A, COMPANY_A);
-    expect(savedProjectRead("levi|invoiced||")).toBeNull();
-    expect(savedProjectRead("herzl|invoiced||")).not.toBeNull();
+    expect(savedProjectRead("levi||")).toBeNull();
+    expect(savedProjectRead("herzl||")).not.toBeNull();
   });
 
   it("starts over for another company, keeping only that company's reads", () => {
-    saveProjectRead("herzl|invoiced||", project());
+    saveProjectRead("herzl||", project());
     setShownCompany(USER_A, COMPANY_B);
-    saveProjectRead("levi|invoiced||", project("levi"));
+    saveProjectRead("levi||", project("levi"));
     setShownCompany(USER_A, COMPANY_A);
-    expect(savedProjectRead("herzl|invoiced||")).toBeNull();
+    expect(savedProjectRead("herzl||")).toBeNull();
   });
 
   it("drops every read on sign-out and for another user", () => {
-    saveProjectRead("herzl|invoiced||", project());
+    saveProjectRead("herzl||", project());
     keepProjectReadsFor(USER_A);
-    expect(savedProjectRead("herzl|invoiced||")).not.toBeNull();
+    expect(savedProjectRead("herzl||")).not.toBeNull();
     keepProjectReadsFor(USER_B);
     expect(localStorage.getItem("flow-project-reads")).toBeNull();
-    saveProjectRead("herzl|invoiced||", project());
+    saveProjectRead("herzl||", project());
     keepProjectReadsFor(null);
     expect(localStorage.getItem("flow-project-reads")).toBeNull();
-    saveProjectRead("herzl|invoiced||", project());
+    saveProjectRead("herzl||", project());
     forgetProjectReads();
     expect(localStorage.getItem("flow-project-reads")).toBeNull();
   });
 
   it("keeps the six newest reads and none too large to keep", () => {
-    for (let index = 0; index < 8; index += 1) saveProjectRead(`p${String(index)}|invoiced||`, project(), index);
-    expect(savedProjectRead("p0|invoiced||")).toBeNull();
-    expect(savedProjectRead("p1|invoiced||")).toBeNull();
-    expect(savedProjectRead("p2|invoiced||")?.at).toBe(2);
-    expect(savedProjectRead("p7|invoiced||")?.at).toBe(7);
+    for (let index = 0; index < 8; index += 1) saveProjectRead(`p${String(index)}||`, project(), index);
+    expect(savedProjectRead("p0||")).toBeNull();
+    expect(savedProjectRead("p1||")).toBeNull();
+    expect(savedProjectRead("p2||")?.at).toBe(2);
+    expect(savedProjectRead("p7||")?.at).toBe(7);
     const large = { ...project(), name: "x".repeat(200_001) };
-    saveProjectRead("p7|invoiced||", large);
+    saveProjectRead("p7||", large);
     // The old copy goes too: it is no longer the project's last read.
-    expect(savedProjectRead("p7|invoiced||")).toBeNull();
-    expect(savedProjectRead("p6|invoiced||")?.at).toBe(6);
+    expect(savedProjectRead("p7||")).toBeNull();
+    expect(savedProjectRead("p6||")?.at).toBe(6);
   });
 
   it("drops the reads when storage refuses a write", () => {
-    saveProjectRead("herzl|invoiced||", project());
+    saveProjectRead("herzl||", project());
     const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("full", "QuotaExceededError");
     });
-    saveProjectRead("levi|invoiced||", project("levi"));
+    saveProjectRead("levi||", project("levi"));
     setItem.mockRestore();
     expect(localStorage.getItem("flow-project-reads")).toBeNull();
   });
@@ -100,7 +100,7 @@ describe("saved project reads (FLOW-804)", () => {
     noteShownCompanyUser(USER_A);
     const read = project();
     const at = Date.now() - 3_600_000;
-    saveProjectRead("herzl|invoiced||", read, at);
+    saveProjectRead("herzl||", read, at);
     const client = new QueryClient();
     const observer = new QueryObserver(client, { ...projectQueryOptions("off", "herzl", null), staleTime: 10_000 });
     const result = observer.getCurrentResult();

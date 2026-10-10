@@ -352,7 +352,8 @@ export function useMercuryStatusQuery(active = true) {
  */
 export function projectQueryOptions(preview: HomePreview, projectId: string, period: PeriodChoice | null) {
   const range = period ? rangeOf(period) : null;
-  const savedKey = [projectId, BOOKS_BASIS, range?.p_from ?? "", range?.p_to ?? ""].join("|");
+  // The company's basis (0170) is not in the key: a change of it drops every saved read (company-basis-sheet.tsx).
+  const savedKey = [projectId, range?.p_from ?? "", range?.p_to ?? ""].join("|");
   // Read from storage only when the query is created, once for the data and its date.
   let saved: { value: ReturnType<typeof savedProjectRead> } | null = null;
   const savedRead = () => {
