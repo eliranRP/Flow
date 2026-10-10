@@ -352,7 +352,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 16 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 17 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -507,6 +507,15 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 16
 - A switch the line can't decide is a locked row whose hint names what decides it (FLOW-415).
 - A yes says what it turns on: a permission card names every push it starts (FLOW-502).
 - Month steppers are one quiet pager segment, never bare chevrons in the rows' drill-in column (FLOW-362).
+
+**Recurring, project cash and lists (folded at cycle 17)**
+
+- An alert a user can hide for themselves ends in a muted 44px ✕ labelled "הסתרה, <name>", and the row also swipes toward the start over "הסתרה". The undo toast says "ההתראה הוסתרה". A hidden change keeps its row without its percent (FLOW-415).
+- A change's ▲/▼ % sits beside the amount: red when it is bad news for the business (an expense up, income down), green otherwise (FLOW-415).
+- One control per job: the switch turns a thing on or off, and the row's words open its detail. A word that opens a sheet is accent and ends in a ▾ (FLOW-415).
+- In a list where some rows end in an action and some don't, every row keeps the action's place, so the figures line up. Every row in a list shares one fill (FLOW-415).
+- A project's main page is its cash, laid out like Home's. Profit, investment and loans are one tap away (FLOW-419).
+- A prompt card's question that wraps is balanced, like titles (FLOW-420).
 
 ---
 
