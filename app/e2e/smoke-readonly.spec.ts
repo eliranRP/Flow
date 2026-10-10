@@ -5,7 +5,9 @@ import { isReadRequest, rpcName } from "./smoke-allow";
 
 const email = process.env.SMOKE_EMAIL ?? "";
 const password = process.env.SMOKE_PASSWORD ?? "";
-const companyName = process.env.SMOKE_COMPANY_NAME?.trim() || "Flow Test";
+// Optional override. By default the smoke expects the name of the company the smoke user has open,
+// so renaming that company in the app does not fail the deploy.
+const companyNameOverride = process.env.SMOKE_COMPANY_NAME?.trim() ?? "";
 
 function hostedEnv(): { url: string; anonKey: string } {
   const fromEnv = {
@@ -60,6 +62,18 @@ function missingEdgeHeaders(response: Response): string[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value != null && !Array.isArray(value);
+}
+
+/** The name of the company the smoke user has open, from a list_my_companies result. */
+function activeCompanyName(result: { data: unknown; error: unknown }): string {
+  const data = result.data;
+  if (result.error != null || !isRecord(data) || !isUnknownArray(data.companies)) throw new Error("list_my_companies");
+  const activeId = data.active_id;
+  const active = data.companies.find((row) => isRecord(row) && row.id === activeId);
+  if (!isRecord(active) || typeof active.name !== "string" || active.name.length === 0) {
+    throw new Error("no active company");
+  }
+  return active.name;
 }
 
 function isUnknownArray(value: unknown): value is unknown[] {
@@ -164,6 +178,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const signed = await client.auth.signInWithPassword({ email, password });
   if (signed.error) throw new Error("smoke sign-in failed");
   const session = signed.data.session;
+  const companyName = companyNameOverride || activeCompanyName(await client.rpc("list_my_companies"));
 
   const watched = await watch(page);
   await page.addInitScript(

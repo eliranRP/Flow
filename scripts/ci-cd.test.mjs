@@ -329,7 +329,8 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(liveSmoke, /Production is already live/);
   assert.match(liveSmoke, /What failed:/);
   assert.match(liveSmoke, /The step log has the Playwright output/);
-  assert.match(liveSmoke, /SMOKE_COMPANY_NAME: Flow Test/);
+  // The smoke reads the open company's name from list_my_companies; no fixed company name in CI.
+  assert.equal(/SMOKE_COMPANY_NAME:/.test(liveSmoke), false);
   assert.equal(liveSmoke.includes("tail "), false);
   assert.match(liveSmoke, /exit 1/);
   const smokeConfig = JSON.parse(execFileSync(process.execPath, [
