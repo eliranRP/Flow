@@ -250,6 +250,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-350"></a>[FLOW-350](tasks/FLOW-350.md) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI |
 | <a id="flow-351"></a>[FLOW-351](tasks/FLOW-351.md) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI |
 | <a id="flow-352"></a>[FLOW-352](tasks/FLOW-352.md) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI |
+| <a id="flow-436"></a>[FLOW-436](tasks/FLOW-436.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 | <a id="flow-353"></a>[FLOW-353](tasks/FLOW-353.md) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI |
 | <a id="flow-354"></a>[FLOW-354](tasks/FLOW-354.md) | The default income category in the money terms word | PLAN FIRST |
 | <a id="flow-355"></a>[FLOW-355](tasks/FLOW-355.md) | A project row on Home's first screen at 375x667 | PLAN FIRST |
