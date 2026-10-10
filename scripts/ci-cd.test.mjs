@@ -618,6 +618,12 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   // FLOW-813: the fast gate runs the e2e specs that reach the change before it stamps.
   const picked = local.indexOf('playwright test --fully-parallel "${e2e_specs[@]}"');
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
+  // A warm instance skips the reset only when the last reset here applied this tree's migrations,
+  // seed and config, the change leaves the database alone, and no reached spec reads it; it says so.
+  assert.ok(local.includes("[[ -n \"$db_reset\" ]] || return 0"));
+  assert.ok(local.includes('elif (( db_change )); then db_reset="this change touches the database"'));
+  assert.ok(local.includes('if grep -q FLOW_E2E_SUPABASE "${readers[@]}" 2>/dev/null; then db_readers+=("$spec"); fi'));
+  assert.ok(local.includes("keeping it without a reset."));
   assert.match(local, /--full\) full=1 ;;/);
   // The scoped vitest runs (unit and storybook) follow scripts/storybook-stories.mjs's relatedRun.
   assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1'));

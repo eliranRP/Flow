@@ -342,15 +342,44 @@ if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
     supabase_log="$(mktemp)"
     supabase_exit="$(mktemp)"
     rm -f "$supabase_exit"
-    # Starts in the background while the static checks run. An instance that is already up is reset,
-    # so it carries this branch's migrations and no rows from an earlier run.
+    # An instance that is already up keeps its database when it carries this tree's migrations, seed
+    # and config (the last reset here recorded them) and no reached spec reads the database. A spec
+    # reads it when it or an e2e helper it imports reads FLOW_E2E_SUPABASE_URL, the local API it signs in
+    # and writes rows through (signed-out screens only reach auth). Anything else resets it.
+    db_tree="$(git ls-tree -r HEAD -- supabase/migrations supabase/seed.sql supabase/config.toml | sha256sum | cut -c1-40)"
+    db_readers=()
+    for spec in "${e2e_specs[@]}"; do
+      readers=("app/$spec")
+      while IFS= read -r helper; do readers+=("app/e2e/$helper.ts"); done \
+        < <(sed -nE 's/.*from "\.\/([^"]+)".*/\1/p' "app/$spec" 2>/dev/null)
+      if grep -q FLOW_E2E_SUPABASE "${readers[@]}" 2>/dev/null; then db_readers+=("$spec"); fi
+    done
+    db_reset=""
+    if (( full )); then db_reset="the full run"
+    elif (( db_change )); then db_reset="this change touches the database"
+    elif [[ "$(cat "$cache/supabase-db-tree" 2>/dev/null)" != "$db_tree" ]]; then
+      db_reset="its migrations, seed or config differ from the last reset here"
+    elif (( ${#db_readers[@]} > 0 )); then db_reset="these specs read the database: ${db_readers[*]}"
+    fi
+    if supabase status >/dev/null 2>&1; then
+      if [[ -n "$db_reset" ]]; then echo "local-ci: resetting local Supabase in the background: $db_reset."
+      else echo "local-ci: local Supabase is up with this tree's migrations, seed and config, and no reached spec reads the database; keeping it without a reset."
+      fi
+    fi
+    # Starts in the background while the static checks run. A reset instance carries this branch's
+    # migrations and no rows from an earlier run.
     # A stack that is still starting (another run's start, or containers coming back after a restart)
     # fails the first reset or start: wait for its database to answer, then try once more.
     (
       up() {
         if supabase status >/dev/null 2>&1; then
-          supabase db reset >>"$supabase_log" 2>&1
+          [[ -n "$db_reset" ]] || return 0
+          rm -f "$cache/supabase-db-tree"
+          supabase db reset >>"$supabase_log" 2>&1 || return
+          printf '%s' "$db_tree" >"$cache/supabase-db-tree"
         else
+          # A start can reuse an older database volume, so only a reset records the tree.
+          rm -f "$cache/supabase-db-tree"
           supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >>"$supabase_log" 2>&1
         fi
       }
