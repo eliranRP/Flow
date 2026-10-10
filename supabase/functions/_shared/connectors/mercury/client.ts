@@ -305,13 +305,17 @@ export async function listMercuryCardLabels(session: ConnectorSession): Promise<
   let cards: unknown[];
   try {
     cards = await listCollection(session, "/cards", "cards", {}, true);
-  } catch {
+  } catch (error) {
+    // The class only, never the body: a list that stays unreadable shows in the logs.
+    console.warn("mercury_cards_unread", classifyMercuryError(error).class);
     return null;
   }
   const byLast4 = new Map<string, string | null>();
   for (const card of cards) {
     if (!isRecord(card)) continue;
-    const last4 = typeof card.lastFour === "string" ? card.lastFour.trim() : "";
+    // The card list sends lastFour; lastFourDigits is the Cards API reference's name for it.
+    const rawLast4 = card.lastFour ?? card.lastFourDigits;
+    const last4 = typeof rawLast4 === "string" ? rawLast4.trim() : "";
     const nickname = typeof card.nickname === "string" ? card.nickname.trim() : "";
     if (!/^[0-9]{4}$/.test(last4) || nickname === "") continue;
     const label = String(redactMercury(nickname)).trim().slice(0, CARD_LABEL_LIMIT);
@@ -325,6 +329,14 @@ export async function listMercuryCardLabels(session: ConnectorSession): Promise<
     if (label != null) labels.push({ last4, label });
   }
   return labels.sort((left, right) => left.last4.localeCompare(right.last4));
+}
+
+/**
+ * The connection update for the card names: none when the list was unreadable, so the stored
+ * names stay; an empty list clears them.
+ */
+export function cardLabelsUpdate(labels: CardLabel[] | null): { card_labels?: Array<{ last4: string; label: string }> } {
+  return labels == null ? {} : { card_labels: labels.map(({ last4, label }) => ({ last4, label })) };
 }
 
 /**

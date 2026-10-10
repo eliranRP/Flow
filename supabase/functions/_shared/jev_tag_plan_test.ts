@@ -429,24 +429,30 @@ Deno.test("FLOW-707: the card's nickname reaches Jev in the state and the questi
     }
     if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
     if (url.includes("/connector_connections")) {
-      assert(url.includes(`company_id=eq.${COMPANY}`) && url.includes("provider=eq.mercury"));
-      return Promise.resolve(Response.json([{ card_labels: [
-        { last4: "4242", label: "Example Street Utilities" },
-        { last4: "12345", label: "not a last 4" },
-      ] }]));
+      assert(url.includes(`company_id=eq.${COMPANY}`) && url.includes("select=provider,card_labels"));
+      return Promise.resolve(Response.json([
+        { provider: "bankb", card_labels: [{ last4: "7777", label: "Other Bank Card" }] },
+        { provider: "banka", card_labels: [
+          { last4: "4242", label: "Example Street Utilities" },
+          { last4: "12345", label: "not a last 4" },
+        ] },
+      ]));
     }
     if (url.includes("/transactions")) {
       assert(url.includes("card_last4:provider_meta->>card_last4"));
       return Promise.resolve(Response.json([
-        txnRow({ card_last4: "4242" }),
-        txnRow({ id: "99999999-9999-4999-8999-999999999999", doc_date: "2026-04-11", card_last4: "1111" }),
+        txnRow({ source: "banka", card_last4: "4242" }),
+        txnRow({ id: "99999999-9999-4999-8999-999999999999", doc_date: "2026-04-11", source: "banka", card_last4: "1111" }),
         txnRow({ id: "88888888-8888-4888-8888-888888888888", doc_date: "2026-04-10" }),
+        txnRow({ id: "77777777-7777-4777-8777-777777777777", doc_date: "2026-04-09", source: "banka", card_last4: "7777" }),
       ]));
     }
     return Promise.resolve(new Response(null, { status: 204 }));
   };
   const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
-  const [named, unnamed, noCard] = work[0].expenses;
+  const [named, unnamed, noCard, otherProvider] = work[0].expenses;
+  // A name from one provider's card list never reaches a line from another source.
+  assertEquals([otherProvider.cardLast4, otherProvider.cardName], ["7777", undefined]);
   assertEquals([named.cardLast4, named.cardName], ["4242", "Example Street Utilities"]);
   assertEquals([unnamed.cardLast4, unnamed.cardName], ["1111", undefined]);
   assertEquals([noCard.cardLast4, noCard.cardName], [null, undefined]);

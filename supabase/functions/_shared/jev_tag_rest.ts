@@ -59,7 +59,7 @@ export function transactionsPath(companyId: string, limit: number, nowIso: strin
     `/rest/v1/transactions?company_id=eq.${companyId}`,
     "removed_at=is.null",
     "review_queue.status=eq.open",
-    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,card_last4:provider_meta->>card_last4,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
+    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,source,card_last4:provider_meta->>card_last4,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
     `tagged.model_version=eq.${JEV_MODEL}`,
     "tagged=is.null",
     `failed.model_version=eq.${JEV_MODEL}`,
@@ -172,6 +172,7 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
     pnlRole: asString(row.pnl_role),
     allocationCount: embeddedRows(row.allocations).length,
     cardLast4: cardLast4Of(row.card_last4),
+    source: asString(row.source),
   }];
 }
 
@@ -181,7 +182,7 @@ function cardLast4Of(value: unknown): string | null {
 }
 
 export function cardLabelsPath(companyId: string): string {
-  return `/rest/v1/connector_connections?company_id=eq.${companyId}&provider=eq.mercury&select=card_labels`;
+  return `/rest/v1/connector_connections?company_id=eq.${companyId}&select=provider,card_labels`;
 }
 
 /**
@@ -200,16 +201,21 @@ async function attachCardNames(
   } catch {
     return;
   }
+  // Keyed by the connection's provider and the last 4, so a card name only reaches lines from
+  // that provider, as get_line_meta matches them. The sync redacts each name before storing it.
   const names = new Map<string, string>();
   for (const connection of connections) {
+    const provider = asString(connection.provider);
+    if (!provider) continue;
     for (const label of embeddedRows(connection.card_labels)) {
       const last4 = cardLast4Of(label.last4);
       const name = asString(label.label)?.trim().slice(0, 80);
-      if (last4 && name && !names.has(last4)) names.set(last4, name);
+      const key = `${provider}:${last4}`;
+      if (last4 && name && !names.has(key)) names.set(key, name);
     }
   }
   for (const expense of expenses) {
-    const name = expense.cardLast4 ? names.get(expense.cardLast4) : undefined;
+    const name = expense.cardLast4 && expense.source ? names.get(`${expense.source}:${expense.cardLast4}`) : undefined;
     if (name) expense.cardName = name;
   }
 }

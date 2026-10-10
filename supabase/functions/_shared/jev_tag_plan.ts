@@ -58,6 +58,8 @@ export type TagExpense = {
   userAssigned: boolean;
   pnlRole: string | null;
   allocationCount: number;
+  /** The line's source (the provider that synced it). */
+  source?: string | null;
   /** The paying card's last 4, when the bank sent one. */
   cardLast4?: string | null;
   /** The nickname the owner gave that card in the bank (FLOW-707), often a property or a purpose. */

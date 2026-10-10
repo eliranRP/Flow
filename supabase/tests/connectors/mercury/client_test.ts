@@ -19,6 +19,7 @@ import {
   fetchMercurySince,
   getMercuryTransaction,
   listMercuryCardLabels,
+  cardLabelsUpdate,
   mercuryAccountsChanged,
   mercuryFailureCode,
   mercuryStartDate,
@@ -857,6 +858,7 @@ Deno.test("FLOW-707: card nicknames by last 4, only named cards, and an unreadab
           { id: "card-5", lastFour: "3333", nickname: "Example Other", kind: "debit" },
           { id: "card-6", lastFour: "123", nickname: "Too short", kind: "debit" },
           { id: "card-7", lastFour: "4242", nickname: "Example Street Utilities", kind: "credit" },
+          { id: "card-8", lastFourDigits: "5555", nickname: "Example Lot 123456789", kind: "credit" },
         ],
         page: {},
       });
@@ -864,11 +866,23 @@ Deno.test("FLOW-707: card nicknames by last 4, only named cards, and an unreadab
     return jsonResponse({}, 404);
   });
   const session = openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW });
-  assertEquals(await listMercuryCardLabels(session), [{ last4: "4242", label: "Example Street Utilities" }]);
+  const labels = await listMercuryCardLabels(session);
+  assertEquals(labels?.map((label) => label.last4), ["4242", "5555"]);
+  assertEquals(labels?.[0].label, "Example Street Utilities");
+  // A long digit run in a nickname never reaches the store whole.
+  assertEquals(labels?.[1].label.includes("123456789"), false);
   assertEquals(calls.length, 1);
   assertEquals(calls[0].init.method, "GET");
 
   const denied = transport(() => jsonResponse({ errors: { message: "forbidden" } }, 403));
   const deniedSession = openMercury(`test-${crypto.randomUUID()}`, { fetch: denied.fetchImpl, now: () => NOW });
   assertEquals(await listMercuryCardLabels(deniedSession), null);
+});
+
+Deno.test("FLOW-707: an unreadable card list keeps the stored names, an empty one clears them", () => {
+  assertEquals(cardLabelsUpdate(null), {});
+  assertEquals(cardLabelsUpdate([]), { card_labels: [] });
+  assertEquals(cardLabelsUpdate([{ last4: "4242", label: "Example Street Utilities" }]), {
+    card_labels: [{ last4: "4242", label: "Example Street Utilities" }],
+  });
 });

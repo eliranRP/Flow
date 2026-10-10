@@ -9,6 +9,7 @@ import {
   getMercuryTransaction,
   mercuryTreasuryAccountCount,
   recheckMissingPending,
+  cardLabelsUpdate,
   listMercuryCardLabels,
 } from "../_shared/connectors/mercury/client.ts";
 import { addCalendarDays, jerusalemDate } from "../_shared/connectors/mercury/dates.ts";
@@ -290,7 +291,7 @@ async function syncCompany(
         .from("connector_connections")
         .update({
           account_labels: plan.accounts.map(({ id, label }) => ({ id, label })),
-          ...(cardLabels == null ? {} : { card_labels: cardLabels.map(({ last4, label }) => ({ last4, label })) }),
+          ...cardLabelsUpdate(cardLabels),
           settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
         })
         .eq("company_id", companyId)

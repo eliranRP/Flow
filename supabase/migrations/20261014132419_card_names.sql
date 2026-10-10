@@ -3,6 +3,7 @@
 -- only its card's last 4, so get_line_meta resolves card_name from that list at read time, and a
 -- line synced before this change gets its card's name too. The sync leaves out a last 4 that two
 -- cards with different nicknames share. No other card field is stored.
+-- Like account, card_name reads as null for a demo viewer: the connection's RLS is the owner's.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
