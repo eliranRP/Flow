@@ -43,5 +43,10 @@ export const screenLoaders = {
  * the tap fetches again. Tests await it so a lazy screen renders on the next tick.
  */
 export async function preloadScreens(): Promise<void> {
+  // FLOW-910: with them, the watch that reloads an open tab onto a new deploy's bundle; a new
+  // worker takes over long after Home is up, and this keeps it out of Home's entry.
+  void import("./sw-reload").then(({ watchServiceWorker }) => {
+    watchServiceWorker();
+  }, () => undefined);
   await Promise.all(Object.values(screenLoaders).map((load) => load().catch(() => undefined)));
 }
