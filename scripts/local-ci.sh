@@ -13,8 +13,11 @@
 #       flow-mcp smoke, the db types check, and the pgTAP files that name what changed
 #       (scripts/pgtap-specs.mjs).
 #   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
-#     merge of main that leaves the patch unchanged; lint and the file-size check only when the
-#     branch changes only docs/, Markdown or design images (a claim commit). Each run appends a line to
+#     merge of main that leaves the patch unchanged; the file-size check only when the branch
+#     changes only docs/, Markdown or design images (a claim commit). Lint checks the changed files
+#     and every file that imports them (scripts/gate-scope.mjs), and the dist builds run only when
+#     the change reaches the built app: the rest is as main left it, and main's CI lints and builds
+#     all of it. Each run appends a line to
 #     gate-times.log beside the shared cache: time, branch, mode, diff kind, seconds, result, and
 #     each phase's seconds (node scripts/gate-times.mjs sums it up).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
@@ -213,8 +216,8 @@ base_area() {
 # Only docs_files against main: lint and the file-size check, nothing else.
 if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then
   mode="docs"
-  phase "docs only: lint and the file-size check"
-  pnpm lint
+  phase "docs only: the file-size check"
+  echo "local-ci: lint skipped: eslint reads no docs, Markdown or design images (main lints all of it)."
   node scripts/check-file-size.mjs
   passed
   phase "passed on ${head:0:7} (docs only)"
@@ -392,7 +395,23 @@ wait_supabase() {
 
 phase "lint and check: lint, static checks, and builds, side by side"
 logs="$(mktemp -d)"
+# The lint rules read types, so a file's result can change only when the file or something it
+# imports changes: the branch's changed files and every file that imports them, all the way up
+# (scripts/gate-scope.mjs). A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all.
 lint_part() {
+  local scope
+  if (( skips )) && [[ -n "$pr_fork" ]]; then
+    scope="$(git diff --name-status "$pr_fork" HEAD | node scripts/gate-scope.mjs --lint)"
+    if [[ -z "$scope" ]]; then
+      echo "local-ci: lint skipped: this branch changes no file eslint reads (main lints all of it)."
+      return 0
+    fi
+    if [[ "$scope" != all ]]; then
+      echo "local-ci: linting the $(wc -l <<<"$scope") files this branch changes or that import them (main lints all of it)."
+      xargs -d '\n' pnpm exec eslint --no-warn-ignored <<<"$scope"
+      return
+    fi
+  fi
   pnpm lint
 }
 static_part() {
@@ -415,8 +434,29 @@ static_part() {
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }
+# The same tsc runs as pnpm typecheck, with --incremental: a tsbuildinfo per project in this
+# container's cache keeps what the last run checked, and tsc re-checks only the files a change
+# reaches (its own dependency tracking; a new TypeScript version starts over). --full, an
+# unexpected typecheck script, or a package with another script runs the scripts as they are.
 typecheck_part() {
-  pnpm typecheck
+  local info dir script
+  info="$(cd "$cache" && pwd)/tsbuildinfo"
+  if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
+    != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
+    pnpm typecheck
+    return
+  fi
+  mkdir -p "$info"
+  pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"
+  for dir in app packages/*/; do
+    dir="${dir%/}"
+    script="$(node -p "require('./$dir/package.json').scripts?.typecheck ?? ''")"
+    case "$script" in
+      "") ;;
+      "tsc --noEmit") (cd "$dir" && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile "$info/${dir//\//-}.tsbuildinfo") ;;
+      *) (cd "$dir" && pnpm run typecheck) ;;
+    esac
+  done
 }
 unit_part() {
   if (( ! skips )); then
@@ -436,12 +476,21 @@ unit_part() {
   pnpm test:connectors
   node scripts/check-deny-list.mjs
 }
+# Both dist builds. Skipped when every app input the branch changes is one the built app never
+# reads (tests, stories, e2e specs, test setups: scripts/gate-scope.mjs --build). Both run vite
+# build alone: the app's build script adds tsc --noEmit, the typecheck part's own check of the same
+# inputs (it runs beside this one, or passed on them before).
 build_part() {
-  pnpm build
+  if (( skips )) && [[ -n "$pr_fork" ]] \
+    && [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]; then
+    echo "local-ci: app builds skipped: this branch changes only tests, stories and specs, which the built app doesn't read (main builds it)."
+    return 0
+  fi
+  pnpm --filter @flow/app exec vite build
   node scripts/stamp-build.mjs "$head"
   pnpm check:bundle
   rm -rf app/dist
-  VITE_REVIEWER_BUILD=1 VITE_SUPABASE_URL="" VITE_SUPABASE_ANON_KEY="" pnpm build
+  VITE_REVIEWER_BUILD=1 VITE_SUPABASE_URL="" VITE_SUPABASE_ANON_KEY="" pnpm --filter @flow/app exec vite build
   pnpm check:reviewer-bundle
   test ! -f app/dist/build.txt
 }
