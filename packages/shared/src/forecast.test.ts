@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expectedMonthsSchema, missingBillsSchema, paymentRecurringSchema, recurringChangesSchema } from "./forecast";
+import { expectedMonthsSchema, missingBillsSchema, paymentRecurringSchema, recurringChangesSchema, recurringThisMonthSchema } from "./forecast";
 
 describe("missingBillsSchema", () => {
   it("reads the RPC rows as bigint minor units", () => {
@@ -84,6 +84,26 @@ describe("FLOW-415 recurring reads (decision 0172)", () => {
     expect(row?.amount_minor).toBe(-255_000n);
     expect(row?.change_percent).toBe(38);
     expect(row?.supplier_name).toBe("");
+  });
+
+  it("reads an income row with no supplier, its pace and alert key (decision 0175)", () => {
+    const [late] = missingBillsSchema.parse([
+      {
+        direction: "income", party_id: "c1", party_name: "שוכר לדוגמה", supplier_id: null, supplier_name: null,
+        currency: "ILS", typical_amount_minor: 650000, typical_day: 5, expected_by: "2026-10-10", months_seen: 8,
+        pace: "quarter", pace_source: "user", due_month: "2026-10", alert_key: "income:c1:ILS:2026-10",
+      },
+    ]);
+    expect(late).toMatchObject({ direction: "income", supplier_id: null, party_name: "שוכר לדוגמה", pace: "quarter", due_month: "2026-10" });
+    const [arrived] = recurringThisMonthSchema.parse([
+      {
+        direction: "expense", party_id: "s1", party_name: "אור חשמל", supplier_id: "s1", supplier_name: "אור חשמל", currency: "ILS",
+        amount_minor: -132000, typical_amount_minor: -130000, change_percent: 2, changed: false, transaction_id: "t1", pace: "2months", alert_key: "t1",
+      },
+    ]);
+    expect(arrived?.changed).toBe(false);
+    expect(arrived?.amount_minor).toBe(-132000n);
+    expect(() => missingBillsSchema.parse([{ ...late, typical_amount_minor: 1, pace: "weekly" }])).toThrow();
   });
 
   it("reads payment_recurring, with and without a party", () => {

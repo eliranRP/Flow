@@ -46,7 +46,14 @@ import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
-import { chargeChangeViews, missingBillsTitle, useMissingBillsQuery, useRecurringChangesQuery, type ChargeChangeView } from "../forecast";
+import {
+  chargeChangeViews,
+  lateCounts,
+  missingBillsTitle,
+  useMissingBillsQuery,
+  useRecurringChangesQuery,
+  type ChargeChangeView,
+} from "../forecast";
 
 function changePercent(current: bigint, previous: bigint | null): number | null {
   if (previous == null || previous === 0n) return null;
@@ -161,7 +168,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross: unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? []) : 0n,
         unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : [],
-        missingCount: missing.data?.length ?? 0,
+        missingCount: lateCounts(missing.data ?? []).expense,
+        missingIncome: lateCounts(missing.data ?? []).income,
         changes: chargeChangeViews(changes.data ?? [], search),
         search,
       })}
@@ -305,7 +313,7 @@ export function ProfitScreen({ example }: { example?: ReactNode } = {}) {
       unpaidCount={unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0}
       unpaidOther={unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : []}
       unpaidPhase={unpaidPhase.kind}
-      missingCount={missing.data?.length ?? 0}
+      missingCount={lateCounts(missing.data ?? []).expense}
       onUnpaidRetry={() => {
         void unpaid.refetch();
       }}
@@ -543,8 +551,10 @@ export function homeProjects(projects: readonly ProjectRow[], currency: string):
 /**
  * FLOW-321. The Home pending card: one row to Review and one to Unpaid with its
  * total, each only when it has something. A count of 1 reads singular. FLOW-403 adds a
- * third row, the late recurring bills, as a count only. FLOW-415 (layout A, a-2) adds one row per
- * recurring payment 20% or more off its usual amount, last, with an up or down arrow; a tap opens it.
+ * third row, the late recurring bills, as a count only. FLOW-415 (b-2): late income gets its own
+ * count row, and a recurring payment 20% or more off its usual amount gets a row with an up or down
+ * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו". The count rows open the
+ * קבועים screen at their section.
  */
 export function attentionRows({
   pending,
@@ -552,6 +562,7 @@ export function attentionRows({
   unpaidGross,
   unpaidOther = [],
   missingCount = 0,
+  missingIncome = 0,
   missingTo = "/missing-bills",
   changes = [],
   search,
@@ -560,7 +571,11 @@ export function attentionRows({
   unpaidCount: number;
   unpaidGross: bigint;
   unpaidOther?: { currency: string; minor: bigint }[];
+  /** Late bills (expenses). */
   missingCount?: number;
+  /** FLOW-415 (b-2): late income, on its own row. */
+  missingIncome?: number;
+  /** The קבועים screen; each row opens it at its section. */
   missingTo?: string;
   changes?: readonly ChargeChangeView[];
   search: string;
@@ -594,23 +609,33 @@ export function attentionRows({
       ),
     });
   }
-  // FLOW-403 (plan option A1): a count, no hint and no total, only when a bill is late.
+  // FLOW-403 (plan option A1): a count, no hint and no total, only when a bill is late. FLOW-415
+  // (b-2): late income has its own row; both open the קבועים screen at לא הגיעו.
+  const count = (n: number, income: boolean) =>
+    n === 1 ? missingBillsTitle(1, income) : <><bdi dir="ltr">{String(n)}</bdi> {income ? "תנועות קבועות לא הגיעו" : "חשבונות לא הגיעו"}</>;
   if (missingCount > 0) {
-    rows.push({
-      id: "missing",
-      to: `${missingTo}${search}`,
-      icon: <CalendarIcon size={24} stroke={1.9} />,
-      title: missingCount === 1 ? missingBillsTitle(1) : <><bdi dir="ltr">{String(missingCount)}</bdi> חשבונות לא הגיעו</>,
-    });
+    rows.push({ id: "missing", to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false) });
   }
-  for (const change of changes) {
+  if (missingIncome > 0) {
+    rows.push({ id: "missing-income", to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true) });
+  }
+  // FLOW-415: one changed charge opens its payment; two or more share a row that opens הגיעו החודש.
+  const [only] = changes;
+  if (changes.length === 1 && only != null) {
     rows.push({
-      id: `change:${change.id}`,
-      to: change.href,
-      icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
-      title: change.title,
-      // Each half wraps whole at 320: "₪2,550 ·" then "בדרך כלל ₪1,850".
-      hint: <HintParts parts={[<bdi key="now" dir="ltr">{change.now}</bdi>, <>בדרך כלל <bdi dir="ltr">{change.usual}</bdi></>]} />,
+      id: `change:${only.id}`,
+      to: only.href,
+      icon: only.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
+      title: only.title,
+      // Each half wraps whole, and no "·" is left at the break.
+      hint: <HintParts parts={[<bdi key="now" dir="ltr">{only.now}</bdi>, <>בדרך כלל <bdi dir="ltr">{only.usual}</bdi></>]} />,
+    });
+  } else if (changes.length > 1) {
+    rows.push({
+      id: "changes",
+      to: `${missingTo}${search}#arrived`,
+      icon: <TrendUpIcon size={24} stroke={1.9} />,
+      title: <><bdi dir="ltr">{String(changes.length)}</bdi> חיובים קבועים השתנו</>,
     });
   }
   return rows;

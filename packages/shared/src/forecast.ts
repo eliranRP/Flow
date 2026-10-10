@@ -9,10 +9,19 @@ import { agorotSchema } from "./dashboard.ts";
 const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const daySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/** FLOW-415 (decision 0175): how often a recurring party comes. */
+export const paceSchema = z.enum(["month", "2months", "quarter", "year"]);
+export type RecurringPace = z.infer<typeof paceSchema>;
+
 /** One recurring supplier whose bill for this month has not come in (`missing_bills`). */
 export const missingBillSchema = z.object({
-  supplier_id: z.string(),
+  /** null on an income row (decision 0175): the party is a customer. */
+  supplier_id: z.string().nullable(),
   supplier_name: z.string().nullable().transform((name) => name ?? ""),
+  /** FLOW-415 (decision 0175): the party, a supplier or a customer. */
+  direction: z.enum(["expense", "income"]).optional(),
+  party_id: z.string().optional(),
+  party_name: z.string().nullable().optional(),
   currency: currencySchema,
   typical_amount_minor: agorotSchema,
   typical_day: z.number().int(),
@@ -27,6 +36,12 @@ export const missingBillSchema = z.object({
   category_name: z.string().nullable().optional(),
   /** `auto` found by the rule, `user` marked recurring by the owner. */
   source: z.enum(["auto", "user"]).optional(),
+  /** FLOW-415 (decision 0175): how often it comes, and the month it is late for (YYYY-MM). */
+  pace: paceSchema.optional(),
+  pace_source: z.enum(["auto", "user"]).optional(),
+  due_month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  /** The key `dismiss_recurring_alert('missing', …)` takes. */
+  alert_key: z.string().optional(),
 });
 
 /** `missing_bills` returns a JSON array, ordered by the typical day. */
@@ -37,8 +52,16 @@ export const missingBillsSchema = z.array(missingBillSchema).nullable().transfor
  * usual amount by 20% or more, either way (`recurring_changes`). Largest change first.
  */
 export const recurringChangeSchema = z.object({
-  supplier_id: z.string(),
+  supplier_id: z.string().nullable(),
   supplier_name: z.string().nullable().transform((name) => name ?? ""),
+  direction: z.enum(["expense", "income"]).optional(),
+  party_id: z.string().optional(),
+  party_name: z.string().nullable().optional(),
+  /** `recurring_this_month` (decision 0175): true at 20% or more either way. */
+  changed: z.boolean().optional(),
+  pace: paceSchema.optional(),
+  /** The key `dismiss_recurring_alert('change', …)` takes: the payment's id. */
+  alert_key: z.string().optional(),
   currency: currencySchema,
   amount_minor: agorotSchema,
   typical_amount_minor: agorotSchema,
@@ -54,6 +77,13 @@ export const recurringChangeSchema = z.object({
 });
 
 export const recurringChangesSchema = z.array(recurringChangeSchema).nullable().transform((rows) => rows ?? []);
+
+/**
+ * FLOW-415 (decision 0175): every recurring supplier and customer seen this month, changed or not
+ * (`recurring_this_month`), for הגיעו החודש. The same rows as `recurring_changes`, not filtered by
+ * dismissals. Expenses first, then by name.
+ */
+export const recurringThisMonthSchema = recurringChangesSchema;
 
 /**
  * FLOW-415: one payment's recurring switch (`payment_recurring`, and `set_payment_recurring` with

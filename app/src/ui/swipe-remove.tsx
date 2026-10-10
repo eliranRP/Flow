@@ -46,9 +46,12 @@ export function swipeRemoves(dx: number, elapsedMs: number, width: number, isRtl
 export function SwipeRemove({
   onRemove,
   disabled = false,
+  label = "הסרה",
   children,
 }: {
   onRemove: () => void;
+  /** The word under the row: "הסרה", or "הסתרה" for an alert hidden for this user (FLOW-415). */
+  label?: string;
   /** While the editor is busy or locked, the row stays put. */
   disabled?: boolean;
   children: ReactNode;
@@ -176,7 +179,7 @@ export function SwipeRemove({
     >
       {/* Under the row, shown only while it moves; the row's ✕ is the named control. */}
       <div className="ui-sremove-under" aria-hidden="true">
-        <span>הסרה</span>
+        <span>{label}</span>
       </div>
       <div ref={row} className="ui-sremove-row">
         {children}

@@ -142,11 +142,13 @@ export {
   expectedPartySchema,
   missingBillSchema,
   missingBillsSchema,
+  paceSchema,
   paymentRecurringSchema,
   recurringChangeSchema,
   recurringChangesSchema,
+  recurringThisMonthSchema,
 } from "./forecast.ts";
-export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill, PaymentRecurring, RecurringChange } from "./forecast.ts";
+export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill, PaymentRecurring, RecurringChange, RecurringPace } from "./forecast.ts";
 export { cashBasisSchema, cashLinesSchema, cashMonthsSchema, cashLinesSideSchema, cashSideSchema, cashYearsSchema } from "./cash.ts";
 export type {
   CashBasis,
