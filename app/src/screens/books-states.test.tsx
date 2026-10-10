@@ -65,6 +65,20 @@ const emptyDashboard = {
   projects: [],
 };
 
+// Home's cash read (FLOW-413): one month with money in and out.
+const cashMonths = {
+  basis: "paid",
+  base_currency: "ILS",
+  months: [
+    {
+      month: `${new Date().toISOString().slice(0, 7)}-01`,
+      by_currency: [
+        { currency: "ILS", in_minor: 100, out_minor: 0, net_minor: 100, profit_minor: 100, excluded_count: 0, excluded_in_minor: 0, excluded_out_minor: 0 },
+      ],
+    },
+  ],
+};
+
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -179,6 +193,7 @@ describe("rejected reads", () => {
   it("does not hide open invoices when only that query fails", async () => {
     rpc.impl = (name) => {
       if (name === "get_dashboard") return Promise.resolve({ data: emptyDashboard, error: null });
+      if (name === "cash_months") return Promise.resolve({ data: cashMonths, error: null });
       if (name === "get_home") {
         return Promise.resolve({
           data: { company_id: "c", name: "אלפא", net_profit_agorot: 100, is_demo: false },
@@ -190,7 +205,7 @@ describe("rejected reads", () => {
     renderAt("/");
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.queryByText("הכל שולם")).not.toBeInTheDocument();
-    expect(screen.getByText("הכנסות")).toBeInTheDocument();
+    expect(screen.getByText("נכנס")).toBeInTheDocument();
   });
 
   it("shows the split form error instead of an empty project list when projects fail", async () => {
