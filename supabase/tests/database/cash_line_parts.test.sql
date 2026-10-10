@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(7);
+select plan(8);
 
 select tests.create_supabase_user('clp_owner', 'clp-owner@example.com');
 
@@ -29,13 +29,19 @@ insert into clp (label, id) values
   ('deposit', tests.fixture_line(pg_temp.id('co'), 'clp:deposit', 200000, 'income', pg_temp.id('harbor'),
     pg_temp.id('rent_cat'), '2026-06-05', p_pnl_role => null, p_doc_kind => 'invoice_receipt')),
   ('bill', tests.fixture_line(pg_temp.id('co'), 'clp:bill', 30000, 'expense', pg_temp.id('harbor'),
-    pg_temp.id('power_cat'), '2026-06-06'));
+    pg_temp.id('power_cat'), '2026-06-06')),
+  ('pier', tests.fixture_project(pg_temp.id('co'), 'Pier')),
+  ('repair', tests.fixture_line(pg_temp.id('co'), 'clp:repair', 50000, 'expense', pg_temp.id('harbor'),
+    pg_temp.id('power_cat'), '2026-06-07'));
 
 -- The deposit is rent plus two refunds: 1,700.00 + 120.00 + 180.00 = 2,000.00.
 insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
   (pg_temp.id('co'), pg_temp.id('deposit'), 1, pg_temp.id('rent_cat'), null, 170000),
   (pg_temp.id('co'), pg_temp.id('deposit'), 2, pg_temp.id('power_cat'), null, 12000),
-  (pg_temp.id('co'), pg_temp.id('deposit'), 3, pg_temp.id('water_cat'), null, 18000);
+  (pg_temp.id('co'), pg_temp.id('deposit'), 3, pg_temp.id('water_cat'), null, 18000),
+  -- One category on two projects.
+  (pg_temp.id('co'), pg_temp.id('repair'), 1, pg_temp.id('power_cat'), null, 30000),
+  (pg_temp.id('co'), pg_temp.id('repair'), 2, pg_temp.id('power_cat'), pg_temp.id('pier'), 20000);
 
 create or replace function pg_temp.row_of(p_page jsonb, p_description text)
 returns jsonb
@@ -74,6 +80,12 @@ select is(
   pg_temp.row_of(public.project_cash_month_lines(pg_temp.id('harbor'), '2026-06-01', 'out'), 'clp:deposit') -> 'parts',
   '[{"name": "Water", "amount_minor": -18000}, {"name": "Power", "amount_minor": -12000}]'::jsonb,
   'the project''s lines carry the parts too'
+);
+
+select is(
+  pg_temp.row_of(public.cash_month_lines('2026-06-01', 'out'), 'clp:repair') -> 'parts',
+  '[{"name": "Power", "amount_minor": 50000}]'::jsonb,
+  'parts of one category on two projects are one entry'
 );
 
 -- A split that no longer sums to the line counts whole, so the row names no parts.

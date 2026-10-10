@@ -14,7 +14,9 @@ export function SplitPartsHint({ parts, total, date }: { parts: readonly SplitHi
   return (
     <span className="ui-split-hint">
       {first == null ? null : parts.length === 1 ? (
-        <span className="ui-split-hint-line">{first.name}</span>
+        <span className="ui-split-hint-line">
+          <span className="ui-split-hint-name">{first.name}</span>
+        </span>
       ) : parts.length === 2 ? (
         <HintParts parts={parts.map((part, index) => <PartText key={index} part={part} />)} />
       ) : (

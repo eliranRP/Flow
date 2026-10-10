@@ -4,7 +4,8 @@
 -- so a line split by category (decision 0104) shows only the sum of the parts the list counts,
 -- with no category. Each row now also carries, for a line with a valid split by category:
 -- - parts: the parts this row counts, [{name, amount_minor}], signed like the row's amount,
---   largest first; name is the part's category.
+--   largest first; name is the part's category, and parts of one category (on several projects)
+--   are one entry.
 -- - line_minor: the whole line's bank amount (gross, positive), so the row can say what the parts
 --   are out of.
 -- Both are null on any other row (a loan split's parts are rows of their own already).
@@ -54,8 +55,7 @@ begin
        or pg_temp.anchor_count(def, json_anchor) <> 1 then
       raise exception '% is not the expected definition', fn;
     end if;
-    def := replace(def, merged_anchor, merged_anchor || $n$      jsonb_agg(jsonb_build_object('category_id', r.category_id, 'amount_minor', r.side_minor)
-        order by abs(r.side_minor) desc, r.category_id) filter (where r.part is null) as part_list,
+    def := replace(def, merged_anchor, merged_anchor || $n$      jsonb_agg(jsonb_build_object('category_id', r.category_id, 'amount_minor', r.side_minor)) filter (where r.part is null) as part_list,
 $n$);
     def := replace(def, page_anchor, page_anchor || $n$      abs(t.amount_gross) as line_gross,
       m.part is null and private.line_split_valid(m.transaction_id) as split_shown,
@@ -63,9 +63,13 @@ $n$);
     def := replace(def, json_anchor, $n$        'kept_out', p_side = 'excluded',
         'line_minor', case when pg.split_shown then pg.line_gross end,
         'parts', case when pg.split_shown then (
-          select jsonb_agg(jsonb_build_object('name', c.name, 'amount_minor', (e.v ->> 'amount_minor')::bigint) order by e.ord)
-          from jsonb_array_elements(pg.part_list) with ordinality e(v, ord)
-          left join public.categories c on c.id = (e.v ->> 'category_id')::uuid
+          select jsonb_agg(jsonb_build_object('name', c.name, 'amount_minor', x.amount_minor) order by abs(x.amount_minor) desc, c.name)
+          from (
+            select (e.v ->> 'category_id')::uuid as category_id, sum((e.v ->> 'amount_minor')::bigint)::bigint as amount_minor
+            from jsonb_array_elements(pg.part_list) e(v)
+            group by 1
+          ) x
+          left join public.categories c on c.id = x.category_id
         ) end
 $n$);
     execute def;
