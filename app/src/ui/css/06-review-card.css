@@ -311,6 +311,14 @@
   white-space: nowrap;
 }
 
+/* A long amount in a narrow card (−₪1,234,567 at 320) steps its size down so it stays whole: about
+   0.64em a character, so a figure of N characters fits the card's width (100cqi) at 100cqi / (N × 0.64).
+   A figure that fits keeps the display size. */
+.ui-review-figure {
+  font-size: min(var(--type-display-size), calc(100cqi / (var(--figure-chars, 1) * 0.64)));
+  white-space: nowrap;
+}
+
 .ui-review-spike {
   flex: none;
   background: color-mix(in srgb, var(--color-warning) 16%, var(--color-surface));
