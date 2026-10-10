@@ -36,7 +36,7 @@ function currencyRow(inMinor: number, outMinor: number, profit: number) {
     excluded_count: 0,
     excluded_in_minor: 0,
     excluded_out_minor: 0,
-    // FLOW-417: what profit leaves out, by category, as the server sends it.
+    // FLOW-418: what profit leaves out, by category, as the server sends it.
     not_in_profit_categories: [
       { name: "שיפוץ והשבחה", amount_minor: -440_000 },
       { name: "השקעת בעלים", amount_minor: 200_000 },
@@ -120,7 +120,7 @@ describe("Home's cash (FLOW-413, frame b)", () => {
     expect(within(incoming).getByText("₪18,000")).toHaveClass("ui-income");
     expect(screen.getByRole("link", { name: /^יצא ב/ })).toHaveAttribute("href", `/cash/${current}/out/ILS`);
     expect(screen.getByRole("link", { name: /^רווח ב/ })).toHaveClass("ui-cash-quiet");
-    // FLOW-417: the rest of the month's figure, profit leaves out, under it with what it holds.
+    // FLOW-418: the rest of the month's figure, profit leaves out, under it with what it holds.
     const kept = screen.getByRole("link", { name: /^לא נספר ברווח ב\S+ −₪2,400 – פירוט$/ });
     expect(kept).toHaveAttribute("href", `/cash/${current}/kept/ILS`);
     expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים")).toHaveClass("ui-flow-hint");

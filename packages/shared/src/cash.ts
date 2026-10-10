@@ -21,7 +21,7 @@ const cashCurrencyRowSchema = z.object({
   excluded_in_minor: minorSchema,
   excluded_out_minor: minorSchema,
   /**
-   * FLOW-417: the cash the P&L leaves out, by category, signed like net (money in positive),
+   * FLOW-418: the cash the P&L leaves out, by category, signed like net (money in positive),
    * largest first. "לא נספר ברווח" is net minus profit; what these don't cover is VAT and lines
    * out of the view but in profit.
    */
@@ -48,7 +48,7 @@ export const cashMonthsSchema = z
 
 export const cashSideSchema = z.enum(["in", "out"]);
 
-/** `cash_month_lines`' sides: נכנס, יצא, or (FLOW-417) the lines the P&L leaves out of the view's cash. */
+/** `cash_month_lines`' sides: נכנס, יצא, or (FLOW-418) the lines the P&L leaves out of the view's cash. */
 export const cashLinesSideSchema = z.enum(["in", "out", "not_in_profit"]);
 
 /** `cash_month_lines`: the lines behind one month's נכנס, יצא or לא נספר ברווח, newest first. Amounts are positive on their side. */

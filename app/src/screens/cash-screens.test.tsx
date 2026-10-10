@@ -149,7 +149,7 @@ describe("Cash lines", () => {
   });
 });
 
-describe("Cash lines profit leaves out (FLOW-417)", () => {
+describe("Cash lines profit leaves out (FLOW-418)", () => {
   it("reads the not_in_profit side, shows net less profit, and gives money out its minus", async () => {
     const capital = { ...lines.rows[0], transaction_id: "t2", part: null, supplier_name: "שותף לדוגמה", category_name: "השקעת בעלים", amount_minor: 45_000, side: "in" };
     rpc.impl = (name) => {

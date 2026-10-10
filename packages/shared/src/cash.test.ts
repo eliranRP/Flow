@@ -31,7 +31,7 @@ describe("cashMonthsSchema", () => {
     expect(parsed?.months[0]?.by_currency[0]?.not_in_profit_categories).toEqual([]);
   });
 
-  it("reads FLOW-417's not-in-profit categories, signed, as bigint", () => {
+  it("reads FLOW-418's not-in-profit categories, signed, as bigint", () => {
     const parsed = cashMonthsSchema.parse({
       basis: "paid",
       base_currency: "USD",

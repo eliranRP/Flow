@@ -21,7 +21,7 @@
   background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
 }
 
-/* FLOW-417: לא נספר ברווח names what it holds on a quiet line under its label. */
+/* FLOW-418: לא נספר ברווח names what it holds on a quiet line under its label. */
 .ui-flow-labels {
   display: flex;
   flex-direction: column;
@@ -29,8 +29,11 @@
 }
 
 .ui-flow-hint {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--color-text-secondary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }

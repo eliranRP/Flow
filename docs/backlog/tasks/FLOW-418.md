@@ -1,5 +1,5 @@
-<a id="flow-417"></a>
-# FLOW-417 · Home shows what profit leaves out of the month's cash
+<a id="flow-418"></a>
+# FLOW-418 · Home shows what profit leaves out of the month's cash
 - **Type:** PLAN FIRST · **Status:** in-progress (#495) · **Depends on:** [FLOW-413](FLOW-413.md), [FLOW-103](FLOW-103.md)
 - **What:** On cash Home, נכנס and יצא don't add up to "רווח החודש", and nothing says why. Profit leaves out money that moved in the bank but is not income or an expense (renovation kept out of profit, owner's capital, loan principal).
 - **Owner's pick:** option A, approved by the owner on 2026-10-10: under יצא, "רווח החודש", then a quiet "לא נספר ברווח" row with a short hint naming its categories. The two rows add up to the month's cash. A tap on the new row opens the month's lines page for the lines not counted in profit, in the same look as נכנס and יצא.

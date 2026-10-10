@@ -1,4 +1,4 @@
--- FLOW-417 (decision 0172): Home shows what profit leaves out of the month's cash.
+-- FLOW-418 (decision 0173): Home shows what profit leaves out of the month's cash.
 --
 -- - private.cash_parts gains in_pnl, each part's place in the P&L (private.pnl_lines' own flag),
 --   so a read can tell the cash that profit counts from the cash it leaves out (renovation kept
@@ -125,7 +125,7 @@ declare
   def text;
   cte_anchor text := E'  months as (\n    select m::date as month\n';
   json_anchor text := E'            ''excluded_out_minor'', coalesce(c.excluded_out_minor, 0)\n';
-  kept_cte text := $a$  -- FLOW-417: the cash in the view that the P&L leaves out, by category.
+  kept_cte text := $a$  -- FLOW-418: the cash in the view that the P&L leaves out, by category.
   kept as (
     select
       date_trunc('month', p.month_date)::date as month,

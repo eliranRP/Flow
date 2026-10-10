@@ -7,7 +7,7 @@ import { israelToday } from "../ui/date-math";
  * The months end with the current one, so the band always names this month.
  */
 
-/** FLOW-417: the cash profit leaves out, by category; it adds up to net less profit. */
+/** FLOW-418: the cash profit leaves out, by category; it adds up to net less profit. */
 const KEPT_OUT = [
   { name: "שיפוץ והשבחה", amount_minor: -440_000n },
   { name: "השקעת בעלים", amount_minor: 200_000n },
@@ -69,7 +69,7 @@ function line(id: string, day: string, supplier: string, project: string | null,
 export function sampleCashLines(side: "in" | "out" | "kept", now = new Date()): CashLine[] {
   const current = israelToday(now).slice(0, 7);
   const day = (d: number) => `${current}-${String(d).padStart(2, "0")}`;
-  // FLOW-417: the month's cash profit leaves out (KEPT_OUT's lines), both sides mixed.
+  // FLOW-418: the month's cash profit leaves out (KEPT_OUT's lines), both sides mixed.
   if (side === "kept") {
     return [
       line("8", day(7), "קבלן שיפוצים לדוגמה", "שיפוץ הרצל 12", "שיפוץ והשבחה", 440_000n, "out", "mercury"),

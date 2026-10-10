@@ -261,6 +261,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-358"></a>[FLOW-358](tasks/FLOW-358.md) | Phone polish after the October 10 morning deploy (cycle 14) | SMALL UI |
 | <a id="flow-359"></a>[FLOW-359](tasks/FLOW-359.md) | One way to change the period on Home and the project band | PLAN FIRST |
 | <a id="flow-361"></a>[FLOW-361](tasks/FLOW-361.md) | Loan setup story shows Hebrew letters in reverse order | SMALL BUG |
+| <a id="flow-362"></a>[FLOW-362](tasks/FLOW-362.md) | Phone polish after the cash Home deploy (cycle 15) | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 
 ## Projects and reports
@@ -281,7 +282,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-411"></a>[FLOW-411](tasks/FLOW-411.md) | Project screen: lines on open, honest period label | SMALL UI |
 | <a id="flow-412"></a>[FLOW-412](tasks/FLOW-412.md) | Category drill-down on the cash basis | BACKLOG NIT |
 | <a id="flow-413"></a>[FLOW-413](tasks/FLOW-413.md) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST |
-| <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
+| <a id="flow-418"></a>[FLOW-418](tasks/FLOW-418.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
 

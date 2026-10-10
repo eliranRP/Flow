@@ -605,6 +605,11 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     assert.ok(local.includes(part), part);
     assert.ok(ci.includes(part.trim().replace(/^pnpm test:e2e$/, "pnpm test:e2e --shard")), `CI ${part}`);
   }
+  // A start can reuse an older database volume: a run that needs a reset resets after it, so the
+  // pgTAP files never run against another branch's migrations.
+  const start = local.indexOf("supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime");
+  const afterStart = local.slice(start, local.indexOf("      }\n", start));
+  assert.match(afterStart, /\|\| return 0\n.*resetting it.*\n\s+fi\n\s+rm -f "\$cache\/supabase-db-tree"\n\s+supabase db reset >>"\$supabase_log" 2>&1 \|\| return\n/);
   // passed() stamps the commit and marks the branch's patch. The fast gate calls it after the scoped
   // Storybook smoke and the e2e specs; --full calls it only after e2e. The same-patch exit stamps too.
   assert.match(local, /passed\(\) \{\n  echo "\$head" >"\$\(git rev-parse --git-dir\)\/flow-local-ci"\n/);

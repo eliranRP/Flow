@@ -39,7 +39,7 @@ describe("cashSummaryRows", () => {
     expect(rows[0]?.name).toBe("נכנס באוקטובר ₪18,000 – פירוט");
   });
 
-  it("adds לא נספר ברווח, the rest of the month's figure, with a hint and its lines (FLOW-417)", () => {
+  it("adds לא נספר ברווח, the rest of the month's figure, with a hint and its lines (FLOW-418)", () => {
     const kept = [
       { name: "שיפוץ והשבחה", amount_minor: -440_000n },
       { name: "השקעת בעלים", amount_minor: 200_000n },

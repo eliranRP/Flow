@@ -336,7 +336,7 @@ export function DevCashMonth() {
   return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
 }
 
-/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-417). */
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). */
 export function DevCashLines() {
   const [params] = useSearchParams();
   const asked = params.get("side");

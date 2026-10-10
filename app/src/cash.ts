@@ -31,7 +31,7 @@ export function cashTitle(key: string, now = new Date()): string {
   return `תזרים ${cashMonthName(key, now)}`;
 }
 
-/** A month's lines page: נכנס, יצא, or (FLOW-417) "kept", the cash the P&L leaves out. */
+/** A month's lines page: נכנס, יצא, or (FLOW-418) "kept", the cash the P&L leaves out. */
 export type CashListSide = CashSide | "kept";
 
 export function cashSideLabel(side: CashListSide): string {
@@ -43,7 +43,7 @@ export function isCashSide(value: string | undefined): value is CashListSide {
   return value === "in" || value === "out" || value === "kept";
 }
 
-/** FLOW-417 (glossary: kept-out is "לא נספר ברווח"). */
+/** FLOW-418 (glossary: kept-out is "לא נספר ברווח"). */
 export const NOT_IN_PROFIT_LABEL = "לא נספר ברווח";
 
 /** The cash profit leaves out: with רווח החודש it adds up to the month's figure. */
@@ -111,7 +111,7 @@ export function profitPath(search: string): string {
 
 /**
  * The rows under a month's cash figure: נכנס and יצא open the month's lines, רווח החודש opens the
- * profit view for the month, and (FLOW-417) לא נספר ברווח, the rest of the month's figure, opens
+ * profit view for the month, and (FLOW-418) לא נספר ברווח, the rest of the month's figure, opens
  * the lines profit leaves out; it shows only when some currency has any. Each row lists the base
  * currency, then any other that moved.
  */

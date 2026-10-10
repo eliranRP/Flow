@@ -5,21 +5,21 @@ import { ChevronIcon } from "./icons";
 
 /**
  * FLOW-413, frame b. The cash view's rows: נכנס (green), יצא and a quiet רווח החודש under its
- * figure, then (FLOW-417) a quiet לא נספר ברווח with a hint naming what it holds, and the earlier
+ * figure, then (FLOW-418) a quiet לא נספר ברווח with a hint naming what it holds, and the earlier
  * months. They share the look of Home's income and expense rows (ui-flow-line), and each row opens
  * what is behind it. A currency other than the base adds a line under the first amount.
  */
 
 /**
  * "in" is green; "net" (a month row) and "quiet" (רווח החודש) show a loss in red with its minus.
- * "aside" (FLOW-417, לא נספר ברווח) reads quiet and keeps its minus without red: it is not a loss.
+ * "aside" (FLOW-418, לא נספר ברווח) reads quiet and keeps its minus without red: it is not a loss.
  */
 export type CashRowTone = "in" | "out" | "net" | "quiet" | "aside";
 
 export type CashRow = {
   id: string;
   label: string;
-  /** FLOW-417: a short line under the label ("שיפוץ והשבחה, השקעת בעלים"). */
+  /** FLOW-418: a short line under the label ("שיפוץ והשבחה, השקעת בעלים"). */
   hint?: string;
   tone: CashRowTone;
   amounts: { currency: string; minor: bigint }[];

@@ -4,7 +4,7 @@ import { CashRows, type CashRow } from "./cash-rows";
 import { at320, dark } from "./screen-stories-support";
 import { StoryRoute } from "./story-route";
 
-/** FLOW-413 + FLOW-417: the cash view's rows under a month's figure. Invented figures. */
+/** FLOW-413 + FLOW-418: the cash view's rows under a month's figure. Invented figures. */
 
 const meta = {
   title: "Components/CashRows",

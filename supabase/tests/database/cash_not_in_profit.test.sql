@@ -1,17 +1,20 @@
--- FLOW-417 (decision 0172). What profit leaves out of the month's cash: cash_months'
+-- FLOW-418 (decision 0173). What profit leaves out of the month's cash: cash_months'
 -- not_in_profit_minor and not_in_profit_categories, and cash_month_lines' 'not_in_profit' side.
 -- Invented data only. Amounts are agorot. Today is 2026-06-15.
 
 begin;
 
-select plan(9);
+select plan(12);
 
 select tests.create_supabase_user('cnp_owner', 'cnp-owner@example.com');
+select tests.create_supabase_user('cnp_other', 'cnp-other@example.com');
 
 create temp table cnp (label text primary key, id uuid);
 grant all on cnp to authenticated, service_role;
 
-insert into cnp (label, id) values ('co', tests.fixture_company('cnp_owner', 'Example Profit LLC'));
+insert into cnp (label, id) values
+  ('co', tests.fixture_company('cnp_owner', 'Example Profit LLC')),
+  ('other', tests.fixture_company('cnp_other', 'Example Other LLC'));
 
 create or replace function pg_temp.id(p_label text)
 returns uuid
@@ -94,6 +97,26 @@ select is(
   pg_temp.june() -> 'not_in_profit_categories',
   '[{"name": "Owner capital", "amount_minor": 200000}]'::jsonb,
   'a kept-out line out of the cash view leaves the categories'
+);
+
+-- 10-11. Another company sees none of it.
+select tests.authenticate_as('cnp_other');
+select is(
+  coalesce(pg_temp.june() -> 'not_in_profit_categories', '[]'::jsonb),
+  '[]'::jsonb,
+  'another company''s month lists none of these categories'
+);
+select is(
+  jsonb_array_length(public.cash_month_lines('2026-06-01', 'not_in_profit') -> 'rows'),
+  0,
+  'another company''s not_in_profit side lists none of these lines'
+);
+
+-- 12. The parts behind both stay private.
+reset role;
+select ok(
+  not has_function_privilege('authenticated', 'private.cash_parts(uuid,text,date,date)', 'execute'),
+  'private.cash_parts is not callable by app users'
 );
 
 select * from finish();

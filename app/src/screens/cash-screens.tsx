@@ -32,7 +32,7 @@ import { SegmentedControl } from "../ui/segmented-control";
 
 /**
  * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and רווח החודש, as Home
- * shows the current month), and the lines behind one month's נכנס or יצא, or (FLOW-417) the cash
+ * shows the current month), and the lines behind one month's נכנס or יצא, or (FLOW-418) the cash
  * profit leaves out. Decision 0168.
  */
 
@@ -79,7 +79,7 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
   );
 }
 
-/** FLOW-417: the lines page's one line on what these are. */
+/** FLOW-418: the lines page's one line on what these are. */
 const KEPT_NOTE = "כסף שזז בבנק, אבל אינו הכנסה או הוצאה.";
 
 function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
@@ -137,7 +137,7 @@ function CashLinesBody({
   const shown = data == null ? [] : shownCashRows(month, data.base_currency);
   const total = shown.find((row) => row.currency === currency);
   const figure = total == null ? null : side === "in" ? total.in_minor : side === "out" ? total.out_minor : notInProfitMinor(total);
-  // FLOW-417: VAT, and lines out of the view but in profit, are in the figure but have no row here.
+  // FLOW-418: VAT, and lines out of the view but in profit, are in the figure but have no row here.
   const rest = side === "kept" && total != null ? notInProfitRest(total) : 0n;
   const more = sample ? false : lines.hasNextPage;
   return (
@@ -171,7 +171,7 @@ function CashLinesBody({
       {rows.length === 0 ? (
         <EmptyState
           icon={<DocumentIcon />}
-          title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : "הכול נספר ברווח החודש"}
+          title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"}
           body="תנועות שנכנסות לתזרים יופיעו כאן."
         />
       ) : (

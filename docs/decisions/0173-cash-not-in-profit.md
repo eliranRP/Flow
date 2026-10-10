@@ -1,7 +1,7 @@
 # Home shows what profit leaves out of the month's cash
 
 **Date:** 2026-10-10
-**Status:** Accepted (owner picked option A on the plan-first card, 2026-10-10, and asked for the tap to open the transactions; FLOW-417)
+**Status:** Accepted (owner picked option A on the plan-first card, 2026-10-10, and asked for the tap to open the transactions; FLOW-418)
 
 ## Context
 

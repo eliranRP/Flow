@@ -29,7 +29,7 @@ export const CashHomeMonth: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
-    // FLOW-417: under רווח החודש, the rest of the month's figure with what it holds.
+    // FLOW-418: under רווח החודש, the rest of the month's figure with what it holds.
     await expect(canvas.getByRole("link", { name: /^לא נספר ברווח ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
   },
@@ -84,7 +84,7 @@ export const CashLinesOut: Story = {
 };
 export const CashLinesOut320: Story = { ...CashLinesOut, name: "Cash, the month's יצא, 320", ...at320 };
 
-/** FLOW-417: the lines behind לא נספר ברווח, money in and out mixed. */
+/** FLOW-418: the lines behind לא נספר ברווח, money in and out mixed. */
 export const CashLinesKept: Story = {
   name: "Cash, the month's לא נספר ברווח",
   render: () => {

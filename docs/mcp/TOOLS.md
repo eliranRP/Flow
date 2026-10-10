@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -39,6 +39,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category_cash"` | `id` | the category id `set_category_cash` returned |
 | `undo` `kind: "line_cash"` | `id` | the transaction id `set_line_cash` used |
 | `undo` `kind: "cash_basis"` | `id` | the company id `set_cash_basis` returned |
+| `set_line_recurring`, `get_line_recurring` | `transaction_id` | `get_recurring_changes` `changes[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
+| `undo` `kind: "line_recurring"` | `id` | the transaction id `set_line_recurring` used |
+| `set_line_pace` | `transaction_id` | as `set_line_recurring` |
+| `undo` `kind: "line_pace"` | `id` | the transaction id `set_line_pace` used |
 | `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 | `detach_loan_payment` | `transaction_id` | `get_loan_schedule` payments, `get_expense.id` of a line with `loan_split` |
@@ -519,11 +523,23 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 
 ### get_missing_bills
 
-`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers (an expense line in at least 3 of the last 6 complete months and one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time; on the month's last day when that falls later). Each has `supplier_id`, `supplier_name`, `currency`, `typical_amount_minor` (median monthly net, negative), `typical_day`, `expected_by`, `months_seen`, `last_doc_date`, `project_id`, `category_id`.
+`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers and customers whose due month has come with no line yet, after their usual day plus 5 days in the due month (Israel time; on the month's last day when that falls later). Monthly ones (a line in at least 3 of the last 6 complete months and one of the last 2) are due every month; a pace of every 2 months, quarter or year is due one pace after the last bill ([0175](../decisions/0175-recurring-pace-dismissals.md)). Alerts the token's user dismissed in the app are left out. A supplier the owner marked recurring ([set_line_recurring](#set_line_recurring)) counts too, and one marked not recurring never does ([0172](../decisions/0172-recurring-charges.md)). Each has `direction`, `party_id`, `party_name`, `supplier_id` and `supplier_name` (null for income), `currency`, `typical_amount_minor` (median net per bill, negative for expenses), `typical_day`, `due_month` (YYYY-MM), `expected_by`, `months_seen`, `last_doc_date`, `last_amount_minor` (the last bill's net), `project_id`, `project_name`, `category_id`, `category_name`, `source` (`auto`: the rule found it; `user`: the owner marked it), `pace` (`month`, `2months`, `quarter` or `year`), `pace_source` and `alert_key`.
 
 ### get_expected_months
 
-`expected_months`, optional `months` (1 to 12, default 3) and `project_id` ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data`: `today`, `project_id`, `months[]` (`month` YYYY-MM, `open`, `by_currency[]` with `currency`, `income_minor`, `expense_minor`; expenses negative) and `recurring[]` (`direction`, `party_id`, `name`, `currency`, `typical_amount_minor`, `typical_day`, `months_seen`, `seen_this_month`, `project_id`, `category_id`). This month counts only the recurring parties not seen yet; later months count all of them. With `project_id`, only parties whose usual project it is. A projection from past months, not booked lines.
+`expected_months`, optional `months` (1 to 12, default 3) and `project_id` ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data`: `today`, `project_id`, `months[]` (`month` YYYY-MM, `open`, `by_currency[]` with `currency`, `income_minor`, `expense_minor`; expenses negative) and `recurring[]` (`direction`, `party_id`, `name`, `currency`, `typical_amount_minor`, `typical_day`, `months_seen`, `seen_this_month`, `project_id`, `category_id`, `source`: `auto` or `user`, `pace`, `next_due_month`). A party counts in its due months: from its next due month (this month when it is late), every pace months. With `project_id`, only parties whose usual project it is. A projection from past months, not booked lines.
+
+### get_recurring_changes
+
+`recurring_changes`, no arguments ([FLOW-415](../backlog/TASKS.md#flow-415), [0172](../decisions/0172-recurring-charges.md)). Read tool. Output `data.changes[]`: recurring suppliers and customers whose lines this month so far (posted and pending) differ from their usual amount by 20% or more, either way, largest change first, less what the token's user dismissed in the app. Each has `direction`, `party_id`, `party_name`, `supplier_id`, `supplier_name` (null for income), `currency`, `amount_minor` (this month's net so far, negative), `typical_amount_minor`, `change_percent` (signed and rounded: `38` is 38% more than usual, `-30` is 30% less), `typical_day`, `transaction_id` (the month's latest line), `project_id`, `project_name`, `category_id`, `category_name`, `source`, `pace`, `changed` and `alert_key`.
+
+### get_recurring_this_month
+
+`recurring_this_month`, no arguments ([0175](../decisions/0175-recurring-pace-dismissals.md)). Read tool. Output `data.arrived[]`: every recurring supplier and customer seen this month (the app's הגיעו החודש), with the fields of `get_recurring_changes`; `changed` is true at 20% or more either way. Nothing is left out for dismissals. Expenses first, then by name.
+
+### get_line_recurring
+
+`payment_recurring`, `transaction_id` required ([0172](../decisions/0172-recurring-charges.md)). Read tool. Output `data`: `{ "transaction_id", "party", "recurring", "override", "detected", "typical_day", "typical_amount_minor" }`. `party` is the line's supplier (expense) or customer (income) with `direction`, `id`, `name`, `currency`, or `null` when it has neither. `recurring` is what counts: `override` (the owner's switch, `null` when the rule decides) and otherwise `detected` (the rule alone). `typical_day` and `typical_amount_minor` are `null` when not recurring. `pace` is what counts, `pace_override` the owner's (`set_line_pace`), `detected_pace` the rule's, and `next_due_month` (YYYY-MM) when the next bill is due. Another company's line is `refused`.
 
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
 
@@ -781,11 +797,11 @@ The company's `cash_basis` picks each line's month: `paid` (the default) is the 
 
 Input: `{ "months": 3 }`.
 
-Output `data`: `basis` (`paid` or `invoice`), `base_currency`, and `months[]` newest first: `month` (`YYYY-MM-DD`, the first day) and `by_currency[]` (the base currency first and always present): `currency`, `in_minor` (נכנס), `out_minor` (יצא), `net_minor` (in less out), `profit_minor` (the month's net profit on the company's basis, equal to `get_profit_months` without a basis), `excluded_count`, `excluded_in_minor` and `excluded_out_minor` (what the view leaves out). FLOW-417: `not_in_profit_minor` (`net_minor` less `profit_minor`, so "רווח החודש" and "לא נספר ברווח" add up to the month) and `not_in_profit_categories[]` (`name`, `amount_minor` signed like net, largest first): the cash in the view that the P&L leaves out. VAT and lines out of the view but in profit are what the categories do not cover.
+Output `data`: `basis` (`paid` or `invoice`), `base_currency`, and `months[]` newest first: `month` (`YYYY-MM-DD`, the first day) and `by_currency[]` (the base currency first and always present): `currency`, `in_minor` (נכנס), `out_minor` (יצא), `net_minor` (in less out), `profit_minor` (the month's net profit on the company's basis, equal to `get_profit_months` without a basis), `excluded_count`, `excluded_in_minor` and `excluded_out_minor` (what the view leaves out). FLOW-418: `not_in_profit_minor` (`net_minor` less `profit_minor`, so "רווח החודש" and "לא נספר ברווח" add up to the month) and `not_in_profit_categories[]` (`name`, `amount_minor` signed like net, largest first): the cash in the view that the P&L leaves out. VAT and lines out of the view but in profit are what the categories do not cover.
 
 ### get_cash_lines
 
-`cash_month_lines(p_month, p_side, p_currency, p_limit, p_offset)`. The lines behind a `get_cash_months` figure. `month` is `YYYY-MM` or a date in it; `side` is `in`, `out`, `excluded` (left out of the view), or `not_in_profit` (in the view, left out of the P&L; FLOW-417); `currency` defaults to the base currency. `limit` is 1 to 100 (default 40) and `offset` pages.
+`cash_month_lines(p_month, p_side, p_currency, p_limit, p_offset)`. The lines behind a `get_cash_months` figure. `month` is `YYYY-MM` or a date in it; `side` is `in`, `out`, `excluded` (left out of the view), or `not_in_profit` (in the view, left out of the P&L; FLOW-418); `currency` defaults to the base currency. `limit` is 1 to 100 (default 40) and `offset` pages.
 
 Input: `{ "month": "2026-09", "side": "out" }`.
 
@@ -826,6 +842,22 @@ Counts a category's lines in the cash view or leaves them out, separate from `se
 ```
 
 Owner only. `basis` is `paid` or `invoice`. It is the company's one date choice ([0170](../decisions/0170-pnl-follows-company-basis.md)): the cash view, and every P&L read and tool called without a `basis` (`paid` as `cash`, `invoice` as `invoiced`), follow it. Output `data`: `{ "basis", "prior_basis", "undo_kind": "cash_basis", "id" }` (`id` is the company id). Undo `kind: "cash_basis"` with that id puts back the prior basis; `conflict` once it was changed again.
+
+### set_line_recurring
+
+```json
+{ "idempotency_key": "recurring-1", "transaction_id": "22222222-2222-4000-8000-000000000020", "recurring": false }
+```
+
+Marks the line's supplier (or customer) recurring (`true`) or not (`false`) in the line's currency, or leaves it to the rule again (`null`) ([FLOW-415](../backlog/TASKS.md#flow-415), [0172](../decisions/0172-recurring-charges.md)). The switch covers every line of that party in that currency and wins over the rule in `get_missing_bills`, `get_recurring_changes` and `get_expected_months`; a party marked recurring with no complete month yet takes its usual day and amount from its latest month. Output `data`: the [get_line_recurring](#get_line_recurring) state plus `"undo_kind": "line_recurring"`, `id` and `write_id`. Refused: `transaction not found` (also another company's line), `no supplier or customer`. Undo `kind: "line_recurring"` with the transaction id puts back the switch from before; `conflict` once it was changed since. Keeping one payment out of the cash view is [set_line_cash](#set_line_cash). The pace is kept when the switch is cleared.
+
+### set_line_pace
+
+```json
+{ "idempotency_key": "pace-1", "transaction_id": "22222222-2222-4000-8000-000000000020", "pace": "quarter" }
+```
+
+Sets how often the line's supplier (or customer) recurs in the line's currency: `month`, `2months`, `quarter` or `year`; `null` goes back to the detected pace ([0175](../decisions/0175-recurring-pace-dismissals.md)). Late bills and expected months follow it. It does not make a party recurring; `set_line_recurring` does, and clearing that switch keeps the pace. Output `data`: the [get_line_recurring](#get_line_recurring) state plus `"undo_kind": "line_pace"`, `id` and `write_id`. Refused: `transaction not found`, `no supplier or customer`. Undo `kind: "line_pace"` with the transaction id puts back the pace from before; `conflict` once it was changed since.
 
 ## Unpaid · FLOW-330
 
