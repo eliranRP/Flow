@@ -44,8 +44,9 @@
   margin-top: 2px;
 }
 
+/* 56px rows, as the sheet gap was; the gap shrinks with the keyboard at 320 and these rows don't. */
 .ui-change-summary .ui-row {
-  min-block-size: var(--sheet-gap);
+  min-block-size: 56px;
 }
 
 /* Values at the row-title weight, like the transaction detail (FLOW-328). */
