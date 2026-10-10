@@ -384,6 +384,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
 | <a id="flow-912"></a>[FLOW-912](tasks/FLOW-912.md) | The speed checks hold the median of 5 opens | TASK |
 | <a id="flow-913"></a>[FLOW-913](tasks/FLOW-913.md) | קבועים: a lighter list, swipe to close, and a row that opens all its payments | SMALL UI |
+| <a id="flow-914"></a>[FLOW-914](tasks/FLOW-914.md) | Red main: the 320 split-hint story counted a dropped date as clipped | BUG |
 
 ## Future features
 

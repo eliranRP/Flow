@@ -165,7 +165,10 @@ function LongRows() {
   );
 }
 
-/** Each amount (and the date) is inside the box that clips it, or wholly outside it (dropped), never part-way. */
+/**
+ * Each amount (and the date) is inside the boxes that clip it, or wholly outside one (dropped), never
+ * part-way. A dropped date is hidden by its own box, so the walk stops there (FLOW-914).
+ */
 function clippedAmounts(root: HTMLElement): string[] {
   return [...root.querySelectorAll<HTMLElement>(".ui-split-hint-amount, .ui-split-hint-date-in")].flatMap((amount) => {
     const box = amount.getBoundingClientRect();
@@ -174,7 +177,8 @@ function clippedAmounts(root: HTMLElement): string[] {
       const clip = el.getBoundingClientRect();
       const inside = box.left >= clip.left - 0.5 && box.right <= clip.right + 0.5 && box.top >= clip.top - 0.5 && box.bottom <= clip.bottom + 0.5;
       const outside = box.top >= clip.bottom - 0.5 || box.bottom <= clip.top + 0.5;
-      if (!inside && !outside) return [amount.textContent];
+      if (outside) return [];
+      if (!inside) return [amount.textContent];
     }
     return [];
   });
