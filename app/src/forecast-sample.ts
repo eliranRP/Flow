@@ -97,7 +97,6 @@ export const SAMPLE_MISSING_RENAMED: MissingBill = {
   suggestion: {
     party_id: "s-river-works",
     party_name: "Riverside Water Works",
-    transaction_id: "t-river-oct",
     doc_date: "2026-10-06",
     amount_minor: -5_779n,
   },

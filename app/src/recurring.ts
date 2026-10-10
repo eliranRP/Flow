@@ -46,7 +46,7 @@ export type MissingBillMatch = {
 export function missingBillMatch(row: MissingBill, now = new Date()): MissingBillMatch | null {
   const found = row.suggestion;
   if (found == null || row.party_id == null) return null;
-  const name = found.party_name === "" ? "ללא שם" : found.party_name;
+  const name = found.party_name || "ללא שם";
   return {
     direction: row.direction ?? "expense",
     partyId: row.party_id,

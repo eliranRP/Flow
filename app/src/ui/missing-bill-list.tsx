@@ -13,6 +13,7 @@ import { List } from "./list-row";
 import type { ScreenPhase } from "./screen-phase";
 import { ListSkeleton } from "./skeleton";
 import { SwipeRemove } from "./swipe-remove";
+import "./css/39-missing-bills.css";
 
 export type MissingBillRow = {
   id: string;
