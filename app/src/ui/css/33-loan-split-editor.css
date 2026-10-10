@@ -51,16 +51,29 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-362: tight enough that the fees category and "לשמור להלוואה הזו" show above שמירה at 375x667 (4px between blocks). */
 .ui-lsedit {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-1);
 }
 
+/* The line's amount and its date on one line. */
 .ui-lsedit-head {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: var(--space-3);
+}
+
+/* 2px over and under each field, so its border clears the dividers (design lead). */
+.ui-lsedit .ui-loan-parts-row {
+  padding-block: 2px;
+}
+
+.ui-lsedit .ui-loan-parts-total {
+  padding-block: var(--space-1) 0;
 }
 
 .ui-lsedit-meta {
@@ -72,7 +85,7 @@
   font-weight: var(--type-amount-weight);
 }
 
-/* "פיצול אחר" under the match sheet's loans; "עריכת הפיצול" under a matched split's total (FLOW-106). */
+/* "פיצול אחר" under the match sheet's loans. */
 .ui-loan-other {
   margin-block-start: var(--space-2);
 }

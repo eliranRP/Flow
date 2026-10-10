@@ -186,7 +186,7 @@ test("a preview load error returns to the empty preview", async ({ page }) => {
   await page.goto("/?preview=error");
   await page.getByRole("button", { name: "ניסיון חוזר" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
   await page.goto("/unpaid?preview=error");
   await page.getByRole("button", { name: "ניסיון חוזר" }).click();
   await expect(page).toHaveURL(/\/unpaid\?preview=1$/);
