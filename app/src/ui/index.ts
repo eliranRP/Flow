@@ -79,3 +79,4 @@ export type { LoanPartField, LoanPartKey } from "./loan-parts-sheet";
 export { TxnStepRow } from "./txn-step-row";
 export type { TxnStepRowProps } from "./txn-step-row";
 export { ReviewCount, reviewCountDigits } from "./review-count";
+export { ShareAmount } from "./share-amount";

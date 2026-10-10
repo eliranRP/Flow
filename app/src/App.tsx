@@ -238,6 +238,9 @@ function AppRoutes() {
                   <Route path="/e2e/connections" element={<DevConnections />} />
                   <Route path="/e2e/loans" element={<DevLoans />} />
                   <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
+                  <Route path="/e2e/loans/:loanId/details" element={<DevLoanDetail view="details" />} />
+                  <Route path="/e2e/loans/:loanId/future" element={<DevLoanDetail view="future" />} />
+                  <Route path="/e2e/loans/:loanId/future/:period" element={<DevLoanDetail view="period" />} />
                   <Route path="/e2e/categories" element={<DevCategories />} />
                   <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
                   <Route path="/e2e/team" element={<DevTeam />} />
@@ -318,6 +321,9 @@ function AppRoutes() {
                 <Route path="settings/team" element={<TeamScreen />} />
                 {/* FLOW-106 B / FLOW-110: one loan's page. */}
                 <Route path="settings/loans/:loanId" element={<LoanDetailScreen />} />
+                <Route path="settings/loans/:loanId/details" element={<LoanDetailScreen view="details" />} />
+                <Route path="settings/loans/:loanId/future" element={<LoanDetailScreen view="future" />} />
+                <Route path="settings/loans/:loanId/future/:period" element={<LoanDetailScreen view="period" />} />
               </Route>
             </Route>
         </Routes>
