@@ -15,7 +15,7 @@ import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { focusReviewEmptyAction } from "./review-focus";
 
-export const PUSH_QUESTION = "תזכורת בערב כשיש תנועות לאישור?";
+export const PUSH_QUESTION = "התראה על תנועה חדשה ותזכורת בערב?";
 export const IOS_HOME_NOTE = "כדי לקבל תזכורות באייפון, מוסיפים את Flow למסך הבית ופותחים משם.";
 const IOS_HOME_LINK = "למסך הבית";
 const [IOS_HOME_BEFORE, IOS_HOME_AFTER] = IOS_HOME_NOTE.split(IOS_HOME_LINK) as [string, string];
@@ -32,7 +32,7 @@ export function IosHomeNote() {
   );
 }
 
-export const PUSH_ON = "נשלח תזכורת בערב כשיש תנועות לאישור.";
+export const PUSH_ON = "נשלח התראה על כל תנועה חדשה ותזכורת בערב.";
 export const PUSH_BLOCKED = "ההתראות חסומות בדפדפן. אפשר לאשר אותן בהגדרות הדפדפן.";
 export const PUSH_FAILED = "לא הצלחנו להפעיל תזכורות.";
 
