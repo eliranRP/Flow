@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { BandHero, SectionHead } from "../ui/layout";
-import { PeriodBar } from "../ui/period-bar";
+import { PeriodPicker } from "../ui/period-picker";
 import { SearchEntry } from "../ui/search-entry";
 import { usePreviewSearch } from "../preview";
-import { defaultPeriod, type PeriodChoice } from "../period";
+import { defaultPeriod, windowLabel, type PeriodChoice } from "../period";
 import { ListRow } from "../ui/list-row";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
@@ -19,11 +19,13 @@ export function HomeSkeleton({
 }: {
   preview?: boolean;
   example?: ReactNode;
-  /** Home's period. The bar is real while the figures load, so a period can change meanwhile. */
+  /** Home's period. The pill is real while the figures load, so a period can change meanwhile. */
   period?: PeriodChoice;
   onPeriod?: (period: PeriodChoice) => void;
 }) {
   const [own, setOwn] = useState<PeriodChoice>(() => defaultPeriod());
+  const [sheet, setSheet] = useState(false);
+  const shown = period ?? own;
   const search = usePreviewSearch();
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col" aria-busy="true">
@@ -36,14 +38,14 @@ export function HomeSkeleton({
         example={example}
         trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
-        <div className="ui-band-pbar">
-          <PeriodBar period={period ?? own} onChange={onPeriod ?? setOwn} />
-        </div>
         <BandHero>
-          <div className="ui-hero" aria-hidden="true">
+          <div className="ui-hero">
             <Skeleton tone="band" className="ui-skel-label" />
+            {/* FLOW-355: the pill is real while the figures load, so a period can change meanwhile. */}
+            <div className="ui-hero-pill">
+              <PeriodPicker pill={windowLabel(shown)} name={`${windowLabel(shown)} – בחירת תקופה`} open={sheet} onOpenChange={setSheet} period={shown} onChange={onPeriod ?? setOwn} />
+            </div>
             <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
-            <Skeleton tone="band" className="ui-skel-explain" />
           </div>
         </BandHero>
       </TopBand>
@@ -57,6 +59,13 @@ export function HomeSkeleton({
           <Skeleton className="ui-skel-figure" />
         </span>
       </div>
+      <SectionHead title="פרויקטים" />
+      <div className="ui-project-list">
+        {rowKeys.slice(0, 2).map((key) => (
+          <ListRow variant="skeleton" key={key} />
+        ))}
+      </div>
+      {/* FLOW-355: the attention card loads where it lands, under the first two projects. */}
       <div className="ui-skel-card">
         <Skeleton className="ui-skel-dot" />
         <span className="ui-skel-copy">
@@ -64,9 +73,8 @@ export function HomeSkeleton({
           <Skeleton width="md" />
         </span>
       </div>
-      <SectionHead title="פרויקטים" />
       <div className="ui-project-list">
-        {rowKeys.map((key) => (
+        {rowKeys.slice(2).map((key) => (
           <ListRow variant="skeleton" key={key} />
         ))}
       </div>

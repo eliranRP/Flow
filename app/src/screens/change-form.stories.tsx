@@ -73,7 +73,7 @@ function ChangeStory({
   suggestionId?: string;
   suggestionCategoryId?: string;
   supplier?: string;
-  projects?: typeof changeProjects;
+  projects?: { id: string; name: string; code?: string; recent?: string; group?: string }[];
   categories?: typeof changeCategories;
   initialQuery?: string;
   loading?: boolean;
@@ -269,4 +269,42 @@ export const ChangeLongHebrew: Story = {
       ]}
     />
   ),
+};
+
+/** FLOW-406 (picker): projects in a group sit under the group's name, then שאר הפרויקטים. */
+const groupedChangeProjects = [
+  { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
+  { id: "u1", name: "דירה 1", group: "בניין לדוגמה" },
+  { id: "u2", name: "דירה 2", group: "בניין לדוגמה" },
+  { id: "u3", name: "דירה 3", group: "בניין לדוגמה" },
+  { id: "villa", name: "וילה רעננה", code: "P-02" },
+  { id: "p17", name: "גן יבנה – תוספת קומה", code: "P-17" },
+];
+
+export const ChangeProjectPickerGrouped: Story = {
+  name: "Project picker, grouped",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" projects={groupedChangeProjects} />,
+};
+
+export const ChangeProjectPickerGroupedDark: Story = { ...ChangeProjectPickerGrouped, name: "Project picker, grouped, dark", globals: { theme: "dark" } };
+
+export const ChangeProjectPickerGrouped320: Story = {
+  ...ChangeProjectPickerGrouped,
+  name: "Project picker, grouped, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
+export const ChangeProjectPickerGroupedDark320: Story = {
+  ...ChangeProjectPickerGrouped,
+  name: "Project picker, grouped, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
+/** A search lists the matches flat, a group's name included in what it matches. */
+export const ChangeProjectPickerGroupedSearch: Story = {
+  name: "Project picker, grouped, searching the group",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" projects={groupedChangeProjects} initialQuery="לדוגמה" />,
 };

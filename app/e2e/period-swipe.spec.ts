@@ -15,30 +15,31 @@ async function touchSwipe(cdp: CDPSession, from: { x: number; y: number }, to: {
 }
 
 async function figureRow(page: Page) {
-  const box = await page.locator(".ui-pswipe").first().boundingBox();
+  const swipe = page.locator(".ui-pswipe").first();
+  const box = await swipe.boundingBox();
   if (!box) throw new Error("no swipe figure");
-  return { y: box.y + box.height / 2, left: box.x, right: box.x + box.width };
+  // FLOW-355: Home's pill sits inside the swipe area, so the gesture runs across the figure line.
+  const figureLine = swipe.locator(".ui-hero-figure").first();
+  const figure = (await figureLine.count()) > 0 ? await figureLine.boundingBox() : null;
+  const y = figure ? figure.y + figure.height / 2 : box.y + box.height / 2;
+  return { y, left: box.x, right: box.x + box.width };
 }
 
 test("Home: a swipe right on the figure goes to the earlier window, left comes back, and the edge and a vertical move do nothing", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.goto("/e2e/home?preview=1");
-  const later = page.getByRole("button", { name: "3 חודשים הבאים" });
+  // FLOW-355: Home's band has one period pill and no arrows; the pill names the window.
   const label = page.getByRole("button", { name: /בחירת תקופה/ });
-  await expect(later).toHaveAttribute("aria-disabled", "true");
   const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
 
-  // Finger moves right, toward the start-side ("earlier") arrow.
+  // Finger moves right: the earlier window.
   await touchSwipe(cdp, { x: 80, y: row.y }, { x: 280, y: row.y + 6 });
-  await expect(later).not.toHaveAttribute("aria-disabled", "true");
   await expect(label).not.toHaveText(current ?? "");
-  await expect(label).toContainText("חזרה להיום");
 
   // Finger moves left: the later window, back to the current one.
   await touchSwipe(cdp, { x: 280, y: row.y }, { x: 80, y: row.y });
-  await expect(later).toHaveAttribute("aria-disabled", "true");
   await expect(label).toHaveText(current ?? "");
 
   // At the current window a further swipe left does nothing.
@@ -70,7 +71,8 @@ test("Reduced motion: the figure stays put during the drag and the period swaps 
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/e2e/home?preview=1");
-  const later = page.getByRole("button", { name: "3 חודשים הבאים" });
+  const label = page.getByRole("button", { name: /בחירת תקופה/ });
+  const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
   await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 80, y: row.y }] });
@@ -79,5 +81,5 @@ test("Reduced motion: the figure stays put during the drag and the period swaps 
   }
   await expect(page.locator(".ui-pswipe").first()).toHaveCSS("transform", "none");
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await expect(later).not.toHaveAttribute("aria-disabled", "true");
+  await expect(label).not.toHaveText(current ?? "");
 });

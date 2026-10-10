@@ -20,6 +20,7 @@ import { useToast } from "../ui/toast";
 import { reversalChoices } from "../reversal";
 import { collapseSplit, combinePhase, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { reviewE2e, reviewIsSplit, reviewLineFocus, reviewSplitTitle } from "./review-shared";
+import { projectChoices } from "../project-groups";
 
 type ChangeSample = {
   supplier: string;
@@ -138,11 +139,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     : (filledRow?.project_suggested === true ? (filledRow.project_id ?? "") : "");
   const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? filledRow?.category_id ?? "";
   const projectOptions = withChoice(
-    [...(sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({
-      id: project.id,
-      name: project.name,
-      status: project.status,
-    }))), ...extraProjects],
+    [...(sample?.projects ?? projectChoices(dashboard.data)), ...extraProjects],
     projectId,
     row?.project_name,
   );

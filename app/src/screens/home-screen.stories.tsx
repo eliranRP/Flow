@@ -1,6 +1,7 @@
 import type { Dashboard } from "@flow/shared";
 import { type ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, fireEvent, within } from "@storybook/test";
 import { HomeBooks, HomeScreen } from "./HomeScreen";
 import { presetPeriod } from "../period";
 import { Banner } from "../ui/banner";
@@ -317,7 +318,24 @@ function PeriodHome() {
   );
 }
 
-export const HomePeriod: Story = { name: "Home, period bar, 3 months", render: () => <PeriodHome /> };
-export const HomePeriodDark: Story = { ...HomePeriod, name: "Home, period bar, 3 months, dark", ...dark };
-export const HomePeriod320: Story = { ...HomePeriod, name: "Home, period bar, 3 months, 320", ...at320 };
-export const HomePeriodDark320: Story = { ...HomePeriod, name: "Home, period bar, 3 months, dark, 320", ...dark, ...at320 };
+export const HomePeriod: Story = { name: "Home, period pill, 3 months", render: () => <PeriodHome /> };
+export const HomePeriodDark: Story = { ...HomePeriod, name: "Home, period pill, 3 months, dark", ...dark };
+export const HomePeriod320: Story = { ...HomePeriod, name: "Home, period pill, 3 months, 320", ...at320 };
+export const HomePeriodDark320: Story = { ...HomePeriod, name: "Home, period pill, 3 months, dark, 320", ...dark, ...at320 };
+
+/** FLOW-355 (A): on a 375x667 phone the first project row shows above the tab bar; the review and invoices rows follow two projects. */
+export const HomePeriodSmallPhone: Story = {
+  ...HomePeriod,
+  name: "Home, period pill, 375x667",
+  parameters: { viewport: { defaultViewport: "flow375-se" } },
+};
+
+/** The pill opens the period sheet. */
+export const HomePeriodSheet: Story = {
+  ...HomePeriod,
+  name: "Home, period pill opens the sheet",
+  play: async ({ canvasElement }) => {
+    await fireEvent.click(within(canvasElement).getByRole("button", { name: /בחירת תקופה$/ }));
+    await expect(await within(document.body).findByRole("dialog", { name: "תקופה" })).toBeVisible();
+  },
+};

@@ -33,6 +33,7 @@ import { ReversalTag } from "../ui/suggest-tag";
 import type { LineSplitRead } from "../line-split";
 import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
+import { projectChoices } from "../project-groups";
 
 function splitProjectLabel(
   txn: { allocations?: Array<{ project_name?: string | null }> },
@@ -410,7 +411,7 @@ export function TransactionScreen({
     [
       ...(sample
         ? (sampleProjects ?? []).map((project) => ({ id: project.id, name: project.name, code: project.code }))
-        : (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status }))),
+        : projectChoices(dashboard.data)),
       ...extraProjects,
     ],
     projectId,

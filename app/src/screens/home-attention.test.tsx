@@ -1,11 +1,25 @@
-import type { Dashboard } from "@flow/shared";
+import type { Dashboard, ProjectRow } from "@flow/shared";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeBooks } from "./HomeScreen";
 import { thisMonth } from "../period";
 
-function books(review: number): Dashboard {
+function project(id: string, profit: bigint): ProjectRow {
+  return {
+    id,
+    name: `פרויקט ${id}`,
+    status: "active",
+    income_agorot: profit,
+    direct_agorot: 0n,
+    shared_agorot: 0n,
+    profit_before_shared_agorot: profit,
+    profit_agorot: profit,
+    by_currency: [],
+  };
+}
+
+function books(review: number, projects: ProjectRow[] = []): Dashboard {
   return {
     company_id: "co",
     name: "Flow Test",
@@ -24,7 +38,7 @@ function books(review: number): Dashboard {
     prev_net_agorot: null,
     active_projects: 0,
     review_count: review,
-    projects: [],
+    projects,
     by_currency: [],
   };
 }
@@ -35,7 +49,9 @@ function renderHome({
   gross = 0n,
   phase = "ready",
   search = "",
+  projects = [],
 }: {
+  projects?: ProjectRow[];
   review: number;
   unpaid: number;
   gross?: bigint;
@@ -45,7 +61,7 @@ function renderHome({
   return render(
     <MemoryRouter>
       <HomeBooks
-        data={books(review)}
+        data={books(review, projects)}
         previewing={false}
         search={search}
         unpaidGross={gross}
@@ -127,5 +143,24 @@ describe("Home attention card (FLOW-321)", () => {
       expect(unpaidLink()).toBeNull();
       unmount();
     }
+  });
+
+  it("sits under the first two projects, so a project shows on a 667px screen (FLOW-355)", () => {
+    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n), project("ב", 2_000n), project("ג", 1_000n)] });
+    const card = document.querySelector(".ui-banner, .ui-banner-rows");
+    const lists = document.querySelectorAll(".ui-project-list");
+    expect(lists).toHaveLength(2);
+    expect(within(lists[0] as HTMLElement).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(lists[1] as HTMLElement).getAllByRole("listitem")).toHaveLength(1);
+    const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(lists[0] as Element, card as Element)).toBe(true);
+    expect(follows(card as Element, lists[1] as Element)).toBe(true);
+  });
+
+  it("follows the list when there are two projects or fewer (FLOW-355)", () => {
+    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n)] });
+    const lists = document.querySelectorAll(".ui-project-list");
+    expect(lists).toHaveLength(1);
+    expect(Boolean((lists[0] as Element).compareDocumentPosition(document.querySelector(".ui-banner, .ui-banner-rows") as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 });
