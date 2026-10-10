@@ -1,7 +1,7 @@
 import { projectDetailSchema } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvestmentCard, INVESTMENT_ERROR } from "../ui/investment-card";
 import { FILLED } from "../ui/investment-card.stories-support";
@@ -397,6 +397,16 @@ describe("the rehab sheet", () => {
     expect(none?.querySelector(".ui-row-chevron-space")).not.toBeNull();
   });
 
+  it("opens a left-out category's lines the same way", async () => {
+    serveRehab();
+    renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    const interest = await screen.findByRole("link", { name: /ריבית משכנתא/ });
+    expect(interest).toHaveAttribute("href", "/projects/p1/categories/c-int?period=all&basis=cash");
+    expect(interest.querySelector(".ui-row-chevron")).not.toBeNull();
+    expect(screen.getByRole("link", { name: /רכישת נכס/ })).toHaveAttribute("href", "/projects/p1/categories/c-buy?period=all&basis=cash");
+  });
+
   it("brings Back from the lines to the investment screen on its period", async () => {
     serveRehab();
     function BackProbe() {
@@ -413,6 +423,27 @@ describe("the rehab sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
     fireEvent.click(await screen.findByRole("link", { name: /חומרים/ }));
     expect(await screen.findByTestId("back")).toHaveTextContent("/projects/p1/investment?period=month&at=2026-09");
+  });
+
+  it("reopens the rehab sheet on Back from a category's lines", async () => {
+    serveRehab();
+    function BackProbe() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => { void navigate(-1); }}>חזרה</button>;
+    }
+    wrap(
+      <Routes>
+        <Route path="/projects/:projectId/investment" element={<ProjectInvestmentSection project={parsed()} />} />
+        <Route path="/projects/:projectId/categories/:categoryId" element={<BackProbe />} />
+      </Routes>,
+      "/projects/p1/investment",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /ריבית משכנתא/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "חזרה" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("שיפוץ")).toBeInTheDocument();
+    expect(await within(dialog).findByText("חומרים")).toBeInTheDocument();
   });
 
   it("says loading while it reads", async () => {
