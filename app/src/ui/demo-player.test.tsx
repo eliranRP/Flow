@@ -120,8 +120,8 @@ describe("DemoPlayer", () => {
     fireEvent.click(screen.getByRole("button", { name: "שוב" }));
     expect(root).toHaveAttribute("data-demo-state", "playing");
     expect(progressOf(root)).toBe(0);
-    expect(screen.queryByRole("button", { name: "שוב" })).not.toBeInTheDocument();
-    expect(document.activeElement).toHaveClass("ui-demo-replay");
+    // Focus stays on שוב through the replay, and a focused button is never hidden from readers.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "שוב" }));
 
     act(() => {
       vi.advanceTimersByTime(4200);

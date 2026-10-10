@@ -54,8 +54,8 @@ export const Playing: Story = {
     await expect(root).toHaveAttribute("data-demo-state", "settled");
     await userEvent.click(canvas.getByRole("button", { name: "שוב" }));
     await expect(root).toHaveAttribute("data-demo-state", "playing");
-    await expect(canvas.queryByRole("button", { name: "שוב" })).toBeNull();
-    await expect(canvasElement.querySelector(".ui-demo-replay")).toHaveFocus();
+    // Focus stays on שוב through the replay, and a focused button is never hidden from readers.
+    await expect(canvas.getByRole("button", { name: "שוב" })).toHaveFocus();
     await waitFor(() => expect(root).toHaveAttribute("data-demo-state", "settled"), { timeout: 3000 });
   },
 };
