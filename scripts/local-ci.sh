@@ -45,6 +45,7 @@ esac
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
+export FLOW_E2E_FRESH_SERVER=1 # Playwright starts its own servers: one already on a port may serve an old build.
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
 

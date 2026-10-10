@@ -19,7 +19,8 @@ export default defineConfig({
     command:
       "pnpm exec vite build --mode development --outDir node_modules/.e2e-dist --emptyOutDir --logLevel error && node ../scripts/serve-dist.mjs node_modules/.e2e-dist 43123",
     url: "http://127.0.0.1:43123",
-    reuseExistingServer: !process.env.CI,
+    // The gate (scripts/local-ci.sh) never reuses a server on the port: it may hold an old build.
+    reuseExistingServer: !process.env.CI && !process.env.FLOW_E2E_FRESH_SERVER,
     timeout: 120_000,
     env: {
       NODE_ENV: "development",
