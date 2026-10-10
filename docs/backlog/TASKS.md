@@ -307,6 +307,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
 | <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
 | <a id="flow-437"></a>[FLOW-437](tasks/FLOW-437.md) | Month pager keeps a disabled chevron; band Back lines up with the text | SMALL UI |
+| <a id="flow-438"></a>[FLOW-438](tasks/FLOW-438.md) | The month's transactions on the project's cash month page, and the profit page in the same layout | UI (plan-first, owner card) |
 
 ## Onboarding, Settings and connectors
 

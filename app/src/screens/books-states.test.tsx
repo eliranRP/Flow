@@ -149,7 +149,7 @@ describe("rejected reads", () => {
     ))) as unknown;
     rpc.impl = (name) => Promise.resolve(name === "get_project" ? { data: wire, error: null } : { data: null, error: { message: "db down" } });
     const first = renderAt("/projects/herzl");
-    expect(await screen.findByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     first.unmount();
     // That visit was an hour ago, so the saved read is stale and is read again.
     const saved = JSON.parse(localStorage.getItem("flow-project-reads") ?? "null") as { entries: { at: number }[] };
@@ -162,10 +162,10 @@ describe("rejected reads", () => {
       return Promise.resolve({ data: null, error: { message: "db down" } });
     };
     renderAt("/projects/herzl");
-    expect(screen.getByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
     forgetProjectReads();
     resetShownCompanyForTests();
@@ -187,7 +187,7 @@ describe("rejected reads", () => {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(reads).not.toContain("list_project_groups");
     await act(async () => { answer({ data: wire, error: null }); await Promise.resolve(); });
-    expect(await screen.findByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("list_project_groups"); });
   });
 

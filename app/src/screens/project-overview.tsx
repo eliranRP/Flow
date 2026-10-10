@@ -1,7 +1,6 @@
 import { formatAmountText, type ProjectDetail } from "@flow/shared";
-import type { ReactNode } from "react";
 import { projectExpenseMinor, type ProjectCurrencyRow } from "../by-currency";
-import { List, ListRow } from "../ui/list-row";
+import { CashRows, cashAmountsText, type CashRow } from "../ui/cash-rows";
 import type { ProjectInvestment } from "./project-investment-data";
 
 type Project = NonNullable<ProjectDetail>;
@@ -9,20 +8,12 @@ type Project = NonNullable<ProjectDetail>;
 /** get_project returns at most this many recent transactions, so a full page may hide older rows. */
 export const PROJECT_RECENT_CAP = 40;
 
-/** Where each overview row goes. The screen builds them, so dev fixtures can point elsewhere. */
-export type ProjectOverviewLinks = {
+/** Where the profit page's rows go. The screen builds them, so dev fixtures can point elsewhere. */
+export type ProjectProfitLinks = {
   income: string;
   expenses: string;
-  investment: string;
-  loans: string;
-  transactions: string;
   months: string;
 };
-
-/** One figure per currency, joined: "₪400,000 · $1,200". */
-function figures(rows: readonly ProjectCurrencyRow[], pick: (row: ProjectCurrencyRow) => bigint): string {
-  return rows.map((row) => formatAmountText(pick(row), row.currency)).join(" · ");
-}
 
 /** "הון עצמי בנכס ₪850,000"; "" when there is data but no equity yet; null with nothing to show (FLOW-340 C). */
 export function investmentFigure(data: ProjectInvestment): string | null {
@@ -54,50 +45,28 @@ export function loansFigure(project: Project): string | null {
   return `${String(loans.length)} הלוואות · ${totals}`;
 }
 
-/** The lines the project page lists for its period; "40+" when the read stopped at its cap. */
-export function transactionsFigure(project: Project): string {
-  const count = project.transactions.length;
-  return count >= PROJECT_RECENT_CAP ? `${String(PROJECT_RECENT_CAP)}+` : String(count);
-}
-
-function Figure({ children }: { children: ReactNode }) {
-  return <bdi className="ui-num ui-project-row-figure" dir="ltr">{children}</bdi>;
-}
-
 /**
- * FLOW-340 C: the project page below the band is one list of one-line rows, each opening its own
- * screen. A row with nothing to show (no loan, no investment data) is left out.
+ * FLOW-438 (design lead, 2026-10-10): the profit page's rows in the cash month page's look, so the
+ * summary outweighs the lines listed under it: הכנסות in green, הוצאות, then לפי חודש. Each opens
+ * its own screen. The page's own list carries the lines, so there is no תנועות row.
  */
-export function ProjectOverviewRows({
-  project,
-  investmentData,
+export function ProjectProfitRows({
   currencyRows,
   links,
-  profitOnly = false,
+  periodWords,
 }: {
-  project: Project;
-  investmentData: ProjectInvestment;
   currencyRows: readonly ProjectCurrencyRow[];
-  links: ProjectOverviewLinks;
-  /** FLOW-419: the profit page leaves השקעה and הלוואות to their own page. */
-  profitOnly?: boolean;
+  links: ProjectProfitLinks;
+  /** "באוקטובר": the period, for a screen reader's row name. */
+  periodWords: string;
 }) {
-  const investment = profitOnly ? null : investmentFigure(investmentData);
-  const loans = profitOnly ? null : loansFigure(project);
-  return (
-    <List className="ui-project-overview">
-      <ListRow variant="item" title="הכנסות" meta={<Figure>{figures(currencyRows, (row) => row.income_minor)}</Figure>} href={links.income} chevron />
-      <ListRow variant="item" title="הוצאות" meta={<Figure>{figures(currencyRows, projectExpenseMinor)}</Figure>} href={links.expenses} chevron />
-      {investment == null ? null : (
-        <ListRow variant="item" title="השקעה" meta={investment === "" ? undefined : <span className="ui-project-row-figure">{investment}</span>} href={links.investment} chevron />
-      )}
-      {loans == null ? null : (
-        <ListRow variant="item" title="הלוואות" meta={<span className="ui-project-row-figure">{loans}</span>} href={links.loans} chevron />
-      )}
-      {project.transactions.length === 0 ? null : (
-        <ListRow variant="item" title="תנועות" meta={<Figure>{transactionsFigure(project)}</Figure>} href={links.transactions} chevron />
-      )}
-      <ListRow variant="item" title="לפי חודש" href={links.months} chevron />
-    </List>
-  );
+  const amounts = (pick: (row: ProjectCurrencyRow) => bigint) => currencyRows.map((row) => ({ currency: row.currency, minor: pick(row) }));
+  const income = amounts((row) => row.income_minor);
+  const expenses = amounts(projectExpenseMinor);
+  const rows: CashRow[] = [
+    { id: "income", label: "הכנסות", tone: "in", amounts: income, href: links.income, name: `הכנסות ${periodWords} ${cashAmountsText(income)} – פירוט` },
+    { id: "expenses", label: "הוצאות", tone: "out", amounts: expenses, href: links.expenses, name: `הוצאות ${periodWords} ${cashAmountsText(expenses)} – פירוט` },
+    { id: "months", label: "לפי חודש", tone: "out", amounts: [], href: links.months, name: "לפי חודש" },
+  ];
+  return <CashRows rows={rows} />;
 }

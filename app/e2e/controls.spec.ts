@@ -414,7 +414,7 @@ test("a project's by-month list opens a month, and Back steps back one screen at
   await page.goto("/e2e/project-detail?preview=1&section=profit");
   await page.getByRole("link", { name: /לפי חודש/ }).click();
   await expect(page).toHaveURL(/\/projects\/p1\/months\?preview=1&period=months3&at=\d{4}-\d{2}$/);
-  await page.getByRole("button", { name: "חזרה" }).click();
+  await page.getByRole("button", { name: /^חזרה/ }).first().click();
   await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1&section=profit$/);
   await page.goto("/e2e/project-months?preview=1");
   await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();
@@ -730,18 +730,16 @@ test("a preview toast stays clear of שמירה in the new-category sheet", asyn
 test("the project page lists one row per section and each opens its screen (FLOW-340 C)", async ({ page }) => {
   // FLOW-419: these rows moved to the profit page.
   await page.goto("/e2e/project-detail?preview=1&section=profit");
-  for (const name of ["הכנסות", "הוצאות", "תנועות", "לפי חודש"]) {
+  // FLOW-438: the lines are listed under the rows, so there is no תנועות row.
+  for (const name of ["הכנסות", "הוצאות", "לפי חודש"]) {
     await expect(page.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
   }
+  await expect(page.getByRole("heading", { name: "תנועות" })).toBeVisible();
   await page.getByRole("link", { name: /^הוצאות/ }).click();
   await expect(page).toHaveURL(/section=expenses/);
   await expect(page.getByRole("heading", { name: "הוצאות" })).toBeVisible();
   await page.getByRole("button", { name: /^חזרה/ }).first().click();
   await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1&section=profit$/);
-  await page.getByRole("link", { name: /^תנועות/ }).click();
-  await expect(page).toHaveURL(/section=transactions/);
-  await expect(page.getByRole("heading", { name: "תנועות" })).toBeVisible();
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
   await page.getByRole("link", { name: /^הכנסות/ }).click();
   await expect(page).toHaveURL(/\/search\?.*dir=income/);
 });
