@@ -1,9 +1,15 @@
 import type { ProjectWaitingRow } from "@flow/shared";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ProjectWaitingList } from "./review-screen";
 import { KEPT_OUT } from "./screen-shared";
+import { readTxnList } from "../txn-nav";
+
+function CardState() {
+  const location = useLocation();
+  return <p data-testid="list">{JSON.stringify(readTxnList(location.state))}</p>;
+}
 
 const line: ProjectWaitingRow = {
   review_id: null,
@@ -53,5 +59,30 @@ describe("ProjectWaitingList (FLOW-124, FLOW-125)", () => {
     expect(usdRow?.textContent).toContain("$");
     expect(usdRow?.textContent).not.toContain("₪");
     expect(screen.getByText("חשבונית 2231").closest("a")?.textContent).toContain("₪");
+  });
+
+  it("opens a card with the list's card rows, so ˄ ˅ and a swipe walk them; a change to review stays out (FLOW-314)", () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/a/waiting"]}>
+        <Routes>
+          <Route
+            path="/projects/a/waiting"
+            element={(
+              <ProjectWaitingList
+                search=""
+                rows={[
+                  { ...line, transaction_id: "t1", description: "שורה 1", doc_date: "2026-10-07" },
+                  { ...line, transaction_id: "t2", description: "שינוי", review_id: "r2", doc_date: "2026-10-06" },
+                  { ...line, transaction_id: "t3", description: "שורה 3", doc_date: "2026-10-05" },
+                ]}
+              />
+            )}
+          />
+          <Route path="/transactions/:id" element={<CardState />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("שורה 3"));
+    expect(JSON.parse(screen.getByTestId("list").textContent)).toEqual({ ids: ["t1", "t3"], from: "/projects/a/waiting" });
   });
 });

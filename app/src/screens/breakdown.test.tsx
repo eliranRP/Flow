@@ -1,11 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GROUP_BY_KEY } from "../breakdown";
 import { allTime, defaultPeriod, periodPillLabel } from "../period";
 import { BooksProvider } from "../use-books";
 import { BreakdownLinesScreen, BreakdownScreen } from "./breakdown";
+import { readTxnList } from "../txn-nav";
+
+function CardState() {
+  const location = useLocation();
+  return <p data-testid="list">{JSON.stringify(readTxnList(location.state))}</p>;
+}
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -71,6 +77,7 @@ function wrap(path: string) {
             <Route path="/flow/:direction/excluded/:currency" element={<BreakdownLinesScreen excluded />} />
             <Route path="/flow/:direction/:groupBy/:currency/:groupKey" element={<BreakdownLinesScreen />} />
             <Route path="/" element={<p>בית</p>} />
+            <Route path="/transactions/:id" element={<CardState />} />
           </Routes>
         </MemoryRouter>
       </BooksProvider>
@@ -224,6 +231,12 @@ describe("Breakdown lines screen", () => {
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "get_breakdown_lines" && (c.args as { p_offset: number }).p_offset === 40)).toBe(true);
     });
+  });
+
+  it("opens a line's card with the list, so ˄ ˅ and a swipe walk the lines (FLOW-314)", async () => {
+    wrap("/flow/expense/category/ILS/c1");
+    fireEvent.click(await screen.findByRole("link", { name: /ספק לדוגמה/ }));
+    expect(JSON.parse(screen.getByTestId("list").textContent)).toMatchObject({ ids: ["t1"], from: "/flow/expense/category/ILS/c1" });
   });
 
   it("titles a supplier group's lines by their description, not the supplier again", async () => {

@@ -33,7 +33,8 @@ function useContentUnder(mark: RefObject<HTMLElement | null>, row: RefObject<HTM
 export type TxnStepRowProps = {
   /** 1-based place of this card in the list. */
   index: number;
-  total: number;
+  /** The list's row count; null while it is not known yet (FLOW-314): the counter shows the place alone. */
+  total: number | null;
   /** No previous card: הקודמת is hidden and keeps its box. */
   atStart: boolean;
   /** No next card: הבאה is hidden and keeps its box. */
@@ -44,6 +45,8 @@ export type TxnStepRowProps = {
   nextRef?: Ref<HTMLButtonElement>;
   /** The counter; focus waits here when the pressed word is hidden at a list end. */
   countRef?: Ref<HTMLParagraphElement>;
+  /** FLOW-314: הבאה is loading the list's next page; the card stays put until it lands. */
+  nextBusy?: boolean;
 };
 
 /**
@@ -52,12 +55,12 @@ export type TxnStepRowProps = {
  * A hairline shows on top only while card content is scrolled under the row. Render it after the
  * stepped content: a 1px mark before the row tells it where that content ends.
  */
-export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevRef, nextRef, countRef }: TxnStepRowProps) {
+export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevRef, nextRef, countRef, nextBusy = false }: TxnStepRowProps) {
   const mark = useRef<HTMLDivElement>(null);
   const row = useRef<HTMLDivElement>(null);
   const under = useContentUnder(mark, row);
-  const digits = reviewCountDigits(total);
-  const place = `${String(index)} מתוך ${String(total)}`;
+  const digits = reviewCountDigits(total ?? index);
+  const place = total == null ? String(index) : `${String(index)} מתוך ${String(total)}`;
   return (
     <>
       <div ref={mark} className="ui-txn-step-end" aria-hidden="true" />
@@ -76,12 +79,16 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
           {/* The reserved digits are drawing only; a screen reader hears the plain place. */}
           <span aria-hidden="true">
             <ReviewCount value={index} digits={digits} side="index" />
-            {" מתוך "}
-            <ReviewCount value={total} digits={digits} side="total" />
+            {total == null ? null : (
+              <>
+                {" מתוך "}
+                <ReviewCount value={total} digits={digits} side="total" />
+              </>
+            )}
           </span>
           <span className="sr-only">{place}</span>
         </p>
-        <TextLink className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")} chevron={false} label="התנועה הבאה" buttonRef={nextRef} onClick={onNext}>
+        <TextLink className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")} chevron={false} label="התנועה הבאה" buttonRef={nextRef} onClick={onNext} busy={nextBusy}>
           הבאה
         </TextLink>
       </div>

@@ -10,7 +10,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
-import { TxnStepNav, txnParty, usePrefetchNeighbours, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
+import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
 import { CardSwipe } from "../ui/card-swipe";
@@ -195,6 +195,7 @@ export function TransactionScreen({
   const txn = sample ?? detail.data;
   const parent = transactionParent(txn?.project_id, search);
   usePrefetchNeighbours(nav, txn != null);
+  usePrefetchNextPage(sample?.id ?? transactionId, txn != null);
   const peekNext = useNeighbourParty(nav?.next ?? null);
   const peekPrev = useNeighbourParty(nav?.prev ?? null);
   useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
