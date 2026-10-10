@@ -295,6 +295,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
 | <a id="flow-430"></a>[FLOW-430](tasks/FLOW-430.md) | A missing recurring bill suggests a renamed supplier, and the user decides | FEATURE |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
+| <a id="flow-436"></a>[FLOW-436](tasks/FLOW-436.md) | Loan money in cash: the one-category rule keeps the owner's choice | TASK |
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
