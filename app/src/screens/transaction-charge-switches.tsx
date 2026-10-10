@@ -16,7 +16,7 @@ type PaceChange = { id: string; party: string; next: RecurringPace | null; previ
 
 /** The keys a cash or recurring switch changes: the line, Home's cash and attention box, the lists. */
 const CASH_KEYS = ["txn", "dashboard", "home", "breakdown-lines"];
-const RECURRING_KEYS = ["payment-recurring", "missing-bills", "recurring-changes", "expected-months"];
+const RECURRING_KEYS = ["payment-recurring", "missing-bills", "recurring-changes", "expected-months", "party-charges"];
 
 /**
  * FLOW-415 (layout A, a-3): נספר בתזרים and חיוב קבוע under נספר ברווח, each with an undo toast.

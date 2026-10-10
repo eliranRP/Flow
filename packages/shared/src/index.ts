@@ -163,3 +163,5 @@ export type {
   CashYear,
   CashYears,
 } from "./cash.ts";
+export { partyChargesSchema } from "./party-charges.ts";
+export type { PartyCharges } from "./party-charges.ts";
