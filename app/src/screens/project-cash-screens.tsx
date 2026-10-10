@@ -13,13 +13,16 @@ import {
   type CashListSide,
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
+import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
+  projectCashHistoryPath,
   projectCashLinesPath,
   projectCashMonthPath,
   projectCashSummaryRows,
   projectEarlierMonthRows,
   useProjectCashLinesQuery,
+  useProjectCashMonthData,
   useProjectCashMonthsQuery,
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
@@ -27,18 +30,23 @@ import { BackButton } from "../ui/back";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { CashRows } from "../ui/cash-rows";
-import { formatDayMonth } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { FocusTitle } from "../ui/focus-title";
 import { DocumentIcon } from "../ui/icons";
+import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero, SectionHead } from "../ui/layout";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
+import { MonthStepper } from "../ui/month-stepper";
+import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
+import { TextLink } from "../ui/text-link";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
+import { useProjectQuery } from "../use-books";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
 
@@ -72,6 +80,7 @@ export function ProjectCashOverview({
   investmentHref,
   stateLine,
   menu,
+  attention = [],
   example,
   now,
 }: {
@@ -84,6 +93,8 @@ export function ProjectCashOverview({
   /** The line under the name for a state other than active ("הסתיים"). */
   stateLine: string | null;
   menu: ReactNode;
+  /** Home's attention rows for this project: its late bills and income, and its changed charges. */
+  attention?: BannerRow[];
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -132,10 +143,18 @@ export function ProjectCashOverview({
           />
         </List>
       )}
+      {/* As on Home: the rows that need a hand, after the figures; an empty box hides. */}
+      <BannerRows rows={attention} />
       {earlier.length > 0 ? (
         <>
           <SectionHead title="חודשים קודמים" />
           <CashRows rows={earlier} months />
+          {/* As on Home (FLOW-417): the project's whole history, years then months, under the last month. */}
+          <p className="ui-page-pad">
+            <TextLink to={projectCashHistoryPath(project.id, search)} tone="quiet">
+              לכל החודשים
+            </TextLink>
+          </p>
         </>
       ) : null}
     </div>
@@ -151,13 +170,14 @@ export function ProjectCashMonthScreen({
   sample,
   monthKey,
   projectId: sampleProjectId,
-}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string } = {}) {
+  projectName,
+}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string; projectName?: string } = {}) {
   const params = useParams();
   const month = monthKey ?? params.month;
   const projectId = sampleProjectId ?? params.projectId ?? "";
   const search = usePreviewSearch();
   if (!isCashMonthKey(month)) return <Navigate to={`/projects/${projectId}${search}`} replace />;
-  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} />;
+  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} sampleName={projectName} />;
 }
 
 function ProjectCashMonthBody({
@@ -165,35 +185,66 @@ function ProjectCashMonthBody({
   monthKey,
   search,
   sample,
+  sampleName,
 }: {
   projectId: string;
   monthKey: string;
   search: string;
   sample?: NonNullable<CashMonths>;
+  sampleName?: string;
 }) {
   const preview = useHomePreview();
-  const query = useProjectCashMonthsQuery(projectId, sample == null);
+  // An older month (opened from the history) reads its year's months.
+  const query = useProjectCashMonthData(projectId, monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
   const back = `/projects/${projectId}${search}`;
-  if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} />;
-  }
+  // FLOW-422 (design lead): Back names the project it returns to; the page says which project it is.
+  const project = useProjectQuery(sample ? "" : projectId);
+  const kicker = sampleName ?? project.data?.name ?? undefined;
+  const navigate = useNavigate();
   const data = sample ?? query.data ?? null;
+  // FLOW-422: Home's month pager and swipe, within the months the project's read holds.
+  const opens = (key: string) => monthOf(data ?? undefined, key) != null && key <= israelToday().slice(0, 7);
+  const go = (key: string) => {
+    void navigate(projectCashMonthPath(projectId, key, search), { replace: true });
+  };
+  const earlierKey = shiftMonthKey(monthKey, -1);
+  const laterKey = shiftMonthKey(monthKey, 1);
+  const stepper = (
+    <MonthStepper
+      earlier={opens(earlierKey) ? cashTitle(earlierKey) : null}
+      later={opens(laterKey) ? cashTitle(laterKey) : null}
+      onStep={(delta) => {
+        go(delta < 0 ? earlierKey : laterKey);
+      }}
+    />
+  );
+  if (phase.kind !== "ready") {
+    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void query.refetch(); }} />;
+  }
   const month = monthOf(data ?? undefined, monthKey);
-  // The project page reads the last few months; a month outside them has no page.
+  // A month outside the project's books (or after this one) has no page.
   if (data == null || month == null) return <Navigate to={back} replace />;
   const rows = shownCashRows(month, data.base_currency);
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker="תזרים" />
-      <p className="ui-breakdown-total ui-page-pad">
-        {rows.map((row) => (
-          <span key={row.currency} className="ui-breakdown-total-line">
-            <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
-          </span>
-        ))}
-      </p>
+      <ScreenHeader layout="stacked" title={title} backTo={back} kicker={kicker} titleAside={stepper} />
+      <PeriodSwipe
+        period={monthPeriod(monthKey)}
+        allow={(next: PeriodChoice) => opens(anchorOf(next))}
+        onChange={(next) => {
+          go(anchorOf(next));
+        }}
+      >
+        <p className="ui-breakdown-total ui-page-pad">
+          {rows.map((row) => (
+            <span key={row.currency} className="ui-breakdown-total-line">
+              <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
+            </span>
+          ))}
+        </p>
+      </PeriodSwipe>
       <CashRows rows={projectCashSummaryRows(projectId, monthKey, rows, search)} />
     </div>
   );
