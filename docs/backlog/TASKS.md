@@ -282,6 +282,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-412"></a>[FLOW-412](tasks/FLOW-412.md) | Category drill-down on the cash basis | BACKLOG NIT |
 | <a id="flow-413"></a>[FLOW-413](tasks/FLOW-413.md) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
+| <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
