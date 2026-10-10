@@ -688,15 +688,34 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
-                },"recurring_overrides": {
+                },"recurring_dismissals": {
                   Row: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"party_id": string,"recurring": boolean,"set_at": string,"set_by": string | null
+                    "alert_key": string,"company_id": string,"dismissed_at": string,"kind": string,"user_id": string
                   }
                   Insert: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"party_id": string,"recurring": boolean,"set_at"?: string,"set_by"?: string | null
+                    "alert_key": string,"company_id": string,"dismissed_at"?: string,"kind": string,"user_id": string
                   }
                   Update: {
-                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"party_id"?: string,"recurring"?: boolean,"set_at"?: string,"set_by"?: string | null
+                    "alert_key"?: string,"company_id"?: string,"dismissed_at"?: string,"kind"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recurring_dismissals_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"recurring_overrides": {
+                  Row: {
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"pace": string | null,"party_id": string,"recurring": boolean | null,"set_at": string,"set_by": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"pace"?: string | null,"party_id": string,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"pace"?: string | null,"party_id"?: string,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1080,6 +1099,9 @@ isOneToOne: false
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"dismiss_recurring_alert":
+{ Args: { "p_key": string,"p_kind": string }; Returns: Json
+                           },
 "expected_months":
 { Args: { "p_months"?: number,"p_project_id"?: string,"p_today"?: string }; Returns: Json
                            },
@@ -1325,6 +1347,9 @@ isOneToOne: false
 "mcp_set_line_cash":
 { Args: { "p_idempotency_key": string,"p_in_cash": boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_line_pace":
+{ Args: { "p_idempotency_key": string,"p_pace": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_set_line_pnl":
 { Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
                            },
@@ -1446,6 +1471,9 @@ isOneToOne: false
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json
                            },
+"recurring_this_month":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "remove_member":
 { Args: { "p_user_id": string }; Returns: Json
                            },
@@ -1545,6 +1573,9 @@ isOneToOne: false
 "set_overhead_project":
 { Args: { "p_project_id": string }; Returns: undefined
                            },
+"set_payment_pace":
+{ Args: { "p_id": string,"p_pace": string }; Returns: Json
+                           },
 "set_payment_recurring":
 { Args: { "p_id": string,"p_recurring": boolean }; Returns: Json
                            },
@@ -1586,6 +1617,9 @@ isOneToOne: false
                            },
 "touch_mcp_credential":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"undismiss_recurring_alert":
+{ Args: { "p_key": string,"p_kind": string }; Returns: Json
                            },
 "undo_category_move":
 { Args: { "p_move_id": string }; Returns: undefined

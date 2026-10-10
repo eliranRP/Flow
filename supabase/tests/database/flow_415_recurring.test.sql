@@ -81,7 +81,10 @@ select is(
   'water is the one bill that did not come in'
 );
 select is(
-  (select e - 'supplier_id' - 'project_id' - 'category_id' from jsonb_array_elements(public.missing_bills('2026-10-20')) e),
+  (select e - 'supplier_id' - 'project_id' - 'category_id'
+     -- PR 2 (decision 0175) adds the party, pace, due month and key.
+     - 'direction' - 'party_id' - 'party_name' - 'due_month' - 'pace' - 'pace_source' - 'alert_key'
+   from jsonb_array_elements(public.missing_bills('2026-10-20')) e),
   jsonb_build_object(
     'supplier_name', 'Example Water', 'currency', 'ILS', 'typical_amount_minor', -48000, 'typical_day', 2,
     'expected_by', '2026-10-07', 'months_seen', 4, 'last_doc_date', '2026-09-02', 'last_amount_minor', -48000,
@@ -104,6 +107,7 @@ select is(
 );
 select is(
   (select e - 'supplier_id' - 'project_id' - 'category_id' - 'transaction_id'
+     - 'direction' - 'party_id' - 'party_name' - 'pace' - 'changed' - 'alert_key'
    from jsonb_array_elements(public.recurring_changes('2026-10-20')) e where e ->> 'supplier_name' = 'Example Power'),
   jsonb_build_object(
     'supplier_name', 'Example Power', 'currency', 'ILS', 'amount_minor', -255300, 'typical_amount_minor', -185000,
@@ -128,7 +132,7 @@ select is(public.recurring_changes('2026-10-03'), '[]'::jsonb, 'before this mont
 
 -- 10-13. One payment's switch, read.
 select is(
-  public.payment_recurring(pg_temp.id('power_10'), '2026-10-20') - 'party' - 'transaction_id',
+  public.payment_recurring(pg_temp.id('power_10'), '2026-10-20') - 'party' - 'transaction_id' - 'pace' - 'pace_override' - 'detected_pace' - 'next_due_month',
   jsonb_build_object('recurring', true, 'override', null, 'detected', true, 'typical_day', 4, 'typical_amount_minor', -185000),
   'power is recurring by the rule'
 );
@@ -138,7 +142,7 @@ select is(
   'the switch is the supplier''s, in the line''s currency'
 );
 select is(
-  public.payment_recurring(pg_temp.id('new_10'), '2026-10-20') - 'party' - 'transaction_id',
+  public.payment_recurring(pg_temp.id('new_10'), '2026-10-20') - 'party' - 'transaction_id' - 'pace' - 'pace_override' - 'detected_pace' - 'next_due_month',
   jsonb_build_object('recurring', false, 'override', null, 'detected', false, 'typical_day', null, 'typical_amount_minor', null),
   'a supplier seen once is not recurring'
 );
@@ -155,7 +159,7 @@ select is(
   'the owner turns power off; it was automatic'
 );
 select is(
-  public.payment_recurring(pg_temp.id('power_04'), '2026-10-20') - 'party' - 'transaction_id' - 'typical_day' - 'typical_amount_minor',
+  public.payment_recurring(pg_temp.id('power_04'), '2026-10-20') - 'party' - 'transaction_id' - 'pace' - 'pace_override' - 'detected_pace' - 'next_due_month' - 'typical_day' - 'typical_amount_minor',
   jsonb_build_object('recurring', false, 'override', false, 'detected', true),
   'every power payment says so, and the rule still detects it'
 );
@@ -170,7 +174,7 @@ select is(
   'the owner marks a new supplier recurring'
 );
 select is(
-  public.payment_recurring(pg_temp.id('new_10'), '2026-10-20') - 'party' - 'transaction_id',
+  public.payment_recurring(pg_temp.id('new_10'), '2026-10-20') - 'party' - 'transaction_id' - 'pace' - 'pace_override' - 'detected_pace' - 'next_due_month',
   jsonb_build_object('recurring', true, 'override', true, 'detected', false, 'typical_day', 15, 'typical_amount_minor', -5000),
   'its usual day and amount come from its one month'
 );
@@ -247,7 +251,7 @@ grant execute on function pg_temp.as_mcp() to authenticated, service_role;
 select pg_temp.as_mcp();
 select is(
   (public.mcp_set_line_recurring('rc-1', pg_temp.id('water_09'), false) -> 'data') - 'party' - 'transaction_id' - 'write_id'
-    - 'typical_day' - 'typical_amount_minor' - 'detected',
+    - 'typical_day' - 'typical_amount_minor' - 'detected' - 'pace' - 'pace_override' - 'detected_pace' - 'next_due_month',
   jsonb_build_object('recurring', false, 'override', false, 'undo_kind', 'line_recurring', 'id', pg_temp.id('water_09')),
   'set_line_recurring turns water off'
 );

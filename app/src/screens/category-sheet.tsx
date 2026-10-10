@@ -15,6 +15,7 @@ import { Toggle } from "../ui/toggle";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
 import { CategoryGroupSheet, parentChoices } from "./category-group";
 import { CategoryRenameSheet } from "./category-rename";
+import type { LoanLine } from "./category-loan-use";
 
 /**
  * FLOW-405 + FLOW-404: the sheet a category's ⋯ opens in Settings → Categories, and the move and delete it starts.
@@ -61,7 +62,7 @@ export function CategoryMenuSheet({
   /** Every category, for the move picker. */
   rows: ManagedCategory[];
   /** The fixed line a built-in loan category shows instead of the P&L, rehab, move and delete rows. */
-  loanLine: string | null;
+  loanLine: LoanLine | null;
   pnlBusy: boolean;
   onClose: () => void;
   onPnl: (category: ManagedCategory) => void;
@@ -180,7 +181,10 @@ export function CategoryMenuSheet({
             {loanLine != null ? (
               <p className="ui-cat-fixed">
                 <LockIcon size={18} />
-                {loanLine}
+                <span className="ui-cat-fixed-text">
+                  <span>{loanLine.title}</span>
+                  {loanLine.detail != null ? <span>{loanLine.detail}</span> : null}
+                </span>
               </p>
             ) : (
               <List className="ui-cat-danger">
