@@ -476,4 +476,4 @@ export const ProjectInvestmentScreen: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectInvestmentScreen320: Story = { ...ProjectInvestmentScreen, name: "Project, investment section, 320", ...at320 };
+export const ProjectInvestmentScreen320: Story = { ...ProjectInvestmentScreen, name: "Project, investment and loans section, 320", ...at320 };

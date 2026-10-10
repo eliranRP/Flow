@@ -68,7 +68,19 @@ const project: NonNullable<ProjectDetail> = {
   loans: [{ id: "l1", name: "הלוואת DSCR לדוגמה", currency: "USD", balance_minor: 21_360_000n, status: "open" }],
 };
 
-const investment = { isOverhead: false, figures: FILLED, categories: [], loans: [] };
+/** A dollar project's investment, so the row's figure is in the project's currency. */
+const usdFigures = {
+  ...FILLED,
+  currency: "USD",
+  purchaseMinor: 28_500_000n,
+  arvMinor: 41_000_000n,
+  valueMinor: 37_000_000n,
+  rehabMinor: 6_200_000n,
+  loanMinor: 21_360_000n,
+  forcedEquityMinor: 6_300_000n,
+  currentEquityMinor: 15_640_000n,
+};
+const investment = { isOverhead: false, figures: usdFigures, categories: [], loans: [] };
 const sectionTo = (target: string) => (target === "overview" ? "/projects/p-c" : `/projects/p-c/${target}`);
 
 export const ProjectCash: Story = {
