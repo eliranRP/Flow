@@ -37,6 +37,29 @@
   );
 }
 
+/* FLOW-115: loan list and loan page rows while they load: the two text lines every loaded row has
+   (title and hint, or eyebrow and title), so the list does not grow when the read lands. */
+.ui-loan-skel-rows .ui-row {
+  min-height: calc(
+    2 * var(--row-pad)
+    + var(--type-meta-size) * var(--type-meta-line)
+    + var(--type-title-3-size) * var(--type-title-3-line)
+  );
+}
+
+/* A loading line on the loan page keeps its text style's line height around the bar. */
+.ui-loan-skel-line {
+  display: flex;
+  align-items: center;
+  min-block-size: 1lh;
+  margin: 0;
+}
+
+/* The status pill's height (it holds one line of chip text) at about a short status's width. */
+.ui-loan-skel-pill {
+  inline-size: 4.5rem;
+}
+
 /* A loan's balance in a row's meta slot: the list amount size, not the hint size the slot sets,
    so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
 .ui-loan-amount {

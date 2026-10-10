@@ -61,6 +61,9 @@ export const Demand: Story = { name: "Demand", ...loan("loan-partner") };
 export const DemandDark: Story = { name: "Demand, dark", ...loan("loan-partner"), ...dark };
 export const PaidOffWithBalance: Story = { name: "Paid off with a balance left", ...loan("loan-old") };
 export const PaidOffWithBalanceDark320: Story = { name: "Paid off with a balance left, dark 320", ...loan("loan-old"), ...dark, ...at320 };
+/** FLOW-138 "Hide" (FLOW-356): נפרעה and its date lead; no balance, no תשלום חודשי and no מצב row. */
+export const PaidOffWithBalanceSE: Story = { name: "Paid off with a balance left, 375×667", ...loan("loan-old"), ...se };
+export const PaidOffWithBalanceDark: Story = { name: "Paid off with a balance left, dark", ...loan("loan-old"), ...dark };
 export const Viewer: Story = { name: "Viewer", args: { loanId: "loan-bridge", store: () => oneLoanStore("loan-bridge"), viewer: true } };
 export const ViewerDark: Story = { ...Viewer, name: "Viewer, dark", ...dark };
 export const Loading: Story = { name: "Loading", ...loan("loan-mortgage", { phase: "loading" }) };

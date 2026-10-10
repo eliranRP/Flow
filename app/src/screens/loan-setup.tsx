@@ -635,7 +635,7 @@ export function LoanSettingsSection({
       {loading ? (
         <>
           <p className="sr-only" role="status">טוען…</p>
-          <List>
+          <List className="ui-loan-skel-rows">
             <ListRow variant="skeleton" />
             <ListRow variant="skeleton" />
           </List>

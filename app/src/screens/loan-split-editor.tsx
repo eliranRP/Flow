@@ -40,7 +40,7 @@ function draftFrom(parts: ReadonlyArray<{ part: LoanSplitPart; amountMinor: bigi
 }
 
 /**
- * FLOW-106 §3.4, "חלוקת התשלום": a loan payment split other than the one tap. לפי הלוח covers
+ * FLOW-106 §3.4, "פיצול התשלום": a loan payment split other than the one tap. לפי הלוח covers
  * 1 to 12 installments with optional fees off the top (a demand loan: its accrued interest, and no
  * installments); סכומים מדויקים takes the lender's own parts. Fees name their category, and
  * "לשמור להלוואה הזו" keeps it on the loan. One שמירה, as the matched split's sheet has.
@@ -151,7 +151,7 @@ export function LoanSplitEditor({
         if (!next && saving) return;
         onOpenChange(next);
       }}
-      title="חלוקת התשלום"
+      title="פיצול התשלום"
       returnFocusRef={returnFocusRef}
       action={(
         <Button
@@ -187,7 +187,7 @@ export function LoanSplitEditor({
           />
         ) : null}
         <SegmentedControl<Mode>
-          label="אופן החלוקה"
+          label="אופן הפיצול"
           showLabel={false}
           value={mode}
           busy={saving}
@@ -220,7 +220,7 @@ export function LoanSplitEditor({
               enterKeyHint="done"
               onValueChange={setFeesRaw}
             />
-            <div className="ui-loan-parts ui-lsedit-parts" aria-label="החלוקה">
+            <div className="ui-loan-parts ui-lsedit-parts" aria-label="הפיצול">
               {LOAN_PART_ORDER.map((part) => {
                 const amount = parts.find((item) => item.part === part)?.amountMinor;
                 if (part === "fees" && (amount ?? 0n) === 0n) return null;
@@ -258,7 +258,7 @@ export function LoanSplitEditor({
               </div>
             ))}
             <div className="ui-loan-parts-total">
-              <span>{`חולקו ${money(exactCheck.totalMinor)}`}</span>
+              <span>{`פוצלו ${money(exactCheck.totalMinor)}`}</span>
               <span id={exactGap ? problemId : undefined} role="status" className={exactCheck.leftMinor < 0n ? "ui-split-bad" : undefined}>
                 {exactCheck.leftMinor > 0n ? "חסרים " : exactCheck.leftMinor < 0n ? "עודף " : "נשאר "}
                 <bdi className="ui-num" dir="ltr">{money(exactCheck.leftMinor < 0n ? -exactCheck.leftMinor : exactCheck.leftMinor)}</bdi>
