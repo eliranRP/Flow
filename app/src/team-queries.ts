@@ -1,13 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useAuth } from "./auth";
-import { writeRoleCache } from "./company-role-cache";
+import { MY_COMPANIES_KEY, writeRoleCache } from "./company-role-cache";
 import { setShownCompany, shownCompanyFor } from "./lib/company-header";
 import { pinReviewLine } from "./review-pin";
 import { useTeamApi, type MyCompanies } from "./team-api";
 
-/** FLOW-601: the switcher's list and the shown company's role share this one read. */
-export const MY_COMPANIES_KEY = "my-companies";
+export { MY_COMPANIES_KEY };
 export const TEAM_KEY = "team";
 export const MY_INVITES_KEY = "my-invites";
 
@@ -46,7 +45,9 @@ export function useMyCompaniesQuery(active = true) {
     retry: false,
     // FLOW-804: read once a minute at most, not on every screen that asks for the role. A switch,
     // an accepted invite and sign-out start every read over; the server checks each write anyway.
-    staleTime: 60_000,
+    // An answer with no company yet stays stale: an invite accepted in another tab makes this user
+    // a viewer, and "no company" must not keep showing them an owner's controls.
+    staleTime: (cached: { state: { data?: MyCompanies } }) => (cached.state.data?.role == null ? 0 : 60_000),
     queryFn: async ({ signal }): Promise<MyCompanies> => {
       if (userId == null) throw new Error("no user");
       const sent = shownCompanyFor(userId);

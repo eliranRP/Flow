@@ -1,5 +1,6 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
+import { MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
 
@@ -21,6 +22,20 @@ export type WriteFailure = string | {
 /** A database refusal is final. Retry is for a dropped connection or a server error. */
 export function isTransientWriteError(error: Error): boolean {
   return /failed to fetch|networkerror|network request failed|load failed|timeout|econnreset|econnrefused|bad gateway|gateway|internal server error|\b500\b|\b502\b|\b503\b|\b504\b/i.test(error.message);
+}
+
+/**
+ * The server refused because this user may not write the company shown (decision 0167). The books'
+ * write RPCs say "no company" when the user only reads it: a viewer, or one the app still took for
+ * an owner because it read the role before an invite made them a viewer.
+ */
+export function isReadOnlyRefusal(error: Error): boolean {
+  return error.message.trim() === "no company";
+}
+
+/** Any refusal of this user's role. The screen's own copy still words a "forbidden". */
+function isRoleRefusal(error: Error): boolean {
+  return isReadOnlyRefusal(error) || (error as Error & { code?: unknown }).code === "42501" || error.message.trim() === "forbidden";
 }
 
 function failureMessage(failure: WriteFailure): string {
@@ -52,6 +67,7 @@ export function useWrite<T = void>(options: {
   place?: "page" | "tab" | "bar";
 }) {
   const toast = useToast();
+  const client = useQueryClient();
   const invalidate = useInvalidateBooks();
   const retry = useRef<(payload: T) => void>(() => undefined);
   const retryToast = useRef<number | null>(null);
@@ -72,7 +88,13 @@ export function useWrite<T = void>(options: {
     onError: (error, payload) => {
       const failure = error instanceof Error ? error : new Error("failed");
       options.onError?.(failure, payload);
+      // Read the role again, so the screen drops the controls this user cannot use.
+      if (isRoleRefusal(failure)) void client.invalidateQueries({ queryKey: [MY_COMPANIES_KEY] });
       if (options.silent?.(failure) === true) return;
+      if (isReadOnlyRefusal(failure)) {
+        toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", message: VIEWER_NOTE });
+        return;
+      }
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
       const retryable = failureRetries(reported, failure);
       const tone = typeof reported === "string" ? "bad" : (reported.tone ?? "bad");
