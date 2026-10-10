@@ -207,3 +207,42 @@ Deno.test("the P&L reads default to the company's date choice and echo it (FLOW-
   if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "refused");
   assertEquals(refused.calls.length, 0);
 });
+
+Deno.test("get_project_cash_months reads one project's months, 4 by default", async () => {
+  const report = { basis: "paid", base_currency: "USD", months: [] };
+  const { calls, rpc } = rpcOf((name) => name === "project_cash_months" ? { status: 200, json: report } : { status: 500, json: null });
+  const result = await callTool("get_project_cash_months", { project_id: PROJECT }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  if (result.structuredContent.ok) assertEquals(result.structuredContent.data, report);
+  await callTool("get_project_cash_months", { project_id: PROJECT, months: 12 }, ["read"], rpc);
+  assertEquals(calls.map((call) => call.body), [
+    { p_project: PROJECT, p_months: 4 },
+    { p_project: PROJECT, p_months: 12 },
+  ]);
+});
+
+Deno.test("get_project_cash_months refuses bad arguments before any read, and says not_found for another company's project", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: null }));
+  for (const args of [{}, { project_id: "nope" }, { project_id: PROJECT, months: 0 }, { project_id: PROJECT, months: 25 }]) {
+    const result = await callTool("get_project_cash_months", args, ["read"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
+  const missing = await callTool("get_project_cash_months", { project_id: PROJECT }, ["read"], rpc);
+  assertEquals(missing.isError, true);
+  if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error.code, "not_found");
+});
+
+Deno.test("get_project_cash_lines takes get_cash_lines' arguments plus the project", async () => {
+  const page = { rows: [{ transaction_id: TXN, side: "out", amount_minor: 600, shared: true }], has_more: false };
+  const { calls, rpc } = rpcOf((name) => name === "project_cash_month_lines" ? { status: 200, json: page } : { status: 500, json: null });
+  const result = await callTool("get_project_cash_lines", { project_id: PROJECT, month: "2026-09", side: "out" }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  if (result.structuredContent.ok) assertEquals(result.structuredContent.data, page);
+  const bad = await callTool("get_project_cash_lines", { project_id: PROJECT, month: "2026-09", side: "both" }, ["read"], rpc);
+  assertEquals(bad.isError, true);
+  assertEquals(calls, [
+    { name: "project_cash_month_lines", body: { p_project: PROJECT, p_month: "2026-09-01", p_side: "out", p_currency: null, p_limit: 40, p_offset: 0 } },
+  ]);
+});

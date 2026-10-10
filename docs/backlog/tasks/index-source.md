@@ -254,6 +254,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-359
 - FLOW-361
 - FLOW-362
+- FLOW-420
 - FLOW-346
 
 ## Projects and reports
@@ -276,6 +277,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-415
 - FLOW-416
 - FLOW-417
+- FLOW-419
 
 ## Onboarding, Settings and connectors
 

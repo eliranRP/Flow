@@ -1,0 +1,1 @@
+The pre-push gate no longer runs Playwright against a server already on the e2e or Storybook port. It always starts its own from this push's build, so an old dev server can't turn main red (code-field swipe at 320 and 390). Running Playwright by hand still reuses a running server. No migration.
