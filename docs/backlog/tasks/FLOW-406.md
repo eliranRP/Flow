@@ -13,4 +13,4 @@
   - [x] Settings → Categories drill-in (cat-b, cat-b-2), #378 (owner OK on the real-app shots, 2026-10-09).
   - [x] Project page: sub-categories fold under their parent (list_categories' parent_id), #378.
   - [x] Project groups (proj-b, proj-b-2) and the grouped picker, #418 (UI lane 4).
-  - [ ] The starter pick, after server 3.
+  - [x] The starter pick, after server 3. (UI lane 3, #420: right after the company step, כללי picked on arrival, one המשך; owner shipped it 2026-10-10)
