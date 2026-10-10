@@ -30,7 +30,7 @@ export type MissingBillView = {
   match: MissingBillMatch | null;
 };
 
-/** FLOW-430 (decision 0178): the pair `answer_recurring_match` takes, and the hint's words. */
+/** FLOW-430 (decision 0179): the pair `answer_recurring_match` takes, and the hint's words. */
 export type MissingBillMatch = {
   direction: "expense" | "income";
   partyId: string;

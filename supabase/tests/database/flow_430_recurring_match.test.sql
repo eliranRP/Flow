@@ -1,4 +1,4 @@
--- FLOW-430 (decision 0178). A late recurring bill suggests a renamed supplier (missing_bills'
+-- FLOW-430 (decision 0179). A late recurring bill suggests a renamed supplier (missing_bills'
 -- suggestion), and the user's answer (answer_recurring_match, mcp_answer_recurring_match) decides:
 -- private.recurring_parties, private.recurring_arrivals and private.payment_party follow it.
 -- Invented data only. Amounts are cents. "Today" is 2026-10-20.

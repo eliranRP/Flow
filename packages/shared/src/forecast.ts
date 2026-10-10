@@ -43,7 +43,7 @@ export const missingBillSchema = z.object({
   /** The key `dismiss_recurring_alert('missing', …)` takes. */
   alert_key: z.string().optional(),
   /**
-   * FLOW-430 (decision 0178): a party that may be this one under another name, for the user to
+   * FLOW-430 (decision 0179): a party that may be this one under another name, for the user to
    * answer with `answer_recurring_match`; null when there is none.
    */
   suggestion: z

@@ -1,4 +1,4 @@
-import { formatAmountText, formatMoney, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
+import { formatAmountText, formatMoney, type PartyCharges, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
@@ -32,6 +32,7 @@ import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
 import type { LineSplitRead } from "../line-split";
 import { TxnChargeSwitches } from "./transaction-charge-switches";
+import { TxnPartyCharges } from "./transaction-party-charges";
 import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { projectChoices } from "../project-groups";
@@ -129,6 +130,7 @@ export function TransactionScreen({
   sampleCategories,
   sampleLineSplit,
   sampleRecurring,
+  sampleCharges,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
@@ -138,6 +140,8 @@ export function TransactionScreen({
   sampleLineSplit?: LineSplitRead | null;
   /** FLOW-415: a story's recurring switch, in place of the payment_recurring read. */
   sampleRecurring?: PaymentRecurring | null;
+  /** FLOW-431: a story's party charges, in place of the party_charges read. */
+  sampleCharges?: PartyCharges | null;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -543,6 +547,8 @@ export function TransactionScreen({
               {pnlPill}
             </div>
           ) : null}
+          {/* FLOW-431 (pick B): the month against the party's usual amount; a tap opens its charges. */}
+          <TxnPartyCharges transactionId={txn.id} sample={sample ? (sampleCharges ?? null) : undefined} />
         </div>
         <List>
           {holdWrites ? (

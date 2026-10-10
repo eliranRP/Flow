@@ -1,4 +1,4 @@
--- FLOW-430 (decision 0178): a late recurring bill suggests a renamed supplier, and the user
+-- FLOW-430 (decision 0179): a late recurring bill suggests a renamed supplier, and the user
 -- decides. When a supplier's bill comes in under a different name it becomes a new supplier, and
 -- the recurring one stays late. Nothing merges by itself (the owner's rule, 2026-10-10):
 -- - public.recurring_matches keeps the company's answer for a pair: the recurring party and the
@@ -34,7 +34,7 @@ create unique index recurring_matches_one_same_idx
 create index recurring_matches_set_by_idx on public.recurring_matches (set_by);
 
 comment on table public.recurring_matches is
-  'FLOW-430. The company''s answer to a suggested match for a recurring supplier (or customer): the same party under another name, or not. Same counts the other party''s lines as the recurring one''s. Decision 0178.';
+  'FLOW-430. The company''s answer to a suggested match for a recurring supplier (or customer): the same party under another name, or not. Same counts the other party''s lines as the recurring one''s. Decision 0179.';
 
 -- Only the functions below read and write it.
 alter table public.recurring_matches enable row level security;

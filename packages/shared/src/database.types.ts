@@ -1468,6 +1468,9 @@ isOneToOne: false
 "owner_company_for":
 { Args: { "p_hint"?: string,"p_user": string }; Returns: string
                            },
+"party_charges":
+{ Args: { "p_id": string,"p_today"?: string }; Returns: Json
+                           },
 "payment_recurring":
 { Args: { "p_id": string,"p_today"?: string }; Returns: Json
                            },
