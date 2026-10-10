@@ -43,14 +43,7 @@ import { LoanDetailScreen } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
-import {
-  SAMPLE_EXPECTED,
-  SAMPLE_EXPECTED_EMPTY,
-  SAMPLE_MISSING_BILLS,
-  SAMPLE_MISSING_INCOME,
-  SAMPLE_RECURRING_CHANGES,
-  SAMPLE_RECURRING_THIS_MONTH,
-} from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
