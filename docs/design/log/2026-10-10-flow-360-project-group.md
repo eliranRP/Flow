@@ -8,3 +8,4 @@
   - Every move toasts with ביטול: "הפרויקט עבר לקבוצה …", or "הפרויקט הוצא מהקבוצה …" for בלי קבוצה. ביטול puts the project back.
 - Rule: a project's group is changed from the project, never from the Projects tab; the tab only shows groups.
 - Shots: mockups/flow-360-build/ in the project files.
+- Follow-up: a new group name the server refuses (taken, too short, too long) shows under the "שם הקבוצה" field, where it was typed, instead of in a toast.

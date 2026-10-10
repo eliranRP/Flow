@@ -53,18 +53,31 @@ export function groupNameError(value: string): string | undefined {
   return undefined;
 }
 
+/** The name as upsert_project_group stores it: trimmed, inner wide spaces made plain (private.trim_name). */
+export function cleanGroupName(value: string): string {
+  return value.trim().replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
+}
+
 /** What the toast says after a move: into a group, or out of one. */
 export function groupMoveMessage(after: string | null, before: string | null): string {
   if (after != null) return `הפרויקט עבר לקבוצה ${after}`;
   return before != null ? `הפרויקט הוצא מהקבוצה ${before}` : "הפרויקט בלי קבוצה";
 }
 
+const GROUP_NAME_TAKEN = "כבר יש קבוצה בשם הזה.";
+
+/** A refusal about the new group's name, which belongs on the name field rather than in a toast. */
+function groupNameRefusal(error: Error): string | undefined {
+  if (error.message.includes("already exists")) return GROUP_NAME_TAKEN;
+  if (error.message.includes("too short")) return `שם קצר מדי – לפחות ${String(GROUP_NAME_MIN)} תווים`;
+  if (error.message.includes("too long")) return `שם ארוך מדי – עד ${String(GROUP_NAME_MAX)} תווים`;
+  return undefined;
+}
+
 function groupFailureText(error: Error): string {
   if ((error as Error & { code?: string }).code === "42501" || error.message.includes("forbidden")) {
     return "רק בעלי העסק יכולים לשנות קבוצה.";
   }
-  if (error.message.includes("already exists")) return "כבר יש קבוצה בשם הזה.";
-  if (error.message.includes("too short")) return `שם קצר מדי – לפחות ${String(GROUP_NAME_MIN)} תווים`;
   return "לא הצלחנו לשנות את הקבוצה.";
 }
 
@@ -132,8 +145,12 @@ export function ProjectGroupSheets({
         }),
       });
     },
-    onError: () => {
+    // A refused new group name shows on the field, next to what caused it; other failures toast.
+    silent: (failed) => groupNameRefusal(failed) != null,
+    onError: (failed) => {
       setSavingId(null);
+      const refusal = groupNameRefusal(failed);
+      if (refusal) setError(refusal);
     },
     run: async (change) => {
       if (change.create != null && sample) created.current = { id: "new", name: change.create.trim() };
@@ -175,13 +192,14 @@ export function ProjectGroupSheets({
     const problem = groupNameError(name);
     setError(problem);
     if (problem) return;
-    const existing = groups.find((group) => group.name === name.trim());
+    const clean = cleanGroupName(name);
+    const existing = groups.find((group) => group.name === clean);
     if (existing) {
       pick(existing.id);
       return;
     }
     if (blocked()) return;
-    move.mutate({ to: null, create: name, from: currentId });
+    move.mutate({ to: null, create: clean, from: currentId });
   };
 
   return (
