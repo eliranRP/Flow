@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useLocation } from "react-router-dom";
 import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon } from "../ui/icons";
-import { splitCents, withCents } from "../ui/big-number";
+import { splitCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { RadioRow } from "../ui/radio-row";
@@ -180,9 +180,9 @@ function loanRowHint(row: LoanBalanceRow): string | undefined {
   return project ?? undefined;
 }
 
-/** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
+/** A balance with its agorot drawn small, none on a whole amount (FLOW-501, decision 0120). */
 function LoanBalance({ minor, currency }: { minor: bigint; currency: string }) {
-  const { whole, cents } = splitCents(withCents(showMoney(minor, currency)), "detail");
+  const { whole, cents } = splitCents(showMoney(minor, currency), "detail");
   return (
     <bdi className="ui-num ui-loan-amount" dir="ltr">
       {whole}
@@ -217,7 +217,7 @@ export function LoanBalanceList({
             key={row.id}
             variant="button"
             {...common}
-            label={`${row.name}, ${withCents(showMoney(row.balanceMinor, row.currency))}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
+            label={`${row.name}, ${showMoney(row.balanceMinor, row.currency)}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
             chevron
             buttonRef={(node) => { rowRef?.(row.id, node); }}
             onClick={() => { onOpen(row); }}

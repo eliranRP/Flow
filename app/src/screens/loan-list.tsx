@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LoanKind, LoanStatus } from "@flow/shared";
-import { splitCents, withCents } from "../ui/big-number";
+import { splitCents } from "../ui/big-number";
 import { formatDisplay } from "../ui/date-math";
 import { DisclosureGroup } from "../ui/disclosure-group";
 import { BankIcon } from "../ui/icons";
@@ -75,9 +75,9 @@ export function showsLoanBalance(row: LoanListRow): boolean {
   return !(row.status === "closed" && row.balanceMinor === 0n);
 }
 
-/** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
+/** A balance with its agorot drawn small, none on a whole amount (FLOW-501, decision 0120). */
 export function LoanBalance({ minor, currency, className }: { minor: bigint; currency: string; className?: string }) {
-  const { whole, cents } = splitCents(withCents(showMoney(minor, currency)), "detail");
+  const { whole, cents } = splitCents(showMoney(minor, currency), "detail");
   return (
     <bdi className={className == null ? "ui-num ui-loan-amount" : `ui-num ui-loan-amount ${className}`} dir="ltr">
       {whole}
@@ -103,7 +103,7 @@ function LoanRows({
       {rows.map((row) => {
         const hint = loanListHint(row);
         const parts = loanListHintParts(row);
-        const balance = showsLoanBalance(row) ? withCents(showMoney(row.balanceMinor, row.currency)) : null;
+        const balance = showsLoanBalance(row) ? showMoney(row.balanceMinor, row.currency) : null;
         const common = {
           title: row.name,
           icon: <BankIcon />,

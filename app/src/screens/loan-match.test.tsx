@@ -254,9 +254,9 @@ describe("LoanBalanceList", () => {
     );
     expect(screen.getByText("הלוואת דוגמה")).toBeInTheDocument();
     const amount = screen.getByText("₪117,000");
-    // FLOW-501: cents are drawn small, ".00" included.
-    expect(amount).toHaveTextContent("₪117,000.00");
-    expect(amount.querySelector(".ui-num-cents")).toHaveTextContent(".00");
+    // A whole balance shows no ".00" (owner, 2026-10-10).
+    expect(amount).toHaveTextContent(/^₪117,000$/);
+    expect(amount.querySelector(".ui-num-cents")).toBeNull();
     expect(screen.getByText("ממתין לבדיקה")).toBeInTheDocument();
   });
 
