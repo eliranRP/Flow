@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(32);
+select plan(34);
 
 do $users$
 begin
@@ -298,6 +298,26 @@ select ok(
   and not has_function_privilege('anon', 'public.recurring_this_month(date)', 'execute')
   and not has_function_privilege('anon', 'public.set_payment_pace(uuid, text)', 'execute'),
   'the dismissals are read only through the functions'
+);
+
+-- 33-34. FLOW-913: a row says how many of this month's lines its amount sums.
+select is(
+  (select jsonb_agg(jsonb_build_array(e ->> 'party_name', (e ->> 'line_count')::integer) order by ord)
+   from jsonb_array_elements(public.recurring_this_month('2026-10-20')) with ordinality x(e, ord)),
+  '[["Example Power", 1], ["Example Steady", 1], ["Example Tenant", 1]]'::jsonb,
+  'one line each this month'
+);
+insert into rp (label, id) values ('tenant_10b', tests.fixture_line(
+  pg_temp.id('co'), 'rp:tenant_10b', 100000, 'income', null, null, '2026-10-12',
+  p_pnl_role => null, p_doc_kind => 'invoice'
+));
+update public.transactions set customer_id = pg_temp.id('tenant') where id = pg_temp.id('tenant_10b');
+select is(
+  (select jsonb_build_array((e ->> 'line_count')::integer, (e ->> 'amount_minor')::bigint)
+   from jsonb_array_elements(public.recurring_this_month('2026-10-20')) e
+   where e ->> 'party_name' = 'Example Tenant'),
+  '[2, 600000]'::jsonb,
+  'a second rent this month: two lines, summed'
 );
 
 select * from finish();

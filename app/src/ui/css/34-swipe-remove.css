@@ -43,3 +43,25 @@
 .ui-sremove[data-drag]:not([data-leaving]) .ui-sremove-row {
   transition: none;
 }
+
+/* FLOW-913: a one-time peek. The row slides toward the start side and back, showing the word under it. */
+.ui-sremove[data-peek] .ui-sremove-under {
+  visibility: visible;
+  transition: none;
+}
+
+.ui-sremove[data-peek] .ui-sremove-row {
+  animation: ui-sremove-peek 900ms var(--ease-standard) 400ms both;
+}
+
+@keyframes ui-sremove-peek {
+  0%,
+  100% {
+    transform: none;
+  }
+
+  40%,
+  60% {
+    transform: translateX(var(--sremove-peek, 72px));
+  }
+}

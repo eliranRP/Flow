@@ -43,15 +43,21 @@ export function swipeRemoves(dx: number, elapsedMs: number, width: number, isRtl
   return move > 0 && swipeStep(move, elapsedMs, width) === -1;
 }
 
+/** FLOW-913: how far the one-time peek slides the row toward the start side. */
+const PEEK_PX = 72;
+
 export function SwipeRemove({
   onRemove,
   disabled = false,
   label = "הסרה",
+  peek = false,
   children,
 }: {
   onRemove: () => void;
-  /** The word under the row: "הסרה", or "הסתרה" for an alert hidden for this user (FLOW-415). */
+  /** The word under the row: "הסרה", or "סגירה" for an alert closed for this user (FLOW-415, FLOW-913). */
   label?: string;
+  /** FLOW-913: on mount the row slides a little toward the start and back once, showing the word under it. */
+  peek?: boolean;
   /** While the editor is busy or locked, the row stays put. */
   disabled?: boolean;
   children: ReactNode;
@@ -70,6 +76,19 @@ export function SwipeRemove({
   useEffect(() => () => {
     if (leaving.current != null) window.clearTimeout(leaving.current);
   }, []);
+
+  useEffect(() => {
+    const box = frame.current;
+    if (!peek || !box || reducedMotion()) return;
+    box.style.setProperty("--sremove-peek", `${String(rtl() ? PEEK_PX : -PEEK_PX)}px`);
+    box.setAttribute("data-peek", "");
+    const done = () => { box.removeAttribute("data-peek"); };
+    box.addEventListener("animationend", done, { once: true });
+    return () => {
+      box.removeEventListener("animationend", done);
+      done();
+    };
+  }, [peek]);
 
   function place(shift: number | null) {
     const node = row.current;

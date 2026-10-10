@@ -34,8 +34,8 @@ const full: RecurringSample = {
   changes: SAMPLE_RECURRING_CHANGES,
 };
 
-// FLOW-415 (owner 08:43Z, frame b-2): "קבועים", opened from Home's pending card. A late row and a
-// change hide with ✕ or a swipe; the rest are plain.
+// FLOW-415 (owner 08:43Z, frame b-2): "קבועים", opened from Home's pending card. FLOW-913 layout A:
+// one line per row; a late row and a change close by swipe, or with "סגירה" under עריכה.
 export const MissingBills: Story = { name: "Recurring", render: () => <Recurring sample={full} /> };
 export const MissingBillsDark: Story = { ...MissingBills, name: "Recurring, dark", ...dark };
 export const MissingBills320: Story = { ...MissingBills, name: "Recurring, 320", ...at320 };
