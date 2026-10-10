@@ -1,4 +1,4 @@
-import type { MissingBill, RecurringChange, RecurringPace } from "@flow/shared";
+import { formatAmountText, type MissingBill, type RecurringChange, type RecurringPace } from "@flow/shared";
 import { abs, partyName } from "./forecast";
 import { searchHref } from "./search";
 import { PACE_LABEL } from "./ui/charge-switches";
@@ -26,7 +26,36 @@ export type MissingBillView = {
   href: string;
   /** FLOW-415 (owner, 08:41Z): the key that hides this row for this user; null on an older server. */
   alertKey: string | null;
+  /** FLOW-430: a supplier that may be this one under another name, for the user to answer. */
+  match: MissingBillMatch | null;
 };
+
+/** FLOW-430 (decision 0179): the pair `answer_recurring_match` takes, and the hint's words. */
+export type MissingBillMatch = {
+  direction: "expense" | "income";
+  partyId: string;
+  matchPartyId: string;
+  /** The suggested name. */
+  name: string;
+  /** Its newest line's amount, "$57.79", and date, "06/10". */
+  amount: string;
+  date: string;
+};
+
+/** FLOW-430: the suggestion's hint and pair, or null when the row has none (or an older server). */
+export function missingBillMatch(row: MissingBill, now = new Date()): MissingBillMatch | null {
+  const found = row.suggestion;
+  if (found == null || row.party_id == null) return null;
+  const name = found.party_name || "ללא שם";
+  return {
+    direction: row.direction ?? "expense",
+    partyId: row.party_id,
+    matchPartyId: found.party_id,
+    name,
+    amount: formatAmountText(abs(found.amount_minor), row.currency, { detail: true }),
+    date: formatDayMonth(found.doc_date, now),
+  };
+}
 
 /** Search with the party's name typed and its side set, keeping the preview flag. */
 export function missingBillHref(name: string, search: string, income = false): string {
@@ -59,6 +88,7 @@ export function missingBillViews(rows: readonly MissingBill[], search: string, n
       currency: row.currency,
       href: missingBillHref(name === "ללא שם" ? "" : name, search, income),
       alertKey: row.alert_key ?? null,
+      match: missingBillMatch(row, now),
     };
   });
 }

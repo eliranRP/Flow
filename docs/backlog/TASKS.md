@@ -181,6 +181,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-114"></a>[FLOW-114](tasks/FLOW-114.md) | Loans server follow-ups | BACKLOG NIT |
 | <a id="flow-115"></a>[FLOW-115](tasks/FLOW-115.md) | Loan screens UI follow-ups | BACKLOG NIT |
 | <a id="flow-414"></a>[FLOW-414](tasks/FLOW-414.md) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG |
+| <a id="flow-434"></a>[FLOW-434](tasks/FLOW-434.md) | Loan page: next payment, year total and what was paid | UI |
 
 ## MCP
 
@@ -267,6 +268,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-422"></a>[FLOW-422](tasks/FLOW-422.md) | A project's month page steps months like Home's | SMALL UI |
 | <a id="flow-423"></a>[FLOW-423](tasks/FLOW-423.md) | A fixed way into קבועים from Home | SMALL UI |
 | <a id="flow-424"></a>[FLOW-424](tasks/FLOW-424.md) | Cycle 18 polish on lists, קבועים and the usual-amount chip | SMALL UI |
+| <a id="flow-425"></a>[FLOW-425](tasks/FLOW-425.md) | Split rows keep their amounts whole, and the first sheet opens at once | SMALL UI |
+| <a id="flow-426"></a>[FLOW-426](tasks/FLOW-426.md) | The viewer toast wraps whole, and the update reload never drops the user's place | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
@@ -291,7 +294,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-432"></a>[FLOW-432](tasks/FLOW-432.md) | Show a split line's parts on the list row | UI |
 | <a id="flow-418"></a>[FLOW-418](tasks/FLOW-418.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
+| <a id="flow-430"></a>[FLOW-430](tasks/FLOW-430.md) | A missing recurring bill suggests a renamed supplier, and the user decides | FEATURE |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
+| <a id="flow-436"></a>[FLOW-436](tasks/FLOW-436.md) | Loan money in cash: the one-category rule keeps the owner's choice | TASK |
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |

@@ -95,7 +95,7 @@ describe("rates", () => {
 describe("kinds", () => {
   it("names each kind with its months", () => {
     expect(kindValue(SAMPLE_AMORTIZING)).toBe("רגילה · 360 חודשים");
-    expect(kindValue(SAMPLE_INTEREST_ONLY)).toBe("ריבית בלבד · 6 מתוך 24 חודשים");
+    expect(kindValue(SAMPLE_INTEREST_ONLY)).toBe("ריבית בלבד · 12 מתוך 24 חודשים");
     expect(kindValue({ kind: "balloon", termMonths: 60, interestOnlyMonths: null, amortizationMonths: 360 })).toBe("בלון · פריסה 360, נגמרת אחרי 60");
     expect(kindValue(SAMPLE_DEMAND)).toBe("לפי דרישה · ריבית יומית, 365 יום");
   });

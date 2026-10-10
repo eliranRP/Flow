@@ -203,3 +203,39 @@ Deno.test("set_line_pace calls its writer, validates the pace, and undo takes li
     { name: "mcp_undo", body: { p_idempotency_key: "u-2", p_kind: "line_pace", p_id: TXN } },
   ]);
 });
+
+Deno.test("answer_recurring_match calls its writer, validates the pair, and undo takes recurring_match", async () => {
+  const OTHER = "22222222-2222-4222-8222-222222222222";
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: OTHER, undo_kind: "recurring_match" } } }));
+  for (
+    const [name, args] of [
+      ["answer_recurring_match", { idempotency_key: "m-1", direction: "expense", party_id: TXN, match_party_id: OTHER, same: true }],
+      ["answer_recurring_match", { idempotency_key: "m-2", direction: "income", party_id: TXN, match_party_id: OTHER, same: null }],
+      ["undo", { idempotency_key: "u-3", kind: "recurring_match", id: OTHER }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", direction: "transfer", party_id: TXN, match_party_id: OTHER, same: true },
+      { idempotency_key: "k", direction: "expense", party_id: TXN, same: true },
+      { idempotency_key: "k", direction: "expense", party_id: TXN, match_party_id: OTHER, same: "yes" },
+    ]
+  ) {
+    const result = await callTool("answer_recurring_match", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true);
+  }
+  assertEquals(calls, [
+    {
+      name: "mcp_answer_recurring_match",
+      body: { p_idempotency_key: "m-1", p_direction: "expense", p_party_id: TXN, p_match_party_id: OTHER, p_same: true },
+    },
+    {
+      name: "mcp_answer_recurring_match",
+      body: { p_idempotency_key: "m-2", p_direction: "income", p_party_id: TXN, p_match_party_id: OTHER, p_same: null },
+    },
+    { name: "mcp_undo", body: { p_idempotency_key: "u-3", p_kind: "recurring_match", p_id: OTHER } },
+  ]);
+});

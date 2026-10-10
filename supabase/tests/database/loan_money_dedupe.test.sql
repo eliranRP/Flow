@@ -1,11 +1,12 @@
 -- FLOW-413 follow-up (decision 0168): one loan money category per company. A company with an
 -- income category of its own for loan money, kept out of the P&L, loses the seeded duplicate
--- while nothing uses it, and its own category leaves cash in its place.
+-- while nothing uses it. Its own category keeps whether it counts in cash (FLOW-436: loan money
+-- counts in cash, and the owner switches it off).
 -- Invented data only.
 
 begin;
 
-select plan(14);
+select plan(15);
 
 do $users$
 begin
@@ -13,6 +14,7 @@ begin
   perform tests.create_supabase_user('lmd_used', 'lmd-used@example.com');
   perform tests.create_supabase_user('lmd_none', 'lmd-none@example.com');
   perform tests.create_supabase_user('lmd_kept_in', 'lmd-kept-in@example.com');
+  perform tests.create_supabase_user('lmd_off', 'lmd-off@example.com');
 end
 $users$;
 
@@ -23,7 +25,8 @@ insert into lmd (label, id) values
   ('own', tests.fixture_company('lmd_own', 'Example Own Loans LLC')),
   ('used', tests.fixture_company('lmd_used', 'Example Used Loans LLC')),
   ('none', tests.fixture_company('lmd_none', 'Example No Loans LLC')),
-  ('kept_in', tests.fixture_company('lmd_kept_in', 'Example Kept In LLC'));
+  ('kept_in', tests.fixture_company('lmd_kept_in', 'Example Kept In LLC')),
+  ('off', tests.fixture_company('lmd_off', 'Example Off LLC'));
 
 create or replace function pg_temp.id(p_label text)
 returns uuid
@@ -46,7 +49,10 @@ select isnt(pg_temp.seeded('own'), null, 'every company starts with the seeded l
 insert into lmd (label, id) values
   ('own_loans', tests.fixture_category(pg_temp.id('own'), 'Loans received', 'income', true)),
   ('used_loans', tests.fixture_category(pg_temp.id('used'), 'הלוואות שהתקבלו', 'income', true)),
-  ('kept_in_loans', tests.fixture_category(pg_temp.id('kept_in'), 'Loan interest income', 'income', false));
+  ('kept_in_loans', tests.fixture_category(pg_temp.id('kept_in'), 'Loan interest income', 'income', false)),
+  ('off_loans', tests.fixture_category(pg_temp.id('off'), 'Loan proceeds', 'income', true));
+-- The owner of 'off' switched its loan money out of cash.
+update public.categories set in_cash = false where id = pg_temp.id('off_loans');
 insert into lmd (label, id) values
   ('used_line', tests.fixture_line(pg_temp.id('used'), 'lmd:used', 500000, 'income', null,
     pg_temp.seeded('used'), '2026-06-03', p_pnl_role => null, p_doc_kind => 'invoice_receipt'));
@@ -65,13 +71,18 @@ select ok(not private.loan_money_category('income', false, 'Loans received'), 'a
 select ok(not private.loan_money_category('expense', true, 'Loan principal'), 'an expense category is not');
 select ok(not private.loan_money_category('income', true, 'Sloane rent'), 'a word that only contains loan is not');
 
-select is(private.dedupe_loan_money_categories(), 1, 'the cleanup removes one duplicate');
+select is(private.dedupe_loan_money_categories(), 2, 'the cleanup removes the two unused duplicates');
 
 select is(pg_temp.seeded('own'), null, 'the unused duplicate is gone');
 select is(
   (select in_cash from public.categories where id = pg_temp.id('own_loans')),
+  true,
+  'the company''s own loan money category stays in cash'
+);
+select is(
+  (select in_cash from public.categories where id = pg_temp.id('off_loans')),
   false,
-  'the company''s own loan money category leaves cash in its place'
+  'and one the owner switched out of cash stays out'
 );
 select isnt(pg_temp.seeded('used'), null, 'a duplicate with a line stays for the owner to merge');
 select ok(

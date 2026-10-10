@@ -127,3 +127,46 @@
   inset-inline: 0;
   inset-block: calc((var(--touch-min) - 100%) / -2);
 }
+
+/* FLOW-434 (owner's pick A): the loan page leads with the next payment, its label above the
+   display figure; the part rows end in a share and an amount (ShareAmount). */
+.ui-loan-next {
+  margin-top: var(--space-6);
+}
+
+.ui-loan-next .t-label {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-next .t-display {
+  margin: var(--space-1) 0 0;
+}
+
+.ui-share-amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.ui-share-pct {
+  min-inline-size: 2.5em;
+  color: var(--color-text-muted);
+  text-align: start;
+}
+
+/* The amount keeps one width and sits against the chevron, so the shares line up in one column
+   down the list whatever each amount's length (owner, 2026-10-10). */
+.ui-share-amount .t-amount {
+  display: inline-block;
+  min-inline-size: 7ch;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.ui-loan-next .t-meta {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+}

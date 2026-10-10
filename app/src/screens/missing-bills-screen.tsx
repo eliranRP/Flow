@@ -2,7 +2,7 @@ import type { MissingBill, RecurringChange } from "@flow/shared";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMissingBillsQuery, useRecurringChangesQuery, useRecurringThisMonthQuery } from "../forecast";
-import { arrivedViews, missingBillViews } from "../recurring";
+import { arrivedViews, missingBillViews, type MissingBillMatch } from "../recurring";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { getSupabase } from "../lib/supabase";
@@ -13,9 +13,13 @@ import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 
 type Hide = { kind: "missing" | "change"; key: string; name: string; undo: boolean };
+/** FLOW-430: an answer to a row's suggestion; `same` null takes it back (ביטול). */
+type Answer = { rowId: string; match: MissingBillMatch; same: boolean | null };
 
 /** What a hide changes: the two lists here and Home's rows (the same reads). */
 const HIDE_KEYS = ["missing-bills", "recurring-changes", "recurring-this-month"];
+/** What an answer changes: the lists, Home's rows and expected months. */
+const MATCH_KEYS = [...HIDE_KEYS, "expected-months", "payment-recurring"];
 
 export type RecurringSample = { late: MissingBill[]; arrived?: RecurringChange[]; changes?: RecurringChange[] };
 
@@ -44,12 +48,16 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const changes = useRecurringChangesQuery(live);
   // A sample screen hides locally, so a story and the e2e show the row leave and come back.
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  // FLOW-430: a sample screen keeps its answers too: "same" takes the row out, "not" its hint.
+  const [answered, setAnswered] = useState<ReadonlyMap<string, boolean>>(new Map());
   const base = sample ? ({ kind: "ready" } as const) : screenPhase(preview, missing);
   // With nothing late, wait for הגיעו החודש before saying "הכל הגיע", so the empty state never flashes.
   const phase = base.kind === "ready" && !sample && (missing.data ?? []).length === 0 && thisMonth.isPending ? ({ kind: "loading" } as const) : base;
   const late = ofProject(sample ? sample.late.filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (missing.data ?? []));
   const open = ofProject(sample ? (sample.changes ?? []).filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (changes.data ?? []));
-  const rows = missingBillViews(placed(late), search);
+  const rows = missingBillViews(placed(late), search)
+    .filter((row) => answered.get(row.id) !== true)
+    .map((row) => (answered.get(row.id) === false ? { ...row, match: null } : row));
   // The arrivals are a second read: while it loads or if it fails, the late rows still show.
   const seen = ofProject(sample?.arrived ?? thisMonth.data ?? []);
   const arrived = arrivedViews(placed(seen), open, search);
@@ -86,6 +94,42 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
     },
   });
 
+  const answer = useWrite<Answer>({
+    failure: () => "לא הצלחנו לשמור את התשובה.",
+    keys: MATCH_KEYS,
+    onSuccess: (done) => {
+      toast.show({
+        message: done.same == null ? "התשובה בוטלה" : done.same ? (done.match.direction === "income" ? "סומן כאותו לקוח" : "סומן כאותו ספק") : "לא נציע שוב",
+        ...(done.same == null ? {} : {
+          action: "ביטול",
+          onAction: () => {
+            answer.mutate({ ...done, same: null });
+          },
+        }),
+      });
+    },
+    run: async ({ rowId, match, same }) => {
+      if (!live) {
+        setAnswered((before) => {
+          const next = new Map(before);
+          if (same == null) next.delete(rowId);
+          else next.set(rowId, same);
+          return next;
+        });
+        return;
+      }
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("answer_recurring_match", {
+        p_direction: match.direction,
+        p_party_id: match.partyId,
+        p_match_party_id: match.matchPartyId,
+        // The generated type has no null; null takes the answer back.
+        p_same: same as boolean,
+      }));
+    },
+  });
+
   // Home's rows open the screen at their section once the rows are in.
   const ready = phase.kind === "ready" && (hash !== "#arrived" || arrived.length > 0);
   useEffect(() => {
@@ -104,6 +148,11 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
         onHide={(kind, key, name) => {
           if (write.isPending || (live && blocked())) return;
           write.mutate({ kind, key, name, undo: false });
+        }}
+        onMatch={(rowId, same) => {
+          const match = rows.find((row) => row.id === rowId)?.match;
+          if (match == null || answer.isPending || (live && blocked())) return;
+          answer.mutate({ rowId, match, same });
         }}
       />
     </div>

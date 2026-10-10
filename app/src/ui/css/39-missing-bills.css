@@ -1,0 +1,105 @@
+/* FLOW-415 and FLOW-430: the קבועים screen's own rules, loaded by missing-bill-list.tsx (a lazy screen),
+   so the Home entry stays in its budget (FLOW-804). */
+
+/* FLOW-415 (b-2): the קבועים screen. A row that can be hidden ends in a muted 44px ✕. */
+/* Every row, and a hideable row's swipe layer, sits on the page background, so the list stays flat
+   in dark too (FLOW-424, C18-2; light is unchanged). */
+.ui-recurring-row {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+}
+
+.ui-recurring-row,
+.ui-recurring-section .ui-sremove-row {
+  background: var(--color-bg);
+}
+
+.ui-recurring-row > .ui-row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-recurring-hide {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+/* The ✕'s place on a row with nothing to hide. */
+.ui-recurring-hide-space {
+  flex: none;
+  inline-size: var(--touch-min);
+}
+
+.ui-recurring-amount {
+  display: inline-flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-recurring-change {
+  white-space: nowrap;
+}
+
+/* Its place line: one line; the project ends in an ellipsis and "· category" stays whole. */
+.ui-place-line {
+  display: flex;
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.ui-place-head {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-place-tail {
+  flex: none;
+  white-space: pre;
+}
+
+/* FLOW-430: "אולי זה: <name> · <amount> · dd/mm" under a late row, then "כן" and "לא" (44px). It
+   sits on the row's background, so the row and its hint read as one. */
+.ui-missing-item {
+  background: var(--color-bg);
+}
+
+.ui-missing-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block-end: var(--row-pad);
+  min-inline-size: 0;
+}
+
+.ui-missing-match-text {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+  text-wrap: balance;
+}
+
+/* The amount and the date are whole or gone: they never shrink into an ellipsis. */
+.ui-missing-match-whole {
+  flex-shrink: 0;
+}
+
+.ui-missing-match-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+.ui-missing-match-actions .ui-btn-pill {
+  height: var(--touch-min);
+  min-height: var(--touch-min);
+}
+
+/* "לא" is the quiet, neutral pill; the accent stays on yes. */
+.ui-missing-match-actions .ui-btn-pill.ui-missing-match-no {
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
