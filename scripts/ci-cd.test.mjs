@@ -699,14 +699,120 @@ test("the gate treats design images as docs and asks storybook-stories.mjs wheth
 
 test("the gate starts containerd then dockerd and fails, never skips, when a change needs Docker and it won't start", () => {
   const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
-  assert.ok(local.includes('(sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)'));
-  assert.ok(local.includes('(sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)'));
+  assert.ok(local.includes('(detach sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)'));
+  assert.ok(local.includes('(detach sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)'));
   // A stale socket from an earlier containerd doesn't count as one serving, and a dockerd that
   // exited before containerd was ready gets one more start.
-  assert.match(local, /if ! pgrep -x containerd >\/dev\/null 2>&1; then\n\s*\(sudo -n containerd/);
+  assert.match(local, /if ! pgrep -x containerd >\/dev\/null 2>&1; then\n\s*\(detach sudo -n containerd/);
   assert.ok(local.includes('grep -q "containerd successfully booted" /tmp/flow-containerd.log'));
   assert.match(local, /if \[\[ -z \$retried \]\] && \(\( i >= 5 \)\) && ! pgrep -x dockerd[\s\S]*?start_dockerd/);
   assert.match(local, /if ! start_docker; then[\s\S]*?Nothing is left to main\.[\s\S]*?exit 1\n  else/);
   assert.doesNotMatch(local, /Docker is not running, so the e2e specs/);
   assert.ok(local.includes("skipping them: ${e2e_specs[*]}"));
+});
+
+// A fixture gate that sources the guard as local-ci.sh does: "clean" passes with nothing left,
+// "orphan" leaves a process behind and passes, "budget" runs past a 1-second Storybook budget, "hang" waits for a signal.
+function guardFixture() {
+  const dir = mkdtempSync(join(tmpdir(), "flow-guard-"));
+  const script = join(dir, "gate.sh");
+  writeFileSync(script, `#!/usr/bin/env bash
+set -euo pipefail
+full=0
+source ${JSON.stringify(new URL("./local-ci-guard.sh", import.meta.url).pathname)}
+guard_session "$@"
+started="$(date +%s)"
+log_time() { local rc=$?; echo "rc=$(guard_exit_rc "$rc")" >"${dir}/log"; }
+trap log_time EXIT
+case "$1" in
+  clean) phase "passed" ;;
+  orphan) (sleep 300 >/dev/null 2>&1 & echo $! >"${dir}/pid"); phase "passed" ;;
+  budget) budgets[storybook]=1; phase "check: Storybook"; sleep 300 & echo $! >"${dir}/pid"; wait ;;
+  hang) sleep 300 & echo $! >"${dir}/pid"; wait ;;
+esac
+`);
+  return { dir, script };
+}
+const alive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+test("the gate stops what it left running when it passes", { skip: !existsSync("/usr/bin/setsid") }, () => {
+  const { dir, script } = guardFixture();
+  try {
+    const out = execFileSync("bash", [script, "orphan"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    assert.match(out, /== local-ci: passed/);
+    assert.equal(alive(Number(readFileSync(join(dir, "pid"), "utf8"))), false);
+    assert.equal(readFileSync(join(dir, "log"), "utf8"), "rc=0\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a gate that leaves nothing running passes", { skip: !existsSync("/usr/bin/setsid") }, () => {
+  const { dir, script } = guardFixture();
+  try {
+    execFileSync("bash", [script, "clean"], { stdio: "ignore" });
+    assert.equal(readFileSync(join(dir, "log"), "utf8"), "rc=0\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a phase past its budget stops the gate with the phase's name and fails", { skip: !existsSync("/usr/bin/setsid") }, () => {
+  const { dir, script } = guardFixture();
+  try {
+    const begun = Date.now();
+    let failed;
+    try {
+      execFileSync("bash", [script, "budget"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    } catch (error) {
+      failed = error;
+    }
+    assert.ok(failed, "the gate fails");
+    assert.notEqual(failed.status, 0);
+    assert.match(failed.stderr, /the "check: Storybook" phase ran past its 1s budget; stopping the gate/);
+    assert.ok(Date.now() - begun < 20_000);
+    assert.equal(alive(Number(readFileSync(join(dir, "pid"), "utf8"))), false);
+    assert.equal(readFileSync(join(dir, "log"), "utf8"), "rc=124\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a gate stopped by a signal stops its whole group and logs a failure", { skip: !existsSync("/usr/bin/setsid") }, async () => {
+  const { spawn } = await import("node:child_process");
+  const { dir, script } = guardFixture();
+  try {
+    const child = spawn("bash", [script, "hang"], { stdio: "ignore" });
+    const pidFile = join(dir, "pid");
+    for (let i = 0; i < 100 && !existsSync(pidFile); i++) await new Promise((done) => setTimeout(done, 50));
+    const pid = Number(readFileSync(pidFile, "utf8"));
+    assert.equal(alive(pid), true);
+    const code = await new Promise((done) => {
+      child.on("exit", (status) => done(status));
+      child.kill("SIGTERM");
+    });
+    assert.equal(code, 143);
+    assert.equal(alive(pid), false);
+    assert.equal(readFileSync(join(dir, "log"), "utf8"), "rc=143\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("local-ci.sh sources the guard first, and Docker's daemons start outside the gate's group", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const guard = readFileSync(new URL("./local-ci-guard.sh", import.meta.url), "utf8");
+  assert.ok(local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"\nguard_session "$@"\n') < local.indexOf('cd "$root"'));
+  assert.ok(local.includes('rc="$(guard_exit_rc "$rc")"'));
+  assert.equal([...local.matchAll(/\(sudo -n (dockerd|containerd)/g)].length, 0);
+  assert.equal([...local.matchAll(/\(detach sudo -n (dockerd|containerd)/g)].length, 3);
+  assert.match(guard, /declare -A budgets=\(\[storybook\]=\d+ \[storybook-smoke\]=\d+ \[e2e\]=/);
+  assert.match(guard, /setsid bash "\$0" "\$@" <&0 &/);
 });
