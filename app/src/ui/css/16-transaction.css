@@ -123,6 +123,12 @@
   flex: none;
 }
 
+/* FLOW-707: the dot between the card and its nickname from the bank. */
+.ui-bank-sep {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
 /* The clipping box takes the name's own direction, so a Latin name loses its end, not its start. */
 .ui-bank-line {
   display: block;

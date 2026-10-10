@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { ToastProvider } from "./ui/toast";
 import { changeSaveFailure } from "./ui/change-sheet";
 import { useWrite } from "./use-write";
@@ -26,7 +27,7 @@ function renderSave(
   run: () => Promise<void>,
   failure: typeof changeSaveFailure | string = changeSaveFailure,
   onSplit?: () => void,
-) {
+): QueryClient {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -35,6 +36,7 @@ function renderSave(
       </ToastProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 describe("useWrite", () => {
@@ -99,5 +101,31 @@ describe("useWrite", () => {
     });
     expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+  });
+
+  it("says the company is view only, and reads the role again, when the server answers no company", async () => {
+    const client = renderSave(() => Promise.reject(new Error("no company")));
+    const reread = vi.spyOn(client, "invalidateQueries");
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText(VIEWER_NOTE)).toBeInTheDocument();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(reread).toHaveBeenCalledWith({ queryKey: [MY_COMPANIES_KEY] });
+  });
+
+  it("keeps the screen's own words for forbidden, and still reads the role again", async () => {
+    const client = renderSave(() => Promise.reject(Object.assign(new Error("forbidden"), { code: "42501" })), "אין הרשאה לעדכן את השורה.");
+    const reread = vi.spyOn(client, "invalidateQueries");
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("אין הרשאה לעדכן את השורה.")).toBeInTheDocument();
+    expect(reread).toHaveBeenCalledWith({ queryKey: [MY_COMPANIES_KEY] });
+  });
+
+  it("leaves the role alone for any other failure", async () => {
+    const client = renderSave(() => Promise.reject(new Error("category kind must match the direction")));
+    const reread = vi.spyOn(client, "invalidateQueries");
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("לא נשמר. בדקו את הפרטים ונסו שוב.")).toBeInTheDocument();
+    expect(reread).not.toHaveBeenCalledWith({ queryKey: [MY_COMPANIES_KEY] });
   });
 });

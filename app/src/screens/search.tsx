@@ -15,6 +15,7 @@ import {
   readSearchFilters,
   searchCountWords,
   searchRowAmount,
+  searchMonthTotals,
   searchRowTitle,
   useDebounced,
   uniqueSearchRows,
@@ -123,6 +124,8 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const total = localRows ? Math.max(sample?.total ?? 0, localRows.length) : query.data?.pages[0]?.total ?? 0;
   // Live: done when the server has no next page (a repeated line, dropped above, still ends it).
   const complete = localRows ? rows.length >= total : !query.hasNextPage;
+  // Live: every month's totals come with the first page, so a month still paging shows its own.
+  const monthTotals = useMemo(() => searchMonthTotals(localRows ? null : query.data?.pages[0]?.months), [localRows, query.data]);
   const refreshing = live && query.isPlaceholderData;
   const projects: SearchProject[] = local?.projects ?? dashboard.data?.projects ?? [];
   const categoryList: SearchCategory[] = local?.categories ?? categoryQuery.data ?? [];
@@ -222,6 +225,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
           dateOf={(row) => row.doc_date}
           amountOf={searchRowAmount}
           complete={complete}
+          monthTotals={monthTotals}
           cents
           net
           renderRow={(row) => (

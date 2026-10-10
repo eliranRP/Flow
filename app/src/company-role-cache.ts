@@ -1,3 +1,9 @@
+/** FLOW-601: the switcher's list and the shown company's role share this one read. */
+export const MY_COMPANIES_KEY = "my-companies";
+
+/** One quiet line. Settings puts it under the header. Review puts it where the actions were. */
+export const VIEWER_NOTE = "צפייה בלבד · שינויים נעשים על ידי בעל העסק";
+
 /** Last successful role, keyed by user id. The value names the company. */
 const COMPANY_ROLE_CACHE_KEY = "flow-company-role";
 

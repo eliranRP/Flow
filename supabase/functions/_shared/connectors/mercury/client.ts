@@ -9,6 +9,7 @@ import { redactMercury } from "./redact.ts";
 import { isVoidMercuryStatus } from "./rules.ts";
 import type {
   AccountLabel,
+  CardLabel,
   ClassifiedError,
   ConnectorErrorClass,
   ConnectorSession,
@@ -18,6 +19,8 @@ import type {
 } from "../types.ts";
 
 const API_BASE = "https://api.mercury.com/api/v1";
+/** A card nickname is short in Mercury; 80 characters is plenty for a row. */
+export const CARD_LABEL_LIMIT = 80;
 
 export class MercuryRequestError extends Error {
   readonly errorClass: ConnectorErrorClass;
@@ -273,8 +276,27 @@ function accountLabel(row: unknown, fallback: string): AccountLabel | null {
   if (!isRecord(row) || typeof row.id !== "string") return null;
   const id = row.id.trim();
   if (id.length === 0 || id.length > 128 || id.includes("/")) return null;
-  const name = typeof row.name === "string" && row.name.trim() ? row.name.trim() : fallback;
-  return { id, label: String(redactMercury(name)).slice(0, 300) };
+  // The nickname the owner gave the account (often a property) wins over Mercury's own
+  // "Mercury Checking ••1234" (FLOW-707).
+  const nickname = typeof row.nickname === "string" ? row.nickname.trim() : "";
+  const name = nickname || (typeof row.name === "string" && row.name.trim() ? row.name.trim() : fallback);
+  const label: AccountLabel = { id, label: String(redactMercury(name)).slice(0, 300) };
+  const last4 = accountLast4(row);
+  if (last4) label.last4 = last4;
+  return label;
+}
+
+/**
+ * The account's last 4, kept beside the label so a nickname still shows ••1234 (FLOW-707):
+ * from lastFour, else the "••1234" in Mercury's name, else the account number's end. Only the
+ * 4 digits are kept.
+ */
+function accountLast4(row: Record<string, unknown>): string | null {
+  if (typeof row.lastFour === "string" && /^[0-9]{4}$/.test(row.lastFour.trim())) return row.lastFour.trim();
+  const named = typeof row.name === "string" ? /(?:••|\*\*)\s?([0-9]{4})\b/.exec(row.name) : null;
+  if (named?.[1]) return named[1];
+  const number = typeof row.accountNumber === "string" ? row.accountNumber.replace(/\D/g, "") : "";
+  return number.length >= 4 ? number.slice(-4) : null;
 }
 
 /** A treasury row with no usable id is a rejected validation, not a silent drop. The log has no payload. */
@@ -290,6 +312,50 @@ function requireTreasuryLabel(row: unknown): AccountLabel {
 
 async function listTreasuryAccounts(session: ConnectorSession): Promise<unknown[]> {
   return await listCollection(session, "/treasury", "accounts", {}, true);
+}
+
+/**
+ * The nickname of each card, keyed by its last 4 (FLOW-707). A card with no nickname is left
+ * out, and a last 4 shared by two cards with different nicknames is left out, since a line
+ * keeps only the last 4. Null when the list can't be read: the names are extra, so the sync
+ * goes on and keeps the names it stored before.
+ */
+export async function listMercuryCardLabels(session: ConnectorSession): Promise<CardLabel[] | null> {
+  let cards: unknown[];
+  try {
+    cards = await listCollection(session, "/cards", "cards", {}, true);
+  } catch (error) {
+    // The class only, never the body: a list that stays unreadable shows in the logs.
+    console.warn("mercury_cards_unread", classifyMercuryError(error).class);
+    return null;
+  }
+  const byLast4 = new Map<string, string | null>();
+  for (const card of cards) {
+    if (!isRecord(card)) continue;
+    // The card list sends lastFour; lastFourDigits is the Cards API reference's name for it.
+    const rawLast4 = card.lastFour ?? card.lastFourDigits;
+    const last4 = typeof rawLast4 === "string" ? rawLast4.trim() : "";
+    const nickname = typeof card.nickname === "string" ? card.nickname.trim() : "";
+    if (!/^[0-9]{4}$/.test(last4) || nickname === "") continue;
+    const label = String(redactMercury(nickname)).trim().slice(0, CARD_LABEL_LIMIT);
+    if (label === "") continue;
+    const seen = byLast4.get(last4);
+    if (seen === undefined) byLast4.set(last4, label);
+    else if (seen !== label) byLast4.set(last4, null);
+  }
+  const labels: CardLabel[] = [];
+  for (const [last4, label] of byLast4) {
+    if (label != null) labels.push({ last4, label });
+  }
+  return labels.sort((left, right) => left.last4.localeCompare(right.last4));
+}
+
+/**
+ * The connection update for the card names: none when the list was unreadable, so the stored
+ * names stay; an empty list clears them.
+ */
+export function cardLabelsUpdate(labels: CardLabel[] | null): { card_labels?: Array<{ last4: string; label: string }> } {
+  return labels == null ? {} : { card_labels: labels.map(({ last4, label }) => ({ last4, label })) };
 }
 
 /**
