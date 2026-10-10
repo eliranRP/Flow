@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(3);
+select plan(4);
 
 do $users$
 begin
@@ -98,5 +98,16 @@ select ok(
 );
 
 select diag((select (finished - started)::text from pps_run));
+
+-- A `create or replace` of get_project drops this setting unless it repeats it.
+select ok(
+  (
+    select 'plan_cache_mode=force_generic_plan' = any(p.proconfig)
+    from pg_proc p
+    where p.oid = 'public.get_project(uuid, text, date, date)'::regprocedure
+  ),
+  'get_project reuses one generic plan per connection'
+);
+
 select * from finish();
 rollback;
