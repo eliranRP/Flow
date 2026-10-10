@@ -1,0 +1,4 @@
+<a id="flow-423"></a>
+# FLOW-423 · A fixed way into קבועים from Home
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Source:** cycle 17 phone review of main at 88d4ee8, 2026-10-10 (C17-3). Shots are in the project files under `reviews/ui-ux-cycle-17/`. The design lead picked the entry point; there is no owner card.
+- [x] (UI lane 2) The קבועים screen opens only from Home's attention rows (late bills, a change). In a month with nothing late or changed, or once this user has hidden every alert, those rows are gone, so "הגיעו החודש", income, and the "הכל הגיע" empty state can be reached only by URL. A hidden alert can't be found again after its undo toast. Add a quiet TextLink "לכל הקבועים", styled like "לכל החודשים", on its own line directly under it at the end of Home's earlier months. Show it whenever the company has any recurring party. Its tap area is 44px tall. Shots needed: Home at 390 light and dark, plus 320, with and without attention rows.
