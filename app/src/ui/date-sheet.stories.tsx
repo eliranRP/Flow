@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { DateSheet } from "./date-sheet";
 
 /**
@@ -63,6 +63,9 @@ export const YearList: Story = {
   args: { min: undefined, reason: undefined },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
+    // The sheet ignores taps until its enter transition ends (pointer-events: none); wait for it.
+    const dialog = body.getByRole("dialog");
+    await waitFor(async () => { await expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"); });
     await userEvent.click(body.getByRole("button", { name: /בחירת שנה/ }));
     await expect(body.getByRole("group", { name: "שנה" })).toBeVisible();
   },
