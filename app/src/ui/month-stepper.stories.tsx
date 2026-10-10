@@ -27,7 +27,7 @@ export const BothDark: Story = { args: { earlier: "תזרים אוגוסט", lat
 export const CurrentMonth: Story = {
   args: { earlier: "תזרים ספטמבר", later: null },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("button", { name: "אין חודש הבא" })).toBeDisabled();
+    await expect(within(canvasElement).getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
   },
 };
 export const CurrentMonthDark: Story = { args: { earlier: "תזרים ספטמבר", later: null }, ...dark390 };

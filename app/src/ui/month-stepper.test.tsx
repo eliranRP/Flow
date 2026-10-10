@@ -15,8 +15,9 @@ describe("MonthStepper (FLOW-362)", () => {
     const onStep = vi.fn();
     render(<MonthStepper earlier="תזרים ספטמבר" later={null} onStep={onStep} />);
     expect(screen.getAllByRole("button")).toHaveLength(2);
-    const next = screen.getByRole("button", { name: "אין חודש הבא" });
-    expect(next).toBeDisabled();
+    const next = screen.getByRole("button", { name: "חודש הבא" });
+    expect(next).toHaveAttribute("aria-disabled", "true");
+    expect(next).toHaveAccessibleDescription("זה החודש הנוכחי");
     fireEvent.click(next);
     expect(onStep).not.toHaveBeenCalled();
   });

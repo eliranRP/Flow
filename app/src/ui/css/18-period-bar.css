@@ -198,7 +198,9 @@
 }
 
 /* No month that way: the chevron stays, dimmed, and does not respond (2026-10-10). */
-.ui-month-step-arrow:disabled {
+.ui-month-step-arrow[aria-disabled="true"],
+.ui-month-step-arrow[aria-disabled="true"]:active {
   opacity: 0.35;
+  background: transparent;
   cursor: default;
 }

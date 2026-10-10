@@ -506,7 +506,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 18
 - A recurring charge names its pace and day in one hint line, "כל חודש ב־N", then "· אחרון dd/mm" or "· זוהה לבד" when known. Hint parts wrap whole, and a separator never starts or ends a line: the "·" before a wrapped part is dropped (FLOW-415).
 - A switch the line can't decide is a locked row whose hint names what decides it (FLOW-415).
 - A yes says what it turns on: a permission card names every push it starts (FLOW-502).
-- Month steppers are one quiet pager segment, never bare chevrons in the rows' drill-in column (FLOW-362).
+- Month steppers are one quiet pager segment, never bare chevrons in the rows' drill-in column (FLOW-362). Both arrows always show; an end it cannot go past is dimmed and aria-disabled, not hidden (owner, 2026-10-10).
 
 **Recurring, project cash and lists (folded at cycle 17)**
 
