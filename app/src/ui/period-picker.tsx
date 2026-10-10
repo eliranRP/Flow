@@ -105,9 +105,11 @@ type PeriodPickerProps = {
   tone?: "band" | "page";
   /** The pill's name when the window alone says too little, e.g. Home's "… – בחירת תקופה" (FLOW-355). */
   name?: string;
+  /** A project's sheet says מתחילת הפרויקט for הכול (FLOW-359). */
+  scope?: PeriodScope;
 };
 
-export function PeriodPicker({ pill, open, onOpenChange, period, onChange, options = [], onCustom, tone = "band", name }: PeriodPickerProps) {
+export function PeriodPicker({ pill, open, onOpenChange, period, onChange, options = [], onCustom, tone = "band", name, scope }: PeriodPickerProps) {
   return (
     <>
       <button
@@ -125,7 +127,7 @@ export function PeriodPicker({ pill, open, onOpenChange, period, onChange, optio
         </span>
       </button>
       {period != null && onChange != null ? (
-        <PresetPeriodSheet period={period} onChange={onChange} open={open} onOpenChange={onOpenChange} />
+        <PresetPeriodSheet period={period} onChange={onChange} open={open} onOpenChange={onOpenChange} scope={scope} />
       ) : (
         <PeriodSheet open={open} onOpenChange={onOpenChange} options={options} onCustom={onCustom} selectedLabel={pill} />
       )}

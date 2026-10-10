@@ -257,7 +257,8 @@ export function heroProfitLabel(period: PeriodChoice, profitAgorot: bigint | "mi
   return pillNamesPeriod(period, now) ? word : `${word} ${periodPhrase(period, now)}`;
 }
 
-function pillNamesPeriod(period: PeriodChoice, now: Date): boolean {
+/** FLOW-358: the period pill already names a past window, a year or all time, so a label beside it leaves the period out. */
+export function pillNamesPeriod(period: PeriodChoice, now = new Date()): boolean {
   switch (period.kind) {
     case "month":
     case "months3":
