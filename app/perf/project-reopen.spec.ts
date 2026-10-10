@@ -1,4 +1,5 @@
 import { expect, test, type Browser } from "@playwright/test";
+import { median, RUNS, runsLine } from "./runs";
 import { stubBackend } from "./stub-backend";
 
 /**
@@ -6,7 +7,7 @@ import { stubBackend } from "./stub-backend";
  * REST every read pays a 150 to 500 ms floor plus 1 to 4 s spikes. A project opened before paints
  * from its last read saved on the phone, so a repeat open, after a reload too, shows its figures
  * within 0.7 s of the tap even while the server takes 2 s, and the fresh read lands behind it.
- * Production build, CPU ×4, the median of 3.
+ * Production build, CPU ×4, the median of 5.
  */
 const CPU = 4;
 const LIMIT_MS = 700;
@@ -69,15 +70,14 @@ test("a project opened before paints within 0.7 s of a tap while the server spik
   for (const warm of [false, true]) {
     const runs: number[] = [];
     let reads = "";
-    for (let run = 0; run < 3; run += 1) {
+    for (let run = 0; run < RUNS; run += 1) {
       const result = await timedOpen(browser, warm);
       runs.push(result.ms);
       reads = `beside get_project ${result.early.join(" ") || "none"}, after it ${result.late.join(" ") || "none"}`;
     }
-    const median = [...runs].sort((a, b) => a - b)[1] ?? Number.POSITIVE_INFINITY;
     const label = warm ? "opened before" : "first open";
-    medians[label] = median;
-    lines.push(`${label}: median ${String(median)} ms (${runs.join(", ")} ms), reads ${reads}`);
+    medians[label] = median(runs);
+    lines.push(`${runsLine(label, runs)}, reads ${reads}`);
   }
   const summary = `${lines.join("; ")}; get_project ${String(SPIKE_MS)} ms, other reads ${String(FLOOR_MS)} ms; limit ${String(LIMIT_MS)} ms`;
   test.info().annotations.push({ type: "project-reopen", description: summary });
