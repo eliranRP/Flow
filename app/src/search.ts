@@ -6,6 +6,7 @@ import { loadReadSchemas } from "./load-read-schemas";
 import { allTime, periodFromSearch, periodSearch, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import { waitForAccessToken } from "./wait-for-session";
+import type { MonthTotal } from "./ui/month-groups";
 
 /**
  * The transaction search (FLOW-323, option A; FLOW-402 is the same screen with a project set).
@@ -203,6 +204,22 @@ export function searchRowTitle(row: SearchRow): string {
  */
 export function searchRowAmount(row: SearchRow): { minor: bigint; currency: string; direction: SearchDirection } {
   return { minor: row.kept_out ? 0n : row.amount_net, currency: row.currency, direction: row.direction };
+}
+
+/**
+ * The server's month totals as MonthList reads them, ILS first in each month; undefined when
+ * there are none (sample rows, or a reply from before the server sent them).
+ */
+export function searchMonthTotals(months: SearchPage["months"]): Map<string, MonthTotal[]> | undefined {
+  if (months == null) return undefined;
+  const byMonth = new Map<string, MonthTotal[]>();
+  for (const row of months) {
+    const list = byMonth.get(row.month) ?? [];
+    list.push({ currency: row.currency, incomeMinor: row.income_minor, expenseMinor: row.expense_minor });
+    byMonth.set(row.month, list);
+  }
+  for (const list of byMonth.values()) list.sort((a, b) => Number(a.currency !== "ILS") - Number(b.currency !== "ILS"));
+  return byMonth;
 }
 
 /** "תנועה אחת" or "N תנועות". */

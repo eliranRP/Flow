@@ -14,6 +14,7 @@ import {
   searchCountWords,
   searchFiltersQuery,
   searchRowAmount,
+  searchMonthTotals,
   searchRowTitle,
 } from "./search";
 
@@ -192,5 +193,22 @@ describe("filterSearchRows (sample and dev lists)", () => {
     expect(filterSearchRows(rows, { ...EMPTY_FILTERS, category: "none" }).map((r) => r.id)).toEqual(["b", "c"]);
     expect(filterSearchRows(rows, { ...EMPTY_FILTERS, review: true }).map((r) => r.id)).toEqual(["c"]);
     expect(filterSearchRows(rows, { ...EMPTY_FILTERS, period: customRange("2026-09-01", "2026-09-30") }).map((r) => r.id)).toEqual(["b"]);
+  });
+});
+
+describe("searchMonthTotals", () => {
+  it("keys the server's month totals by month, ILS first", () => {
+    const totals = searchMonthTotals([
+      { month: "2026-09", currency: "USD", income_minor: 0n, expense_minor: 500n },
+      { month: "2026-09", currency: "ILS", income_minor: 1_000n, expense_minor: 0n },
+      { month: "2026-08", currency: "ILS", income_minor: 0n, expense_minor: 200n },
+    ]);
+    expect(totals?.get("2026-09")?.map((total) => total.currency)).toEqual(["ILS", "USD"]);
+    expect(totals?.get("2026-08")).toEqual([{ currency: "ILS", incomeMinor: 0n, expenseMinor: 200n }]);
+  });
+
+  it("is undefined when the page has none", () => {
+    expect(searchMonthTotals(null)).toBeUndefined();
+    expect(searchMonthTotals(undefined)).toBeUndefined();
   });
 });

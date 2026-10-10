@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(42);
+select plan(46);
 
 do $users$
 begin
@@ -235,6 +235,20 @@ select throws_ok($$select public.search_transactions(p_amount_min => 5, p_amount
   'P0001', 'validation', 'a minimum above the maximum is validation');
 select throws_ok($$select public.search_transactions(p_amount_min => -1)$$,
   'P0001', 'validation', 'a negative amount is validation');
+
+-- Month totals (search month totals bug): the first page carries every matching line's totals
+-- per month and currency, as the rows draw them; a kept-out line adds nothing.
+select is(public.search_transactions(p_from => '2026-06-01', p_to => '2026-06-15', p_limit => 1)->'months',
+  '[{"month": "2026-06", "currency": "ILS", "income_minor": 500000, "expense_minor": 260000}]'::jsonb,
+  'the first page carries the month totals of every matching line, not only the page');
+select is(public.search_transactions(p_from => '2026-06-21', p_to => '2026-06-21')->'months', '[]'::jsonb,
+  'a kept-out line adds nothing to its month');
+select is(
+  (select string_agg((e->>'month') || ' ' || (e->>'currency'), ',' order by n)
+   from jsonb_array_elements(public.search_transactions(p_project => pg_temp.id('beta')::text)->'months')
+     with ordinality as m(e, n)),
+  '2026-07 USD,2026-06 ILS', 'newest month first, each currency on its own row');
+select is(public.search_transactions(p_offset => 1)->'months', 'null'::jsonb, 'a later page leaves the months out');
 
 -- Paging: lines on the same date never repeat across pages.
 select is(

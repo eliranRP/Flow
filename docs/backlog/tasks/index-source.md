@@ -335,6 +335,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-905
 - FLOW-906
 - FLOW-907
+- FLOW-908
 
 ## Future features
 
