@@ -79,6 +79,7 @@ function wrap(path: string) {
           <Routes>
             <Route path="/cash/:month" element={<CashMonthScreen />} />
             <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
+            <Route path="/cash/year/:year" element={<p>שנה</p>} />
             <Route path="/" element={<p>בית</p>} />
           </Routes>
         </MemoryRouter>
@@ -108,9 +109,21 @@ describe("Cash month page", () => {
     expect(screen.getAllByText("$300").length).toBeGreaterThan(0);
   });
 
-  it("sends a month Home does not read back to Home", async () => {
+  it("reads a month older than Home's from its year, and Back returns to that year (FLOW-417)", async () => {
+    const yearMonths = { ...months, months: [{ month: "2001-01-01", by_currency: [currencyRow("ILS", 300_000, 100_000, 0)] }] };
+    const impl = rpc.impl;
+    rpc.impl = (name, args) => (name === "cash_year_months" ? Promise.resolve({ data: yearMonths, error: null }) : impl(name, args));
     wrap("/cash/2001-01");
-    expect(await screen.findByText("בית")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /^נכנס ב/ })).toHaveAttribute("href", "/cash/2001-01/in/ILS");
+    expect(rpc.calls.find((c) => c.name === "cash_year_months")?.args).toEqual({ p_year: 2001 });
+    expect(screen.getAllByText("₪2,000").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "חזרה לתזרים" }));
+    expect(await screen.findByText("שנה")).toBeInTheDocument();
+  });
+
+  it("sends a month its year does not hold back to the year", async () => {
+    wrap("/cash/2001-01");
+    expect(await screen.findByText("שנה")).toBeInTheDocument();
   });
 
   it("sends a broken month back to Home without a read", () => {
@@ -146,5 +159,25 @@ describe("Cash lines", () => {
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_currency: string }).p_currency === "USD")).toBe(true);
     });
+  });
+});
+
+describe("Cash lines profit leaves out (FLOW-418)", () => {
+  it("reads the not_in_profit side, shows net less profit, and gives money out its minus", async () => {
+    const capital = { ...lines.rows[0], transaction_id: "t2", part: null, supplier_name: "שותף לדוגמה", category_name: "השקעת בעלים", amount_minor: 45_000, side: "in" };
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: [lines.rows[0], capital], has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/kept/ILS`);
+    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
+    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_side: "not_in_profit", p_currency: "ILS" });
+    expect(screen.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    // Net −₪1,150 less profit −₪400; the month sends no categories, so all of it is the rest.
+    expect(screen.getByText("−₪750")).toBeInTheDocument();
+    expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
+    expect(screen.getByText("−₪1,200")).toBeInTheDocument();
+    expect(screen.getByText("₪450")).toHaveClass("ui-income");
   });
 });

@@ -1,0 +1,1 @@
+The Storybook focus-on-open check waits for each story to finish rendering and skips a story that ran a play function, including a dark copy made by spreading a story with one, which the index does not tag. Main went red twice on such a copy.
