@@ -71,6 +71,9 @@ export default defineConfig(({ mode }) => {
 
   const lifecycle = process.env.npm_lifecycle_event ?? "";
   const storybook = Boolean(process.env.VITEST) || lifecycle.includes("storybook");
+  // FLOW-813: the e2e build (playwright.config.ts) stands in for the dev server: no service
+  // worker, and CSS as written, so a spec reads the same computed styles as in dev.
+  const e2eBuild = process.env.FLOW_E2E_BUILD === "1";
 
   return {
     optimizeDeps: {
@@ -87,6 +90,7 @@ export default defineConfig(({ mode }) => {
       ],
     },
     envDir: path.resolve(__dirname, ".."),
+    ...(e2eBuild ? { build: { cssMinify: false } } : {}),
     server: {
       host: "0.0.0.0",
       // Storybook and the story tests must not take the app's port.
@@ -97,9 +101,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      tailwindcss(),
+      tailwindcss(e2eBuild ? { optimize: false } : undefined),
       ...(storybook ? [] : [bundleGraph(), reviewerGuard()]),
-      ...(storybook
+      ...(storybook || e2eBuild
         ? []
         : [
             spaFallback(),
