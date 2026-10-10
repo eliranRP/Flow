@@ -292,6 +292,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-432"></a>[FLOW-432](tasks/FLOW-432.md) | Show a split line's parts on the list row | UI |
 | <a id="flow-418"></a>[FLOW-418](tasks/FLOW-418.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
+| <a id="flow-430"></a>[FLOW-430](tasks/FLOW-430.md) | A missing recurring bill suggests a renamed supplier, and the user decides | FEATURE |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |

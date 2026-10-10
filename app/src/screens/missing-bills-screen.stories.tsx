@@ -3,6 +3,7 @@ import { MissingBillsScreen, type RecurringSample } from "./missing-bills-screen
 import {
   SAMPLE_MISSING_BILLS,
   SAMPLE_MISSING_INCOME,
+  SAMPLE_MISSING_RENAMED,
   SAMPLE_MISSING_USD,
   SAMPLE_RECURRING_CHANGES,
   SAMPLE_RECURRING_THIS_MONTH,
@@ -47,3 +48,11 @@ export const MissingBillsArrivedOnly: Story = {
   render: () => <Recurring sample={{ late: [], arrived: SAMPLE_RECURRING_THIS_MONTH, changes: [] }} />,
 };
 export const MissingBillsEmpty: Story = { name: "Recurring, empty", render: () => <Recurring sample={{ late: [] }} /> };
+// FLOW-430: a late bill suggests the supplier its October charge came under; "כן" takes the row
+// out, "לא" its hint, each with ביטול.
+export const MissingBillsMatch: Story = {
+  name: "Recurring, suggested match",
+  render: () => <Recurring sample={{ ...full, late: [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_RENAMED] }} />,
+};
+export const MissingBillsMatch320: Story = { ...MissingBillsMatch, name: "Recurring, suggested match, 320", ...at320 };
+export const MissingBillsMatchDark: Story = { ...MissingBillsMatch, name: "Recurring, suggested match, dark", ...dark };

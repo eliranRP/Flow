@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -43,6 +43,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "line_recurring"` | `id` | the transaction id `set_line_recurring` used |
 | `set_line_pace` | `transaction_id` | as `set_line_recurring` |
 | `undo` `kind: "line_pace"` | `id` | the transaction id `set_line_pace` used |
+| `answer_recurring_match` | `party_id`, `match_party_id` | `get_missing_bills` `missing[].party_id` and `missing[].suggestion.party_id` |
+| `undo` `kind: "recurring_match"` | `id` | the `match_party_id` `answer_recurring_match` used |
 | `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 | `detach_loan_payment` | `transaction_id` | `get_loan_schedule` payments, `get_expense.id` of a line with `loan_split` |
@@ -523,7 +525,7 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 
 ### get_missing_bills
 
-`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers and customers whose due month has come with no line yet, after their usual day plus 5 days in the due month (Israel time; on the month's last day when that falls later). Monthly ones (a line in at least 3 of the last 6 complete months and one of the last 2) are due every month; a pace of every 2 months, quarter or year is due one pace after the last bill ([0175](../decisions/0175-recurring-pace-dismissals.md)). Alerts the token's user dismissed in the app are left out. A supplier the owner marked recurring ([set_line_recurring](#set_line_recurring)) counts too, and one marked not recurring never does ([0172](../decisions/0172-recurring-charges.md)). Each has `direction`, `party_id`, `party_name`, `supplier_id` and `supplier_name` (null for income), `currency`, `typical_amount_minor` (median net per bill, negative for expenses), `typical_day`, `due_month` (YYYY-MM), `expected_by`, `months_seen`, `last_doc_date`, `last_amount_minor` (the last bill's net), `project_id`, `project_name`, `category_id`, `category_name`, `source` (`auto`: the rule found it; `user`: the owner marked it), `pace` (`month`, `2months`, `quarter` or `year`), `pace_source` and `alert_key`.
+`missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers and customers whose due month has come with no line yet, after their usual day plus 5 days in the due month (Israel time; on the month's last day when that falls later). Monthly ones (a line in at least 3 of the last 6 complete months and one of the last 2) are due every month; a pace of every 2 months, quarter or year is due one pace after the last bill ([0175](../decisions/0175-recurring-pace-dismissals.md)). Alerts the token's user dismissed in the app are left out. A supplier the owner marked recurring ([set_line_recurring](#set_line_recurring)) counts too, and one marked not recurring never does ([0172](../decisions/0172-recurring-charges.md)). Each has `direction`, `party_id`, `party_name`, `supplier_id` and `supplier_name` (null for income), `currency`, `typical_amount_minor` (median net per bill, negative for expenses), `typical_day`, `due_month` (YYYY-MM), `expected_by`, `months_seen`, `last_doc_date`, `last_amount_minor` (the last bill's net), `project_id`, `project_name`, `category_id`, `category_name`, `source` (`auto`: the rule found it; `user`: the owner marked it), `pace` (`month`, `2months`, `quarter` or `year`), `pace_source`, `alert_key` and `suggestion`: `null`, or `{ "party_id", "party_name", "transaction_id", "doc_date", "amount_minor" }`, a supplier (or customer) that may be this one under another name, first seen in the due month or the month before, with an alike name and its newest line within 50% of the usual amount ([0179](../decisions/0179-recurring-match.md)). Ask the user, then [answer_recurring_match](#answer_recurring_match).
 
 ### get_expected_months
 
@@ -882,6 +884,14 @@ Marks the line's supplier (or customer) recurring (`true`) or not (`false`) in t
 ```
 
 Sets how often the line's supplier (or customer) recurs in the line's currency: `month`, `2months`, `quarter` or `year`; `null` goes back to the detected pace ([0175](../decisions/0175-recurring-pace-dismissals.md)). Late bills and expected months follow it. It does not make a party recurring; `set_line_recurring` does, and clearing that switch keeps the pace. Output `data`: the [get_line_recurring](#get_line_recurring) state plus `"undo_kind": "line_pace"`, `id` and `write_id`. Refused: `transaction not found`, `no supplier or customer`. Undo `kind: "line_pace"` with the transaction id puts back the pace from before; `conflict` once it was changed since.
+
+### answer_recurring_match
+
+```json
+{ "idempotency_key": "match-1", "direction": "expense", "party_id": "22222222-2222-4000-8000-000000000020", "match_party_id": "22222222-2222-4000-8000-000000000021", "same": true }
+```
+
+Answers a late bill's `suggestion` ([FLOW-430](../backlog/TASKS.md#flow-430), [0179](../decisions/0179-recurring-match.md)). `same: true`: `match_party_id` is the recurring `party_id` under another name, and its lines count as the recurring party's in the late bills, הגיעו החודש, the changes, expected months and `get_line_recurring`. `false`: not the same, and the pair is not suggested again. `null` takes the answer back. Only on the user's word: a different name is never merged by itself. Output `data`: `direction`, `party_id`, `match_party_id`, `same`, `"undo_kind": "recurring_match"`, `id` (the `match_party_id`) and `write_id`. Refused: `party not found`, `already matched` (the suggested party is already the same as another one, or a party in the pair is itself a match). Undo `kind: "recurring_match"` with `match_party_id` puts back the answer from before; `conflict` once it changed since.
 
 ## Unpaid · FLOW-330
 

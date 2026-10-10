@@ -43,7 +43,7 @@ import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
@@ -512,7 +512,9 @@ export function DevMissingBills() {
   const [params] = useSearchParams();
   if (params.get("empty") === "1") return <MissingBillsScreen sample={{ late: [] }} />;
   // FLOW-415 (b-2): `?income=1` adds a late payment from a customer.
-  const late = params.get("income") === "1" ? [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME] : SAMPLE_MISSING_BILLS;
+  const base = params.get("income") === "1" ? [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME] : SAMPLE_MISSING_BILLS;
+  // FLOW-430: `?match=1` adds a late bill that suggests a renamed supplier.
+  const late = params.get("match") === "1" ? [...base, SAMPLE_MISSING_RENAMED] : base;
   return <MissingBillsScreen sample={{ late, arrived: SAMPLE_RECURRING_THIS_MONTH, changes: SAMPLE_RECURRING_CHANGES }} />;
 }
 
