@@ -46,7 +46,14 @@ export type RecurringSample = { late: MissingBill[]; arrived?: RecurringChange[]
 export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const { hash } = useLocation();
+  const { hash, search: query } = useLocation();
+  // FLOW-424 (C18-4): `?project=` shows one project's rows, as its page counted them.
+  const projectId = new URLSearchParams(query).get("project");
+  const ofProject = <T extends { project_id?: string | null }>(rows: readonly T[]): T[] =>
+    projectId == null ? [...rows] : rows.filter((row) => row.project_id === projectId);
+  // On one project the header names it, so each row's place line keeps only its category (FLOW-424).
+  const placed = <T extends { project_name?: string | null }>(rows: readonly T[]): T[] =>
+    projectId == null ? [...rows] : rows.map((row) => ({ ...row, project_name: null }));
   const toast = useToast();
   const blocked = useBlockedPreview();
   const live = sample == null;
@@ -62,13 +69,15 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const base = sample ? ({ kind: "ready" } as const) : screenPhase(preview, missing);
   // With nothing late, wait for הגיעו החודש before saying "הכל הגיע", so the empty state never flashes.
   const phase = base.kind === "ready" && !sample && (missing.data ?? []).length === 0 && thisMonth.isPending ? ({ kind: "loading" } as const) : base;
-  const late = sample ? sample.late.filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (missing.data ?? []);
-  const open = sample ? (sample.changes ?? []).filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (changes.data ?? []);
-  const rows = missingBillViews(late, search)
+  const late = ofProject(sample ? sample.late.filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (missing.data ?? []));
+  const open = ofProject(sample ? (sample.changes ?? []).filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (changes.data ?? []));
+  const rows = missingBillViews(placed(late), search)
     .filter((row) => answered.get(row.id) !== true)
     .map((row) => (answered.get(row.id) === false ? { ...row, match: null } : row));
   // The arrivals are a second read: while it loads or if it fails, the late rows still show.
-  const arrived = arrivedViews(sample?.arrived ?? thisMonth.data ?? [], open, search);
+  const seen = ofProject(sample?.arrived ?? thisMonth.data ?? []);
+  const arrived = arrivedViews(placed(seen), open, search);
+  const projectName = projectId == null ? undefined : ([...late, ...seen].find((row) => row.project_name != null && row.project_name !== "")?.project_name ?? undefined);
 
   const write = useWrite<Hide>({
     failure: () => "לא הצלחנו לסגור את ההתראה.",
@@ -154,7 +163,8 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader
         title="קבועים"
-        backTo={`/${search}`}
+        kicker={projectName}
+        backTo={projectId == null ? `/${search}` : `/projects/${projectId}${search}`}
         action={closable || editing ? (
           <TextLink chevron={false} onClick={() => { setEditing((on) => !on); }}>
             {editing ? "סיום" : "עריכה"}

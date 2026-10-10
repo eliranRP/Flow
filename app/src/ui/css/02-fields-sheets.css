@@ -272,14 +272,6 @@
   flex-grow: 1;
 }
 
-.ui-row-set-aside .ui-hint-parts {
-  min-inline-size: min-content;
-}
-
-.ui-row-set-aside .ui-hint-parts > .ui-hint-part:first-child {
-  flex-shrink: 0;
-}
-
 .ui-nowrap {
   white-space: nowrap;
 }

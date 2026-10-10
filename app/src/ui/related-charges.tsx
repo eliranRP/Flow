@@ -5,6 +5,7 @@ import { absAgorot } from "../agorot";
 import { chargesTitle, earlierCharges, partyChangeView, shortMonth, type PartyChangeView } from "../party-charges";
 import { cx } from "./cx";
 import { formatDayMonth } from "./date-math";
+import { ChevronIcon } from "./icons";
 import { Sheet } from "./sheet";
 import "./css/38-related-charges.css";
 
@@ -29,7 +30,13 @@ function ChargeRows({ data, charges, search }: { data: PartyCharges; charges: Pa
         const body = (
           <>
             <span className="ui-charges-date"><bdi dir="ltr">{date}</bdi>{charge.pending ? <span className="t-label text-text-secondary"> · ממתין</span> : null}</span>
-            <bdi dir="ltr" className="t-amount ui-num">{amount}</bdi>
+            <span className="ui-charges-end">
+              <bdi dir="ltr" className="t-amount ui-num">{amount}</bdi>
+              {/* FLOW-424 (C18-5): a linked charge ends in a chevron; the open one keeps its place. */}
+              <span className="ui-row-chevron ui-charges-chevron" aria-hidden="true">
+                {current ? null : <ChevronIcon />}
+              </span>
+            </span>
           </>
         );
         return (

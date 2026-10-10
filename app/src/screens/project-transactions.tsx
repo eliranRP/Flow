@@ -1,10 +1,12 @@
 import { formatAmountText, type ProjectDetail } from "@flow/shared";
+import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
+import { KeptOutHint } from "../ui/split-parts-hint";
 import { rowSource } from "../ui/line-marks";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -47,11 +49,13 @@ export function projectLineRow(txn: ProjectLine): { agorot: bigint; sign: "in" |
   return { agorot: part.minor, sign: part.direction === "income" ? "in" : "out", whole: `מתוך ${formatAmountText(whole, currency)}` };
 }
 
-/** "לא נספר ברווח · מתוך $3,170 · category · date". The marker leads, so a kept-out line reads as one at a glance. */
-function projectLineHint(txn: ProjectLine, whole: string | null): string {
-  return [txn.kept_out === true ? KEPT_OUT_SHORT : null, whole, txn.category, formatDayMonth(txn.doc_date)]
-    .filter((part): part is string => part != null && part !== "")
-    .join(" · ");
+/**
+ * "לא נספר ברווח · מתוך $3,170 · category · date". The marker leads, so a kept-out line reads as one
+ * at a glance, and only the marker holds its width (FLOW-424).
+ */
+function projectLineHint(txn: ProjectLine, whole: string | null): ReactNode {
+  const parts = [whole, txn.category, formatDayMonth(txn.doc_date)].filter((part): part is string => part != null && part !== "");
+  return txn.kept_out === true ? <KeptOutHint parts={[KEPT_OUT_SHORT, ...parts]} /> : parts.join(" · ");
 }
 
 /** FLOW-340 C: the project's lines for the period, opened from the overview's תנועות row. */
