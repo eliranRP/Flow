@@ -8,12 +8,11 @@ import type { Browser } from "@playwright/test";
  */
 
 /**
- * The bench's median on the CI runner at CPU ×4, estimated: a lane container measured about 300 ms
- * (2026-10-10), and the same opens ran 3.3-3.7 times slower there than on CI (project herzl 509 vs
- * 150 ms, history 363 vs 98). CI prints its own median on every main run ("container speed: bench
- * median ... ms"); set this from that line.
+ * The bench's median on the CI runner at CPU ×4, from main's run on 9b2d1ac (2026-10-10):
+ * "container speed: bench median 98 ms (118, 98, 98, 95, 101 ms)". CI prints it on every main run;
+ * update this when it drifts.
  */
-export const CI_BENCH_MS = 90;
+export const CI_BENCH_MS = 98;
 export const MAX_FACTOR = 1.5;
 const BENCH_RUNS = 5;
 

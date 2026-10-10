@@ -105,7 +105,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
-  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "category_exact", "direction", "amount", "amount_min", "amount_max"]),
+  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "category_exact", "direction", "amount", "amount_min", "amount_max", "amount_minor", "amount_min_minor", "amount_max_minor"]),
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit", "as_of"]),

@@ -1,7 +1,13 @@
 import type { Decorator, Preview } from "@storybook/react";
 import { MemoryRouter } from "react-router-dom";
 import "../src/styles/app.css";
-import { loadSheetDrawer } from "../src/ui/sheet";
+import { primeSheetDrawer } from "../src/ui/sheet";
+import * as sheetDrawer from "../src/ui/sheet-drawer";
+
+// FLOW-815: the app loads vaul on a sheet's first mount. Stories import it up front instead: a
+// dynamic import there failed ("Failed to fetch dynamically imported module") whenever Vite
+// re-optimized its deps mid-run, and an open sheet draws on the first frame.
+primeSheetDrawer(sheetDrawer);
 
 const withFlow: Decorator = (Story, context) => {
   const theme = context.globals.theme === "dark" ? "dark" : "light";
@@ -20,13 +26,6 @@ const withFlow: Decorator = (Story, context) => {
 
 const preview: Preview = {
   decorators: [withFlow],
-  // FLOW-815: sheets load vaul on first mount; a story that opens one draws it on the first frame.
-  loaders: [
-    async () => {
-      await loadSheetDrawer();
-      return {};
-    },
-  ],
   initialGlobals: {
     theme: "light",
     viewport: { value: "flow390", isRotated: false },

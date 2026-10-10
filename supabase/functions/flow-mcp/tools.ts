@@ -5,8 +5,10 @@
 
 import { demandStatement, LoanScheduleError } from "../../../packages/shared/src/loan-schedule.ts";
 import {
+  amountFilterOf,
   argsOf,
   basisArgOf,
+  cashLineArgsOf,
   companyCurrency,
   dateOf,
   fail,
@@ -15,8 +17,6 @@ import {
   limitOf,
   lineMetaOf,
   majorString,
-  minorFromMajor,
-  minorFromMajorOrNull,
   monthsBetween,
   NO_LINE_META,
   offsetOf,
@@ -355,10 +355,9 @@ export async function callTool(
       }
       result = await rpc("project_cash_months", { p_project: projectId, p_months: months });
     } else {
-      const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
-      if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
-      const side = args.side;
-      if (side !== "in" && side !== "out" && side !== "excluded" && side !== "not_in_profit") return fail("validation", "validation");
+      const picked = cashLineArgsOf(args);
+      if (isFail(picked)) return picked;
+      const { month, side } = picked;
       const currency = args.currency ?? null;
       if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
       const limit = limitOf(args.limit, 40);
@@ -418,10 +417,9 @@ export async function callTool(
 
   if (name === "get_cash_lines") {
     // A month is YYYY-MM or any YYYY-MM-DD in it, as get_cash_months returns it.
-    const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
-    if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
-    const side = args.side;
-    if (side !== "in" && side !== "out" && side !== "excluded" && side !== "not_in_profit") return fail("validation", "validation");
+    const picked = cashLineArgsOf(args);
+    if (isFail(picked)) return picked;
+    const { month, side } = picked;
     const currency = args.currency ?? null;
     if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
     const limit = limitOf(args.limit, 40);
@@ -493,16 +491,11 @@ export async function callTool(
       const categoryExact = args.category_exact == null ? false : args.category_exact;
       if (typeof categoryExact !== "boolean") return fail("validation", "validation");
       if (categoryExact && (category == null || category === "none")) return fail("validation", "validation");
-      // An amount is the bank figure without its sign, in the line's own currency (FLOW-211):
-      // amount finds one figure, amount_min and amount_max a range, both ends included.
-      if (args.amount != null && (args.amount_min != null || args.amount_max != null)) {
-        return fail("validation", "validation");
-      }
-      const amountMin = args.amount != null ? minorFromMajor(args.amount) : minorFromMajorOrNull(args.amount_min);
-      if (amountMin != null && typeof amountMin !== "bigint") return amountMin;
-      const amountMax = args.amount != null ? amountMin : minorFromMajorOrNull(args.amount_max);
-      if (amountMax != null && typeof amountMax !== "bigint") return amountMax;
-      if (amountMin != null && amountMax != null && amountMin > amountMax) return fail("validation", "validation");
+      // One figure or a range, in major or minor units (FLOW-211, FLOW-214).
+      const amount = amountFilterOf(args);
+      if (isFail(amount)) return amount;
+      const { min: amountMin, max: amountMax } = amount;
+      const hinted = (rows: unknown[]) => (rows.length === 0 && amount.hint != null ? { hint: amount.hint } : {});
       const filters = {
         p_from: from,
         p_to: to,
@@ -544,7 +537,7 @@ export async function callTool(
         });
         const expenses = await withLineMeta(rpc, rows, (row) => row.id);
         if (!Array.isArray(expenses)) return expenses;
-        return ok({ total: body.total, expenses });
+        return ok({ total: body.total, expenses, ...hinted(expenses) });
       }
       if (scopeName === "pending") {
         const listed = await rpc("list_review", {});
@@ -581,7 +574,7 @@ export async function callTool(
       const rows = Array.isArray(body.expenses) ? (body.expenses as Array<Record<string, unknown>>) : [];
       const expenses = await withLineMeta(rpc, rows, (row) => row.id);
       if (!Array.isArray(expenses)) return expenses;
-      return ok({ ...found.json, expenses });
+      return ok({ ...found.json, expenses, ...hinted(expenses) });
     }
     const direction = textOf(args.direction);
     if (typeof direction !== "string" && direction != null) return direction;

@@ -11,6 +11,12 @@ type SheetDrawer = { Drawer: typeof VaulDrawer };
 let sheetDrawer: SheetDrawer | null = null;
 let sheetDrawerLoad: Promise<SheetDrawer> | null = null;
 
+/** Storybook hands over a static import, so a story never waits on (or re-fetches) the chunk. */
+export function primeSheetDrawer(mod: SheetDrawer): void {
+  sheetDrawer = mod;
+  sheetDrawerLoad = Promise.resolve(mod);
+}
+
 export function loadSheetDrawer(): Promise<SheetDrawer> {
   sheetDrawerLoad ??= import("./sheet-drawer").then((mod) => {
     sheetDrawer = mod;

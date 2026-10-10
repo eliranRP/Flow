@@ -1,0 +1,4 @@
+<a id="flow-214"></a>
+# FLOW-214 · search_expenses takes amounts in minor units too
+- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 4, 2026-10-10, claude/flow-601-team-invites-dbh8bx) · **Depends on:** — · **Source:** the Flow MCP agent's requests, 2026-10-10 16:24Z: `amount: 143217` (minor units, like the rest of the API) for a $1,432.17 line found nothing, because the amount filters read major units.
+- [ ] `search_expenses` keeps `amount`, `amount_min` and `amount_max` in major units and adds `amount_minor`, `amount_min_minor` and `amount_max_minor` in minor units. A call uses one kind; mixing them is `validation`, with a message that says so. When nothing matches and a major-unit value is a whole number of 100000 or more, the result carries `hint`, naming the `_minor` field to pass instead. TOOLS.md and the tool description state the unit of each field.
