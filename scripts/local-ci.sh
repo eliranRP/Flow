@@ -42,34 +42,15 @@ case "${1:-}" in
   --full) full=1 ;;
   *) echo "Usage: local-ci.sh [--full]" >&2; exit 2 ;;
 esac
+# Phases and their budgets, and the process group whose leftovers the gate stops when it ends.
+source "$(dirname "$0")/local-ci-guard.sh"
+guard_session "$@"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 export FLOW_E2E_FRESH_SERVER=1 # Playwright starts its own servers: one already on a port may serve an old build.
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
-
-# Each phase's start (seconds into the run) and its short name, for gate-times.log.
-ran=()
-phase_key() {
-  case "$1" in
-    "docs only"*) echo lint ;;
-    "lint and check"*) echo lint-build ;;
-    "check: app unit tests"* | "check: unit and connector tests"*) echo units ;;
-    "check: Storybook smoke"*) echo storybook-smoke ;;
-    "check: Storybook"*) echo storybook ;;
-    "Docker and local Supabase"* | "e2e: waiting for local Supabase"*) echo supabase ;;
-    "database:"* | "e2e: database checks"*) echo pgtap ;;
-    "e2e:"*) echo e2e ;;
-    "passed"*) echo end ;;
-    *) echo other ;;
-  esac
-}
-phase() {
-  echo
-  echo "== local-ci: $1 ($(( $(date +%s) - started ))s)"
-  ran+=("$(( $(date +%s) - started )) $(phase_key "$1")")
-}
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   echo "local-ci: commit or stash your changes first, so the run tests the commit you push." >&2
@@ -98,6 +79,7 @@ times_log="$cache/gate-times.log"
 [[ -z "$shared" ]] || times_log="$(dirname "$shared")/gate-times.log"
 log_time() {
   local rc=$? total i start key next phases=""
+  rc="$(guard_exit_rc "$rc")"
   total="$(( $(date +%s) - started ))"
   for (( i = 0; i < ${#ran[@]}; i++ )); do
     start="${ran[i]%% *}"
@@ -333,9 +315,9 @@ start_docker() {
   docker info >/dev/null 2>&1 && return 0
   start_dockerd() {
     if [[ -S "$sock" ]]; then
-      (sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
+      (detach sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
     else
-      (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
+      (detach sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
     fi
   }
   # The socket file appears before containerd serves it, and dockerd started then exits with
@@ -351,7 +333,7 @@ start_docker() {
     # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
     # none runs. Either way, start dockerd only once containerd answers, for at most 30 seconds.
     if ! pgrep -x containerd >/dev/null 2>&1; then
-      (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
+      (detach sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
     fi
     for _ in $(seq 1 30); do
       containerd_serving && break
