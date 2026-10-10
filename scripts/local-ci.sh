@@ -675,7 +675,7 @@ storybook_smoke() {
     echo "local-ci: Storybook smoke skipped: these app inputs already passed."
     return 0
   fi
-  local base="" commit tree changed scope logs_dir
+  local base="" commit tree changed scope logs_dir setup
   logs_dir="$(mktemp -d)"
   if (( skips )); then
     while read -r commit tree; do
@@ -688,11 +688,13 @@ storybook_smoke() {
     # The vitest Storybook project above already ran the stories the change reaches. The build and
     # its layout, clip and secret specs run when a story spec or the Storybook setup changes; a
     # manifest, tsconfig or lockfile counts only when the part the build reads changed.
-    if [[ "$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes ]]; then
+    setup="$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")"
+    if [[ "$setup" != yes* ]]; then
       echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
     fi
+    echo "local-ci: Storybook build and smoke run: ${setup#yes } changed, which they read."
   else
     changed="pnpm-lock.yaml"
   fi

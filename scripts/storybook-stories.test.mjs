@@ -28,6 +28,10 @@ test("CSS and files outside the app pick no story; the Storybook config and lock
   assert.equal(select(".storybook/x", "app/.storybook/preview.tsx"), "all");
   assert.equal(select("pnpm-lock.yaml"), "all");
   assert.equal(select("app/e2e/storybook-static.spec.ts"), "all");
+  assert.equal(select("app/e2e/storybook-network.ts"), "all");
+  // A vitest test of a smoke helper runs in the unit project; it opens no story.
+  assert.deepEqual(select("app/e2e/storybook-network.test.ts", "app/e2e/smoke-allow.test.ts"), []);
+  assert.equal(reachesBuild("app/e2e/storybook-network.test.ts", { root }), false);
 });
 
 test("whole tiers fit the budget, nearest first; the first tier always goes", () => {

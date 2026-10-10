@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The story files a set of changed files reaches, for the pre-push every-story check.
 // Usage: git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --index <index.json> [--budget N] [--base <base>]
-//        git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --setup [--base <base>]  (prints yes or no)
+//        git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --setup [--base <base>]  (prints "yes <file>" or no)
 //        git diff --name-status <base> HEAD -- <app inputs> | node scripts/storybook-stories.mjs --related-run [--base <base>]
 // Prints the story files to open, one per line as Storybook's index names them (./src/x.stories.tsx),
 // or "all" when a change reaches every story (the Storybook config, the lockfile, the smoke itself),
@@ -22,7 +22,8 @@ import { importWalker } from "./e2e-specs.mjs";
 const runsAll = [
   /^app\/\.storybook\//,
   /^app\/(vite\.config\.ts|playwright\.storybook\.config\.ts)$/,
-  /^app\/e2e\/storybook-[^/]+$/,
+  // The smoke's specs and helpers; their vitest tests (storybook-*.test.ts) run in the unit project.
+  /^app\/e2e\/storybook-[^/]+(?<!\.test\.ts)$/,
   /^scripts\/(storybook-stories|e2e-specs)\.mjs$/,
 ];
 
@@ -215,7 +216,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const base = arg("--base");
   const indexPath = arg("--index");
   if (process.argv.includes("--setup")) {
-    console.log(changed.some((file) => reachesBuild(file, { root, base })) ? "yes" : "no");
+    const reaching = changed.find((file) => reachesBuild(file, { root, base }));
+    console.log(reaching ? `yes ${reaching}` : "no");
   } else if (!indexPath) {
     throw new Error("usage: storybook-stories.mjs --index <index.json> [--budget N] [--base <base>]");
   } else {
