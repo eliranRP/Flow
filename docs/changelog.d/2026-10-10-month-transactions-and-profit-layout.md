@@ -1,2 +1,2 @@
 A project's cash month page now lists that month's transactions under its total, including the ones not counted in profit, and the month chevrons move the list too.
-A project's profit page uses the white page layout, with its transactions listed under the summary.
+A project's profit page uses the white page layout, with its counted transactions listed under the summary. On a month its title names the month ("רווח אוקטובר") with the same month chevrons as the cash month page, and its income and expense rows look like the cash rows.

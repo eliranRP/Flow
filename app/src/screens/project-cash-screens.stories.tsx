@@ -10,6 +10,7 @@ import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ProjectDetailScreen } from "./flow-screens";
 import { ProjectCashLinesScreen, ProjectCashMonthScreen } from "./project-cash-screens";
+import { SAMPLE_MONTH_FIGURES, SAMPLE_MONTH_KEPT, SAMPLE_PROFIT_FIGURES, sampleMonthLines, sampleProfitLines } from "../dev/project-month-sample";
 
 /** FLOW-419 (owner's option A "Like Home"): a project opens on its cash. Invented figures. */
 
@@ -31,7 +32,7 @@ function cashRow(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "
     excluded_count: 0,
     excluded_in_minor: 0n,
     excluded_out_minor: 0n,
-    not_in_profit_categories: [],
+    not_in_profit_categories: [] as { name: string; amount_minor: bigint }[],
   };
 }
 
@@ -48,7 +49,8 @@ function months(rows: ReturnType<typeof cashRow>[][], base = "USD"): NonNullable
 
 const cash = months([
   [cashRow(310_000n, 75_000n, 128_000n)],
-  [cashRow(310_000n, 500_000n, 95_000n)],
+  // FLOW-438: the earlier month's figures are the ones its listed lines add up to.
+  [{ ...cashRow(SAMPLE_MONTH_FIGURES.in_minor, SAMPLE_MONTH_FIGURES.out_minor, SAMPLE_MONTH_FIGURES.profit_minor), not_in_profit_categories: SAMPLE_MONTH_KEPT }],
   [cashRow(310_000n, 195_000n, 101_000n)],
   [cashRow(310_000n, 212_000n, 98_000n)],
 ]);
@@ -67,15 +69,12 @@ const project: NonNullable<ProjectDetail> = {
   direct_agorot: 0n,
   shared_agorot: 0n,
   profit_agorot: 0n,
-  by_currency: [{ currency: "USD", income_minor: 310_000n, direct_minor: 182_000n, shared_minor: 0n, profit_minor: 128_000n }],
+  by_currency: [{ currency: "USD", ...SAMPLE_PROFIT_FIGURES, shared_minor: 0n }],
   categories: [],
   pending_count: 0,
   pending_agorot: 0n,
-  transactions: [
-    { id: "t1", description: "שכירות לדוגמה", doc_date: `${thisMonth}-03`, amount_net: 310_000n, currency: "USD", direction: "income", category: null },
-    { id: "t2", description: "חנות חומרים לדוגמה", doc_date: `${thisMonth}-02`, amount_net: -15_000n, currency: "USD", direction: "expense", category: "שיפוץ" },
-    { id: "t3", description: "מלווה לדוגמה", doc_date: `${thisMonth}-06`, amount_net: -60_000n, currency: "USD", direction: "expense", category: "תשלומי הלוואה" },
-  ],
+  // FLOW-438: the profit page lists these under its figures; they add up to them.
+  transactions: sampleProfitLines(thisMonth),
   loans: [{ id: "l1", name: "הלוואת DSCR לדוגמה", currency: "USD", balance_minor: 21_360_000n, status: "open" }],
 };
 
@@ -170,6 +169,14 @@ export const ProjectProfitPage: Story = {
     // The page is the row's month, and its figure is the row's (cash's profit_minor, $1,280).
     await expect(canvas.getAllByText(new RegExp(cashMonthName(thisMonth))).length).toBeGreaterThan(0);
     await expect(canvas.getAllByText("$1,280").length).toBeGreaterThan(0);
+    // FLOW-438: the title names the month with the cash page's pager (this month: earlier only).
+    await expect(canvas.getByRole("heading", { level: 1 })).toHaveTextContent(`רווח ${cashMonthName(thisMonth)}`);
+    await expect(canvas.getAllByRole("button", { name: /^רווח / })).toHaveLength(1);
+    // The list holds the counted lines only, and they make up הכנסות $3,100 and הוצאות $1,820.
+    const list = canvas.getByRole("region", { name: "תנועות" });
+    await expect(within(list).getAllByRole("link")).toHaveLength(3);
+    await expect(canvas.queryByRole("link", { name: /^תנועות/ })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /^הוצאות .*\$1,820/ })).toBeInTheDocument();
   },
 };
 
@@ -276,15 +283,7 @@ export const ProjectCashKept: Story = {
 };
 
 /** FLOW-438 (owner, 2026-10-10): the month's תנועות under its figures, a kept-out line in place. */
-const monthLines = {
-  counted: [
-    { ...line("3", "שוכר לדוגמה", "שכירות", 310_000n), side: "in" as const },
-    line("2", "חנות חומרים לדוגמה", "תיקונים ותחזוקה", 15_000n),
-    line("6", "מלווה לדוגמה", "ריבית משכנתא", 60_000n),
-  ],
-  kept: [{ ...line("4", "השקעת בעלים לדוגמה", "השקעת בעלים", 107_000n), supplier_name: null, side: "in" as const }],
-  more: false,
-};
+const monthLines = sampleMonthLines(earlier);
 
 export const ProjectCashMonthWithLines: Story = {
   name: "Project, a month with its lines",

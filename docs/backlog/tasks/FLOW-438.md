@@ -4,3 +4,4 @@
 - [x] The project's cash month page keeps its layout and lists the month's transactions under it in the project transactions page's rows, kept-out ones inline with the "לא נספר ברווח" hint (the owner's layout, not mockup A or B).
 - [x] A cash lines side for the counted lines only (`in_profit`), so the page reads them without subtracting the kept-out ones.
 - [x] The project's profit page moves off the purple band to the same white stacked layout, with its transactions inline.
+- [x] Design lead fixes: the listed lines add up to the figures (sample test), the profit rows in the cash rows' look, no "תנועות" row, counted lines only; owner: the profit page's month header and chevrons like the cash month page.

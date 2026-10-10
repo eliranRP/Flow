@@ -117,10 +117,11 @@ describe("ProjectDetailScreen currency", () => {
     const overview = renderProject(mixed);
     expect(screen.getByText("₪800")).toBeInTheDocument();
     expect(screen.getByText("$2,750")).toBeInTheDocument();
-    // FLOW-340 C: the band holds the profit; income and expenses are rows, one figure per currency.
+    // FLOW-340 C: the band holds the profit; income and expenses are rows, one figure per currency
+    // (FLOW-438: in the cash rows' look, one amount under the other).
     expect(document.querySelectorAll(".ui-band-figures")).toHaveLength(0);
-    expect(screen.getByRole("link", { name: /^הכנסות/ })).toHaveTextContent("₪1,000 · $4,000");
-    expect(screen.getByRole("link", { name: /^הוצאות/ })).toHaveTextContent("₪200 · $1,250");
+    expect(screen.getByRole("link", { name: /^הכנסות/ })).toHaveTextContent("₪1,000$4,000");
+    expect(screen.getByRole("link", { name: /^הוצאות/ })).toHaveTextContent("₪200$1,250");
     overview.unmount();
     renderProject(mixed, "expenses");
     const ilsRow = screen.getByText("1 ממתינה לאישור").closest(".ui-row");
