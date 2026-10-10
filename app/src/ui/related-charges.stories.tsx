@@ -6,14 +6,22 @@ import { inSheet, padded, Stack } from "./story-support";
 
 /**
  * FLOW-431 (owner's pick B, 2026-10-10): the transaction screen's "לעומת הרגיל" chip, and the
- * sheet of the party's earlier charges it opens. Invented data.
+ * sheet of the party's earlier charges it opens. Invented data. Args name a sample, since story
+ * args never hold a bigint.
  */
+const samples = { mailbox: mailboxCharges, cheaper: cheaperCharges, steady: steadyCharges, rent: rentCharges };
+
+function Demo({ sample }: { sample: keyof typeof samples }) {
+  return <PartyChargesBody data={samples[sample]} />;
+}
+
 const meta = {
   title: "Components/RelatedCharges",
-  component: PartyChargesBody,
+  component: Demo,
   decorators: [inSheet],
   parameters: { sheetTitle: "Example Mailbox" },
-} satisfies Meta<typeof PartyChargesBody>;
+  args: { sample: "mailbox" },
+} satisfies Meta<typeof Demo>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -21,22 +29,22 @@ type Story = StoryObj<typeof meta>;
 function Chips() {
   return (
     <Stack>
-      {[mailboxCharges, cheaperCharges, steadyCharges, rentCharges].map((data) => {
+      {Object.entries(samples).map(([key, data]) => {
         const view = partyChangeView(data);
-        return view == null ? null : <ChargeChangeChip key={`${data.transaction_id}-${String(data.change_percent)}`} view={view} onClick={() => undefined} />;
+        return view == null ? null : <ChargeChangeChip key={key} view={view} onClick={() => undefined} />;
       })}
     </Stack>
   );
 }
 
 const chips = { render: () => <Chips />, decorators: [padded] };
-export const Chip: Story = { name: "Chip: up, down, usual, income down", args: { data: mailboxCharges }, ...chips };
-export const ChipDark: Story = { name: "Chip, dark", args: { data: mailboxCharges }, ...chips, globals: { theme: "dark" } };
-export const Chip320: Story = { name: "Chip, 320", args: { data: mailboxCharges }, ...chips, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const Chip: Story = { name: "Chip: up, down, usual, income down", ...chips };
+export const ChipDark: Story = { name: "Chip, dark", ...chips, globals: { theme: "dark" } };
+export const Chip320: Story = { name: "Chip, 320", ...chips, parameters: { viewport: { defaultViewport: "flow320" } } };
 
-export const ExpenseUp: Story = { name: "Sheet: an expense up 92%", args: { data: mailboxCharges } };
-export const ExpenseUpDark: Story = { name: "Sheet: an expense up, dark", args: { data: mailboxCharges }, globals: { theme: "dark" } };
-export const ExpenseUp320: Story = { name: "Sheet: an expense up, 320", args: { data: mailboxCharges }, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const ExpenseDown: Story = { name: "Sheet: an expense down", args: { data: cheaperCharges } };
-export const AsUsual: Story = { name: "Sheet: the usual amount", args: { data: steadyCharges } };
-export const IncomeDown: Story = { name: "Sheet: income down 20%, this one pending", args: { data: rentCharges }, parameters: { sheetTitle: "שוכר לדוגמה" } };
+export const ExpenseUp: Story = { name: "Sheet: an expense up 92%" };
+export const ExpenseUpDark: Story = { name: "Sheet: an expense up, dark", globals: { theme: "dark" } };
+export const ExpenseUp320: Story = { name: "Sheet: an expense up, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
+export const ExpenseDown: Story = { name: "Sheet: an expense down", args: { sample: "cheaper" } };
+export const AsUsual: Story = { name: "Sheet: the usual amount", args: { sample: "steady" } };
+export const IncomeDown: Story = { name: "Sheet: income down 20%, this one pending", args: { sample: "rent" }, parameters: { sheetTitle: "שוכר לדוגמה" } };
