@@ -1,4 +1,4 @@
 <a id="flow-215"></a>
 # FLOW-215 · get_cash_lines names a missing side, and documents its page cap
-- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 4, 2026-10-10, claude/flow-601-team-invites-dbh8bx) · **Depends on:** — · **Source:** the Flow MCP agent's requests, 2026-10-10 16:24Z: `get_cash_lines` without `side` returned a bare `validation`.
+- **Type:** SMALL CYCLE · **Status:** done (#570) · **Depends on:** — · **Source:** the Flow MCP agent's requests, 2026-10-10 16:24Z: `get_cash_lines` without `side` returned a bare `validation`.
 - [ ] A missing or unknown `month` or `side` in `get_cash_lines` and `get_project_cash_lines` is still `validation`, but the message names the field and its values ("side is required: one of in, out, excluded, not_in_profit (call once per side)"). Side stays required: one call per side keeps each page newest first with `has_more` exact. TOOLS.md and the tool description say a call returns at most 100 rows and how to page with `offset` while `has_more` is true.
