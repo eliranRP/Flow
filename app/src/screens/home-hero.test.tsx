@@ -168,7 +168,8 @@ describe("Home hero", () => {
   it("names a loss in the label", () => {
     const period = stepPeriod(thisMonth(), -1) ?? thisMonth();
     renderHome(books({ income_agorot: 10_000_000n, expense_agorot: 20_000_000n, net_profit_agorot: -10_000_000n }), period);
-    expect(screen.getByText(`הפסד ${periodPhrase(period)}`)).toBeInTheDocument();
+    // FLOW-358: last month's pill names the month, so the label is the word alone.
+    expect(screen.getByText("הפסד", { selector: ".ui-band-label" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "−₪100,000" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `${windowLabel(period)} – בחירת תקופה` })).toBeInTheDocument();
   });

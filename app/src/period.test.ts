@@ -94,11 +94,11 @@ describe("period labels", () => {
     expect(periodLabel(presetPeriod("months3", now), now)).toBe("3 חודשים");
     expect(heroProfitLabel(thisMonth(now), 1n, now)).toBe("רווח החודש");
     expect(heroProfitLabel(thisMonth(now), 0n, now)).toBe("רווח החודש");
-    expect(heroProfitLabel(monthPeriod("2026-09", now), -1n, now)).toBe("הפסד בספטמבר 2026");
+    expect(heroProfitLabel(monthPeriod("2026-09", now), -1n, now)).toBe("הפסד");
     expect(heroProfitLabel(thisMonth(now), "mixed", now)).toBe("רווח והפסד החודש");
     expect(heroProfitLabel(presetPeriod("months3", now), 1n, now)).toBe("רווח ב־3 חודשים");
-    expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח ב־2026");
-    expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח בכל התקופה");
+    expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח");
+    expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח");
     expect(heroProfitLabel(customRange("2026-01-01", "2026-02-01"), 1n, now)).toBe("רווח בטווח שנבחר");
     expect(periodPhrase(allTime(), now, "project")).toBe("מתחילת הפרויקט");
   });
