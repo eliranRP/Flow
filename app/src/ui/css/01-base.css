@@ -46,6 +46,14 @@
   --review-radius: 10px;
 }
 
+/* FLOW-310: with the keyboard up on a 320 phone the visual viewport is short, so an open sheet
+   keeps only a 16px gap above it instead of 56px. */
+@media (max-width: 359px) {
+  :root[data-kb="open"] {
+    --sheet-gap: var(--space-4);
+  }
+}
+
 .ui-btn {
   position: relative;
   display: inline-flex;
