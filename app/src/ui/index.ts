@@ -61,6 +61,7 @@ export { MatchText, matchRange } from "./match-text";
 export type { StatementDetail } from "./statement";
 export { CurrencySheet, CURRENCY_CHOICES, currencyChoiceLabel } from "./currency-sheet";
 export { BasisSheet, BASIS_CHOICES, basisChoiceLabel } from "./basis-sheet";
+export { PaceSheet, PACE_CHOICES } from "./pace-sheet";
 export { PeriodSwipe } from "./period-swipe";
 export { MonthStepper } from "./month-stepper";
 export { ApproxAmount, approxAmountText } from "./approx-amount";

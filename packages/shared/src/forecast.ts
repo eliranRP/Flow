@@ -106,6 +106,15 @@ export const paymentRecurringSchema = z.object({
   typical_day: z.number().int().nullable(),
   typical_amount_minor: agorotSchema.nullable(),
   prior_override: z.boolean().nullable().optional(),
+  /** FLOW-415 (decision 0175): how often it comes, the owner's or the detected one. */
+  pace: paceSchema.nullable().optional(),
+  /** The owner's pace; null: the detected one decides. */
+  pace_override: paceSchema.nullable().optional(),
+  detected_pace: paceSchema.nullable().optional(),
+  /** yyyy-mm, the month the next payment is due. */
+  next_due_month: z.string().nullable().optional(),
+  /** set_payment_pace's pace before the change, for ביטול. */
+  prior_pace: paceSchema.nullable().optional(),
 });
 
 const expectedCurrencySchema = z.object({
