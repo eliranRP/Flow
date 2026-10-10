@@ -48,6 +48,7 @@ const CategoriesScreen = lazy(() => screenLoaders.categories().then((m) => ({ de
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => ({ default: m.ProfitMonthsScreen })));
+const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
 const SearchScreen = lazy(() => screenLoaders.search().then((m) => ({ default: m.SearchScreen })));
 const MissingBillsScreen = lazy(() => screenLoaders.missingBills().then((m) => ({ default: m.MissingBillsScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
@@ -244,6 +245,8 @@ function AppRoutes() {
                   <Route path="add" element={<AddForm />} />
                 </Route>
                 <Route path="projects" element={<ProjectsScreen />} />
+                {/* FLOW-406 (proj-b-2): a project group's page. */}
+                <Route path="projects/groups/:groupId" element={<ProjectGroupScreen />} />
                 <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
                 <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
                 {/* FLOW-340 C: the screens the project page's rows open. */}
