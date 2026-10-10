@@ -2,6 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ApproxAmount, approxAmountText } from "./approx-amount";
+import { Button } from "./button";
 import { cx } from "./cx";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
@@ -29,7 +30,12 @@ export type MissingBillRow = {
   href: string;
   /** FLOW-415 (owner, 08:41Z): set when this user can hide the row. */
   alertKey?: string | null;
+  /** FLOW-430: a supplier (or customer) that may be this one under another name. */
+  match?: MissingBillMatchHint | null;
 };
+
+/** FLOW-430: the suggested name, its newest line's amount ("$57.79") and date ("06/10"). */
+export type MissingBillMatchHint = { name: string; amount: string; date: string };
 
 export type ArrivedRow = {
   id: string;
@@ -112,6 +118,30 @@ function PaceLine({ text }: { text: string }) {
   );
 }
 
+/**
+ * FLOW-430 (owner, 2026-10-10): "אולי זה: <name> · <amount> · dd/mm" under a late row, and the user
+ * decides. Nothing merges by itself: "כן" counts that party's bills as this one's, "לא" stops the hint.
+ */
+function MatchHint({ match, income, onAnswer }: { match: MissingBillMatchHint; income?: boolean; onAnswer: (same: boolean) => void }) {
+  const same = income ? "כן, אותו לקוח" : "כן, אותו ספק";
+  return (
+    <div className="ui-missing-match" role="group" aria-label={`אולי זה: ${match.name}`}>
+      <span className="ui-row-hint ui-missing-match-text">
+        {"אולי זה: "}
+        <bdi>{match.name}</bdi>
+        {" · "}
+        <bdi dir="ltr" className="ui-num ui-missing-match-whole">{match.amount}</bdi>
+        {" · "}
+        <bdi dir="ltr" className="ui-missing-match-whole">{match.date}</bdi>
+      </span>
+      <span className="ui-missing-match-actions">
+        <Button variant="pill" aria-label={`${same}: ${match.name}`} onClick={() => { onAnswer(true); }}>{same}</Button>
+        <Button variant="pill" aria-label={`לא, ${match.name} הוא לא אותו אחד`} onClick={() => { onAnswer(false); }}>לא</Button>
+      </span>
+    </div>
+  );
+}
+
 function changeText(percent: number): string {
   return `${String(Math.abs(percent))}% ${percent < 0 ? "▼" : "▲"}`;
 }
@@ -133,12 +163,15 @@ export function MissingBillList({
   phase = { kind: "ready" },
   onRetry,
   onHide,
+  onMatch,
 }: {
   rows: readonly MissingBillRow[];
   arrived?: readonly ArrivedRow[];
   phase?: ScreenPhase;
   onRetry?: () => void;
   onHide?: (kind: "missing" | "change", key: string, name: string) => void;
+  /** FLOW-430: the user's answer to a row's suggestion. */
+  onMatch?: (rowId: string, same: boolean) => void;
 }) {
   if (phase.kind === "loading") return <ListSkeleton />;
   if (phase.kind === "error") return <ErrorState offline={phase.offline} onRetry={() => { onRetry?.(); }} />;
@@ -154,25 +187,30 @@ export function MissingBillList({
           <SectionHead title="לא הגיעו" />
           <List className="ui-missing-bills">
             {rows.map((row) => (
-              <HideableRow key={row.id} name={row.name} onHide={hide("missing", row.alertKey, row.name)} reserve={onHide != null}>
-                <Link
-                  to={row.href}
-                  className="ui-row ui-hit"
-                  aria-label={[row.name, row.place, row.usual, approxAmountText(row.minor, row.currency)].filter((part) => part != null).join(", ")}
-                >
-                  <span className="ui-row-main">
-                    <span className="ui-row-text">
-                      <span className="ui-row-title">{row.name}</span>
-                      {row.place != null ? <PlaceLine place={row.place} /> : null}
-                      <PaceLine text={row.usual} />
+              <div key={row.id} className="ui-missing-item">
+                <HideableRow name={row.name} onHide={hide("missing", row.alertKey, row.name)} reserve={onHide != null}>
+                  <Link
+                    to={row.href}
+                    className="ui-row ui-hit"
+                    aria-label={[row.name, row.place, row.usual, approxAmountText(row.minor, row.currency)].filter((part) => part != null).join(", ")}
+                  >
+                    <span className="ui-row-main">
+                      <span className="ui-row-text">
+                        <span className="ui-row-title">{row.name}</span>
+                        {row.place != null ? <PlaceLine place={row.place} /> : null}
+                        <PaceLine text={row.usual} />
+                      </span>
                     </span>
-                  </span>
-                  <ApproxAmount minor={row.minor} currency={row.currency} income={row.income} />
-                  <span className="ui-row-chevron" aria-hidden="true">
-                    <ChevronIcon />
-                  </span>
-                </Link>
-              </HideableRow>
+                    <ApproxAmount minor={row.minor} currency={row.currency} income={row.income} />
+                    <span className="ui-row-chevron" aria-hidden="true">
+                      <ChevronIcon />
+                    </span>
+                  </Link>
+                </HideableRow>
+                {row.match != null && onMatch != null ? (
+                  <MatchHint match={row.match} income={row.income} onAnswer={(same) => { onMatch(row.id, same); }} />
+                ) : null}
+              </div>
             ))}
           </List>
         </section>

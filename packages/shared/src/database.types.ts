@@ -707,6 +707,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"recurring_matches": {
+                  Row: {
+                    "company_id": string,"direction": Database["public"]['Enums']["txn_direction"],"match_party_id": string,"party_id": string,"same": boolean,"set_at": string,"set_by": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"direction": Database["public"]['Enums']["txn_direction"],"match_party_id": string,"party_id": string,"same": boolean,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"match_party_id"?: string,"party_id"?: string,"same"?: boolean,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recurring_matches_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"recurring_overrides": {
                   Row: {
                     "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"pace": string | null,"party_id": string,"recurring": boolean | null,"set_at": string,"set_by": string | null
@@ -1020,6 +1039,9 @@ isOneToOne: false
 "answer_push_prompt":
 { Args: { "p_yes": boolean }; Returns: Json
                            },
+"answer_recurring_match":
+{ Args: { "p_direction": Database["public"]['Enums']["txn_direction"],"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
+                           },
 "apply_starter_categories":
 { Args: { "p_set": string }; Returns: Json
                            },
@@ -1233,6 +1255,9 @@ isOneToOne: false
                            },
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
+                           },
+"mcp_answer_recurring_match":
+{ Args: { "p_direction": string,"p_idempotency_key": string,"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
                            },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json

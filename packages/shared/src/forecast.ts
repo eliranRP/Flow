@@ -42,6 +42,20 @@ export const missingBillSchema = z.object({
   due_month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   /** The key `dismiss_recurring_alert('missing', …)` takes. */
   alert_key: z.string().optional(),
+  /**
+   * FLOW-430 (decision 0178): a party that may be this one under another name, for the user to
+   * answer with `answer_recurring_match`; null when there is none.
+   */
+  suggestion: z
+    .object({
+      party_id: z.string(),
+      party_name: z.string().nullable().transform((name) => name ?? ""),
+      transaction_id: z.string(),
+      doc_date: daySchema,
+      amount_minor: agorotSchema,
+    })
+    .nullable()
+    .optional(),
 });
 
 /** `missing_bills` returns a JSON array, ordered by the typical day. */

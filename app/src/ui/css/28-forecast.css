@@ -87,3 +87,40 @@
   flex: none;
   white-space: pre;
 }
+
+/* FLOW-430: "אולי זה: <name> · <amount> · dd/mm" under a late row, then "כן" and "לא" (44px). It
+   sits on the row's surface, so the row and its hint read as one. */
+.ui-missing-item {
+  background: var(--color-surface);
+}
+
+.ui-missing-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block-end: var(--row-pad);
+  min-inline-size: 0;
+}
+
+.ui-missing-match-text {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The amount and date never break inside. */
+.ui-missing-match-whole {
+  white-space: nowrap;
+}
+
+.ui-missing-match-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+.ui-missing-match-actions .ui-btn-pill {
+  height: var(--touch-min);
+  min-height: var(--touch-min);
+}

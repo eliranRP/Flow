@@ -71,6 +71,38 @@ export const SAMPLE_MISSING_INCOME: MissingBill = {
   alert_key: "income:00000000-0000-4000-8000-000000000003:ILS:2026-10",
 };
 
+/**
+ * FLOW-430: an invented water bill whose October charge came in under a longer name, so the row
+ * suggests that supplier.
+ */
+export const SAMPLE_MISSING_RENAMED: MissingBill = {
+  supplier_id: "s-river",
+  supplier_name: "Riverside Water",
+  direction: "expense",
+  party_id: "s-river",
+  party_name: "Riverside Water",
+  currency: "USD",
+  typical_amount_minor: -4_200n,
+  typical_day: 4,
+  expected_by: "2026-10-09",
+  months_seen: 6,
+  last_doc_date: "2026-09-04",
+  project_id: "p2",
+  project_name: "שיפוץ הרצל 12",
+  category_id: "c-water",
+  category_name: "מים",
+  pace: "month",
+  due_month: "2026-10",
+  alert_key: "expense:00000000-0000-4000-8000-000000000004:USD:2026-10",
+  suggestion: {
+    party_id: "s-river-works",
+    party_name: "Riverside Water Works",
+    transaction_id: "t-river-oct",
+    doc_date: "2026-10-06",
+    amount_minor: -5_779n,
+  },
+};
+
 /** FLOW-415: invented recurring charges off their usual amount, for Home's rows. */
 export const SAMPLE_RECURRING_CHANGES: RecurringChange[] = [
   {
