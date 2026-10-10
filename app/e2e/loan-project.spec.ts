@@ -132,9 +132,9 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) });
   await expect(row).toBeVisible();
 
-  // FLOW-340 C: the project page's הלוואות row names its one open loan.
+  // FLOW-419: the project's השקעה והלוואות row names its one open loan.
   await page.goto(`/projects/${projectA}`);
-  await expect(page.getByRole("link", { name: /^הלוואות/ })).toContainText(lender);
+  await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toContainText(lender);
 
   await page.goto("/settings/loans");
   await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) }).click();
@@ -151,8 +151,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await expect(page.getByRole("button", { name: /^פרויקט ללא פרויקט/ })).toBeVisible();
 
   await page.goto(`/projects/${projectB}`);
-  // The short project page (FLOW-340 C): "הוצאות לפי קטגוריה" is only in its skeleton now, so wait
-  // for the loaded rows, then check the loan row is gone.
-  await expect(page.getByRole("link", { name: /^תנועות/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^הלוואות/ })).toHaveCount(0);
+  // FLOW-419: the project opens on its cash, so wait for its נכנס row, then check no loan row is left.
+  await expect(page.getByRole("link", { name: /^נכנס/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toHaveCount(0);
 });
