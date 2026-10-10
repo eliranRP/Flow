@@ -17,6 +17,7 @@
 
 .ui-recurring-hide {
   flex: none;
+  align-self: stretch;
   padding-inline: var(--space-4);
 }
 
@@ -40,6 +41,7 @@
   inline-size: auto;
   margin-inline: var(--space-side);
   padding-inline: 0;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   overflow: clip;

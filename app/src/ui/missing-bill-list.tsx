@@ -62,8 +62,8 @@ export const SECTION_ID: Record<RecurringSection, string> = { late: "late", arri
 
 /**
  * One row the user can close for themselves (FLOW-415, owner 08:41Z; FLOW-913, owner 16:05Z: it is a
- * dismiss, so "סגירה"): a swipe toward the start over "סגירה", and, while the list is in "עריכה", a
- * quiet "סגירה" in place of the chevron. `peek` slides the row once to show the swipe.
+ * dismiss, so "סגירה"): a swipe toward the start over "סגירה", and, while the list is in "עריכה", an
+ * accent "סגירה" (44px) in place of the chevron. `peek` slides the row once to show the swipe.
  */
 function HideableRow({ name, onHide, editing, peek, children }: { name: string; onHide?: () => void; editing: boolean; peek: boolean; children: ReactNode }) {
   if (onHide == null) return <div className="ui-recurring-row">{children}</div>;
@@ -72,7 +72,7 @@ function HideableRow({ name, onHide, editing, peek, children }: { name: string; 
       <div className="ui-recurring-row">
         {children}
         {editing ? (
-          <TextLink className="ui-recurring-hide" tone="quiet" chevron={false} label={`סגירה, ${name}`} onClick={onHide}>
+          <TextLink className="ui-recurring-hide" chevron={false} label={`סגירה, ${name}`} onClick={onHide}>
             סגירה
           </TextLink>
         ) : null}
