@@ -96,7 +96,7 @@ export async function saveNotificationPrefs(change: Partial<Record<NotificationP
   })));
 }
 
-/** Records the review card's answer, so it is asked once. Yes also turns on the evening reminder. */
+/** Records the review card's answer, so it is asked once. Yes also turns on the evening reminder, and a first yes turns on תנועה חדשה. */
 export async function answerPushPrompt(yes: boolean): Promise<NotificationPrefs> {
   return prefsFromData(await result(db().rpc("answer_push_prompt", { p_yes: yes })));
 }
