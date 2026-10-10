@@ -81,8 +81,11 @@ describe("DateSheet", () => {
     const buttons = years.querySelectorAll("button");
     expect(buttons[0]?.textContent).toBe(String(thisYear));
     expect(buttons[buttons.length - 1]?.textContent).toBe(String(thisYear - 40));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "2026" }));
     fireEvent.click(screen.getByRole("button", { name: "2004" }));
     expect(screen.queryByRole("group", { name: "שנה" })).toBeNull();
+    // Focus stays in the sheet, on the title that now names March 2004.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: `${monthTitle(2004, 2)}, בחירת שנה` }));
     fireEvent.click(screen.getByRole("button", { name: dayLabel("2004-03-15") }));
     fireEvent.click(screen.getByRole("button", { name: "בחירה" }));
     expect(applied).toEqual(["2004-03-15"]);

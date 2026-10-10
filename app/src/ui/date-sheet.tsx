@@ -70,6 +70,7 @@ export function DateSheet({
   // FLOW-115: a tap on the month title swaps the days for the years, so an old loan start is one tap away.
   const [years, setYears] = useState(false);
   const yearsRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLButtonElement>(null);
   const todayYear = Number(today.slice(0, 4));
   const lastMonth = lastPickableMonth(today, allowFuture, max);
   const firstMonth = min != null ? monthIndex(monthOf(min)) : null;
@@ -94,7 +95,10 @@ export function DateSheet({
     // The picked year starts in the middle of the list; only the list scrolls, never the sheet.
     const box = yearsRef.current;
     const picked = box?.querySelector<HTMLElement>("[aria-pressed='true']");
-    if (box && picked) box.scrollTop = picked.offsetTop - (box.clientHeight - picked.offsetHeight) / 2;
+    if (box && picked) {
+      box.scrollTop = picked.offsetTop - (box.clientHeight - picked.offsetHeight) / 2;
+      picked.focus({ preventScroll: true });
+    }
   }, [years]);
 
   function chooseYear(year: number) {
@@ -103,6 +107,8 @@ export function DateSheet({
     if (firstMonth != null) index = Math.max(index, firstMonth);
     setCursor({ year: Math.floor(index / 12), month: index % 12 });
     setYears(false);
+    // The picked year's button leaves with the list: focus stays in the sheet, on the title that names the new month.
+    titleRef.current?.focus();
   }
 
   function choose(iso: string) {
@@ -175,6 +181,7 @@ export function DateSheet({
           <OutwardChevron side="start" />
         </IconButton>
         <button
+          ref={titleRef}
           type="button"
           className="t-label ui-date-title"
           aria-expanded={years}
@@ -206,6 +213,7 @@ export function DateSheet({
               className="ui-day ui-year"
               aria-pressed={year === cursor.year}
               aria-current={year === todayYear ? "date" : undefined}
+              disabled={busy}
               onClick={() => {
                 chooseYear(year);
               }}
