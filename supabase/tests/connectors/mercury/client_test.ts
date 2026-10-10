@@ -18,6 +18,8 @@ import {
   encodeMercuryResume,
   fetchMercurySince,
   getMercuryTransaction,
+  listMercuryCardLabels,
+  cardLabelsUpdate,
   mercuryAccountsChanged,
   mercuryFailureCode,
   mercuryStartDate,
@@ -198,8 +200,10 @@ Deno.test("validate reads accounts, credit, and treasury and returns ids and lab
     result.accounts.length,
     accountsFile.accounts.length + creditFile.accounts.length + treasuryFile.accounts.length,
   );
-  const text = JSON.stringify(result.accounts);
+  const text = JSON.stringify(result.accounts.map(({ id, label }) => ({ id, label })));
   assertEquals(text.includes(token), false);
+  // Only the last 4 sits beside a label (FLOW-707), never more of the number.
+  assertEquals(result.accounts.every((account) => account.last4 == null || /^[0-9]{4}$/.test(account.last4)), true);
   assertEquals(text.includes("availableBalance"), false);
   assertEquals(text.includes("routingNumber"), false);
   assertEquals(text.includes("0000"), false);
@@ -841,4 +845,64 @@ Deno.test("a reconnect to other accounts is a change; the same accounts in anoth
   assertEquals(mercuryAccountsChanged([{ id: "acct-a" }, { id: "acct-b" }, { id: "acct-c" }], next), true);
   assertEquals(mercuryAccountsChanged(null, next), true);
   assertEquals(mercuryAccountsChanged([], []), false);
+});
+
+Deno.test("FLOW-707: card nicknames by last 4, only named cards, and an unreadable list is null", async () => {
+  assertMercuryGet("GET", "/cards");
+  const { fetchImpl, calls } = transport((url) => {
+    if (url.pathname.endsWith("/cards")) {
+      return jsonResponse({
+        cards: [
+          { id: "card-1", lastFour: "4242", nickname: "Example Street Utilities", nameOnCard: "Example Holder", kind: "credit" },
+          { id: "card-2", lastFour: "1111", nickname: null, kind: "credit" },
+          { id: "card-3", lastFour: "2222", nickname: "  ", kind: "debit" },
+          { id: "card-4", lastFour: "3333", nickname: "Example General", kind: "credit" },
+          { id: "card-5", lastFour: "3333", nickname: "Example Other", kind: "debit" },
+          { id: "card-6", lastFour: "123", nickname: "Too short", kind: "debit" },
+          { id: "card-7", lastFour: "4242", nickname: "Example Street Utilities", kind: "credit" },
+          { id: "card-8", lastFourDigits: "5555", nickname: "Example Lot 123456789", kind: "credit" },
+        ],
+        page: {},
+      });
+    }
+    return jsonResponse({}, 404);
+  });
+  const session = openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW });
+  const labels = await listMercuryCardLabels(session);
+  assertEquals(labels?.map((label) => label.last4), ["4242", "5555"]);
+  assertEquals(labels?.[0].label, "Example Street Utilities");
+  // A long digit run in a nickname never reaches the store whole.
+  assertEquals(labels?.[1].label.includes("123456789"), false);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].init.method, "GET");
+
+  const denied = transport(() => jsonResponse({ errors: { message: "forbidden" } }, 403));
+  const deniedSession = openMercury(`test-${crypto.randomUUID()}`, { fetch: denied.fetchImpl, now: () => NOW });
+  assertEquals(await listMercuryCardLabels(deniedSession), null);
+});
+
+Deno.test("FLOW-707: an unreadable card list keeps the stored names, an empty one clears them", () => {
+  assertEquals(cardLabelsUpdate(null), {});
+  assertEquals(cardLabelsUpdate([]), { card_labels: [] });
+  assertEquals(cardLabelsUpdate([{ last4: "4242", label: "Example Street Utilities" }]), {
+    card_labels: [{ last4: "4242", label: "Example Street Utilities" }],
+  });
+});
+
+Deno.test("FLOW-707: an account's nickname is its label; without one the bank's name stays", async () => {
+  const [first, second] = accountsFile.accounts;
+  const { fetchImpl } = transport((url) => {
+    if (url.pathname.endsWith("/credit")) return jsonResponse({ accounts: [] });
+    if (url.pathname.endsWith("/treasury")) return jsonResponse({ accounts: [], page: {} });
+    if (url.pathname.endsWith("/accounts")) {
+      return jsonResponse({ accounts: [{ ...first, nickname: " Example Street " }, { ...second, nickname: null }], page: {} });
+    }
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW }));
+  assertEquals(result.ok, true);
+  if (!result.ok) return;
+  assertEquals(result.accounts.find((account) => account.id === first.id)?.label, "Example Street");
+  assertEquals(result.accounts.find((account) => account.id === first.id)?.last4, "0000");
+  assertEquals(result.accounts.find((account) => account.id === second.id)?.label.startsWith("Mercury Savings"), true);
 });

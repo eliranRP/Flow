@@ -7,6 +7,7 @@ const empty = {
   transaction_id: "t1",
   method: null,
   card_last4: null,
+  card_name: null,
   memo: null,
   account: null,
   counterparty: null,
@@ -31,6 +32,13 @@ describe("parseTxnMeta", () => {
     expect(parseTxnMeta({ ...empty, method: "card", card_last4: "424242" })?.card_last4).toBeNull();
     expect(parseTxnMeta({ ...empty, method: "card", card_last4: 4242 })?.card_last4).toBeNull();
     expect(parseTxnMeta({ ...empty, method: "card", card_last4: "4242" })?.card_last4).toBe("4242");
+  });
+
+  it("reads the card's nickname trimmed, and a blank or missing one as null (FLOW-707)", () => {
+    expect(parseTxnMeta({ ...empty, method: "card", card_last4: "4242", card_name: " Example Utilities " })?.card_name).toBe("Example Utilities");
+    expect(parseTxnMeta({ ...empty, card_name: "  " })?.card_name).toBeNull();
+    const { card_name: _dropped, ...older } = empty;
+    expect(parseTxnMeta(older)?.card_name).toBeNull();
   });
 
   it("masks a 9-digit run in the memo and the bank text, and trims blanks to null", () => {

@@ -329,6 +329,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-702"></a>[FLOW-702](tasks/FLOW-702.md) | Jev auto mode | PLAN FIRST |
 | <a id="flow-703"></a>[FLOW-703](tasks/FLOW-703.md) | Jev corrections write-back | SMALL CYCLE |
 | <a id="flow-704"></a>[FLOW-704](tasks/FLOW-704.md) | Jev review card follow-ups | BACKLOG NIT |
+| <a id="flow-707"></a>[FLOW-707](tasks/FLOW-707.md) | The card's nickname from the bank, on the transaction and for Jev | SMALL UI |
 
 ## Infra and CI
 
@@ -360,6 +361,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-906"></a>[FLOW-906](tasks/FLOW-906.md) | Confirm the public help contact | BACKLOG NIT |
 | <a id="flow-907"></a>[FLOW-907](tasks/FLOW-907.md) | Data clean-up after PR B | MCP |
 | <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
+| <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
 
 ## Future features
 

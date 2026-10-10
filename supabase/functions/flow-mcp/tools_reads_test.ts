@@ -19,6 +19,7 @@ import {
 const NO_META = {
   method: null,
   card_last4: null,
+  card_name: null,
   memo: null,
   account: null,
   counterparty: null,
@@ -802,6 +803,7 @@ Deno.test("FLOW-304: get_expense, list_review and search_expenses carry the line
   const card = {
     method: "card",
     card_last4: "4242",
+    card_name: "Example Utilities",
     memo: null,
     account: "Example Checking",
     counterparty: "Example Office Suite",
