@@ -26,7 +26,7 @@ test("preview error and loading states are reachable", async ({ page }) => {
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toBeVisible();
   await page.goto("/?preview=loading");
   await expect(page.locator("[aria-busy=true]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "חודשים קודמים" })).toBeVisible();
 });
 
 test("add is a sheet over Home and transaction detail has no tab bar", async ({ page }) => {
