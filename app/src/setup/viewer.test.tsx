@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
+import { myCompaniesFor } from "../team-test-support";
 import { useSetupViewer } from "./viewer";
 
 const session = {
@@ -21,9 +22,10 @@ const session = {
   },
 } satisfies Session;
 
-const gate = vi.hoisted((): { row: { owner_id: string } | null; error: boolean } => ({
+const gate = vi.hoisted((): { row: { owner_id: string } | null; error: boolean; memberRole: "viewer" | "editor" } => ({
   row: { owner_id: "user-1" },
   error: false,
+  memberRole: "viewer",
 }));
 
 const supabase = {
@@ -33,11 +35,11 @@ const supabase = {
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
   },
-  from: () => ({
-    select: () => ({
-      maybeSingle: () => Promise.resolve(gate.error ? { data: null, error: { message: "down" } } : { data: gate.row, error: null }),
-    }),
-  }),
+  rpc: (name: string) => {
+    if (name !== "list_my_companies") return Promise.resolve({ data: null, error: null });
+    if (gate.error) return Promise.resolve({ data: null, error: { message: "down" } });
+    return Promise.resolve({ data: myCompaniesFor("user-1", gate.row?.owner_id ?? null, { role: gate.memberRole }), error: null });
+  },
 };
 
 vi.mock("../lib/supabase", () => ({
@@ -68,6 +70,7 @@ describe("setup viewer", () => {
   afterEach(() => {
     gate.row = { owner_id: "user-1" };
     gate.error = false;
+    gate.memberRole = "viewer";
     localStorage.clear();
   });
 
@@ -77,7 +80,7 @@ describe("setup viewer", () => {
       expect(screen.getByText("owner")).toBeInTheDocument();
     });
     const keys = client.getQueryCache().getAll().map((query) => query.queryKey);
-    expect(keys).toContainEqual(["company-owner", "user-1"]);
+    expect(keys).toContainEqual(["my-companies", "user-1"]);
   });
 
   it("treats a missing company as an owner", async () => {
@@ -98,6 +101,15 @@ describe("setup viewer", () => {
 
   it("fails closed when the owner read errors", async () => {
     gate.error = true;
+    renderProbe();
+    await waitFor(() => {
+      expect(screen.getByText("viewer")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps an editor out of the run: setup is the owner's (FLOW-601)", async () => {
+    gate.row = { owner_id: "other" };
+    gate.memberRole = "editor";
     renderProbe();
     await waitFor(() => {
       expect(screen.getByText("viewer")).toBeInTheDocument();

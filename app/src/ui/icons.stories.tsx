@@ -19,7 +19,9 @@ import {
   LoanIcon,
   LockIcon,
   LogoutIcon,
+  MailIcon,
   PencilIcon,
+  PeopleIcon,
   PercentIcon,
   PlugIcon,
   ProjectsIcon,
@@ -36,7 +38,7 @@ import { padded } from "./story-support";
 
 type Entry = [string, ComponentType<{ size?: number }>];
 
-/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות). */
+/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite). */
 const ICONS: Entry[] = [
   ["PlugIcon", PlugIcon],
   ["LoanIcon", LoanIcon],
@@ -68,6 +70,8 @@ const ICONS: Entry[] = [
   ["SplitIcon", SplitIcon],
   ["TrashIcon", TrashIcon],
   ["BellIcon", BellIcon],
+  ["PeopleIcon", PeopleIcon],
+  ["MailIcon", MailIcon],
 ];
 
 function IconGrid() {

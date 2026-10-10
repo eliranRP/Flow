@@ -8,6 +8,7 @@ import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { ReviewScreen } from "./flow-screens";
+import { myCompaniesFor } from "../team-test-support";
 
 const gate = vi.hoisted(() => ({ owner: "11111111-1111-1111-1111-111111111111" }));
 
@@ -77,6 +78,7 @@ const supabase = {
   },
   rpc: (name: string, args?: unknown) => {
     rpc.calls.push({ name, args });
+    if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(session.user.id, gate.owner), error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     return rpc.impl(name, args);
   },

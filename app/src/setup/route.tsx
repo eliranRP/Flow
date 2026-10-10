@@ -1,4 +1,4 @@
-import { lazy, useEffect, useLayoutEffect, useRef } from "react";
+import { lazy, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode, usePreviewSearch } from "../preview";
@@ -34,6 +34,7 @@ import { screenLoaders } from "../screen-loaders";
 // FLOW-804: the steps load when a setup screen opens, so Home's first load skips them.
 const loadSteps = screenLoaders.setupSteps;
 const StepBusiness = lazy(() => loadSteps().then((m) => ({ default: m.StepBusiness })));
+const StepStarter = lazy(() => loadSteps().then((m) => ({ default: m.StepStarter })));
 const StepSumit = lazy(() => loadSteps().then((m) => ({ default: m.StepSumit })));
 const StepJev = lazy(() => loadSteps().then((m) => ({ default: m.StepJev })));
 const StepLists = lazy(() => loadSteps().then((m) => ({ default: m.StepLists })));
@@ -167,6 +168,7 @@ function SetupStepBody({
   const dashboard = useDashboardQuery();
   const count = dashboard.data?.review_count ?? reviewCount;
   const backTo = backPath(step, fromCard, created);
+  const [createdCompany, setCreatedCompany] = useState<string | null>(null);
 
   function go(path: string) {
     void navigate(path);
@@ -187,6 +189,22 @@ function SetupStepBody({
   }
 
   if (step === 0) {
+    // FLOW-406: once the company exists, step 0 asks for the starter categories before step 1.
+    const starterCompany = createdCompany ?? companyId;
+    if (starterCompany != null) {
+      return (
+        <StepStarter
+          initial={readSetupStore(userId, starterCompany).starter_set}
+          onDone={(set) => {
+            if (userId && set != null) {
+              const current = readSetupStore(userId, starterCompany);
+              writeSetupStore(userId, starterCompany, { ...current, starter_set: set, starter_at: new Date().toISOString() });
+            }
+            go("/setup/1");
+          }}
+        />
+      );
+    }
     return (
       <StepBusiness
         userId={userId}
@@ -196,7 +214,7 @@ function SetupStepBody({
             const current = readSetupStore(userId, nextCompany);
             writeSetupStore(userId, nextCompany, { ...current, run_started_at: current.run_started_at ?? at });
           }
-          go("/setup/1");
+          setCreatedCompany(nextCompany);
         }}
       />
     );

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactElement, type ReactNode, type Ref } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
@@ -61,7 +61,7 @@ import {
   type MemoryLoanStore,
 } from "./loan-detail-store";
 import { formatLoanMoney } from "./loan-form";
-import { LoanBalance } from "./loan-list";
+import { LoanBalance, showsLoanBalance } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
 
@@ -182,11 +182,18 @@ function LoanDetailLoading({ back }: { back: string }) {
     <div aria-busy="true">
       <ScreenHeader barOnly kicker="הלוואות" backTo={back} />
       <p className="sr-only" role="status">טוען…</p>
-      <div className="ui-page-pad ui-loan-head">
-        <Skeleton width="md" />
+      {/* FLOW-115: the name, the balance and the status hold their loaded lines, so nothing moves when the read lands. */}
+      <div className="ui-page-pad" aria-hidden="true">
+        <p className="t-title-1 ui-loan-skel-title ui-loan-skel-line"><Skeleton width="md" /></p>
+        <div className="ui-loan-head">
+          <p className="t-display ui-loan-skel-line"><Skeleton width="lg" /></p>
+          <div className="ui-status-row">
+            <span className="ui-status ui-skeleton-bar ui-loan-skel-pill"><span className="ui-chip-label">{"\u00a0"}</span></span>
+          </div>
+        </div>
       </div>
       <SectionHead title="פרטים" />
-      <List>
+      <List className="ui-loan-skel-rows">
         {["a", "b", "c", "d", "e", "f"].map((key) => <ListRow key={key} variant="skeleton" />)}
       </List>
     </div>
@@ -222,6 +229,9 @@ function LoanDetailReady({
   const [deleting, setDeleting] = useState(false);
   const busyClose = useRef(false);
   const returnRef = useRef<HTMLElement | null>(null);
+  // The status opener is the מצב row, or "שינוי" beside the pill once the loan ended (FLOW-356). A
+  // status change swaps one for the other, so the sheet returns focus to whichever is mounted now.
+  const statusRef = useRef<HTMLButtonElement | null>(null);
   const setSheet = useSheetHistory("loan-detail", sheet != null, (next) => {
     if (!next) setSheetState(null);
   }, () => !busyClose.current);
@@ -310,12 +320,14 @@ function LoanDetailReady({
   const [allPayments, setAllPayments] = useState(false);
   const listed = allPayments ? payments : payments.slice(0, LOAN_PAYMENTS_SHOWN);
   const parts = loanParts(loan);
+  // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
+  const ended = !showsLoanBalance(loan);
 
-  function row(key: string, label: string, value: ReactNode, icon: ReactElement, onOpen: (() => void) | null, hint?: string) {
+  function row(key: string, label: string, value: ReactNode, icon: ReactElement, onOpen: (() => void) | null, hint?: string, buttonRef?: Ref<HTMLButtonElement>) {
     return holdWrites || onOpen == null ? (
       <ListRow key={key} variant="static" eyebrow={label} title={value} icon={icon} hint={hint} />
     ) : (
-      <ListRow key={key} variant="button" eyebrow={label} title={value} icon={icon} hint={hint} chevron onClick={onOpen} />
+      <ListRow key={key} variant="button" eyebrow={label} title={value} icon={icon} hint={hint} chevron onClick={onOpen} buttonRef={buttonRef} />
     );
   }
 
@@ -325,12 +337,21 @@ function LoanDetailReady({
         <ScreenHeader title={loan.name} kicker="הלוואות" backTo={back} />
         <ViewerNote />
         <div className="ui-page-pad ui-loan-head">
-          <p className="t-display">
-            <BigNumber agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
-          </p>
+          {ended ? null : (
+            <p className="t-display">
+              <BigNumber agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
+            </p>
+          )}
           <div className="ui-status-row">
             <StatusPill>{statusPill(loan)}</StatusPill>
-            <span className="t-hint">{loan.kind === "demand" ? "יתרת קרן" : "יתרה"}</span>
+            {ended ? (
+              // The מצב row goes, so the status changes from here (reopening a loan stays one tap away).
+              holdWrites ? null : (
+                <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" buttonRef={statusRef} onClick={() => { open("status"); }}>שינוי</TextLink>
+              )
+            ) : (
+              <span className="t-hint">{loan.kind === "demand" ? "יתרת קרן" : "יתרה"}</span>
+            )}
           </div>
         </div>
         {flagged.length > 0 ? (
@@ -348,9 +369,9 @@ function LoanDetailReady({
         <List>
           {row("kind", "סוג", kindValue(loan), <LoanIcon />, () => { open("kind"); })}
           {row("rate", "ריבית", <RateValue loan={loan} today={today} />, <PercentIcon />, () => { setRate(null); open("rate"); })}
-          {payment == null ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
+          {payment == null || ended ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
           {row("project", "פרויקט", projectName ?? NO_PROJECT, <ProjectsIcon />, () => { open("project"); })}
-          {row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); })}
+          {ended ? null : row("status", "מצב", LOAN_STATUS_LABEL[loan.status], <InfoIcon size={24} />, () => { open("status"); }, undefined, statusRef)}
         </List>
 
         {/* No rate rows yet: the ריבית row above opens קביעת ריבית, so the section waits (mockup B6). */}
@@ -475,7 +496,7 @@ function LoanDetailReady({
               loan={loan}
               open={sheet === "status"}
               onOpenChange={setSheet}
-              returnFocusRef={returnRef}
+              returnFocusRef={statusRef}
               lastPayment={lastPaid}
               defaultDate={closeDateDefault(loan, payments, today)}
               onSave={(next) => patchSave(next, statusToast(next.status, loan.balanceMinor, loan.currency), "status")}

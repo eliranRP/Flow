@@ -6,7 +6,7 @@ import type { LoanChoice } from "./loan-match-api";
 import { LoanSplitEditor } from "./loan-split-editor";
 
 /**
- * FLOW-106 §3.4, "חלוקת התשלום": the split editor that "חלוקה אחרת" opens from the loan match
+ * FLOW-106 §3.4, "פיצול התשלום": the split editor that "פיצול אחר" opens from the loan match
  * sheet. Invented loans, categories and amounts.
  */
 const MORTGAGE: LoanChoice = {

@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { Session } from "@supabase/supabase-js";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { myCompaniesFor } from "./team-test-support";
 import { AuthProvider, useAuth } from "./auth";
 import { readRoleCache, writeRoleCache } from "./company-role-cache";
 import { useCompanyRole } from "./use-is-viewer";
@@ -15,6 +16,8 @@ const roleRead = vi.hoisted(() => ({
   calls: 0,
   gate: null as Promise<void> | null,
   row: null as { id: string; owner_id: string } | null,
+  /** The signed-in user the FLOW-601 companies read answers for. */
+  userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
 }));
 
 vi.mock("./lib/supabase", () => ({
@@ -25,15 +28,13 @@ vi.mock("./lib/supabase", () => ({
         return { data: { subscription: { unsubscribe: () => undefined } } };
       },
     },
-    from: () => ({
-      select: () => ({
-        maybeSingle: async () => {
-          roleRead.calls += 1;
-          if (roleRead.gate) await roleRead.gate;
-          return { data: roleRead.row, error: null };
-        },
-      }),
-    }),
+    rpc: async (name: string) => {
+      if (name !== "list_my_companies") return { data: null, error: null };
+      roleRead.calls += 1;
+      if (roleRead.gate) await roleRead.gate;
+      const row = roleRead.row;
+      return { data: row == null ? null : myCompaniesFor(roleRead.userId, row.owner_id, { companyId: row.id }), error: null };
+    },
   }),
 }));
 

@@ -1,3 +1,4 @@
+import { STARTER_SETS, type StarterSetKey } from "@flow/shared";
 import { loadSetupState, uploadSetupState, type LocalSetupCopy } from "./server-store";
 
 /**
@@ -16,6 +17,9 @@ export type SetupStore = {
   card_dismissed_at: string | null;
   /** Not in the design jsonb. Keeps "ההגדרה הושלמה." to one show. */
   completed_toast_at: string | null;
+  /** FLOW-406: the starter set picked after the company step, and when (decision 0164). */
+  starter_set: StarterSetKey | null;
+  starter_at: string | null;
 };
 
 const SKIP_KEYS = ["1", "2", "3", "4", "5"] as const;
@@ -31,6 +35,8 @@ export function emptySetupStore(): SetupStore {
     ios_steps_seen_at: null,
     card_dismissed_at: null,
     completed_toast_at: null,
+    starter_set: null,
+    starter_at: null,
   };
 }
 
@@ -40,6 +46,13 @@ export function setupStorageKey(userId: string, companyId: string | null): strin
 
 function stamp(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
+}
+
+/** A pick needs both a known set and its stamp. */
+function starterPick(set: unknown, at: unknown): Pick<SetupStore, "starter_set" | "starter_at"> {
+  const when = stamp(at);
+  const known = STARTER_SETS.find((row) => row.key === set)?.key ?? null;
+  return known != null && when != null ? { starter_set: known, starter_at: when } : { starter_set: null, starter_at: null };
 }
 
 export function parseSetupStore(raw: string | null): SetupStore {
@@ -70,6 +83,7 @@ export function parseSetupStore(raw: string | null): SetupStore {
     ios_steps_seen_at: stamp(row.ios_steps_seen_at),
     card_dismissed_at: stamp(row.card_dismissed_at),
     completed_toast_at: stamp(row.completed_toast_at),
+    ...starterPick(row.starter_set, row.starter_at),
   };
 }
 
@@ -117,6 +131,7 @@ export function mergeSetupStores(server: SetupStore, local: SetupStore): SetupSt
   for (const [step, at] of Object.entries(local.skipped) as [keyof SetupStore["skipped"], string][]) {
     skipped[step] = later(skipped[step], at) ?? at;
   }
+  const starter = local.starter_at != null && later(server.starter_at, local.starter_at) === local.starter_at ? local : server;
   return {
     run_started_at: later(server.run_started_at, local.run_started_at),
     run_resumed_at: later(server.run_resumed_at, local.run_resumed_at),
@@ -127,6 +142,9 @@ export function mergeSetupStores(server: SetupStore, local: SetupStore): SetupSt
     ios_steps_seen_at: later(server.ios_steps_seen_at, local.ios_steps_seen_at),
     card_dismissed_at: later(server.card_dismissed_at, local.card_dismissed_at),
     completed_toast_at: later(server.completed_toast_at, local.completed_toast_at),
+    // The later pick wins with its own set.
+    starter_set: starter.starter_set,
+    starter_at: starter.starter_at,
   };
 }
 

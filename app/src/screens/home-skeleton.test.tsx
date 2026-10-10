@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeSkeleton } from "./home-skeleton";
+import { defaultPeriod, windowLabel } from "../period";
 import { expectRtl } from "../ui/test-support";
 
 describe("HomeSkeleton", () => {
@@ -13,11 +14,16 @@ describe("HomeSkeleton", () => {
     expect(screen.queryByText("מצב תצוגה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(document.querySelector(".ui-spinner")).toBeNull();
-    expect(screen.getByRole("button", { name: /בחירת תקופה$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${windowLabel(defaultPeriod())} – בחירת תקופה` }).closest(".ui-band .ui-hero")).not.toBeNull();
     expect(document.querySelector(".ui-skel-pill")).toBeNull();
     expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
-    expect(document.querySelector(".ui-skel-explain")).not.toBeNull();
-    expect(document.querySelector(".ui-skel-card")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-explain")).toBeNull();
+    // FLOW-355: the attention card placeholder sits under the first two project rows, as the loaded page does.
+    const card = document.querySelector(".ui-skel-card");
+    const lists = document.querySelectorAll(".ui-project-list");
+    expect(lists).toHaveLength(2);
+    expect(Boolean((lists[0] as Element).compareDocumentPosition(card as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean((card as Element).compareDocumentPosition(lists[1] as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(document.querySelector(".ui-band .ui-hero")).not.toBeNull();
     expect(document.querySelector(".ui-flow")).not.toBeNull();
     expect(document.querySelectorAll(".ui-skel-figure")).toHaveLength(2);

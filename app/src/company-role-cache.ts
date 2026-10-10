@@ -1,7 +1,14 @@
 /** Last successful role, keyed by user id. The value names the company. */
 const COMPANY_ROLE_CACHE_KEY = "flow-company-role";
 
-export type KnownRole = { companyId: string; role: "owner" | "viewer" };
+/** FLOW-601: an editor of someone else's company is a role of its own. */
+export type SavedRole = "owner" | "editor" | "viewer";
+
+export type KnownRole = { companyId: string; role: SavedRole };
+
+function isSavedRole(value: unknown): value is SavedRole {
+  return value === "owner" || value === "editor" || value === "viewer";
+}
 
 export function readRoleCache(userId: string): KnownRole | null {
   try {
@@ -14,14 +21,14 @@ export function readRoleCache(userId: string): KnownRole | null {
     const companyId = (entry as { companyId?: unknown }).companyId;
     const role = (entry as { role?: unknown }).role;
     if (typeof companyId !== "string") return null;
-    if (role !== "owner" && role !== "viewer") return null;
+    if (!isSavedRole(role)) return null;
     return { companyId, role };
   } catch {
     return null;
   }
 }
 
-export function writeRoleCache(userId: string, companyId: string, role: "owner" | "viewer") {
+export function writeRoleCache(userId: string, companyId: string, role: SavedRole) {
   try {
     const raw = localStorage.getItem(COMPANY_ROLE_CACHE_KEY);
     const parsed: Record<string, KnownRole> = {};
@@ -33,7 +40,7 @@ export function writeRoleCache(userId: string, companyId: string, role: "owner" 
           const storedCompany = (value as { companyId?: unknown }).companyId;
           const storedRole = (value as { role?: unknown }).role;
           if (typeof storedCompany !== "string") continue;
-          if (storedRole !== "owner" && storedRole !== "viewer") continue;
+          if (!isSavedRole(storedRole)) continue;
           parsed[key] = { companyId: storedCompany, role: storedRole };
         }
       }

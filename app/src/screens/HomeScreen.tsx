@@ -11,7 +11,7 @@ import {
   roundedHeroProfit,
 } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useHeldOrder } from "../list-hold";
 import { useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
@@ -25,7 +25,7 @@ import { FlowLines, Hero } from "../ui/hero";
 import { CalendarIcon, ChartIcon, DocumentIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
-import { PeriodBar } from "../ui/period-bar";
+import { PeriodPicker } from "../ui/period-picker";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { ProfitMark } from "../ui/profit-mark";
 import { SearchEntry } from "../ui/search-entry";
@@ -34,10 +34,11 @@ import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { emptyHomeLabel } from "../home-label";
 import { breakdownPath } from "../breakdown";
-import { comparisonWords, heroExplanation, heroProfitLabel, periodPhrase, type PeriodChoice } from "../period";
+import { comparisonWords, heroProfitLabel, periodPhrase, windowLabel, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useHoldWrites } from "../use-is-viewer";
+import { useHoldOwnerSettings } from "../use-is-viewer";
+import { CompanySwitcher } from "./company-switcher";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
 import { missingBillsTitle, useMissingBillsQuery } from "../forecast";
@@ -55,7 +56,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const { status } = useAuth();
-  const holdWrites = useHoldWrites();
+  // FLOW-601: connecting a bank or SUMIT is the owner's.
+  const holdWrites = useHoldOwnerSettings();
   const previewing = preview !== "off";
   const books = useBooks();
   const dashboard = useDashboardQuery();
@@ -102,7 +104,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   if (!showBooks) {
     return (
       <div className="flex min-h-full min-w-0 flex-1 flex-col">
-        <TopBand preview={previewing} example={example} wordmark={false}>
+        <TopBand preview={previewing} example={example} wordmark={false} leading={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}>
           <Hero label={emptyHomeLabel} />
         </TopBand>
         <EmptyState
@@ -140,6 +142,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onPeriod={books.setPeriod}
       refreshing={dashboard.isPlaceholderData}
       checklist={<SetupHomeSlot emptyHome={false} />}
+      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
     />
   );
 }
@@ -166,7 +169,10 @@ export function HomeBooks({
   notice,
   checklist,
   companyCurrency = "ILS",
+  company,
 }: {
+  /** FLOW-601: the company's name, which opens the חברה sheet. */
+  company?: ReactNode;
   /** The company's currency, for an empty period's zeros (a USD company reads $0, not ₪0). */
   companyCurrency?: string;
   data: Dashboard;
@@ -216,6 +222,7 @@ export function HomeBooks({
             ? roundedHeroProfit(data.prev_income_agorot, data.prev_expense_agorot)
             : data.prev_net_agorot;
   const percent = single ? changePercent(heroFigures[0]?.agorot ?? 0n, previous) : null;
+  const [periodSheet, setPeriodSheet] = useState(false);
   const comparison = comparisonWords(period);
   const phrase = periodPhrase(period);
   const attention = attentionRows({
@@ -239,17 +246,18 @@ export function HomeBooks({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
+        leading={company}
         trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
-        <div className="ui-band-pbar">
-          <PeriodBar period={period} onChange={onPeriod} />
-        </div>
-        {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0150). */}
+        {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150). */}
         <PeriodSwipe period={period} onChange={onPeriod}>
           <Hero
             label={heroProfitLabel(period, profitSign(heroFigures.map((figure) => figure.agorot)) === "mixed" ? "mixed" : hero)}
             figures={heroFigures}
-            explanation={heroExplanation()}
+            pill={
+              // FLOW-355 (A): one period pill instead of the tabs and stepper, so a project row fits on a 667px screen.
+              <PeriodPicker pill={windowLabel(period)} name={`${windowLabel(period)} – בחירת תקופה`} open={periodSheet} onOpenChange={setPeriodSheet} period={period} onChange={onPeriod} />
+            }
           />
         </PeriodSwipe>
       </TopBand>
@@ -276,6 +284,14 @@ export function HomeBooks({
 
       {checklist}
 
+      <SectionHead title="פרויקטים" />
+      {leading.length === 0 ? (
+        <p className="ui-page-pad t-hint">אין תנועות בפרויקטים בתקופה הזו.</p>
+      ) : (
+        <ProjectLines projects={leading.slice(0, HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
+      )}
+
+      {/* FLOW-355 (A): the review and invoices rows sit under the first projects, so a project shows on the first screen. */}
       {unpaidPhase === "error" ? (
         <div className="ui-page-pad">
           <ErrorState
@@ -289,24 +305,30 @@ export function HomeBooks({
 
       <BannerRows rows={attention} />
 
-      <SectionHead title="פרויקטים" />
-      {leading.length === 0 ? (
-        <p className="ui-page-pad t-hint">אין תנועות בפרויקטים בתקופה הזו.</p>
-      ) : (
-        <ul className="ui-project-list">
-          {leading.map((project) => (
-            <li key={project.id}>
-              <ProjectLine project={project} search={search} rankCurrency={rankCurrency} />
-            </li>
-          ))}
-        </ul>
-      )}
+      {leading.length > HOME_PROJECTS_BEFORE_ATTENTION ? (
+        <ProjectLines projects={leading.slice(HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
+      ) : null}
       <p className="ui-page-pad">
         <TextLink to={`/projects${search}`} tone="quiet">
           לכל הפרויקטים
         </TextLink>
       </p>
     </div>
+  );
+}
+
+/** FLOW-355: the review and invoices rows come after this many projects. */
+const HOME_PROJECTS_BEFORE_ATTENTION = 2;
+
+function ProjectLines({ projects, search, rankCurrency }: { projects: readonly ProjectRow[]; search: string; rankCurrency: string }) {
+  return (
+    <ul className="ui-project-list">
+      {projects.map((project) => (
+        <li key={project.id}>
+          <ProjectLine project={project} search={search} rankCurrency={rankCurrency} />
+        </li>
+      ))}
+    </ul>
   );
 }
 

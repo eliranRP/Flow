@@ -117,6 +117,19 @@ describe("loan page: states and the viewer", () => {
     expect(screen.queryByRole("button", { name: "מחיקת ההלוואה" })).not.toBeInTheDocument();
   });
 
+  it("leads a paid-off loan with נפרעה and its date only, and changes its status from there (FLOW-138, FLOW-356)", async () => {
+    renderLoan(sampleLoanStore(), "loan-old");
+    expect(screen.getByText(/^נפרעה · \d\d\/\d\d\/\d{4}$/)).toBeInTheDocument();
+    expect(screen.queryByText("יתרה")).not.toBeInTheDocument();
+    expect(screen.queryByText("תשלום חודשי")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שינוי מצב" }));
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "נפרעה" })).toHaveAttribute("aria-checked", "true"); });
+    // Reopening swaps "שינוי" for the מצב row; focus lands on the row, not the page.
+    fireEvent.click(screen.getByRole("radio", { name: "פתוחה" }));
+    await waitFor(() => { expect(screen.getByRole("button", { name: /^מצב/ })).toHaveFocus(); });
+  });
+
   it("offers the tint ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
     renderLoan(oneLoanStore("loan-mortgage", { phase: "error" }), "loan-mortgage");
     const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
