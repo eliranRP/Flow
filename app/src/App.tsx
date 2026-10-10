@@ -26,6 +26,7 @@ import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/
 import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, screenLoaders } from "./screen-loaders";
 import { ScreenSuspense } from "./screen-suspense";
+import { PrefetchProjects } from "./prefetch";
 import { SignInScreen } from "./screens/SignInScreen";
 
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
@@ -376,6 +377,7 @@ function Shell() {
   return (
     <div className="flex min-h-dvh flex-col">
       <SetupResume />
+      <PrefetchProjects />
       <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">
         {/* A screen that is still loading keeps the tab bar on screen. */}
         <ScreenSuspense>

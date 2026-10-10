@@ -103,3 +103,8 @@
 .ui-sheet-danger-group {
   margin-block-start: var(--space-section);
 }
+
+/* FLOW-356: the status sheet's rows start at the sheet's edge, in line with its title and copy. */
+.ui-connector-sheet-list.ui-project-list {
+  padding-inline: 0;
+}

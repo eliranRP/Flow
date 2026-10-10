@@ -1,0 +1,1 @@
+The pre-push gate no longer passes a change whose e2e specs it could not run because Docker was down. It now starts containerd and then Docker itself. If Docker still won't start, it stops the push and prints the two commands that fix it. Every phase it leaves to main now says why.

@@ -9,6 +9,7 @@ GitHub runs no CI on pull requests. Each push to a PR branch is checked on the p
 - By default (about 4 minutes) it runs lint, the `check (core)` steps, and `pnpm test:storybook`, in parallel where it can. The migration order check compares against the lock at the merge base with `main`.
 - `FLOW_LOCAL_CI=full git push`, or `bash scripts/local-ci.sh --full`, also runs the Storybook build and smoke specs, local Supabase with pgTAP, the db types check, the deploy preflight, and the main Playwright suite (about 12 minutes).
 - The tree must be clean. A pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it.
+- A change that needs Docker (a database change, or e2e specs that reach it) starts Docker when it is down: containerd first, then `dockerd --containerd=/run/containerd/containerd.sock`. It starts containerd whenever none runs, even if an old socket file is left, waits for it to boot, and starts dockerd once more if the first one exited. In cloud containers a bare `dockerd` can fail with "timeout waiting for containerd". If Docker still won't start, the push fails with those two commands to run by hand. The gate never passes a push with a required phase skipped. A phase it leaves to main (more e2e specs than `FLOW_E2E_MAX`, a patch that already passed on a main that didn't move the database) prints why.
 
 ## When main runs CI and deploys
 

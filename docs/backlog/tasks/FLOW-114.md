@@ -1,6 +1,6 @@
 <a id="flow-114"></a>
 # FLOW-114 · Loans server follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready (loan match server items done in #184; the loan match UI done in #252; the backfill item open) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (every item checked; closed by dev lane 1, 2026-10-09) · **Depends on:** —
 - [x] `ratioToPayment` divides by the payment including escrow (`packages/shared/src/loan-schedule.ts`), while the balloon test uses principal and interest only. (Now principal and interest on both sides.)
 - [x] `loan_balances.flagged_parts` counts flagged parts on voided or removed lines. (Also `list_loans`' `flagged_transaction_ids`; migration `20261010140000`.)
 - [x] Revoke the unnecessary `service_role` EXECUTE grant on `public.clear_loan_split_review`. (Migration `20261010140000`.)
