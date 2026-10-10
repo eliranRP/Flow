@@ -64,6 +64,9 @@ export type TagExpense = {
   cardLast4?: string | null;
   /** The nickname the owner gave that card in the bank (FLOW-707), often a property or a purpose. */
   cardName?: string | null;
+  /** The bank account's own name (FLOW-707): the nickname the owner gave it, else the bank's. */
+  accountId?: string | null;
+  accountName?: string | null;
 };
 
 export type TagDirection = "expense" | "income";
@@ -208,9 +211,9 @@ function choiceCriteria(
   return criteria;
 }
 
-/** Said once per question when the line's card has a nickname (FLOW-707). */
+/** Said once per question when the line's card or account has a name (FLOW-707). */
 export const CARD_NAME_HINT =
-  "card_name in the state is the name the owner gave the paying card in the bank, often a property or a purpose; weigh it.";
+  "card_name and account_name in the state are the names the owner gave the paying card and the bank account, often a property or a purpose; weigh them.";
 
 export function buildTagQuestions(
   projects: readonly TagProject[],
@@ -274,7 +277,7 @@ export function lineQuestions(expense: TagExpense, company: TagCompanyWork): Rec
     lineCategories(expense, company),
     direction,
     (expense.flags ?? []).length > 0,
-    Boolean(expense.cardName),
+    Boolean(expense.cardName || expense.accountName),
   );
 }
 
@@ -311,6 +314,7 @@ export function buildTagState(
   };
   // The owner names cards by property or purpose ("<property> Utilities"): a strong project hint.
   if (expense.cardName) state.card_name = expense.cardName;
+  if (expense.accountName) state.account_name = expense.accountName;
   const flags = expense.flags ?? [];
   if (flags.length > 0) {
     state.flags = flags.map((flag) => ({ kind: flag.kind, ...flag.detail }));

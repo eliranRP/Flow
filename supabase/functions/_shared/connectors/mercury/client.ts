@@ -276,7 +276,10 @@ function accountLabel(row: unknown, fallback: string): AccountLabel | null {
   if (!isRecord(row) || typeof row.id !== "string") return null;
   const id = row.id.trim();
   if (id.length === 0 || id.length > 128 || id.includes("/")) return null;
-  const name = typeof row.name === "string" && row.name.trim() ? row.name.trim() : fallback;
+  // The nickname the owner gave the account (often a property) wins over Mercury's own
+  // "Mercury Checking ••1234" (FLOW-707).
+  const nickname = typeof row.nickname === "string" ? row.nickname.trim() : "";
+  const name = nickname || (typeof row.name === "string" && row.name.trim() ? row.name.trim() : fallback);
   return { id, label: String(redactMercury(name)).slice(0, 300) };
 }
 

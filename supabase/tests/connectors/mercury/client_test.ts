@@ -886,3 +886,20 @@ Deno.test("FLOW-707: an unreadable card list keeps the stored names, an empty on
     card_labels: [{ last4: "4242", label: "Example Street Utilities" }],
   });
 });
+
+Deno.test("FLOW-707: an account's nickname is its label; without one the bank's name stays", async () => {
+  const [first, second] = accountsFile.accounts;
+  const { fetchImpl } = transport((url) => {
+    if (url.pathname.endsWith("/credit")) return jsonResponse({ accounts: [] });
+    if (url.pathname.endsWith("/treasury")) return jsonResponse({ accounts: [], page: {} });
+    if (url.pathname.endsWith("/accounts")) {
+      return jsonResponse({ accounts: [{ ...first, nickname: " Example Street " }, { ...second, nickname: null }], page: {} });
+    }
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW }));
+  assertEquals(result.ok, true);
+  if (!result.ok) return;
+  assertEquals(result.accounts.find((account) => account.id === first.id)?.label, "Example Street");
+  assertEquals(result.accounts.find((account) => account.id === second.id)?.label.startsWith("Mercury Savings"), true);
+});
