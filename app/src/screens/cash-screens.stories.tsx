@@ -32,6 +32,8 @@ export const CashHomeMonth: Story = {
     // FLOW-418: under רווח החודש, the rest of the month's figure with what it holds.
     await expect(canvas.getByRole("link", { name: /^לא נספר ברווח ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
+    // FLOW-417: the whole history opens from under the last month.
+    await expect(canvas.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
   },
 };
 export const CashHomeMonthDark: Story = { ...CashHomeMonth, name: "Home cash, attention box, dark", ...dark };
@@ -64,6 +66,12 @@ export const CashMonth: Story = {
         <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />
       </StoryRoute>
     );
+  },
+  play: async ({ canvasElement }) => {
+    // FLOW-362: an earlier month's profit row names its month, not "רווח החודש".
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/^רווח ב/)).toBeInTheDocument();
+    await expect(canvas.queryByText("רווח החודש")).not.toBeInTheDocument();
   },
 };
 export const CashMonthDark: Story = { ...CashMonth, name: "Cash, an earlier month, dark", ...dark };

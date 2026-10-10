@@ -8,6 +8,7 @@ import {
   cashSideLabel,
   cashSummaryRows,
   cashTitle,
+  cashYearPath,
   isCashMonthKey,
   isCashSide,
   notInProfitMinor,
@@ -17,7 +18,7 @@ import {
 import { useHeldOrder } from "../list-hold";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useCashLinesQuery, useCashMonthsQuery, useOpenCashRow } from "../use-cash";
+import { useCashLinesQuery, useCashMonthData, useOpenCashRow } from "../use-cash";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { CashRows } from "../ui/cash-rows";
@@ -31,7 +32,7 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 
 /**
- * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and רווח החודש, as Home
+ * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and "רווח ב<month>", as Home
  * shows the current month), and the lines behind one month's נכנס or יצא, or (FLOW-418) the cash
  * profit leaves out. Decision 0168.
  */
@@ -52,16 +53,17 @@ export function CashMonthScreen({ sample, monthKey }: { sample?: NonNullable<Cas
 function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search: string; sample?: NonNullable<CashMonths> }) {
   const preview = useHomePreview();
   const open = useOpenCashRow();
-  const query = useCashMonthsQuery(sample == null);
+  // FLOW-417: a month older than Home's reads its year, and Back returns to that year.
+  const { query, recent } = useCashMonthData(monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
-  const back = `/${search}`;
+  const back = recent ? `/${search}` : cashYearPath(Number(monthKey.slice(0, 4)), search);
   if (phase.kind !== "ready") {
     return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
   const data = sample ?? query.data ?? null;
   const month = monthOf(data ?? undefined, monthKey);
-  // Home reads the last few months; a month outside them has no page.
+  // A month outside the books (after this one) has no page.
   if (data == null || month == null) return <Navigate to={back} replace />;
   const rows = shownCashRows(month, data.base_currency);
   return (
@@ -118,7 +120,8 @@ function CashLinesBody({
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
-  const months = useCashMonthsQuery(sample == null);
+  const monthData = useCashMonthData(monthKey, sample == null);
+  const months = monthData.query;
   const lines = useCashLinesQuery(monthKey, side, currency, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
   const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
@@ -126,7 +129,7 @@ function CashLinesBody({
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);
   const data = sample?.months ?? months.data ?? null;
-  const isCurrent = data != null && data.months[0] != null && cashMonthKey(data.months[0].month) === monthKey;
+  const isCurrent = (sample != null || monthData.recent) && data != null && data.months[0] != null && cashMonthKey(data.months[0].month) === monthKey;
   const back = isCurrent ? `/${search}` : cashMonthPath(monthKey, search);
 
   if (phase.kind !== "ready") {

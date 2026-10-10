@@ -1043,6 +1043,12 @@ isOneToOne: false
 "cash_months":
 { Args: { "p_months"?: number,"p_today"?: string }; Returns: Json
                            },
+"cash_year_months":
+{ Args: { "p_today"?: string,"p_year": number }; Returns: Json
+                           },
+"cash_years":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "claim_connector_refreshes":
 { Args: { "p_limit": number }; Returns: {
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]

@@ -19,7 +19,8 @@ import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
 import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
   CategoriesScreen,
@@ -348,6 +349,18 @@ export function DevCashLines() {
       at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
+}
+
+/** FLOW-417: the cash history, years then months. `?currencies=two` adds a USD line. */
+export function DevCashHistory() {
+  const [params] = useSearchParams();
+  return <CashHistoryScreen sample={sampleCashYears(new Date(), params.get("currencies") === "two" ? "two" : "one")} />;
+}
+
+/** FLOW-417: last year's page: its net, נכנס, יצא and its months. */
+export function DevCashYear() {
+  const months = sampleCashYearMonths();
+  return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;
 }
 
 export function DevProjects() {

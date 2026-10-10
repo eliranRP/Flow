@@ -50,6 +50,8 @@ const NotificationsScreen = lazy(() => screenLoaders.notifications().then((m) =>
 const CategoriesScreen = lazy(() => screenLoaders.categories().then((m) => ({ default: m.CategoriesScreen })));
 const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
 const CashLinesScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashLinesScreen })));
+const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
+const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => ({ default: m.ProfitMonthsScreen })));
@@ -85,6 +87,8 @@ const DevHome = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m
 const DevCash = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCash })));
 const DevCashMonth = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashMonth })));
 const DevCashLines = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashLines })));
+const DevCashHistory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashHistory })));
+const DevCashYear = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashYear })));
 const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
@@ -218,6 +222,8 @@ function AppRoutes() {
                   <Route path="/e2e/cash" element={<DevCash />} />
                   <Route path="/e2e/cash-month" element={<DevCashMonth />} />
                   <Route path="/e2e/cash-lines" element={<DevCashLines />} />
+                  <Route path="/e2e/cash-history" element={<DevCashHistory />} />
+                  <Route path="/e2e/cash-year" element={<DevCashYear />} />
                   <Route path="/e2e/unpaid" element={<DevUnpaid />} />
                   <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
                 </Route>
@@ -269,6 +275,9 @@ function AppRoutes() {
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
                 <Route path="profit" element={<ProfitScreen />} />
+                {/* FLOW-417: "לכל החודשים" opens the years, a year its months. */}
+                <Route path="cash/history" element={<CashHistoryScreen />} />
+                <Route path="cash/year/:year" element={<CashYearScreen />} />
                 <Route path="cash/:month" element={<CashMonthScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
                 <Route path="projects" element={<ProjectsScreen />} />

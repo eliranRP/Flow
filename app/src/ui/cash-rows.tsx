@@ -19,11 +19,12 @@ export type CashRowTone = "in" | "out" | "net" | "quiet" | "aside";
 export type CashRow = {
   id: string;
   label: string;
-  /** FLOW-418: a short line under the label ("שיפוץ והשבחה, השקעת בעלים"). */
+  /** A short line under the label: FLOW-418 "שיפוץ והשבחה, השקעת בעלים", FLOW-417 "10 חודשים". */
   hint?: string;
   tone: CashRowTone;
   amounts: { currency: string; minor: bigint }[];
-  href: string;
+  /** Where the row opens. A row without one is a figure only (a year's נכנס and יצא). */
+  href?: string;
   /** רווח החודש: the month the profit view opens on. */
   profitMonth?: string;
   /** Read in full by a screen reader: "נכנס באוקטובר ₪18,000 – פירוט". */
@@ -39,41 +40,55 @@ export function CashRows({ rows, onOpen, months = false }: { rows: CashRow[]; on
   return (
     // The earlier months sit under their own heading, so they drop the section gap and name each month in full text.
     <div className={months ? "ui-flow ui-cash-months" : "ui-flow"}>
-      {rows.map((row) => (
-        <Link
-          key={row.id}
-          to={row.href}
-          className={row.tone === "quiet" || row.tone === "aside" ? "ui-flow-line ui-flow-link ui-hit ui-cash-quiet" : "ui-flow-line ui-flow-link ui-hit"}
-          aria-label={row.name}
-          onClick={onOpen == null ? undefined : () => {
-            onOpen(row);
-          }}
-        >
-          {row.hint == null ? (
-            <span className="ui-flow-label t-body">{row.label}</span>
-          ) : (
-            <span className="ui-flow-labels">
+      {rows.map((row) => {
+        const body = (
+          <>
+            {row.hint == null ? (
               <span className="ui-flow-label t-body">{row.label}</span>
-              <span className="ui-flow-hint t-hint">{row.hint}</span>
+            ) : (
+              <span className="ui-flow-labels">
+                <span className="ui-flow-label t-body">{row.label}</span>
+                <span className="ui-flow-hint t-hint">{row.hint}</span>
+              </span>
+            )}
+            <span className="ui-flow-amounts">
+              {row.amounts.map((amount) => (
+                <BigNumber
+                  key={amount.currency}
+                  agorot={amount.minor}
+                  currency={amount.currency}
+                  size="list"
+                  income={row.tone === "in"}
+                  loss={(row.tone === "quiet" || row.tone === "net") && amount.minor < 0n}
+                />
+              ))}
             </span>
-          )}
-          <span className="ui-flow-amounts">
-            {row.amounts.map((amount) => (
-              <BigNumber
-                key={amount.currency}
-                agorot={amount.minor}
-                currency={amount.currency}
-                size="list"
-                income={row.tone === "in"}
-                loss={(row.tone === "quiet" || row.tone === "net") && amount.minor < 0n}
-              />
-            ))}
-          </span>
-          <span className="ui-flow-chevron" aria-hidden="true">
-            <ChevronIcon />
-          </span>
-        </Link>
-      ))}
+          </>
+        );
+        if (row.href == null) {
+          return (
+            <p key={row.id} className="ui-flow-line" aria-label={row.name}>
+              {body}
+            </p>
+          );
+        }
+        return (
+          <Link
+            key={row.id}
+            to={row.href}
+            className={row.tone === "quiet" || row.tone === "aside" ? "ui-flow-line ui-flow-link ui-hit ui-cash-quiet" : "ui-flow-line ui-flow-link ui-hit"}
+            aria-label={row.name}
+            onClick={onOpen == null ? undefined : () => {
+              onOpen(row);
+            }}
+          >
+            {body}
+            <span className="ui-flow-chevron" aria-hidden="true">
+              <ChevronIcon />
+            </span>
+          </Link>
+        );
+      })}
     </div>
   );
 }

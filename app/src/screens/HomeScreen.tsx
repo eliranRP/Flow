@@ -16,7 +16,7 @@ import { useHeldOrder } from "../list-hold";
 import { useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
-import { cashMonthKey, cashSummaryRows, cashTitle, earlierMonthRows, shownCashRows } from "../cash";
+import { cashHistoryPath, cashMonthKey, cashSummaryRows, cashTitle, earlierMonthRows, shownCashRows } from "../cash";
 import { useCashMonthsQuery, useOpenCashRow } from "../use-cash";
 import { BackButton } from "../ui/back";
 import { CashRows } from "../ui/cash-rows";
@@ -236,6 +236,12 @@ export function CashHome({
         <>
           <SectionHead title="חודשים קודמים" />
           <CashRows rows={earlier} months />
+          {/* FLOW-417: the whole history, years then months, under the last month. */}
+          <p className="ui-page-pad">
+            <TextLink to={cashHistoryPath(search)} tone="quiet">
+              לכל החודשים
+            </TextLink>
+          </p>
         </>
       ) : null}
     </div>

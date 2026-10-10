@@ -46,6 +46,34 @@ export const cashMonthsSchema = z
   })
   .nullable();
 
+const cashTotalRowSchema = z.object({
+  currency: currencySchema,
+  in_minor: minorSchema,
+  out_minor: minorSchema,
+  net_minor: minorSchema,
+});
+
+/**
+ * FLOW-417 (decision 0174). `cash_years`: the net, in and out since the first cash month
+ * (by_currency) and per year, newest first, through this month. first_month is null when the
+ * books hold no cash line yet.
+ */
+export const cashYearsSchema = z
+  .object({
+    basis: cashBasisSchema,
+    base_currency: currencySchema,
+    this_month: z.string().regex(/^\d{4}-\d{2}-01$/),
+    first_month: z.string().regex(/^\d{4}-\d{2}-01$/).nullable(),
+    by_currency: z.array(cashTotalRowSchema).nullable().transform((rows) => rows ?? []),
+    years: z.array(
+      z.object({
+        year: z.number().int(),
+        by_currency: z.array(cashTotalRowSchema).nullable().transform((rows) => rows ?? []),
+      }),
+    ),
+  })
+  .nullable();
+
 export const cashSideSchema = z.enum(["in", "out"]);
 
 /** `cash_month_lines`' sides: נכנס, יצא, or (FLOW-418) the lines the P&L leaves out of the view's cash. */
@@ -78,6 +106,9 @@ export type CashBasis = z.infer<typeof cashBasisSchema>;
 export type CashMonths = z.infer<typeof cashMonthsSchema>;
 export type CashMonth = NonNullable<CashMonths>["months"][number];
 export type CashCurrencyRow = CashMonth["by_currency"][number];
+export type CashYears = z.infer<typeof cashYearsSchema>;
+export type CashYear = NonNullable<CashYears>["years"][number];
+export type CashTotalRow = CashYear["by_currency"][number];
 export type CashSide = z.infer<typeof cashSideSchema>;
 export type CashLinesSide = z.infer<typeof cashLinesSideSchema>;
 export type CashLinesPage = z.infer<typeof cashLinesSchema>;

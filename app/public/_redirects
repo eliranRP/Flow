@@ -83,6 +83,10 @@
 /projects/:projectId/ /projects/:projectId 301
 /profit /app-shell 200
 /profit/ /profit 301
+/cash/history /app-shell 200
+/cash/history/ /cash/history 301
+/cash/year/:year /app-shell 200
+/cash/year/:year/ /cash/year/:year 301
 /cash/:month/:side/:currency /app-shell 200
 /cash/:month/:side/:currency/ /cash/:month/:side/:currency 301
 /cash/:month /app-shell 200

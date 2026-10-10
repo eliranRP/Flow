@@ -113,6 +113,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_project_cash_months",
     "get_project_cash_lines",
     "get_cash_months",
+    "get_cash_years",
     "get_cash_lines",
     "match_lines",
     "get_anomalies",

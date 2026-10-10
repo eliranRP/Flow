@@ -135,6 +135,7 @@ describe("Home's cash (FLOW-413, frame b)", () => {
     wrap();
     const loss = await screen.findByRole("link", { name: /−₪1,150/ });
     expect(screen.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
     expect(loss).toHaveAttribute("href", `/cash/${month(1)}`);
     expect(within(loss).getByText("−₪1,150")).toHaveClass("ui-loss");
     expect(screen.getByRole("link", { name: /^תזרים \S+ ₪2,400/ })).toHaveAttribute("href", `/cash/${month(2)}`);

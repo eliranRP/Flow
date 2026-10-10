@@ -79,6 +79,7 @@ function wrap(path: string) {
           <Routes>
             <Route path="/cash/:month" element={<CashMonthScreen />} />
             <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
+            <Route path="/cash/year/:year" element={<p>שנה</p>} />
             <Route path="/" element={<p>בית</p>} />
           </Routes>
         </MemoryRouter>
@@ -108,9 +109,21 @@ describe("Cash month page", () => {
     expect(screen.getAllByText("$300").length).toBeGreaterThan(0);
   });
 
-  it("sends a month Home does not read back to Home", async () => {
+  it("reads a month older than Home's from its year, and Back returns to that year (FLOW-417)", async () => {
+    const yearMonths = { ...months, months: [{ month: "2001-01-01", by_currency: [currencyRow("ILS", 300_000, 100_000, 0)] }] };
+    const impl = rpc.impl;
+    rpc.impl = (name, args) => (name === "cash_year_months" ? Promise.resolve({ data: yearMonths, error: null }) : impl(name, args));
     wrap("/cash/2001-01");
-    expect(await screen.findByText("בית")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /^נכנס ב/ })).toHaveAttribute("href", "/cash/2001-01/in/ILS");
+    expect(rpc.calls.find((c) => c.name === "cash_year_months")?.args).toEqual({ p_year: 2001 });
+    expect(screen.getAllByText("₪2,000").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "חזרה לתזרים" }));
+    expect(await screen.findByText("שנה")).toBeInTheDocument();
+  });
+
+  it("sends a month its year does not hold back to the year", async () => {
+    wrap("/cash/2001-01");
+    expect(await screen.findByText("שנה")).toBeInTheDocument();
   });
 
   it("sends a broken month back to Home without a read", () => {

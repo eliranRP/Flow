@@ -36,6 +36,41 @@ Deno.test("get_cash_months refuses a bad count before any read, and a failed rea
   if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
 });
 
+Deno.test("get_cash_months with year reads that year's months (FLOW-417)", async () => {
+  const report = { basis: "paid", base_currency: "ILS", months: [{ month: "2025-12-01", by_currency: [] }] };
+  const { calls, rpc } = rpcOf((name) => name === "cash_year_months" ? { status: 200, json: report } : { status: 500, json: null });
+  const result = await callTool("get_cash_months", { year: 2025 }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  if (result.structuredContent.ok) assertEquals(result.structuredContent.data, report);
+  assertEquals(calls.map((call) => [call.name, call.body]), [["cash_year_months", { p_year: 2025 }]]);
+  for (const args of [{ year: 2025, months: 3 }, { year: "2025" }, { year: 1800 }, { year: 2025.5 }]) {
+    const bad = await callTool("get_cash_months", args, ["read"], rpc);
+    assertEquals(bad.isError, true);
+    if (!bad.structuredContent.ok) assertEquals(bad.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1);
+});
+
+Deno.test("get_cash_years passes the history through, and refuses a read with no company", async () => {
+  const report = {
+    basis: "paid",
+    base_currency: "ILS",
+    this_month: "2026-10-01",
+    first_month: "2025-03-01",
+    by_currency: [{ currency: "ILS", in_minor: 900, out_minor: 400, net_minor: 500 }],
+    years: [{ year: 2026, by_currency: [] }, { year: 2025, by_currency: [] }],
+  };
+  const { calls, rpc } = rpcOf((name) => name === "cash_years" ? { status: 200, json: report } : { status: 500, json: null });
+  const result = await callTool("get_cash_years", {}, ["read"], rpc);
+  assertEquals(result.isError, false);
+  if (result.structuredContent.ok) assertEquals(result.structuredContent.data, report);
+  assertEquals(calls.map((call) => [call.name, call.body]), [["cash_years", {}]]);
+  const empty = await callTool("get_cash_years", {}, ["read"], rpcOf(() => ({ status: 200, json: null })).rpc);
+  assertEquals(empty.isError, true);
+  const extra = await callTool("get_cash_years", { year: 2025 }, ["read"], rpc);
+  assertEquals(extra.isError, true);
+});
+
 Deno.test("get_cash_lines takes a month as YYYY-MM or a date, a side, a currency and a page", async () => {
   const page = { rows: [{ transaction_id: TXN, side: "out", amount_minor: 200 }], has_more: false };
   const { calls, rpc } = rpcOf((name) => name === "cash_month_lines" ? { status: 200, json: page } : { status: 500, json: null });
