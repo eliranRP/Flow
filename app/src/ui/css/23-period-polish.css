@@ -54,10 +54,6 @@
   margin-block: var(--space-2);
 }
 
-.ui-band-hero-project .ui-band-figures {
-  padding-top: var(--space-2);
-}
-
 /* "לפי חודש" is a plain row right under the band (FLOW-335), not the tinted pending card. */
 .ui-project-months {
   margin-block-start: var(--space-3);

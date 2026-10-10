@@ -75,8 +75,8 @@ describe("App", () => {
     expect(document.querySelector(".ui-skel-project-period")).not.toBeNull();
     expect(document.querySelector(".ui-skel-project-label")).not.toBeNull();
     expect(document.querySelector(".ui-skel-project-num")).not.toBeNull();
-    expect(document.querySelectorAll(".ui-project-skel .ui-skel-project-figure")).toHaveLength(2);
-    expect(document.querySelector(".ui-project-skel .ui-band-figures")).not.toBeNull();
+    // FLOW-359: the loaded band ends at the figure, so the skeleton draws no figure pair under it.
+    expect(document.querySelector(".ui-project-skel .ui-band-figures")).toBeNull();
     expect(document.querySelector(".ui-hero")).toBeNull();
   });
 

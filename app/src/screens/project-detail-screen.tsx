@@ -68,11 +68,8 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
             <span className="ui-skel-project-period">
               <Skeleton tone="band" className="ui-skel-project-period-bar" />
             </span>
+            {/* The loaded band ends at the figure, so the skeleton does too (FLOW-115: no shrink on load). */}
             <Skeleton tone="band" className="ui-skel-project-num" />
-            <span className="ui-band-figures">
-              <Skeleton tone="band" className="ui-skel-project-figure" />
-              <Skeleton tone="band" className="ui-skel-project-figure" />
-            </span>
           </div>
         </BandHero>
       </TopBand>
