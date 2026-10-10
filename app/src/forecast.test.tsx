@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { expectedMonthLabel, expectedMonthViews, hasExpectedHistory, missingBillHref, missingBillViews, missingBillsTitle } from "./forecast";
+import { expectedMonthLabel, expectedMonthViews, hasExpectedHistory, missingBillHref, missingBillPlace, missingBillViews, missingBillsTitle, usualDayText, chargeChangePercent, chargeChangeViews } from "./forecast";
 import {
   SAMPLE_EXPECTED,
   SAMPLE_EXPECTED_EMPTY,
@@ -18,11 +18,11 @@ import { MissingBillList } from "./ui/missing-bill-list";
 const now = new Date("2026-10-08T09:00:00Z");
 
 describe("missing bills", () => {
-  it("maps each late bill to a row: name, the due day, the unsigned amount, and Search on that supplier", () => {
+  it("maps each late bill to a row: name, when it usually comes, the unsigned amount, and Search on that supplier", () => {
     const rows = missingBillViews(SAMPLE_MISSING_BILLS, "", now);
-    expect(rows.map((row) => [row.name, row.due, row.minor, row.currency])).toEqual([
-      ["מים טובים", "עד 06/10", 48_000n, "ILS"],
-      ["אור חשמל", "עד 07/10", 185_000n, "ILS"],
+    expect(rows.map((row) => [row.name, row.usual, row.minor, row.currency])).toEqual([
+      ["מים טובים", "בדרך כלל ב־1 לחודש · אחרון 01/09", 48_000n, "ILS"],
+      ["אור חשמל", "בדרך כלל ב־2 לחודש · אחרון 02/09", 185_000n, "ILS"],
     ]);
     const href = new URL(rows[1]?.href ?? "", "https://example.com");
     expect(href.pathname).toBe("/search");
@@ -43,6 +43,36 @@ describe("missing bills", () => {
     expect(row?.name).toBe("ללא שם");
   });
 
+  it("names where a late bill files, either half alone, and leaves the line out when neither is known (FLOW-415)", () => {
+    const names = { project: (id: string) => (id === "p1" ? "בניין לדוגמה" : undefined), category: (id: string) => (id === "c1" ? "חשמל" : undefined) };
+    expect(missingBillPlace({ project_id: "p1", category_id: "c1" }, names)).toBe("בניין לדוגמה · חשמל");
+    expect(missingBillPlace({ project_id: "p1", category_id: null }, names)).toBe("בניין לדוגמה");
+    expect(missingBillPlace({ project_id: null, category_id: "c1" }, names)).toBe("חשמל");
+    expect(missingBillPlace({ project_id: "gone", category_id: null }, names)).toBeNull();
+    expect(missingBillPlace({ project_id: "p1", category_id: "c1" })).toBeNull();
+    // No last bill: the day alone; a last bill in another year carries its year.
+    expect(usualDayText(4, null, now)).toBe("בדרך כלל ב־4 לחודש");
+    expect(usualDayText(4, "2025-12-04", now)).toBe("בדרך כלל ב־4 לחודש · אחרון 04/12/2025");
+  });
+
+  it("words a payment off its usual amount for Home, rounding the percent half away from zero (FLOW-415)", () => {
+    expect(chargeChangePercent(255_000n, 185_000n)).toBe(38);
+    expect(chargeChangePercent(150_000n, 200_000n)).toBe(-25);
+    expect(chargeChangePercent(100_500n, 100_000n)).toBe(1);
+    expect(chargeChangePercent(99_500n, 100_000n)).toBe(-1);
+    expect(chargeChangePercent(100n, 0n)).toBe(0);
+    const [up, down] = chargeChangeViews([
+      { transaction_id: "t1", category_name: "חשמל", currency: "ILS", amount_minor: 255_000n, usual_minor: 185_000n },
+      { transaction_id: "t2", category_name: "", currency: "USD", amount_minor: 15_000n, usual_minor: 20_000n },
+    ], "?preview=1");
+    expect(up).toEqual({ id: "t1", title: "חשמל עלה ב־38%", now: "₪2,550", usual: "₪1,850", href: "/transactions/t1?preview=1" });
+    expect(down?.title).toBe("ללא קטגוריה ירד ב־25%");
+    const rows = attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, changes: up ? [up] : [], search: "" });
+    expect(rows.map((row) => row.id)).toEqual(["review", "missing", "change:t1"]);
+    render(<MemoryRouter><span>{rows[2]?.hint}</span></MemoryRouter>);
+    expect(screen.getByText(/בדרך כלל/).textContent).toBe("₪2,550 · בדרך כלל ₪1,850");
+  });
+
   it("titles the Home row with a count only, singular for one", () => {
     expect(missingBillsTitle(1)).toBe("חשבון אחד לא הגיע");
     expect(missingBillsTitle(3)).toBe("3 חשבונות לא הגיעו");
@@ -58,8 +88,8 @@ describe("missing bills", () => {
     expect(missing?.hint).toBeUndefined();
   });
 
-  it("draws one row per bill with the amount after כ־, and a calm empty state", () => {
-    const rows = missingBillViews([...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD], "", now);
+  it("draws one row per bill with its hint lines and the amount after כ־, and a calm empty state", () => {
+    const rows = missingBillViews([...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD], "", now, { project: () => "בניין לדוגמה" });
     const { unmount } = render(
       <MemoryRouter>
         <MissingBillList rows={rows} />
@@ -67,7 +97,10 @@ describe("missing bills", () => {
     );
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
-    expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, עד 07/10, בערך ₪1,850");
+    expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, בניין לדוגמה, בדרך כלל ב־2 לחודש · אחרון 02/09, בערך ₪1,850");
+    // FLOW-415: a bill that files nowhere has one hint line, when it usually comes.
+    expect(links[0]?.querySelectorAll(".ui-row-hint")).toHaveLength(1);
+    expect(links[1]?.querySelectorAll(".ui-row-hint")).toHaveLength(2);
     expect(links[2]?.textContent).toContain("$20");
     unmount();
     render(

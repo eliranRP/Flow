@@ -519,6 +519,28 @@ export function TransferIcon(props: IconProps) {
   );
 }
 
+/** FLOW-415. A recurring charge (חיוב קבוע); the mockups' "repeat". Reads the same both ways, so it is not mirrored. */
+export function RepeatIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polyline points="17 1 21 5 17 9" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <polyline points="7 23 3 19 7 15" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </Svg>
+  );
+}
+
+/** FLOW-415. A charge above its usual amount, on Home's attention card. */
+export function TrendUpIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </Svg>
+  );
+}
+
 /** FLOW-304. A memo on a bank line. */
 export function NoteIcon(props: IconProps) {
   return (

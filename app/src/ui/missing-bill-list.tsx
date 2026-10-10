@@ -10,8 +10,10 @@ import { ListSkeleton } from "./skeleton";
 export type MissingBillRow = {
   id: string;
   name: string;
-  /** "עד 07/10". */
-  due: string;
+  /** FLOW-415: "project · category", or null when the bill files to neither. */
+  place: string | null;
+  /** FLOW-415: "בדרך כלל ב־2 לחודש · אחרון 02/09". */
+  usual: string;
   /** The typical amount, unsigned. */
   minor: bigint;
   currency: string;
@@ -20,8 +22,9 @@ export type MissingBillRow = {
 };
 
 /**
- * The late bills (FLOW-403, plan option A2): one row per recurring supplier, its name, the day it
- * is late from, and one "כ־" amount. A tap opens Search on that supplier. No approve, no dismiss:
+ * The late bills (FLOW-403, plan option A2): one row per recurring supplier, its name, and one "כ־"
+ * amount. FLOW-415 (layout A): two hint lines, where the bill files ("project · category") and when it
+ * usually comes ("בדרך כלל ב־N לחודש · אחרון dd/mm"). A tap opens Search on that supplier. No approve, no dismiss:
  * a row leaves by itself when the bill comes in.
  */
 export function MissingBillList({
@@ -45,12 +48,13 @@ export function MissingBillList({
           key={row.id}
           to={row.href}
           className="ui-row ui-hit"
-          aria-label={`${row.name}, ${row.due}, ${approxAmountText(row.minor, row.currency)}`}
+          aria-label={[row.name, row.place, row.usual, approxAmountText(row.minor, row.currency)].filter((part) => part != null).join(", ")}
         >
           <span className="ui-row-main">
             <span className="ui-row-text">
               <span className="ui-row-title">{row.name}</span>
-              <span className="ui-row-hint">{row.due}</span>
+              {row.place != null ? <span className="ui-row-hint">{row.place}</span> : null}
+              <span className="ui-row-hint">{row.usual}</span>
             </span>
           </span>
           <ApproxAmount minor={row.minor} currency={row.currency} />
