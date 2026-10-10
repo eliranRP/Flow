@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { containerSpeed } from "./container-speed";
 import { median, RUNS, runsLine } from "./runs";
 import { stubBackend } from "./stub-backend";
 
@@ -7,6 +8,7 @@ import { stubBackend } from "./stub-backend";
  * against the stub backend (the demo books), opens פרויקטים on the production build, and taps a
  * project row at CPU ×4, the mid-range phone of the Home test. The stub answers at once, so this
  * times the page's code and its render, not the server's read. Each project takes the median of 5.
+ * FLOW-816: CI holds the bare limit; a local gate scales it by the container's speed (container-speed.ts).
  */
 const CPU = 4;
 const LIMIT_MS = 700;
@@ -24,6 +26,8 @@ async function openProjects(page: Page) {
 
 test("a project page opens within 0.7 s of a tap on its row on a mid-range phone", async ({ browser }) => {
   test.setTimeout(180_000);
+  const speed = await containerSpeed(browser, CPU, LIMIT_MS);
+  console.log(speed.line);
   const lines: string[] = [];
   const slow: string[] = [];
   for (const { id, name } of projects) {
@@ -47,9 +51,9 @@ test("a project page opens within 0.7 s of a tap on its row on a mid-range phone
       await context.close();
     }
     lines.push(runsLine(id, runs));
-    if (median(runs) > LIMIT_MS) slow.push(id);
+    if (median(runs) > speed.limitMs) slow.push(id);
   }
-  const summary = `${lines.join("; ")}; limit ${String(LIMIT_MS)} ms`;
+  const summary = `${lines.join("; ")}; limit ${String(speed.limitMs)} ms (${String(LIMIT_MS)} ms × ${speed.factor.toFixed(2)}); ${speed.line}`;
   test.info().annotations.push({ type: "project-open", description: summary });
   console.log(summary);
   expect(slow, summary).toEqual([]);

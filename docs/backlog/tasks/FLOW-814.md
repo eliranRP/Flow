@@ -1,5 +1,5 @@
 <a id="flow-814"></a>
 # FLOW-814 · A migration that main overtook fails in seconds, and one command renames it
-- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 4, 2026-10-10, claude/flow-601-team-invites-dbh8bx) · **Depends on:** — · **Source:** lane manager, 2026-10-10: twice in one hour a PR renamed its migration because a newer one merged first, and each rename cost a full ~9 minute gate run.
+- **Type:** SMALL CYCLE · **Status:** done (#545) · **Depends on:** — · **Source:** lane manager, 2026-10-10: twice in one hour a PR renamed its migration because a newer one merged first, and each rename cost a full ~9 minute gate run.
 - [ ] `scripts/local-ci.sh` fetches main and runs `node scripts/migration-ahead.mjs` before anything else. It compares the branch's new migrations (files main's lock does not name) with main's last one and fails in seconds when one sorts at or before it, or its hour is past 23, printing the fix.
 - [ ] `node scripts/migration-ahead.mjs --rename` renames them to main's latest date prefix and the current UTC `HHMMSS` (one second after main's last when the clock would not sort after it), updates the branch's changed files that name them, rewrites the lock from the files (main's lines unchanged, a conflicted lock included) and stages it. CONTRIBUTING documents it.
