@@ -8,8 +8,8 @@ import { HEBREW_MONTHS } from "./ui/date-math";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
- * FLOW-431 (owner's pick B, 2026-10-10): the transaction screen's "לעומת הרגיל" chip and the sheet
- * of the party's earlier charges. Every figure is the server's (`party_charges`).
+ * FLOW-431 (the owner's layout A, 2026-10-10 16:07Z): the transaction screen's "חיובים קודמים"
+ * section and the sheet with all of them. Every figure is the server's (`party_charges`).
  */
 
 export type ChargeTone = "bad" | "good" | "flat";
@@ -21,19 +21,19 @@ export type PartyChangeView = {
   tone: ChargeTone;
   /** The usual amount, "$11.99". */
   usual: string;
-  /** The chip's words: "▲ 92% לעומת הרגיל $11.99" or "כמו הרגיל $11.99". */
-  label: string;
+  /** The change in words: "עלה ב־92%", "ירד ב־20%" or "כמו הרגיל". */
+  change: string;
   /** For screen readers: "עלייה של 92% לעומת הרגיל, $11.99". */
   words: string;
 };
 
-/** The chip's view; null when the party has no usual amount yet (too few earlier charges). */
+/** The section's change line; null when the party has no usual amount yet (too few earlier charges). */
 export function partyChangeView(data: PartyCharges | null | undefined): PartyChangeView | null {
   if (!data?.party || data.typical_amount_minor == null || data.change_percent == null) return null;
   const usual = formatAmountText(absAgorot(data.typical_amount_minor), data.party.currency, { detail: true });
   const pct = data.change_percent;
   if (pct === 0) {
-    return { percent: null, arrow: null, tone: "flat", usual, label: `כמו הרגיל ${usual}`, words: `כמו הרגיל, ${usual}` };
+    return { percent: null, arrow: null, tone: "flat", usual, change: "כמו הרגיל", words: `כמו הרגיל, ${usual}` };
   }
   const up = pct > 0;
   const income = data.party.direction === "income";
@@ -45,7 +45,7 @@ export function partyChangeView(data: PartyCharges | null | undefined): PartyCha
     // An expense going up or income going down is the bad news (DESIGN-RULES: red only then).
     tone: income ? (up ? "good" : "bad") : (up ? "bad" : "good"),
     usual,
-    label: `${arrow} ${percent} לעומת הרגיל ${usual}`,
+    change: `${up ? "עלה" : "ירד"} ב־${percent}`,
     words: `${up ? "עלייה" : "ירידה"} של ${percent} לעומת הרגיל, ${usual}`,
   };
 }
@@ -57,9 +57,14 @@ export function shortMonth(month: string): string {
   return name.length <= 4 ? name : `${name.slice(0, 3)}׳`;
 }
 
-/** The sheet's title for the list: payments out are חיובים, money in is תקבולים. */
+/** The section's title: payments out are חיובים, money in is תקבולים. */
 export function chargesTitle(data: PartyCharges): string {
   return data.party?.direction === "income" ? "תקבולים קודמים" : "חיובים קודמים";
+}
+
+/** The charges before this one, newest first: the section lists 3 and shows only with at least 2. */
+export function earlierCharges(data: PartyCharges): PartyCharges["charges"] {
+  return data.charges.filter((charge) => charge.id !== data.transaction_id);
 }
 
 export function usePartyChargesQuery(transactionId: string, active = true) {

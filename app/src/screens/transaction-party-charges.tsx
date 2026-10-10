@@ -1,26 +1,25 @@
 import type { PartyCharges } from "@flow/shared";
 import { useRef, useState } from "react";
-import { partyChangeView, usePartyChargesQuery } from "../party-charges";
+import { usePartyChargesQuery } from "../party-charges";
 import { usePreviewSearch } from "../preview";
-import { ChargeChangeChip, PartyChargesSheet } from "../ui/related-charges";
+import { PartyChargesSection, PartyChargesSheet } from "../ui/related-charges";
 
 /**
- * FLOW-431 (owner's pick B, 2026-10-10): under the status pills, "▲ 92% לעומת הרגיל $11.99"; a tap
- * opens the party's earlier charges. Nothing shows until the read answers, or when the party has
- * no usual amount yet. A failed read just hides the chip.
+ * FLOW-431 (the owner's layout A, 2026-10-10 16:07Z): under the switches, the party's earlier
+ * charges in the line's context; "לכל החיובים" opens all of them. Nothing shows until the read
+ * answers, and a failed read just hides the section.
  */
 export function TxnPartyCharges({ transactionId, sample }: { transactionId: string; sample?: PartyCharges | null }) {
   const search = usePreviewSearch();
   const query = usePartyChargesQuery(sample === undefined ? transactionId : "", sample === undefined);
   const data = sample === undefined ? query.data : sample;
   const [open, setOpen] = useState(false);
-  const chipRef = useRef<HTMLButtonElement>(null);
-  const view = partyChangeView(data);
-  if (data == null || view == null) return null;
+  const allRef = useRef<HTMLButtonElement>(null);
+  if (data == null) return null;
   return (
     <>
-      <ChargeChangeChip view={view} buttonRef={chipRef} onClick={() => { setOpen(true); }} />
-      <PartyChargesSheet open={open} onOpenChange={setOpen} data={data} search={search} returnFocusRef={chipRef} />
+      <PartyChargesSection data={data} search={search} showAllRef={allRef} onShowAll={() => { setOpen(true); }} />
+      <PartyChargesSheet open={open} onOpenChange={setOpen} data={data} search={search} returnFocusRef={allRef} />
     </>
   );
 }

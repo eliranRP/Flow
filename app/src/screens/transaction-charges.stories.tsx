@@ -6,7 +6,7 @@ import { StoryRoute } from "../ui/story-route";
 import { mailboxCharges, rentCharges } from "../ui/related-charges.sample";
 import { ExampleBar, at320, dark } from "../ui/screen-stories-support";
 
-/** FLOW-431 (owner's pick B): the transaction screen with its "לעומת הרגיל" chip. Invented data. */
+/** FLOW-431 (the owner's layout A): the transaction screen with its "חיובים קודמים" section. Invented data. */
 const meta = {
   title: "Screens/Routes",
   parameters: { flowRouter: false },
@@ -51,7 +51,7 @@ function ChargesStory({ income = false }: { income?: boolean }) {
 
 const openSheet = {
   play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: /לעומת הרגיל/ }));
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "לכל החיובים" }));
   },
 };
 
