@@ -130,6 +130,21 @@ describe("עריכת הפיצול on a matched line (FLOW-106 §3.4)", () => {
     expect(within(sheet).getByRole("button", { name: "ביטול השיוך" })).toBeInTheDocument();
   });
 
+  it("says when the loan can't be read, keeps עריכת הפיצול off and reads again on ניסיון חוזר", async () => {
+    const base = api([]);
+    let fail = true;
+    renderRow({ ...base, read: (...args) => (fail ? Promise.reject(new Error("supabase")) : base.read(...args)) });
+    fireEvent.click(screen.getByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ }));
+    const sheet = await screen.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    expect(await within(sheet).findByText("לא הצלחנו לטעון את הפיצול.")).toBeInTheDocument();
+    const edit = within(sheet).getByRole("button", { name: "עריכת הפיצול" });
+    expect(edit).toBeDisabled();
+    expect(edit).toHaveAccessibleDescription("לא הצלחנו לטעון את הפיצול.");
+    fail = false;
+    fireEvent.click(within(sheet).getByRole("button", { name: "ניסיון חוזר" }));
+    await waitFor(() => { expect(edit).toBeEnabled(); });
+  });
+
   it("saves the edit with each part's stored schedule and category", async () => {
     const saves: Array<{ loanId: string; parts: SavePart[] }> = [];
     renderRow(api(saves));

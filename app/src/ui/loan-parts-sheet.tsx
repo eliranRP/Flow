@@ -122,6 +122,7 @@ export function LoanPartsSheet({
               full
               className="ui-loan-parts-edit"
               disabled={loading || unmatching || editDisabled}
+              aria-describedby={problem ? problemId : undefined}
               onClick={() => { if (!busy) onEdit(); }}
             >
               עריכת הפיצול

@@ -261,9 +261,13 @@ export function LoanCategoryRow({
   // A flagged split keeps its own correction (עדכון החלוקה), not the editor.
   const canEdit = editable && !reviewWaits;
   // FLOW-362: one editor. The sheet reads the parts and "עריכת הפיצול" is the only way to change them.
-  const staticTotal = editing.parts.reduce((sum, part) => sum + part.amount_minor, 0n);
-  const staticFields: LoanPartField[] = editing.parts.map((part) => ({ part: part.part, value: showMoney(part.amount_minor, shownCurrency) }));
+  // The stored read, once it lands, is what the editor opens on: the rows show the same amounts.
+  const staticParts = storedData?.parts.map((part) => ({ part: part.part, amountMinor: part.amountMinor }))
+    ?? editing.parts.map((part) => ({ part: part.part, amountMinor: part.amount_minor }));
+  const staticTotal = staticParts.reduce((sum, part) => sum + part.amountMinor, 0n);
+  const staticFields: LoanPartField[] = staticParts.map((part) => ({ part: part.part, value: showMoney(part.amountMinor, shownCurrency) }));
   const readFailed = stored.isError || loaded.isError;
+  const staticProblem = readFailed ? "לא הצלחנו לטעון את הפיצול." : currencyMismatch ? "המטבע של השורה לא מתאים להלוואה." : undefined;
   function openSheet() {
     if (split == null) return;
     touched.current = false;
@@ -299,7 +303,7 @@ export function LoanCategoryRow({
         }}
         prefix={shownCurrency === "USD" ? "$" : "₪"}
         total={showMoney(canEdit ? staticTotal : totalMinor, shownCurrency)}
-        problem={canEdit ? (readFailed ? "לא הצלחנו לטעון את הפיצול." : undefined) : problem}
+        problem={canEdit ? staticProblem : problem}
         note={note}
         loading={stored.isLoading}
         saving={save.isPending}
@@ -338,7 +342,7 @@ export function LoanCategoryRow({
           setEditor(true);
         } : undefined}
         // A refetch may be bringing newer parts (another save, another device): the editor waits for them.
-        editDisabled={storedData == null || editLoan == null || stored.isFetching || loaded.isFetching}
+        editDisabled={storedData == null || editLoan == null || stored.isFetching || loaded.isFetching || readFailed}
       />
       {editable && storedData != null && editLoan != null ? (
         <MatchedSplitEditor
