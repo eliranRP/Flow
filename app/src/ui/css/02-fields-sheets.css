@@ -276,9 +276,12 @@
   white-space: nowrap;
 }
 
-/* HintParts (FLOW-415): whole parts that wrap, with no "·" at either end of a line. Each part but
-   the first opens with a 1em dot box; the inner row starts 1em before the clip, so the box of a part
-   that opens a line is cut off, and the first part pads the same 1em instead. */
+/* HintParts (FLOW-415): whole parts that wrap, with no "·" at either end of a line. Every part pads
+   1em at its start, and each part but the first puts its dot box in that pad; the inner row starts
+   1em before the clip, so the box of a part that opens a line is cut off.
+   FLOW-429: a part moves to the next line whole while it fits a line (flex places it by its full
+   width). One wider than the whole line is held to the line's width and wraps at its own spaces, so
+   it is never clipped; its later lines start after the pad, inside the clip. */
 .ui-hint-wrap {
   display: block;
   overflow: hidden;
@@ -291,10 +294,8 @@
 }
 
 .ui-hint-wrap-part {
-  white-space: nowrap;
-}
-
-.ui-hint-wrap-first {
+  box-sizing: border-box;
+  max-inline-size: 100%;
   padding-inline-start: 1em;
 }
 
@@ -302,6 +303,10 @@
   display: inline-block;
   inline-size: 1em;
   text-align: center;
+}
+
+.ui-hint-wrap-part > .ui-hint-wrap-sep {
+  margin-inline-start: -1em;
 }
 
 .ui-row-icon {
