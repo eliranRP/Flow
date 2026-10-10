@@ -1,4 +1,4 @@
-/* Loaded by split-parts-hint.tsx, so it ships with the cash lists, not Home's entry. */
+/* Loaded by split-parts-hint.tsx, so it ships with the cash and project lists, not Home's entry. */
 /* FLOW-432: a split line's row hint: its parts, then "מתוך" and the date on a line of their own.
    Part amounts line up like the row figures. With "ועוד N", the first part's name ellipsizes. */
 .ui-split-hint {
@@ -83,4 +83,28 @@
 .ui-split-hint-date::before {
   block-size: calc(1em * var(--type-meta-line));
   content: "";
+}
+
+/* FLOW-424 (C18-1): only the kept-out words set that minimum. They lead on their own line box;
+   the later parts are out of the intrinsic width and take what is left, dropping whole. */
+.ui-hint-kept-line {
+  display: flex;
+  min-inline-size: min-content;
+}
+
+.ui-hint-kept {
+  flex: none;
+  white-space: pre;
+}
+
+.ui-hint-rest {
+  flex: 1 1 0;
+  contain: inline-size;
+}
+
+/* A line tall, so a later part that does not fit drops to the hidden second line. */
+.ui-hint-rest::before {
+  content: "";
+  inline-size: 0;
+  block-size: calc(var(--type-meta-size) * var(--type-meta-line));
 }
