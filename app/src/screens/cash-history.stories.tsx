@@ -5,7 +5,7 @@ import { at320, dark } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { CashHistorySkeleton, CashHistoryScreen, CashYearScreen } from "./cash-history";
 
-/** FLOW-416 (owner's "Years, then months"): the cash history and a year's page. Invented figures. */
+/** FLOW-417 (owner's "Years, then months"): the cash history and a year's page. Invented figures. */
 
 const meta = {
   title: "Screens/Cash history",

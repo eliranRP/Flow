@@ -3,7 +3,7 @@ import { expect, within } from "@storybook/test";
 import { MemoryRouter } from "react-router-dom";
 import { CashRows, type CashRow } from "./cash-rows";
 
-/** FLOW-413 / FLOW-416: the cash view's rows. Invented figures. */
+/** FLOW-413 / FLOW-417: the cash view's rows. Invented figures. */
 
 const meta = {
   title: "Components/CashRows",
@@ -31,7 +31,7 @@ const months: CashRow[] = [
 
 export const Months: Story = { name: "Month rows", args: { rows: months, months: true } };
 
-/** FLOW-416: year rows carry a quiet line: this year's month count, the first year's first month. */
+/** FLOW-417: year rows carry a quiet line: this year's month count, the first year's first month. */
 export const YearsWithHints: Story = {
   name: "Year rows with hints",
   args: {
@@ -50,7 +50,7 @@ export const YearsWithHints: Story = {
   },
 };
 
-/** FLOW-416: a year's נכנס and יצא are figures only: no link, no chevron. */
+/** FLOW-417: a year's נכנס and יצא are figures only: no link, no chevron. */
 export const FiguresOnly: Story = {
   name: "Figures only (a year's נכנס and יצא)",
   args: {

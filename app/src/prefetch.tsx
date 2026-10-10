@@ -15,7 +15,7 @@ export function projectLink(href: string): { projectId: string; search: string }
   return match?.[1] ? { projectId: decodeURIComponent(match[1]), search: url.search } : null;
 }
 
-/** FLOW-416: the history or a year's page behind a link, or null for any other link. */
+/** FLOW-417: the history or a year's page behind a link, or null for any other link. */
 export function cashHistoryLink(href: string): { year: number | null } | null {
   const path = new URL(href, "https://flow.invalid").pathname;
   if (path === "/cash/history") return { year: null };
@@ -46,7 +46,7 @@ export function PrefetchProjects() {
       const href = anchor?.getAttribute("href") ?? "";
       const link = anchor ? projectLink(href) : null;
       if (link) prefetch(link.projectId, link.search);
-      // FLOW-416: the cash history and a year's months are read on touch too, toward the 0.7 s open.
+      // FLOW-417: the cash history and a year's months are read on touch too, toward the 0.7 s open.
       const cash = anchor ? cashHistoryLink(href) : null;
       if (cash) {
         const read =

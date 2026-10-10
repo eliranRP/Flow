@@ -17,7 +17,7 @@ export type CashRow = {
   label: string;
   tone: CashRowTone;
   amounts: { currency: string; minor: bigint }[];
-  /** FLOW-416: a quiet line under the label ("10 חודשים", "מאז מרץ"). */
+  /** FLOW-417: a quiet line under the label ("10 חודשים", "מאז מרץ"). */
   hint?: string;
   /** Where the row opens. A row without one is a figure only (a year's נכנס and יצא). */
   href?: string;

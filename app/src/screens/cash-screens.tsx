@@ -49,7 +49,7 @@ export function CashMonthScreen({ sample, monthKey }: { sample?: NonNullable<Cas
 function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search: string; sample?: NonNullable<CashMonths> }) {
   const preview = useHomePreview();
   const open = useOpenCashRow();
-  // FLOW-416: a month older than Home's reads its year, and Back returns to that year.
+  // FLOW-417: a month older than Home's reads its year, and Back returns to that year.
   const { query, recent } = useCashMonthData(monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);

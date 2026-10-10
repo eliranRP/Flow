@@ -350,13 +350,13 @@ export function DevCashLines() {
   );
 }
 
-/** FLOW-416: the cash history, years then months. `?currencies=two` adds a USD line. */
+/** FLOW-417: the cash history, years then months. `?currencies=two` adds a USD line. */
 export function DevCashHistory() {
   const [params] = useSearchParams();
   return <CashHistoryScreen sample={sampleCashYears(new Date(), params.get("currencies") === "two" ? "two" : "one")} />;
 }
 
-/** FLOW-416: last year's page: its net, נכנס, יצא and its months. */
+/** FLOW-417: last year's page: its net, נכנס, יצא and its months. */
 export function DevCashYear() {
   const months = sampleCashYearMonths();
   return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { cashHistoryLink, PrefetchProjects, projectLink } from "./prefetch";
 import { BooksProvider } from "./use-books";
 
-describe("cashHistoryLink (FLOW-416)", () => {
+describe("cashHistoryLink (FLOW-417)", () => {
   it("reads the history and a year's page, and nothing else", () => {
     expect(cashHistoryLink("/cash/history?preview=1")).toEqual({ year: null });
     expect(cashHistoryLink("/cash/year/2025")).toEqual({ year: 2025 });

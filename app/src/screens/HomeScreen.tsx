@@ -233,7 +233,7 @@ export function CashHome({
         <>
           <SectionHead title="חודשים קודמים" />
           <CashRows rows={earlier} months />
-          {/* FLOW-416: the whole history, years then months, under the last month. */}
+          {/* FLOW-417: the whole history, years then months, under the last month. */}
           <p className="ui-page-pad">
             <TextLink to={cashHistoryPath(search)} tone="quiet">
               לכל החודשים

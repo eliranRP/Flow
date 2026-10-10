@@ -1,7 +1,7 @@
 # Cash history: years, then months
 
 **Date:** 2026-10-10
-**Status:** Accepted (owner picked "Years, then months" on the FLOW-416 plan card, 2026-10-10)
+**Status:** Accepted (owner picked "Years, then months" on the FLOW-417 plan card, 2026-10-10)
 
 ## Context
 

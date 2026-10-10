@@ -109,7 +109,7 @@ describe("Cash month page", () => {
     expect(screen.getAllByText("$300").length).toBeGreaterThan(0);
   });
 
-  it("reads a month older than Home's from its year, and Back returns to that year (FLOW-416)", async () => {
+  it("reads a month older than Home's from its year, and Back returns to that year (FLOW-417)", async () => {
     const yearMonths = { ...months, months: [{ month: "2001-01-01", by_currency: [currencyRow("ILS", 300_000, 100_000, 0)] }] };
     const impl = rpc.impl;
     rpc.impl = (name, args) => (name === "cash_year_months" ? Promise.resolve({ data: yearMonths, error: null }) : impl(name, args));

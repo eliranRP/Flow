@@ -78,7 +78,7 @@ export function sampleCashLines(side: "in" | "out", now = new Date()): CashLine[
 }
 
 /**
- * FLOW-416: invented years for the history page. The books start in March three years back, and
+ * FLOW-417: invented years for the history page. The books start in March three years back, and
  * one year ends in a loss, so a loss row shows.
  */
 export function sampleCashYears(now = new Date(), currencies: "one" | "two" = "one"): NonNullable<CashYears> {
@@ -101,7 +101,7 @@ export function sampleCashYears(now = new Date(), currencies: "one" | "two" = "o
   };
 }
 
-/** FLOW-416: last year's twelve months, newest first, for the year page. */
+/** FLOW-417: last year's twelve months, newest first, for the year page. */
 export function sampleCashYearMonths(now = new Date()): NonNullable<CashMonths> {
   const year = Number(israelToday(now).slice(0, 4)) - 1;
   const nets = [210_000n, 340_000n, -90_000n, 150_000n, 280_000n, 60_000n, 190_000n, -130_000n, 220_000n, 170_000n, 250_000n, 300_000n];

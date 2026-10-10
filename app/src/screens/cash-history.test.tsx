@@ -79,7 +79,7 @@ beforeEach(() => {
   };
 });
 
-describe("Cash history (FLOW-416)", () => {
+describe("Cash history (FLOW-417)", () => {
   it("shows the net since the first month, then a row per year opening its page", async () => {
     wrap("/cash/history");
     expect(await screen.findByText(`תזרים מאז מרץ ${String(lastYear)}`)).toBeInTheDocument();

@@ -1,1 +1,0 @@
-FLOW-416: Home's cash reaches the whole history. "לכל החודשים" under the earlier months opens the years since the first cash month; a year opens its months, and a month its page. New reads `cash_years` and `cash_year_months`, MCP `get_cash_years` and `get_cash_months` with `year` (decision 0171).

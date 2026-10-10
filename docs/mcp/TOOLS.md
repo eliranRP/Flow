@@ -783,11 +783,11 @@ Input: `{ "months": 3 }`.
 
 Output `data`: `basis` (`paid` or `invoice`), `base_currency`, and `months[]` newest first: `month` (`YYYY-MM-DD`, the first day) and `by_currency[]` (the base currency first and always present): `currency`, `in_minor` (נכנס), `out_minor` (יצא), `net_minor` (in less out), `profit_minor` (the month's net profit on the company's basis, equal to `get_profit_months` without a basis), `excluded_count`, `excluded_in_minor` and `excluded_out_minor` (what the view leaves out).
 
-With `year` instead of `months` (FLOW-416), `cash_year_months(p_year)` returns that calendar year's months in the same shape: all 12 for a past year, January to this month for this one. A later year, or `year` with `months`, is a validation error.
+With `year` instead of `months` (FLOW-417), `cash_year_months(p_year)` returns that calendar year's months in the same shape: all 12 for a past year, January to this month for this one. A later year, or `year` with `months`, is a validation error.
 
 ### get_cash_years
 
-`cash_years()`. The cash view's whole history (FLOW-416, decision 0171), on the company's cash basis, through the end of this month. No input.
+`cash_years()`. The cash view's whole history (FLOW-417, decision 0172), on the company's cash basis, through the end of this month. No input.
 
 Output `data`: `basis`, `base_currency`, `this_month` and `first_month` (`YYYY-MM-DD`, the first day; `first_month` is null when no line counts in cash yet), `by_currency[]` (the total since `first_month`: `currency`, `in_minor`, `out_minor`, `net_minor`; the base currency first and always present), and `years[]` newest first, from `first_month`'s year to this one, empty years included: `year` and `by_currency[]` in the same shape. A year's months (`get_cash_months` with `year`) add up to its row.
 

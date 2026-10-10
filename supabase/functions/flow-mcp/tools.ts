@@ -313,7 +313,7 @@ export async function callTool(
 
   // FLOW-413 (decision 0168): money in and out per month, on the company's cash basis.
   if (name === "get_cash_months") {
-    // FLOW-416: year (with no months) reads that calendar year's months instead.
+    // FLOW-417: year (with no months) reads that calendar year's months instead.
     if (args.year != null) {
       const year = args.year;
       if (args.months != null || typeof year !== "number" || !Number.isInteger(year) || year < 1900 || year > 9999) {
@@ -336,7 +336,7 @@ export async function callTool(
     return ok(result.json as Review);
   }
 
-  // FLOW-416 (decision 0171): the net, in and out since the first cash month and per year.
+  // FLOW-417 (decision 0172): the net, in and out since the first cash month and per year.
   if (name === "get_cash_years") {
     const result = await rpc("cash_years", {});
     if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {

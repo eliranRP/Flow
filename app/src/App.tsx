@@ -273,7 +273,7 @@ function AppRoutes() {
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
                 <Route path="profit" element={<ProfitScreen />} />
-                {/* FLOW-416: "לכל החודשים" opens the years, a year its months. */}
+                {/* FLOW-417: "לכל החודשים" opens the years, a year its months. */}
                 <Route path="cash/history" element={<CashHistoryScreen />} />
                 <Route path="cash/year/:year" element={<CashYearScreen />} />
                 <Route path="cash/:month" element={<CashMonthScreen />} />

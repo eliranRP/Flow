@@ -36,7 +36,7 @@ Deno.test("get_cash_months refuses a bad count before any read, and a failed rea
   if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
 });
 
-Deno.test("get_cash_months with year reads that year's months (FLOW-416)", async () => {
+Deno.test("get_cash_months with year reads that year's months (FLOW-417)", async () => {
   const report = { basis: "paid", base_currency: "ILS", months: [{ month: "2025-12-01", by_currency: [] }] };
   const { calls, rpc } = rpcOf((name) => name === "cash_year_months" ? { status: 200, json: report } : { status: 500, json: null });
   const result = await callTool("get_cash_months", { year: 2025 }, ["read"], rpc);

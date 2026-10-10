@@ -31,7 +31,7 @@ export function useCashMonthsQuery(active = true) {
   });
 }
 
-/** FLOW-416: the net since the first cash month and per year, for the history page. */
+/** FLOW-417: the net since the first cash month and per year, for the history page. */
 export function cashYearsQueryOptions(preview: HomePreview) {
   return {
     queryKey: ["dashboard", "cash-years", preview],
@@ -51,7 +51,7 @@ export function useCashYearsQuery(active = true) {
   return useQuery({ ...cashYearsQueryOptions(preview), enabled: active && preview === "off" });
 }
 
-/** FLOW-416: one year's months, in the shape Home's months read (the current year to this month). */
+/** FLOW-417: one year's months, in the shape Home's months read (the current year to this month). */
 export function cashYearMonthsQueryOptions(preview: HomePreview, year: number) {
   return {
     queryKey: ["dashboard", "cash-year-months", preview, year],

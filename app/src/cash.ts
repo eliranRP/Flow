@@ -138,7 +138,7 @@ export function earlierMonthRows(data: NonNullable<CashMonths>, search: string, 
 }
 
 /**
- * FLOW-416 (owner's "Years, then months", decision 0171). Home's "לכל החודשים" opens the history:
+ * FLOW-417 (owner's "Years, then months", decision 0172). Home's "לכל החודשים" opens the history:
  * the net since the first cash month, then a row per year; a year opens its months, and a month
  * opens its page as from Home.
  */

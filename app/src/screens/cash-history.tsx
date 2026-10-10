@@ -26,7 +26,7 @@ import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 
 /**
- * FLOW-416 (owner's "Years, then months", decision 0171). Home's "לכל החודשים" opens the
+ * FLOW-417 (owner's "Years, then months", decision 0172). Home's "לכל החודשים" opens the
  * history: the net since the first cash month on the band, then a row per year. A year opens its
  * page: its net, נכנס and יצא, then its months, each opening the month's page.
  */
