@@ -52,6 +52,7 @@ import {
   missingBillsTitle,
   useMissingBillsQuery,
   useRecurringChangesQuery,
+  useRecurringThisMonthQuery,
   type ChargeChangeView,
 } from "../forecast";
 
@@ -127,6 +128,10 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const late = lateCounts(missing.data ?? []);
   // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
   const changes = useRecurringChangesQuery();
+  // FLOW-423: "לכל הקבועים" shows when the company has any recurring party (late, changed or seen
+  // this month), so קבועים stays reachable with no alert on Home.
+  const thisMonth = useRecurringThisMonthQuery();
+  const hasRecurring = previewing || (missing.data ?? []).length > 0 || (changes.data ?? []).length > 0 || (thisMonth.data ?? []).length > 0;
 
   const cashPhase = screenPhase(preview, cash);
   const dashboardPhase = screenPhase(preview, dashboard);
@@ -178,6 +183,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onUnpaidRetry={() => {
         void unpaid.refetch();
       }}
+      recurringTo={hasRecurring ? `/missing-bills${search}` : undefined}
       checklist={<SetupHomeSlot emptyHome={false} />}
       company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
     />
@@ -199,6 +205,7 @@ export function CashHome({
   example,
   checklist,
   company,
+  recurringTo,
   now,
 }: {
   data: NonNullable<CashMonths>;
@@ -212,6 +219,8 @@ export function CashHome({
   checklist?: ReactNode;
   /** FLOW-601: the company's name, which opens the חברה sheet, on the band next to search. */
   company?: ReactNode;
+  /** FLOW-423: the קבועים screen, when the company has a recurring party. */
+  recurringTo?: string;
   /** Stories and tests pin the month names. */
   now?: Date;
 }) {
@@ -257,6 +266,14 @@ export function CashHome({
           </p>
         </>
       ) : null}
+      {/* FLOW-423: a fixed way into קבועים, on its own line under "לכל החודשים". */}
+      {recurringTo == null ? null : (
+        <p className="ui-page-pad">
+          <TextLink to={recurringTo} tone="quiet">
+            לכל הקבועים
+          </TextLink>
+        </p>
+      )}
     </div>
   );
 }

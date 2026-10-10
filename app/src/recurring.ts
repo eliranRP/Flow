@@ -1,13 +1,8 @@
 import type { MissingBill, RecurringChange, RecurringPace } from "@flow/shared";
-import { useQuery } from "@tanstack/react-query";
 import { abs, partyName } from "./forecast";
-import { getSupabase } from "./lib/supabase";
-import { loadReadSchemas } from "./load-read-schemas";
-import { useHomePreview } from "./preview";
 import { searchHref } from "./search";
 import { PACE_LABEL } from "./ui/charge-switches";
 import { formatDayMonth } from "./ui/date-math";
-import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * FLOW-415 (b-2): the קבועים screen's own reads and views, apart from forecast.ts so Home's entry
@@ -114,19 +109,3 @@ export function arrivedViews(rows: readonly RecurringChange[], open: readonly Re
   });
 }
 
-/** FLOW-415 (b-2): הגיעו החודש, every recurring party seen this month. */
-export function useRecurringThisMonthQuery(active = true) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["recurring-this-month", preview],
-    enabled: active && preview === "off",
-    queryFn: async (): Promise<RecurringChange[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("recurring_this_month", {});
-      if (error) throw error;
-      return (await loadReadSchemas()).recurringThisMonthSchema.parse(data);
-    },
-  });
-}
