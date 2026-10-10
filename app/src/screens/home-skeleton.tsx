@@ -81,3 +81,40 @@ export function HomeSkeleton({
     </div>
   );
 }
+
+/** FLOW-413: Home's cash while it loads: the band, נכנס, יצא and רווח החודש, then the earlier months. */
+export function CashHomeSkeleton({ preview = false, example }: { preview?: boolean; example?: ReactNode }) {
+  const search = usePreviewSearch();
+  return (
+    <div className="flex min-h-full min-w-0 flex-1 flex-col" aria-busy="true">
+      <p className="sr-only" role="status">
+        טוען…
+      </p>
+      <TopBand wordmark={false} preview={preview} example={example} trailing={<SearchEntry to={`/search${search}`} onBand />}>
+        <BandHero>
+          <div className="ui-hero">
+            <Skeleton tone="band" className="ui-skel-label" />
+            <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
+          </div>
+        </BandHero>
+      </TopBand>
+      <div className="ui-flow" aria-hidden="true">
+        {rowKeys.map((key) => (
+          <span key={key} className="ui-flow-line">
+            <Skeleton className="ui-skel-flow-label" />
+            <Skeleton className="ui-skel-figure" />
+          </span>
+        ))}
+      </div>
+      <SectionHead title="חודשים קודמים" />
+      <div className="ui-flow" aria-hidden="true">
+        {rowKeys.map((key) => (
+          <span key={key} className="ui-flow-line">
+            <Skeleton className="ui-skel-flow-label" />
+            <Skeleton className="ui-skel-figure" />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}

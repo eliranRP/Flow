@@ -32,6 +32,10 @@
   Content-Type: text/html; charset=utf-8
 /flow/*
   Content-Type: text/html; charset=utf-8
+/profit
+  Content-Type: text/html; charset=utf-8
+/cash/*
+  Content-Type: text/html; charset=utf-8
 /search
   Content-Type: text/html; charset=utf-8
 /review
