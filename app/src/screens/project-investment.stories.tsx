@@ -78,6 +78,7 @@ export const EditValue: Story = { args: { sheet: "value" } };
 export const EditValueSE: Story = { args: { sheet: "value" }, ...se };
 export const EditValueDark: Story = { args: { sheet: "value" }, ...dark };
 export const AddArv: Story = { args: { project: "missing", sheet: "arv" } };
+/** Every category row, counted or left out, opens its lines; the row with no category does not. */
 export const RehabList: Story = { args: { sheet: "rehab" } };
 export const RehabListSE: Story = { args: { sheet: "rehab" }, ...se };
 export const RehabListDark: Story = { args: { sheet: "rehab" }, ...dark };

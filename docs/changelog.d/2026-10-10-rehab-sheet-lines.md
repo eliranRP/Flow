@@ -1,0 +1,1 @@
+On a project's renovation sheet, the categories that do not count in the renovation (purchase price, loan parts, categories taken out in settings) now open their transactions too, and Back from any category's transactions returns to the open sheet.
