@@ -636,7 +636,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.includes("xargs -d '\\n' pnpm exec eslint --no-warn-ignored <<<\"$scope\""));
   assert.ok(local.includes('-- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]'));
   assert.ok(local.includes('pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"'));
-  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests'));
+  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests "${workers[@]}"'));
+  // The jsdom unit tests run on one worker per core; the Storybook browser tests keep vitest's default.
+  assert.ok(local.includes('[[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")'));
   // The same-patch skip holds only when main left the database surface alone since the marked fork;
   // otherwise the gate runs, and a database branch runs every pgTAP file.
   assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));

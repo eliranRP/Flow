@@ -578,9 +578,14 @@ app_tests() {
   if [[ "$project" == storybook ]]; then
     pnpm --filter @flow/app exec playwright install chromium
   fi
+  # The jsdom tests on one worker per core: vitest's default (one fewer) left 16% of the CPU idle,
+  # since each test file spends about a second starting its own jsdom and setup (the full suite on
+  # 4 cores: 203 s on 3 workers, 178 s on 4; 4 and 6 passed every test twice).
+  local workers=()
+  [[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")
   if base="$(changed_base "$project")"; then
-    echo "local-ci: $project tests related to the changes since ${base:0:7}."
-    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests
+    echo "local-ci: $project tests related to the changes since ${base:0:7}${workers:+, on $(nproc) workers}."
+    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests "${workers[@]}"
     # The module graph doesn't see a glob of the migrations: run the tests that read them by name.
     local globbing
     globbing="$(git grep -l 'supabase/migrations' -- 'app/src/*.test.ts' 'app/src/*.test.tsx' || true)"
@@ -590,7 +595,7 @@ app_tests() {
       pnpm --filter @flow/app exec vitest run --project unit ${globbing//app\//}
     fi
   elif [[ "$project" == unit ]]; then
-    pnpm --filter @flow/app test
+    pnpm --filter @flow/app test "${workers[@]}"
   else
     pnpm test:storybook
   fi
