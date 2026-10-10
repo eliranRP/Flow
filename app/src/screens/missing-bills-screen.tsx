@@ -33,6 +33,9 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const projectId = new URLSearchParams(query).get("project");
   const ofProject = <T extends { project_id?: string | null }>(rows: readonly T[]): T[] =>
     projectId == null ? [...rows] : rows.filter((row) => row.project_id === projectId);
+  // On one project the header names it, so each row's place line keeps only its category (FLOW-424).
+  const placed = <T extends { project_name?: string | null }>(rows: readonly T[]): T[] =>
+    projectId == null ? [...rows] : rows.map((row) => ({ ...row, project_name: null }));
   const toast = useToast();
   const blocked = useBlockedPreview();
   const live = sample == null;
@@ -46,10 +49,10 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const phase = base.kind === "ready" && !sample && (missing.data ?? []).length === 0 && thisMonth.isPending ? ({ kind: "loading" } as const) : base;
   const late = ofProject(sample ? sample.late.filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (missing.data ?? []));
   const open = ofProject(sample ? (sample.changes ?? []).filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (changes.data ?? []));
-  const rows = missingBillViews(late, search);
+  const rows = missingBillViews(placed(late), search);
   // The arrivals are a second read: while it loads or if it fails, the late rows still show.
   const seen = ofProject(sample?.arrived ?? thisMonth.data ?? []);
-  const arrived = arrivedViews(seen, open, search);
+  const arrived = arrivedViews(placed(seen), open, search);
   const projectName = projectId == null ? undefined : ([...late, ...seen].find((row) => row.project_name != null && row.project_name !== "")?.project_name ?? undefined);
 
   const write = useWrite<Hide>({

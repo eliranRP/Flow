@@ -59,6 +59,7 @@ test("קבועים on one project shows only its rows and names it (FLOW-424)", 
   const late = page.getByRole("region", { name: "לא הגיעו" });
   await expect(late.getByRole("link")).toHaveCount(1);
   await expect(late.getByRole("link").first()).toHaveAccessibleName(/^אור חשמל/);
+  await expect(late.getByRole("link").first()).not.toContainText("בניין הדקל");
   await expect(page.getByRole("region", { name: "הגיעו החודש" }).getByRole("link")).toHaveCount(1);
 });
 
