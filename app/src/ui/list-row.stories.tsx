@@ -52,6 +52,21 @@ export const Skeleton: Story = {
   ),
 };
 
+// FLOW-358: loading rows shaped like the loaded ones: an icon slot, and on an eyebrow row a short
+// label over a long value with nothing at the end (the loaded row has only a chevron there).
+export const SkeletonShaped: Story = {
+  tags: ["clip-no-text"],
+  args: { variant: "item", title: "טוען" },
+  render: () => (
+    <List>
+      <ListRow variant="skeleton" icon />
+      <ListRow variant="skeleton" icon eyebrow end={false} />
+    </List>
+  ),
+};
+export const SkeletonShaped320: Story = { ...SkeletonShaped, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const SkeletonShapedDark: Story = { ...SkeletonShaped, globals: { theme: "dark" } };
+
 export const Project: Story = {
   args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
 };
@@ -164,7 +179,7 @@ export const ProjectRowsLineUp: Story = {
   ),
 };
 
-/** Option C (decision 0120): income green with no plus and small cents (".00" included), expense with − and cents,
+/** Option C (decision 0120): income green with no plus and small agorot (none on a whole amount), expense with − and agorot,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {
   return (
@@ -187,9 +202,9 @@ function MercuryRows() {
 function SetAsideRows() {
   return (
     <List>
-      <ListRow variant="transaction" title="חשמלאי לדוגמה" hint="עבודה · 05/10" agorot={-632_000n} sign="out" source="invoice" href="/transactions/1" realCents />
-      <ListRow variant="transaction" title="החזר ציוד לדוגמה" hint="לא נספר ברווח · ציוד · 02/10" agorot={-150_000n} sign="out" source="invoice" href="/transactions/2" realCents setAside />
-      <ListRow variant="statement" title="ספק לדוגמה" fallback="invoice" details={[{ text: "לא נספר ברווח" }]} agorot={-42_000n} sign="out" href="/transactions/3" realCents setAside />
+      <ListRow variant="transaction" title="חשמלאי לדוגמה" hint="עבודה · 05/10" agorot={-632_000n} sign="out" source="invoice" href="/transactions/1" />
+      <ListRow variant="transaction" title="החזר ציוד לדוגמה" hint="לא נספר ברווח · ציוד · 02/10" agorot={-150_000n} sign="out" source="invoice" href="/transactions/2" setAside />
+      <ListRow variant="statement" title="ספק לדוגמה" fallback="invoice" details={[{ text: "לא נספר ברווח" }]} agorot={-42_000n} sign="out" href="/transactions/3" setAside />
     </List>
   );
 }

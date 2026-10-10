@@ -171,7 +171,7 @@ describe("review list months", () => {
       backTo="/review"
     />);
     // FLOW-305: the statement rows show cents, so the month total shows exact cents too.
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250.00, הכנסות $100.00");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250, הכנסות $100");
   });
 
   it("adds exact cents, so the month matches its statement rows", () => {
@@ -184,7 +184,7 @@ describe("review list months", () => {
       search=""
       backTo="/review"
     />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪201.00");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪201");
   });
 });
 
@@ -231,9 +231,9 @@ describe("review list statement rows (FLOW-305)", () => {
     expect(link.querySelector(".ui-statement-method")?.textContent).toBe("חשבונית");
     expect(link.querySelector(".ui-status")).toBeNull();
     expect(link.querySelector(".ui-statement-line")).toBeNull();
-    expect(link.querySelector(".ui-income")?.textContent).toBe("₪5,000.00");
+    expect(link.querySelector(".ui-income")?.textContent).toBe("₪5,000");
     expect(link.textContent).not.toContain("+");
-    expect(link.getAttribute("aria-label")).toBe("לקוח לדוגמה, חשבונית, הכנסה ₪5,000.00");
+    expect(link.getAttribute("aria-label")).toBe("לקוח לדוגמה, חשבונית, הכנסה ₪5,000");
   });
 });
 
@@ -258,7 +258,7 @@ describe("category drill-down months", () => {
   it("shows a USD drill-down in dollars", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, currency: "USD", pageSize: undefined }} backTo="/projects/a" />);
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות $5,000");
-    expect(screen.getByText("Line 1").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("$1,000.00"); // FLOW-339: a cost list carries no minus
+    expect(screen.getByText("Line 1").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("$1,000"); // FLOW-339: a cost list carries no minus
   });
 
   it("totals the last month once every row is shown", () => {

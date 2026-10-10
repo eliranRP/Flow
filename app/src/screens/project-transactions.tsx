@@ -91,7 +91,6 @@ export function ProjectTransactions({
                 agorot={row.agorot}
                 sign={row.sign}
                 currency={txn.currency ?? "ILS"}
-                realCents
                 setAside={txn.kept_out === true}
                 source={rowSource(txn.source)}
                 href={`/transactions/${txn.id}${search}`}

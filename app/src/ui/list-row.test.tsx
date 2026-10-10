@@ -35,7 +35,7 @@ describe("ListRow", () => {
     expect(screen.getByText("ספק · פטור ממע״מ")).toBeInTheDocument();
     const txnAmount = screen.getByText("−₪12,000");
     expect(txnAmount.closest("bdi")).toHaveAttribute("dir", "ltr");
-    expect(txnAmount.textContent).toBe("−₪12,000.00");
+    expect(txnAmount.textContent).toBe("−₪12,000");
   });
 
   it("renders a USD transaction amount inside one bdi and honours project currency", () => {
@@ -48,7 +48,7 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const usdTxn = screen.getByText("−$1,250");
-    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250.00");
+    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250");
     // Project rows stay whole units.
     expect(screen.getByText("$2,000").textContent).toBe("$2,000");
     expect(screen.getByText("$2,000").querySelector(".ui-num-cents")).toBeNull();
@@ -290,14 +290,14 @@ describe("ListRow", () => {
     const income = screen.getByText("₪3,500");
     expect(income).toHaveClass("ui-income");
     expect(income.textContent).not.toContain("+");
-    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500.00");
+    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500");
     expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
     const expense = screen.getByText("−₪1,200");
     expect(expense).not.toHaveClass("ui-income");
     expect(expense.closest(".t-amount")).not.toBeNull();
   });
 
-  it("shows transaction cents small and raised, .00 included, and keeps project rows whole (decision 0120, option C)", () => {
+  it("shows transaction agorot small and raised, no .00 on a whole amount, and keeps project rows whole (decision 0120, option C)", () => {
     const { container } = render(
       <MemoryRouter>
         <>
@@ -308,8 +308,8 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
-    expect(figures.map((node) => node.textContent)).toEqual(["₪1,234.56", "−₪500.00", "₪988"]);
-    expect(figures.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([".56", ".00", null]);
+    expect(figures.map((node) => node.textContent)).toEqual(["₪1,234.56", "−₪500", "₪988"]);
+    expect(figures.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([".56", null, null]);
   });
 
   it("draws no hairline under a row", () => {
@@ -334,7 +334,7 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
-    expect(figures[0]?.textContent).toBe("−₪200.00");
+    expect(figures[0]?.textContent).toBe("−₪200");
     expect(figures[0]).not.toHaveClass("ui-income");
     expect(figures[1]).toHaveClass("ui-income");
     expect(figures[2]).not.toHaveClass("ui-income");
@@ -422,8 +422,8 @@ describe("ListRow statement (FLOW-305)", () => {
   it("shows income green with no plus and the hidden word", () => {
     renderRow({ title: "Northwind Traders", agorot: 500_000n, sign: "in", currency: "USD" });
     const link = screen.getByRole("link");
-    expect(link.querySelector(".ui-income")?.textContent).toBe("$5,000.00");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה $5,000.00");
+    expect(link.querySelector(".ui-income")?.textContent).toBe("$5,000");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה $5,000");
     expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "ltr");
   });
@@ -454,9 +454,9 @@ describe("ListRow transaction in a cost list (FLOW-339)", () => {
         <ListRow variant="transaction" title="החזר" agorot={50_000n} sign="in" inWord="זיכוי" source="invoice" href="/t/2" />
       </MemoryRouter>,
     );
-    expect(screen.getByText("מלט").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("₪85,000.00");
+    expect(screen.getByText("מלט").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("₪85,000");
     const refund = screen.getByText("החזר").closest(".ui-row");
-    expect(refund?.querySelector(".ui-num")?.textContent).toBe("₪500.00");
+    expect(refund?.querySelector(".ui-num")?.textContent).toBe("₪500");
     expect(refund?.textContent).toContain("זיכוי");
   });
 });
