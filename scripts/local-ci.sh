@@ -713,13 +713,18 @@ storybook_smoke() {
     ${base:+--base "$base"} <<<"$changed" >"$scope"
   if grep -qx all "$scope"; then
     echo "local-ci: the every-story check opens every story."
-  else
+  elif [[ -s "$scope" ]]; then
     echo "local-ci: the every-story check opens the stories of $(grep -cvx partial "$scope" || true) files the changes since ${base:0:7} reach."
+  else
+    # A layout, clip or secret spec change runs those specs; the every-story check doesn't read them.
+    echo "local-ci: the every-story check skipped: the changes since ${base:0:7} reach no story (main opens every story)."
   fi
   # Two runs, as on main: next to the every-story shards, the focus specs miss their timing.
   pnpm test:storybook:smoke --reporter=line --grep-invert "every static story"
-  FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story" \
-    --workers="${FLOW_STORY_WORKERS:-4}"
+  if [[ -s "$scope" ]]; then
+    FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story" \
+      --workers="${FLOW_STORY_WORKERS:-4}"
+  fi
   mark_green "smoke-$app_key"
   # Only a run that opened every story the change reaches moves the next run's base here.
   if grep -qx partial "$scope"; then

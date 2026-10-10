@@ -6,6 +6,8 @@
 // Prints the story files to open, one per line as Storybook's index names them (./src/x.stories.tsx),
 // or "all" when a change reaches every story (the Storybook config, the lockfile, the smoke itself),
 // and a last line "partial" when the budget left some reached stories to main.
+// The layout, clip and secret specs are part of the smoke, so a change to one runs the build and the
+// specs (--setup says yes), but the every-story check doesn't read them: alone they pick no story.
 // Tier 1: a changed story file. Tier 2: a story that imports a changed file. Tier 3: a story whose
 // imports reach one further down. Whole tiers are taken, nearest first, while their stories fit the
 // budget (default 250); the first tier is always taken.
@@ -26,6 +28,9 @@ const runsAll = [
   /^app\/e2e\/storybook-[^/]+(?<!\.test\.ts)$/,
   /^scripts\/(storybook-stories|e2e-specs)\.mjs$/,
 ];
+
+/** Smoke specs the every-story check doesn't read: a change to one runs the specs, not every story. */
+const specsOnly = /^app\/e2e\/storybook-(layout|clip|secret)\.spec\.ts$/;
 
 /** The parts of a JSON file the Storybook build reads, or null when it does not parse. */
 function jsonParts(text, pick) {
@@ -129,7 +134,7 @@ function storyFiles(root, folder = "app/src/") {
  * @returns {Array<[number, string]> | "all"} [tier, story file as ./src/...], tier 1 first
  */
 export function selectStories(changed, { root, base }) {
-  if (changed.some((file) => reachesBuild(file, { root, base }))) return "all";
+  if (changed.some((file) => !specsOnly.test(file) && reachesBuild(file, { root, base }))) return "all";
   const sources = new Set(changed.filter((file) => /\.(ts|tsx|json)$/.test(file)));
   if (sources.size === 0) return [];
   const walk = importWalker(root);

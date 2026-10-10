@@ -612,6 +612,8 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const fast = local.indexOf('  passed\n  phase "passed on ${head:0:7} (main opens');
   const scoped = local.indexOf('FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story"');
   assert.ok(scoped > local.indexOf("pnpm test:storybook\n") && fast > scoped);
+  // A change that reaches no story (a layout, clip or secret spec alone) runs the specs, not the every-story check.
+  assert.ok(local.includes('  if [[ -s "$scope" ]]; then\n    FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke'));
   assert.ok(fast < local.indexOf("pnpm test:storybook:smoke\n"));
   assert.ok(local.indexOf("if (( ! full )); then") < fast);
   assert.ok(local.indexOf('\npassed\nphase "passed on ${head:0:7}"') > local.indexOf("pnpm test:e2e\n"), "--full stamps last");

@@ -33,6 +33,13 @@ test("CSS and files outside the app pick no story; the Storybook config and lock
   assert.equal(select("pnpm-lock.yaml"), "all");
   assert.equal(select("app/e2e/storybook-static.spec.ts"), "all");
   assert.equal(select("app/e2e/storybook-network.ts"), "all");
+  // The layout, clip and secret specs run when they change (--setup), but open no story by themselves.
+  for (const spec of ["layout", "clip", "secret"]) {
+    assert.equal(reachesBuild(`app/e2e/storybook-${spec}.spec.ts`, { root }), true);
+    assert.deepEqual(select(`app/e2e/storybook-${spec}.spec.ts`), []);
+  }
+  assert.equal(tierOf(select("app/e2e/storybook-layout.spec.ts", "app/src/screens/loan-list.stories.tsx"), "./src/screens/loan-list.stories.tsx"), 1);
+  assert.equal(select("app/e2e/storybook-layout.spec.ts", "app/e2e/storybook-static.spec.ts"), "all");
   // A vitest test of a smoke helper runs in the unit project; it opens no story.
   assert.deepEqual(select("app/e2e/storybook-network.test.ts", "app/e2e/smoke-allow.test.ts"), []);
   assert.equal(reachesBuild("app/e2e/storybook-network.test.ts", { root }), false);
