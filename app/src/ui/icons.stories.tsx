@@ -13,6 +13,7 @@ import {
   CopyIcon,
   DocumentIcon,
   DownloadIcon,
+  EyeOffIcon,
   HomeIcon,
   KeptOutIcon,
   LoanIcon,
@@ -36,7 +37,6 @@ import {
   TrendDownIcon,
   TrendUpIcon,
 } from "./icons";
-import { EyeOffIcon } from "./eye-off-icon";
 import { padded } from "./story-support";
 
 type Entry = [string, ComponentType<{ size?: number }>];

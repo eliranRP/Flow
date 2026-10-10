@@ -34,7 +34,7 @@
   list-style: none;
 }
 
-/* FLOW-415 (b-2): the קבועים screen. A row that can be hidden ends in a muted 44px eye-off button, with no chevron. */
+/* FLOW-415 (b-2): the קבועים screen. FLOW-913 layout A: one line per row; in עריכה a row that can close ends in "סגירה". */
 /* Every row sits on the surface, as a hideable row's swipe layer does, so the list reads as one. */
 .ui-recurring-row {
   display: flex;
@@ -50,13 +50,7 @@
 
 .ui-recurring-hide {
   flex: none;
-  color: var(--color-text-muted);
-}
-
-/* The eye-off button's place on a row with nothing to hide. */
-.ui-recurring-hide-space {
-  flex: none;
-  inline-size: var(--touch-min);
+  padding-inline: var(--space-4);
 }
 
 .ui-recurring-amount {
@@ -70,20 +64,27 @@
   white-space: nowrap;
 }
 
-/* Its place line: one line; the project ends in an ellipsis and "· category" stays whole. */
-.ui-place-line {
-  display: flex;
-  min-inline-size: 0;
-  white-space: nowrap;
+
+/*
+  FLOW-913 (owner 16:14Z): the list is one card inside the page gutter, with rounded corners and its
+  own inner space, so no name, amount or chevron touches its edge. A row sliding over "סגירה" (a
+  swipe or the one-time peek) stays inside the card.
+*/
+.ui-recurring-section .ui-missing-bills {
+  inline-size: auto;
+  margin-inline: var(--space-side);
+  padding-inline: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: clip;
 }
 
-.ui-place-head {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ui-missing-bills .ui-recurring-row > .ui-row {
+  padding-inline: var(--space-4);
 }
 
-.ui-place-tail {
-  flex: none;
-  white-space: pre;
+/* Its title lines up with the rows' text and keeps a gap above the card (owner 16:19Z). */
+.ui-recurring-section .ui-section-head {
+  padding-inline: calc(var(--space-side) + var(--space-4));
+  margin-bottom: var(--space-2);
 }

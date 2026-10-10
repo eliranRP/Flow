@@ -366,7 +366,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 | <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
 | <a id="flow-912"></a>[FLOW-912](tasks/FLOW-912.md) | The speed checks hold the median of 5 opens | TASK |
-| <a id="flow-913"></a>[FLOW-913](tasks/FLOW-913.md) | קבועים rows: a Latin project kept its end, and ✕ sat beside the chevron | SMALL UI |
+| <a id="flow-913"></a>[FLOW-913](tasks/FLOW-913.md) | קבועים: a lighter list, swipe to close, and a row that opens all its payments | SMALL UI |
 
 ## Future features
 

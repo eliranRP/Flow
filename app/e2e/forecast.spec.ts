@@ -27,12 +27,13 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
   await expect(page.getByRole("searchbox")).toHaveValue("אור חשמל");
 });
 
-test("קבועים: a late row hides for this user with ✕ and comes back on ביטול; a change opens its payment", async ({ page }) => {
+test("קבועים: a late row closes for this user with סגירה under עריכה and comes back on ביטול; a change opens its payment", async ({ page }) => {
   await page.goto("/e2e/missing-bills?preview=1");
   const late = page.getByRole("region", { name: "לא הגיעו" });
   await expect(late.getByRole("link")).toHaveCount(2);
-  await late.getByRole("button", { name: "הסתרה, מים טובים" }).click();
-  await expect(page.getByText("ההתראה הוסתרה")).toBeVisible();
+  await page.getByRole("button", { name: "עריכה" }).click();
+  await late.getByRole("button", { name: "סגירה, מים טובים" }).click();
+  await expect(page.getByText("ההתראה נסגרה")).toBeVisible();
   await expect(late.getByRole("link")).toHaveCount(1);
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(late.getByRole("link")).toHaveCount(2);

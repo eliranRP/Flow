@@ -49,25 +49,30 @@ export const EmptyDark: Story = { name: "Empty, dark", render: () => <MissingBil
 export const Loading: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "loading" }} /> };
 export const Error: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "error", offline: false }} /> };
 
-// Owner, 2026-10-10: a list that can hide ends each row in one muted eye-off button, no chevron, and a
-// Latin project name keeps its start ("Example Holdings Compa…", not "…ny / Overhead").
-const latin = (name: string) => (row: (typeof SAMPLE_RECURRING_THIS_MONTH)[number]) => ({ ...row, project_name: name });
-const hideRows = missingBillViews(filed.map((row) => ({ ...row, project_name: "Example Holdings Company / Overhead" })), "", now);
-const hideArrived = arrivedViews(SAMPLE_RECURRING_THIS_MONTH.map(latin("Sample Street 2220")), SAMPLE_RECURRING_CHANGES, "");
+// FLOW-913 (owner 16:03Z, layout A): one line per row. A row closes by swipe over "סגירה"; עריכה
+// shows "סגירה" in place of the chevron; the first visit peeks the top row once.
+const closeRows = missingBillViews(filed, "", now);
+const closeArrived = arrivedViews(SAMPLE_RECURRING_THIS_MONTH, SAMPLE_RECURRING_CHANGES, "");
 const noop = () => undefined;
-export const Hideable: Story = {
-  name: "Hideable, Latin projects",
-  render: () => <MissingBillList rows={hideRows} arrived={hideArrived} onHide={noop} />,
-  parameters: { viewport: { defaultViewport: "flow390" } },
+export const Closable: Story = {
+  name: "Closable",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} />,
 };
-export const HideableDark: Story = {
-  name: "Hideable, Latin projects, dark",
-  render: () => <MissingBillList rows={hideRows} arrived={hideArrived} onHide={noop} />,
-  parameters: { viewport: { defaultViewport: "flow390" } },
+export const Editing: Story = {
+  name: "Editing: סגירה",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
+};
+export const EditingDark: Story = {
+  name: "Editing: סגירה, dark",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
   globals: { theme: "dark" },
 };
-export const Hideable320: Story = {
-  name: "Hideable, 320",
-  render: () => <MissingBillList rows={hideRows} arrived={hideArrived} onHide={noop} />,
+export const Editing320: Story = {
+  name: "Editing: סגירה, 320",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
   parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const Peek: Story = {
+  name: "First visit: the top row peeks",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} peek />,
 };
