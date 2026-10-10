@@ -187,6 +187,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "set_cash_basis",
     "set_line_recurring",
     "set_line_pace",
+    "answer_recurring_match",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
