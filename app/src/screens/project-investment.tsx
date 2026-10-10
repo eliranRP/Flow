@@ -4,7 +4,7 @@ import { getSupabase } from "../lib/supabase";
 import { useLocation } from "react-router-dom";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { BigNumber } from "../ui/big-number";
-import { useSheetHistory } from "../ui/back";
+import { sheetStack, useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { DateSheet } from "../ui/date-sheet";
 import { formatDisplay, israelToday } from "../ui/date-math";
@@ -39,6 +39,7 @@ import {
   type ProjectInvestment,
   type ProjectSource,
   type RehabCategory,
+  type RehabLine,
 } from "./project-investment-data";
 
 export {
@@ -112,6 +113,9 @@ export function RehabSheet({
   // Back from the lines returns here (the investment screen, on its own period), not to the overview.
   const location = useLocation();
   const backState: CategoryBackState = { back: `${location.pathname}${location.search}` };
+  // Every category row, counted or left out, opens its lines (FLOW-404); a line with no category has none.
+  const linesHref = (line: RehabLine) =>
+    line.id == null ? undefined : categoryHref(projectId, line.id, figures.currency, rehabLinesSearch(search));
   const breakdown = categories == null ? null : rehabBreakdown(costs, categories, figures.currency, figures.rehabMinor);
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef}>
@@ -143,7 +147,7 @@ export function RehabSheet({
           ) : (
             <List className="ui-invest-list">
               {breakdown.counted.map((line) => {
-                const href = line.id == null ? undefined : categoryHref(projectId, line.id, figures.currency, rehabLinesSearch(search));
+                const href = linesHref(line);
                 return (
                   <ListRow
                     key={line.key}
@@ -165,18 +169,24 @@ export function RehabSheet({
             <>
               <h3 className="ui-invest-list-head t-label">לא נספרות בשיפוץ</h3>
               <List className="ui-invest-list ui-invest-left">
-                {breakdown.left.map((line) => (
-                  <ListRow
-                    key={line.key}
-                    variant="project"
-                    title={line.name}
-                    hint={line.reason}
-                    agorot={line.minor}
-                    currency={figures.currency}
-                    loss={false}
-                    chevronSpace
-                  />
-                ))}
+                {breakdown.left.map((line) => {
+                  const href = linesHref(line);
+                  return (
+                    <ListRow
+                      key={line.key}
+                      variant="project"
+                      title={line.name}
+                      hint={line.reason}
+                      agorot={line.minor}
+                      currency={figures.currency}
+                      loss={false}
+                      href={href}
+                      state={href == null ? undefined : backState}
+                      chevron={href != null}
+                      chevronSpace={href == null}
+                    />
+                  );
+                })}
               </List>
             </>
           ) : null}
@@ -518,6 +528,8 @@ function applySample(figures: InvestmentFigures, patch: InvestmentPatch): Invest
 
 type OpenSheet = InvestmentField | "rehab" | "loans" | null;
 
+const REHAB_LAYER = "investment-rehab";
+
 /**
  * FLOW-404. The השקעה card with its sheets. Mount it under the project's categories with the
  * project the page already read. The overhead project has no card; a viewer sees it read-only.
@@ -541,7 +553,12 @@ export function ProjectInvestmentSection({
   const [sampleData, setSampleData] = useState(sample);
   const data = sampleData ?? toProjectInvestment(project);
   const sampled = sample != null;
-  const [sheet, setSheet] = useState<OpenSheet>(readOnly ? null : initialSheet);
+  const location = useLocation();
+  // Back from a category's lines lands on the rehab sheet's own history entry: open it again there.
+  const [sheet, setSheet] = useState<OpenSheet>(() => {
+    if (readOnly) return null;
+    return initialSheet ?? (sheetStack(location.state).includes(REHAB_LAYER) ? "rehab" : null);
+  });
   const [editField, setEditField] = useState<InvestmentField>(
     initialSheet === "purchase" || initialSheet === "arv" || initialSheet === "value" ? initialSheet : "purchase",
   );
@@ -555,7 +572,7 @@ export function ProjectInvestmentSection({
   const rehabOpen = sheet === "rehab";
   const costs = useRehabCostsQuery(projectId, rehabOpen && !sampled);
   const categories = useRehabCategoriesQuery(rehabOpen && !sampled);
-  const setRehabSheet = useSheetHistory("investment-rehab", rehabOpen, (next) => { setSheet(next ? "rehab" : null); });
+  const setRehabSheet = useSheetHistory(REHAB_LAYER, rehabOpen, (next) => { setSheet(next ? "rehab" : null); });
   const setLoansSheet = useSheetHistory("investment-loans", sheet === "loans", (next) => { setSheet(next ? "loans" : null); });
   const save = useWrite<SaveRequest>({
     failure: investmentFailure,

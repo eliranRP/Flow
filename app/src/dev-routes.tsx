@@ -331,6 +331,7 @@ export function DevCash() {
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
+      recurringTo="/e2e/missing-bills?preview=1"
     />
   );
 }
