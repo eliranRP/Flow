@@ -1,0 +1,1 @@
+A split line in the cash lists (נכנס, יצא, לא נספר ברווח, and a project's cash lines) names the parts its row counts and the whole line in its hint, for example "חשמל $171.76 · מים וביוב $183.10 · מתוך $2,054.86", so the row's figure reads as their sum. `get_cash_lines` and `get_project_cash_lines` rows carry `parts` and `line_minor` (FLOW-432).

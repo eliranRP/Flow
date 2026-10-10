@@ -11,6 +11,7 @@ import {
   notInProfitRest,
   shownCashRows,
   type CashListSide,
+  cashLineSplit,
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
 import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
@@ -40,6 +41,7 @@ import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
+import { SplitPartsHint } from "../ui/split-parts-hint";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -359,12 +361,15 @@ function ProjectCashLinesBody({
             const hint = [formatDayMonth(row.cash_month_date), row.category_name]
               .filter((part): part is string => part != null && part !== "")
               .join(" · ");
+            // FLOW-432: a split line names the parts this list counts, out of the whole line.
+            const split = cashLineSplit(row);
             return (
               <ListRow
                 key={`${row.transaction_id}:${row.part ?? ""}`}
                 variant="transaction"
                 title={row.supplier_name ?? row.description}
-                hint={hint}
+                hint={split == null ? hint : <SplitPartsHint parts={split.parts} total={split.total} date={formatDayMonth(row.cash_month_date)} />}
+                wrapHint={split != null}
                 agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
                 currency={row.currency}
                 sign={lineSign(side, row)}

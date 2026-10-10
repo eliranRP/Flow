@@ -284,6 +284,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-411"></a>[FLOW-411](tasks/FLOW-411.md) | Project screen: lines on open, honest period label | SMALL UI |
 | <a id="flow-412"></a>[FLOW-412](tasks/FLOW-412.md) | Category drill-down on the cash basis | BACKLOG NIT |
 | <a id="flow-413"></a>[FLOW-413](tasks/FLOW-413.md) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST |
+| <a id="flow-432"></a>[FLOW-432](tasks/FLOW-432.md) | Show a split line's parts on the list row | UI |
 | <a id="flow-418"></a>[FLOW-418](tasks/FLOW-418.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
 | <a id="flow-430"></a>[FLOW-430](tasks/FLOW-430.md) | A missing recurring bill suggests a renamed supplier, and the user decides | FEATURE |

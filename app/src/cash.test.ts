@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cashHistoryLabel,
+  cashLineSplit,
   cashMonthName,
   cashSummaryRows,
   cashTitle,
@@ -187,5 +188,30 @@ describe("FLOW-417: the year row and the year page agree", () => {
     const page = cashYearTotals(cashYearMonths(months, null), "ILS")[0]?.net_minor;
     const row = sampleCashYears(now).years.find((entry) => entry.year === year)?.by_currency[0]?.net_minor;
     expect(page).toBe(row);
+  });
+});
+
+describe("cashLineSplit (FLOW-432)", () => {
+  it("names a split line's counted parts, unsigned, with cents only when they have them, and the whole line", () => {
+    const row = {
+      currency: "USD",
+      line_minor: 205_486n,
+      parts: [
+        { name: "מים וביוב", amount_minor: -18_310n },
+        { name: null, amount_minor: -17_100n },
+      ],
+    };
+    expect(cashLineSplit(row)).toEqual({
+      parts: [
+        { name: "מים וביוב", amount: "$183.10" },
+        { name: "חלק", amount: "$171" },
+      ],
+      total: "$2,054.86",
+    });
+  });
+
+  it("is null for a line with no split", () => {
+    expect(cashLineSplit({ currency: "USD", line_minor: null, parts: null })).toBeNull();
+    expect(cashLineSplit({ currency: "USD" })).toBeNull();
   });
 });
