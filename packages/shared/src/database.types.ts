@@ -1390,6 +1390,12 @@ isOneToOne: false
 "owner_company_for":
 { Args: { "p_hint"?: string,"p_user": string }; Returns: string
                            },
+"project_cash_month_lines":
+{ Args: { "p_currency"?: string,"p_limit"?: number,"p_month": string,"p_offset"?: number,"p_project": string,"p_side": string }; Returns: Json
+                           },
+"project_cash_months":
+{ Args: { "p_months"?: number,"p_project": string,"p_today"?: string }; Returns: Json
+                           },
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
                            },

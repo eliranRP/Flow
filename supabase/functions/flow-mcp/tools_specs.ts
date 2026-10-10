@@ -115,6 +115,18 @@ function readTools() {
       basis: { type: "string", enum: ["cash", "invoiced"] },
       project_id: { type: "string" },
     }),
+    toolSpec("get_project_cash_months", "One project's monthly cash view (the project page's תזרים), in get_cash_months' shape: newest first, the current month included. project_id from list_projects; months 1 to 24 (default 4). A line filed or split to the project counts whole (its part); a shared line counts the project's allocation share of its gross, so the project's figures are its own part, never the whole bank amount. profit_minor is the project's profit for the month on the company's basis (income less direct and shared cost, as get_profit_months with project_id), before the overhead share. not_found for a project of another company or an unknown one.", {
+      project_id: { type: "string" },
+      months: { type: "integer" },
+    }),
+    toolSpec("get_project_cash_lines", "The lines behind a get_project_cash_months figure, in get_cash_lines' shape and arguments plus project_id. A shared line's amount_minor is the project's share, and its row has shared true.", {
+      project_id: { type: "string" },
+      month: { type: "string" },
+      side: { type: "string", enum: ["in", "out", "excluded"] },
+      currency: { type: "string" },
+      limit: { type: "integer" },
+      offset: { type: "integer" },
+    }),
     toolSpec("get_cash_months", "The monthly cash view (תזרים): money that moved in and out per calendar month, newest first, the current month included. months is how many (1 to 24, default 6). Amounts are gross (VAT included), in positive minor units per currency, nothing converted. Returns basis (the company's cash basis: paid counts a line in its payment month, and an open invoice is not cash yet; invoice counts it in its document month; set_cash_basis), base_currency, and months[]: month (YYYY-MM-DD, the first day) and by_currency[] (the base currency first and always present): in_minor, out_minor, net_minor (in less out), profit_minor (the month's P&L net profit on the company's basis, as get_profit_months without a basis), and excluded_count, excluded_in_minor, excluded_out_minor for lines left out of the view (owner's transfers, credit card bill payments, money received from a loan, and lines or categories switched off with set_line_cash or set_category_cash). Loan payments count whole, principal included. Every line counts once: a line split, or a loan payment's parts, by their parts.", {
       months: { type: "integer" },
     }),
