@@ -17,7 +17,6 @@ import { ScreenHeader } from "../ui/screen-header";
 import { Sheet } from "../ui/sheet";
 import { Skeleton } from "../ui/skeleton";
 import { TextLink } from "../ui/text-link";
-import { ShareAmount } from "../ui/share-amount";
 import { useToast } from "../ui/toast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
@@ -65,7 +64,8 @@ import { formatLoanMoney } from "./loan-form";
 import { LoanBalance, showsLoanBalance } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
-import { dueDayLabel, loanOutlook, paidInYear, partCategoryHint, partShares, wholeMinor, type PartTotals } from "./loan-outlook";
+import { dueDayLabel, loanOutlook, paidInYear, wholeMinor, type PartTotals } from "./loan-outlook";
+import { aheadLabel, LoanFutureView, LoanPartRows, LoanPeriodView, periodTotal } from "./loan-outlook-views";
 
 /**
  * FLOW-106 B and FLOW-110: `/settings/loans/:loanId`, one loan's page (template A with the tab
@@ -358,47 +358,7 @@ function LoanDetailReady({
   const loanHref = (rest: string) => `${loanPath}/${rest}${search}`;
 
   function partRows(totals: PartTotals, onOpen: ((item: LoanSplitPart) => void) | null) {
-    const shares = partShares(roundTotals(totals), parts);
-    const total = shares.reduce((sum, item) => sum + item.minor, 0n);
-    return shares.map((item) => {
-      const amount = <bdi className="ui-num" dir="ltr">{formatLoanMoney(item.minor, loan.currency)}</bdi>;
-      const meta = <ShareAmount percent={total > 0n ? item.percent : null}>{amount}</ShareAmount>;
-      const label = `${LOAN_PART_LABEL[item.part]}, ${formatLoanMoney(item.minor, loan.currency)}${total > 0n ? `, ${String(item.percent)}%` : ""}`;
-      const hint = onOpen == null ? undefined : partCategoryHint(loan, categories, item.part) ?? undefined;
-      return (
-        holdWrites || onOpen == null ? (
-          <ListRow key={item.part} variant="static" title={LOAN_PART_LABEL[item.part]} hint={hint} meta={meta} label={label} />
-        ) : (
-          <ListRow key={item.part} variant="button" title={LOAN_PART_LABEL[item.part]} hint={hint} meta={meta} label={label} chevron onClick={() => { onOpen(item.part); }} />
-        )
-      );
-    });
-  }
-
-  function periodTotal(totals: PartTotals): bigint {
-    const rounded = roundTotals(totals);
-    return rounded.interest + rounded.escrow + rounded.principal + rounded.fees;
-  }
-
-  function figure(label: string, minor: bigint, meta?: string) {
-    return (
-      <div className="ui-page-pad ui-loan-next">
-        <p className="t-label">{label}</p>
-        <p className="t-display"><BigNumber agorot={minor} currency={loan.currency} size="display" /></p>
-        {meta == null ? null : <p className="t-meta">{meta}</p>}
-      </div>
-    );
-  }
-
-  function noSchedule() {
-    return (
-      <EmptyState
-        icon={<CalendarIcon />}
-        title="אין לוח תשלומים להלוואה הזו"
-        body={loan.kind === "demand" ? "בהלוואה בלי לוח הריבית נצברת כל יום." : "ההלוואה לא פתוחה, או שחסרים בה פרטים."}
-        action={<Button variant="pill" to={`${loanPath}${search}`}>לעמוד ההלוואה</Button>}
-      />
-    );
+    return <LoanPartRows loan={loan} categories={categories} totals={totals} onOpen={holdWrites ? null : onOpen} />;
   }
 
   const summaryView = (
@@ -461,9 +421,7 @@ function LoanDetailReady({
       <SectionHead title="שולם השנה">
         {paid.payments > 0 ? <bdi className="ui-num t-amount" dir="ltr">{formatLoanMoney(periodTotal(paid.totals), loan.currency)}</bdi> : null}
       </SectionHead>
-      <List>
-        {partRows(paid.totals, (item) => { setPart(item); open("part"); })}
-      </List>
+      {partRows(paid.totals, (item) => { setPart(item); open("part"); })}
 
       <List className="ui-loan-more">
         <ListRow
@@ -571,51 +529,8 @@ function LoanDetailReady({
     </>
   );
 
-  const futureView = outlook == null ? (
-    <>
-      <ScreenHeader title="תשלומים הבאים" kicker={loan.name} backTo={back} />
-      {noSchedule()}
-    </>
-  ) : (
-    <>
-      <ScreenHeader title="תשלומים הבאים" kicker={loan.name} backTo={back} />
-      {figure(outlook.ahead.payments === 12 ? "12 החודשים הבאים" : aheadLabel(outlook.ahead.payments), periodTotal(outlook.ahead.totals))}
-      <List>{partRows(outlook.ahead.totals, null)}</List>
-      <List className="ui-loan-more">
-        <ListRow variant="item" href={loanHref("future/end")} title="עד סוף ההלוואה" hint={`${String(outlook.toEnd.payments)} תשלומים`} meta={<bdi className="ui-num t-amount" dir="ltr">{formatLoanMoney(periodTotal(outlook.toEnd.totals), loan.currency)}</bdi>} chevron />
-      </List>
-      <SectionHead title="לפי שנה" />
-      <List>
-        {outlook.years.map((item, index) => (
-          <ListRow
-            key={item.key}
-            variant="item"
-            href={loanHref(`future/${item.key}`)}
-            title={<bdi className="ui-num" dir="ltr">{item.key}</bdi>}
-            label={`${item.key}, ${formatLoanMoney(periodTotal(item.totals), loan.currency)}`}
-            hint={item.payments >= 12 ? undefined : index === 0 ? `נותרו ${paymentsWord(item.payments)}` : paymentsWord(item.payments)}
-            meta={<bdi className="ui-num t-amount" dir="ltr">{formatLoanMoney(periodTotal(item.totals), loan.currency)}</bdi>}
-            chevron
-          />
-        ))}
-      </List>
-    </>
-  );
-
-  const shownPeriod = outlook == null ? null : period === "end" ? outlook.toEnd : outlook.years.find((item) => item.key === period) ?? null;
-  const periodTitle = period === "end" ? "עד סוף ההלוואה" : period;
-  const periodView = outlook == null || shownPeriod == null ? (
-    <>
-      <ScreenHeader title={periodTitle} kicker="תשלומים הבאים" backTo={back} />
-      {noSchedule()}
-    </>
-  ) : (
-    <>
-      <ScreenHeader title={periodTitle} kicker="תשלומים הבאים" backTo={back} />
-      {figure(period === "end" ? `לתשלום עד ${outlook.endYear}` : "לתשלום בשנה", periodTotal(shownPeriod.totals), paymentsWord(shownPeriod.payments))}
-      <List>{partRows(shownPeriod.totals, null)}</List>
-    </>
-  );
+  const futureView = <LoanFutureView loan={loan} outlook={outlook} back={back} loanPath={loanPath} search={search} />;
+  const periodView = <LoanPeriodView loan={loan} outlook={outlook} period={period} back={back} loanPath={loanPath} search={search} />;
 
   return (
     <ViewerScope>
@@ -770,34 +685,6 @@ function LoanDetailReady({
       },
     });
   }
-}
-
-/**
- * Each part in whole units, rounded so the parts on screen add up to the rounded total (the
- * part with the largest remainder takes the leftover unit).
- */
-function roundTotals(totals: PartTotals): PartTotals {
-  const keys = ["interest", "escrow", "principal", "fees"] as const;
-  const target = wholeMinor(keys.reduce((sum, key) => sum + totals[key], 0n));
-  const out: PartTotals = { interest: 0n, escrow: 0n, principal: 0n, fees: 0n };
-  for (const key of keys) out[key] = (totals[key] / 100n) * 100n;
-  let left = target - keys.reduce((sum, key) => sum + out[key], 0n);
-  for (const key of [...keys].sort((a, b) => Number((totals[b] % 100n) - (totals[a] % 100n)))) {
-    if (left <= 0n) break;
-    out[key] += 100n;
-    left -= 100n;
-  }
-  return out;
-}
-
-/** "תשלום אחד", "2 תשלומים". */
-function paymentsWord(count: number): string {
-  return count === 1 ? "תשלום אחד" : `${String(count)} תשלומים`;
-}
-
-/** "12 חודשים", or "3 התשלומים האחרונים" near the end. */
-function aheadLabel(count: number): string {
-  return count === 12 ? "12 חודשים" : count === 1 ? "התשלום האחרון" : `${String(count)} התשלומים האחרונים`;
 }
 
 /** "11.25% · מ־01/09/2026", the date kept left to right, or "6% · מההתחלה". */
