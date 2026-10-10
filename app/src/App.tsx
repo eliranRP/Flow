@@ -25,7 +25,7 @@ import "./screens/split-pop";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
-import { preloadScreens, screenLoaders } from "./screen-loaders";
+import { preloadScreens, preloadSheet, screenLoaders } from "./screen-loaders";
 import { ScreenSuspense } from "./screen-suspense";
 import { PrefetchProjects } from "./prefetch";
 import { SignInScreen } from "./screens/SignInScreen";
@@ -133,6 +133,8 @@ export function App() {
     }
     function onPointer() {
       delete document.documentElement.dataset.keyboard;
+      // FLOW-425: a tap on a sheet opener starts the sheet code before its click opens the sheet.
+      void preloadSheet();
     }
     window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onPointer);

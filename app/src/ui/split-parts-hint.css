@@ -29,3 +29,35 @@
 .ui-split-hint-amount {
   font-variant-numeric: tabular-nums lining-nums;
 }
+
+/* FLOW-425: amounts are never cut; only names ellipsize. A part that alone is wider than the line
+   shrinks its name (or the word "מתוך"). The line box is 1em wider than the hint (its clipped
+   separator margin), which the first part's padding and the others' "·" box take, so 100% is the
+   hint's width. */
+.ui-split-hint .ui-hint-wrap-part,
+.ui-split-hint-part {
+  display: flex;
+  min-width: 0;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+}
+
+.ui-split-hint .ui-hint-wrap-sep,
+.ui-split-hint-part-amount {
+  flex: none;
+}
+
+/* More than two parts: the first part's name keeps about 3em; below that its amount wraps onto a
+   second line, which is clipped, so the name and "ועוד N" stay. */
+.ui-split-hint-first {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-block-size: calc(1em * var(--type-meta-line));
+  overflow: hidden;
+}
+
+.ui-split-hint-first > .ui-split-hint-name {
+  flex: 1 1 3em;
+  max-inline-size: max-content;
+}

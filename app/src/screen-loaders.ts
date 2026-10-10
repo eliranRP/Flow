@@ -48,5 +48,14 @@ export async function preloadScreens(): Promise<void> {
   void import("./sw-reload").then(({ watchServiceWorker }) => {
     watchServiceWorker();
   }, () => undefined);
-  await Promise.all(Object.values(screenLoaders).map((load) => load().catch(() => undefined)));
+  await Promise.all([preloadSheet(), ...Object.values(screenLoaders).map((load) => load().catch(() => undefined))]);
+}
+
+/**
+ * FLOW-425: the sheet code (vaul) is not in Home's entry, so the first sheet on a screen waited for
+ * it. App loads it with the screens on idle, and on the first pointerdown, which lands before the
+ * opener's click. Loading it twice is free: loadSheetDrawer keeps one promise.
+ */
+export function preloadSheet(): Promise<void> {
+  return import("./ui/sheet").then(({ loadSheetDrawer }) => loadSheetDrawer()).then(() => undefined, () => undefined);
 }

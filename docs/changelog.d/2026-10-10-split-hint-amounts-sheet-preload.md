@@ -1,0 +1,1 @@
+On a narrow phone, a split line's row in a cash list no longer cuts its amounts: long names ellipsize instead. The first sheet on a screen opens at once, since the sheet code now loads after the first paint and on the first tap.
