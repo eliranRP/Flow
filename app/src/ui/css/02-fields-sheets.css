@@ -285,6 +285,15 @@
   overflow: hidden;
 }
 
+/* FLOW-432: at most two (or three) lines; a part that would open one more is clipped whole. */
+.ui-hint-wrap-2 {
+  max-block-size: calc(2em * var(--type-meta-line));
+}
+
+.ui-hint-wrap-3 {
+  max-block-size: calc(3em * var(--type-meta-line));
+}
+
 .ui-hint-wrap-in {
   display: flex;
   flex-wrap: wrap;

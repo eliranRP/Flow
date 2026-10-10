@@ -38,3 +38,8 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
+
+/* FLOW-432: a split line's part amounts in its row hint line up like the row figures. */
+.ui-split-hint-amount {
+  font-variant-numeric: tabular-nums lining-nums;
+}

@@ -1,6 +1,7 @@
-import type { CashCurrencyRow, CashMonth, CashMonths, CashSide, CashTotalRow, CashYears } from "@flow/shared";
+import { formatAmountText, type CashCurrencyRow, type CashLine, type CashMonth, type CashMonths, type CashSide, type CashTotalRow, type CashYears } from "@flow/shared";
 import { cashAmountsText, type CashRow } from "./ui/cash-rows";
 import { HEBREW_MONTHS, israelToday } from "./ui/date-math";
+import type { SplitHintPart } from "./ui/split-parts-hint";
 
 /**
  * FLOW-413 (owner's "Cash first", frame b; decision 0168). The words, paths and figures of the
@@ -309,4 +310,19 @@ export function cashYearMonthRows(months: CashMonth[], base: string, search: str
       name: `תזרים ${name} ${key.slice(0, 4)} ${cashAmountsText(net)}`,
     };
   });
+}
+
+/**
+ * FLOW-432. A split line's parts as its row hint names them: each part this row counts, by its
+ * category, with its amount (cents when it has them), and the whole line. null for any other row.
+ */
+export function cashLineSplit(row: Pick<CashLine, "parts" | "line_minor" | "currency">): { parts: SplitHintPart[]; total: string } | null {
+  if (row.parts == null || row.parts.length === 0 || row.line_minor == null) return null;
+  return {
+    parts: row.parts.map((part) => ({
+      name: part.name ?? "חלק",
+      amount: formatAmountText(part.amount_minor < 0n ? -part.amount_minor : part.amount_minor, row.currency, { detail: true }),
+    })),
+    total: formatAmountText(row.line_minor, row.currency, { detail: true }),
+  };
 }
