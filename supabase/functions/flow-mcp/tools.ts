@@ -252,11 +252,12 @@ export async function callTool(
   }
 
   // FLOW-415 (decision 0172).
-  if (name === "get_recurring_changes") {
-    const result = await rpc("recurring_changes", {});
+  if (name === "get_recurring_changes" || name === "get_recurring_this_month") {
+    const changes = name === "get_recurring_changes";
+    const result = await rpc(changes ? "recurring_changes" : "recurring_this_month", {});
     const data = result.json;
     if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
-    return ok({ changes: data });
+    return ok(changes ? { changes: data } : { arrived: data });
   }
 
   if (name === "get_line_recurring") {

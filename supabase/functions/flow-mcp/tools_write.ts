@@ -49,6 +49,7 @@ import {
   setMemberRoleSchema,
   setJevModeSchema,
   setLineCashSchema,
+  setLinePaceSchema,
   setLineRecurringSchema,
   setLinesCashSchema,
   setLinePnlSchema,
@@ -327,6 +328,15 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_recurring: parsed.data.recurring,
+    };
+  } else if (name === "set_line_pace") {
+    const parsed = setLinePaceSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_line_pace";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_pace: parsed.data.pace,
     };
   } else if (name === "set_invoice_paid") {
     const parsed = setInvoicePaidSchema.safeParse(args);

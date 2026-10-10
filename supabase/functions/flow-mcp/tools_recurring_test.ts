@@ -165,3 +165,41 @@ Deno.test("set_line_recurring validates input and refuses read tokens", async ()
   }
   assertEquals(calls.length, 0);
 });
+
+Deno.test("get_recurring_this_month passes the month's arrivals through", async () => {
+  const arrived = [{ direction: "income", party_name: "Example Tenant", amount_minor: 500000, change_percent: 0, changed: false }];
+  const { calls, rpc } = rpcOf((name) => name === "recurring_this_month" ? { status: 200, json: arrived } : { status: 500, json: null });
+  assertEquals((await callTool("get_recurring_this_month", {}, ["read"], rpc)).structuredContent, { ok: true, data: { arrived } });
+  assertEquals(calls, [{ name: "recurring_this_month", body: {} }]);
+  const failed = await callTool("get_recurring_this_month", {}, ["read"], () => Promise.resolve({ status: 200, json: null }));
+  if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.code, "refused");
+});
+
+Deno.test("set_line_pace calls its writer, validates the pace, and undo takes line_pace", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_pace" } } }));
+  for (
+    const [name, args] of [
+      ["set_line_pace", { idempotency_key: "p-1", transaction_id: TXN, pace: "quarter" }],
+      ["set_line_pace", { idempotency_key: "p-2", transaction_id: TXN, pace: null }],
+      ["undo", { idempotency_key: "u-2", kind: "line_pace", id: TXN }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", transaction_id: TXN, pace: "weekly" },
+      { idempotency_key: "k", transaction_id: TXN },
+      { idempotency_key: "k", transaction_id: TXN, pace: 3 },
+    ]
+  ) {
+    const result = await callTool("set_line_pace", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true);
+  }
+  assertEquals(calls, [
+    { name: "mcp_set_line_pace", body: { p_idempotency_key: "p-1", p_transaction_id: TXN, p_pace: "quarter" } },
+    { name: "mcp_set_line_pace", body: { p_idempotency_key: "p-2", p_transaction_id: TXN, p_pace: null } },
+    { name: "mcp_undo", body: { p_idempotency_key: "u-2", p_kind: "line_pace", p_id: TXN } },
+  ]);
+});

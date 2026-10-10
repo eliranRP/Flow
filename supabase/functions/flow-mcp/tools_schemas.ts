@@ -29,6 +29,7 @@ export const READ_TOOL_NAMES = [
   "get_expected_months",
   "get_recurring_changes",
   "get_line_recurring",
+  "get_recurring_this_month",
   "list_unpaid",
   "list_team",
   "get_cash_months",
@@ -85,6 +86,7 @@ export const WRITE_TOOL_NAMES = [
   "set_lines_cash",
   "set_cash_basis",
   "set_line_recurring",
+  "set_line_pace",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -113,6 +115,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_expected_months: new Set(["months", "project_id"]),
   get_recurring_changes: new Set(),
   get_line_recurring: new Set(["transaction_id"]),
+  get_recurring_this_month: new Set(),
   list_unpaid: new Set(),
   list_team: new Set(),
   get_cash_months: new Set(["months"]),
@@ -167,6 +170,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_lines_cash: new Set(["idempotency_key", "items"]),
   set_cash_basis: new Set(["idempotency_key", "basis"]),
   set_line_recurring: new Set(["idempotency_key", "transaction_id", "recurring"]),
+  set_line_pace: new Set(["idempotency_key", "transaction_id", "pace"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -258,7 +262,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -633,6 +637,11 @@ export const setLineRecurringSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   recurring: z.boolean().nullable(),
+}).strict();
+export const setLinePaceSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  pace: z.enum(["month", "2months", "quarter", "year"]).nullable(),
 }).strict();
 export const setCashBasisSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,

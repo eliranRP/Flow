@@ -1,0 +1,1 @@
+On a loan's own category, the locked line in the ⋯ sheet now reads "קטגוריה של הלוואה" with the loan and its part on a second line, so a long loan name no longer breaks in the middle (FLOW-362). No migration.

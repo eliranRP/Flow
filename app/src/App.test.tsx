@@ -33,11 +33,11 @@ async function renderAt(path: string) {
 describe("App", () => {
   it("shows the first-run Home in preview, without a fake profit", async () => {
     await renderAt("/?preview=1");
-    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeInTheDocument();
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("הרווח יופיע כאן אחרי חיבור בנק או SUMIT.")).toBeInTheDocument();
+    expect(screen.getByText("התזרים יופיע כאן אחרי חיבור בנק או SUMIT.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("App", () => {
     }
     expect(screen.queryByText(/צילום חשבונית/)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק", hidden: true }),
+      screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק", hidden: true }),
     ).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "ניווט ראשי", hidden: true })).toBeInTheDocument();
     await waitFor(() => {
@@ -151,7 +151,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeInTheDocument();
     await waitFor(() => {
       expect(document.activeElement).toHaveAttribute("aria-label", "הוספה");
     });
@@ -163,7 +163,7 @@ describe("App", () => {
     expect(await screen.findByRole("dialog", { name: "הוספה" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "כאן יופיע הרווח של העסק" }),
+      screen.queryByRole("heading", { name: "כאן יופיע התזרים של העסק" }),
     ).not.toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {
