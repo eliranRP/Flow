@@ -434,8 +434,29 @@ static_part() {
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }
+# The same tsc runs as pnpm typecheck, with --incremental: a tsbuildinfo per project in this
+# container's cache keeps what the last run checked, and tsc re-checks only the files a change
+# reaches (its own dependency tracking; a new TypeScript version starts over). --full, an
+# unexpected typecheck script, or a package with another script runs the scripts as they are.
 typecheck_part() {
-  pnpm typecheck
+  local info dir script
+  info="$(cd "$cache" && pwd)/tsbuildinfo"
+  if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
+    != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
+    pnpm typecheck
+    return
+  fi
+  mkdir -p "$info"
+  pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"
+  for dir in app packages/*/; do
+    dir="${dir%/}"
+    script="$(node -p "require('./$dir/package.json').scripts?.typecheck ?? ''")"
+    case "$script" in
+      "") ;;
+      "tsc --noEmit") (cd "$dir" && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile "$info/${dir//\//-}.tsbuildinfo") ;;
+      *) (cd "$dir" && pnpm run typecheck) ;;
+    esac
+  done
 }
 unit_part() {
   if (( ! skips )); then
