@@ -206,5 +206,167 @@
       "txn-nav.tsx",
       "screens/transaction-screen.tsx"
     ]
+  },
+  "sweeps": {
+    "about": "The no-op control sweep's routes per spec (app/e2e/control-sweep.ts reads them), and the files each route draws, under app/src: scripts/gate-scope.mjs --sweep sweeps a route when a change reaches one of them. A route also draws the app shell, and an /e2e/ route the fixtures in dev-routes.tsx; a change that reaches either sweeps every route, or every /e2e/ route. `pages` are the screens App.tsx imports for its first paint; the screens it loads on demand count on their own.",
+    "pages": [
+      "screens/HomeScreen.tsx",
+      "screens/SignInScreen.tsx"
+    ],
+    "routes": {
+      "controls-sweep-home.spec.ts": {
+        "/?preview=1": [
+          "screens/HomeScreen.tsx"
+        ],
+        "/?preview=error": [
+          "screens/HomeScreen.tsx"
+        ],
+        "/e2e/home?preview=1": [
+          "screens/HomeScreen.tsx",
+          "dev-routes.tsx#DevHome"
+        ],
+        "/add?preview=1": [
+          "screens/HomeScreen.tsx",
+          "screens/add-sheet.tsx"
+        ],
+        "/sign-in": [
+          "screens/SignInScreen.tsx"
+        ],
+        "/sign-in?error=server_error": [
+          "screens/SignInScreen.tsx"
+        ],
+        "/help": [
+          "screens/HelpScreen.tsx"
+        ],
+        "/terms": [
+          "screens/PlaceholderScreen.tsx"
+        ],
+        "/privacy": [
+          "screens/PlaceholderScreen.tsx"
+        ],
+        "/install?preview=1": [
+          "screens/SignInScreen.tsx",
+          "ui/install-screen.tsx"
+        ],
+        "/e2e/install-android": [
+          "ui/install-screen.tsx",
+          "dev-routes.tsx#DevInstall"
+        ],
+        "/e2e/install-other": [
+          "ui/install-screen.tsx",
+          "dev-routes.tsx#DevInstall"
+        ]
+      },
+      "controls-sweep-projects.spec.ts": {
+        "/projects?preview=1": [
+          "screens/projects-screen.tsx"
+        ],
+        "/projects/herzl?preview=1": [
+          "screens/project-detail-screen.tsx"
+        ],
+        "/e2e/projects?preview=1": [
+          "screens/projects-screen.tsx",
+          "dev-routes.tsx#DevProjects"
+        ],
+        "/e2e/project-detail?preview=1": [
+          "screens/project-detail-screen.tsx",
+          "dev-routes.tsx#DevProjectDetail"
+        ],
+        "/e2e/project-months?preview=1": [
+          "screens/profit-months.tsx",
+          "dev-routes.tsx#DevProjectMonths"
+        ],
+        "/transactions/1?preview=1": [
+          "screens/transaction-screen.tsx"
+        ],
+        "/e2e/txn?preview=1": [
+          "screens/transaction-screen.tsx",
+          "dev-routes.tsx#DevTransaction"
+        ],
+        "/e2e/split": [
+          "screens/split-screen.tsx",
+          "dev-routes.tsx#DevSplit"
+        ],
+        "/unpaid?preview=1": [
+          "screens/unpaid-screen.tsx"
+        ],
+        "/e2e/unpaid?preview=1": [
+          "screens/unpaid-screen.tsx",
+          "dev-routes.tsx#DevUnpaid"
+        ],
+        "/e2e/missing-bills?preview=1": [
+          "screens/missing-bills-screen.tsx",
+          "dev-routes.tsx#DevMissingBills"
+        ]
+      },
+      "controls-sweep-review.spec.ts": {
+        "/review?preview=1": [
+          "screens/review-screen.tsx"
+        ],
+        "/review/filed?preview=1": [
+          "screens/filed-today-screen.tsx"
+        ],
+        "/review/change?preview=1": [
+          "screens/review-screen.tsx",
+          "screens/change-form.tsx"
+        ],
+        "/e2e/review-banner": [
+          "screens/review-queue.tsx",
+          "dev-routes.tsx#DevReviewBanner"
+        ],
+        "/e2e/filed?preview=1": [
+          "screens/filed-today-screen.tsx",
+          "dev-routes.tsx#DevFiled"
+        ],
+        "/e2e/review": [
+          "dev-routes.tsx#DevReview"
+        ],
+        "/e2e/change?preview=1": [
+          "ui/change-sheet.tsx",
+          "dev-routes.tsx#DevChange"
+        ]
+      },
+      "controls-sweep-settings.spec.ts": {
+        "/settings?preview=1": [
+          "screens/settings-screen.tsx"
+        ],
+        "/settings/categories?preview=1": [
+          "screens/categories-screen.tsx"
+        ],
+        "/settings/connections?preview=1": [
+          "screens/connections-screen.tsx"
+        ],
+        "/settings/loans?preview=1": [
+          "screens/settings-screen.tsx"
+        ],
+        "/onboarding?preview=1": [
+          "screens/onboarding-screen.tsx"
+        ],
+        "/e2e/settings?preview=1": [
+          "screens/settings-screen.tsx",
+          "dev-routes.tsx#DevSettings"
+        ],
+        "/e2e/connections?preview=1": [
+          "screens/connections-screen.tsx",
+          "dev-routes.tsx#DevConnections"
+        ],
+        "/e2e/connections?preview=1&connected=1": [
+          "screens/connections-screen.tsx",
+          "dev-routes.tsx#DevConnections"
+        ],
+        "/e2e/connections?preview=1&connected=auth": [
+          "screens/connections-screen.tsx",
+          "dev-routes.tsx#DevConnections"
+        ],
+        "/e2e/loans?preview=1": [
+          "screens/settings-screen.tsx",
+          "dev-routes.tsx#DevLoans"
+        ],
+        "/e2e/categories?preview=1": [
+          "screens/categories-screen.tsx",
+          "dev-routes.tsx#DevCategories"
+        ]
+      }
+    }
   }
 }

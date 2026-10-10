@@ -253,6 +253,7 @@ changed_base() {
 # to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
 e2e_specs=()
 e2e_left=0
+sweep_routes=""
 if (( ! full )); then
   e2e_base=""
   if (( skips )); then
@@ -267,6 +268,24 @@ if (( ! full )); then
   else
     e2e_list="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs)"
     [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
+    # The no-op sweep specs open only the routes whose files the change reaches, a sweep spec with
+    # none of them is left out, and one with some runs (scripts/gate-scope.mjs --sweep, from the
+    # routes in spec-sources.json). The gate names each route it sweeps and why.
+    sweep_out="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/gate-scope.mjs --sweep)"
+    sweep_routes="$(cut -f2 <<<"$sweep_out" | sed '/^$/d')"
+    mapfile -t e2e_specs < <(
+      { printf '%s\n' "${e2e_specs[@]}" | grep -v '^e2e/controls-sweep-' || true; cut -f1 <<<"$sweep_out"; } | sed '/^$/d' | sort -u
+    )
+    for spec in $(grep '^e2e/controls-sweep-' <<<"$e2e_list" || true); do
+      grep -q "^$spec"$'\t' <<<"$sweep_out" \
+        || echo "local-ci: $spec sweeps none of its routes: this change reaches no file they draw."
+    done
+    if [[ -n "$sweep_out" && "$(cut -f3 <<<"$sweep_out" | sort -u | wc -l)" == 1 ]]; then
+      echo "local-ci: the no-op sweep opens $(wc -l <<<"$sweep_routes") routes, all because $(head -n 1 <<<"$sweep_out" | cut -f3)."
+    elif [[ -n "$sweep_out" ]]; then
+      echo "local-ci: the no-op sweep opens the $(wc -l <<<"$sweep_routes") routes this change reaches:"
+      awk -F'\t' '{ print "  " $1 " " $2 ": " $3 }' <<<"$sweep_out"
+    fi
     # At most FLOW_E2E_MAX specs (default 6), the branch's own changed specs first; main runs the rest.
     if (( ${#e2e_specs[@]} > ${FLOW_E2E_MAX:-6} )); then
       mapfile -t e2e_specs < <(
@@ -715,7 +734,7 @@ if (( ! full )); then
     # default (half the cores) left a core idle (the review set: 293 s on 2 of 4 cores, 246 s on 3).
     e2e_workers="$(( $(nproc) > 2 ? $(nproc) - 1 : 1 ))"
     echo "local-ci: running the e2e specs on $e2e_workers Playwright workers ($(nproc) cores)."
-    pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"
+    FLOW_SWEEP_ROUTES="$sweep_routes" pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"
