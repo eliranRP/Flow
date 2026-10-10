@@ -24,7 +24,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // FLOW-403, plan option A2: one row per late bill, one "כ־" amount. FLOW-415 layout A: two hint lines,
-// "project · category" and "בדרך כלל ב־N לחודש · אחרון dd/mm".
+// "project · category" and "כל חודש ב־N · אחרון dd/mm".
 export const Several: Story = { render: () => <MissingBillList rows={rows} /> };
 export const SeveralDark: Story = { name: "Several, dark", render: () => <MissingBillList rows={rows} />, globals: { theme: "dark" } };
 export const Several320: Story = { name: "Several, 320", render: () => <MissingBillList rows={rows} />, parameters: { viewport: { defaultViewport: "flow320" } } };

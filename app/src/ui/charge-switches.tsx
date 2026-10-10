@@ -17,10 +17,10 @@ export type ChargeSwitchState = {
 export const IN_CASH = "נספר בתזרים";
 export const RECURRING = "חיוב קבוע";
 
-/** "בדרך כלל ב־4 לחודש · זוהה לבד", either half alone, or nothing. */
+/** "כל חודש ב־4 · זוהה לבד", either half alone, or nothing. */
 export function recurringHint(state: Pick<ChargeSwitchState, "typicalDay" | "detected">): string | undefined {
   const parts = [
-    state.typicalDay == null ? null : `בדרך כלל ב־${String(state.typicalDay)} לחודש`,
+    state.typicalDay == null ? null : `כל חודש ב־${String(state.typicalDay)}`,
     state.detected ? "זוהה לבד" : null,
   ].filter((part): part is string => part != null);
   return parts.length > 0 ? parts.join(" · ") : undefined;

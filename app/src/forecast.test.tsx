@@ -21,8 +21,8 @@ describe("missing bills", () => {
   it("maps each late bill to a row: name, when it usually comes, the unsigned amount, and Search on that supplier", () => {
     const rows = missingBillViews(SAMPLE_MISSING_BILLS, "", now);
     expect(rows.map((row) => [row.name, row.usual, row.minor, row.currency])).toEqual([
-      ["מים טובים", "בדרך כלל ב־1 לחודש · אחרון 01/09", 48_000n, "ILS"],
-      ["אור חשמל", "בדרך כלל ב־2 לחודש · אחרון 02/09", 185_000n, "ILS"],
+      ["מים טובים", "כל חודש ב־1 · אחרון 01/09", 48_000n, "ILS"],
+      ["אור חשמל", "כל חודש ב־2 · אחרון 02/09", 185_000n, "ILS"],
     ]);
     const href = new URL(rows[1]?.href ?? "", "https://example.com");
     expect(href.pathname).toBe("/search");
@@ -51,8 +51,8 @@ describe("missing bills", () => {
     expect(missingBillPlace({ project_id: "gone", category_id: null }, names)).toBeNull();
     expect(missingBillPlace({ project_id: "p1", category_id: "c1" })).toBeNull();
     // No last bill: the day alone; a last bill in another year carries its year.
-    expect(usualDayText(4, null, now)).toBe("בדרך כלל ב־4 לחודש");
-    expect(usualDayText(4, "2025-12-04", now)).toBe("בדרך כלל ב־4 לחודש · אחרון 04/12/2025");
+    expect(usualDayText(4, null, now)).toBe("כל חודש ב־4");
+    expect(usualDayText(4, "2025-12-04", now)).toBe("כל חודש ב־4 · אחרון 04/12/2025");
   });
 
   it("words a payment off its usual amount for Home from the server's percent (FLOW-415)", () => {
@@ -65,8 +65,9 @@ describe("missing bills", () => {
     expect(down?.now).toBe("$150");
     const rows = attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, changes: up ? [up] : [], search: "" });
     expect(rows.map((row) => row.id)).toEqual(["review", "missing", "change:t1"]);
-    render(<MemoryRouter><span>{rows[2]?.hint}</span></MemoryRouter>);
-    expect(screen.getByText(/בדרך כלל/).textContent).toBe("₪2,550 · בדרך כלל ₪1,850");
+    const { container } = render(<MemoryRouter><span>{rows[2]?.hint}</span></MemoryRouter>);
+    // Each half wraps whole: "₪2,550 ·" then "בדרך כלל ₪1,850".
+    expect([...container.querySelectorAll(".ui-nowrap")].map((part) => part.textContent)).toEqual(["₪2,550 ·", "בדרך כלל ₪1,850"]);
   });
 
   it("titles the Home row with a count only, singular for one", () => {
@@ -93,7 +94,7 @@ describe("missing bills", () => {
     );
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
-    expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, בניין לדוגמה, בדרך כלל ב־2 לחודש · אחרון 02/09, בערך ₪1,850");
+    expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, בניין לדוגמה, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850");
     // FLOW-415: a bill that files nowhere has one hint line, when it usually comes.
     expect(links[0]?.querySelectorAll(".ui-row-hint")).toHaveLength(1);
     expect(links[1]?.querySelectorAll(".ui-row-hint")).toHaveLength(2);

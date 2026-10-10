@@ -112,7 +112,7 @@ const changeRow: BannerRow = {
   to: "/transactions/t1",
   icon: <TrendUpIcon size={24} stroke={1.9} />,
   title: "חשמל עלה ב־38%",
-  hint: <><bdi dir="ltr">₪2,550</bdi> · בדרך כלל <bdi dir="ltr">₪1,850</bdi></>,
+  hint: <><span className="ui-nowrap"><bdi dir="ltr">₪2,550</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">₪1,850</bdi></span></>,
 };
 export const RowsChargeUp: Story = {
   name: "Rows, a charge above usual",

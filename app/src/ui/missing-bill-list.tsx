@@ -13,7 +13,7 @@ export type MissingBillRow = {
   name: string;
   /** FLOW-415: "project · category", or null when the bill files to neither. */
   place: string | null;
-  /** FLOW-415: "בדרך כלל ב־2 לחודש · אחרון 02/09". */
+  /** FLOW-415: "כל חודש ב־2 · אחרון 02/09". */
   usual: string;
   /** The typical amount, unsigned. */
   minor: bigint;
@@ -25,7 +25,7 @@ export type MissingBillRow = {
 /**
  * The late bills (FLOW-403, plan option A2): one row per recurring supplier, its name, and one "כ־"
  * amount. FLOW-415 (layout A): two hint lines, where the bill files ("project · category") and when it
- * usually comes ("בדרך כלל ב־N לחודש · אחרון dd/mm"). A tap opens Search on that supplier. No approve, no dismiss:
+ * usually comes ("כל חודש ב־N · אחרון dd/mm"). A tap opens Search on that supplier. No approve, no dismiss:
  * a row leaves by itself when the bill comes in.
  */
 export function MissingBillList({

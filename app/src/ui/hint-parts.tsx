@@ -1,16 +1,20 @@
 /**
- * A hint whose parts are joined by " · " (FLOW-351): each part keeps its words together and carries
- * the "·" before it, so a narrow line breaks before a separator and never ends on one.
+ * A hint whose parts are joined by " · " (FLOW-415 design review): each part keeps its words together
+ * and the "·" ends the part before it, so a narrow line wraps between whole parts and never starts
+ * with a separator.
  */
 export function HintParts({ text }: { text: string }) {
   const parts = text.split(" · ");
   return (
     <>
-      {parts.map((part, index) => (
-        <span key={`${String(index)}:${part}`} className="ui-nowrap">
-          {index > 0 ? `· ${part}` : part}
-        </span>
-      )).flatMap((span, index) => (index > 0 ? [" ", span] : [span]))}
+      {parts.flatMap((part, index) => {
+        const span = (
+          <span key={`${String(index)}:${part}`} className="ui-nowrap">
+            {index < parts.length - 1 ? `${part} ·` : part}
+          </span>
+        );
+        return index > 0 ? [" ", span] : [span];
+      })}
     </>
   );
 }

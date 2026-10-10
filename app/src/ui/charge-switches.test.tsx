@@ -10,10 +10,10 @@ describe("ChargeSwitches (FLOW-415)", () => {
     expect(screen.getByRole("switch", { name: IN_CASH })).toBeChecked();
     const recurring = screen.getByRole("switch", { name: RECURRING });
     expect(recurring).toBeChecked();
-    // FLOW-351: each part keeps its words together, and the "·" leads the second part.
+    // Each part keeps its words together, and the "·" ends the first part.
     const hint = recurring.closest("label")?.querySelector(".ui-row-hint");
-    expect(hint?.textContent).toBe("בדרך כלל ב־4 לחודש · זוהה לבד");
-    expect([...(hint?.querySelectorAll(".ui-nowrap") ?? [])].map((part) => part.textContent)).toEqual(["בדרך כלל ב־4 לחודש", "· זוהה לבד"]);
+    expect(hint?.textContent).toBe("כל חודש ב־4 · זוהה לבד");
+    expect([...(hint?.querySelectorAll(".ui-nowrap") ?? [])].map((part) => part.textContent)).toEqual(["כל חודש ב־4 ·", "זוהה לבד"]);
   });
 
   it("calls back with the next value, and not while disabled", () => {
@@ -30,7 +30,7 @@ describe("ChargeSwitches (FLOW-415)", () => {
   });
 
   it("words the hint from what the server knows, or leaves it out", () => {
-    expect(recurringHint({ typicalDay: 4, detected: false })).toBe("בדרך כלל ב־4 לחודש");
+    expect(recurringHint({ typicalDay: 4, detected: false })).toBe("כל חודש ב־4");
     expect(recurringHint({ typicalDay: null, detected: true })).toBe("זוהה לבד");
     expect(recurringHint({ typicalDay: null, detected: false })).toBeUndefined();
   });

@@ -596,7 +596,8 @@ export function attentionRows({
       to: change.href,
       icon: <TrendUpIcon size={24} stroke={1.9} />,
       title: change.title,
-      hint: <><bdi dir="ltr">{change.now}</bdi> · בדרך כלל <bdi dir="ltr">{change.usual}</bdi></>,
+      // Each half wraps whole at 320: "₪2,550 ·" then "בדרך כלל ₪1,850".
+      hint: <><span className="ui-nowrap"><bdi dir="ltr">{change.now}</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">{change.usual}</bdi></span></>,
     });
   }
   return rows;

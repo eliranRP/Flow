@@ -25,7 +25,7 @@ export type MissingBillView = {
   name: string;
   /** FLOW-415: "project · category" when the bill files to one; null when neither is known. */
   place: string | null;
-  /** FLOW-415: "בדרך כלל ב־2 לחודש · אחרון 02/09". */
+  /** FLOW-415: "כל חודש ב־2 · אחרון 02/09". */
   usual: string;
   /** The typical amount, unsigned (the list is all expenses). */
   minor: bigint;
@@ -39,9 +39,9 @@ export function missingBillHref(name: string, search: string): string {
   return searchHref(name, search, { dir: "expense" });
 }
 
-/** FLOW-415: the day of the month a recurring charge usually comes, and when the last one came. */
+/** FLOW-415: the pace and day a recurring charge comes ("כל חודש ב־2"), and when the last one came. */
 export function usualDayText(typicalDay: number, lastDocDate: string | null | undefined, now = new Date()): string {
-  const day = `בדרך כלל ב־${String(typicalDay)} לחודש`;
+  const day = `כל חודש ב־${String(typicalDay)}`;
   return lastDocDate == null ? day : `${day} · אחרון ${formatDayMonth(lastDocDate, now)}`;
 }
 
