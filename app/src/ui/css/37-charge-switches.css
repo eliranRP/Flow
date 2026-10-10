@@ -1,0 +1,40 @@
+/* FLOW-415 step D: the recurring row while it is on. Its words are a button that opens the "כל כמה
+   זמן" sheet, and the switch keeps its own 44px target at the end, so the two never overlap. */
+.ui-switch-row-open {
+  cursor: default;
+}
+
+.ui-switch-open {
+  min-block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-switch-open:focus-visible {
+  border-radius: var(--radius-chip);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-switch-hit {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  min-inline-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  cursor: pointer;
+}
+
+.ui-switch-row .ui-switch-hit input {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}

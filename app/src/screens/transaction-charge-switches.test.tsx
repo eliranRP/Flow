@@ -41,6 +41,10 @@ const found: PaymentRecurring = {
   detected: true,
   typical_day: 4,
   typical_amount_minor: -185_000n,
+  pace: "month",
+  pace_override: null,
+  detected_pace: "month",
+  next_due_month: "2026-11",
 };
 
 function show(sample: NonNullable<TransactionDetail>, recurring: PaymentRecurring | null) {
@@ -64,7 +68,27 @@ describe("payment page: cash and recurring switches (FLOW-415)", () => {
     expect(switches.slice(-3)).toEqual(["נספר ברווח", "נספר בתזרים", "חיוב קבוע"]);
     expect(screen.getByRole("switch", { name: "נספר בתזרים" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "חיוב קבוע" })).toBeChecked();
-    expect(screen.getByText(/זוהה לבד/).closest(".ui-row-hint")?.textContent).toBe("כל חודש ב־4 · זוהה לבד");
+    expect(screen.getByText(/זוהה לבד/).closest(".ui-row-hint")?.textContent).toBe("כל חודש · בערך ב־4 · זוהה לבד");
+  });
+
+  it("opens כל כמה זמן from the row, changes the pace with an undo toast, and ביטול puts it back (FLOW-415 D)", async () => {
+    show(base, found);
+    fireEvent.click(screen.getByRole("button", { name: /^חיוב קבוע/ }));
+    expect(await screen.findByRole("radiogroup", { name: "כל כמה זמן" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "כל חודש" })).toBeChecked();
+    fireEvent.click(screen.getByRole("radio", { name: "כל רבעון" }));
+    await waitFor(() => { expect(screen.getByText("אור חשמל · כל רבעון")).toBeInTheDocument(); });
+    expect(screen.getByText(/זוהה לבד/).closest(".ui-row-hint")?.textContent).toBe("כל רבעון · בערך ב־4 · זוהה לבד");
+    // The switch still turns the charge off; its own target is apart from the row's.
+    expect(screen.getByRole("switch", { name: "חיוב קבוע" })).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(screen.getByText(/זוהה לבד/).closest(".ui-row-hint")?.textContent).toBe("כל חודש · בערך ב־4 · זוהה לבד"); });
+  });
+
+  it("has no pace row while the charge is off", () => {
+    show(base, { ...found, recurring: false, override: false, detected: true });
+    expect(screen.queryByRole("button", { name: /^חיוב קבוע/ })).toBeNull();
+    expect(screen.getByRole("switch", { name: "חיוב קבוע" })).not.toBeChecked();
   });
 
   it("turns the charge off with an undo toast, and ביטול puts it back", async () => {
