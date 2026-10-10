@@ -1,3 +1,4 @@
+import { HintParts } from "./hint-parts";
 import { RepeatIcon, TransferIcon } from "./icons";
 import { Toggle } from "./toggle";
 
@@ -48,6 +49,7 @@ export function ChargeSwitches({
   onCash: (next: boolean) => void;
   onRecurring: (next: boolean) => void;
 }) {
+  const hint = recurringHint(state);
   return (
     <>
       <Toggle
@@ -60,7 +62,7 @@ export function ChargeSwitches({
       />
       <Toggle
         label={RECURRING}
-        hint={recurringHint(state)}
+        hint={hint == null ? undefined : <HintParts text={hint} />}
         icon={<RepeatIcon />}
         checked={state.recurring}
         disabled={disabled}

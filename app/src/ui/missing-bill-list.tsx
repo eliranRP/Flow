@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ApproxAmount, approxAmountText } from "./approx-amount";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
+import { HintParts } from "./hint-parts";
 import { CheckIcon, ChevronIcon } from "./icons";
 import { List } from "./list-row";
 import type { ScreenPhase } from "./screen-phase";
@@ -54,7 +55,7 @@ export function MissingBillList({
             <span className="ui-row-text">
               <span className="ui-row-title">{row.name}</span>
               {row.place != null ? <span className="ui-row-hint">{row.place}</span> : null}
-              <span className="ui-row-hint">{row.usual}</span>
+              <span className="ui-row-hint"><HintParts text={row.usual} /></span>
             </span>
           </span>
           <ApproxAmount minor={row.minor} currency={row.currency} />
