@@ -1,13 +1,8 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import {
-  arrivedViews,
-  missingBillViews,
-  useMissingBillsQuery,
-  useRecurringChangesQuery,
-  useRecurringThisMonthQuery,
-} from "../forecast";
+import { useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
+import { arrivedViews, missingBillViews, useRecurringThisMonthQuery } from "../recurring";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { getSupabase } from "../lib/supabase";

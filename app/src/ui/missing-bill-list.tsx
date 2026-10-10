@@ -5,7 +5,6 @@ import { ApproxAmount, approxAmountText } from "./approx-amount";
 import { cx } from "./cx";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
-import { HintParts } from "./hint-parts";
 import { IconButton } from "./icon-button";
 import { CheckIcon, ChevronIcon, CloseIcon } from "./icons";
 import { SectionHead } from "./layout";
@@ -72,6 +71,39 @@ function HideableRow({ name, onHide, children }: { name: string; onHide?: () => 
   );
 }
 
+/**
+ * The place line (design lead, FLOW-420 item 3): one line, "project · category". Only the project
+ * ends in an ellipsis; "· category" stays whole.
+ */
+function PlaceLine({ place }: { place: string }) {
+  const [head, ...rest] = place.split(" · ");
+  return (
+    <span className="ui-row-hint ui-place-line">
+      <span className="ui-place-head" data-clip-ok="">{head}</span>
+      {rest.length > 0 ? <span className="ui-place-tail">{` · ${rest.join(" · ")}`}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * The pace line (FLOW-124): one line of whole parts. A part that does not fit drops with its "·"
+ * ("אחרון dd/mm" first), so at 320 it reads "כל חודש ב־2".
+ */
+function PaceLine({ text }: { text: string }) {
+  return (
+    <span className="ui-row-hint">
+      <span className="ui-hint-parts">
+        {text.split(" · ").map((part, index) => (
+          <span key={part} className="ui-hint-part" data-clip-ok="">
+            {index > 0 ? " · " : null}
+            {part}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 function changeText(percent: number): string {
   return `${String(Math.abs(percent))}% ${percent < 0 ? "▼" : "▲"}`;
 }
@@ -123,8 +155,8 @@ export function MissingBillList({
                   <span className="ui-row-main">
                     <span className="ui-row-text">
                       <span className="ui-row-title">{row.name}</span>
-                      {row.place != null ? <span className="ui-row-hint"><HintParts text={row.place} /></span> : null}
-                      <span className="ui-row-hint"><HintParts text={row.usual} /></span>
+                      {row.place != null ? <PlaceLine place={row.place} /> : null}
+                      <PaceLine text={row.usual} />
                     </span>
                   </span>
                   <ApproxAmount minor={row.minor} currency={row.currency} income={row.income} />
@@ -155,7 +187,7 @@ export function MissingBillList({
                     <span className="ui-row-main">
                       <span className="ui-row-text">
                         <span className="ui-row-title">{row.name}</span>
-                        {row.place != null ? <span className="ui-row-hint"><HintParts text={row.place} /></span> : null}
+                        {row.place != null ? <PlaceLine place={row.place} /> : null}
                       </span>
                     </span>
                     <span className="ui-recurring-amount">

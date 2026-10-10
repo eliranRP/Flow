@@ -61,3 +61,21 @@
 .ui-recurring-change {
   white-space: nowrap;
 }
+
+/* Its place line: one line; the project ends in an ellipsis and "· category" stays whole. */
+.ui-place-line {
+  display: flex;
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.ui-place-head {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-place-tail {
+  flex: none;
+  white-space: pre;
+}

@@ -2,18 +2,14 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import {
-  arrivedViews,
   chargeChangeViews,
   expectedMonthLabel,
   expectedMonthViews,
   hasExpectedHistory,
   lateCounts,
-  missingBillHref,
-  missingBillPlace,
-  missingBillViews,
   missingBillsTitle,
-  usualDayText,
 } from "./forecast";
+import { arrivedViews, missingBillHref, missingBillPlace, missingBillViews, usualDayText } from "./recurring";
 import {
   SAMPLE_EXPECTED,
   SAMPLE_EXPECTED_EMPTY,
