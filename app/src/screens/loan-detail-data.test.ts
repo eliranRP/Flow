@@ -11,6 +11,7 @@ import {
   partCategoryOptions,
   partCategoryValue,
   partDefaultLabel,
+  paymentHint,
   rateInput,
   ratePpmOfInput,
   rateValue,
@@ -151,12 +152,27 @@ describe("status", () => {
     { transaction_id: "t2", doc_date: "2026-10-01", interest_minor: 100, escrow_minor: 0, principal_minor: 50, fees_minor: 25, needs_review: true },
   ]);
 
-  it("reads payments newest first, with 4 parts when there are fees", () => {
+  it("reads payments newest first, counting only the parts with an amount (FLOW-427)", () => {
     expect(payments.map((payment) => payment.transactionId)).toEqual(["t2", "t1"]);
-    expect(payments[0]).toMatchObject({ parts: 4, totalMinor: 175n, needsReview: true });
-    expect(payments[1]).toMatchObject({ parts: 3, totalMinor: 150n, needsReview: false });
+    expect(payments[0]).toMatchObject({ parts: 3, totalMinor: 175n, needsReview: true });
+    expect(payments[1]).toMatchObject({ parts: 2, totalMinor: 150n, needsReview: false });
+    // An interest-only payment with no escrow is one part.
+    expect(readLoanPayments([{ transaction_id: "t3", doc_date: "2026-09-01", interest_minor: 225_000, escrow_minor: 0, principal_minor: 0, fees_minor: 0 }])[0]?.parts).toBe(1);
     expect(readLoanPayments(null)).toEqual([]);
     expect(readLoanPayments([{ doc_date: "2026-01-01" }, "x"])).toEqual([]);
+  });
+
+  it("names a payment's one part, and counts from 2 (FLOW-427)", () => {
+    const usd = { kind: "interest_only" as const, currency: "USD" as const };
+    const one = (interest: number, principal: number, fees: number) => {
+      const [payment] = readLoanPayments([{ transaction_id: "t", doc_date: "2026-09-01", interest_minor: interest, escrow_minor: 0, principal_minor: principal, fees_minor: fees }]);
+      if (payment == null) throw new Error("no payment");
+      return payment;
+    };
+    expect(paymentHint(one(225_000, 0, 0), usd)).toBe("ריבית");
+    expect(paymentHint(one(0, 50_000, 0), usd)).toBe("קרן");
+    expect(paymentHint(one(0, 0, 26_250), usd)).toBe("עמלות $262.50");
+    expect(paymentHint(one(225_000, 0, 26_250), usd)).toBe("2 חלקים · עמלות $262.50");
   });
 
   it("floors the close date at the last payment and opens on it", () => {

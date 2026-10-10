@@ -1,4 +1,4 @@
-import { buildLoanSchedule, type LoanScheduleRow, type LoanSplitPart } from "@flow/shared";
+import { buildLoanSchedule, type LoanScheduleRow, type LoanSplitPart, type LoanTerms } from "@flow/shared";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { keyedCategory, type LoanCategory, type LoanDetail, type LoanPayment } from "./loan-detail-data";
 import { LOAN_PART_LABEL } from "./loan-copy";
@@ -44,27 +44,38 @@ function sumRows(key: string, rows: readonly LoanScheduleRow[]): OutlookPeriod {
   return { key, totals, totalMinor: totals.interest + totals.escrow + totals.principal, payments: rows.length };
 }
 
-/** The schedule from the payment due today or later. Null for a demand loan or a loan that ended. */
+/**
+ * The schedule from the payment due today or later. Null for a demand loan or a loan that ended.
+ * FLOW-427 (C20-1): the payments left start from the balance in the books, not from where the
+ * original terms would have it, so the principal to the end is the balance shown. They keep the
+ * loan's own payment, the one the bank charges and the page leads with, and its months of interest
+ * only and its balloon; a balance below the schedule ends the loan sooner, one above it leaves more
+ * for the last payment.
+ */
 export function loanOutlook(loan: LoanDetail, today: string): LoanOutlook | null {
   if (loan.status !== "open" || loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) return null;
-  let rows: readonly LoanScheduleRow[];
+  if (loan.balanceMinor <= 0n) return null;
+  const rates = [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm }));
+  const terms: LoanTerms = {
+    principalMinor: loan.principalMinor,
+    annualRatePpm: loan.annualRatePpm,
+    termMonths: loan.termMonths,
+    startDate: loan.startDate,
+    paymentMinor: loan.paymentMinor,
+    escrowMinor: loan.escrowMinor,
+    kind: loan.kind,
+    interestOnlyMonths: loan.interestOnlyMonths,
+    amortizationMonths: loan.amortizationMonths,
+    rates,
+  };
+  let left: readonly LoanScheduleRow[];
   try {
-    rows = buildLoanSchedule({
-      principalMinor: loan.principalMinor,
-      annualRatePpm: loan.annualRatePpm,
-      termMonths: loan.termMonths,
-      startDate: loan.startDate,
-      paymentMinor: loan.paymentMinor,
-      escrowMinor: loan.escrowMinor,
-      kind: loan.kind,
-      interestOnlyMonths: loan.interestOnlyMonths,
-      amortizationMonths: loan.amortizationMonths,
-      rates: [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm })),
-    }).rows;
+    const first = buildLoanSchedule(terms).rows.find((row) => row.dueDate >= today);
+    if (first == null) return null;
+    left = remainingFromBalance(terms, loan.balanceMinor, first);
   } catch {
     return null;
   }
-  const left = rows.filter((row) => row.dueDate >= today);
   const next = left[0];
   if (next == null) return null;
   const byYear = new Map<string, LoanScheduleRow[]>();
@@ -81,6 +92,23 @@ export function loanOutlook(loan: LoanDetail, today: string): LoanOutlook | null
     toEnd: sumRows("end", left),
     endYear: left.at(-1)?.dueDate.slice(0, 4) ?? next.dueDate.slice(0, 4),
   };
+}
+
+/** The payments from `first` on, from `balanceMinor` instead of the schedule's balance (FLOW-427). */
+function remainingFromBalance(terms: LoanTerms, balanceMinor: bigint, first: LoanScheduleRow): LoanScheduleRow[] {
+  const done = first.period - 1;
+  const kind = terms.kind ?? "amortizing";
+  const interestOnlyLeft = kind === "interest_only" ? (terms.interestOnlyMonths ?? 0) - done : 0;
+  return buildLoanSchedule({
+    ...terms,
+    principalMinor: balanceMinor,
+    termMonths: terms.termMonths - done,
+    startDate: first.dueDate,
+    // Past its months of interest only, the loan amortizes over the rest of its term.
+    kind: kind === "interest_only" && interestOnlyLeft <= 0 ? "amortizing" : kind,
+    interestOnlyMonths: interestOnlyLeft > 0 ? interestOnlyLeft : null,
+    amortizationMonths: terms.amortizationMonths == null ? null : terms.amortizationMonths - done,
+  }).rows.map((row) => ({ ...row, period: row.period + done }));
 }
 
 /** What the attached payments of a calendar year paid, part by part. */

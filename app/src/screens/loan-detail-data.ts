@@ -9,7 +9,7 @@ import {
   type LoanStatus,
 } from "@flow/shared";
 import { formatDisplay } from "../ui/date-math";
-import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL, loanPartsText } from "./loan-copy";
+import { LOAN_KIND_LABEL, LOAN_PART_LABEL, LOAN_STATUS_LABEL, loanPartsText } from "./loan-copy";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 
 /** FLOW-106 B and FLOW-110: one loan's page, as the app reads it. Pure mappers, no reads. */
@@ -161,7 +161,8 @@ export function readLoanPayments(data: unknown): LoanPayment[] {
       principalMinor,
       feesMinor,
       totalMinor: interestMinor + escrowMinor + principalMinor + feesMinor,
-      parts: feesMinor > 0n ? 4 : 3,
+      // FLOW-427 (C20-3): only the parts that have a line; an interest-only payment has no principal.
+      parts: Math.max(1, [interestMinor, escrowMinor, principalMinor, feesMinor].filter((minor) => minor !== 0n).length),
     });
   }
   return rows.sort((a, b) => (a.docDate < b.docDate ? 1 : a.docDate > b.docDate ? -1 : b.transactionId.localeCompare(a.transactionId)));
@@ -170,13 +171,23 @@ export function readLoanPayments(data: unknown): LoanPayment[] {
 /** The payments section shows the last 3; "כל התשלומים" opens the rest. */
 export const LOAN_PAYMENTS_SHOWN = 3;
 
-/** "4 חלקים · עמלות ₪262.50", or "3 חלקים". A demand payment names its interest and principal. */
+/**
+ * "4 חלקים · עמלות ₪262.50", "2 חלקים" (only the parts with an amount), or the one part's name
+ * ("ריבית"). A demand payment names its interest and principal.
+ */
 export function paymentHint(payment: LoanPayment, loan: Pick<LoanDetail, "kind" | "currency">): string {
   if (loan.kind === "demand") {
     return `ריבית ${formatLoanMoney(payment.interestMinor, loan.currency)} · קרן ${formatLoanMoney(payment.principalMinor, loan.currency)}`;
   }
+  const fees = `עמלות ${formatLoanMoney(payment.feesMinor, loan.currency)}`;
+  if (payment.parts <= 1) {
+    // FLOW-427: a payment with one part names it; "N חלקים" starts at 2.
+    if (payment.feesMinor > 0n) return fees;
+    const only = (["interest", "escrow", "principal"] as const).find((part) => payment[`${part}Minor`] !== 0n) ?? "interest";
+    return LOAN_PART_LABEL[only];
+  }
   const parts = loanPartsText(payment.parts);
-  return payment.feesMinor > 0n ? `${parts} · עמלות ${formatLoanMoney(payment.feesMinor, loan.currency)}` : parts;
+  return payment.feesMinor > 0n ? `${parts} · ${fees}` : parts;
 }
 
 /**

@@ -40,7 +40,8 @@ function payment(id: string, docDate: string, parts: { interest: bigint; escrow?
     principalMinor: parts.principal,
     feesMinor: fees,
     totalMinor: parts.interest + escrow + parts.principal + fees,
-    parts: fees > 0n ? 4 : 3,
+    // FLOW-427 (C20-3): as the server data counts them, only the parts with an amount.
+    parts: [parts.interest, escrow, parts.principal, fees].filter((minor) => minor !== 0n).length,
   };
 }
 

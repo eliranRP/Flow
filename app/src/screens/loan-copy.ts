@@ -254,7 +254,7 @@ export function loanDeletedToast(name: string): string {
   return `${name} נמחקה`;
 }
 
-/** "N חלקים" for a payment row: 3, or 4 with fees. */
+/** "N חלקים" for a payment row, counting the parts with an amount; "חלק אחד" for one. */
 export function loanPartsText(parts: number): string {
   return parts === 1 ? "חלק אחד" : `${String(parts)} חלקים`;
 }
