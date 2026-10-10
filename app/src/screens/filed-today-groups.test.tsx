@@ -82,17 +82,17 @@ describe("FiledTodayScreen by project", () => {
     const projectA = screen.getByRole("group", { name: "Project A" });
     expect(projectA).toHaveTextContent("3 תנועות");
     const figuresA = [...(projectA.querySelectorAll(".ui-month-totals bdi"))];
-    expect(figuresA.map((node) => node.textContent)).toEqual(["₪10,000.00", "−₪4,340.50"]);
+    expect(figuresA.map((node) => node.textContent)).toEqual(["₪10,000", "−₪4,340.50"]);
     expect(figuresA[0]).toHaveClass("ui-income");
-    // The agorot are drawn small, as on the rows (FLOW-334).
-    expect(figuresA.map((node) => node.querySelector(".ui-num-cents")?.textContent)).toEqual([".00", ".50"]);
+    // Agorot are drawn small, as on the rows (FLOW-334); a whole figure has no ".00" (owner, 2026-10-10).
+    expect(figuresA.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([null, ".50"]);
     const projectB = screen.getByRole("group", { name: "Project B" });
     // FLOW-347: every head takes one shape, a one-line group's too: the count, then the total.
     const headB = projectB.querySelector(".ui-month-totals");
-    expect(headB).toHaveTextContent(/^תנועה אחת, הוצאות −₪1,200\.00$/);
+    expect(headB).toHaveTextContent(/^תנועה אחת, הוצאות −₪1,200$/);
     const none = screen.getByRole("group", { name: FILED_NO_PROJECT }).querySelector(".ui-month-totals");
     expect(none?.firstElementChild).toHaveClass("ui-group-count");
-    expect(none).toHaveTextContent(/^תנועה אחת, הוצאות −₪25\.00$/);
+    expect(none).toHaveTextContent(/^תנועה אחת, הוצאות −₪25$/);
   });
 
   it("keeps only the category in each row's hint", () => {

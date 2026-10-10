@@ -108,3 +108,20 @@
 .ui-connector-sheet-list.ui-project-list {
   padding-inline: 0;
 }
+
+/* FLOW-357: an open invoice's sheet. The amount is the one figure, the facts under it, then the
+   link to the invoice; "סימון כשולם" is pinned under the body. */
+.ui-unpaid-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.ui-unpaid-sheet .t-display bdi {
+  display: inline-block;
+}
+
+.ui-unpaid-sheet .ui-text-link {
+  margin-block-start: var(--space-5);
+}

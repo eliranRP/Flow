@@ -201,7 +201,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Button | primary, secondary (tint), ghost, destructive. Default, pressed, disabled | One primary per screen. Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
 | + button | 48px circle. Default, pressed | Opens Add. Sits in the tab bar |
 | Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"`; compact bar shown | With Back or a leading control, Back sits alone on the bar and the title and subtitle stack under it on the start side (FLOW-326). With a kicker, the kicker is Back's label ("‹ הגדרות", `label` in `accent-text`, cut at about 16 characters) and there is no kicker line ([0156](../decisions/0156-labelled-back-and-compact-bar.md)). On a stacked page with Back, a 44px compact bar (Back and the title in `title-3`, one line, `line` hairline) pins to the top once the large title scrolls off; month heads pin under it. A compact title (the transaction) and `layout="inline"` stay on the bar and get no compact bar. FLOW-326, FLOW-334 |
-| Period pill | tinted, or white/dark on the band | Opens the period sheet. Home and the project band use the period bar instead |
+| Period pill | tinted, or white/dark on the band | Opens the period sheet. Home's band carries one pill (FLOW-355); the project band uses the period bar |
 | Period bar (`PeriodBar`) | preset selected; custom range (no preset selected, first preset keeps the tab stop); later arrow `aria-disabled` | Home and the project band ([0141](../decisions/0141-period-bar.md), FLOW-411): five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) on a band-tone segmented control, then a stepper. The later arrow keeps its slot at the current window. The period label opens the period sheet |
 | Chips | suggested (tint + ✦), outlined choice, selected (violet + check), disabled, status | Hit area 44px even if drawn 36px |
 | Segmented tabs | track tint, selected `seg-on` | |
@@ -259,7 +259,7 @@ Source: [implementation-guide.md](../../design/system/implementation-guide.md). 
 
 Notifications (`13`) is a lock-screen reference, not an app screen. Guide §3.
 
-The band holds only the summary. Home: one period bar ([0141](../decisions/0141-period-bar.md)), one label, the hero number, and one explanation ("הכנסות פחות הוצאות, מ־…"). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
+The band holds only the summary. Home: one period pill, one label and the hero number (FLOW-355); the project band keeps the period bar ([0141](../decisions/0141-period-bar.md)). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
 
 ### 3.2 Layout grid and viewport
 
@@ -352,7 +352,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 13 (2026-10-09), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 14 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -383,6 +383,8 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 13
 - A text link's 44px hit area may grow into empty space or below it, never up or across into another control's box (FLOW-339).
 - A toast after a sync says what changed ("3 תנועות חדשות"), not only that it ended (FLOW-509).
 - A warning shows in one place only. When that place is the tap target, the footer adds only the way out (FLOW-343).
+- With the keyboard open on a short screen, a sheet gives up its top gap before it hides its first field (FLOW-310).
+- A tinted note under a demo frame shares the frame's inset; a focused control never hides (FLOW-506).
 
 **Rows, figures and empty values**
 
@@ -421,6 +423,12 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 13
 - A link that writes before it navigates shows busy in place and ignores presses until the write settles. It stays put when the write fails (FLOW-325).
 - The bin icon and red mark real deletes only (FLOW-334).
 - Every money word comes from the Money terms table in §3.6. A by-month row's hint shows הוצאות only when the month has income, and no hint when income is 0 (money terms, #367).
+- A skeleton's height counts the hints its loaded rows carry (FLOW-115).
+- A status the page leads with is not repeated as a row; where the row was its only way to change, the change sits beside the status (FLOW-356).
+- A group reads like a project row with a count, never a header with a total; its page and its row show the same figures from the same read (FLOW-406).
+- On Home, attention rows sit under the first project rows, so the first screen always shows a project (FLOW-355).
+- A long amount in a narrow card shrinks to fit; it is never cut or wrapped (review card at 320).
+- A wrapped hint line never starts with "·"; the separator ends the part before it. One date shape across the app: dd/mm (FLOW-356).
 
 **Sheets and settings**
 
@@ -450,6 +458,9 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 13
 - A form or list that appears in two places is one component, so a fix lands in both. A one-time question shown in two places shares one answer (FLOW-506, FLOW-502).
 - A line that asks the user to fix a sum prints the gap, not the target they must add up to. A waiting state says what changed. A row that is saving keeps focus (FLOW-115).
 - A form whose parts must add up to a total says in one place, its summary row, what is still missing or over ("חסרים $x" / "עודף $x"), and its save stays off until they match. This is the one exception to a save that stays enabled (FLOW-106, cycle 12) A running total carries its own state; no second line repeats it (FLOW-353).
+- Every setup step's title starts at the same height; a step without a back, a דלג or a count keeps their space empty (FLOW-356).
+- A setup choice with a safe default opens on that default and has one button (FLOW-406).
+- A role change applies on tap and offers ביטול; removing a person asks first, because the toast cannot undo it (FLOW-601).
 
 **Review card and Jev**
 
@@ -466,7 +477,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 13
 
 **Band**
 
-- The band's preset track is at most 10% white with white labels. Pressed darkens, never lightens. A label that opens a sheet ends in a 16px ▼. Home's hero explanation is "הכנסות פחות הוצאות" with no dates (FLOW-335).
+- The band's preset track is at most 10% white with white labels. Pressed darkens, never lightens. A label that opens a sheet ends in a 16px ▼. Home's hero has no explanation line under it (FLOW-355).
 - A figure on the band stays white, a minus included. A loss is named in the label ("הפסד ..."), never by red on violet (FLOW-338).
 - A label over several currencies' figures never says רווח over a loss. When the signs differ it names both: "רווח והפסד" (FLOW-339).
 
@@ -484,7 +495,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Empty: [es-01-home-first-run-light.png](../../design/states/es-01-home-first-run-light.png), [es-01-home-first-run-dark.png](../../design/states/es-01-home-first-run-dark.png).
 - Loading: [ld-01-home-skeleton-light.png](../../design/states/ld-01-home-skeleton-light.png), [ld-01-home-skeleton-dark.png](../../design/states/ld-01-home-skeleton-dark.png). Refresh: [ld-07](../../design/states/ld-07-pull-to-refresh-light.png).
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.24.
-- Steps: the period bar's label opens 16. The hero is the label, the number, and one line that says income minus expenses. נכנס and יצא sit below the band. The pending card has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
+- Steps: the band's period pill opens 16. The hero is the label and the number. נכנס and יצא sit below the band. The pending card sits under the first two project rows and has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321, FLOW-355). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
 - Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור בנק או SUMIT" and opens the connections page, and the line says the profit appears once a bank or SUMIT is connected (FLOW-328). No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
 - Error: skeleton while loading (`ld-01`). The loading band matches the calm hero. Offline is `ld-08`. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
@@ -657,7 +668,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 ### 16 Period sheet
 
 - Mockups: [16-period-sheet-light.png](../../design/screens/16-period-sheet-light.png), [16-period-sheet-dark.png](../../design/screens/16-period-sheet-dark.png).
-- Entry: the period bar's label on Home and on the project band ([0141](../decisions/0141-period-bar.md)), or a period pill elsewhere.
+- Entry: the period pill on Home and elsewhere, or the period bar's label on the project band ([0141](../decisions/0141-period-bar.md)).
 - Steps: the five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) apply on tap. "טווח מותאם" opens 15c; with a custom range no preset is selected and the label shows the dates. [0019](../decisions/0019-home-periods-and-comparison.md), [0028](../decisions/0028-period-sheet-with-custom-range.md).
 - Cancel: ✕ or scrim keeps the current period.
 

@@ -2,11 +2,12 @@ import type { Dashboard } from "@flow/shared";
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { defaultPeriod } from "../period";
-import { HomeBooks } from "../screens/HomeScreen";
+import { attentionRows, CashHome, HomeBooks } from "../screens/HomeScreen";
 import { CompanySwitcher } from "../screens/company-switcher";
 import { InvitesScreen } from "../screens/invites-screen";
 import { TeamScreen } from "../screens/team-screen";
 import { TeamApiProvider } from "../team-api";
+import { sampleCashMonths } from "./cash-sample";
 import { createSampleTeamApi, type SampleTeamOptions } from "./team-sample";
 
 /**
@@ -80,7 +81,10 @@ const devDashboard: Dashboard = {
   ],
 };
 
-/** `/e2e/company?company=` invite (invite-4), viewer, error, or nothing for two companies (a-3). Tap the name. */
+/**
+ * `/e2e/company?company=` invite (invite-4), viewer, error, or nothing for two companies (a-3). Tap the name.
+ * `&home=cash` draws the name on Home's cash band (FLOW-413).
+ */
 export function DevCompany() {
   const [params] = useSearchParams();
   const state = params.get("company");
@@ -91,6 +95,19 @@ export function DevCompany() {
     role: state === "viewer" ? "viewer" : "owner",
     fail: state === "error" ? { switchCompany: "Failed to fetch" } : undefined,
   };
+  if (params.get("home") === "cash") {
+    return (
+      <SampleTeam key={state} options={options}>
+        <CashHome
+          data={sampleCashMonths()}
+          previewing={false}
+          search=""
+          attention={attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, missingCount: 0, search: "" })}
+          company={<CompanySwitcher />}
+        />
+      </SampleTeam>
+    );
+  }
   return (
     <SampleTeam key={state} options={options}>
       <HomeBooks

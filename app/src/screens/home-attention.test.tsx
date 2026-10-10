@@ -163,4 +163,21 @@ describe("Home attention card (FLOW-321)", () => {
     expect(lists).toHaveLength(1);
     expect(Boolean((lists[0] as Element).compareDocumentPosition(document.querySelector(".ui-banner, .ui-banner-rows") as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
+
+  it("keeps לכל הפרויקטים under the last project row, before the card, with two projects or fewer (FLOW-358)", () => {
+    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n), project("ב", 2_000n)] });
+    const link = screen.getByRole("link", { name: "לכל הפרויקטים" });
+    const card = document.querySelector(".ui-banner, .ui-banner-rows") as Element;
+    const list = document.querySelector(".ui-project-list") as Element;
+    const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(list, link)).toBe(true);
+    expect(follows(link, card)).toBe(true);
+  });
+
+  it("puts לכל הפרויקטים after the remaining projects when the card splits the list (FLOW-358)", () => {
+    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n), project("ב", 2_000n), project("ג", 1_000n)] });
+    const link = screen.getByRole("link", { name: "לכל הפרויקטים" });
+    const lists = document.querySelectorAll(".ui-project-list");
+    expect(Boolean((lists[1] as Element).compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  });
 });

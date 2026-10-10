@@ -1,0 +1,22 @@
+/* FLOW-413, frame b: the cash view. Its rows are Home's ui-flow rows; רווח החודש reads quiet. */
+.ui-cash-quiet .ui-flow-label,
+.ui-cash-quiet .ui-num:not(.ui-loss) {
+  color: var(--color-text-secondary);
+}
+
+.ui-cash-months {
+  margin-top: 0;
+}
+
+.ui-cash-months .ui-flow-label {
+  color: var(--color-text);
+}
+
+/* Frame b-2: the profit view's way back to Home's cash, on the band. */
+.ui-band .ui-back-labelled {
+  color: var(--color-on-band);
+}
+
+.ui-band .ui-back-labelled:active {
+  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
+}

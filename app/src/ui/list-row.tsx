@@ -66,6 +66,9 @@ export type ListRowProps =
     mark?: ReactNode;
     /** No amount yet: a muted "—" with this hidden word instead (FLOW-401: a bill not in yet). */
     missing?: string;
+    /** With no href, the row is a button (an open invoice opens its sheet, FLOW-357). */
+    onClick?: () => void;
+    buttonRef?: Ref<HTMLButtonElement>;
   })
   | (Common & {
     variant: "transaction";
@@ -76,14 +79,20 @@ export type ListRowProps =
     currency?: string;
     /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */
     inWord?: string;
-    /** Real agorot only, no ".00" (the project's transactions, FLOW-340 C, as Search does). */
-    realCents?: boolean;
   })
   | StatementRowProps
   | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
-  | { variant: "skeleton" }
+  | {
+    variant: "skeleton";
+    /** Holds the icon slot the loaded row has. */
+    icon?: boolean;
+    /** A short eyebrow over a long value, as an eyebrow row draws (FLOW-358). Default: long title over short hint. */
+    eyebrow?: boolean;
+    /** The end-side bar for an amount; false for a row with only a chevron or nothing at its end. */
+    end?: boolean;
+  }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; /** A refused delete keeps its reason at full contrast (FLOW-405). */ clearHint?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
@@ -118,8 +127,6 @@ export type StatementRowProps = {
   match?: string;
   /** Muted facts on line 2 after the suggestion, joined with " · " (Search: statuses only, FLOW-339 option C). FLOW-323. */
   details?: StatementDetail[];
-  /** Real agorot only, no ".00" (Search, FLOW-339 option C). */
-  realCents?: boolean;
   /** A line kept out of profit: it fades but keeps line 2 at full muted grey (owner's pick C; FLOW-352). */
   setAside?: boolean;
 };
@@ -130,11 +137,16 @@ export function ListRow(props: ListRowProps) {
   if (props.variant === "skeleton") {
     return (
       <div className="ui-row" aria-hidden="true">
+        {props.icon === true ? (
+          <span className="ui-row-icon">
+            <Skeleton className="ui-skel-icon" />
+          </span>
+        ) : null}
         <span className="ui-skel-copy">
-          <Skeleton width="md" />
-          <Skeleton width="sm" />
+          <Skeleton width={props.eyebrow === true ? "sm" : "md"} />
+          <Skeleton width={props.eyebrow === true ? "md" : "sm"} />
         </span>
-        <Skeleton width="sm" />
+        {props.end === false ? null : <Skeleton width="sm" />}
       </div>
     );
   }
@@ -300,7 +312,18 @@ export function ListRow(props: ListRowProps) {
     props.setAside === true && "ui-row-set-aside",
     props.className,
   );
-  const row = props.href && props.external === true ? (
+  const row = props.variant === "project" && props.href == null && props.onClick != null ? (
+    <button
+      ref={props.buttonRef}
+      type="button"
+      className={className}
+      aria-label={described ? rowName(props) : props.label}
+      aria-describedby={described}
+      onClick={props.onClick}
+    >
+      {body}
+    </button>
+  ) : props.href && props.external === true ? (
     <a
       href={props.href}
       target="_blank"
@@ -391,7 +414,7 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string; realCents?: boolean }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
   const cost = props.sign === "cost";
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
@@ -406,7 +429,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
         currency={props.currency}
         direction={income ? "income" : cost ? undefined : "expense"}
         income={income}
-        {...(props.realCents === true ? { presentation: "detail" as const } : { cents: "always" as const })}
+        cents="always"
       />
     </span>
   );
@@ -464,7 +487,7 @@ function StatementRow(props: StatementRowProps) {
         </span>
       </span>
       <span className="ui-statement-end">
-        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} realCents={props.realCents} />
+        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />
         {props.method != null ? (
           <span className="ui-statement-method t-meta">
             <span className="ui-statement-method-icon" aria-hidden="true">{props.method.icon}</span>
@@ -478,7 +501,7 @@ function StatementRow(props: StatementRowProps) {
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} realCents={props.realCents} />;
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
   }
   if (props.missing != null) {
     return (

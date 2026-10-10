@@ -295,6 +295,8 @@ export const LoansLoading: Story = {
     </StoryRoute>
   ),
 };
+// FLOW-358: under 360px the loading rows drop the icon slot, as the loaded list does.
+export const LoansLoading320: Story = { ...LoansLoading, name: "Loans, loading, 320", ...at320 };
 
 export const LoansError: Story = {
   name: "Loans, error",

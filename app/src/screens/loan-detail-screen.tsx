@@ -194,7 +194,7 @@ function LoanDetailLoading({ back }: { back: string }) {
       </div>
       <SectionHead title="פרטים" />
       <List className="ui-loan-skel-rows">
-        {["a", "b", "c", "d", "e", "f"].map((key) => <ListRow key={key} variant="skeleton" />)}
+        {["a", "b", "c", "d", "e", "f"].map((key) => <ListRow key={key} variant="skeleton" icon eyebrow end={false} />)}
       </List>
     </div>
   );

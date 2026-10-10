@@ -40,6 +40,16 @@ export function groupSections(
   return sections.map((section, index) => ({ ...section, index }));
 }
 
+/**
+ * FLOW-358: a search that found a project only through its group's name shows that name under
+ * the row, so a visible row holds what was typed.
+ */
+export function groupHint(option: ChangeChoice, needle: string): string | undefined {
+  if (needle === "" || option.group == null || !option.group.includes(needle)) return undefined;
+  if (option.name.includes(needle) || (option.code ?? "").toLowerCase().includes(needle.toLowerCase())) return undefined;
+  return option.group;
+}
+
 export function Picker({
   kind,
   searchable,
@@ -111,6 +121,7 @@ export function Picker({
         code={option.code}
         date={needle === "" ? option.recent : undefined}
         tag={option.id === suggestionId ? (suggestionJev ? "jev" : true) : false}
+        description={groupHint(option, needle)}
         selected={option.id === selectedId}
         busy={option.id === savingId}
         disabled={savingId != null && option.id !== savingId}

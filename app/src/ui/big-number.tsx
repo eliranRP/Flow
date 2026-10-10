@@ -33,16 +33,12 @@ type BigNumberProps = {
    */
   income?: boolean;
   /**
-   * "always": transaction rows show cents like Mercury, ".00" included, drawn small and raised
-   * (decision 0120, option C). Other lists, totals and summaries stay whole units.
+   * "always": transaction rows show agorot like Mercury, drawn small and raised (decision 0120,
+   * option C). A whole amount shows no ".00" (owner, 2026-10-10). Other lists, totals and
+   * summaries stay whole units.
    */
   cents?: "always";
 };
-
-/** The figure with its cents always shown: the detail text, plus ".00" when the cents are zero. */
-export function withCents(text: string): string {
-  return /\.\d{2}$/.test(text) ? text : `${text}.00`;
-}
 
 /** True when the formatted figure starts with a minus sign. */
 export function showsMinus(text: string): boolean {
@@ -96,8 +92,7 @@ export function BigNumber({
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const shown = cents === "always" ? "detail" : presentation;
-  const formatted = formatAmount(agorot, shown, currency, direction);
-  const text = cents === "always" ? withCents(formatted) : formatted;
+  const text = formatAmount(agorot, shown, currency, direction);
   useLayoutEffect(() => {
     const first = firstStep(size);
     if (first == null) return;

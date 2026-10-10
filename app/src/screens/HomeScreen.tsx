@@ -1,5 +1,5 @@
 import { useCompanyCurrency } from "../company-currency";
-import { formatAmountText, formatIls, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
+import { formatAmountText, formatIls, wholeShekels, type CashMonths, type Dashboard, type ProjectRow } from "@flow/shared";
 import {
   companyRows,
   dashboardHasBooks,
@@ -16,6 +16,10 @@ import { useHeldOrder } from "../list-hold";
 import { useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
+import { cashMonthKey, cashSummaryRows, cashTitle, earlierMonthRows, shownCashRows } from "../cash";
+import { useCashMonthsQuery, useOpenCashRow } from "../use-cash";
+import { BackButton } from "../ui/back";
+import { CashRows } from "../ui/cash-rows";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
@@ -29,7 +33,7 @@ import { PeriodPicker } from "../ui/period-picker";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { ProfitMark } from "../ui/profit-mark";
 import { SearchEntry } from "../ui/search-entry";
-import { HomeSkeleton } from "./home-skeleton";
+import { CashHomeSkeleton, HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { emptyHomeLabel } from "../home-label";
@@ -51,13 +55,199 @@ function changePercent(current: bigint, previous: bigint | null): number | null 
   return ((currentShekels - previousShekels) / Math.abs(previousShekels)) * 100;
 }
 
+/** Marks the page while a band shows (the status bar follows it), and while a failure hides it. */
+function useBandMark(failed: boolean, showBooks: boolean) {
+  useEffect(() => {
+    if (!failed && showBooks) {
+      document.documentElement.dataset.band = "on";
+      return () => {
+        delete document.documentElement.dataset.band;
+      };
+    }
+    if (!failed) return;
+    document.documentElement.dataset.band = "off";
+    return () => {
+      delete document.documentElement.dataset.band;
+    };
+  }, [failed, showBooks]);
+}
+
+/** Before a bank or SUMIT is connected there are no books: the band names it and the action connects one. */
+function NoBooksYet({ previewing, example, search, companyName }: { previewing: boolean; example?: ReactNode; search: string; companyName?: string | null }) {
+  // FLOW-601: connecting a bank or SUMIT is the owner's.
+  const holdWrites = useHoldOwnerSettings();
+  return (
+    <div className="flex min-h-full min-w-0 flex-1 flex-col">
+      <TopBand preview={previewing} example={example} wordmark={false} leading={previewing ? undefined : <CompanySwitcher fallbackName={companyName} />}>
+        <Hero label={emptyHomeLabel} />
+      </TopBand>
+      <EmptyState
+        icon={<ChartIcon />}
+        title="עוד אין נתונים"
+        body="הרווח יופיע כאן אחרי חיבור בנק או SUMIT."
+        action={holdWrites ? undefined : (
+          // FLOW-328: a bank or SUMIT both start the books, so the action opens the connections page.
+          <Button variant="pill" to={`/settings/connections${search}`}>
+            חיבור בנק או SUMIT
+          </Button>
+        )}
+      />
+      <SetupHomeSlot emptyHome />
+    </div>
+  );
+}
+
+/**
+ * Home: the month's cash (FLOW-413, the owner's "Cash first", frame b). The profit view is one tap
+ * away on "רווח החודש". Home still reads the dashboard: its review count fills the attention box,
+ * and it says whether the books have started.
+ */
 export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const { status } = useAuth();
-  // FLOW-601: connecting a bank or SUMIT is the owner's.
-  const holdWrites = useHoldOwnerSettings();
+  const previewing = preview !== "off";
+  const cash = useCashMonthsQuery();
+  const dashboard = useDashboardQuery();
+  const unpaid = useUnpaidQuery();
+  // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
+  const missing = useMissingBillsQuery();
+
+  const cashPhase = screenPhase(preview, cash);
+  const dashboardPhase = screenPhase(preview, dashboard);
+  const errorPhase = cashPhase.kind === "error" ? cashPhase : dashboardPhase.kind === "error" ? dashboardPhase : null;
+  const ready = cashPhase.kind === "ready" && dashboardPhase.kind === "ready";
+  const showBooks = ready && cash.data != null && dashboard.data != null && hasBooks(dashboard.data);
+  const loading = errorPhase == null && (cashPhase.kind === "loading" || dashboardPhase.kind === "loading" || (!previewing && status === "loading" && !showBooks));
+  const failed = errorPhase != null || previewHidesBand(preview);
+  const offline = errorPhase != null ? errorPhase.offline : preview === "error";
+  useBandMark(failed, showBooks);
+
+  function retry() {
+    if (previewing) {
+      void navigate("/?preview=1");
+      return;
+    }
+    void cash.refetch();
+    void dashboard.refetch();
+    void unpaid.refetch();
+  }
+
+  if (loading) return <CashHomeSkeleton preview={previewing} example={example} />;
+
+  if (failed) {
+    return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
+  }
+
+  if (!showBooks || cash.data == null) {
+    return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} />;
+  }
+
+  const unpaidPhase = screenPhase(preview, unpaid);
+  return (
+    <CashHome
+      data={cash.data}
+      previewing={previewing}
+      search={search}
+      attention={attentionRows({
+        pending: dashboard.data.review_count,
+        unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
+        unpaidGross: unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? []) : 0n,
+        unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : [],
+        missingCount: missing.data?.length ?? 0,
+        search,
+      })}
+      unpaidFailed={unpaidPhase.kind === "error"}
+      onUnpaidRetry={() => {
+        void unpaid.refetch();
+      }}
+      checklist={<SetupHomeSlot emptyHome={false} />}
+      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
+    />
+  );
+}
+
+/**
+ * Frame b: the band names the month and shows its cash, then נכנס, יצא and a quiet רווח החודש.
+ * The attention box (review, open invoices, late bills) follows when it has rows, then the
+ * earlier months, each opening its own page.
+ */
+export function CashHome({
+  data,
+  previewing,
+  search,
+  attention,
+  unpaidFailed = false,
+  onUnpaidRetry,
+  example,
+  checklist,
+  company,
+  now,
+}: {
+  data: NonNullable<CashMonths>;
+  previewing: boolean;
+  search: string;
+  attention: BannerRow[];
+  unpaidFailed?: boolean;
+  onUnpaidRetry?: () => void;
+  /** Storybook sample label. The live home never passes it. */
+  example?: ReactNode;
+  checklist?: ReactNode;
+  /** FLOW-601: the company's name, which opens the חברה sheet, on the band next to search. */
+  company?: ReactNode;
+  /** Stories and tests pin the month names. */
+  now?: Date;
+}) {
+  const open = useOpenCashRow();
+  const month = data.months[0];
+  const key = month == null ? null : cashMonthKey(month.month);
+  const rows = shownCashRows(month, data.base_currency);
+  const earlier = earlierMonthRows(data, search, now);
+  return (
+    <div className="flex min-h-full min-w-0 flex-1 flex-col">
+      <TopBand wordmark={false} preview={previewing} example={example} leading={company} trailing={<SearchEntry to={`/search${search}`} onBand />}>
+        <Hero
+          label={key == null ? "תזרים" : cashTitle(key, now)}
+          figures={rows.map((row) => ({ agorot: row.net_minor, currency: row.currency, loss: row.net_minor < 0n }))}
+        />
+      </TopBand>
+      {key == null ? null : <CashRows rows={cashSummaryRows(key, rows, search, now)} onOpen={open} />}
+
+      {checklist}
+
+      {unpaidFailed ? (
+        <div className="ui-page-pad">
+          <ErrorState
+            offline={false}
+            onRetry={() => {
+              onUnpaidRetry?.();
+            }}
+          />
+        </div>
+      ) : null}
+      {/* Design lead: Home shows money that needs a hand whatever its main figure; an empty box hides. */}
+      <BannerRows rows={attention} />
+
+      {earlier.length > 0 ? (
+        <>
+          <SectionHead title="חודשים קודמים" />
+          <CashRows rows={earlier} months />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The profit view (frame b-2), one tap from Home's "רווח החודש": the profit for a period, with
+ * הכנסות and הוצאות, the projects and the attention box, as Home showed it before FLOW-413.
+ */
+export function ProfitScreen({ example }: { example?: ReactNode } = {}) {
+  const preview = useHomePreview();
+  const search = usePreviewSearch();
+  const navigate = useNavigate();
+  const { status } = useAuth();
   const previewing = preview !== "off";
   const books = useBooks();
   const dashboard = useDashboardQuery();
@@ -72,23 +262,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const failed = phase.kind === "error" || previewHidesBand(preview);
   const offline = phase.kind === "error" ? phase.offline : preview === "error";
 
-  useEffect(() => {
-    if (!failed && showBooks) {
-      document.documentElement.dataset.band = "on";
-      return () => {
-        delete document.documentElement.dataset.band;
-      };
-    }
-    if (!failed) return;
-    document.documentElement.dataset.band = "off";
-    return () => {
-      delete document.documentElement.dataset.band;
-    };
-  }, [failed, showBooks]);
+  useBandMark(failed, showBooks);
 
   function retry() {
     if (previewing) {
-      void navigate("/?preview=1");
+      void navigate("/profit?preview=1");
       return;
     }
     void dashboard.refetch();
@@ -101,27 +279,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
   }
 
-  if (!showBooks) {
-    return (
-      <div className="flex min-h-full min-w-0 flex-1 flex-col">
-        <TopBand preview={previewing} example={example} wordmark={false} leading={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}>
-          <Hero label={emptyHomeLabel} />
-        </TopBand>
-        <EmptyState
-          icon={<ChartIcon />}
-          title="עוד אין נתונים"
-          body="הרווח יופיע כאן אחרי חיבור בנק או SUMIT."
-          action={holdWrites ? undefined : (
-            // FLOW-328: a bank or SUMIT both start the books, so the action opens the connections page.
-            <Button variant="pill" to={`/settings/connections${search}`}>
-              חיבור בנק או SUMIT
-            </Button>
-          )}
-        />
-        <SetupHomeSlot emptyHome />
-      </div>
-    );
-  }
+  if (!showBooks) return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} />;
 
   const unpaidPhase = screenPhase(preview, unpaid);
   return (
@@ -141,8 +299,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       period={books.period}
       onPeriod={books.setPeriod}
       refreshing={dashboard.isPlaceholderData}
-      checklist={<SetupHomeSlot emptyHome={false} />}
-      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
+      back={<BackButton fallback={`/${search}`} onBand text="תזרים" label="חזרה לתזרים" />}
     />
   );
 }
@@ -168,6 +325,7 @@ export function HomeBooks({
   refreshing = false,
   notice,
   checklist,
+  back,
   companyCurrency = "ILS",
   company,
 }: {
@@ -197,10 +355,20 @@ export function HomeBooks({
   /** ld-09. A note under the band, above the pending card. */
   notice?: ReactNode;
   checklist?: ReactNode;
+  /** FLOW-413 (frame b-2): the profit view's way back to Home's cash, on the band's start. */
+  back?: ReactNode;
 }) {
   const rankCurrency = primaryCurrency(data);
   const ranked = homeProjects(data.projects, rankCurrency);
   const leading = useHeldOrder(ranked, (project) => project.id);
+  const splitList = leading.length > HOME_PROJECTS_BEFORE_ATTENTION;
+  const allProjects = (
+    <p className="ui-page-pad">
+      <TextLink to={`/projects${search}`} tone="quiet">
+        לכל הפרויקטים
+      </TextLink>
+    </p>
+  );
   const currencyRows = companyRows(data, data.base_currency ?? companyCurrency);
   const heroFigures = currencyRows.map((row) => ({
     agorot: roundedHeroProfit(row.income_minor, row.expense_minor),
@@ -246,7 +414,7 @@ export function HomeBooks({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
-        leading={company}
+        leading={back ?? company}
         trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
         {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150). */}
@@ -290,6 +458,8 @@ export function HomeBooks({
       ) : (
         <ProjectLines projects={leading.slice(0, HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
       )}
+      {/* FLOW-358: with two projects or fewer the link stays under the last project row, before the attention rows. */}
+      {splitList ? null : allProjects}
 
       {/* FLOW-355 (A): the review and invoices rows sit under the first projects, so a project shows on the first screen. */}
       {unpaidPhase === "error" ? (
@@ -305,14 +475,12 @@ export function HomeBooks({
 
       <BannerRows rows={attention} />
 
-      {leading.length > HOME_PROJECTS_BEFORE_ATTENTION ? (
-        <ProjectLines projects={leading.slice(HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
+      {splitList ? (
+        <>
+          <ProjectLines projects={leading.slice(HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
+          {allProjects}
+        </>
       ) : null}
-      <p className="ui-page-pad">
-        <TextLink to={`/projects${search}`} tone="quiet">
-          לכל הפרויקטים
-        </TextLink>
-      </p>
     </div>
   );
 }

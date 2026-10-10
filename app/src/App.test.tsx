@@ -83,10 +83,11 @@ describe("App", () => {
   it("shows the ld-01 loading skeleton from preview=loading", async () => {
     await renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
+    // FLOW-413: Home is the month's cash, so it loads as the band, three rows and the earlier months.
+    expect(screen.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
     expect(document.querySelector(".ui-band")).not.toBeNull();
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
-    expect(document.querySelectorAll(".ui-project-list .ui-row")).toHaveLength(3);
+    expect(document.querySelectorAll(".ui-flow .ui-flow-line")).toHaveLength(6);
     expect(document.querySelector(".ui-project-skel")).toBeNull();
     expect(document.querySelector(".ui-band .ui-hero")).not.toBeNull();
     expect(document.querySelector(".ui-flow")).not.toBeNull();

@@ -71,7 +71,7 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
 
 test("the period sheet closes on browser back and on its own close", async ({ page }) => {
   await page.goto("/e2e/project");
-  await page.goto("/?preview=loading");
+  await page.goto("/profit?preview=loading");
   await page.getByRole("button", { name: /בחירת תקופה$/ }).click();
   await expect(page.getByRole("dialog", { name: "תקופה" })).toBeVisible();
   await page.goBack();
