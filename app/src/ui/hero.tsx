@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { expenseFigure, flowLinkName } from "../breakdown";
 import { BigNumber } from "./big-number";
@@ -17,13 +18,15 @@ type HeroProps = {
   currency?: string;
   figures?: HeroFigure[];
   explanation?: string;
+  /** FLOW-355: Home's period pill, between the label and the figure. */
+  pill?: ReactNode;
 };
 
 /**
  * Home summary. One label, the figure, and one explanation.
  * A loss is named in the label. The figure stays white: red on the violet band does not read.
  */
-export function Hero({ label, agorot, currency = "ILS", figures, explanation }: HeroProps) {
+export function Hero({ label, agorot, currency = "ILS", figures, explanation, pill }: HeroProps) {
   const rows = figures ?? (agorot == null ? [] : [{ agorot, currency, loss: agorot < 0n }]);
   const multi = rows.length > 1;
   return (
@@ -34,6 +37,7 @@ export function Hero({ label, agorot, currency = "ILS", figures, explanation }: 
         ) : (
           <>
             <p className="ui-band-label t-label">{label}</p>
+            {pill ? <div className="ui-hero-pill">{pill}</div> : null}
             <h1 className="ui-hero-figure">
               {rows.map((row) => (
                 <span key={row.currency} className={multi ? "ui-hero-figure-line" : undefined}>

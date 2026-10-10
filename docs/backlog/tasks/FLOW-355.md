@@ -1,5 +1,5 @@
 <a id="flow-355"></a>
 # FLOW-355 · A project row on Home's first screen at 375x667
-- **Type:** PLAN FIRST · **Status:** owner picked "Both changes" (2026-10-09 18:53Z): the band keeps the profit and one period pill (no period tabs, stepper or explanation line), and the review and invoices box moves under the first two projects. UI lane 1 builds it after the feature freeze; real-app shots go to the design lead, then the owner, before merge · **Source:** cycle 12, the FLOW-334 Home item
+- **Type:** PLAN FIRST · **Status:** done (#403): owner picked "Both changes" (2026-10-09 18:53Z): the band keeps the profit and one period pill (no period tabs, stepper or explanation line), and the review and invoices box moves under the first two projects. The owner saw the real-app shots and chose "Ship it" (2026-10-10). · **Source:** cycle 12, the FLOW-334 Home item
 - **What:** At 375x667 the band is 336px, the attention banners 175px, and the first project row starts 158px under the tab bar. Without banners, FLOW-334's tighter income and expenses pair plus a 24px head gap bring it to the bar's edge. #386 already moved the income and expenses pair to a 52px pitch. With banners, a row shows only if the band gets shorter or the banners move under the first project rows. Mockups at 390, one option per frame.
 - **Acceptance:** owner's pick on a card, then real-app shots.

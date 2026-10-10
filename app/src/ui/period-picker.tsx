@@ -103,15 +103,18 @@ type PeriodPickerProps = {
   onCustom?: () => void;
   /** Page sits on a white screen, so the pill is tint with accent text. Band stays on the violet band. */
   tone?: "band" | "page";
+  /** The pill's name when the window alone says too little, e.g. Home's "… – בחירת תקופה" (FLOW-355). */
+  name?: string;
 };
 
-export function PeriodPicker({ pill, open, onOpenChange, period, onChange, options = [], onCustom, tone = "band" }: PeriodPickerProps) {
+export function PeriodPicker({ pill, open, onOpenChange, period, onChange, options = [], onCustom, tone = "band", name }: PeriodPickerProps) {
   return (
     <>
       <button
         type="button"
         className={tone === "page" ? "ui-band-period ui-page-period ui-hit" : "ui-band-period ui-hit"}
-        aria-label={pill}
+        aria-label={name ?? pill}
+        aria-haspopup="dialog"
         onClick={() => {
           onOpenChange(true);
         }}
