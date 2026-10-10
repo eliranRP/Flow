@@ -463,7 +463,7 @@ export const ProjectTransactionsSection320: Story = { ...ProjectTransactionsSect
 // the counted rows at 320; the category drops whole instead of pushing them out.
 const longKeptOut: NonNullable<ProjectDetailData> = {
   ...overviewProject,
-  transactions: (overviewProject.transactions ?? []).map((txn) => (txn.kept_out === true ? { ...txn, category: "קבלני משנה וחומרי גמר" } : txn)),
+  transactions: overviewProject.transactions.map((txn) => (txn.kept_out === true ? { ...txn, category: "קבלני משנה וחומרי גמר" } : txn)),
 };
 export const ProjectTransactionsLongKeptOut320: Story = {
   name: "Project, transactions section, long kept-out hint, 320",

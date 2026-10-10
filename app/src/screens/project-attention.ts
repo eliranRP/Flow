@@ -38,7 +38,7 @@ export function projectAttentionRows({
   });
   // FLOW-424 (C18-4): the review and קבועים rows open on this project, so the count matches.
   const projectSearch = withParam(search, "project", projectId);
-  return rows.map((row) => ({ ...row, to: row.to.replace(/^\/(review|missing-bills)[^#]*/, (_, page) => `/${page}${projectSearch}`) }));
+  return rows.map((row) => ({ ...row, to: row.to.replace(/^\/(review|missing-bills)[^#]*/, (_, page: string) => `/${page}${projectSearch}`) }));
 }
 
 /** The reads behind the rows: Home's, so a hide or a new bill refreshes both. Off for a sample or another section. */
