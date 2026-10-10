@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Decides whether this main run tests and deploys. Pull requests are checked locally before the push
 # (scripts/local-ci.sh), so main runs the full suite and the deploy in batches: once FLOW_DEPLOY_BATCH
-# merges (default 5) have landed since the last successful production deploy, or on a manual run.
+# merges (default 5) that change something outside docs/ have landed since the last successful
+# production deploy, or on a manual run.
 # Writes run=true or run=false to $GITHUB_OUTPUT.
 set -euo pipefail
 
@@ -38,7 +39,8 @@ if [[ -z "$last" ]] || ! git cat-file -e "${last}^{commit}" 2>/dev/null; then
   decide true "No successful production deploy found in this history: the full suite runs, then the deploy."
 fi
 
-count="$(git rev-list --count --first-parent "${last}..HEAD")"
+# FLOW-817: a merge that changes only docs/ ships nothing, so it does not count toward the batch.
+count="$(git rev-list --count --first-parent "${last}..HEAD" -- ':(top)' ':(top,exclude)docs/')"
 if (( count >= batch )); then
   decide true "${count} merges since the last deploy (${last:0:7}): the full suite runs, then the deploy."
 fi
