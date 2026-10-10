@@ -211,7 +211,7 @@
       "txn-list-more.ts",
       "txn-nav.tsx",
       "ui/txn-step-row.tsx",
-      "dev-routes.tsx"
+      "dev/txn-lists.tsx"
     ],
     "txn-swipe.spec.ts": [
       "ui/card-swipe.tsx",
