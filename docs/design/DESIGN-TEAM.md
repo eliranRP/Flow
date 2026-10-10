@@ -79,7 +79,7 @@ The owner chose "Small UI only" on 2026-10-08 and confirmed it with no timeout o
 
 Pixel and consistency fixes that already follow DESIGN-RULES still ship on the PR's design review alone, with no ask.
 
-**`PLAN FIRST` UI: the owner decides, as today.** He decides on a choice card with a recommended option. Nothing is built until he answers.
+**`PLAN FIRST` UI: the owner approves the layout only (2026-10-10).** He picks a big layout change on a choice card with a recommended option, and nothing is built until he answers. After that the team runs it: the design lead checks the built screens against the picked mockup and DESIGN-RULES and signs off, and the lane merges once its gates pass. There is no "ship as built" card, no screenshot card and no merge ask. A build that drifts from the picked layout in a way he would notice (a different flow, a new screen) is a new layout question and goes back to him on a card.
 
 **Mockups for the owner are phone-sized.** He reviews on his phone, and a wide page with several frames side by side is unreadable there (2026-10-08).
 - Every mockup sent with a card is drawn at 390px wide: one option per frame, stacked, with no desktop layout around it.

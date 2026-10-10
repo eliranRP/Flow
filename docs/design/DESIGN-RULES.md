@@ -352,7 +352,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 14 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 15 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -480,6 +480,20 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 14
 - The band's preset track is at most 10% white with white labels. Pressed darkens, never lightens. A label that opens a sheet ends in a 16px ▼. Home's hero has no explanation line under it (FLOW-355).
 - A figure on the band stays white, a minus included. A loss is named in the label ("הפסד ..."), never by red on violet (FLOW-338).
 - A label over several currencies' figures never says רווח over a loss. When the signs differ it names both: "רווח והפסד" (FLOW-339).
+
+**Rows, amounts and settings (folded at cycle 15)**
+
+- Whole amounts never show .00; agorot show only when they are not zero (FLOW-334).
+- A project's name is its identity: it wraps to two lines before the ellipsis, and a row's hint stops at two lines too (FLOW-358).
+- A name is cut only when it does not fit, never to protect words the row does not show (category lines).
+- A skeleton row draws the loaded row's parts in their places: an icon slot where the row has an icon, the eyebrow's short bar on top of an eyebrow row, and an end bar only where the row shows a figure (FLOW-358).
+- A search row says why it matched when the match isn't in its own name (FLOW-358).
+- A company-wide setting is a Settings row with its value as the hint, a sheet that applies on tap, and an undo toast, like the currency (FLOW-103, FLOW-504).
+- The copy says פיצול, never חלוקה. A category a loan's part writes to is locked the same way whether it is built in or the loan's own (FLOW-106, FLOW-356).
+- A date sheet jumps years from its month title; the grid keeps the days' height (FLOW-115).
+- The band label never repeats what the period pill already says (FLOW-358).
+- Home shows money that needs a hand (review, open invoices, missing bills) whatever its main figure (FLOW-413).
+- A project's group is changed from the project, never from the Projects tab; the tab only shows groups (FLOW-360).
 
 ---
 
