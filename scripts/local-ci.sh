@@ -45,10 +45,7 @@ esac
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
-# Playwright starts its own server for the app and the built Storybook: a server already on the port
-# (a dev server or an earlier run's, maybe from another tree) would serve an old build, and a spec
-# would pass or fail against code this push doesn't carry. Both configs read this.
-export FLOW_E2E_FRESH_SERVER=1
+export FLOW_E2E_FRESH_SERVER=1 # Playwright starts its own servers: one already on a port may serve an old build.
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
 
