@@ -197,8 +197,30 @@ export const ProjectCashMonth: Story = {
       <ProjectCashMonthScreen sample={cash} monthKey={earlier} projectId="p-c" />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    // FLOW-422: Home's ‹ › pager by the title, both ways from a middle month.
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(2);
+  },
 };
 export const ProjectCashMonthDark: Story = { ...ProjectCashMonth, name: "Project, an earlier month, dark", ...dark };
+export const ProjectCashMonth320: Story = { ...ProjectCashMonth, name: "Project, an earlier month, 320", ...at320 };
+
+const oldest = cashMonthKey(cash.months.at(-1)?.month ?? "");
+
+/** The oldest month the project's read holds keeps the earlier step's empty slot. */
+export const ProjectCashMonthOldest: Story = {
+  name: "Project, the oldest month it reads",
+  render: () => (
+    <StoryRoute entry={`/projects/p-c/cash/${oldest}`} tabs>
+      <ProjectCashMonthScreen sample={cash} monthKey={oldest} projectId="p-c" />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(1);
+  },
+};
 
 function line(id: string, supplier: string, category: string, minor: bigint): CashLine {
   const day = `${israelToday().slice(0, 7)}-0${id}`;

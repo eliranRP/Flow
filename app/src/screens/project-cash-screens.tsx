@@ -13,6 +13,7 @@ import {
   type CashListSide,
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
+import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
   projectCashLinesPath,
@@ -27,13 +28,15 @@ import { BackButton } from "../ui/back";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { CashRows } from "../ui/cash-rows";
-import { formatDayMonth } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { FocusTitle } from "../ui/focus-title";
 import { DocumentIcon } from "../ui/icons";
 import { BandHero, SectionHead } from "../ui/layout";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
+import { MonthStepper } from "../ui/month-stepper";
+import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -176,24 +179,49 @@ function ProjectCashMonthBody({
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
   const back = `/projects/${projectId}${search}`;
+  const navigate = useNavigate();
+  const data = sample ?? query.data ?? null;
+  // FLOW-422: Home's month pager and swipe, within the months the project's read holds.
+  const opens = (key: string) => monthOf(data ?? undefined, key) != null && key <= israelToday().slice(0, 7);
+  const go = (key: string) => {
+    void navigate(projectCashMonthPath(projectId, key, search), { replace: true });
+  };
+  const earlierKey = shiftMonthKey(monthKey, -1);
+  const laterKey = shiftMonthKey(monthKey, 1);
+  const stepper = (
+    <MonthStepper
+      earlier={opens(earlierKey) ? cashTitle(earlierKey) : null}
+      later={opens(laterKey) ? cashTitle(laterKey) : null}
+      onStep={(delta) => {
+        go(delta < 0 ? earlierKey : laterKey);
+      }}
+    />
+  );
   if (phase.kind !== "ready") {
     return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
-  const data = sample ?? query.data ?? null;
   const month = monthOf(data ?? undefined, monthKey);
   // The project page reads the last few months; a month outside them has no page.
   if (data == null || month == null) return <Navigate to={back} replace />;
   const rows = shownCashRows(month, data.base_currency);
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker="תזרים" />
-      <p className="ui-breakdown-total ui-page-pad">
-        {rows.map((row) => (
-          <span key={row.currency} className="ui-breakdown-total-line">
-            <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
-          </span>
-        ))}
-      </p>
+      <ScreenHeader layout="stacked" title={title} backTo={back} kicker="תזרים" titleAside={stepper} />
+      <PeriodSwipe
+        period={monthPeriod(monthKey)}
+        allow={(next: PeriodChoice) => opens(anchorOf(next))}
+        onChange={(next) => {
+          go(anchorOf(next));
+        }}
+      >
+        <p className="ui-breakdown-total ui-page-pad">
+          {rows.map((row) => (
+            <span key={row.currency} className="ui-breakdown-total-line">
+              <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
+            </span>
+          ))}
+        </p>
+      </PeriodSwipe>
       <CashRows rows={projectCashSummaryRows(projectId, monthKey, rows, search)} />
     </div>
   );
