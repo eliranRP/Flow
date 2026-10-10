@@ -1,0 +1,1 @@
+חשבוניות פתוחות is a list of rows: the name, the amount and how long ago. A tap opens the invoice in a sheet with "סימון כשולם", and the toast after a mark offers ביטול. With one invoice the head shows only the title (FLOW-357, the owner's pick A).

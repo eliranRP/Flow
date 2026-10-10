@@ -1,5 +1,6 @@
 import type { UnpaidRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { UnpaidScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { at320, dark, ExampleBar } from "../ui/screen-stories-support";
@@ -52,7 +53,7 @@ export const UnpaidList: Story = {
   ),
 };
 
-// FLOW-335: a row with SUMIT's document link opens it in a new tab (chevron); the others stay still.
+// FLOW-335, FLOW-357: a row opens its invoice's sheet; SUMIT's document link is in the sheet.
 export const UnpaidWithDocument: Story = {
   name: "Unpaid, document link",
   render: () => (
@@ -115,3 +116,33 @@ export const UnpaidMarked: Story = {
 export const UnpaidMarkedDark: Story = { ...UnpaidMarked, name: "Unpaid, marked, dark", ...dark };
 export const UnpaidMarked320: Story = { ...UnpaidMarked, name: "Unpaid, marked, 320", ...at320 };
 export const UnpaidMarkedDark320: Story = { ...UnpaidMarked, name: "Unpaid, marked, dark, 320", ...dark, ...at320 };
+
+// FLOW-357 (owner's pick A): one invoice keeps the head to the title; its amount is on the row.
+export const UnpaidOne: Story = {
+  name: "Unpaid, one invoice",
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={sampleUnpaid.slice(1, 2)} />
+    </StoryRoute>
+  ),
+};
+
+// FLOW-357: a tap on a row opens the invoice: its amount, the facts, the SUMIT link and סימון כשולם.
+export const UnpaidSheet: Story = {
+  name: "Unpaid, invoice sheet",
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={sampleUnpaid.map((row, index) => (index === 1 ? { ...row, document_url: "https://pay.sumit.co.il/example/doc-2" } : row))} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^אבי חשמל/ }));
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "אבי חשמל" });
+    await waitFor(async () => { await expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"); });
+    await expect(within(dialog).getByRole("button", { name: "סימון כשולם" })).toBeVisible();
+  },
+};
+export const UnpaidSheetDark: Story = { ...UnpaidSheet, name: "Unpaid, invoice sheet, dark", ...dark };
+export const UnpaidSheet320: Story = { ...UnpaidSheet, name: "Unpaid, invoice sheet, 320", ...at320 };

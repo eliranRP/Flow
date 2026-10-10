@@ -1,5 +1,5 @@
 import { formatAmountText, type UnpaidRow } from "@flow/shared";
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useRef, useState, type ReactNode } from "react";
 import { absAgorot } from "../agorot";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
@@ -11,12 +11,15 @@ import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-
 import { useSyncSettled } from "../use-sync-settled";
 import { useHeldOrder } from "../list-hold";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
+import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { CheckIcon, RefreshIcon, ReviewIcon } from "../ui/icons";
+import { CheckIcon, ExternalIcon, RefreshIcon, ReviewIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
+import { Sheet } from "../ui/sheet";
+import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 
@@ -64,6 +67,11 @@ export const UNPAID_MARKED = "סומן כשולם · ממתין לסנכרון";
 const UNPAID_MARK_DONE = "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT.";
 const UNPAID_CLEAR_DONE = "הסימון בוטל.";
 
+/** FLOW-357 (owner's pick A): a row says only how old the invoice is, or that it waits for the sync. */
+function unpaidRowHint(row: UnpaidRow, marked: boolean): string {
+  return marked ? UNPAID_MARKED : unpaidAge(daysBefore(row.doc_date));
+}
+
 export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
@@ -75,15 +83,22 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   // A sample (Storybook, dev routes) keeps its marks on the screen; a live mark is the server's (0133).
   const [sampleMarks, setSampleMarks] = useState<Record<string, string | null>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  // FLOW-357: a tap on a row opens that invoice's sheet; its main action marks it paid.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const setInvoiceSheet = useSheetHistory("unpaid-invoice", sheetOpen, setSheetOpen);
+  const rowRefs = useRef(new Map<string, HTMLButtonElement>());
+  const returnRef = useRef<HTMLButtonElement | null>(null);
   const all = (sample ?? unpaid.data ?? []).map((row) => (row.id in sampleMarks ? { ...row, marked_paid_at: sampleMarks[row.id] ?? null } : row));
   const rows = useHeldOrder(all, (row) => row.id);
   const totals = unpaidTotals(all);
   const mark = useWrite<{ id: string; paid: boolean }>({
     keys: ["unpaid"],
     failure: (error) => (isTransientWriteError(error) ? { message: "לא הצלחנו לעדכן את הסימון.", retry: true } : "לא הצלחנו לעדכן את הסימון."),
-    onSuccess: ({ paid }) => {
+    onSuccess: ({ id, paid }) => {
       setBusyId(null);
-      toast.show({ message: paid ? UNPAID_MARK_DONE : UNPAID_CLEAR_DONE });
+      setInvoiceSheet(false);
+      showDone(id, paid);
     },
     run: async ({ id, paid }) => {
       const supabase = getSupabase();
@@ -113,17 +128,33 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
     if (blocked()) return;
     sync.mutate();
   }
-  function setPaid(row: UnpaidRow, paid: boolean) {
+  /** A mark's toast offers ביטול, which clears the mark again. */
+  function showDone(id: string, paid: boolean) {
+    toast.show(paid
+      ? { message: UNPAID_MARK_DONE, action: "ביטול", onAction: () => { setPaid(id, false); } }
+      : { message: UNPAID_CLEAR_DONE });
+  }
+  function setPaid(id: string, paid: boolean) {
     if (holdWrites || mark.isPending) return;
     if (sample) {
-      setSampleMarks((current) => ({ ...current, [row.id]: paid ? new Date().toISOString() : null }));
-      toast.show({ message: paid ? UNPAID_MARK_DONE : UNPAID_CLEAR_DONE });
+      setSampleMarks((current) => ({ ...current, [id]: paid ? new Date().toISOString() : null }));
+      setInvoiceSheet(false);
+      showDone(id, paid);
       return;
     }
     if (blocked()) return;
-    setBusyId(row.id);
-    mark.mutate({ id: row.id, paid }, { onError: () => { setBusyId(null); } });
+    setBusyId(id);
+    mark.mutate({ id, paid }, { onError: () => { setBusyId(null); } });
   }
+  function openInvoice(id: string) {
+    returnRef.current = rowRefs.current.get(id) ?? null;
+    setOpenId(id);
+    setInvoiceSheet(true);
+  }
+  const openRow = all.find((row) => row.id === openId) ?? null;
+  const openMarked = openRow != null && unpaidIsMarked(openRow);
+  const openBusy = openRow != null && busyId === openRow.id && mark.isPending;
+  const openUrl = openRow == null ? null : unpaidDocumentUrl(openRow);
   return (
     <ScreenState
       title="חשבוניות פתוחות"
@@ -132,48 +163,36 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       onRetry={() => { void unpaid.refetch(); }}
       empty={<EmptyState icon={<ReviewIcon />} title="הכל שולם" body="אין חשבוניות פתוחות כרגע." />}
     >
-      <div className="ui-page-pad">
-        <p className="t-display ui-unpaid-totals">
-          {totals.map((total) => (
-            <bdi key={total.currency} dir="ltr">{formatAmountText(total.minor, total.currency)}</bdi>
-          ))}
-        </p>
-        <p className="t-label text-text-secondary">לגבייה</p>
-      </div>
+      {/* FLOW-357: one invoice shows its amount on its row only, so the head is the title alone. */}
+      {all.length > 1 ? (
+        <div className="ui-page-pad">
+          <p className="t-display ui-unpaid-totals">
+            {totals.map((total) => (
+              <bdi key={total.currency} dir="ltr">{formatAmountText(total.minor, total.currency)}</bdi>
+            ))}
+          </p>
+          <p className="t-label text-text-secondary">לגבייה</p>
+        </div>
+      ) : null}
       <List className="ui-list-wrap-title">
         {rows.map((row) => {
           const marked = unpaidIsMarked(row);
-          const busy = busyId === row.id && mark.isPending;
-          // FLOW-335: a row with SUMIT's document link opens it in a new tab; without one it stays still.
-          const documentUrl = unpaidDocumentUrl(row);
           return (
             <ListRow
               key={row.id}
               variant="project"
-              href={documentUrl ?? undefined}
-              external={documentUrl != null}
-              chevron={documentUrl != null}
+              onClick={() => { openInvoice(row.id); }}
+              buttonRef={(node) => {
+                if (node) rowRefs.current.set(row.id, node);
+                else rowRefs.current.delete(row.id);
+              }}
+              chevron
               title={row.customer_name ?? row.description}
-              hint={unpaidHint(row, marked)}
-              wrapHint
+              hint={unpaidRowHint(row, marked)}
               agorot={absAgorot(row.open_gross_agorot)}
               currency={row.currency ?? "ILS"}
               loss={false}
               muted={marked}
-              actionBelow
-              action={holdWrites ? undefined : (
-                <Button
-                  variant="pill"
-                  icon={marked ? undefined : <CheckIcon />}
-                  busy={busy}
-                  disabled={mark.isPending && !busy}
-                  onClick={() => {
-                    setPaid(row, !marked);
-                  }}
-                >
-                  {busy ? (marked ? "מבטל…" : "מסמן…") : marked ? "ביטול הסימון" : "סימון כשולם"}
-                </Button>
-              )}
             />
           );
         })}
@@ -192,6 +211,38 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
           />
         </List>
       ) : null}
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={setInvoiceSheet}
+        title={openRow == null ? "" : openRow.customer_name ?? openRow.description}
+        returnFocusRef={returnRef}
+        onClosed={() => { setOpenId(null); }}
+        action={openRow == null || holdWrites ? undefined : (
+          <Button
+            full
+            variant={openMarked ? "secondary" : undefined}
+            icon={openMarked ? undefined : <CheckIcon />}
+            busy={openBusy}
+            onClick={() => { setPaid(openRow.id, !openMarked); }}
+          >
+            {openBusy ? (openMarked ? "מבטל…" : "מסמן…") : openMarked ? "ביטול הסימון" : "סימון כשולם"}
+          </Button>
+        )}
+      >
+        {openRow == null ? null : (
+          <div className="ui-unpaid-sheet">
+            <p className="t-display">
+              <bdi dir="ltr">{formatAmountText(absAgorot(openRow.open_gross_agorot), openRow.currency ?? "ILS")}</bdi>
+            </p>
+            <p className="t-label text-text-secondary">{unpaidHint(openRow, openMarked)}</p>
+            {openUrl != null ? (
+              <TextLink href={openUrl} external chevron={false} trailing={<ExternalIcon />}>
+                פתיחת החשבונית
+              </TextLink>
+            ) : null}
+          </div>
+        )}
+      </Sheet>
     </ScreenState>
   );
 }

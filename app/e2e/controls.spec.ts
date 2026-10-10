@@ -373,28 +373,40 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page).toHaveURL(/\/review\?preview=1$/);
 });
 
-test("unpaid marks a row paid in one tap, keeps it listed, and clears the mark", async ({ page }) => {
+test("unpaid opens an invoice, marks it paid from its sheet, keeps it listed, and clears the mark", async ({ page }) => {
   await page.goto("/e2e/unpaid?preview=1");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
+  // FLOW-357: one invoice shows its amount on its row only, so the head is the title alone.
   await page.goto("/e2e/unpaid?preview=1");
+  await expect(page.locator(".ui-unpaid-totals")).toHaveCount(0);
+  // Two invoices, one already marked: the total counts the open one.
+  await page.goto("/e2e/unpaid?preview=1&marked=1");
   await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
   // FLOW-335: the total sits on the start (right) side, lined up with the title, not on the end side.
   const totalBox = await page.locator(".ui-unpaid-totals bdi").first().boundingBox();
   const titleBox = await page.getByRole("heading", { name: "חשבוניות פתוחות" }).boundingBox();
   expect(Math.abs((totalBox?.x ?? 0) + (totalBox?.width ?? 0) - ((titleBox?.x ?? 0) + (titleBox?.width ?? 0)))).toBeLessThan(4);
-  await expect(page.getByRole("button", { name: /רענון מ־SUMIT/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "סימון כשולם" }).click();
+  // FLOW-357: rows carry no button of their own; a tap opens the invoice's sheet.
+  await expect(page.getByRole("button", { name: "סימון כשולם" })).toHaveCount(0);
+  await page.getByRole("button", { name: /^לקוח לדוגמה/ }).click();
+  const sheet = page.getByRole("dialog", { name: "לקוח לדוגמה" });
+  await sheet.getByRole("button", { name: "סימון כשולם" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await toast(page, "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT.");
-  await expect(page.getByText("לקוח לדוגמה")).toBeVisible();
-  await expect(page.getByText(/סומן כשולם · ממתין לסנכרון/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /^לקוח לדוגמה/ })).toContainText("סומן כשולם · ממתין לסנכרון");
   // FLOW-335: a marked row brings the SUMIT sync onto the page.
   await expect(page.getByRole("button", { name: /רענון מ־SUMIT/ })).toBeVisible();
   await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪0");
-  await page.getByRole("button", { name: "ביטול הסימון" }).click();
-  await expect(page.getByRole("button", { name: "סימון כשולם" })).toBeVisible();
+  // The toast's ביטול clears the mark again.
+  await page.locator(".ui-toast").getByRole("button", { name: "ביטול" }).click();
+  await toast(page, "הסימון בוטל.");
   await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
+  // A marked invoice's sheet offers ביטול הסימון.
+  await page.getByRole("button", { name: /^לקוח שני לדוגמה/ }).click();
+  await page.getByRole("dialog", { name: "לקוח שני לדוגמה" }).getByRole("button", { name: "ביטול הסימון" }).click();
+  await toast(page, "הסימון בוטל.");
+  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪1,700");
 });
 
 test("a project's by-month list opens a month, and Back steps back one screen at a time", async ({ page }) => {

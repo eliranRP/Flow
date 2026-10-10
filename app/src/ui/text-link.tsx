@@ -10,6 +10,8 @@ type TextLinkProps = {
   /** Replaces the current history entry. Settings uses it so onboarding does not sit on a sheet entry. */
   replace?: boolean;
   href?: string;
+  /** The href is an outside page: it opens in a new tab, and the name says so (FLOW-357). */
+  external?: boolean;
   onClick?: () => void;
   tone?: "accent" | "quiet";
   size?: "label" | "hint";
@@ -36,6 +38,7 @@ export function TextLink({
   to,
   replace = false,
   href,
+  external = false,
   onClick,
   tone = "accent",
   size = "label",
@@ -92,6 +95,14 @@ export function TextLink({
       >
         {body}
       </button>
+    );
+  }
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={classes} aria-label={label} aria-busy={busy || undefined}>
+        {body}
+        <span className="sr-only">(נפתח בלשונית חדשה)</span>
+      </a>
     );
   }
   return (
