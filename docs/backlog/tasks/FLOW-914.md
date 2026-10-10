@@ -1,0 +1,4 @@
+<a id="flow-914"></a>
+# FLOW-914 · Red main: the 320 split-hint story counted a dropped date as clipped
+- **Type:** BUG · **Status:** done · **Depends on:** FLOW-425 (done) · **Source:** main run on 8cc332c, 2026-10-10 17:35Z (stories 2/4).
+- [x] (UI lane 1) **The story's clip check walked past the box that hides the date.** "Split lines with long names, 320" failed with `[' · 07/10', ' · 05/10']`: at 320 the date wraps onto its own box's hidden second line, as FLOW-425 intends, but the check went on to the row's clipping box and counted it as cut there. Now an amount or date that is wholly outside a clipping box counts as dropped and the walk stops. The app's layout is unchanged. #561's own gate ran this story only in the wide unit runner, so the 320 viewport first ran in main's full story pass.
