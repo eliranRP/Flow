@@ -23,7 +23,7 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 const current = israelToday().slice(0, 7);
-const months = [0, 1, 2, 3].map((back) => shiftMonthKey(current, -back));
+const month = (back: number) => shiftMonthKey(current, -back);
 
 function currencyRow(inMinor: number, outMinor: number, profit: number) {
   return {
@@ -43,10 +43,10 @@ const cash = {
   basis: "paid",
   base_currency: "ILS",
   months: [
-    { month: `${months[0]}-01`, by_currency: [currencyRow(1_800_000, 1_480_000, 560_000)] },
-    { month: `${months[1]}-01`, by_currency: [currencyRow(1_650_000, 1_765_000, 210_000)] },
-    { month: `${months[2]}-01`, by_currency: [currencyRow(1_720_000, 1_480_000, 390_000)] },
-    { month: `${months[3]}-01`, by_currency: [currencyRow(1_700_000, 1_520_000, 330_000)] },
+    { month: `${month(0)}-01`, by_currency: [currencyRow(1_800_000, 1_480_000, 560_000)] },
+    { month: `${month(1)}-01`, by_currency: [currencyRow(1_650_000, 1_765_000, 210_000)] },
+    { month: `${month(2)}-01`, by_currency: [currencyRow(1_720_000, 1_480_000, 390_000)] },
+    { month: `${month(3)}-01`, by_currency: [currencyRow(1_700_000, 1_520_000, 330_000)] },
   ],
 };
 
@@ -121,10 +121,10 @@ describe("Home's cash (FLOW-413, frame b)", () => {
     wrap();
     const loss = await screen.findByRole("link", { name: /−₪1,150/ });
     expect(screen.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
-    expect(loss).toHaveAttribute("href", `/cash/${months[1]}`);
+    expect(loss).toHaveAttribute("href", `/cash/${month(1)}`);
     expect(within(loss).getByText("−₪1,150")).toHaveClass("ui-loss");
-    expect(screen.getByRole("link", { name: /₪2,400/ })).toHaveAttribute("href", `/cash/${months[2]}`);
-    expect(screen.getByRole("link", { name: /₪1,800/ })).toHaveAttribute("href", `/cash/${months[3]}`);
+    expect(screen.getByRole("link", { name: /₪2,400/ })).toHaveAttribute("href", `/cash/${month(2)}`);
+    expect(screen.getByRole("link", { name: /₪1,800/ })).toHaveAttribute("href", `/cash/${month(3)}`);
   });
 
   it("keeps the attention box when something waits, and hides it when nothing does (design lead)", async () => {

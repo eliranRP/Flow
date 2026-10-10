@@ -71,6 +71,12 @@
 /projects/:projectId/transactions/ /projects/:projectId/transactions 301
 /projects/:projectId /app-shell 200
 /projects/:projectId/ /projects/:projectId 301
+/profit /app-shell 200
+/profit/ /profit 301
+/cash/:month/:side/:currency /app-shell 200
+/cash/:month/:side/:currency/ /cash/:month/:side/:currency 301
+/cash/:month /app-shell 200
+/cash/:month/ /cash/:month 301
 /flow/:direction/excluded/:currency /app-shell 200
 /flow/:direction/excluded/:currency/ /flow/:direction/excluded/:currency 301
 /flow/:direction/:groupBy/:currency/:groupKey /app-shell 200

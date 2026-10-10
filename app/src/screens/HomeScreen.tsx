@@ -138,7 +138,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
   }
 
-  if (!showBooks || cash.data == null || dashboard.data == null) {
+  if (!showBooks || cash.data == null) {
     return <NoBooksYet previewing={previewing} example={example} search={search} />;
   }
 
