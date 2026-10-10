@@ -4,7 +4,7 @@ import { OutwardChevron } from "./icons";
 /**
  * FLOW-362 (cycle 15, C15-6): a month page's earlier and later chevrons, at the end of its title.
  * As on the period bar, › on the start side goes to the earlier month and ‹ to the later one; both
- * are SVG and point outward. A side with no month to open (the current month has no later one, the
+ * are SVG and point outward, inside one quiet rounded segment so they read as a pager. A side with no month to open (the current month has no later one, the
  * first month of the books no earlier one) keeps an empty slot, so the other chevron stays put.
  */
 export function MonthStepper({

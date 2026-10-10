@@ -178,13 +178,19 @@
   margin-block-start: var(--space-4);
 }
 
-/* FLOW-362 (C15-6): a month page's earlier and later chevrons. The pair hangs its glyph inset past
-   the gutter, as a page's end icon does, so the ‹ lines up with the content's end edge. */
+/* FLOW-362 (C15-6): a month page's earlier and later chevrons, one quiet segment in the period
+   pill's tint, so the pair reads as a pager and not as the rows' drill-in chevrons (design lead). */
 .ui-month-step {
   display: flex;
   flex: none;
   align-items: center;
-  margin-inline-end: calc((var(--touch-min) - 24px) / -2);
+  border-radius: 22px;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-month-step .ui-icon-btn {
+  color: inherit;
 }
 
 .ui-month-step-arrow,
