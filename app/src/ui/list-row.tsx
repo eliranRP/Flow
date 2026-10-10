@@ -310,6 +310,8 @@ export function ListRow(props: ListRowProps) {
         : "ui-row ui-hit",
     toneClass,
     props.setAside === true && "ui-row-set-aside",
+    // A set-aside row whose mark is the tag (no kept-out words in its hint) lets the title use the row's width.
+    props.setAside === true && props.tag != null && "ui-row-set-aside-tagged",
     props.className,
   );
   const row = props.variant === "project" && props.href == null && props.onClick != null ? (
