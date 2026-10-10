@@ -179,7 +179,7 @@ export const ProjectRowsLineUp: Story = {
   ),
 };
 
-/** Option C (decision 0120): income green with no plus and small cents (".00" included), expense with − and cents,
+/** Option C (decision 0120): income green with no plus and small agorot (none on a whole amount), expense with − and agorot,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {
   return (
@@ -202,9 +202,9 @@ function MercuryRows() {
 function SetAsideRows() {
   return (
     <List>
-      <ListRow variant="transaction" title="חשמלאי לדוגמה" hint="עבודה · 05/10" agorot={-632_000n} sign="out" source="invoice" href="/transactions/1" realCents />
-      <ListRow variant="transaction" title="החזר ציוד לדוגמה" hint="לא נספר ברווח · ציוד · 02/10" agorot={-150_000n} sign="out" source="invoice" href="/transactions/2" realCents setAside />
-      <ListRow variant="statement" title="ספק לדוגמה" fallback="invoice" details={[{ text: "לא נספר ברווח" }]} agorot={-42_000n} sign="out" href="/transactions/3" realCents setAside />
+      <ListRow variant="transaction" title="חשמלאי לדוגמה" hint="עבודה · 05/10" agorot={-632_000n} sign="out" source="invoice" href="/transactions/1" />
+      <ListRow variant="transaction" title="החזר ציוד לדוגמה" hint="לא נספר ברווח · ציוד · 02/10" agorot={-150_000n} sign="out" source="invoice" href="/transactions/2" setAside />
+      <ListRow variant="statement" title="ספק לדוגמה" fallback="invoice" details={[{ text: "לא נספר ברווח" }]} agorot={-42_000n} sign="out" href="/transactions/3" setAside />
     </List>
   );
 }
