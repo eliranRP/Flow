@@ -1,0 +1,1 @@
+Searching projects by a group's name now shows the group under each matching project. A project group link that no longer exists shows a clear empty page with a button back to all projects. Setup notes no longer end on a single word (FLOW-358). No migration.

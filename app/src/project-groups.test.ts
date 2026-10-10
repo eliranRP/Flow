@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { findGroup, groupHref, projectChoices, projectCountLabel, splitByGroup } from "./project-groups";
 import { projectsGrouped } from "./screens/project-groups-sample";
-import { groupSections, PICK_REST_HEADING } from "./ui/change-picker";
+import { groupHint, groupSections, PICK_REST_HEADING } from "./ui/change-picker";
 
 describe("project groups (FLOW-406)", () => {
   it("lifts grouped projects out of the top level and keeps the rest loose", () => {
@@ -71,5 +71,14 @@ describe("project groups (FLOW-406)", () => {
       "s",
     );
     expect(sections?.map((section) => section.options.map((option) => option.id))).toEqual([["u1"], ["u2"]]);
+  });
+
+  it("names the group under a row only when the search matched through the group (FLOW-358)", () => {
+    const unit = { id: "u1", name: "דירה 1", code: "P-7", group: "בניין לדוגמה", groupId: "g1" };
+    expect(groupHint(unit, "לדוגמה")).toBe("בניין לדוגמה");
+    expect(groupHint(unit, "דירה")).toBeUndefined();
+    expect(groupHint(unit, "p-7")).toBeUndefined();
+    expect(groupHint(unit, "")).toBeUndefined();
+    expect(groupHint({ id: "a", name: "לדוגמה" }, "לדוגמה")).toBeUndefined();
   });
 });
