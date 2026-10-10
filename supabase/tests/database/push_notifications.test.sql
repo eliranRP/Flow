@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(32);
+select plan(33);
 
 do $users$
 begin
@@ -107,6 +107,11 @@ select is(
 -- Other users and roles.
 select tests.authenticate_as('pn_other');
 select is((public.get_notification_prefs()->>'has_subscription')::boolean, false, 'another user sees only their own prefs');
+select is(
+  (public.answer_push_prompt(true)->>'new_transaction')::boolean,
+  true,
+  'a first yes also turns on תנועה חדשה'
+);
 select lives_ok($$select public.push_unsubscribe('https://fcm.googleapis.com/fcm/send/dev-1')$$, 'unsubscribing a device that is not yours does nothing');
 select throws_ok($$select * from public.push_subscriptions$$, '42501', null, 'a user cannot read the subscriptions table');
 select throws_ok($$select * from public.notification_prefs$$, '42501', null, 'a user cannot read the prefs table');
