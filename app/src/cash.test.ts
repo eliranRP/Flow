@@ -49,7 +49,7 @@ describe("cashSummaryRows", () => {
       ["נכנס", "in", "/cash/2026-10/in/ILS"],
       ["יצא", "out", "/cash/2026-10/out/ILS"],
       ["רווח החודש", "quiet", "/profit"],
-      ["לא נספר ברווח", "quiet", "/cash/2026-10/kept/ILS"],
+      ["לא נספר ברווח", "aside", "/cash/2026-10/kept/ILS"],
     ]);
     // רווח החודש and לא נספר ברווח add up to the month's figure.
     expect(rows[3]?.amounts).toEqual([{ currency: "ILS", minor: -240_000n }]);

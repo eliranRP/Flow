@@ -124,6 +124,8 @@ describe("Home's cash (FLOW-413, frame b)", () => {
     const kept = screen.getByRole("link", { name: /^לא נספר ברווח ב\S+ −₪2,400 – פירוט$/ });
     expect(kept).toHaveAttribute("href", `/cash/${current}/kept/ILS`);
     expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים")).toHaveClass("ui-flow-hint");
+    // It is not a loss, so its minus stays out of red.
+    expect(within(kept).getByText("−₪2,400")).not.toHaveClass("ui-loss");
     // No profit band, period pill or projects: those are the profit view's.
     expect(screen.queryByRole("button", { name: /בחירת תקופה/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "פרויקטים" })).not.toBeInTheDocument();

@@ -24,7 +24,7 @@ const rows: CashRow[] = [
     id: "kept",
     label: "לא נספר ברווח",
     hint: "שיפוץ והשבחה, השקעת בעלים",
-    tone: "quiet",
+    tone: "aside",
     amounts: ils(-240_000n),
     href: "/cash/2026-10/kept/ILS",
     name: "לא נספר ברווח באוקטובר −₪2,400 – פירוט",

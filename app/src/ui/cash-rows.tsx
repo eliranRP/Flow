@@ -10,8 +10,11 @@ import { ChevronIcon } from "./icons";
  * what is behind it. A currency other than the base adds a line under the first amount.
  */
 
-/** "in" is green; "net" (a month row) and "quiet" (רווח החודש) show a loss in red with its minus. */
-export type CashRowTone = "in" | "out" | "net" | "quiet";
+/**
+ * "in" is green; "net" (a month row) and "quiet" (רווח החודש) show a loss in red with its minus.
+ * "aside" (FLOW-417, לא נספר ברווח) reads quiet and keeps its minus without red: it is not a loss.
+ */
+export type CashRowTone = "in" | "out" | "net" | "quiet" | "aside";
 
 export type CashRow = {
   id: string;
@@ -40,7 +43,7 @@ export function CashRows({ rows, onOpen, months = false }: { rows: CashRow[]; on
         <Link
           key={row.id}
           to={row.href}
-          className={row.tone === "quiet" ? "ui-flow-line ui-flow-link ui-hit ui-cash-quiet" : "ui-flow-line ui-flow-link ui-hit"}
+          className={row.tone === "quiet" || row.tone === "aside" ? "ui-flow-line ui-flow-link ui-hit ui-cash-quiet" : "ui-flow-line ui-flow-link ui-hit"}
           aria-label={row.name}
           onClick={onOpen == null ? undefined : () => {
             onOpen(row);

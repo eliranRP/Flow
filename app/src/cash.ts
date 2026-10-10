@@ -129,7 +129,7 @@ export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: st
           id: "kept",
           label: NOT_IN_PROFIT_LABEL,
           hint: notInProfitHint(rows[0]),
-          tone: "quiet",
+          tone: "aside",
           amounts: kept,
           href: cashLinesPath(key, "kept", base, search),
           name: `${NOT_IN_PROFIT_LABEL} ב${name} ${cashAmountsText(kept)} – פירוט`,
