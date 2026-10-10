@@ -403,6 +403,16 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     expect(container.querySelector(".ui-review-filled")).toBeNull();
   });
 
+  it("shows a held flagged line with its flag, the הצעת Jev pills and no fill (plan item 3)", () => {
+    // The anomaly gate kept the auto job off this line, so no jev_prefills row and no jevFilled.
+    const loud = reviewFlagView([{ transaction_id: "t", kind: "duplicate", jev_score: 0.8, other_doc_date: "2026-10-03" }]);
+    const { container } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} flag={loud} onProject={() => undefined} onCategory={() => undefined} />);
+    expect(container.querySelector(".ui-review-flag")).not.toBeNull();
+    expect(screen.getAllByText("הצעת Jev").length).toBeGreaterThan(0);
+    expect(screen.queryByText(JEV_FILLED)).toBeNull();
+    expect(screen.queryByRole("button", { name: /ביטול/ })).toBeNull();
+  });
+
   it("marks ביטול busy while the undo runs", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevFilled={{ onUndo: () => undefined, busy: true }} />);
     expect(screen.getByRole("button", { name: /ביטול/ })).toHaveAttribute("aria-busy", "true");
