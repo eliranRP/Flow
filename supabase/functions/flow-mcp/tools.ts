@@ -271,6 +271,18 @@ export async function callTool(
     return ok(data);
   }
 
+  // FLOW-431 (decision 0178).
+  if (name === "get_line_charges") {
+    const id = args.transaction_id;
+    if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");
+    const result = await rpc("party_charges", { p_id: id });
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(data);
+  }
+
   if (name === "get_breakdown") {
     const direction = args.direction;
     if (direction !== "income" && direction !== "expense") return fail("validation", "validation");

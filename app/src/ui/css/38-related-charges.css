@@ -1,0 +1,120 @@
+/* FLOW-431 (owner's pick B): the "לעומת הרגיל" chip under the status pills and the party's sheet. */
+
+.ui-charge-chip {
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  border: 0;
+  font: inherit;
+  font-size: var(--type-micro-size);
+  font-weight: var(--type-micro-weight);
+  text-align: start;
+}
+
+.ui-status-row + .ui-charge-chip {
+  margin-top: var(--space-2);
+}
+
+.ui-charge-chip:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-charge-chip-text {
+  min-width: 0;
+}
+
+.ui-charge-pct {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ui-charge-chip-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-charges-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+/* Six bars, at most 48px tall, the line's month in its tone and the rest muted. */
+.ui-charge-bars {
+  display: flex;
+  direction: ltr;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.ui-charge-bar-col {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.ui-charge-bar-track {
+  display: flex;
+  block-size: 48px;
+  align-items: flex-end;
+}
+
+.ui-charge-bar {
+  inline-size: 100%;
+  border-radius: 4px 4px 2px 2px;
+  background: var(--color-tint-strong);
+}
+
+.ui-charge-bar-now {
+  background: var(--color-accent);
+}
+
+.ui-charge-bar-bad {
+  background: var(--color-bad);
+}
+
+.ui-charge-bar-good {
+  background: var(--color-good);
+}
+
+.ui-charge-bar-label {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ui-charges-head {
+  margin: 0 0 var(--space-1);
+  font-weight: 500;
+}
+
+.ui-charges-list {
+  margin: 0 calc(-1 * var(--space-4));
+  padding: 0;
+  list-style: none;
+}
+
+.ui-charges-row {
+  display: flex;
+  min-height: var(--touch-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-charges-row-now {
+  background: var(--color-tint);
+}
+
+.ui-charges-date {
+  color: var(--color-text-secondary);
+}
