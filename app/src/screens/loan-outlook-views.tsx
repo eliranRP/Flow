@@ -1,4 +1,5 @@
 import type { LoanSplitPart } from "@flow/shared";
+import { useId, useState } from "react";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
@@ -7,6 +8,7 @@ import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ShareAmount } from "../ui/share-amount";
+import { TextLink } from "../ui/text-link";
 import { LOAN_PART_LABEL } from "./loan-copy";
 import { loanParts, type LoanCategory, type LoanDetail } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
@@ -52,15 +54,19 @@ export function aheadLabel(count: number): string {
   return count === 12 ? "12 חודשים" : count === 1 ? "התשלום האחרון" : `${String(count)} התשלומים האחרונים`;
 }
 
-/** One row per part: its share and amount; with `onOpen`, its category as the hint and a tap that opens its sheet. */
+/**
+ * One row per part: its share and amount; with `onOpen`, its category as the hint and a tap that
+ * opens its sheet. A part at $0 is left out once anything was paid (design r1).
+ */
 export function LoanPartRows({ loan, categories, totals, onOpen }: {
   loan: LoanDetail;
   categories: readonly LoanCategory[];
   totals: PartTotals;
   onOpen: ((part: LoanSplitPart) => void) | null;
 }) {
-  const shares = partShares(roundTotals(totals), loanParts(loan));
-  const total = shares.reduce((sum, item) => sum + item.minor, 0n);
+  const all = partShares(roundTotals(totals), loanParts(loan));
+  const total = all.reduce((sum, item) => sum + item.minor, 0n);
+  const shares = total > 0n ? all.filter((item) => item.minor > 0n) : all;
   return (
     <List>
       {shares.map((item) => {
@@ -98,8 +104,13 @@ function NoSchedule({ loan, loanPath, search }: { loan: LoanDetail; loanPath: st
 
 type ViewProps = { loan: LoanDetail; outlook: LoanOutlook | null; back: string; loanPath: string; search: string };
 
+/** Year rows shown before "לכל השנים": this year and the next four. */
+export const YEARS_SHOWN = 5;
+
 /** `/settings/loans/:id/future`: the next 12 months split by part, the rest of the loan, then one row per year. */
 export function LoanFutureView({ loan, outlook, back, loanPath, search }: ViewProps) {
+  const [allYears, setAllYears] = useState(false);
+  const yearsId = useId();
   const header = <ScreenHeader title="תשלומים הבאים" kicker={loan.name} backTo={back} />;
   if (outlook == null) return <>{header}<NoSchedule loan={loan} loanPath={loanPath} search={search} /></>;
   const money = (minor: bigint) => <bdi className="ui-num t-amount" dir="ltr">{formatLoanMoney(minor, loan.currency)}</bdi>;
@@ -112,20 +123,27 @@ export function LoanFutureView({ loan, outlook, back, loanPath, search }: ViewPr
         <ListRow variant="item" href={`${loanPath}/future/end${search}`} title="עד סוף ההלוואה" hint={paymentsWord(outlook.toEnd.payments)} meta={money(periodTotal(outlook.toEnd.totals))} chevron />
       </List>
       <SectionHead title="לפי שנה" />
-      <List>
-        {outlook.years.map((item, index) => (
-          <ListRow
-            key={item.key}
-            variant="item"
-            href={`${loanPath}/future/${item.key}${search}`}
-            title={<bdi className="ui-num" dir="ltr">{item.key}</bdi>}
-            label={`${item.key}, ${formatLoanMoney(periodTotal(item.totals), loan.currency)}`}
-            hint={item.payments >= 12 ? undefined : index === 0 ? `נותרו ${paymentsWord(item.payments)}` : paymentsWord(item.payments)}
-            meta={money(periodTotal(item.totals))}
-            chevron
-          />
-        ))}
-      </List>
+      <div id={yearsId}>
+        <List>
+          {(allYears ? outlook.years : outlook.years.slice(0, YEARS_SHOWN)).map((item, index) => (
+            <ListRow
+              key={item.key}
+              variant="item"
+              href={`${loanPath}/future/${item.key}${search}`}
+              title={<bdi className="ui-num" dir="ltr">{item.key}</bdi>}
+              label={`${item.key}, ${formatLoanMoney(periodTotal(item.totals), loan.currency)}`}
+              hint={item.payments >= 12 ? undefined : index === 0 ? `נותרו ${paymentsWord(item.payments)}` : paymentsWord(item.payments)}
+              meta={money(periodTotal(item.totals))}
+              chevron
+            />
+          ))}
+        </List>
+      </div>
+      {allYears || outlook.years.length <= YEARS_SHOWN ? null : (
+        <div className="ui-page-pad">
+          <TextLink tone="quiet" chevron={false} expanded={false} controls={yearsId} onClick={() => { setAllYears(true); }}>לכל השנים</TextLink>
+        </div>
+      )}
     </>
   );
 }

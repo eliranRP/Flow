@@ -29,6 +29,9 @@ describe("loanOutlook", () => {
   it("has none for a demand loan or one that ended", () => {
     expect(loanOutlook(SAMPLE_DEMAND, "2026-10-09")).toBeNull();
     expect(loanOutlook(SAMPLE_PAID_OFF, "2026-10-09")).toBeNull();
+    // A loan marked paid off or closed while its schedule still runs has no next payment either.
+    expect(loanOutlook({ ...SAMPLE_AMORTIZING, status: "paid_off" }, "2026-10-09")).toBeNull();
+    expect(loanOutlook({ ...SAMPLE_AMORTIZING, status: "closed" }, "2026-10-09")).toBeNull();
   });
 });
 

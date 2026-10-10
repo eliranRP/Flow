@@ -58,7 +58,7 @@ export const InterestOnlyRates320: Story = {
   play: async ({ canvasElement }) => {
     const kind = within(canvasElement).getByRole("button", { name: /^סוג/ });
     const value = kind.querySelector<HTMLElement>(".ui-row-title");
-    await expect(value).toHaveTextContent("ריבית בלבד · 6 מתוך 24 חודשים");
+    await expect(value).toHaveTextContent("ריבית בלבד · 12 מתוך 24 חודשים");
     await expect(value == null ? Number.NaN : value.scrollHeight - value.clientHeight).toBeLessThanOrEqual(1);
     await expect(value == null ? "" : getComputedStyle(value).whiteSpace).toBe("normal");
   },

@@ -179,6 +179,12 @@ describe("loan page: states and the viewer", () => {
   });
 });
 
+function firstBack(): HTMLElement {
+  const [button] = screen.getAllByRole("button", { name: /^חזרה/ });
+  if (button == null) throw new Error("no Back button");
+  return button;
+}
+
 describe("loan page: what it leads with (FLOW-434)", () => {
   it("leads an amortizing loan with the next payment and opens the years ahead", async () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
@@ -195,6 +201,45 @@ describe("loan page: what it leads with (FLOW-434)", () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
     fireEvent.click(screen.getByRole("button", { name: /^ריבית,/ }));
     expect(await screen.findByRole("dialog", { name: "ריבית" })).toBeInTheDocument();
+  });
+
+  it("steps Back one page at a time: a year to תשלומים הבאים, that to the loan", async () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/2027");
+    fireEvent.click(firstBack());
+    expect(await screen.findByRole("heading", { name: "לפי שנה" })).toBeInTheDocument();
+    fireEvent.click(firstBack());
+    expect(await screen.findByText(/^תשלום הבא · /)).toBeInTheDocument();
+  });
+
+  it("opens the rest of the loan, and says so for a year the schedule does not have", () => {
+    const { unmount } = renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/end");
+    expect(screen.getByText(/^לתשלום עד \d{4}$/)).toBeInTheDocument();
+    unmount();
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/1999");
+    expect(screen.getByText("אין לוח תשלומים להלוואה הזו")).toBeInTheDocument();
+  });
+
+  it("shows a viewer the שולם השנה rows without a sheet to open", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", (ui) => <ViewerPreview>{ui}</ViewerPreview>, "");
+    expect(screen.getByText(/^תשלום הבא · /)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^ריבית,/ })).not.toBeInTheDocument();
+  });
+
+  it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
+    const { container } = renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
+    expect(container.querySelector(".ui-loan-next")?.textContent).toMatch(/\$2,250(\.00)?$/);
+    expect(screen.getByRole("button", { name: /^ריבית,/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^קרן,/ })).not.toBeInTheDocument();
+  });
+
+  it("lists this year and the next four, then opens the rest with לכל השנים", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future");
+    expect(screen.getAllByRole("link", { name: /^\d{4},/ })).toHaveLength(5);
+    const more = screen.getByRole("button", { name: "לכל השנים" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    expect(screen.getAllByRole("link", { name: /^\d{4},/ }).length).toBeGreaterThan(5);
+    expect(screen.queryByRole("button", { name: "לכל השנים" })).not.toBeInTheDocument();
   });
 
   it("has no next payment for a demand loan, and the future page says why", () => {

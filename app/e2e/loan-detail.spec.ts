@@ -9,6 +9,8 @@ function toast(page: Page, text: string | RegExp) {
 }
 
 test("the list puts paid-off and closed loans under a collapsed נסגרו (N), and a row opens its page", async ({ page }) => {
+  // FLOW-434: the next payment reads the schedule against today; pin it (the bridge loan ends in 2028).
+  await page.clock.setFixedTime(new Date("2026-10-09T09:00:00Z"));
   await page.goto("/e2e/loans");
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toBeVisible();
   await expect(page.getByRole("button", { name: /ריבית בלבד · בית דוגמה 9$/ })).toBeVisible();
@@ -135,6 +137,8 @@ test("the kind sheet turns a mortgage interest-only with its months, and checks 
 });
 
 test("the next payments open by year, and a year opens its parts (FLOW-434)", async ({ page }) => {
+  // The year rows come from today: pin it so "2027" stays on the page.
+  await page.clock.setFixedTime(new Date("2026-10-09T09:00:00Z"));
   await page.goto("/e2e/loans/loan-mortgage?reset=1");
   await page.getByRole("link", { name: /^תשלומים הבאים/ }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-mortgage\/future$/);

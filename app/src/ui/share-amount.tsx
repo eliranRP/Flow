@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
  * read part by part (the loan page's interest, taxes and insurance, principal). The percent is a
  * whole number in the muted colour; the amount keeps the row's own type.
  */
-export function ShareAmount({ percent, children, label }: { percent: number | null; children: ReactNode; label?: string }) {
+export function ShareAmount({ percent, children }: { percent: number | null; children: ReactNode }) {
   return (
-    <span className="ui-share-amount" aria-label={label}>
+    <span className="ui-share-amount">
       {percent == null ? null : <bdi className="ui-num ui-share-pct t-meta" dir="ltr">{`${String(percent)}%`}</bdi>}
       <span className="t-amount">{children}</span>
     </span>
