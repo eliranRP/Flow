@@ -1,8 +1,38 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Drawer } from "vaul";
+import type { Drawer as VaulDrawer } from "vaul";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { CloseIcon } from "./icons";
+
+type SheetDrawer = { Drawer: typeof VaulDrawer };
+
+// FLOW-815: vaul is not in Home's entry. The first sheet that mounts loads it; until then an open
+// sheet renders nothing and opens as soon as it arrives. Tests and Storybook load it up front.
+let sheetDrawer: SheetDrawer | null = null;
+let sheetDrawerLoad: Promise<SheetDrawer> | null = null;
+
+export function loadSheetDrawer(): Promise<SheetDrawer> {
+  sheetDrawerLoad ??= import("./sheet-drawer").then((mod) => {
+    sheetDrawer = mod;
+    return mod;
+  });
+  return sheetDrawerLoad;
+}
+
+function useSheetDrawer(): SheetDrawer | null {
+  const [mod, setMod] = useState(sheetDrawer);
+  useEffect(() => {
+    if (mod) return;
+    let live = true;
+    void loadSheetDrawer().then((loaded) => {
+      if (live) setMod(loaded);
+    });
+    return () => {
+      live = false;
+    };
+  }, [mod]);
+  return mod;
+}
 
 export function SheetSurface({
   title,
@@ -29,10 +59,11 @@ export function SheetSurface({
   titleRef?: RefObject<HTMLHeadingElement | null>;
   footClassName?: string;
 }) {
-  const heading = drawer ? (
-    <Drawer.Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2" data-clip-ok="">
+  const Title = drawer ? sheetDrawer?.Drawer.Title : undefined;
+  const heading = Title ? (
+    <Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2" data-clip-ok="">
       {title}
-    </Drawer.Title>
+    </Title>
   ) : (
     <h2 className="t-title-2" data-clip-ok="">
       {title}
@@ -85,7 +116,7 @@ export function showRingUntilBlur(el: HTMLElement): void {
 }
 
 export function Sheet({
-  open,
+  open: wanted,
   onOpenChange,
   title,
   children,
@@ -134,6 +165,9 @@ export function Sheet({
   /** A backdrop tap closes the sheet. Step 2 of the one-time code turns this off. */
   closeOnBackdrop?: boolean;
 }) {
+  const vaul = useSheetDrawer();
+  // Until vaul arrives the sheet counts as closed, so its open runs in full once it can draw.
+  const open = wanted && vaul != null;
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
@@ -304,6 +338,8 @@ export function Sheet({
     });
     if (onToast) event.preventDefault();
   }
+  if (!vaul) return null;
+  const { Drawer } = vaul;
   return (
     <Drawer.Root
       open={open}
