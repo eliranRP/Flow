@@ -12,8 +12,8 @@ describe("SplitPartsHint (FLOW-432)", () => {
       <SplitPartsHint parts={[{ name: "מים וביוב", amount: "$183.10" }, { name: "חשמל", amount: "$171.76" }]} total="$2,054.86" date="07/10" />,
     );
     expect(lines(container)).toEqual(["מים וביוב $183.10 · חשמל $171.76", "מתוך $2,054.86 · 07/10"]);
-    // The date shares the מתוך line or is clipped with it; it never opens a line alone.
-    expect(container.querySelector(".ui-hint-wrap-1")?.textContent).toContain("07/10");
+    // The date sits on the מתוך line in a box that clips it when it does not fit; it never opens a line alone.
+    expect(container.querySelector(".ui-split-hint-of .ui-split-hint-date")?.textContent).toContain("07/10");
   });
 
   it("keeps the first of three or more parts with how many more, on one line", () => {

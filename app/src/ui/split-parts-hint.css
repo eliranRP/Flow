@@ -1,9 +1,4 @@
 /* Loaded by split-parts-hint.tsx, so it ships with the cash and project lists, not Home's entry. */
-/* FLOW-432: one line; a part that would open a second is clipped whole. */
-.ui-hint-wrap-1 {
-  max-block-size: calc(1em * var(--type-meta-line));
-}
-
 /* FLOW-432: a split line's row hint: its parts, then "מתוך" and the date on a line of their own.
    Part amounts line up like the row figures. With "ועוד N", the first part's name ellipsizes. */
 .ui-split-hint {
@@ -28,6 +23,66 @@
 
 .ui-split-hint-amount {
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* FLOW-425: amounts are never cut; only names ellipsize. A part that alone is wider than the line
+   shrinks its name. The line box is 1em wider than the hint (its clipped separator margin), which
+   the first part's padding and the others' "·" box take, so 100% is the hint's width. */
+.ui-split-hint .ui-hint-wrap-part,
+.ui-split-hint-part {
+  display: flex;
+  min-width: 0;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+}
+
+.ui-split-hint .ui-hint-wrap-sep,
+.ui-split-hint-part-amount {
+  flex: none;
+}
+
+/* More than two parts: the first part's name keeps about 3em; below that its amount wraps onto a
+   second line, which is clipped, so the name and "ועוד N" stay. */
+.ui-split-hint-first {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-block-size: calc(1em * var(--type-meta-line));
+  overflow: hidden;
+}
+
+.ui-split-hint-first > .ui-split-hint-name {
+  flex: 1 1 3em;
+  max-inline-size: max-content;
+}
+
+/* The מתוך line: the total never shrinks; when "מתוך" and the total don't fit side by side, the total
+   wraps whole onto a second line. The date takes what is left of the first line, and when it doesn't
+   fit there it wraps onto a clipped line of its own (the empty ::before, one line tall, holds the
+   first), so it drops. */
+.ui-split-hint-of {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.ui-split-hint-total {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ui-split-hint-date {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-block-size: calc(1em * var(--type-meta-line));
+  overflow: hidden;
+}
+
+.ui-split-hint-date::before {
+  block-size: calc(1em * var(--type-meta-line));
+  content: "";
 }
 
 /* FLOW-424 (C18-1): only the kept-out words set that minimum. They lead on their own line box;
