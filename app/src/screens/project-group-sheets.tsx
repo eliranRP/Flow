@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
+import { useHomePreview } from "../preview";
 import { assertNoError, useWrite } from "../use-write";
 import { Button } from "../ui/button";
 import { BackIcon, PlusIcon } from "../ui/icons";
@@ -13,7 +15,34 @@ import { useToast } from "../ui/toast";
 /** FLOW-360 A: the project's group, picked from its ⋯ menu. */
 export type ProjectGroupChoice = { id: string; name: string };
 
+export type ProjectGroups = { groups: readonly ProjectGroupChoice[]; currentId: string | null };
+
 export const NO_GROUP = "בלי קבוצה";
+
+/**
+ * The company's groups and this project's own. Under the "project" key, so a move's refetch
+ * reaches it; off in a preview and for a sample.
+ */
+export function useProjectGroups(projectId: string, active: boolean): ProjectGroups | undefined {
+  const preview = useHomePreview();
+  const read = useQuery({
+    queryKey: ["project", "groups", projectId],
+    enabled: active && preview === "off" && projectId !== "",
+    queryFn: async (): Promise<ProjectGroups> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const [groups, project] = await Promise.all([
+        supabase.rpc("list_project_groups"),
+        supabase.from("projects").select("group_id").eq("id", projectId).maybeSingle(),
+      ]);
+      assertNoError(groups);
+      assertNoError(project);
+      const rows = Array.isArray(groups.data) ? groups.data as { id: string; name: string }[] : [];
+      return { groups: rows.map(({ id, name }) => ({ id, name })), currentId: project.data?.group_id ?? null };
+    },
+  });
+  return read.data;
+}
 export const GROUP_NAME_MIN = 2;
 export const GROUP_NAME_MAX = 120;
 

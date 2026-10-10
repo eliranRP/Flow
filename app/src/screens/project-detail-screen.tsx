@@ -13,7 +13,7 @@ import { PeriodBar } from "../ui/period-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useDashboardQuery, useProjectQuery } from "../use-books";
+import { useProjectQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -33,7 +33,7 @@ import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
-import { ProjectGroupSheets, NO_GROUP, type ProjectGroupChoice } from "./project-group-sheets";
+import { ProjectGroupSheets, NO_GROUP, useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
@@ -160,12 +160,9 @@ export function ProjectDetailScreen({
   // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
   const [period, setPeriod] = useProjectPeriod();
   const detail = useProjectQuery(sample ? "" : projectId, period);
-  // FLOW-360: the project's group and the company's groups come from the Projects tab's read.
-  const dashboard = useDashboardQuery(sample == null);
-  const groups: ProjectGroups | undefined = sampleGroups ?? (dashboard.data == null ? undefined : {
-    groups: dashboard.data.groups ?? [],
-    currentId: dashboard.data.projects.find((row) => row.id === projectId)?.group_id ?? null,
-  });
+  // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
+  const liveGroups = useProjectGroups(projectId, sample == null);
+  const groups = sampleGroups ?? liveGroups;
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -424,8 +421,6 @@ function LegacyEmptyProject() {
     </div>
   );
 }
-
-type ProjectGroups = { groups: readonly ProjectGroupChoice[]; currentId: string | null };
 
 function ProjectMenu({
   projectId,
