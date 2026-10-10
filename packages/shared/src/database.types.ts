@@ -1026,6 +1026,9 @@ isOneToOne: false
 "company_pnl":
 { Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json
                            },
+"company_pnl_basis":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "create_category":
 { Args: { "p_kind": string,"p_name": string }; Returns: string
                            } |
