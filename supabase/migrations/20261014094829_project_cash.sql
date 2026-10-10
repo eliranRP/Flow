@@ -5,8 +5,10 @@
 -- - public.project_cash_months(p_project, p_months, p_today): cash_months' shape for one project.
 --   profit_minor is the project's profit for the month on the company's basis (get_project's
 --   income, direct and shared lines), before the overhead share.
--- - public.project_cash_month_lines(p_project, ...): cash_month_lines' shape for one project; a
---   shared line's amount is the project's share.
+-- - public.project_cash_month_lines(p_project, ...): cash_month_lines' shape for one project,
+--   'not_in_profit' side included; a shared line's amount is the project's share.
+-- - Both carry FLOW-418's לא נספר ברווח: not_in_profit_minor (the project's net less its profit)
+--   and not_in_profit_categories (its cash in the view that the P&L leaves out, by category).
 
 begin;
 
@@ -52,7 +54,8 @@ returns table (
   pnl_role public.pnl_role,
   month_date date,
   amount_minor bigint,
-  in_cash boolean
+  in_cash boolean,
+  in_pnl boolean
 )
 language sql
 stable
@@ -90,6 +93,7 @@ as $$
       l.line_amount_net,
       t.amount_gross as line_gross,
       l.month_date,
+      l.in_pnl,
       count(*) over (partition by l.transaction_id) as parts,
       coalesce(
         t.in_cash_override,
@@ -134,7 +138,8 @@ as $$
       when p.pnl_role = 'shared' then private.div_half_even(p.gross_minor::numeric * a.share_bp, 10000)
       else p.gross_minor
     end::bigint,
-    p.in_cash
+    p.in_cash,
+    p.in_pnl
   from parts p
   left join public.allocations a
     on p.pnl_role = 'shared'
@@ -246,6 +251,18 @@ begin
     ) x
     group by 1, 2
   ),
+  -- The project's cash in the view that the P&L leaves out, by category (Home's לא נספר ברווח).
+  kept as (
+    select
+      date_trunc('month', p.month_date)::date as month,
+      p.currency,
+      coalesce(cat.name, '') as name,
+      sum(p.amount_minor)::bigint as amount_minor
+    from parts p
+    left join public.categories cat on cat.id = p.category_id
+    where p.in_cash and not p.in_pnl
+    group by 1, 2, 3
+  ),
   months as (
     select m::date as month
     from generate_series(this_month, first_month, interval '-1 month') m
@@ -272,7 +289,14 @@ begin
             'profit_minor', coalesce(p.profit_minor, 0),
             'excluded_count', coalesce(c.excluded_count, 0),
             'excluded_in_minor', coalesce(c.excluded_in_minor, 0),
-            'excluded_out_minor', coalesce(c.excluded_out_minor, 0)
+            'excluded_out_minor', coalesce(c.excluded_out_minor, 0),
+            'not_in_profit_minor', coalesce(c.in_minor, 0) - coalesce(c.out_minor, 0) - coalesce(p.profit_minor, 0),
+            'not_in_profit_categories', coalesce((
+              select jsonb_agg(jsonb_build_object('name', kp.name, 'amount_minor', kp.amount_minor)
+                order by abs(kp.amount_minor) desc, kp.name)
+              from kept kp
+              where kp.month = k.month and kp.currency = k.currency and kp.amount_minor <> 0
+            ), '[]'::jsonb)
           ) order by k.currency is distinct from base, k.currency)
           from keys k
           left join cash c on c.month = k.month and c.currency = k.currency
@@ -317,7 +341,7 @@ begin
   if cid is null then
     return null;
   end if;
-  if p_project is null or p_month is null or p_side is null or p_side not in ('in', 'out', 'excluded') then
+  if p_project is null or p_month is null or p_side is null or p_side not in ('in', 'out', 'excluded', 'not_in_profit') then
     raise exception 'validation';
   end if;
   if not exists (select 1 from public.projects pr where pr.id = p_project and pr.company_id = cid) then
@@ -339,6 +363,7 @@ begin
     where p.currency = coalesce(p_currency, base)
       and (
         (p_side = 'excluded' and not p.in_cash)
+        or (p_side = 'not_in_profit' and p.in_cash and not p.in_pnl)
         or (p_side = 'in' and p.in_cash and p.kind = 'income')
         or (p_side = 'out' and p.in_cash and p.kind = 'expense')
       )

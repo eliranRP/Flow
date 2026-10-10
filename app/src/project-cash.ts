@@ -1,6 +1,6 @@
-import type { CashCurrencyRow, CashLinesPage, CashMonths, CashSide } from "@flow/shared";
+import type { CashCurrencyRow, CashLinesPage, CashMonths } from "@flow/shared";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { cashMonthKey, cashMonthName, cashSummaryRows, cashTitle, shownCashRows } from "./cash";
+import { cashMonthKey, cashMonthName, cashSummaryRows, cashTitle, shownCashRows, type CashListSide } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { monthPeriod } from "./period";
@@ -29,8 +29,8 @@ export function projectCashMonthPath(projectId: string, key: string, search: str
   return `/projects/${projectId}/cash/${key}${search}`;
 }
 
-/** The project's lines behind one month's נכנס or יצא in one currency. */
-export function projectCashLinesPath(projectId: string, key: string, side: CashSide, currency: string, search: string): string {
+/** The project's lines behind one month's נכנס, יצא or לא נספר ברווח in one currency. */
+export function projectCashLinesPath(projectId: string, key: string, side: CashListSide, currency: string, search: string): string {
   return `/projects/${projectId}/cash/${key}/${side}/${currency}${search}`;
 }
 
@@ -44,7 +44,7 @@ export function projectCashSummaryRows(
 ): CashRow[] {
   const base = rows[0]?.currency ?? "ILS";
   return cashSummaryRows(key, rows, search, now).map((row) => {
-    if (row.id === "in" || row.id === "out") return { ...row, href: projectCashLinesPath(projectId, key, row.id, base, search) };
+    if (row.id === "in" || row.id === "out" || row.id === "kept") return { ...row, href: projectCashLinesPath(projectId, key, row.id, base, search) };
     // The profit page reads its period from the link, so the month travels in the search, not Home's period.
     return { ...row, href: projectProfitPath(projectId, withPeriodSearch(search, monthPeriod(key))), profitMonth: undefined };
   });
@@ -93,7 +93,7 @@ export function useProjectCashMonthsQuery(projectId: string, active = true) {
 
 const LINES_PAGE = 40;
 
-export function useProjectCashLinesQuery(projectId: string, month: string, side: CashSide, currency: string, active = true) {
+export function useProjectCashLinesQuery(projectId: string, month: string, side: CashListSide, currency: string, active = true) {
   const preview = useHomePreview();
   return useInfiniteQuery({
     queryKey: ["breakdown-lines", "project-cash", preview, projectId, month, side, currency],
@@ -106,7 +106,7 @@ export function useProjectCashLinesQuery(projectId: string, month: string, side:
       const { data, error } = await supabase.rpc("project_cash_month_lines", {
         p_project: projectId,
         p_month: `${month}-01`,
-        p_side: side,
+        p_side: side === "kept" ? "not_in_profit" : side,
         p_currency: currency,
         p_limit: LINES_PAGE,
         p_offset: pageParam,

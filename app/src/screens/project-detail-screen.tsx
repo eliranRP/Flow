@@ -470,6 +470,7 @@ function sampleCashOf(project: NonNullable<ProjectDetail>, now = new Date()): No
         excluded_count: 0,
         excluded_in_minor: 0n,
         excluded_out_minor: 0n,
+        not_in_profit_categories: [],
       })),
     }],
   };

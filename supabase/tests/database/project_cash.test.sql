@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(16);
+select plan(19);
 
 do $users$
 begin
@@ -41,6 +41,11 @@ insert into pc (label, id) values
   ('elsewhere', tests.fixture_project(pg_temp.id('other_co'), 'Elsewhere'));
 
 insert into pc (label, id) values
+  ('reno_cat', tests.fixture_category(pg_temp.id('co'), 'Renovation', 'expense', true));
+
+insert into pc (label, id) values
+  ('reno', tests.fixture_line(pg_temp.id('co'), 'pc:reno', 500000, 'expense', pg_temp.id('cedar'),
+    pg_temp.id('reno_cat'), '2026-06-08')),
   ('rent', tests.fixture_line(pg_temp.id('co'), 'pc:rent', 1000000, 'income', pg_temp.id('cedar'),
     pg_temp.cat('תקבול מלקוח', 'income'), '2026-06-05', p_pnl_role => null, p_doc_kind => 'invoice_receipt')),
   ('repair', tests.fixture_line(pg_temp.id('co'), 'pc:repair', 300000, 'expense', pg_temp.id('cedar'),
@@ -79,9 +84,24 @@ select is(
   'two months, the current one first'
 );
 select is(pg_temp.cell('cedar', '2026-06-01', 'in_minor'), 1000000::bigint, 'Cedar June: the rent is in');
-select is(pg_temp.cell('cedar', '2026-06-01', 'out_minor'), 360000::bigint, 'Cedar June: its repair and 60% of the shared bill are out');
-select is(pg_temp.cell('cedar', '2026-06-01', 'net_minor'), 640000::bigint, 'Cedar June: the net');
-select is(pg_temp.cell('cedar', '2026-06-01', 'profit_minor'), 640000::bigint, 'Cedar June: the profit counts the same lines');
+select is(pg_temp.cell('cedar', '2026-06-01', 'out_minor'), 860000::bigint, 'Cedar June: its repair, its renovation and 60% of the shared bill are out');
+select is(pg_temp.cell('cedar', '2026-06-01', 'net_minor'), 140000::bigint, 'Cedar June: the net');
+select is(pg_temp.cell('cedar', '2026-06-01', 'profit_minor'), 640000::bigint, 'Cedar June: the profit leaves the renovation out');
+select is(pg_temp.cell('cedar', '2026-06-01', 'not_in_profit_minor'), -500000::bigint, 'Cedar June: net and profit add up with לא נספר ברווח');
+select is(
+  (select r -> 'not_in_profit_categories'
+   from jsonb_array_elements(public.project_cash_months(pg_temp.id('cedar'), 2, '2026-06-15') -> 'months') m
+   cross join lateral jsonb_array_elements(m -> 'by_currency') r
+   where m ->> 'month' = '2026-06-01' and r ->> 'currency' = 'ILS'),
+  '[{"name": "Renovation", "amount_minor": -500000}]'::jsonb,
+  'Cedar June: the renovation is what profit leaves out'
+);
+select is(
+  (select jsonb_agg((r ->> 'amount_minor')::bigint)
+   from jsonb_array_elements(public.project_cash_month_lines(pg_temp.id('cedar'), '2026-06-01', 'not_in_profit') -> 'rows') r),
+  '[500000]'::jsonb,
+  'Cedar June not in profit: the renovation line'
+);
 select is(pg_temp.cell('maple', '2026-06-01', 'out_minor'), 90000::bigint, 'Maple June: its cost and 40% of the shared bill');
 select is(pg_temp.cell('cedar', '2026-05-01', 'out_minor'), 200000::bigint, 'Cedar May: the transfer stays out of cash');
 select is(pg_temp.cell('cedar', '2026-05-01', 'excluded_out_minor'), 25000::bigint, 'Cedar May: the transfer is what the view leaves out');
@@ -89,8 +109,8 @@ select is(pg_temp.cell('cedar', '2026-05-01', 'excluded_out_minor'), 25000::bigi
 select is(
   (select jsonb_agg((r ->> 'amount_minor')::bigint order by (r ->> 'amount_minor')::bigint)
    from jsonb_array_elements(public.project_cash_month_lines(pg_temp.id('cedar'), '2026-06-01', 'out') -> 'rows') r),
-  '[60000, 300000]'::jsonb,
-  'Cedar June out: the repair, and the shared bill at Cedar''s share'
+  '[60000, 300000, 500000]'::jsonb,
+  'Cedar June out: the repair, the renovation, and the shared bill at Cedar''s share'
 );
 select is(
   (select (r ->> 'shared')::boolean

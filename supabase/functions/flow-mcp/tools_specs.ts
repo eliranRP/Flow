@@ -115,14 +115,14 @@ function readTools() {
       basis: { type: "string", enum: ["cash", "invoiced"] },
       project_id: { type: "string" },
     }),
-    toolSpec("get_project_cash_months", "One project's monthly cash view (the project page's תזרים), in get_cash_months' shape: newest first, the current month included. project_id from list_projects; months 1 to 24 (default 4). A line filed or split to the project counts whole (its part); a shared line counts the project's allocation share of its gross, so the project's figures are its own part, never the whole bank amount. profit_minor is the project's profit for the month on the company's basis (income less direct and shared cost, as get_profit_months with project_id), before the overhead share. not_found for a project of another company or an unknown one.", {
+    toolSpec("get_project_cash_months", "One project's monthly cash view (the project page's תזרים), in get_cash_months' shape: newest first, the current month included. project_id from list_projects; months 1 to 24 (default 4). A line filed or split to the project counts whole (its part); a shared line counts the project's allocation share of its gross, so the project's figures are its own part, never the whole bank amount. profit_minor is the project's profit for the month on the company's basis (income less direct and shared cost, as get_profit_months with project_id), before the overhead share. not_in_profit_minor and not_in_profit_categories are get_cash_months' לא נספר ברווח for the project. not_found for a project of another company or an unknown one.", {
       project_id: { type: "string" },
       months: { type: "integer" },
     }),
-    toolSpec("get_project_cash_lines", "The lines behind a get_project_cash_months figure, in get_cash_lines' shape and arguments plus project_id. A shared line's amount_minor is the project's share, and its row has shared true.", {
+    toolSpec("get_project_cash_lines", "The lines behind a get_project_cash_months figure, in get_cash_lines' shape and arguments plus project_id (side not_in_profit included). A shared line's amount_minor is the project's share, and its row has shared true.", {
       project_id: { type: "string" },
       month: { type: "string" },
-      side: { type: "string", enum: ["in", "out", "excluded"] },
+      side: { type: "string", enum: ["in", "out", "excluded", "not_in_profit"] },
       currency: { type: "string" },
       limit: { type: "integer" },
       offset: { type: "integer" },

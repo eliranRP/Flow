@@ -346,7 +346,7 @@ export async function callTool(
       const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
       if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
       const side = args.side;
-      if (side !== "in" && side !== "out" && side !== "excluded") return fail("validation", "validation");
+      if (side !== "in" && side !== "out" && side !== "excluded" && side !== "not_in_profit") return fail("validation", "validation");
       const currency = args.currency ?? null;
       if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
       const limit = limitOf(args.limit, 40);

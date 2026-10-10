@@ -31,6 +31,7 @@ function cashRow(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "
     excluded_count: 0,
     excluded_in_minor: 0n,
     excluded_out_minor: 0n,
+    not_in_profit_categories: [],
   };
 }
 
@@ -51,6 +52,9 @@ const cash = months([
   [cashRow(310_000n, 195_000n, 101_000n)],
   [cashRow(310_000n, 212_000n, 98_000n)],
 ]);
+// This month's net less its profit (לא נספר ברווח, FLOW-418): the owner's money put into the project.
+const currentRow = cash.months[0]?.by_currency[0];
+if (currentRow) currentRow.not_in_profit_categories = [{ name: "השקעת בעלים", amount_minor: 107_000n }];
 
 const project: NonNullable<ProjectDetail> = {
   id: "p-c",
@@ -229,3 +233,21 @@ export const ProjectCashLines: Story = {
   },
 };
 export const ProjectCashLines320: Story = { ...ProjectCashLines, name: "Project, a month's יצא, 320", ...at320 };
+
+export const ProjectCashKept: Story = {
+  name: "Project, a month's לא נספר ברווח",
+  render: () => {
+    const key = cashMonthKey(cash.months[0]?.month ?? "");
+    const owner: CashLine = { ...line("4", "השקעת בעלים לדוגמה", "השקעת בעלים", 107_000n), supplier_name: null, side: "in" };
+    return (
+      <StoryRoute entry={`/projects/p-c/cash/${key}/kept/USD`} tabs>
+        <ProjectCashLinesScreen sample={{ months: cash, lines: [owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    await expect(canvas.getAllByText("$1,070").length).toBeGreaterThan(0);
+  },
+};

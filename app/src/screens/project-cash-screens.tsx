@@ -1,7 +1,17 @@
-import { formatAmountText, type CashLine, type CashMonths, type CashSide, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } from "@flow/shared";
 import type { ReactNode } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { cashMonthKey, cashSideLabel, cashTitle, isCashMonthKey, isCashSide, shownCashRows } from "../cash";
+import {
+  cashMonthKey,
+  cashSideLabel,
+  cashTitle,
+  isCashMonthKey,
+  isCashSide,
+  notInProfitMinor,
+  notInProfitRest,
+  shownCashRows,
+  type CashListSide,
+} from "../cash";
 import { useHeldOrder } from "../list-hold";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
@@ -184,11 +194,21 @@ function ProjectCashMonthBody({
 
 type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
 
-/** The project's lines behind one month's נכנס or יצא; a shared bill shows the project's share. */
+// Home's words and signs for the lines pages (cash-screens.tsx), for the project's own lines.
+const KEPT_NOTE = "כסף שזז בבנק, אבל אינו הכנסה או הוצאה.";
+
+function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
+  const back = row.amount_minor < 0n;
+  if (side === "in") return back ? "out" : "in";
+  if (side === "out") return back ? "in" : "cost";
+  return (row.side === "in") !== back ? "in" : "out";
+}
+
+/** The project's lines behind one month's נכנס, יצא or לא נספר ברווח; a shared bill shows the project's share. */
 export function ProjectCashLinesScreen({
   sample,
   at,
-}: { sample?: LinesSample; at?: { projectId: string; month: string; side: CashSide; currency: string } } = {}) {
+}: { sample?: LinesSample; at?: { projectId: string; month: string; side: CashListSide; currency: string } } = {}) {
   const params = useParams();
   const projectId = at?.projectId ?? params.projectId ?? "";
   const month = at?.month ?? params.month;
@@ -211,7 +231,7 @@ function ProjectCashLinesBody({
 }: {
   projectId: string;
   monthKey: string;
-  side: CashSide;
+  side: CashListSide;
   currency: string;
   search: string;
   sample?: LinesSample;
@@ -236,7 +256,9 @@ function ProjectCashLinesBody({
   const month = data == null ? undefined : monthOf(data, monthKey);
   const shown = data == null ? [] : shownCashRows(month, data.base_currency);
   const total = shown.find((row) => row.currency === currency);
-  const figure = total == null ? null : side === "in" ? total.in_minor : total.out_minor;
+  const figure = total == null ? null : side === "in" ? total.in_minor : side === "out" ? total.out_minor : notInProfitMinor(total);
+  // FLOW-418: VAT, and lines out of the view but in profit, are in the figure but have no row here.
+  const rest = side === "kept" && total != null ? notInProfitRest(total) : 0n;
   const more = sample ? false : lines.hasNextPage;
   return (
     <div>
@@ -246,6 +268,11 @@ function ProjectCashLinesBody({
           <span className="ui-breakdown-total-line">
             <BigNumber agorot={figure} currency={currency} size="display" income={side === "in"} />
           </span>
+        </p>
+      ) : null}
+      {side === "kept" ? (
+        <p className="ui-breakdown-hint ui-page-pad t-hint">
+          {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
         </p>
       ) : null}
       {shown.length > 1 ? (
@@ -264,7 +291,7 @@ function ProjectCashLinesBody({
       {rows.length === 0 ? (
         <EmptyState
           icon={<DocumentIcon />}
-          title={side === "in" ? "לא נכנס כסף בחודש הזה" : "לא יצא כסף בחודש הזה"}
+          title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"}
           body="תנועות שנכנסות לתזרים יופיעו כאן."
         />
       ) : (
@@ -282,7 +309,7 @@ function ProjectCashLinesBody({
                 hint={hint}
                 agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
                 currency={row.currency}
-                sign={side === "in" ? (row.amount_minor < 0n ? "out" : "in") : row.amount_minor < 0n ? "in" : "cost"}
+                sign={lineSign(side, row)}
                 inWord={side === "out" ? "זיכוי" : undefined}
                 source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}
