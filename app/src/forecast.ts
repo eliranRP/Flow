@@ -20,7 +20,8 @@ export function abs(minor: bigint): bigint {
 
 /** The party's name: a customer's on income (decision 0175), else the supplier's. */
 export function partyName(row: { party_name?: string | null; supplier_name: string }): string {
-  const name = row.party_name ?? row.supplier_name;
+  // An empty party name falls back to the supplier's, then to ללא שם.
+  const name = row.party_name != null && row.party_name !== "" ? row.party_name : row.supplier_name;
   return name === "" ? "ללא שם" : name;
 }
 

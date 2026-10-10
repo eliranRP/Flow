@@ -37,7 +37,9 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const changes = useRecurringChangesQuery(live);
   // A sample screen hides locally, so a story and the e2e show the row leave and come back.
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, missing);
+  const base = sample ? ({ kind: "ready" } as const) : screenPhase(preview, missing);
+  // With nothing late, wait for הגיעו החודש before saying "הכל הגיע", so the empty state never flashes.
+  const phase = base.kind === "ready" && !sample && (missing.data ?? []).length === 0 && thisMonth.isPending ? ({ kind: "loading" } as const) : base;
   const late = sample ? sample.late.filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (missing.data ?? []);
   const open = sample ? (sample.changes ?? []).filter((row) => row.alert_key == null || !hidden.has(row.alert_key)) : (changes.data ?? []);
   const rows = missingBillViews(late, search);
