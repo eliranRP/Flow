@@ -1,0 +1,1 @@
+The read-only post-deploy smoke now expects the name of the company the smoke user has open (from list_my_companies) instead of the fixed name "Flow Test", so renaming that company in the app no longer fails the deploy. SMOKE_COMPANY_NAME stays as an optional override.
