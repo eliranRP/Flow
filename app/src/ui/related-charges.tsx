@@ -7,6 +7,7 @@ import { cx } from "./cx";
 import { formatDayMonth } from "./date-math";
 import { ChevronIcon } from "./icons";
 import { Sheet } from "./sheet";
+import "./css/38-related-charges.css";
 
 /**
  * FLOW-431 (owner's pick B, 2026-10-10, frames b-1-chip and b-2-sheet): under the transaction's
