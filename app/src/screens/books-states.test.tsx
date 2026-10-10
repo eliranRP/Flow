@@ -171,6 +171,26 @@ describe("rejected reads", () => {
     resetShownCompanyForTests();
   });
 
+  it("reads a project's groups only once its own read has landed (FLOW-804)", async () => {
+    const wire = JSON.parse(JSON.stringify(demoProject("herzl"), (_key, value: unknown) => (
+      typeof value === "bigint" ? value.toString() : value
+    ))) as unknown;
+    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    const reads: string[] = [];
+    rpc.impl = (name) => {
+      reads.push(name);
+      if (name === "get_project") return new Promise((resolve) => { answer = resolve; });
+      return Promise.resolve({ data: [], error: null });
+    };
+    renderAt("/projects/herzl");
+    await waitFor(() => { expect(reads).toContain("get_project"); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(reads).not.toContain("list_project_groups");
+    await act(async () => { answer({ data: wire, error: null }); await Promise.resolve(); });
+    expect(await screen.findByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    await waitFor(() => { expect(reads).toContain("list_project_groups"); });
+  });
+
   it("does not call a failed transaction load not found", async () => {
     renderAt("/transactions/abc");
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();

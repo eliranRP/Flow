@@ -160,7 +160,8 @@ export function ProjectDetailScreen({
   const [periodSheet, setPeriodSheet] = useState(false);
   const detail = useProjectQuery(sample ? "" : projectId, period);
   // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
-  const liveGroups = useProjectGroups(projectId, sample == null);
+  // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
+  const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
   const groups = sampleGroups ?? liveGroups;
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();

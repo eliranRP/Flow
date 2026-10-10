@@ -11,11 +11,11 @@ import { stubBackend } from "./stub-backend";
 const CPU = 4;
 const LIMIT_MS = 700;
 /** A spike: the project's read takes this long; every other read pays the REST floor. */
-const SPIKE_MS = 2_000;
+const SPIKE_MS = Number(process.env.FLOW_PERF_SPIKE_MS ?? 2_000);
 const FLOOR_MS = 300;
 const project = { id: "herzl", name: "שיפוץ הרצל 12" } as const;
 
-async function timedOpen(browser: Browser, warm: boolean): Promise<{ ms: number; rpcs: string[] }> {
+async function timedOpen(browser: Browser, warm: boolean): Promise<{ ms: number; early: string[]; late: string[] }> {
   const context = await browser.newContext();
   const page = await context.newPage();
   let slow = false;
@@ -41,17 +41,25 @@ async function timedOpen(browser: Browser, warm: boolean): Promise<{ ms: number;
   const cdp = await context.newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
   slow = true;
-  const before = stub.rpcs.length;
+  const before = stub.reads.length;
   const start = Date.now();
   await row.tap();
   await expect(page.getByRole("heading", { level: 1, name: project.name, exact: true })).toBeVisible({ timeout: 10_000 });
   const ms = Date.now() - start;
   // The fresh read still goes out and lands behind the saved figures.
-  await expect.poll(() => stub.rpcs.slice(before).includes("get_project")).toBe(true);
+  await expect.poll(() => stub.reads.slice(before).some((read) => read.name === "get_project")).toBe(true);
   await expect.poll(stub.inflight, { timeout: 10_000 }).toBe(0);
-  const rpcs = stub.rpcs.slice(before);
+  // Let any read that waits for the project's read go out too, then sort the open's reads by
+  // whether they were asked while the project's read was still out (they share the server).
+  await page.waitForTimeout(500);
+  await expect.poll(stub.inflight, { timeout: 10_000 }).toBe(0);
+  const opened = stub.reads.slice(before);
+  const landed = opened.find((read) => read.name === "get_project")?.answered ?? Number.POSITIVE_INFINITY;
+  const others = opened.filter((read) => read.name !== "get_project");
+  const early = others.filter((read) => read.asked < landed).map((read) => read.name);
+  const late = others.filter((read) => read.asked >= landed).map((read) => read.name);
   await context.close();
-  return { ms, rpcs };
+  return { ms, early, late };
 }
 
 test("a project opened before paints within 0.7 s of a tap while the server spikes", async ({ browser }) => {
@@ -60,16 +68,16 @@ test("a project opened before paints within 0.7 s of a tap while the server spik
   const medians: Record<string, number> = {};
   for (const warm of [false, true]) {
     const runs: number[] = [];
-    let rpcs: string[] = [];
+    let reads = "";
     for (let run = 0; run < 3; run += 1) {
       const result = await timedOpen(browser, warm);
       runs.push(result.ms);
-      rpcs = result.rpcs;
+      reads = `beside get_project ${result.early.join(" ") || "none"}, after it ${result.late.join(" ") || "none"}`;
     }
     const median = [...runs].sort((a, b) => a - b)[1] ?? Number.POSITIVE_INFINITY;
     const label = warm ? "opened before" : "first open";
     medians[label] = median;
-    lines.push(`${label}: median ${String(median)} ms (${runs.join(", ")} ms), reads ${rpcs.join(" ")}`);
+    lines.push(`${label}: median ${String(median)} ms (${runs.join(", ")} ms), reads ${reads}`);
   }
   const summary = `${lines.join("; ")}; get_project ${String(SPIKE_MS)} ms, other reads ${String(FLOOR_MS)} ms; limit ${String(LIMIT_MS)} ms`;
   test.info().annotations.push({ type: "project-reopen", description: summary });

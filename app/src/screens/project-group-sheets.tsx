@@ -28,6 +28,8 @@ export function useProjectGroups(projectId: string, active: boolean): ProjectGro
   const read = useQuery({
     queryKey: ["project", "groups", projectId],
     enabled: active && preview === "off" && projectId !== "",
+    // FLOW-804: one read a minute at most; a move refetches it under the "project" key.
+    staleTime: 60_000,
     queryFn: async (): Promise<ProjectGroups> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
