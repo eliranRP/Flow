@@ -349,6 +349,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-811"></a>[FLOW-811](tasks/FLOW-811.md) | CI and deploy follow-ups | BACKLOG NIT |
 | <a id="flow-812"></a>[FLOW-812](tasks/FLOW-812.md) | Faster CI | SMALL CYCLE |
 | <a id="flow-813"></a>[FLOW-813](tasks/FLOW-813.md) | Faster pre-push local CI | SMALL CYCLE |
+| <a id="flow-814"></a>[FLOW-814](tasks/FLOW-814.md) | A migration that main overtook fails in seconds, and one command renames it | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
@@ -364,6 +365,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-908"></a>[FLOW-908](tasks/FLOW-908.md) | Search: every month head shows its net | Bug |
 | <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 | <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
+| <a id="flow-912"></a>[FLOW-912](tasks/FLOW-912.md) | The speed checks hold the median of 5 opens | TASK |
 
 ## Future features
 

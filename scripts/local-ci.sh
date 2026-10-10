@@ -59,8 +59,9 @@ if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   exit 1
 fi
 
-pnpm install --frozen-lockfile --silent
 git fetch -q origin main || true
+node scripts/migration-ahead.mjs # FLOW-814: a migration main overtook fails here in seconds; the fix it prints renames it.
+pnpm install --frozen-lockfile --silent
 
 # FLOW-813. A part whose inputs (git trees) passed before is skipped in the default run.
 cache="${FLOW_LOCAL_CI_CACHE:-$(git rev-parse --git-common-dir)/flow-local-ci-cache}"
