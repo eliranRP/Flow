@@ -285,6 +285,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-418"></a>[FLOW-418](tasks/FLOW-418.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
+| <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 

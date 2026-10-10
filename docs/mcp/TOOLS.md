@@ -799,6 +799,14 @@ Input: `{ "months": 3 }`.
 
 Output `data`: `basis` (`paid` or `invoice`), `base_currency`, and `months[]` newest first: `month` (`YYYY-MM-DD`, the first day) and `by_currency[]` (the base currency first and always present): `currency`, `in_minor` (נכנס), `out_minor` (יצא), `net_minor` (in less out), `profit_minor` (the month's net profit on the company's basis, equal to `get_profit_months` without a basis), `excluded_count`, `excluded_in_minor` and `excluded_out_minor` (what the view leaves out). FLOW-418: `not_in_profit_minor` (`net_minor` less `profit_minor`, so "רווח החודש" and "לא נספר ברווח" add up to the month) and `not_in_profit_categories[]` (`name`, `amount_minor` signed like net, largest first): the cash in the view that the P&L leaves out. VAT and lines out of the view but in profit are what the categories do not cover.
 
+With `year` instead of `months` (FLOW-417), `cash_year_months(p_year)` returns that calendar year's months in the same shape: all 12 for a past year, January to this month for this one. A later year, or `year` with `months`, is a validation error.
+
+### get_cash_years
+
+`cash_years()`. The cash view's whole history (FLOW-417, decision 0174), on the company's cash basis, through the end of this month. No input.
+
+Output `data`: `basis`, `base_currency`, `this_month` and `first_month` (`YYYY-MM-DD`, the first day; `first_month` is null when no line counts in cash yet), `by_currency[]` (the total since `first_month`: `currency`, `in_minor`, `out_minor`, `net_minor`; the base currency first and always present), and `years[]` newest first, from `first_month`'s year to this one, empty years included: `year` and `by_currency[]` in the same shape. A year's months (`get_cash_months` with `year`) add up to its row.
+
 ### get_cash_lines
 
 `cash_month_lines(p_month, p_side, p_currency, p_limit, p_offset)`. The lines behind a `get_cash_months` figure. `month` is `YYYY-MM` or a date in it; `side` is `in`, `out`, `excluded` (left out of the view), or `not_in_profit` (in the view, left out of the P&L; FLOW-418); `currency` defaults to the base currency. `limit` is 1 to 100 (default 40) and `offset` pages.
