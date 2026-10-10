@@ -1,4 +1,5 @@
 import { createContext, createElement, useContext, type ReactNode } from "react";
+import { invokeEdge } from "./edge";
 import { getSupabase } from "./lib/supabase";
 import { ROLE_CHOICE_LABEL } from "./ui/role-choice";
 import { assertNoError, isTransientWriteError, type WriteFailure } from "./use-write";
@@ -53,6 +54,14 @@ function client() {
   return supabase;
 }
 
+async function mailInvite(inviteId: string): Promise<void> {
+  try {
+    await invokeEdge("invite-email", { invite_id: inviteId });
+  } catch {
+    // Left in the invitee's inbox.
+  }
+}
+
 /** The live API: one Postgres RPC per call (supabase/migrations/…_team_members.sql). */
 export const liveTeamApi: TeamApi = {
   ready: () => {
@@ -76,7 +85,11 @@ export const liveTeamApi: TeamApi = {
   inviteMember: async (email, role) => {
     const result = await client().rpc("invite_member", { p_email: email, p_role: role });
     assertNoError(result);
-    return (await loadSchemas()).inviteResultSchema.parse(result.data);
+    const invite = (await loadSchemas()).inviteResultSchema.parse(result.data);
+    // A new invite also goes out by email. The invite is saved either way, so a failed send
+    // stays quiet: the invitee still finds it after signing in with that address.
+    if (!invite.existing) void mailInvite(invite.id);
+    return invite;
   },
   cancelInvite: async (inviteId) => {
     assertNoError(await client().rpc("cancel_invite", { p_invite_id: inviteId }));

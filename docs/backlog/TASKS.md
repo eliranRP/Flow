@@ -313,6 +313,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-603"></a>[FLOW-603](tasks/FLOW-603.md) | Per-user cache isolation on a shared device | BUG |
 | <a id="flow-606"></a>[FLOW-606](tasks/FLOW-606.md) | Company name rule in create_company and the rename sheet | BACKLOG NIT |
 | <a id="flow-605"></a>[FLOW-605](tasks/FLOW-605.md) | Shared-device follow-ups (#79 review) | BACKLOG NIT |
+| <a id="flow-421"></a>[FLOW-421](tasks/FLOW-421.md) | Email the invite when the owner invites a team member | FEATURE |
 
 ## Jev
 

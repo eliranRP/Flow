@@ -23,7 +23,7 @@ export async function edgeErrorCode(error: unknown): Promise<string> {
 }
 
 export async function invokeEdge(
-  name: "sumit-connect" | "sumit-sync" | "mercury-connect" | "mercury-sync",
+  name: "sumit-connect" | "sumit-sync" | "mercury-connect" | "mercury-sync" | "invite-email",
   body: Record<string, unknown>,
 ): Promise<unknown> {
   const supabase = getSupabase();

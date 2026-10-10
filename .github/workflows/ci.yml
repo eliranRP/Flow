@@ -472,6 +472,7 @@ jobs:
           supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy push-send --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy invite-email --project-ref sxqpnetmtufkzowutduq
 
       - name: Smoke the production hostname
         run: bash scripts/cd-smoke.sh "$GITHUB_SHA"
