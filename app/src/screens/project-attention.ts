@@ -2,7 +2,7 @@ import type { MissingBill, RecurringChange } from "@flow/shared";
 import { chargeChangeViews, lateCounts, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { withParam } from "./project-categories";
 import type { BannerRow } from "../ui/banner";
-import { attentionRows } from "./HomeScreen";
+import { attentionRows } from "./attention-rows";
 
 /** A sample project's recurring alerts (stories and tests). */
 export type ProjectRecurringSample = { late: MissingBill[]; changes: RecurringChange[] };
