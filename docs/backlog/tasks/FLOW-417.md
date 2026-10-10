@@ -1,6 +1,6 @@
 <a id="flow-417"></a>
 # FLOW-417 · Cash history: all months from Home (years, then months)
-- **Type:** PLAN FIRST · **Status:** in review (#496, cash-history thread, decision [0172](../../decisions/0172-cash-history.md)); approved option A "Years, then months" by the owner, 2026-10-10 · **Depends on:** [FLOW-413](FLOW-413.md)
+- **Type:** PLAN FIRST · **Status:** in review (#496, cash-history thread, decision [0174](../../decisions/0174-cash-history.md)); approved option A "Years, then months" by the owner, 2026-10-10 · **Depends on:** [FLOW-413](FLOW-413.md)
 - **What:** Home's cash list stops at the last 3 months. The owner asked (2026-10-10) to reach all history from Home.
 - **Owner's pick:** A. A quiet "לכל החודשים" row under "חודשים קודמים" opens the history page: the net since the first cash month in the band, then one row per year. A year opens its months (the current year up to this month), and a month opens today's month page.
 - **Design lead notes:** the entry row reads "לכל החודשים"; year rows use the regular row weight; the current year's band reads "תזרים 2026 עד היום".

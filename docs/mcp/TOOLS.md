@@ -787,7 +787,7 @@ With `year` instead of `months` (FLOW-417), `cash_year_months(p_year)` returns t
 
 ### get_cash_years
 
-`cash_years()`. The cash view's whole history (FLOW-417, decision 0172), on the company's cash basis, through the end of this month. No input.
+`cash_years()`. The cash view's whole history (FLOW-417, decision 0174), on the company's cash basis, through the end of this month. No input.
 
 Output `data`: `basis`, `base_currency`, `this_month` and `first_month` (`YYYY-MM-DD`, the first day; `first_month` is null when no line counts in cash yet), `by_currency[]` (the total since `first_month`: `currency`, `in_minor`, `out_minor`, `net_minor`; the base currency first and always present), and `years[]` newest first, from `first_month`'s year to this one, empty years included: `year` and `by_currency[]` in the same shape. A year's months (`get_cash_months` with `year`) add up to its row.
 

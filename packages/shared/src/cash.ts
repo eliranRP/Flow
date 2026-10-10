@@ -44,7 +44,7 @@ const cashTotalRowSchema = z.object({
 });
 
 /**
- * FLOW-417 (decision 0172). `cash_years`: the net, in and out since the first cash month
+ * FLOW-417 (decision 0174). `cash_years`: the net, in and out since the first cash month
  * (by_currency) and per year, newest first, through this month. first_month is null when the
  * books hold no cash line yet.
  */

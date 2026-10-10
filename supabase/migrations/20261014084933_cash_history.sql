@@ -1,4 +1,4 @@
--- FLOW-417 (decision 0172): the cash view's whole history, years then months. The owner picked
+-- FLOW-417 (decision 0174): the cash view's whole history, years then months. The owner picked
 -- "Years, then months" (2026-10-10).
 -- - cash_years(): the net, in and out since the company's first cash month, and per year, newest
 --   first, on the company's cash basis, through the end of the current month. Totals only, so the

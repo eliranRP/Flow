@@ -336,7 +336,7 @@ export async function callTool(
     return ok(result.json as Review);
   }
 
-  // FLOW-417 (decision 0172): the net, in and out since the first cash month and per year.
+  // FLOW-417 (decision 0174): the net, in and out since the first cash month and per year.
   if (name === "get_cash_years") {
     const result = await rpc("cash_years", {});
     if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {

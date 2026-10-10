@@ -1,4 +1,4 @@
--- FLOW-417 (decision 0172). The cash view's whole history: cash_years (the net since the first
+-- FLOW-417 (decision 0174). The cash view's whole history: cash_years (the net since the first
 -- cash month and per year) and cash_year_months (one year's months in cash_months' shape).
 -- Invented data only. Amounts are agorot (cents for USD). Today is 2026-06-15.
 
