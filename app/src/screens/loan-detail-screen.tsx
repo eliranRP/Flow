@@ -12,6 +12,7 @@ import { formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { AlertIcon, BankIcon, CalendarIcon, HomeIcon, InfoIcon, LoanIcon, PercentIcon, ProjectsIcon, RefreshIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
+import { HintParts } from "../ui/hint-parts";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { Sheet } from "../ui/sheet";
@@ -65,6 +66,12 @@ import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
 import { dueDayLabel, loanOutlook, paidInYear, wholeMinor, type PartTotals } from "./loan-outlook";
 import { aheadLabel, LoanFutureView, LoanPartRows, LoanPeriodView, periodTotal } from "./loan-outlook-views";
+
+/** FLOW-427 (C20-4): a value or hint in parts ("a · b") wraps only between whole parts. */
+function inParts(value: ReactNode): ReactNode {
+  return typeof value === "string" && value.includes(" · ") ? <HintParts text={value} /> : value;
+}
+
 
 /**
  * FLOW-106 B and FLOW-110: `/settings/loans/:loanId`, one loan's page (template A with the tab
@@ -344,7 +351,9 @@ function LoanDetailReady({
   // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
   const ended = !showsLoanBalance(loan);
 
-  function row(key: string, label: string, value: ReactNode, icon: ReactElement, onOpen: (() => void) | null, hint?: string, buttonRef?: Ref<HTMLButtonElement>) {
+  function row(key: string, label: string, rawValue: ReactNode, icon: ReactElement, onOpen: (() => void) | null, rawHint?: string, buttonRef?: Ref<HTMLButtonElement>) {
+    const value = inParts(rawValue);
+    const hint = rawHint == null ? undefined : inParts(rawHint);
     return holdWrites || onOpen == null ? (
       <ListRow key={key} variant="static" eyebrow={label} title={value} icon={icon} hint={hint} />
     ) : (
@@ -411,7 +420,7 @@ function LoanDetailReady({
             variant="item"
             href={loanHref("future")}
             title="תשלומים הבאים"
-            hint={`${aheadLabel(outlook.ahead.payments)} · ${formatLoanMoney(periodTotal(outlook.ahead.totals), loan.currency)}`}
+            hint={inParts(`${aheadLabel(outlook.ahead.payments)} · ${formatLoanMoney(periodTotal(outlook.ahead.totals), loan.currency)}`)}
             chevron
           />
         </List>
@@ -427,7 +436,7 @@ function LoanDetailReady({
           variant="item"
           href={loanHref("details")}
           title="פרטי הלוואה"
-          hint={projectName == null ? kindValue(loan) : `${kindValue(loan)} · ${projectName}`}
+          hint={inParts(projectName == null ? kindValue(loan) : `${kindValue(loan)} · ${projectName}`)}
           chevron
         />
       </List>
@@ -503,7 +512,7 @@ function LoanDetailReady({
                 href={`/transactions/${item.transactionId}${search}`}
                 title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.docDate)}</bdi>}
                 label={`תשלום ${formatDisplay(item.docDate)}, ${formatLoanMoney(item.totalMinor, loan.currency)}${item.needsReview ? ", ממתין לבדיקה" : ""}`}
-                hint={item.needsReview ? "ממתין לבדיקה" : paymentHint(item, loan)}
+                hint={item.needsReview ? "ממתין לבדיקה" : inParts(paymentHint(item, loan))}
                 tone={item.needsReview ? "warning" : undefined}
                 meta={<LoanBalance minor={item.totalMinor} currency={loan.currency} className="t-amount" />}
                 chevron

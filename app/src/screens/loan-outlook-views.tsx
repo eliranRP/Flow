@@ -73,7 +73,8 @@ export function LoanPartRows({ loan, categories, totals, onOpen }: {
         const money = formatLoanMoney(item.minor, loan.currency);
         const meta = <ShareAmount percent={total > 0n ? item.percent : null}><bdi className="ui-num" dir="ltr">{money}</bdi></ShareAmount>;
         const label = `${LOAN_PART_LABEL[item.part]}, ${money}${total > 0n ? `, ${String(item.percent)}%` : ""}`;
-        if (onOpen == null) return <ListRow key={item.part} variant="static" title={LOAN_PART_LABEL[item.part]} meta={meta} label={label} />;
+        // FLOW-427 (C20-2): a row that opens nothing keeps the chevron's place, so its amount lines up.
+        if (onOpen == null) return <ListRow key={item.part} variant="static" title={LOAN_PART_LABEL[item.part]} meta={meta} label={label} chevronSpace />;
         const hint = partCategoryHint(loan, categories, item.part) ?? undefined;
         return <ListRow key={item.part} variant="button" title={LOAN_PART_LABEL[item.part]} hint={hint} meta={meta} label={label} chevron onClick={() => { onOpen(item.part); }} />;
       })}
@@ -113,7 +114,8 @@ export function LoanFutureView({ loan, outlook, back, loanPath, search }: ViewPr
   const yearsId = useId();
   const header = <ScreenHeader title="תשלומים הבאים" kicker={loan.name} backTo={back} />;
   if (outlook == null) return <>{header}<NoSchedule loan={loan} loanPath={loanPath} search={search} /></>;
-  const money = (minor: bigint) => <bdi className="ui-num t-amount" dir="ltr">{formatLoanMoney(minor, loan.currency)}</bdi>;
+  // FLOW-427 (C20-2): every row's amount in the part rows' dark type and column.
+  const money = (minor: bigint) => <ShareAmount percent={null}><bdi className="ui-num" dir="ltr">{formatLoanMoney(minor, loan.currency)}</bdi></ShareAmount>;
   return (
     <>
       {header}
@@ -141,7 +143,7 @@ export function LoanFutureView({ loan, outlook, back, loanPath, search }: ViewPr
       </div>
       {allYears || outlook.years.length <= YEARS_SHOWN ? null : (
         <div className="ui-page-pad">
-          <TextLink tone="quiet" chevron={false} expanded={false} controls={yearsId} onClick={() => { setAllYears(true); }}>לכל השנים</TextLink>
+          <TextLink chevron={false} expanded={false} controls={yearsId} onClick={() => { setAllYears(true); }}>לכל השנים</TextLink>
         </div>
       )}
     </>

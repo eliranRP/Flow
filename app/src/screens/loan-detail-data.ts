@@ -161,7 +161,8 @@ export function readLoanPayments(data: unknown): LoanPayment[] {
       principalMinor,
       feesMinor,
       totalMinor: interestMinor + escrowMinor + principalMinor + feesMinor,
-      parts: feesMinor > 0n ? 4 : 3,
+      // FLOW-427 (C20-3): only the parts that have a line; an interest-only payment has no principal.
+      parts: Math.max(1, [interestMinor, escrowMinor, principalMinor, feesMinor].filter((minor) => minor !== 0n).length),
     });
   }
   return rows.sort((a, b) => (a.docDate < b.docDate ? 1 : a.docDate > b.docDate ? -1 : b.transactionId.localeCompare(a.transactionId)));
@@ -170,7 +171,7 @@ export function readLoanPayments(data: unknown): LoanPayment[] {
 /** The payments section shows the last 3; "כל התשלומים" opens the rest. */
 export const LOAN_PAYMENTS_SHOWN = 3;
 
-/** "4 חלקים · עמלות ₪262.50", or "3 חלקים". A demand payment names its interest and principal. */
+/** "4 חלקים · עמלות ₪262.50", or "2 חלקים" (only the parts with an amount). A demand payment names its interest and principal. */
 export function paymentHint(payment: LoanPayment, loan: Pick<LoanDetail, "kind" | "currency">): string {
   if (loan.kind === "demand") {
     return `ריבית ${formatLoanMoney(payment.interestMinor, loan.currency)} · קרן ${formatLoanMoney(payment.principalMinor, loan.currency)}`;
