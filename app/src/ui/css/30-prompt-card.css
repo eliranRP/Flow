@@ -14,6 +14,8 @@
   margin: 0;
   font-weight: 500;
   overflow-wrap: anywhere;
+  /* FLOW-420: a two-line question splits evenly, so no last word sits alone ("בערב?"). */
+  text-wrap: balance;
 }
 
 .ui-prompt-note {

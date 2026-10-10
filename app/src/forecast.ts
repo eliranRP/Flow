@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
-import { searchHref } from "./search";
-import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
+import { HEBREW_MONTHS } from "./ui/date-math";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
@@ -15,57 +14,26 @@ import { waitForAccessToken } from "./wait-for-session";
 /** The project page shows this many months, the open one first (plan default 1). */
 export const EXPECTED_MONTHS = 3;
 
-function abs(minor: bigint): bigint {
+export function abs(minor: bigint): bigint {
   return minor < 0n ? -minor : minor;
 }
 
-/** One row of the "לא הגיעו" list. */
-export type MissingBillView = {
-  id: string;
-  name: string;
-  /** FLOW-415: "project · category" when the bill files to one; null when neither is known. */
-  place: string | null;
-  /** FLOW-415: "כל חודש ב־2 · אחרון 02/09". */
-  usual: string;
-  /** The typical amount, unsigned (the list is all expenses). */
-  minor: bigint;
-  currency: string;
-  /** Search, filtered to this supplier's expenses. */
-  href: string;
-};
-
-/** Search with the supplier's name typed and the expense side set, keeping the preview flag. */
-export function missingBillHref(name: string, search: string): string {
-  return searchHref(name, search, { dir: "expense" });
+/** The party's name: a customer's on income (decision 0175), else the supplier's. */
+export function partyName(row: { party_name?: string | null; supplier_name: string }): string {
+  const name = row.party_name ?? row.supplier_name;
+  return name === "" ? "ללא שם" : name;
 }
 
-/** FLOW-415: the pace and day a recurring charge comes ("כל חודש ב־2"), and when the last one came. */
-export function usualDayText(typicalDay: number, lastDocDate: string | null | undefined, now = new Date()): string {
-  const day = `כל חודש ב־${String(typicalDay)}`;
-  return lastDocDate == null ? day : `${day} · אחרון ${formatDayMonth(lastDocDate, now)}`;
-}
-
-/** FLOW-415: "project · category", either half alone, or null (decision 0172 sends the names). */
-export function missingBillPlace(row: Pick<MissingBill, "project_name" | "category_name">): string | null {
-  const parts = [row.project_name, row.category_name].filter((part): part is string => part != null && part !== "");
-  return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date()): MissingBillView[] {
-  return rows.map((row) => ({
-    id: `${row.supplier_id}:${row.currency}`,
-    name: row.supplier_name === "" ? "ללא שם" : row.supplier_name,
-    place: missingBillPlace(row),
-    usual: usualDayText(row.typical_day, row.last_doc_date, now),
-    minor: abs(row.typical_amount_minor),
-    currency: row.currency,
-    href: missingBillHref(row.supplier_name, search),
-  }));
-}
-
-/** The Home pending card's third row: a count, never a total (plan default 3). */
-export function missingBillsTitle(count: number): string {
+/** The Home pending card's late rows: a count, never a total (plan default 3). Income reads תנועות. */
+export function missingBillsTitle(count: number, income = false): string {
+  if (income) return count === 1 ? "תנועה קבועה אחת לא הגיעה" : `${String(count)} תנועות קבועות לא הגיעו`;
   return count === 1 ? "חשבון אחד לא הגיע" : `${String(count)} חשבונות לא הגיעו`;
+}
+
+/** FLOW-415 (b-2): Home counts late bills and late income on their own rows. */
+export function lateCounts(rows: readonly Pick<MissingBill, "direction">[]): { expense: number; income: number } {
+  const income = rows.filter((row) => row.direction === "income").length;
+  return { expense: rows.length - income, income };
 }
 
 export type ChargeChangeView = {
@@ -84,11 +52,11 @@ export type ChargeChangeView = {
 /**
  * FLOW-415 (layout A): Home's rows for the recurring charges this month that are 20% or more off
  * their usual amount (`recurring_changes`). The server picks them and computes the percent; the app
- * only words it. No category falls back to the supplier's name.
+ * only words it. No category falls back to the party's name.
  */
 export function chargeChangeViews(rows: readonly RecurringChange[], search: string): ChargeChangeView[] {
   return rows.map((row) => {
-    const name = row.category_name != null && row.category_name !== "" ? row.category_name : row.supplier_name !== "" ? row.supplier_name : "ללא שם";
+    const name = row.category_name != null && row.category_name !== "" ? row.category_name : partyName(row);
     const percent = row.change_percent;
     return {
       id: row.transaction_id,

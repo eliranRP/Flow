@@ -1,0 +1,1 @@
+The late-bills screen is now קבועים (FLOW-415): a לא הגיעו section and a הגיעו החודש section with ▲/▼ % on a change of 20% or more, for income as well as expenses. Each user can hide a late payment or a change for themselves with ✕ or a swipe, with undo. Home shows late income on its own row, and two or more changes share one row, "N חיובים קבועים השתנו". No migration.
