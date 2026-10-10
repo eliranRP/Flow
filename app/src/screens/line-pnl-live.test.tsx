@@ -6,6 +6,9 @@ import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { TransactionScreen } from "./flow-screens";
 
+// The pill, not the toast's parts: a toast in parts shows them hidden from queries (FLOW-426).
+const VISIBLE_TOAST_PARTS = "script, style, [aria-hidden='true'] *";
+
 // FLOW-108 review: the live card, not the sample. It writes through set_transaction_pnl.
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -103,7 +106,7 @@ describe("one line out of the P&L, live", () => {
     showLive();
     fireEvent.click(await pnlSwitch());
     await waitFor(() => { expect(pnlCalls()).toEqual([{ p_id: "tx", p_in_pnl: false }]); });
-    expect(await screen.findByText("לא נספר ברווח")).toBeTruthy();
+    expect(await screen.findByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(pnlCalls().at(-1)).toEqual({ p_id: "tx", p_in_pnl: null }); });
   });

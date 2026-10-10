@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { HintParts } from "./hint-parts";
 import { CheckIcon, InfoIcon } from "./icons";
 import { clearToastPad, cssPx, OK_MS, pinSheetScroll, placeToast, sheetContentKey, sheetSurface, shiftPad, SWIPE_PX, toastAnchor, type ToastInput, toastMs } from "./toast-layout";
 
@@ -563,7 +564,20 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
           <span className={tone === "bad" ? "ui-toast-mark ui-toast-icon ui-toast-bad" : "ui-toast-mark ui-toast-icon"} aria-hidden="true">
             {tone === "ok" ? <CheckIcon size={18} /> : <InfoIcon size={18} />}
           </span>
-          <span className="ui-toast-text" dir="rtl">{children}</span>
+          <span className="ui-toast-text" dir="rtl">
+            {/* FLOW-426: a message in parts ("a · b") wraps only between whole parts. Screen readers
+                and searches read it whole, from the hidden copy. */}
+            {typeof children === "string" && children.includes(" · ") ? (
+              <>
+                <span className="sr-only">{children}</span>
+                <span aria-hidden="true">
+                  <HintParts text={children} />
+                </span>
+              </>
+            ) : (
+              children
+            )}
+          </span>
           {action && onAction ? (
             <button type="button" className="ui-toast-action" aria-label={action} onClick={onAction}>
               {action}
