@@ -103,14 +103,14 @@ jobs:
       - name: Type-check every edge function with its own config
         run: bash scripts/check-edge-functions.sh
       - run: pnpm typecheck
-      # `pnpm test:unit`, including the @flow/app suite. '!flow' keeps the root package's own `test`
-      # script (test:unit and test:connectors) from running again here.
+      # `pnpm test:unit` but the @flow/app suite, which check (app) runs in two halves. '!flow' keeps
+      # the root package's own `test` script (test:unit and test:connectors) from running again here.
       # scripts/ci-cd.test.mjs pins the test:unit script, so a new part there must be added here too.
       - name: Unit tests
         run: |
           set -euo pipefail
           node --test scripts/*.test.mjs
-          pnpm -r --if-present --filter '!flow' test
+          pnpm -r --if-present --filter '!flow' --filter '!@flow/app' test
           deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared
           deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors
       # The Mercury fixture deny-list is an Actions secret. Fork PRs do not receive it.
@@ -139,7 +139,31 @@ jobs:
           pnpm check:reviewer-bundle
           test ! -f app/dist/build.txt
 
-  # Storybook tests in the browser, the layout and clip specs.
+  # The @flow/app unit tests (`pnpm test:unit`'s slowest part), split by file across two runners.
+  check-app:
+    name: check (app ${{ matrix.shard }}/2)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: App unit tests (shard ${{ matrix.shard }}/2)
+        run: pnpm --filter @flow/app test --shard=${{ matrix.shard }}/2
+
+  # The Home speed test and the Storybook tests in the browser.
   check-storybook:
     name: check (storybook)
     needs: [plan]
@@ -186,13 +210,12 @@ jobs:
           pnpm build
           pnpm --filter @flow/app test:perf
       - run: pnpm test:storybook
-      - run: pnpm build-storybook
-      - name: Storybook smoke without the every-story test
-        run: pnpm test:storybook:smoke --grep-invert "every static story"
 
-  # The every-story smoke opens each story once. Its 8 tests are split across two runners.
+  # The Storybook smoke on six runners: two of the every-story test's 12 story groups each, then a
+  # sixth of the layout, clip and secret specs in a run of their own (next to the every-story
+  # groups they miss their timing).
   check-stories:
-    name: check (stories ${{ matrix.shard }}/4)
+    name: check (stories ${{ matrix.shard }}/6)
     needs: [plan]
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
@@ -200,7 +223,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -236,12 +259,14 @@ jobs:
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
       - run: pnpm build-storybook
-      - name: Every static story (shard ${{ matrix.shard }}/4)
-        run: pnpm test:storybook:smoke --grep "every static story" --shard=${{ matrix.shard }}/4
+      - name: Every static story (shard ${{ matrix.shard }}/6)
+        run: pnpm test:storybook:smoke --grep "every static story" --shard=${{ matrix.shard }}/6
+      - name: Storybook smoke without the every-story test (shard ${{ matrix.shard }}/6)
+        run: pnpm test:storybook:smoke --grep-invert "every static story" --shard=${{ matrix.shard }}/6
 
   # always(), not !cancelled(): a skipped required check counts as passing, so the gate must run and fail.
   check:
-    needs: [plan, check-core, check-storybook, check-stories]
+    needs: [plan, check-core, check-app, check-storybook, check-stories]
     if: always() && needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -249,20 +274,24 @@ jobs:
       - name: Every check job passed
         env:
           CORE: ${{ needs.check-core.result }}
+          APP: ${{ needs.check-app.result }}
           STORYBOOK: ${{ needs.check-storybook.result }}
           STORIES: ${{ needs.check-stories.result }}
         run: |
           echo "check (core): $CORE"
+          echo "check (app): $APP"
           echo "check (storybook): $STORYBOOK"
           echo "check (stories): $STORIES"
           test "$CORE" = success
+          test "$APP" = success
           test "$STORYBOOK" = success
           test "$STORIES" = success
 
-  # The main Playwright suite is split across three runners (FLOW-812). Each starts its own local Supabase.
-  # Shard 1 also runs the database checks.
+  # Six runners, each with its own local Supabase (FLOW-812): one runs the database checks, and the main
+  # Playwright suite runs on the other five, its slow control sweeps on two and the rest on three.
+  # --grep and --grep-invert on the sweep title split the suite in two with nothing left out.
   e2e-shard:
-    name: e2e (${{ matrix.shard }}/3)
+    name: e2e (${{ matrix.part }})
     needs: [plan]
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
@@ -270,7 +299,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        include:
+          - part: database
+          - { part: 1/3, shard: 1/3, filter: --grep-invert }
+          - { part: 2/3, shard: 2/3, filter: --grep-invert }
+          - { part: 3/3, shard: 3/3, filter: --grep-invert }
+          - { part: sweeps 1/2, shard: 1/2, filter: --grep }
+          - { part: sweeps 2/2, shard: 2/2, filter: --grep }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
@@ -315,7 +350,7 @@ jobs:
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
       - name: Install psql
-        if: matrix.shard == 1
+        if: matrix.part == 'database'
         timeout-minutes: 5
         run: bash scripts/ci-apt-cache.sh psql
       - name: Wait for local Supabase
@@ -328,12 +363,12 @@ jobs:
       - name: flow-mcp answers on the local API
         run: bash scripts/mcp-function-smoke.sh
       - name: pgTAP
-        if: matrix.shard == 1
+        if: matrix.part == 'database'
         run: supabase test db supabase/tests/database
-      - if: matrix.shard == 1
+      - if: matrix.part == 'database'
         run: bash scripts/check-db-types.sh
       - name: Deploy preflight against local Supabase
-        if: matrix.shard == 1
+        if: matrix.part == 'database'
         run: |
           set -euo pipefail
           db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
@@ -343,16 +378,17 @@ jobs:
           rm -f "$log"
           FLOW_CD_PREFLIGHT_LOCAL=1 SUPABASE_DB_URL="$db_url" bash scripts/cd-dry-run-pending.sh
       - name: SUMIT cron jobs
-        if: matrix.shard == 1
+        if: matrix.part == 'database'
         run: |
           set -euo pipefail
           db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
           SUPABASE_DB_URL="$db_url" bash scripts/check-sumit-cron.sh
-      - name: Main Playwright suite against local Supabase (shard ${{ matrix.shard }}/3)
+      - name: Main Playwright suite against local Supabase (${{ matrix.part }})
+        if: matrix.part != 'database'
         run: |
           set -euo pipefail
           eval "$(bash scripts/ci-local-supabase-env.sh)"
-          pnpm test:e2e --shard=${{ matrix.shard }}/3
+          pnpm test:e2e --shard=${{ matrix.shard }} ${{ matrix.filter }} "no enabled control is a no-op"
 
   # always(), not !cancelled(): see the check gate.
   e2e:
