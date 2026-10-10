@@ -292,7 +292,7 @@ const periodDashboard: Dashboard = {
   review_count: 2,
   projects: [
     { id: "p-a", name: "וילה לדוגמה", status: "active", income_agorot: 36_600_000n, direct_agorot: 26_540_000n, shared_agorot: 0n, profit_before_shared_agorot: 10_060_000n, profit_agorot: 10_060_000n, by_currency: [] },
-    { id: "p-b", name: "שיפוץ משרדים לדוגמה עם שם ארוך שנחתך בסוף השורה", status: "active", income_agorot: 4_000_000n, direct_agorot: 4_965_000n, shared_agorot: 0n, profit_before_shared_agorot: -965_000n, profit_agorot: -965_000n, by_currency: [] },
+    { id: "p-b", name: "שיפוץ משרדים לדוגמה עם שם ארוך שעובר לשורה שנייה", status: "active", income_agorot: 4_000_000n, direct_agorot: 4_965_000n, shared_agorot: 0n, profit_before_shared_agorot: -965_000n, profit_agorot: -965_000n, by_currency: [] },
     { id: "p-c", name: "בניין מגורים לדוגמה", status: "active", income_agorot: 12_000_000n, direct_agorot: 8_810_000n, shared_agorot: 0n, profit_before_shared_agorot: 3_190_000n, profit_agorot: 3_190_000n, by_currency: [] },
     { id: "p-d", name: "גג לדוגמה", status: "active", income_agorot: 0n, direct_agorot: 210_000n, shared_agorot: 0n, profit_before_shared_agorot: -210_000n, profit_agorot: -210_000n, by_currency: [] },
     { id: "p-e", name: "מחסן לדוגמה", status: "active", income_agorot: 2_000_000n, direct_agorot: 1_400_000n, shared_agorot: 0n, profit_before_shared_agorot: 600_000n, profit_agorot: 600_000n, by_currency: [] },
