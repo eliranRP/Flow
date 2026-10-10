@@ -6,3 +6,5 @@
 - Rule: a long amount in a narrow card shrinks to fit; it is never cut or wrapped.
 - Source: the Storybook smoke's stricter render wait, which ran the "Flag: amount spike, long amount, 320" story's own check in a real 320 frame.
 - Shots: mockups/review-long-amount/ in the project files (320 light and dark, 390, and a short amount at 320 for comparison).
+
+The story's project and category are now Jev fills, so its pills read ✦ as §3.7 asks. The card itself was right: הצעה is the pill for a suggestion Jev did not fill (DESIGN-RULES "Steps", FLOW-706); only this story's sample left the Jev marks out.
