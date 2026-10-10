@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(16);
+select plan(18);
 
 do $users$
 begin
@@ -72,7 +72,7 @@ grant execute on function pg_temp.water_row() to authenticated, service_role;
 -- 1-3. The suggestion.
 select tests.authenticate_as('rm_owner');
 select is(
-  pg_temp.water_row() -> 'suggestion' - 'transaction_id',
+  (pg_temp.water_row() -> 'suggestion') - 'transaction_id'::text,
   jsonb_build_object('party_id', pg_temp.id('works'), 'party_name', 'Riverside Water Works',
     'doc_date', '2026-10-06', 'amount_minor', -5779),
   'the late water bill suggests the new name with its amount and date'
@@ -89,9 +89,10 @@ select is(
   'a name not alike, an amount three times the usual and a supplier seen since May are never suggested'
 );
 
--- 4-6. No, taken back, and yes.
+-- 4-8. No, taken back, and yes.
 select is(
-  public.answer_recurring_match('expense', pg_temp.id('water'), pg_temp.id('works'), false) - 'direction' - 'party_id' - 'match_party_id',
+  public.answer_recurring_match('expense', pg_temp.id('water'), pg_temp.id('works'), false)
+    - 'direction'::text - 'party_id'::text - 'match_party_id'::text,
   '{"same": false, "prior_same": null}'::jsonb,
   'the owner says no'
 );
@@ -112,7 +113,7 @@ select is(
   'the owner says yes'
 );
 
--- 7-9. Yes counts the new name's lines as the recurring one's.
+-- 9-11. Yes counts the new name's lines as the recurring one's.
 select is(pg_temp.water_row(), null, 'the water bill is no longer late');
 select is(
   (select e ->> 'amount_minor' from jsonb_array_elements(public.recurring_this_month('2026-10-20')) e
@@ -126,7 +127,7 @@ select is(
   'the new name''s payment acts on the recurring supplier'
 );
 
--- 10-12. One step only, and who may answer.
+-- 12-14. One step only, and who may answer.
 select throws_ok(
   format('select public.answer_recurring_match(%L, %L, %L, true)', 'expense', pg_temp.id('gas'), pg_temp.id('works')),
   'already matched',
@@ -144,7 +145,7 @@ select throws_ok(
   'another user cannot answer for the company'
 );
 
--- 13-14. The MCP's answer and its undo.
+-- 15-16. The MCP's answer and its undo.
 select tests.clear_authentication();
 reset role;
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
@@ -182,7 +183,7 @@ select is(
   'undo recurring_match'
 );
 
--- 15-16. The answer is back, and the table is read only through the functions.
+-- 17-18. The answer is back, and the table is read only through the functions.
 reset role;
 select is(
   (select same from public.recurring_matches where company_id = pg_temp.id('co') and match_party_id = pg_temp.id('works')),

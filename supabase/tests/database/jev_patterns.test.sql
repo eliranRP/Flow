@@ -201,6 +201,8 @@ select is(
   (select e - 'supplier_id' - 'project_id' - 'category_id'
      -- FLOW-415 PR 2 (decision 0175): the party, its pace, the due month and the alert's key.
      - 'direction' - 'party_id' - 'party_name' - 'due_month' - 'pace' - 'pace_source' - 'alert_key'
+     -- FLOW-430 (decision 0178): the suggested match.
+     - 'suggestion'
    from jp_out, jsonb_array_elements(result) e
    where e ->> 'direction' = 'expense' and label = 'missing_20'),
   jsonb_build_object('supplier_name', 'שכירות', 'currency', 'ILS', 'typical_amount_minor', -500000,

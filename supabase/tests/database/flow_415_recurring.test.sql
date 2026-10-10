@@ -84,6 +84,8 @@ select is(
   (select e - 'supplier_id' - 'project_id' - 'category_id'
      -- PR 2 (decision 0175) adds the party, pace, due month and key.
      - 'direction' - 'party_id' - 'party_name' - 'due_month' - 'pace' - 'pace_source' - 'alert_key'
+     -- FLOW-430 (decision 0178): the suggested match.
+     - 'suggestion'
    from jsonb_array_elements(public.missing_bills('2026-10-20')) e),
   jsonb_build_object(
     'supplier_name', 'Example Water', 'currency', 'ILS', 'typical_amount_minor', -48000, 'typical_day', 2,
