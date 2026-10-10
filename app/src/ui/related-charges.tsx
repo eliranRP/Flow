@@ -1,8 +1,10 @@
 import { formatAmountText, type PartyCharges } from "@flow/shared";
 import type { Ref, RefObject } from "react";
 import { Link } from "react-router-dom";
+import { absAgorot } from "../agorot";
 import { chargesTitle, partyChangeView, shortMonth, type PartyChangeView } from "../party-charges";
 import { cx } from "./cx";
+import { formatDayMonth } from "./date-math";
 import { ChevronIcon } from "./icons";
 import { Sheet } from "./sheet";
 
@@ -12,15 +14,6 @@ import { Sheet } from "./sheet";
  */
 
 const toneClass = { bad: "ui-delta-bad", good: "ui-delta-good", flat: "ui-delta-flat" } as const;
-
-function absMinor(minor: bigint): bigint {
-  return minor < 0n ? -minor : minor;
-}
-
-function dayLabel(iso: string): string {
-  const [year, month, day] = iso.split("-");
-  return `${day ?? ""}/${month ?? ""}/${year ?? ""}`;
-}
 
 /** The % and the usual amount; the whole chip is the button that opens the sheet. */
 export function ChargeChangeChip({ view, onClick, buttonRef }: { view: PartyChangeView; onClick: () => void; buttonRef?: Ref<HTMLButtonElement> }) {
@@ -45,7 +38,7 @@ export function ChargeChangeChip({ view, onClick, buttonRef }: { view: PartyChan
 
 /** Six quiet month bars: only the line's month in the tone colour. No axis, legend or figures. */
 export function ChargeMonthBars({ months, tone }: { months: PartyCharges["months"]; tone: PartyChangeView["tone"] }) {
-  const sizes = months.map((m) => absMinor(m.amount_minor));
+  const sizes = months.map((m) => absAgorot(m.amount_minor));
   const top = sizes.reduce((max, size) => (size > max ? size : max), 0n);
   return (
     <div className="ui-charge-bars" aria-hidden="true">
@@ -92,8 +85,8 @@ export function PartyChargesBody({ data, search = "" }: { data: PartyCharges; se
       <ul className="ui-charges-list">
         {data.charges.map((charge) => {
           const current = charge.id === data.transaction_id;
-          const amount = formatAmountText(absMinor(charge.amount_minor), currency, { detail: true });
-          const date = dayLabel(charge.doc_date);
+          const amount = formatAmountText(absAgorot(charge.amount_minor), currency, { detail: true });
+          const date = formatDayMonth(charge.doc_date);
           const name = `${date}, ${amount}${charge.pending ? ", ממתין" : ""}${current ? ", השורה הזו" : ""}`;
           const body = (
             <>

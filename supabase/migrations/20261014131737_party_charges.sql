@@ -1,8 +1,10 @@
 -- FLOW-431 (decision 0178): a line's earlier charges from the same supplier (expense) or customer
 -- (income) in the same currency, for the transaction screen's "לעומת הרגיל" chip and its sheet.
 -- - public.party_charges(p_id, p_today): the line's party, its month's total against the usual
---   amount (the recurring rule's usual when the party recurs, else the median of its earlier
---   complete months, at least 2 of the last 6), the last 6 months' totals and the 12 newest charges.
+--   amount (the recurring rule's usual when the party recurs with a complete month, else the median
+--   of its earlier complete months, at least 2 of the last 6), the 6 months up to the line's month
+--   and the 12 newest charges up to it. No percent for a line the rule does not count (an income
+--   receipt), or a month that went the other way (a refund).
 -- Lines are counted as in private.recurring_parties: not removed, not void, and for income only
 -- invoices, credits and invoice-receipts. "Today" is Asia/Jerusalem. All reads are the caller's company.
 
@@ -18,7 +20,7 @@ security definer
 set search_path = ''
 as $$
   with line as (
-    select t.id, t.amount_net, date_trunc('month', t.doc_date)::date as anchor
+    select t.id, t.amount_net, t.doc_date, date_trunc('month', t.doc_date)::date as anchor
     from public.transactions t
     where t.id = p_transaction_id and t.company_id = p_company and t.removed_at is null
   ),
@@ -39,13 +41,16 @@ as $$
       and t.line_status <> 'void'
       and (t.direction = 'expense' or t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
       and t.doc_date >= (p.anchor - interval '24 months')::date
-      and t.doc_date <= p_today
+      -- A line dated after today still reads its own month.
+      and t.doc_date <= greatest(p_today, p.anchor + interval '1 month' - interval '1 day')
   ),
   recurring as (
     select r.typical_amount_minor as usual
     from party p, private.recurring_parties(p_company, p.as_of) r
     where r.direction = p.direction and r.party_id = p.party_id and r.currency = p.currency
       and r.typical_amount_minor <> 0
+      -- As in recurring_arrivals: a party marked recurring with no complete month yet has no usual.
+      and r.months_seen > 0
   ),
   -- Not a recurring party: the median of its earlier complete months, at least 2 of the last 6.
   earlier as (
@@ -68,11 +73,18 @@ as $$
       end as source
   ),
   month_total as (
-    -- A receipt line is not one of the counted lines; its own amount stands for the month.
-    select coalesce(
-      (select sum(l.amount)::bigint from lines l, party p where l.month = p.anchor),
-      (select li.amount_net from line li)
-    ) as amount
+    select (select sum(l.amount)::bigint from lines l, party p where l.month = p.anchor) as amount,
+      -- An income receipt is not one of the counted lines (its invoice is), so it gets no comparison.
+      exists (select 1 from lines l where l.id = p_transaction_id) as counted
+  ),
+  -- The percent only when the month and the usual amount go the same way (a refund month gets none)
+  -- and it fits a readable figure.
+  change as (
+    select case
+      when u.amount is null or not mt.counted or mt.amount is null or sign(mt.amount) <> sign(u.amount) then null
+      else round((abs(mt.amount) - abs(u.amount)) * 100.0 / abs(u.amount))
+    end as percent
+    from usual u, month_total mt
   )
   select case
     when not exists (select 1 from line) then null
@@ -89,10 +101,7 @@ as $$
         'month_amount_minor', mt.amount,
         'typical_amount_minor', u.amount,
         'typical_source', u.source,
-        'change_percent', case
-          when u.amount is null then null
-          else round((abs(mt.amount) - abs(u.amount)) * 100.0 / abs(u.amount))::integer
-        end,
+        'change_percent', case when abs(c.percent) < 100000 then c.percent::integer end,
         'others', (select count(*) from lines l where l.id <> p_transaction_id),
         'months', (
           select jsonb_agg(jsonb_build_object(
@@ -105,10 +114,13 @@ as $$
           select jsonb_agg(jsonb_build_object(
               'id', c.id, 'doc_date', c.doc_date, 'amount_minor', c.amount, 'pending', not c.posted
             ) order by c.doc_date desc, c.created_at desc)
-          from (select * from lines l order by l.doc_date desc, l.created_at desc limit 12) c
+          -- The 12 newest up to the line's month, so an older line sits among its own neighbours.
+          from (
+            select * from lines l where l.month <= p.anchor order by l.doc_date desc, l.created_at desc limit 12
+          ) c
         ), '[]'::jsonb)
       )
-      from party p, usual u, month_total mt
+      from party p, usual u, month_total mt, change c
     )
   end;
 $$;

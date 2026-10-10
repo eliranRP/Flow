@@ -1,5 +1,6 @@
 import { formatAmountText, type PartyCharges } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
+import { absAgorot } from "./agorot";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
@@ -26,14 +27,10 @@ export type PartyChangeView = {
   words: string;
 };
 
-function absMinor(minor: bigint): bigint {
-  return minor < 0n ? -minor : minor;
-}
-
 /** The chip's view; null when the party has no usual amount yet (too few earlier charges). */
 export function partyChangeView(data: PartyCharges | null | undefined): PartyChangeView | null {
   if (!data?.party || data.typical_amount_minor == null || data.change_percent == null) return null;
-  const usual = formatAmountText(absMinor(data.typical_amount_minor), data.party.currency, { detail: true });
+  const usual = formatAmountText(absAgorot(data.typical_amount_minor), data.party.currency, { detail: true });
   const pct = data.change_percent;
   if (pct === 0) {
     return { percent: null, arrow: null, tone: "flat", usual, label: `כמו הרגיל ${usual}`, words: `כמו הרגיל, ${usual}` };

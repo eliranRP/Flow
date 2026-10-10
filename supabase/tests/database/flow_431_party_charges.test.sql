@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(14);
+select plan(17);
 
 do $users$
 begin
@@ -27,10 +27,10 @@ as $$ select id from pg_temp.pc where label = p_label; $$;
 grant execute on function pg_temp.id(text) to anon, authenticated, service_role;
 
 insert into public.suppliers (company_id, name)
-select pg_temp.id('co'), n from unnest(array['Example Mailbox', 'Example Hardware', 'Example Once']) n;
+select pg_temp.id('co'), n from unnest(array['Example Mailbox', 'Example Hardware', 'Example Once', 'Example Refund']) n;
 insert into public.customers (company_id, name) values (pg_temp.id('co'), 'Example Tenant');
 insert into pc (label, id)
-select case s.name when 'Example Mailbox' then 'mailbox' when 'Example Hardware' then 'hardware' else 'once' end, s.id
+select case s.name when 'Example Mailbox' then 'mailbox' when 'Example Hardware' then 'hardware' when 'Example Refund' then 'refunder' else 'once' end, s.id
 from public.suppliers s where s.company_id = pg_temp.id('co');
 insert into pc (label, id) select 'tenant', c.id from public.customers c where c.company_id = pg_temp.id('co');
 
@@ -52,6 +52,11 @@ insert into pc_lines
 select 'rent_' || to_char(d, 'MM'), 'tenant', (d::date), case when d = '2026-10-01' then 400000 else 500000 end,
   'income', 'ILS', 'invoice'
 from generate_series('2026-07-01'::date, '2026-10-01'::date, interval '1 month') d;
+-- Refunder: 10,000 a month in July and August, then money back in October.
+insert into pc_lines values
+  ('refunder_07', 'refunder', '2026-07-09', 10000, 'expense', 'ILS', 'receipt'),
+  ('refunder_08', 'refunder', '2026-08-09', 10000, 'expense', 'ILS', 'receipt'),
+  ('refunder_10', 'refunder', '2026-10-09', 3000, 'expense', 'ILS', 'receipt');
 insert into pc_lines values ('loose_10', null, '2026-10-16', 3000, 'expense', 'ILS', 'receipt');
 
 insert into pc (label, id)
@@ -65,6 +70,12 @@ set supplier_id = case when l.direction = 'expense' then pg_temp.id(l.party) end
   customer_id = case when l.direction = 'income' then pg_temp.id(l.party) end
 from pc_lines l
 where t.id = pg_temp.id(l.label) and l.party is not null;
+
+-- The refund is money in on an expense supplier.
+update public.transactions set amount_net = 3000, amount_gross = 3000 where id = pg_temp.id('refunder_10');
+-- The owner marked Example Once recurring after its first charge.
+insert into public.recurring_overrides (company_id, direction, party_id, currency, recurring)
+values (pg_temp.id('co'), 'expense', pg_temp.id('once'), 'ILS', true);
 
 select tests.authenticate_as('pc_owner');
 
@@ -115,10 +126,28 @@ select is(
 select is(
   public.party_charges(pg_temp.id('once_10'), '2026-10-20') ->> 'typical_amount_minor',
   null,
-  'a first charge has no usual amount'
+  'a first charge has no usual amount, even when the owner marked it recurring'
+);
+select is(
+  public.party_charges(pg_temp.id('refunder_10'), '2026-10-20') - 'transaction_id' - 'months' - 'charges' - 'party' - 'others',
+  jsonb_build_object(
+    'month', '2026-10', 'month_amount_minor', 3000, 'typical_amount_minor', -10000,
+    'typical_source', 'earlier_months', 'change_percent', null
+  ),
+  'a refund month gets no percent'
+);
+select is(
+  (select jsonb_agg(e ->> 'doc_date') from jsonb_array_elements(public.party_charges(pg_temp.id('mailbox_06'), '2026-10-20') -> 'charges') e),
+  '["2026-06-06", "2026-05-06", "2026-04-06"]'::jsonb,
+  'an older line lists the charges up to its own month'
+);
+select is(
+  public.party_charges(pg_temp.id('rent_09'), '2026-10-20') ->> 'change_percent',
+  '0',
+  'an invoice is compared'
 );
 
--- 9. Income down: the customer's invoices.
+-- 12. Income down: the customer's invoices.
 select is(
   public.party_charges(pg_temp.id('rent_10'), '2026-10-20') - 'transaction_id' - 'months' - 'charges' - 'party',
   jsonb_build_object(
@@ -128,14 +157,14 @@ select is(
   'rent came in 20% under its usual amount'
 );
 
--- 10. A line with no party.
+-- 13. A line with no party.
 select is(
   public.party_charges(pg_temp.id('loose_10'), '2026-10-20') -> 'party',
   'null'::jsonb,
   'a line with no supplier has no party and no charges'
 );
 
--- 11-12. Another company, and no company.
+-- 14-15. Another company, and no company.
 select tests.authenticate_as('pc_other');
 select throws_ok(
   format('select public.party_charges(%L)', pg_temp.id('mailbox_10')),
@@ -149,7 +178,7 @@ select throws_ok(
   'no session, no read'
 );
 
--- 13-14.
+-- 16-17.
 select ok(
   not has_function_privilege('anon', 'public.party_charges(uuid, date)', 'execute'),
   'anon cannot call it'
