@@ -1,0 +1,1 @@
+- CI: the "Migration filenames are append-only" check on main now compares a commit against its own first parent instead of live `main`, so a merge that lands while a run is in flight no longer paints that run red for "removing" a migration it never had (seen on the #470 run after #473 merged).

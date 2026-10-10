@@ -75,10 +75,13 @@ jobs:
       - name: Migration filenames are append-only
         run: |
           set -euo pipefail
-          git fetch origin main --depth=1
-          if git cat-file -e origin/main:supabase/migrations.lock 2>/dev/null; then
+          # Compare against this commit's first parent, not live main:
+          # main moves on while a run is in flight, and a newer main would
+          # make this commit look as if it had removed a migration.
+          git fetch origin "$GITHUB_SHA" --depth=2
+          if git cat-file -e "$GITHUB_SHA~1:supabase/migrations.lock" 2>/dev/null; then
             base="$(mktemp)"
-            git show origin/main:supabase/migrations.lock > "$base"
+            git show "$GITHUB_SHA~1:supabase/migrations.lock" > "$base"
             node scripts/check-migration-order.mjs --base "$base"
             rm -f "$base"
           else
