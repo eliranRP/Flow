@@ -616,8 +616,12 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.indexOf("if (( ! full )); then") < fast);
   assert.ok(local.indexOf('\npassed\nphase "passed on ${head:0:7}"') > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
   // FLOW-813: the fast gate runs the e2e specs that reach the change before it stamps.
-  const picked = local.indexOf('playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"');
+  const picked = local.indexOf('FLOW_SWEEP_ROUTES="$sweep_routes" pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"');
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
+  // The no-op sweep opens only the routes the change reaches, and the gate names each one.
+  const swept = local.indexOf('sweep_out="$(branch_changes "$e2e_base" | sed \'/^$/d\' | node scripts/gate-scope.mjs --sweep)"');
+  assert.ok(swept > 0 && swept < local.indexOf("At most FLOW_E2E_MAX specs"));
+  assert.ok(local.includes("awk -F'\\t' '{ print \"  \" $1 \" \" $2 \": \" $3 }' <<<\"$sweep_out\""));
   // A warm instance skips the reset only when the last reset here applied this tree's migrations,
   // seed and config, the change leaves the database alone, and no reached spec reads it; it says so.
   assert.ok(local.includes("[[ -n \"$db_reset\" ]] || return 0"));
