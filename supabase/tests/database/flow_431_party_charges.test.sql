@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(17);
+select plan(21);
 
 do $users$
 begin
@@ -70,6 +70,46 @@ set supplier_id = case when l.direction = 'expense' then pg_temp.id(l.party) end
   customer_id = case when l.direction = 'income' then pg_temp.id(l.party) end
 from pc_lines l
 where t.id = pg_temp.id(l.label) and l.party is not null;
+
+-- Lender: one supplier paying two loans every month, July to October (FLOW-431 follow-up).
+insert into public.suppliers (company_id, name) values (pg_temp.id('co'), 'Example Lender'), (pg_temp.id('co'), 'Example Store');
+insert into pc (label, id) select 'lender', s.id from public.suppliers s where s.company_id = pg_temp.id('co') and s.name = 'Example Lender';
+insert into pc (label, id) select 'store', s.id from public.suppliers s where s.company_id = pg_temp.id('co') and s.name = 'Example Store';
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
+values
+  (pg_temp.id('co'), 'Example Loan A', 30000000, 60000, 360, '2026-01-01', 210000, 30000, 'USD'),
+  (pg_temp.id('co'), 'Example Loan B', 20000000, 60000, 360, '2026-01-01', 180000, 30000, 'USD');
+insert into pc (label, id) select case l.name when 'Example Loan A' then 'loan_a' else 'loan_b' end, l.id
+from public.loans l where l.company_id = pg_temp.id('co');
+insert into pc (label, id)
+select k || '_' || to_char(d, 'MM'), tests.fixture_line(
+  pg_temp.id('co'), 'pc:' || k || to_char(d, 'MM'), case k when 'lender_a' then 210000 else 180000 end, 'expense', null, null,
+  (d::date + 1), 'USD', p_pnl_role => null
+)
+from generate_series('2026-07-01'::date, '2026-10-01'::date, interval '1 month') d, unnest(array['lender_a', 'lender_b']) k;
+-- Before the follow-up, loan A's October payment read against both loans' months together.
+update public.transactions set supplier_id = pg_temp.id('lender') where id in (select id from pc where label like 'lender_%');
+insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
+select pg_temp.id('co'), pg_temp.id(case when pc.label like 'lender_a%' then 'loan_a' else 'loan_b' end), pc.id,
+  v.part::public.loan_split_part, v.amount, v.amount,
+  (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.kind = 'expense' order by c.sort_order limit 1),
+  false
+from pc
+join (values ('principal', 100000), ('interest', 50000), ('escrow', 30000)) v(part, amount) on true
+where pc.label like 'lender_%';
+update public.loan_splits ls set amount_minor = 130000, scheduled_minor = 130000
+where ls.part = 'principal' and ls.transaction_id in (select id from pc where label like 'lender_a%');
+-- Store: one category July to September, another in October.
+insert into pc (label, id) values
+  ('cat_tools', tests.fixture_category(pg_temp.id('co'), 'Example Tools')),
+  ('cat_paint', tests.fixture_category(pg_temp.id('co'), 'Example Paint'));
+insert into pc (label, id)
+select 'store_' || to_char(d, 'MM'), tests.fixture_line(
+  pg_temp.id('co'), 'pc:store' || to_char(d, 'MM'), case when d = '2026-10-01' then 30000 else 10000 end, 'expense', null,
+  pg_temp.id(case when d = '2026-10-01' then 'cat_paint' else 'cat_tools' end), (d::date + 2), 'ILS', p_pnl_role => null
+)
+from generate_series('2026-07-01'::date, '2026-10-01'::date, interval '1 month') d;
+update public.transactions set supplier_id = pg_temp.id('store') where id in (select id from pc where label like 'store_%');
 
 -- The refund is money in on an expense supplier.
 update public.transactions set amount_net = 3000, amount_gross = 3000 where id = pg_temp.id('refunder_10');
@@ -157,14 +197,42 @@ select is(
   'rent came in 20% under its usual amount'
 );
 
--- 13. A line with no party.
+-- 13-16. The line's own context: its loan, else its project and category.
+select is(
+  public.party_charges(pg_temp.id('lender_a_10'), '2026-10-20') - 'transaction_id' - 'months' - 'charges' - 'party',
+  jsonb_build_object(
+    'month', '2026-10', 'month_amount_minor', -210000, 'typical_amount_minor', -210000,
+    'typical_source', 'earlier_months', 'change_percent', 0, 'others', 3
+  ),
+  'a loan payment is compared with the same loan''s payments, not the supplier''s other loan'
+);
+select is(
+  (select jsonb_agg(e ->> 'id') from jsonb_array_elements(public.party_charges(pg_temp.id('lender_a_10'), '2026-10-20') -> 'charges') e),
+  (select jsonb_agg(pc.id::text order by pc.label desc) from pc where pc.label like 'lender_a_%'),
+  'the charges listed are the same loan''s'
+);
+select is(
+  public.party_charges(pg_temp.id('store_10'), '2026-10-20') ->> 'typical_amount_minor',
+  null,
+  'a first charge in a new category has no usual amount'
+);
+select is(
+  public.party_charges(pg_temp.id('store_09'), '2026-10-20') - 'transaction_id' - 'months' - 'charges' - 'party',
+  jsonb_build_object(
+    'month', '2026-09', 'month_amount_minor', -10000, 'typical_amount_minor', -10000,
+    'typical_source', 'earlier_months', 'change_percent', 0, 'others', 2
+  ),
+  'the earlier category reads only its own charges'
+);
+
+-- 17. A line with no party.
 select is(
   public.party_charges(pg_temp.id('loose_10'), '2026-10-20') -> 'party',
   'null'::jsonb,
   'a line with no supplier has no party and no charges'
 );
 
--- 14-15. Another company, and no company.
+-- 18-19. Another company, and no company.
 select tests.authenticate_as('pc_other');
 select throws_ok(
   format('select public.party_charges(%L)', pg_temp.id('mailbox_10')),
@@ -178,7 +246,7 @@ select throws_ok(
   'no session, no read'
 );
 
--- 16-17.
+-- 20-21.
 select ok(
   not has_function_privilege('anon', 'public.party_charges(uuid, date)', 'execute'),
   'anon cannot call it'
