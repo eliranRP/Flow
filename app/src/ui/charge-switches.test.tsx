@@ -10,10 +10,11 @@ describe("ChargeSwitches (FLOW-415)", () => {
     expect(screen.getByRole("switch", { name: IN_CASH })).toBeChecked();
     const recurring = screen.getByRole("switch", { name: RECURRING });
     expect(recurring).toBeChecked();
-    // Each part keeps its words together, and the "·" ends the first part.
     const hint = recurring.closest("label")?.querySelector(".ui-row-hint");
     expect(hint?.textContent).toBe("כל חודש ב־4 · זוהה לבד");
-    expect([...(hint?.querySelectorAll(".ui-nowrap") ?? [])].map((part) => part.textContent)).toEqual(["כל חודש ב־4 ·", "זוהה לבד"]);
+    // Each part keeps its words; the "·" opens the second part, where a wrap clips it.
+    expect([...(hint?.querySelectorAll(".ui-hint-wrap-part") ?? [])].map((part) => part.textContent)).toEqual(["כל חודש ב־4", " · זוהה לבד"]);
+    expect(hint?.querySelector(".ui-hint-wrap-sep")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("calls back with the next value, and not while disabled", () => {

@@ -1,4 +1,4 @@
-import type { ExpectedMonths, MissingBill } from "@flow/shared";
+import type { ExpectedMonths, MissingBill, RecurringChange } from "@flow/shared";
 
 /**
  * Invented sample data for FLOW-403's dev routes, stories and tests: made-up supplier names and
@@ -26,8 +26,31 @@ export const SAMPLE_MISSING_BILLS: MissingBill[] = [
     expected_by: "2026-10-07",
     months_seen: 5,
     last_doc_date: "2026-09-02",
+    last_amount_minor: -184_000n,
     project_id: "p1",
-    category_id: null,
+    project_name: "בניין הדקל",
+    category_id: "c-power",
+    category_name: "חשמל",
+    source: "auto",
+  },
+];
+
+/** FLOW-415: invented recurring charges off their usual amount, for Home's rows. */
+export const SAMPLE_RECURRING_CHANGES: RecurringChange[] = [
+  {
+    supplier_id: "s-power",
+    supplier_name: "אור חשמל",
+    currency: "ILS",
+    amount_minor: -255_000n,
+    typical_amount_minor: -185_000n,
+    change_percent: 38,
+    typical_day: 4,
+    transaction_id: "t-power-oct",
+    project_id: "p1",
+    project_name: "בניין הדקל",
+    category_id: "c-power",
+    category_name: "חשמל",
+    source: "auto",
   },
 ];
 

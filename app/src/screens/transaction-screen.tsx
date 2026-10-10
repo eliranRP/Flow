@@ -1,4 +1,4 @@
-import { formatAmountText, formatMoney, type TransactionDetail } from "@flow/shared";
+import { formatAmountText, formatMoney, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
@@ -31,6 +31,7 @@ import { useToast } from "../ui/toast";
 import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
 import type { LineSplitRead } from "../line-split";
+import { TxnChargeSwitches } from "./transaction-charge-switches";
 import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { projectChoices } from "../project-groups";
@@ -127,6 +128,7 @@ export function TransactionScreen({
   sampleProjects,
   sampleCategories,
   sampleLineSplit,
+  sampleRecurring,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
@@ -134,6 +136,8 @@ export function TransactionScreen({
   sampleCategories?: Array<{ id: string; name: string; kind?: "income" | "expense" }>;
   /** FLOW-325: a story's split by category, in place of the get_line_split read. */
   sampleLineSplit?: LineSplitRead | null;
+  /** FLOW-415: a story's recurring switch, in place of the payment_recurring read. */
+  sampleRecurring?: PaymentRecurring | null;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -574,7 +578,11 @@ export function TransactionScreen({
           readOnly={holdWrites}
           split={txn.loan_split}
         />
-        <List>{pnlRow}</List>
+        <List>
+          {pnlRow}
+          {/* FLOW-415 (a-3): the cash view and recurring switches, under נספר ברווח. */}
+          <TxnChargeSwitches txn={txn} party={party} holdWrites={holdWrites} sample={sample ? (sampleRecurring ?? null) : undefined} />
+        </List>
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
         ) : (
