@@ -8,7 +8,7 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07.
+Last full sync: 2026-10-07. Lanes table: 2026-10-10 11:40Z.
 
 ## Lanes now
 
@@ -16,19 +16,17 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-804 performance plan (docs only; the owner picks before anything is built) | FLOW-804 build once approved |
-| Dev lane 2 | FLOW-406 server 1b: roll-up reads (`get_project` roll-up and own rows, `project_category_months` parent rows, `get_breakdown` level, search parent match with `category_exact`), PR on `claude/project-thread-pz6l1n` (1a merged #354) | FLOW-406 server 2: project groups |
-| Dev lane 3 | FLOW-309 invoice and receipt pairing, server side (owner's option A, 2026-10-09): the matching rule, the paired review read, approve and undo for both, MCP `list_review` echo; branch `claude/flow-309-pairing-server-ubl9gb` | UI lane 2 builds the paired review card on it |
-| UI lane 1 | FLOW-106 screens: the split editor "חלוקת התשלום" (match sheet merged #374) | The kind field on the new-loan form; company "לפי חודש" |
-| UI lane 2 | FLOW-309 pairing on the review card (option A: "✓ שולם · קבלה dd/mm" under the amount, on #350's `receipts`/`paid`/`paid_on`) + long supplier names (overflow-wrap on the review supplier line, the project picker, unpaid hints, the add-sheet hint) | Next UI task for the review and transaction screens |
-| UI lane 3 | Project page batch on FLOW-340 C's screens: FLOW-334 waiting row and the finish row in the ⋯ menu; FLOW-408 item 1 (chevron space); FLOW-404 rehab category opens its lines (FLOW-347 + FLOW-348 A merged #359) | Settings, project screens, and other areas outside the review and transaction screens |
-| UI lane 4 | FLOW-351 cycle 10 polish: Search chips start fade, "הלוואה חדשה" start edge at 320, the PeriodPicker Open story PR #372 (the VAT line and period words follow in a second PR once #367 lands) | The FLOW-704 card shrink after UI lane 2's pairing-card PR |
-| UI/UX review cycle | Design lead; runs after each deploy batch (cycle 7 reviewed e1bec50) | Next deploy batch |
+| Dev lane 3 | Parked (FLOW-309 pairing server done); takes the next server task | Server side of the next plan-first feature |
+| Dev lane 4 | Team invites (FLOW-601 done); reviews FLOW-421 invite emails via Resend (built by the "Invite email not arriving" thread, claims through the lane manager); real-user `get_project` timing after #508 (12:00Z snapshot) | Compute-size evidence for the owner only if project opens stay over 0.7 s |
+| UI lane 1 | FLOW-415 step D: the "כל כמה זמן" pace sheet and hint, plus FLOW-420 item 1 (the "נספר ברווח" icon size) | Next cycle item from the design lead |
+| UI lane 2 | FLOW-415 steps A–C done (#500, #512, #514); the #514 review nits and the red-main spec fix after #504, then the switch to lane 1's `PACE_LABEL` | Next item on the review and transaction screens |
+| UI lane 3 | Gate: per-phase timeout and helper-process cleanup in `scripts/local-ci.sh` (after #516 fresh servers) | Settings, project screens, and other areas outside the review and transaction screens |
+| Plan-first threads | One temporary lane per owner-approved layout, listed here while it runs: none open (FLOW-417 cash history #496, FLOW-418 Home profit line #495, FLOW-419 project page #504 all merged) | The next plan-first feature the owner approves |
+| UI/UX review cycle | Design lead; reviews each deploy (cycle 16 reviewed 333b55f, FLOW-420) and signs off UI PRs in a PR comment | Next deploy batch (cash history, month page, recurring on Home) |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-502 setup step 5 offers the evening reminder once | Next small ready item from the lane manager |
-| File split | Finished (FLOW-807 done #287; size guard #285): every test file was split under 1,200 lines and every file not on the allow list is at least 10% under its limit | None; FLOW-809 only if the owner approves its hosting |
+| Backlog bug fixes | Idle; takes the next bug or red-main fix the lane manager routes | Next bug |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
-
+| Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
 ## Priority queue
 
 Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
