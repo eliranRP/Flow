@@ -1,6 +1,6 @@
 <a id="flow-115"></a>
 # FLOW-115 · Loan screens UI follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (Backlog bug fixes, year jump PR) · **Depends on:** —
 - [x] (UI lane 3, 2026-10-09: the kept preview dims; ✕, Escape and Back wait for a save; each error says what to type, and 0 reads "הסכום צריך להיות גדול מ־0."; the year jump and mockup 15b date details stay open, they are shared DateSheet work) Loan setup: dim the kept preview when inputs are invalid; a year jump in the date sheet for old start dates; date sheet details per mockup 15b; lock ✕ while saving; error copy that says what to do (and 0 shouldn't read as a missing amount).
 - [x] (UI lane 3, 2026-10-09: the sheet shows the form's skeleton while the currency loads; New, Incomplete dimmed and Date sheet open stories) Loan setup: a slow currency read opens the sheet on "טוען…" and then jumps; the currency read has no limit; add date-sheet and new-state stories and a loading skeleton.
 - [x] (UI lane 3, 2026-10-09: the note says the line's amount went up or down and prints only the change; the sum line prints only the difference, "חסרים ₪X…" or "יש ₪X יותר…"; the fields are already disabled while a save runs; a correction fails with "לא הצלחנו לשמור את התיקון." and reads the stored parts again) Loan match: the waiting line should say why and print only the difference; disable the other rows while the correction is busy; its own failure copy; refresh the parts after a failed correction.
