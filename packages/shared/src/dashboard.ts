@@ -645,6 +645,21 @@ export const searchPageSchema = z.object({
       loan_matched: z.boolean(),
     }),
   ),
+  /**
+   * The first page only: every matching line's totals per month (YYYY-MM) and currency, newest
+   * first, as the rows draw them (a kept-out line adds 0). Later pages send null.
+   */
+  months: z
+    .array(
+      z.object({
+        month: z.string().regex(/^\d{4}-\d{2}$/),
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        income_minor: agorotSchema,
+        expense_minor: agorotSchema,
+      }),
+    )
+    .nullable()
+    .optional(),
 });
 
 const profitMonthCurrencySchema = z.object({

@@ -359,6 +359,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-905"></a>[FLOW-905](tasks/FLOW-905.md) | Example data in the rendered design screens | BACKLOG NIT |
 | <a id="flow-906"></a>[FLOW-906](tasks/FLOW-906.md) | Confirm the public help contact | BACKLOG NIT |
 | <a id="flow-907"></a>[FLOW-907](tasks/FLOW-907.md) | Data clean-up after PR B | MCP |
+| <a id="flow-908"></a>[FLOW-908](tasks/FLOW-908.md) | Search: every month head shows its net | Bug |
 | <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 | <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
 
