@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
-import { CalendarIcon, CloseIcon, DocumentIcon, ReviewIcon } from "./icons";
+import { CalendarIcon, CloseIcon, DocumentIcon, ReviewIcon, TrendUpIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { filedTodayBannerTitle } from "../filed-today-copy";
 import { longHebrew, padded } from "./story-support";
@@ -105,6 +105,26 @@ export const RowsMissingOne: Story = {
   name: "Rows, one late bill",
   args: { title: "" },
   render: () => <BannerRows rows={[reviewRow, { ...missingRow, title: "חשבון אחד לא הגיע" }]} />,
+};
+// FLOW-415 (layout A). The last row: a payment well above its usual amount; a tap opens the payment.
+const changeRow: BannerRow = {
+  id: "change:t1",
+  to: "/transactions/t1",
+  icon: <TrendUpIcon size={24} stroke={1.9} />,
+  title: "חשמל עלה ב־38%",
+  hint: <><span className="ui-nowrap"><bdi dir="ltr">₪2,550</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">₪1,850</bdi></span></>,
+};
+export const RowsChargeUp: Story = {
+  name: "Rows, a charge above usual",
+  args: { title: "" },
+  render: () => <BannerRows rows={[{ ...reviewRow, title: <><bdi dir="ltr">2</bdi> פריטים ממתינים לאישור</> }, missingRow, changeRow]} />,
+};
+export const RowsChargeUpDark: Story = { ...RowsChargeUp, name: "Rows, a charge above usual, dark", globals: { theme: "dark" } };
+export const RowsChargeUp320: Story = { ...RowsChargeUp, name: "Rows, a charge above usual, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
+export const RowsChargeUpOnly: Story = {
+  name: "Rows, a charge above usual only",
+  args: { title: "" },
+  render: () => <BannerRows rows={[changeRow]} />,
 };
 export const RowsLongHebrew: Story = {
   name: "Rows, long Hebrew",

@@ -26,7 +26,7 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
-import { CalendarIcon, ChartIcon, DocumentIcon } from "../ui/icons";
+import { CalendarIcon, ChartIcon, DocumentIcon, TrendUpIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
@@ -45,7 +45,7 @@ import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
-import { missingBillsTitle, useMissingBillsQuery } from "../forecast";
+import { missingBillsTitle, useMissingBillsQuery, type ChargeChangeView } from "../forecast";
 
 function changePercent(current: bigint, previous: bigint | null): number | null {
   if (previous == null || previous === 0n) return null;
@@ -530,7 +530,8 @@ export function homeProjects(projects: readonly ProjectRow[], currency: string):
 /**
  * FLOW-321. The Home pending card: one row to Review and one to Unpaid with its
  * total, each only when it has something. A count of 1 reads singular. FLOW-403 adds a
- * third row, the late recurring bills, as a count only.
+ * third row, the late recurring bills, as a count only. FLOW-415 (layout A) adds one row per payment
+ * well off its usual amount, last; a tap opens that payment.
  */
 export function attentionRows({
   pending,
@@ -539,6 +540,7 @@ export function attentionRows({
   unpaidOther = [],
   missingCount = 0,
   missingTo = "/missing-bills",
+  changes = [],
   search,
 }: {
   pending: number;
@@ -547,6 +549,7 @@ export function attentionRows({
   unpaidOther?: { currency: string; minor: bigint }[];
   missingCount?: number;
   missingTo?: string;
+  changes?: readonly ChargeChangeView[];
   search: string;
 }): BannerRow[] {
   const rows: BannerRow[] = [];
@@ -585,6 +588,16 @@ export function attentionRows({
       to: `${missingTo}${search}`,
       icon: <CalendarIcon size={24} stroke={1.9} />,
       title: missingCount === 1 ? missingBillsTitle(1) : <><bdi dir="ltr">{String(missingCount)}</bdi> חשבונות לא הגיעו</>,
+    });
+  }
+  for (const change of changes) {
+    rows.push({
+      id: `change:${change.id}`,
+      to: change.href,
+      icon: <TrendUpIcon size={24} stroke={1.9} />,
+      title: change.title,
+      // Each half wraps whole at 320: "₪2,550 ·" then "בדרך כלל ₪1,850".
+      hint: <><span className="ui-nowrap"><bdi dir="ltr">{change.now}</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">{change.usual}</bdi></span></>,
     });
   }
   return rows;
