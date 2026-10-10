@@ -1,13 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { partyChangeView } from "../party-charges";
-import { ChargeChangeChip, PartyChargesBody } from "./related-charges";
+import { PartyChargesBody } from "./related-charges";
 import { cheaperCharges, mailboxCharges, rentCharges, steadyCharges } from "./related-charges.sample";
-import { inSheet, padded, Stack } from "./story-support";
+import { inSheet } from "./story-support";
 
 /**
- * FLOW-431 (owner's pick B, 2026-10-10): the transaction screen's "לעומת הרגיל" chip, and the
- * sheet of the party's earlier charges it opens. Invented data. Args name a sample, since story
- * args never hold a bigint.
+ * FLOW-431 (the owner's layout A, 2026-10-10): the sheet with all the party's charges that
+ * "לכל החיובים" opens; the section itself is in related-charges-section.stories. Invented data.
+ * Args name a sample, since story args never hold a bigint.
  */
 const samples = { mailbox: mailboxCharges, cheaper: cheaperCharges, steady: steadyCharges, rent: rentCharges };
 
@@ -25,22 +24,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-function Chips() {
-  return (
-    <Stack>
-      {Object.entries(samples).map(([key, data]) => {
-        const view = partyChangeView(data);
-        return view == null ? null : <ChargeChangeChip key={key} view={view} onClick={() => undefined} />;
-      })}
-    </Stack>
-  );
-}
-
-const chips = { render: () => <Chips />, decorators: [padded] };
-export const Chip: Story = { name: "Chip: up, down, usual, income down", ...chips };
-export const ChipDark: Story = { name: "Chip, dark", ...chips, globals: { theme: "dark" } };
-export const Chip320: Story = { name: "Chip, 320", ...chips, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const ExpenseUp: Story = { name: "Sheet: an expense up 92%" };
 export const ExpenseUpDark: Story = { name: "Sheet: an expense up, dark", globals: { theme: "dark" } };

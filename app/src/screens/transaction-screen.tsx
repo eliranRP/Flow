@@ -547,8 +547,6 @@ export function TransactionScreen({
               {pnlPill}
             </div>
           ) : null}
-          {/* FLOW-431 (pick B): the month against the party's usual amount; a tap opens its charges. */}
-          <TxnPartyCharges transactionId={txn.id} sample={sample ? (sampleCharges ?? null) : undefined} />
         </div>
         <List>
           {holdWrites ? (
@@ -590,6 +588,8 @@ export function TransactionScreen({
           {/* FLOW-415 (a-3): the cash view and recurring switches, under נספר ברווח. */}
           <TxnChargeSwitches txn={txn} party={party} holdWrites={holdWrites} sample={sample ? (sampleRecurring ?? null) : undefined} />
         </List>
+        {/* FLOW-431 (layout A): the party's earlier charges, the usual amount and the change. */}
+        <TxnPartyCharges transactionId={txn.id} sample={sample ? (sampleCharges ?? null) : undefined} />
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
         ) : (
