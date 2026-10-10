@@ -39,7 +39,7 @@ import {
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
-import { LoanDetailScreen } from "./screens/loan-detail-screen";
+import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
@@ -401,13 +401,13 @@ export function DevLoans() {
 }
 
 /** FLOW-106 B / FLOW-110: a loan's page on fake data. `?reset=1` starts the dev store over. */
-export function DevLoanDetail() {
+export function DevLoanDetail({ view }: { view?: LoanView } = {}) {
   const [params] = useSearchParams();
   // StrictMode runs the initializer twice, so the page reads the current store, not the returned one.
   useState(() => (params.get("reset") === "1" ? resetDevLoanStore() : null));
   const store = devLoanStore();
   const preview = params.get("preview");
-  return <LoanDetailScreen store={store} listPath={`/e2e/loans${preview ? `?preview=${encodeURIComponent(preview)}` : ""}`} />;
+  return <LoanDetailScreen store={store} view={view} listPath={`/e2e/loans${preview ? `?preview=${encodeURIComponent(preview)}` : ""}`} />;
 }
 
 /** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`. */
