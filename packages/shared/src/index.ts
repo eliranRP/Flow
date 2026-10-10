@@ -137,7 +137,15 @@ export type { Initials } from "./initials.ts";
 export type { AttachedLoanPayment, LoanSplitAmount, LoanSplitPart, LoanStatus, ScheduledSum } from "./loan-split.ts";
 export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";
-export { expectedMonthsSchema, expectedPartySchema, missingBillSchema, missingBillsSchema } from "./forecast.ts";
-export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill } from "./forecast.ts";
+export {
+  expectedMonthsSchema,
+  expectedPartySchema,
+  missingBillSchema,
+  missingBillsSchema,
+  paymentRecurringSchema,
+  recurringChangeSchema,
+  recurringChangesSchema,
+} from "./forecast.ts";
+export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill, PaymentRecurring, RecurringChange } from "./forecast.ts";
 export { cashBasisSchema, cashLinesSchema, cashMonthsSchema, cashSideSchema } from "./cash.ts";
 export type { CashBasis, CashCurrencyRow, CashLine, CashLinesPage, CashMonth, CashMonths, CashSide } from "./cash.ts";

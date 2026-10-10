@@ -524,3 +524,32 @@ export const TransactionMetaLongAccount: Story = {
     />
   ),
 };
+
+/** FLOW-415 (a-3): the cash view and recurring switches under נספר ברווח. Invented data. */
+const recurringSample = {
+  transaction_id: "t1",
+  party: { direction: "expense" as const, id: "s-power", name: "אור חשמל", currency: "ILS" },
+  recurring: true,
+  override: null,
+  detected: true,
+  typical_day: 4,
+  typical_amount_minor: -185_000n,
+};
+function RecurringStory({ income = false }: { income?: boolean }) {
+  return (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={pnlSample(income
+          ? { direction: "income", amount_gross: 1_200_000n, amount_net: 1_200_000n, supplier_name: null, customer_name: "לקוח לדוגמה", category_name: "שכירות" }
+          : { supplier_name: "אור חשמל", project_name: "בניין הדקל", category_name: "חשמל", amount_gross: -255_000n, amount_net: -255_000n })}
+        sampleCategories={[{ id: "c1", name: income ? "שכירות" : "חשמל" }]}
+        sampleRecurring={income ? { ...recurringSample, party: { ...recurringSample.party, direction: "income", name: "לקוח לדוגמה" } } : recurringSample}
+      />
+    </StoryRoute>
+  );
+}
+export const TransactionRecurring: Story = { name: "Recurring charge, found by itself", render: () => <RecurringStory /> };
+export const TransactionRecurringDark: Story = { name: "Recurring charge, found by itself, dark", render: () => <RecurringStory />, ...dark };
+export const TransactionRecurring320: Story = { name: "Recurring charge, found by itself, 320", render: () => <RecurringStory />, ...at320 };
+export const TransactionRecurringIncome: Story = { name: "Recurring income", render: () => <RecurringStory income /> };

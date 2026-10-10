@@ -26,7 +26,7 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
-import { CalendarIcon, ChartIcon, DocumentIcon, TransferIcon, TrendUpIcon } from "../ui/icons";
+import { CalendarIcon, ChartIcon, DocumentIcon, TransferIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
@@ -45,7 +45,7 @@ import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
-import { missingBillsTitle, useMissingBillsQuery, type ChargeChangeView } from "../forecast";
+import { chargeChangeViews, missingBillsTitle, useMissingBillsQuery, useRecurringChangesQuery, type ChargeChangeView } from "../forecast";
 
 function changePercent(current: bigint, previous: bigint | null): number | null {
   if (previous == null || previous === 0n) return null;
@@ -116,6 +116,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const unpaid = useUnpaidQuery();
   // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
   const missing = useMissingBillsQuery();
+  // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
+  const changes = useRecurringChangesQuery();
 
   const cashPhase = screenPhase(preview, cash);
   const dashboardPhase = screenPhase(preview, dashboard);
@@ -159,6 +161,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         unpaidGross: unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? []) : 0n,
         unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : [],
         missingCount: missing.data?.length ?? 0,
+        changes: chargeChangeViews(changes.data ?? [], search),
         search,
       })}
       unpaidFailed={unpaidPhase.kind === "error"}
@@ -533,8 +536,8 @@ export function homeProjects(projects: readonly ProjectRow[], currency: string):
 /**
  * FLOW-321. The Home pending card: one row to Review and one to Unpaid with its
  * total, each only when it has something. A count of 1 reads singular. FLOW-403 adds a
- * third row, the late recurring bills, as a count only. FLOW-415 (layout A) adds one row per payment
- * well off its usual amount, last; a tap opens that payment.
+ * third row, the late recurring bills, as a count only. FLOW-415 (layout A, a-2) adds one row per
+ * recurring payment 20% or more off its usual amount, last, with an up or down arrow; a tap opens it.
  */
 export function attentionRows({
   pending,
@@ -597,7 +600,7 @@ export function attentionRows({
     rows.push({
       id: `change:${change.id}`,
       to: change.href,
-      icon: <TrendUpIcon size={24} stroke={1.9} />,
+      icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: change.title,
       // Each half wraps whole at 320: "₪2,550 ·" then "בדרך כלל ₪1,850".
       hint: <><span className="ui-nowrap"><bdi dir="ltr">{change.now}</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">{change.usual}</bdi></span></>,

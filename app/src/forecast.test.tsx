@@ -44,12 +44,11 @@ describe("missing bills", () => {
   });
 
   it("names where a late bill files, either half alone, and leaves the line out when neither is known (FLOW-415)", () => {
-    const names = { project: (id: string) => (id === "p1" ? "בניין לדוגמה" : undefined), category: (id: string) => (id === "c1" ? "חשמל" : undefined) };
-    expect(missingBillPlace({ project_id: "p1", category_id: "c1" }, names)).toBe("בניין לדוגמה · חשמל");
-    expect(missingBillPlace({ project_id: "p1", category_id: null }, names)).toBe("בניין לדוגמה");
-    expect(missingBillPlace({ project_id: null, category_id: "c1" }, names)).toBe("חשמל");
-    expect(missingBillPlace({ project_id: "gone", category_id: null }, names)).toBeNull();
-    expect(missingBillPlace({ project_id: "p1", category_id: "c1" })).toBeNull();
+    expect(missingBillPlace({ project_name: "בניין לדוגמה", category_name: "חשמל" })).toBe("בניין לדוגמה · חשמל");
+    expect(missingBillPlace({ project_name: "בניין לדוגמה", category_name: null })).toBe("בניין לדוגמה");
+    expect(missingBillPlace({ project_name: "", category_name: "חשמל" })).toBe("חשמל");
+    expect(missingBillPlace({ project_name: null })).toBeNull();
+    expect(missingBillPlace({})).toBeNull();
     // No last bill: the day alone; a last bill in another year carries its year.
     expect(usualDayText(4, null, now)).toBe("כל חודש ב־4");
     expect(usualDayText(4, "2025-12-04", now)).toBe("כל חודש ב־4 · אחרון 04/12/2025");
@@ -57,11 +56,13 @@ describe("missing bills", () => {
 
   it("words a payment off its usual amount for Home from the server's percent (FLOW-415)", () => {
     const [up, down] = chargeChangeViews([
-      { transaction_id: "t1", category_name: "חשמל", currency: "ILS", amount_minor: -255_000n, typical_amount_minor: -185_000n, change_percent: 38 },
-      { transaction_id: "t2", category_name: null, currency: "USD", amount_minor: -15_000n, typical_amount_minor: -20_000n, change_percent: -25 },
+      { supplier_id: "s1", supplier_name: "אור חשמל", transaction_id: "t1", category_name: "חשמל", currency: "ILS", amount_minor: -255_000n, typical_amount_minor: -185_000n, change_percent: 38 },
+      { supplier_id: "s2", supplier_name: "ענן לדוגמה", transaction_id: "t2", category_name: null, currency: "USD", amount_minor: -15_000n, typical_amount_minor: -20_000n, change_percent: -25 },
     ], "?preview=1");
-    expect(up).toEqual({ id: "t1", title: "חשמל עלה ב־38%", now: "₪2,550", usual: "₪1,850", href: "/transactions/t1?preview=1" });
-    expect(down?.title).toBe("ללא קטגוריה ירד ב־25%");
+    expect(up).toEqual({ id: "t1", title: "חשמל עלה ב־38%", down: false, now: "₪2,550", usual: "₪1,850", href: "/transactions/t1?preview=1" });
+    // No category: the supplier's name, and a drop.
+    expect(down?.title).toBe("ענן לדוגמה ירד ב־25%");
+    expect(down?.down).toBe(true);
     expect(down?.now).toBe("$150");
     const rows = attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, changes: up ? [up] : [], search: "" });
     expect(rows.map((row) => row.id)).toEqual(["review", "missing", "change:t1"]);
@@ -86,7 +87,7 @@ describe("missing bills", () => {
   });
 
   it("draws one row per bill with its hint lines and the amount after כ־, and a calm empty state", () => {
-    const rows = missingBillViews([...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD], "", now, { project: () => "בניין לדוגמה" });
+    const rows = missingBillViews([...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD], "", now);
     const { unmount } = render(
       <MemoryRouter>
         <MissingBillList rows={rows} />
@@ -94,7 +95,7 @@ describe("missing bills", () => {
     );
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
-    expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, בניין לדוגמה, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850");
+    expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, בניין הדקל · חשמל, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850");
     // FLOW-415: a bill that files nowhere has one hint line, when it usually comes.
     expect(links[0]?.querySelectorAll(".ui-row-hint")).toHaveLength(1);
     expect(links[1]?.querySelectorAll(".ui-row-hint")).toHaveLength(2);

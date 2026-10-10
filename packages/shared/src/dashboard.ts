@@ -510,6 +510,9 @@ export const transactionDetailSchema = z
     pnl_state: z.enum(["in", "out", "mixed"]).nullable().optional(),
     /** A loan line: its parts decide what counts, so the override is refused. */
     pnl_fixed: z.boolean().optional(),
+    /** FLOW-413 (decision 0168): false keeps the line out of the cash view, null follows the category. */
+    in_cash_override: z.boolean().nullable().optional(),
+    cash_state: z.enum(["in", "out", "mixed"]).nullable().optional(),
   })
   .nullable();
 
