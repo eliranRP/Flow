@@ -2,13 +2,14 @@
 
 begin;
 
-select plan(33);
+select plan(35);
 
 do $users$
 begin
   perform tests.create_supabase_user('pn_owner', 'pn-owner@example.com');
   perform tests.create_supabase_user('pn_other', 'pn-other@example.com');
   perform tests.create_supabase_user('pn_quiet', 'pn-quiet@example.com');
+  perform tests.create_supabase_user('pn_late', 'pn-late@example.com');
 end
 $users$;
 
@@ -112,6 +113,14 @@ select is(
   true,
   'a first yes also turns on תנועה חדשה'
 );
+select tests.authenticate_as('pn_late');
+select is((public.answer_push_prompt(false)->>'new_transaction')::boolean, false, 'a first no leaves תנועה חדשה off');
+select is(
+  (public.answer_push_prompt(true)->>'new_transaction')::boolean,
+  false,
+  'a yes after an earlier no leaves תנועה חדשה off'
+);
+select tests.authenticate_as('pn_other');
 select lives_ok($$select public.push_unsubscribe('https://fcm.googleapis.com/fcm/send/dev-1')$$, 'unsubscribing a device that is not yours does nothing');
 select throws_ok($$select * from public.push_subscriptions$$, '42501', null, 'a user cannot read the subscriptions table');
 select throws_ok($$select * from public.notification_prefs$$, '42501', null, 'a user cannot read the prefs table');
