@@ -5,8 +5,9 @@ import { ChevronIcon } from "./icons";
 
 /**
  * FLOW-413, frame b. The cash view's rows: נכנס (green), יצא and a quiet רווח החודש under its
- * figure, and the earlier months. They share the look of Home's income and expense rows
- * (ui-flow-line), and each row opens what is behind it. A currency other than the base adds a line under the first amount.
+ * figure, then (FLOW-417) a quiet לא נספר ברווח with a hint naming what it holds, and the earlier
+ * months. They share the look of Home's income and expense rows (ui-flow-line), and each row opens
+ * what is behind it. A currency other than the base adds a line under the first amount.
  */
 
 /** "in" is green; "net" (a month row) and "quiet" (רווח החודש) show a loss in red with its minus. */
@@ -15,6 +16,8 @@ export type CashRowTone = "in" | "out" | "net" | "quiet";
 export type CashRow = {
   id: string;
   label: string;
+  /** FLOW-417: a short line under the label ("שיפוץ והשבחה, השקעת בעלים"). */
+  hint?: string;
   tone: CashRowTone;
   amounts: { currency: string; minor: bigint }[];
   href: string;
@@ -43,7 +46,14 @@ export function CashRows({ rows, onOpen, months = false }: { rows: CashRow[]; on
             onOpen(row);
           }}
         >
-          <span className="ui-flow-label t-body">{row.label}</span>
+          {row.hint == null ? (
+            <span className="ui-flow-label t-body">{row.label}</span>
+          ) : (
+            <span className="ui-flow-labels">
+              <span className="ui-flow-label t-body">{row.label}</span>
+              <span className="ui-flow-hint t-hint">{row.hint}</span>
+            </span>
+          )}
           <span className="ui-flow-amounts">
             {row.amounts.map((amount) => (
               <BigNumber

@@ -31,12 +31,40 @@ export function cashTitle(key: string, now = new Date()): string {
   return `תזרים ${cashMonthName(key, now)}`;
 }
 
-export function cashSideLabel(side: CashSide): string {
+/** A month's lines page: נכנס, יצא, or (FLOW-417) "kept", the cash the P&L leaves out. */
+export type CashListSide = CashSide | "kept";
+
+export function cashSideLabel(side: CashListSide): string {
+  if (side === "kept") return NOT_IN_PROFIT_LABEL;
   return side === "in" ? "נכנס" : "יצא";
 }
 
-export function isCashSide(value: string | undefined): value is CashSide {
-  return value === "in" || value === "out";
+export function isCashSide(value: string | undefined): value is CashListSide {
+  return value === "in" || value === "out" || value === "kept";
+}
+
+/** FLOW-417 (glossary: kept-out is "לא נספר ברווח"). */
+export const NOT_IN_PROFIT_LABEL = "לא נספר ברווח";
+
+/** The cash profit leaves out: with רווח החודש it adds up to the month's figure. */
+export function notInProfitMinor(row: CashCurrencyRow): bigint {
+  return row.net_minor - row.profit_minor;
+}
+
+/** The row's hint: the two largest categories profit leaves out ("שיפוץ והשבחה, השקעת בעלים"). */
+export function notInProfitHint(row: CashCurrencyRow | undefined): string | undefined {
+  const names = (row?.not_in_profit_categories ?? []).map((category) => category.name).filter((name) => name !== "");
+  if (names.length === 0) return undefined;
+  const shown = names.slice(0, 2).join(", ");
+  return names.length > 2 ? `${shown} ועוד` : shown;
+}
+
+/**
+ * What the categories don't cover (VAT, a line out of the view but in profit): the lines page
+ * says so under its figure, so its rows and figure still add up.
+ */
+export function notInProfitRest(row: CashCurrencyRow): bigint {
+  return notInProfitMinor(row) - row.not_in_profit_categories.reduce((sum, category) => sum + category.amount_minor, 0n);
 }
 
 /** A month's page: its figure, נכנס and יצא. */
@@ -44,8 +72,8 @@ export function cashMonthPath(key: string, search: string): string {
   return `/cash/${key}${search}`;
 }
 
-/** The lines behind one month's נכנס or יצא in one currency. */
-export function cashLinesPath(key: string, side: CashSide, currency: string, search: string): string {
+/** The lines behind one month's נכנס, יצא or לא נספר ברווח in one currency. */
+export function cashLinesPath(key: string, side: CashListSide, currency: string, search: string): string {
   return `/cash/${key}/${side}/${currency}${search}`;
 }
 
@@ -63,6 +91,7 @@ export function cashRows(month: CashMonth | undefined, base: string): CashCurren
       excluded_count: 0,
       excluded_in_minor: 0n,
       excluded_out_minor: 0n,
+      not_in_profit_categories: [],
     },
     ...rows,
   ];
@@ -82,7 +111,9 @@ export function profitPath(search: string): string {
 
 /**
  * The rows under a month's cash figure: נכנס and יצא open the month's lines, רווח החודש opens the
- * profit view for the month. Each row lists the base currency, then any other that moved.
+ * profit view for the month, and (FLOW-417) לא נספר ברווח, the rest of the month's figure, opens
+ * the lines profit leaves out; it shows only when some currency has any. Each row lists the base
+ * currency, then any other that moved.
  */
 export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: string, now = new Date()): CashRow[] {
   const name = cashMonthName(key, now);
@@ -91,6 +122,20 @@ export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: st
   const incoming = amounts((row) => row.in_minor);
   const outgoing = amounts((row) => row.out_minor);
   const profit = amounts((row) => row.profit_minor);
+  const kept = amounts(notInProfitMinor);
+  const keptRow: CashRow[] = kept.some((amount) => amount.minor !== 0n)
+    ? [
+        {
+          id: "kept",
+          label: NOT_IN_PROFIT_LABEL,
+          hint: notInProfitHint(rows[0]),
+          tone: "quiet",
+          amounts: kept,
+          href: cashLinesPath(key, "kept", base, search),
+          name: `${NOT_IN_PROFIT_LABEL} ב${name} ${cashAmountsText(kept)} – פירוט`,
+        },
+      ]
+    : [];
   return [
     {
       id: "in",
@@ -117,6 +162,7 @@ export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: st
       profitMonth: key,
       name: `רווח ב${name} ${cashAmountsText(profit)}`,
     },
+    ...keptRow,
   ];
 }
 
