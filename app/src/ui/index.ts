@@ -62,6 +62,7 @@ export type { StatementDetail } from "./statement";
 export { CurrencySheet, CURRENCY_CHOICES, currencyChoiceLabel } from "./currency-sheet";
 export { BasisSheet, BASIS_CHOICES, basisChoiceLabel } from "./basis-sheet";
 export { PeriodSwipe } from "./period-swipe";
+export { MonthStepper } from "./month-stepper";
 export { ApproxAmount, approxAmountText } from "./approx-amount";
 export { MissingBillList } from "./missing-bill-list";
 export type { MissingBillRow } from "./missing-bill-list";

@@ -16,17 +16,20 @@ import {
   shownCashRows,
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
+import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useCashLinesQuery, useCashMonthData, useOpenCashRow } from "../use-cash";
+import { useCashLinesQuery, useCashMonthData, useCashYearsQuery, useOpenCashRow } from "../use-cash";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { CashRows } from "../ui/cash-rows";
-import { formatDayMonth } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
+import { MonthStepper } from "../ui/month-stepper";
+import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -58,6 +61,25 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
   const back = recent ? `/${search}` : cashYearPath(Number(monthKey.slice(0, 4)), search);
+  const navigate = useNavigate();
+  // FLOW-362 (C15-6): the page steps months, from the books' first month to this one.
+  const years = useCashYearsQuery(sample == null);
+  const first = sample ? cashMonthKey(sample.months.at(-1)?.month ?? monthKey) : years.data?.first_month ? cashMonthKey(years.data.first_month) : null;
+  const opens = (key: string) => first != null && key >= first && key <= israelToday().slice(0, 7);
+  const go = (key: string) => {
+    void navigate(cashMonthPath(key, search), { replace: true });
+  };
+  const earlierKey = shiftMonthKey(monthKey, -1);
+  const laterKey = shiftMonthKey(monthKey, 1);
+  const stepper = (
+    <MonthStepper
+      earlier={opens(earlierKey) ? cashTitle(earlierKey) : null}
+      later={opens(laterKey) ? cashTitle(laterKey) : null}
+      onStep={(delta) => {
+        go(delta < 0 ? earlierKey : laterKey);
+      }}
+    />
+  );
   if (phase.kind !== "ready") {
     return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
@@ -68,14 +90,23 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
   const rows = shownCashRows(month, data.base_currency);
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker="תזרים" />
-      <p className="ui-breakdown-total ui-page-pad">
-        {rows.map((row) => (
-          <span key={row.currency} className="ui-breakdown-total-line">
-            <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
-          </span>
-        ))}
-      </p>
+      <ScreenHeader layout="stacked" title={title} backTo={back} kicker="תזרים" titleAside={stepper} />
+      {/* A sideways swipe on the figure steps the month, as on the profit band (FLOW-336). */}
+      <PeriodSwipe
+        period={monthPeriod(monthKey)}
+        allow={(next: PeriodChoice) => opens(anchorOf(next))}
+        onChange={(next) => {
+          go(anchorOf(next));
+        }}
+      >
+        <p className="ui-breakdown-total ui-page-pad">
+          {rows.map((row) => (
+            <span key={row.currency} className="ui-breakdown-total-line">
+              <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
+            </span>
+          ))}
+        </p>
+      </PeriodSwipe>
       <CashRows rows={cashSummaryRows(monthKey, rows, search)} onOpen={open} />
     </div>
   );
