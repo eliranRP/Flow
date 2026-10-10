@@ -523,7 +523,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 18
 - A screen Home opens only from an alert also gets a fixed quiet TextLink at the end of Home, so it stays reachable once the alert is gone (FLOW-423).
 - A sheet row that drills into a list brings Back to the same sheet, open (FLOW-433).
 - The project page is Home for one project: Home's rows, words and order, with the project's own figures and alerts. Its history pages name the project above the band label (FLOW-435).
-- A bank-side name for a card or an account sits before its last 4 on the same row. The name clips; the last 4 never do (FLOW-707).
+- A bank-side name shares the row with its last 4: a card reads "כרטיס ••1234 · <name>", an account reads "<name> ••1234". The name clips; the card word and the last 4 never do (FLOW-707).
 - A percent against the usual amount always names that amount next to it (FLOW-431).
 - A month head's total is the whole month's, never a partial sum of the rows loaded so far. When the whole figure isn't known, the head shows none (FLOW-908).
 - A set-aside row lays out like a counted row; only its colors change (FLOW-909).
