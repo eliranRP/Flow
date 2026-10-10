@@ -688,6 +688,11 @@ test("the gate starts containerd then dockerd and fails, never skips, when a cha
   const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
   assert.ok(local.includes('(sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)'));
   assert.ok(local.includes('(sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)'));
+  // A stale socket from an earlier containerd doesn't count as one serving, and a dockerd that
+  // exited before containerd was ready gets one more start.
+  assert.match(local, /if ! pgrep -x containerd >\/dev\/null 2>&1; then\n\s*\(sudo -n containerd/);
+  assert.ok(local.includes('grep -q "containerd successfully booted" /tmp/flow-containerd.log'));
+  assert.match(local, /if \[\[ -z \$retried \]\] && \(\( i >= 5 \)\) && ! pgrep -x dockerd[\s\S]*?start_dockerd/);
   assert.match(local, /if ! start_docker; then[\s\S]*?Nothing is left to main\.[\s\S]*?exit 1\n  else/);
   assert.doesNotMatch(local, /Docker is not running, so the e2e specs/);
   assert.ok(local.includes("skipping them: ${e2e_specs[*]}"));

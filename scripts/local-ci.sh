@@ -305,20 +305,36 @@ fi
 # Starts Docker when it is down. In cloud containers dockerd alone can fail with "timeout waiting
 # for containerd", so containerd starts first and dockerd is pointed at its socket.
 start_docker() {
-  local sock=/run/containerd/containerd.sock
+  local sock=/run/containerd/containerd.sock retried=
   docker info >/dev/null 2>&1 && return 0
-  if ! pgrep -x dockerd >/dev/null 2>&1; then
-    if [[ ! -S "$sock" ]] && ! pgrep -x containerd >/dev/null 2>&1; then
-      (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
-      for _ in $(seq 1 15); do [[ -S "$sock" ]] && break; sleep 1; done
-    fi
+  start_dockerd() {
     if [[ -S "$sock" ]]; then
       (sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
     else
       (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
     fi
+  }
+  if ! pgrep -x dockerd >/dev/null 2>&1; then
+    # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
+    # none runs, and wait for it to say it booted.
+    if ! pgrep -x containerd >/dev/null 2>&1; then
+      (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
+      for _ in $(seq 1 15); do
+        grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null && break
+        sleep 1
+      done
+    fi
+    start_dockerd
   fi
-  for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && return 0; sleep 1; done
+  for i in $(seq 1 30); do
+    docker info >/dev/null 2>&1 && return 0
+    # dockerd exits at once when containerd wasn't ready yet; start it once more.
+    if [[ -z $retried ]] && (( i >= 5 )) && ! pgrep -x dockerd >/dev/null 2>&1; then
+      retried=1
+      start_dockerd
+    fi
+    sleep 1
+  done
   return 1
 }
 
