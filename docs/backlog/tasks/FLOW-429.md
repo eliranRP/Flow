@@ -1,0 +1,4 @@
+<a id="flow-429"></a>
+# FLOW-429 · A hint part wider than its line wraps instead of clipping
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Source:** cycle 21 phone review of production at a6b0b35, 2026-10-10 (C21-2), on the FLOW-426 toast in parts (#564). Shot: `reviews/ui-ux-cycle-21/shots/sb--toast-viewer-note-320--w320.png`. The design lead signs it off; there is no owner card.
+- [ ] (UI lane 3) **The viewer toast cuts its last word (C21-2).** At 320 with the ביטול action, the part "· שינויים נעשים על ידי בעל העסק" is 210px in a 184px line, and `HintParts` keeps each part on one line with overflow hidden, so it reads "בעל העס" with no ellipsis. Rule: a part breaks only at its "·" while it fits its line; a part wider than the whole line wraps at its own spaces (never clips, never ellipsizes in a toast). Fix it in `HintParts` so every user keeps the rule, and add a 320 test with a part wider than the line.

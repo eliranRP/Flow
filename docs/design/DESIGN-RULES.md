@@ -352,7 +352,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 
 ### 3.7 Patterns from the design log
 
-Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 18 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
+Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21 (2026-10-10), plus sign-offs since. The id in brackets names the log entry.
 
 **Headers and navigation**
 
@@ -510,7 +510,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 18
 
 **Recurring, project cash and lists (folded at cycle 17)**
 
-- An alert a user can hide for themselves ends in a muted 44px ✕ labelled "הסתרה, <name>", and the row also swipes toward the start over "הסתרה". The undo toast says "ההתראה הוסתרה". A hidden change keeps its row without its percent (FLOW-415).
+- An alert a user can hide for themselves closes with "סגירה": a swipe toward the start, and the same word on each row under עריכה. Never a ✕ beside a chevron; a row ends in one trailing control. A swipe-only action peeks once on the first visit. The undo toast says "ההתראה נסגרה". A closed change keeps its row without its percent (FLOW-913, replaces FLOW-415).
 - A change's ▲/▼ % sits beside the amount: red when it is bad news for the business (an expense up, income down), green otherwise (FLOW-415).
 - One control per job: the switch turns a thing on or off, and the row's words open its detail. A word that opens a sheet is accent and ends in a ▾ (FLOW-415).
 - In a list where some rows end in an action and some don't, every row keeps the action's place, so the figures line up. Every row in a list shares one fill (FLOW-415).
@@ -530,6 +530,10 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 18
 - A split row's figure reads as the sum of the parts it names, out of the whole line: plain words, no pills, the date last and dropped first. "ועוד N" stays with the part before it (FLOW-432).
 - A part worth $0 has no row (FLOW-434).
 - Figures on one page agree: a schedule's principal still to pay equals the balance shown, and a count of parts counts only the parts that have a row (FLOW-427).
+- Hint and toast parts break only at their "·" while a part fits its line; a part wider than the whole line wraps at its own spaces and never clips (FLOW-429).
+- In a row hint a figure is never cut; words give way first (FLOW-425). An app update never reloads under the user: it waits for a move to another screen or a hidden page (FLOW-426).
+- A list that loads in pages has no end for the walk until its last page is in; its next word stays and shows busy while the page loads. A count shows only a real total; while it is unknown, the place stands alone (FLOW-314).
+- A pager keeps both arrows; an end it cannot go past is dimmed and disabled, not hidden (FLOW-437).
 
 ---
 

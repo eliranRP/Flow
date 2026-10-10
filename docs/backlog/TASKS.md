@@ -273,6 +273,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-425"></a>[FLOW-425](tasks/FLOW-425.md) | Split rows keep their amounts whole, and the first sheet opens at once | SMALL UI |
 | <a id="flow-426"></a>[FLOW-426](tasks/FLOW-426.md) | The viewer toast wraps whole, and the update reload never drops the user's place | SMALL UI |
 | <a id="flow-427"></a>[FLOW-427](tasks/FLOW-427.md) | Loan pages: figures that agree, one row style, whole parts at 320 | SMALL UI |
+| <a id="flow-428"></a>[FLOW-428](tasks/FLOW-428.md) | קבועים edit mode keeps one amount column | SMALL UI |
+| <a id="flow-429"></a>[FLOW-429](tasks/FLOW-429.md) | A hint part wider than its line wraps instead of clipping | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
