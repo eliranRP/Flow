@@ -104,14 +104,14 @@
 }
 
 .ui-missing-match-text {
-  flex: 1 1 12rem;
+  flex: 1 1 100%;
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
-/* The amount and date never break inside. */
+/* The amount and the date are whole or gone: they never shrink into an ellipsis. */
 .ui-missing-match-whole {
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ui-missing-match-actions {
@@ -123,4 +123,11 @@
 .ui-missing-match-actions .ui-btn-pill {
   height: var(--touch-min);
   min-height: var(--touch-min);
+}
+
+/* "לא" is the quiet, neutral pill; the accent stays on yes. */
+.ui-missing-match-actions .ui-btn-pill.ui-missing-match-no {
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-text-secondary);
 }

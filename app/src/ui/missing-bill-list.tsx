@@ -126,17 +126,26 @@ function MatchHint({ match, income, onAnswer }: { match: MissingBillMatchHint; i
   const same = income ? "כן, אותו לקוח" : "כן, אותו ספק";
   return (
     <div className="ui-missing-match" role="group" aria-label={`אולי זה: ${match.name}`}>
+      {/* One line of whole parts: the date drops first, then the amount; a long name ends in "…". */}
       <span className="ui-row-hint ui-missing-match-text">
-        {"אולי זה: "}
-        <bdi>{match.name}</bdi>
-        {" · "}
-        <bdi dir="ltr" className="ui-num ui-missing-match-whole">{match.amount}</bdi>
-        {" · "}
-        <bdi dir="ltr" className="ui-missing-match-whole">{match.date}</bdi>
+        <span className="ui-hint-parts">
+          <span className="ui-hint-part" data-clip-ok="">
+            {"אולי זה: "}
+            <bdi>{match.name}</bdi>
+          </span>
+          <span className="ui-hint-part ui-missing-match-whole">
+            {" · "}
+            <bdi dir="ltr" className="ui-num">{match.amount}</bdi>
+          </span>
+          <span className="ui-hint-part ui-missing-match-whole">
+            {" · "}
+            <bdi dir="ltr">{match.date}</bdi>
+          </span>
+        </span>
       </span>
       <span className="ui-missing-match-actions">
         <Button variant="pill" aria-label={`${same}: ${match.name}`} onClick={() => { onAnswer(true); }}>{same}</Button>
-        <Button variant="pill" aria-label={`לא, ${match.name} הוא לא אותו אחד`} onClick={() => { onAnswer(false); }}>לא</Button>
+        <Button variant="pill" className="ui-missing-match-no" aria-label={`לא, ${match.name} הוא לא אותו אחד`} onClick={() => { onAnswer(false); }}>לא</Button>
       </span>
     </div>
   );
