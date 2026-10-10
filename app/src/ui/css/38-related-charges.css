@@ -14,6 +14,18 @@
   margin-top: var(--space-2);
 }
 
+/* FLOW-424 (C18-3): drawn 28px tall, tapped 44px (.ui-status sets the drawn height). */
+.ui-charge-chip {
+  position: relative;
+}
+
+.ui-charge-chip::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block: calc((var(--touch-min) - 100%) / -2);
+}
+
 .ui-charge-chip:active {
   background: var(--color-tint-pressed);
 }
@@ -117,4 +129,17 @@
 
 .ui-charges-date {
   color: var(--color-text-secondary);
+}
+
+.ui-charges-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-charges-chevron {
+  display: inline-flex;
+  flex: none;
+  inline-size: 20px;
+  justify-content: center;
 }

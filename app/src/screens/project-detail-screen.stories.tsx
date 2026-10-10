@@ -1,6 +1,6 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import { expect, userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
@@ -458,6 +458,30 @@ export const ProjectTransactionsSection: Story = {
 };
 export const ProjectTransactionsSectionDark: Story = { ...ProjectTransactionsSection, name: "Project, transactions section, dark", ...dark };
 export const ProjectTransactionsSection320: Story = { ...ProjectTransactionsSection, name: "Project, transactions section, 320", ...at320 };
+
+// FLOW-424 (C18-1): a kept-out line with a long category keeps its amount and chevron in line with
+// the counted rows at 320; the category drops whole instead of pushing them out.
+const longKeptOut: NonNullable<ProjectDetailData> = {
+  ...overviewProject,
+  transactions: (overviewProject.transactions ?? []).map((txn) => (txn.kept_out === true ? { ...txn, category: "קבלני משנה וחומרי גמר" } : txn)),
+};
+export const ProjectTransactionsLongKeptOut320: Story = {
+  name: "Project, transactions section, long kept-out hint, 320",
+  ...at320,
+  render: () => (
+    <StoryRoute entry="/projects/p-a/transactions" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={longKeptOut} section="transactions" sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = [...canvasElement.querySelectorAll<HTMLElement>("a.ui-row")].filter((row) => row.querySelector(".ui-row-chevron"));
+    const kept = rows.find((row) => row.classList.contains("ui-row-set-aside"));
+    const counted = rows.find((row) => !row.classList.contains("ui-row-set-aside"));
+    const edge = (row: HTMLElement | undefined) => Math.round(row?.querySelector(".ui-row-chevron")?.getBoundingClientRect().left ?? -1);
+    await expect(kept).toBeDefined();
+    await expect(edge(kept)).toBe(edge(counted));
+  },
+};
 
 export const ProjectLoansSection: Story = {
   name: "Project, loans section",

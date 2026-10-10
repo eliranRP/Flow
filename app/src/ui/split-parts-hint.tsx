@@ -58,3 +58,25 @@ function SplitAmount({ text }: { text: string }) {
     </bdi>
   );
 }
+
+/**
+ * FLOW-424 (C18-1): a kept-out row's one-line hint. The kept-out words lead on their own and alone
+ * set the row's minimum width; the later parts take what is left and drop whole, so a long category
+ * never pushes the amount out. Lives here, not in ListRow, so Home's entry does not carry it.
+ */
+export function KeptOutHint({ parts }: { parts: readonly string[] }) {
+  const [kept, ...rest] = parts;
+  return (
+    <span className="ui-hint-kept-line">
+      <span className="ui-hint-kept">{kept}</span>
+      <span className="ui-hint-parts ui-hint-rest">
+        {rest.map((part, index) => (
+          <span key={index} className="ui-hint-part" data-clip-ok="">
+            {" · "}
+            {part}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}

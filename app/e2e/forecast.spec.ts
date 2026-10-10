@@ -52,6 +52,16 @@ test("Home: with no alert in the box, לכל הקבועים still opens קבוע
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
 });
 
+test("קבועים on one project shows only its rows and names it (FLOW-424)", async ({ page }) => {
+  await page.goto("/e2e/missing-bills?preview=1&project=p1");
+  await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
+  await expect(page.getByText("בניין הדקל", { exact: true }).first()).toBeVisible();
+  const late = page.getByRole("region", { name: "לא הגיעו" });
+  await expect(late.getByRole("link")).toHaveCount(1);
+  await expect(late.getByRole("link").first()).toHaveAccessibleName(/^אור חשמל/);
+  await expect(page.getByRole("region", { name: "הגיעו החודש" }).getByRole("link")).toHaveCount(1);
+});
+
 test("Project: a צפוי month opens the sheet of its parties, and the sheet closes", async ({ page }) => {
   await page.goto("/e2e/project-detail?preview=1&section=expenses");
   const section = page.getByRole("region", { name: "צפוי" });

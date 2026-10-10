@@ -5,7 +5,7 @@ import { absAgorot } from "../agorot";
 import { chargesTitle, partyChangeView, shortMonth, type PartyChangeView } from "../party-charges";
 import { cx } from "./cx";
 import { formatDayMonth } from "./date-math";
-import { ChevronIcon } from "./icons";
+import { ChevronDownIcon, ChevronIcon } from "./icons";
 import { Sheet } from "./sheet";
 import "./css/38-related-charges.css";
 
@@ -30,8 +30,9 @@ export function ChargeChangeChip({ view, onClick, buttonRef }: { view: PartyChan
           {view.percent == null ? "כמו הרגיל" : "לעומת הרגיל"} <bdi dir="ltr">{view.usual}</bdi>
         </span>
       </span>
+      {/* FLOW-424 (C18-3): it opens a sheet, so it ends in ▾ (§3.7). */}
       <span className="ui-charge-chip-chevron" aria-hidden="true">
-        <ChevronIcon size={16} />
+        <ChevronDownIcon size={16} />
       </span>
     </button>
   );
@@ -92,7 +93,13 @@ export function PartyChargesBody({ data, search = "" }: { data: PartyCharges; se
           const body = (
             <>
               <span className="ui-charges-date"><bdi dir="ltr">{date}</bdi>{charge.pending ? <span className="t-label text-text-secondary"> · ממתין</span> : null}</span>
-              <bdi dir="ltr" className="t-amount ui-num">{amount}</bdi>
+              <span className="ui-charges-end">
+                <bdi dir="ltr" className="t-amount ui-num">{amount}</bdi>
+                {/* FLOW-424 (C18-5): a linked charge ends in a chevron; the open one keeps its place. */}
+                <span className="ui-row-chevron ui-charges-chevron" aria-hidden="true">
+                  {current ? null : <ChevronIcon />}
+                </span>
+              </span>
             </>
           );
           return (

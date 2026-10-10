@@ -131,6 +131,9 @@ describe("projectAttentionRows", () => {
     expect(rows.map((row) => row.id)).toEqual(["review", "missing", "missing-income", "change:t-power-oct"]);
     expect(rows[0]?.to).toBe("/review?project=p1");
     expect(rows[1]?.title).toBe("חשבון אחד לא הגיע");
+    // FLOW-424 (C18-4): the late rows open קבועים on this project.
+    expect(rows[1]?.to).toBe("/missing-bills?project=p1#late");
+    expect(rows[2]?.to).toBe("/missing-bills?project=p1#late");
   });
 
   it("shows nothing for a project with no alerts", () => {
