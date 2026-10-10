@@ -24,7 +24,7 @@ import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { CategoryMenuSheet } from "./category-sheet";
-import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns } from "./category-loan-use";
+import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns, type LoanLine } from "./category-loan-use";
 import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
 /** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
@@ -34,8 +34,9 @@ const LOAN_CATEGORY_LINES: Record<string, string> = {
   principal: "קטגוריית הלוואה\u00a0· לא נספרת ברווח",
 };
 
-function loanCategoryLine(category: CategoryRow): string | null {
-  return category.loan_part ? (LOAN_CATEGORY_LINES[category.loan_part] ?? null) : null;
+function loanCategoryLine(category: CategoryRow): LoanLine | null {
+  const title = category.loan_part ? LOAN_CATEGORY_LINES[category.loan_part] : undefined;
+  return title == null ? null : { title };
 }
 
 type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
