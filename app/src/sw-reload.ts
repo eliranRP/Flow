@@ -51,13 +51,20 @@ export function watchServiceWorker(win: Win = window, now: () => number = Date.n
     if (win.document.visibilityState === "hidden") tryReload();
   });
   // The router moves between screens with pushState, and Back with popstate: the URL is already the
-  // new screen's, so the reload lands there.
+  // new screen's, so the reload lands there. Only a new path counts: a push that opens a sheet or
+  // changes a query on the same screen comes before the sheet mounts, where busy() can't see it.
+  let path = win.location.pathname;
+  const onMove = () => {
+    if (win.location.pathname === path) return;
+    path = win.location.pathname;
+    tryReload();
+  };
   const push = win.history.pushState.bind(win.history);
   win.history.pushState = (...args: Parameters<History["pushState"]>) => {
     push(...args);
-    tryReload();
+    onMove();
   };
-  win.addEventListener("popstate", tryReload);
+  win.addEventListener("popstate", onMove);
   win.document.addEventListener("visibilitychange", () => {
     if (win.document.visibilityState === "hidden") tryReload();
     else void sw.getRegistration().then((registration) => registration?.update(), () => undefined);

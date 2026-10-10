@@ -11,11 +11,20 @@ function fakeWindow({ controller = true } = {}) {
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
   const target = new EventTarget();
   const pushed: unknown[] = [];
-  const history = { pushState: (_state: unknown, _unused: string, url?: string | URL | null) => pushed.push(url) };
+  const location = { reload, pathname: "/" };
+  const moveTo = (url: string) => {
+    location.pathname = new URL(url, "https://flow.test").pathname;
+  };
+  const history = {
+    pushState: (_state: unknown, _unused: string, url?: string | null) => {
+      pushed.push(url);
+      if (url != null) moveTo(url);
+    },
+  };
   const win = {
     navigator: { serviceWorker: sw },
     document,
-    location: { reload },
+    location,
     sessionStorage: window.sessionStorage,
     history,
     addEventListener: target.addEventListener.bind(target),
@@ -32,7 +41,10 @@ function fakeWindow({ controller = true } = {}) {
     navigate: (url: string) => {
       win.history.pushState(null, "", url);
     },
-    back: () => target.dispatchEvent(new Event("popstate")),
+    back: (url: string) => {
+      moveTo(url);
+      target.dispatchEvent(new Event("popstate"));
+    },
     setVisibility: (state: DocumentVisibilityState) => {
       visibility = state;
       document.dispatchEvent(new Event("visibilitychange"));
@@ -59,11 +71,23 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
     expect(tab.reload).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the page when a push stays on the same screen: a sheet or a query", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.takeControl();
+    tab.navigate("/?sheet=add");
+    tab.navigate("/?period=2026-09");
+    tab.back("/");
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.navigate("/projects");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
   it("reloads on Back", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
     tab.takeControl();
-    tab.back();
+    tab.back("/projects");
     expect(tab.reload).toHaveBeenCalledTimes(1);
   });
 
