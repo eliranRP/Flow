@@ -75,7 +75,9 @@
   font-weight: 500;
 }
 
-.ui-demo[data-demo-state="playing"] .ui-demo-replay {
+/* A replay keeps focus on שוב (FLOW-506): it hides during the play only while it has no keyboard
+   focus, so a focused button never vanishes. */
+.ui-demo[data-demo-state="playing"] .ui-demo-replay:not(:focus-visible) {
   opacity: 0;
   pointer-events: none;
 }

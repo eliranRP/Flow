@@ -57,6 +57,12 @@
   margin-block-start: var(--space-5);
 }
 
+/* A note in a step with a demo lines up with the demo frame, a card, not with the text (FLOW-506). */
+.ui-setup-stage-host ~ .ui-setup-body > .ui-notice {
+  max-width: none;
+  margin-inline: calc(var(--space-card-inset) - var(--space-side));
+}
+
 .ui-setup-panel {
   margin-inline: calc((var(--space-side) - var(--space-4)) * -1);
   border: 1px solid var(--color-line);
