@@ -1,0 +1,1 @@
+The project page now matches Home: "לכל החודשים" under the earlier months opens the project's whole cash history (years, then months), and Home's attention card shows the project's own rows (items waiting for approval, late bills and income, changed recurring charges), leaving out what this user hid.

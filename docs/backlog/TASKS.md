@@ -290,6 +290,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
+| <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
@@ -357,6 +358,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-905"></a>[FLOW-905](tasks/FLOW-905.md) | Example data in the rendered design screens | BACKLOG NIT |
 | <a id="flow-906"></a>[FLOW-906](tasks/FLOW-906.md) | Confirm the public help contact | BACKLOG NIT |
 | <a id="flow-907"></a>[FLOW-907](tasks/FLOW-907.md) | Data clean-up after PR B | MCP |
+| <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 
 ## Future features
 

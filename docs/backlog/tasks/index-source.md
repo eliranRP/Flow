@@ -280,6 +280,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-417
 - FLOW-419
 - FLOW-433
+- FLOW-435
 
 ## Onboarding, Settings and connectors
 
@@ -337,6 +338,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-905
 - FLOW-906
 - FLOW-907
+- FLOW-909
 
 ## Future features
 

@@ -229,6 +229,20 @@ export const SetAsideDark: Story = {
   globals: { theme: "dark" },
   render: () => <SetAsideRows />,
 };
+/** FLOW-909: a kept-out line's name uses the row's free width like a counted line's; it was cut to "City Of Pri…" with room to spare. */
+export const SetAsideShortName: Story = {
+  args: { variant: "transaction", title: "Sample City Water" },
+  render: () => (
+    <List>
+      <ListRow variant="transaction" title="Sample Electric Cooperative" hint="02/10" agorot={-36_500n} sign="out" source="bank" href="/transactions/1" />
+      <ListRow variant="transaction" title="Sample City Water" hint="לא נספר ברווח" agorot={-20_000n} sign="out" source="bank" href="/transactions/2" setAside />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    const title = within(canvasElement).getByText("Sample City Water");
+    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
+  },
+};
 /** FLOW-352: the hint keeps its full muted grey (AA); the icon, name and amount fade. */
 export const SetAside320: Story = { ...SetAside, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const SetAsideDark320: Story = { ...SetAsideDark, parameters: { viewport: { defaultViewport: "flow320" } } };

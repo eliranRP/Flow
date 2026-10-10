@@ -20,18 +20,21 @@ type HeroProps = {
   explanation?: string;
   /** FLOW-355: Home's period pill, between the label and the figure. */
   pill?: ReactNode;
+  /** FLOW-435: a small line above the label, naming whose figure it is (a project's history). */
+  kicker?: string;
 };
 
 /**
  * Home summary. One label, the figure, and one explanation.
  * A loss is named in the label. The figure stays white: red on the violet band does not read.
  */
-export function Hero({ label, agorot, currency = "ILS", figures, explanation, pill }: HeroProps) {
+export function Hero({ label, agorot, currency = "ILS", figures, explanation, pill, kicker }: HeroProps) {
   const rows = figures ?? (agorot == null ? [] : [{ agorot, currency, loss: agorot < 0n }]);
   const multi = rows.length > 1;
   return (
     <BandHero>
       <div className="ui-hero">
+        {kicker ? <p className="t-label">{kicker}</p> : null}
         {rows.length === 0 ? (
           <h1 className="ui-band-label t-label">{label}</h1>
         ) : (

@@ -403,6 +403,10 @@
       "screens/projects-screen.tsx",
       "screens/project-detail-screen.tsx"
     ],
+    "project-history-open.spec.ts": [
+      "screens/project-detail-screen.tsx",
+      "screens/project-cash-history.tsx"
+    ],
     "project-reopen.spec.ts": [
       "screens/projects-screen.tsx",
       "screens/project-detail-screen.tsx"

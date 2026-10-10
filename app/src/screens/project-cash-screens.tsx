@@ -17,11 +17,13 @@ import { useHeldOrder } from "../list-hold";
 import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
+  projectCashHistoryPath,
   projectCashLinesPath,
   projectCashMonthPath,
   projectCashSummaryRows,
   projectEarlierMonthRows,
   useProjectCashLinesQuery,
+  useProjectCashMonthData,
   useProjectCashMonthsQuery,
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
@@ -33,6 +35,7 @@ import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { FocusTitle } from "../ui/focus-title";
 import { DocumentIcon } from "../ui/icons";
+import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero, SectionHead } from "../ui/layout";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
@@ -42,6 +45,7 @@ import { SplitPartsHint } from "../ui/split-parts-hint";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
+import { TextLink } from "../ui/text-link";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { useProjectQuery } from "../use-books";
@@ -78,6 +82,7 @@ export function ProjectCashOverview({
   investmentHref,
   stateLine,
   menu,
+  attention = [],
   example,
   now,
 }: {
@@ -90,6 +95,8 @@ export function ProjectCashOverview({
   /** The line under the name for a state other than active ("הסתיים"). */
   stateLine: string | null;
   menu: ReactNode;
+  /** Home's attention rows for this project: its late bills and income, and its changed charges. */
+  attention?: BannerRow[];
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -138,10 +145,18 @@ export function ProjectCashOverview({
           />
         </List>
       )}
+      {/* As on Home: the rows that need a hand, after the figures; an empty box hides. */}
+      <BannerRows rows={attention} />
       {earlier.length > 0 ? (
         <>
           <SectionHead title="חודשים קודמים" />
           <CashRows rows={earlier} months />
+          {/* As on Home (FLOW-417): the project's whole history, years then months, under the last month. */}
+          <p className="ui-page-pad">
+            <TextLink to={projectCashHistoryPath(project.id, search)} tone="quiet">
+              לכל החודשים
+            </TextLink>
+          </p>
         </>
       ) : null}
     </div>
@@ -181,7 +196,8 @@ function ProjectCashMonthBody({
   sampleName?: string;
 }) {
   const preview = useHomePreview();
-  const query = useProjectCashMonthsQuery(projectId, sample == null);
+  // An older month (opened from the history) reads its year's months.
+  const query = useProjectCashMonthData(projectId, monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
   const back = `/projects/${projectId}${search}`;
@@ -210,7 +226,7 @@ function ProjectCashMonthBody({
     return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
   const month = monthOf(data ?? undefined, monthKey);
-  // The project page reads the last few months; a month outside them has no page.
+  // A month outside the project's books (or after this one) has no page.
   if (data == null || month == null) return <Navigate to={back} replace />;
   const rows = shownCashRows(month, data.base_currency);
   return (
