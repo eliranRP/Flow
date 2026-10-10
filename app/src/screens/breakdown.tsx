@@ -1,6 +1,6 @@
 import type { Breakdown, BreakdownDirection, BreakdownGroupBy, BreakdownLinesPage } from "@flow/shared";
-import { useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import {
   currencyFirst,
   directionLabel,
@@ -17,6 +17,8 @@ import {
   writeGroupBy,
 } from "../breakdown";
 import { useHeldOrder } from "../list-hold";
+import { txnListState } from "../txn-nav";
+import { uniqueIds, useTxnListMore } from "../txn-list-more";
 import { periodPillLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -244,6 +246,18 @@ function LinesBody({
   const pages = sample?.pages ?? lines.data?.pages ?? [];
   const loaded = pages.flatMap((page) => page?.rows ?? []);
   const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
+  // FLOW-314: a card opened here walks these lines; a line split in parts is one card.
+  const location = useLocation();
+  const listFrom = `${location.pathname}${location.search}`;
+  const ids = uniqueIds(rows.map((row) => row.transaction_id));
+  const fetchNext = lines.fetchNextPage;
+  const loadMore = useCallback(async () => {
+    const page = await fetchNext();
+    const data = page.data;
+    if (data == null) return null;
+    return { ids: uniqueIds(data.pages.flatMap((part) => part?.rows ?? []).map((row) => row.transaction_id)), more: page.hasNextPage };
+  }, [fetchNext]);
+  useTxnListMore(listFrom, sample == null && lines.hasNextPage, sample == null ? loadMore : null);
   const breakdown = sample?.breakdown ?? summary.data ?? null;
   const group = excluded ? undefined : breakdown?.groups.find((g) => g.key === groupKey && g.currency === currency);
   const sum = excluded ? breakdown?.excluded.find((e) => e.currency === currency) : group;
@@ -311,6 +325,7 @@ function LinesBody({
                 inWord={direction === "expense" ? "זיכוי" : undefined}
                 source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}
+                state={txnListState(ids, row.transaction_id, listFrom, more ? sum?.count : undefined)}
               />
             );
           })}

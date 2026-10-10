@@ -6,6 +6,7 @@ import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useProjectWaitingQuery, useReviewQuery, useLineMetaPageQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
+import { txnListState } from "../txn-nav";
 import { reviewFocusPath } from "../review-paths";
 import { SetupSampleReview } from "../setup/sample-review";
 import { formatDayMonth } from "../ui/date-math";
@@ -258,6 +259,10 @@ export function ProjectWaitingList({
   hrefFor?: (row: ProjectWaitingRow) => string;
 }) {
   const ordered = useHeldOrder(rows, (row) => row.transaction_id);
+  // FLOW-314: a card opened here walks the list's card rows; a row with a change to review opens its own screen.
+  const location = useLocation();
+  const listFrom = `${location.pathname}${location.search}`;
+  const cardIds = ordered.filter((row) => row.review_id == null).map((row) => row.transaction_id);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} layout="inline" />
@@ -281,6 +286,7 @@ export function ProjectWaitingList({
               : row.review_id == null
                 ? `/transactions/${row.transaction_id}${search}`
                 : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
+            state={hrefFor == null && row.review_id == null ? txnListState(cardIds, row.transaction_id, listFrom) : undefined}
           />
         )}
       />

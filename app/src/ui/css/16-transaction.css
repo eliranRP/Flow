@@ -42,6 +42,11 @@
   visibility: hidden;
 }
 
+/* FLOW-314: הבאה while the list's next page loads; the card stays put. */
+.ui-txn-step-btn[aria-busy="true"] {
+  color: var(--color-text-muted);
+}
+
 .ui-txn-step-btn:first-child {
   justify-self: start;
 }
