@@ -193,12 +193,12 @@
   color: inherit;
 }
 
-.ui-month-step-arrow,
-.ui-month-step-slot {
+.ui-month-step-arrow {
   flex: none;
 }
 
-.ui-month-step-slot {
-  inline-size: var(--touch-min);
-  block-size: var(--touch-min);
+/* No month that way: the chevron stays, dimmed, and does not respond (2026-10-10). */
+.ui-month-step-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
 }

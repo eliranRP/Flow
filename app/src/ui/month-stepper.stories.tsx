@@ -23,7 +23,13 @@ export const Both: Story = {
   },
 };
 export const BothDark: Story = { args: { earlier: "תזרים אוגוסט", later: "תזרים אוקטובר" }, ...dark390 };
-/** The current month: no later chevron, and the earlier one keeps its place. */
-export const CurrentMonth: Story = { args: { earlier: "תזרים ספטמבר", later: null } };
-/** The books' first month: no earlier chevron. */
+/** The current month: the later chevron stays, dimmed and disabled. */
+export const CurrentMonth: Story = {
+  args: { earlier: "תזרים ספטמבר", later: null },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("button", { name: "אין חודש הבא" })).toBeDisabled();
+  },
+};
+export const CurrentMonthDark: Story = { args: { earlier: "תזרים ספטמבר", later: null }, ...dark390 };
+/** The books' first month: the earlier chevron is disabled. */
 export const FirstMonth: Story = { args: { earlier: null, later: "תזרים אפריל" } };
