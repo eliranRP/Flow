@@ -103,6 +103,25 @@ describe("Cash history (FLOW-417)", () => {
     expect(rpc.calls).toEqual([]);
   });
 
+  it("sends a year after this one to the history without a year read", async () => {
+    wrap(`/cash/year/${String(thisYear + 1)}`);
+    expect(await screen.findByText(`תזרים מאז מרץ ${String(lastYear)}`)).toBeInTheDocument();
+    expect(rpc.calls.some((c) => c.name === "cash_year_months")).toBe(false);
+  });
+
+  it("sends a year before the books to the history", async () => {
+    wrap(`/cash/year/${String(lastYear - 3)}`);
+    expect(await screen.findByText(`תזרים מאז מרץ ${String(lastYear)}`)).toBeInTheDocument();
+  });
+
+  it("keeps a way back when a year's read fails", async () => {
+    rpc.impl = (name) =>
+      name === "cash_years" ? Promise.resolve({ data: years, error: null }) : Promise.resolve({ data: null, error: { message: "boom" } });
+    wrap(`/cash/year/${String(lastYear)}`);
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.getByLabelText("חזרה לתזרים")).toBeInTheDocument();
+  });
+
   it("sends a signed-out read back to Home", async () => {
     rpc.impl = () => Promise.resolve({ data: null, error: null });
     wrap("/cash/history");

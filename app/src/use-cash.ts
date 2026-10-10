@@ -4,6 +4,7 @@ import { CASH_MONTHS, cashMonthKey } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { monthPeriod } from "./period";
+import { israelToday } from "./ui/date-math";
 import { useHomePreview, type HomePreview } from "./preview";
 import type { CashRow } from "./ui/cash-rows";
 import { useOptionalBooks } from "./use-books";
@@ -77,7 +78,9 @@ export function useCashYearMonthsQuery(year: number, active = true) {
  */
 export function useCashMonthData(monthKey: string, active = true) {
   const recent = useCashMonthsQuery(active);
-  const older = recent.data != null && !recent.data.months.some((month) => cashMonthKey(month.month) === monthKey);
+  // Only a month from 1900 to this one has a year to read; a later one falls through to Back.
+  const inBooks = monthKey >= "1900-01" && monthKey <= israelToday().slice(0, 7);
+  const older = inBooks && recent.data != null && !recent.data.months.some((month) => cashMonthKey(month.month) === monthKey);
   const year = useCashYearMonthsQuery(Number(monthKey.slice(0, 4)), active && older);
   return { query: older ? year : recent, recent: !older };
 }

@@ -1,5 +1,4 @@
 import type { CashMonths, CashYears } from "@flow/shared";
-import { onlineManager } from "@tanstack/react-query";
 import { Navigate, useParams } from "react-router-dom";
 import {
   cashHistoryLabel,
@@ -18,12 +17,13 @@ import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useCashYearMonthsQuery, useCashYearsQuery } from "../use-cash";
 import { BackButton } from "../ui/back";
 import { CashRows } from "../ui/cash-rows";
-import { ErrorState } from "../ui/error-state";
 import { Hero } from "../ui/hero";
+import { ScreenState } from "../ui/screen-state";
 import { BandHero, SectionHead } from "../ui/layout";
 import { SearchEntry } from "../ui/search-entry";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
+import { israelToday } from "../ui/date-math";
 
 /**
  * FLOW-417 (owner's "Years, then months", decision 0174). Home's "לכל החודשים" opens the
@@ -66,9 +66,22 @@ export function CashHistorySkeleton({ back, section }: { back: string; section: 
   );
 }
 
-function NotReady({ phase, back, section, onRetry }: { phase: ScreenPhase; back: string; section: string; onRetry: () => void }) {
+function NotReady({
+  phase,
+  back,
+  title,
+  section,
+  onRetry,
+}: {
+  phase: ScreenPhase;
+  back: string;
+  title: string;
+  section: string;
+  onRetry: () => void;
+}) {
   if (phase.kind === "loading") return <CashHistorySkeleton back={back} section={section} />;
-  if (phase.kind === "error") return <ErrorState offline={phase.offline || !onlineManager.isOnline()} onRetry={onRetry} />;
+  // A failed read keeps a way back, as the month pages do.
+  if (phase.kind === "error") return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={onRetry} />;
   return <Navigate to={back} replace />;
 }
 
@@ -98,6 +111,7 @@ export function CashHistoryScreen({ sample }: { sample?: NonNullable<CashYears> 
       <NotReady
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         back={back}
+        title="תזרים"
         section="שנים"
         onRetry={() => {
           void query.refetch();
@@ -128,6 +142,8 @@ export function CashYearScreen({
   const search = usePreviewSearch();
   const raw = fixedYear != null ? String(fixedYear) : params.year;
   if (!isCashYear(raw)) return <Navigate to={`/${search}`} replace />;
+  // A year after this one has no page.
+  if (Number(raw) > Number(israelToday().slice(0, 4))) return <Navigate to={cashHistoryPath(search)} replace />;
   return <CashYearBody year={Number(raw)} search={search} sample={sample} />;
 }
 
@@ -144,22 +160,30 @@ function CashYearBody({
   const months = useCashYearMonthsQuery(year, sample == null);
   // The history is usually cached (the page opened from it); it trims months before the first one.
   const years = useCashYearsQuery(sample == null);
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, months);
+  // Both reads land before the page paints, so months before the books never show and then drop.
+  const monthsPhase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, months);
+  const yearsPhase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, years);
+  const phase = monthsPhase.kind !== "ready" ? monthsPhase : yearsPhase;
   const back = cashHistoryPath(search);
   const data = sample?.months ?? months.data ?? null;
-  if (phase.kind !== "ready" || data == null) {
+  const history = sample?.years ?? years.data ?? null;
+  if (phase.kind !== "ready" || data == null || history == null) {
     return (
       <NotReady
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         back={back}
+        title={cashYearTitle(year)}
         section="חודשים"
         onRetry={() => {
           void months.refetch();
+          void years.refetch();
         }}
       />
     );
   }
-  const firstMonth = (sample?.years ?? years.data)?.first_month;
+  // A year before the books start has no page.
+  if (!history.years.some((entry) => entry.year === year)) return <Navigate to={back} replace />;
+  const firstMonth = history.first_month;
   const shown = cashYearMonths(data, firstMonth);
   const totals = cashYearTotals(shown, data.base_currency);
   return (
