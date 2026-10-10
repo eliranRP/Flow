@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { afterAll, afterEach, expect } from "vitest";
+import { afterAll, afterEach, expect, vi } from "vitest";
 import { pinReviewLine } from "./review-pin";
 
 // A file under `// @vitest-environment node` tests logic only: it skips the DOM setup below
@@ -73,5 +73,9 @@ afterEach(() => {
 
 // Radix's FocusScope dispatches its unmount event on a 0 ms timer. Left for after the file, it fires
 // once jsdom is torn down and fails the run with "parameter 1 is not of type 'Event'" (red main on
-// d5365c0, sumit-row-nav.test.tsx). One tick at the end of each file lets it run first.
-afterAll(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+// d5365c0, sumit-row-nav.test.tsx). One real tick at the end of each file lets it run first (a file
+// that left fake timers on would never see it).
+afterAll(() => {
+  vi.useRealTimers();
+  return new Promise<void>((resolve) => setTimeout(resolve, 0));
+});
