@@ -261,6 +261,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-358"></a>[FLOW-358](tasks/FLOW-358.md) | Phone polish after the October 10 morning deploy (cycle 14) | SMALL UI |
 | <a id="flow-359"></a>[FLOW-359](tasks/FLOW-359.md) | One way to change the period on Home and the project band | PLAN FIRST |
 | <a id="flow-361"></a>[FLOW-361](tasks/FLOW-361.md) | Loan setup story shows Hebrew letters in reverse order | SMALL BUG |
+| <a id="flow-362"></a>[FLOW-362](tasks/FLOW-362.md) | Phone polish after the cash Home deploy (cycle 15) | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 
 ## Projects and reports
