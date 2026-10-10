@@ -1,6 +1,6 @@
 # An earlier month's profit row names its month
 
-- PR: pending (UI lane 1).
+- PR: #511 (UI lane 1).
 - Kind: screen
 - Changed: on an earlier month's cash page the quiet profit row read "רווח החודש" ("this month's profit") under "תזרים ספטמבר". It now reads "רווח ב<month>" ("רווח בספטמבר", with the year outside the current year: "רווח בדצמבר 2025"), matching the row's spoken name. The current month, on Home, keeps "רווח החודש".
 - Rule: a label names the period it shows (§2.8).

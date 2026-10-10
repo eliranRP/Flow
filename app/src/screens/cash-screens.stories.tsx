@@ -72,9 +72,28 @@ export const CashMonth: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/^רווח ב/)).toBeInTheDocument();
     await expect(canvas.queryByText("רווח החודש")).not.toBeInTheDocument();
+    // FLOW-362 (C15-6): earlier and later chevrons by the title.
+    await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(2);
   },
 };
 export const CashMonthDark: Story = { ...CashMonth, name: "Cash, an earlier month, dark", ...dark };
+export const CashMonth320: Story = { ...CashMonth, name: "Cash, an earlier month, 320", ...at320 };
+
+export const CashMonthCurrent: Story = {
+  name: "Cash, this month (no later chevron)",
+  render: () => {
+    const data = sampleCashMonths();
+    return (
+      <StoryRoute entry="/" tabs>
+        <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[0]?.month ?? "")} />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(1);
+  },
+};
 
 export const CashLinesOut: Story = {
   name: "Cash, the month's יצא",

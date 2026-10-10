@@ -115,6 +115,18 @@ describe("PeriodSwipe", () => {
     expect(onStep).not.toHaveBeenCalled();
   });
 
+  it("does not step to a window the screen blocks (a month page's first month, FLOW-362)", () => {
+    setReducedMotion(false);
+    const onStep = vi.fn();
+    render(
+      <PeriodSwipe period={months3} onChange={onStep} allow={() => false}>
+        <p>{windowLabel(months3)}</p>
+      </PeriodSwipe>,
+    );
+    swipe(figure(), { x: 100, y: 160 }, { x: 260, y: 166 });
+    expect(onStep).not.toHaveBeenCalled();
+  });
+
   it("hands a mostly vertical move to the page scroll", () => {
     setReducedMotion(false);
     const onStep = vi.fn();

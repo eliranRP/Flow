@@ -69,15 +69,22 @@ export function PeriodSwipe({
   onChange,
   children,
   className,
+  allow,
 }: {
   period: PeriodChoice;
   onChange: (period: PeriodChoice) => void;
   children: ReactNode;
   className?: string;
+  /** A window the screen has no page for (before a month page's first month, FLOW-362) is blocked like a later step at the current one. */
+  allow?: (next: PeriodChoice) => boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const track = useRef<Track | null>(null);
   const steps = canStep(period);
+  const step = (delta: -1 | 1) => {
+    const next = stepPeriod(period, delta);
+    return next != null && (allow?.(next) ?? true) ? next : null;
+  };
 
   function settle() {
     const node = box.current;
@@ -121,7 +128,7 @@ export function PeriodSwipe({
     if (reducedMotion()) return;
     const node = box.current;
     if (!node) return;
-    const blocked = stepPeriod(period, dx > 0 ? -1 : 1) == null;
+    const blocked = step(dx > 0 ? -1 : 1) == null;
     node.classList.add("ui-pswipe-drag");
     node.style.transform = `translateX(${String(Math.round(dx * (blocked ? FOLLOW_BLOCKED : FOLLOW)))}px)`;
   }
@@ -134,9 +141,9 @@ export function PeriodSwipe({
     const touch = event.changedTouches[0];
     if (!touch) return;
     const width = box.current?.getBoundingClientRect().width ?? 0;
-    const step = swipeStep(touch.clientX - start.x, event.timeStamp - start.at, width);
-    if (step === 0) return;
-    const next = stepPeriod(period, step);
+    const delta = swipeStep(touch.clientX - start.x, event.timeStamp - start.at, width);
+    if (delta === 0) return;
+    const next = step(delta);
     if (next == null) return;
     onChange(next);
     // A short tick where the platform has one (Android); iOS Safari has none and ignores this.
