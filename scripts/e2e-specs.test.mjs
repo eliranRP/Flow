@@ -77,7 +77,7 @@ test("every page-speed spec is mapped, and a change runs only the ones whose pag
     for (const entry of entries) assert.ok(fs.existsSync(path.join(root, "app/src", entry)), `app/src/${entry}`);
   }
   const perf = (...changed) => perfSpecs(changed, { root, map });
-  assert.deepEqual(perf("app/src/screens/project-detail-screen.tsx"), ["project-open.spec.ts", "project-reopen.spec.ts"]);
+  assert.deepEqual(perf("app/src/screens/project-detail-screen.tsx"), ["project-history-open.spec.ts", "project-open.spec.ts", "project-reopen.spec.ts"]);
   assert.deepEqual(perf("app/src/screens/HomeScreen.tsx"), ["home-speed.spec.ts"]);
   assert.deepEqual(perf("docs/x.md", "supabase/migrations/x.sql"), []);
   // The bundle's entry or the perf setup runs them all.

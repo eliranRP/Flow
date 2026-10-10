@@ -289,6 +289,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
+| <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
