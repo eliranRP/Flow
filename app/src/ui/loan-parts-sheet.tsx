@@ -2,7 +2,6 @@ import { useId, type ReactNode, type RefObject } from "react";
 import { Button } from "./button";
 import { MoneyField } from "./money-field";
 import { Sheet } from "./sheet";
-import { TextLink } from "./text-link";
 
 /** The parts of a loan payment, in the order the sheet lists them (FLOW-114, option B). */
 export type LoanPartKey = "principal" | "interest" | "escrow" | "fees";
@@ -87,7 +86,10 @@ export function LoanPartsSheet({
   unmatchDisabled?: boolean;
   /** A viewer: static amounts, no שמירה and no ביטול השיוך. */
   readOnly?: boolean;
-  /** FLOW-106 §3.4: "עריכת הפיצול" under the total opens the split editor on these parts. */
+  /**
+   * FLOW-106 §3.4, FLOW-362: one editor. With it, the parts show as static amounts (each value is
+   * formatted) and "עריכת הפיצול", a 44px tint button over ביטול השיוך, opens the split editor.
+   */
   onEdit?: () => void;
   /** עריכת הפיצול waits, such as while the loan is read. */
   editDisabled?: boolean;
@@ -95,6 +97,7 @@ export function LoanPartsSheet({
 }) {
   const problemId = useId();
   const busy = saving || unmatching;
+  const staticParts = readOnly || onEdit != null;
   const ordered = LOAN_PART_ORDER.flatMap((part) => {
     const field = fields.find((item) => item.part === part);
     return field ? [field] : [];
@@ -112,6 +115,18 @@ export function LoanPartsSheet({
       returnFocusRef={returnFocusRef}
       action={readOnly ? undefined : (
         <div className="ui-loan-parts-actions">
+          {onEdit != null ? (
+            <Button
+              type="button"
+              variant="pill"
+              full
+              className="ui-loan-parts-edit"
+              disabled={loading || unmatching || editDisabled}
+              onClick={() => { if (!busy) onEdit(); }}
+            >
+              עריכת הפיצול
+            </Button>
+          ) : (
           <Button
             type="button"
             full
@@ -122,6 +137,7 @@ export function LoanPartsSheet({
           >
             {saving ? "שומר…" : "שמירה"}
           </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -141,7 +157,7 @@ export function LoanPartsSheet({
         {ordered.map((field, index) => (
           <div key={field.part} className="ui-loan-parts-row">
             <span className="t-label ui-loan-parts-label">{LOAN_PART_LABEL[field.part]}</span>
-            {readOnly ? (
+            {staticParts ? (
               <bdi className="ui-num t-amount" dir="ltr">{field.value}</bdi>
             ) : (
             <div className="ui-loan-parts-field">
@@ -168,11 +184,7 @@ export function LoanPartsSheet({
         {onRetry ? (
           <Button type="button" variant="secondary" className="ui-loan-parts-retry" busy={retrying} onClick={() => { if (!retrying) onRetry(); }}>ניסיון חוזר</Button>
         ) : null}
-        {onEdit && !readOnly ? (
-          <TextLink className="ui-loan-other" tone="quiet" chevron={false} disabled={loading || busy || editDisabled} onClick={onEdit}>
-            עריכת הפיצול
-          </TextLink>
-        ) : null}
+
       </div>
     </Sheet>
   );

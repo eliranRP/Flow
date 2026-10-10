@@ -21,9 +21,11 @@ type DemoArgs = {
   loading?: boolean;
   saving?: boolean;
   unmatching?: boolean;
+  /** FLOW-362: static amounts and the "עריכת הפיצול" button, the one editor. */
+  edit?: boolean;
 };
 
-function Demo({ readOnly, retry, fields = FIELDS, total = "₪6,200", problem, note, prefix, loading, saving, unmatching }: DemoArgs) {
+function Demo({ readOnly, retry, fields = FIELDS, total = "₪6,200", problem, note, prefix, loading, saving, unmatching, edit }: DemoArgs) {
   const [open, setOpen] = useState(true);
   const [values, setValues] = useState(fields);
   return (
@@ -47,6 +49,7 @@ function Demo({ readOnly, retry, fields = FIELDS, total = "₪6,200", problem, n
       canSave={problem == null}
       onSave={() => undefined}
       onUnmatch={() => undefined}
+      onEdit={edit ? () => undefined : undefined}
     />
   );
 }
@@ -92,3 +95,14 @@ export const Viewer: Story = {
   },
 };
 export const ViewerDark: Story = { ...Viewer, globals: { theme: "dark" } };
+
+/** FLOW-362: one editor. The parts read as static amounts and "עריכת הפיצול" is the 44px tint button. */
+const SHOWN: LoanPartField[] = [
+  { part: "principal", value: "₪4,150" },
+  { part: "interest", value: "₪1,630" },
+  { part: "escrow", value: "₪380" },
+  { part: "fees", value: "₪40" },
+];
+export const EditButton: Story = { args: { edit: true, fields: SHOWN }, parameters: { viewport: { defaultViewport: "flow390" } } };
+export const EditButton320: Story = { args: { edit: true, fields: SHOWN }, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const EditButtonDark: Story = { ...EditButton, globals: { theme: "dark" } };

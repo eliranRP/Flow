@@ -260,6 +260,10 @@ export function LoanCategoryRow({
   const editLoan = loaded.data?.loans.find((item) => item.id === editing.loan_id);
   // A flagged split keeps its own correction (עדכון החלוקה), not the editor.
   const canEdit = editable && !reviewWaits;
+  // FLOW-362: one editor. The sheet reads the parts and "עריכת הפיצול" is the only way to change them.
+  const staticTotal = editing.parts.reduce((sum, part) => sum + part.amount_minor, 0n);
+  const staticFields: LoanPartField[] = editing.parts.map((part) => ({ part: part.part, value: showMoney(part.amount_minor, shownCurrency) }));
+  const readFailed = stored.isError || loaded.isError;
   function openSheet() {
     if (split == null) return;
     touched.current = false;
@@ -288,23 +292,28 @@ export function LoanCategoryRow({
           if (!next) setShown(null);
         }}
         title={editing.loan_name ?? "הלוואה"}
-        fields={fields}
+        fields={canEdit ? staticFields : fields}
         onFieldChange={(part, raw) => {
           touched.current = true;
           setDraft((current) => ({ ...current, [part]: raw }));
         }}
         prefix={shownCurrency === "USD" ? "$" : "₪"}
-        total={showMoney(totalMinor, shownCurrency)}
-        problem={problem}
+        total={showMoney(canEdit ? staticTotal : totalMinor, shownCurrency)}
+        problem={canEdit ? (readFailed ? "לא הצלחנו לטעון את הפיצול." : undefined) : problem}
         note={note}
         loading={stored.isLoading}
         saving={save.isPending}
         unmatching={unmatch.isPending}
         unmatchDisabled={stored.isFetching}
-        retrying={stored.isFetching}
+        retrying={stored.isFetching || loaded.isFetching}
         canSave={canSave}
         returnFocusRef={rowRef}
-        onRetry={stored.isError ? () => { void stored.refetch(); } : undefined}
+        onRetry={canEdit && readFailed
+          ? () => {
+            if (stored.isError) void stored.refetch();
+            if (loaded.isError) void loaded.refetch();
+          }
+          : stored.isError ? () => { void stored.refetch(); } : undefined}
         onSave={() => {
           if (!canSave) return;
           const parts = fields.map((field, index): SavePart => {
