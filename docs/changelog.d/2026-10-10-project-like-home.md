@@ -1,0 +1,1 @@
+The project page now matches Home: "לכל החודשים" under the earlier months opens the project's whole cash history (years, then months), and the project's own alerts (late bills and income, changed recurring charges) show as on Home, leaving out what this user hid.
