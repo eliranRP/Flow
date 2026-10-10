@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "@storybook/test";
 import { DateSheet } from "./date-sheet";
 
 /**
@@ -56,3 +57,14 @@ export const Range: Story = { args: { min: "2026-09-10", max: "2026-10-20", reas
 /** FLOW-350: outward chevrons and the picked day as a filled circle, as in mockup 15b. */
 export const PickedDay320: Story = { args: { min: undefined, reason: undefined }, ...at320 };
 export const PickedDayDark320: Story = { args: { min: undefined, reason: undefined }, ...dark, ...at320 };
+
+// FLOW-115: the month title swaps the days for the years, newest first, the picked year filled.
+export const YearList: Story = {
+  args: { min: undefined, reason: undefined },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("button", { name: /בחירת שנה/ }));
+    await expect(body.getByRole("group", { name: "שנה" })).toBeVisible();
+  },
+};
+export const YearListDark320: Story = { ...YearList, ...dark, ...at320 };

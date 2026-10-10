@@ -1,0 +1,1 @@
+The date sheet's month title opens a list of years, newest first, so a loan that started years ago is one tap away instead of dozens of month taps. Picking a year keeps the month, inside the sheet's limits (FLOW-115).
