@@ -1,4 +1,4 @@
-// Flow MCP tools tests: recurring charges (FLOW-415, decision 0171). Invented ids only.
+// Flow MCP tools tests: recurring charges (FLOW-415, decision 0172). Invented ids only.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
 import { rpcOf, TXN } from "./tools_test_support.ts";

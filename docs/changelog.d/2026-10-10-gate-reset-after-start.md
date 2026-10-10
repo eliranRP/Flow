@@ -1,0 +1,1 @@
+The pre-push gate resets the local database after it has to start Supabase, whenever the run needs a reset (a migration, seed or config change, or a spec that reads the database). Before, a start reused the old database volume, so the pgTAP files ran without the branch's migrations. #494's first gate run failed that way. The gate now prints the reset and why.

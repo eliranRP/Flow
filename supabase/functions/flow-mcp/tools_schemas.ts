@@ -628,7 +628,7 @@ export const setLinesCashSchema = z.object({
   }
 });
 // FLOW-103: paid counts a line in its payment month, invoice in its document month.
-// FLOW-415 (decision 0171). true marks the line's supplier or customer recurring, false not, null leaves it to the rule.
+// FLOW-415 (decision 0172). true marks the line's supplier or customer recurring, false not, null leaves it to the rule.
 export const setLineRecurringSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,

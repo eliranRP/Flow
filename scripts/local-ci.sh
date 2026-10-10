@@ -422,14 +422,16 @@ if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
       up() {
         if supabase status >/dev/null 2>&1; then
           [[ -n "$db_reset" ]] || return 0
-          rm -f "$cache/supabase-db-tree"
-          supabase db reset >>"$supabase_log" 2>&1 || return
-          printf '%s' "$db_tree" >"$cache/supabase-db-tree"
         else
           # A start can reuse an older database volume, so only a reset records the tree.
           rm -f "$cache/supabase-db-tree"
-          supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >>"$supabase_log" 2>&1
+          supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >>"$supabase_log" 2>&1 || return
+          [[ -n "$db_reset" ]] || return 0
+          echo "local-ci: started local Supabase on its old database; resetting it: $db_reset." >>"$supabase_log"
         fi
+        rm -f "$cache/supabase-db-tree"
+        supabase db reset >>"$supabase_log" 2>&1 || return
+        printf '%s' "$db_tree" >"$cache/supabase-db-tree"
       }
       rc=0
       if ! up; then
@@ -467,6 +469,7 @@ wait_supabase() {
     echo "local-ci: local Supabase did not start." >&2
     exit 1
   fi
+  grep '^local-ci: ' "$supabase_log" || true
   rm -f "$supabase_log" "$supabase_exit"
 }
 

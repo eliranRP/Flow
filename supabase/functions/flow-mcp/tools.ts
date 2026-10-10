@@ -251,7 +251,7 @@ export async function callTool(
     return ok(data);
   }
 
-  // FLOW-415 (decision 0171).
+  // FLOW-415 (decision 0172).
   if (name === "get_recurring_changes") {
     const result = await rpc("recurring_changes", {});
     const data = result.json;

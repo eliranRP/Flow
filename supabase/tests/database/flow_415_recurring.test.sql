@@ -1,4 +1,4 @@
--- FLOW-415, server part (decision 0171). Recurring charges: missing bills name their project,
+-- FLOW-415, server part (decision 0172). Recurring charges: missing bills name their project,
 -- category and last bill; recurring_changes finds this month's charges 20% or more off usual;
 -- the owner's switch (set_payment_recurring) wins over the automatic rule; the MCP's switch has
 -- its idempotency key and undo. Invented data only. Amounts are agorot. "Today" is 2026-10-20.

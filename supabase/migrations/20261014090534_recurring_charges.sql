@@ -1,4 +1,4 @@
--- FLOW-415, server part (decision 0171): recurring charges, the owner's option A (2026-10-10).
+-- FLOW-415, server part (decision 0172): recurring charges, the owner's option A (2026-10-10).
 -- - public.recurring_overrides: the owner's word on whether a supplier's (or customer's) charges
 --   in one currency recur. It is set from one payment and holds for the party, and it wins over
 --   the automatic rule (seen in at least 3 of the last 6 complete months and in one of the last
@@ -31,7 +31,7 @@ create table public.recurring_overrides (
 create index recurring_overrides_set_by_idx on public.recurring_overrides (set_by);
 
 comment on table public.recurring_overrides is
-  'FLOW-415. The owner''s word on whether a supplier''s (expense) or customer''s (income) charges in one currency recur; wins over the automatic rule in private.recurring_parties. Decision 0171.';
+  'FLOW-415. The owner''s word on whether a supplier''s (expense) or customer''s (income) charges in one currency recur; wins over the automatic rule in private.recurring_parties. Decision 0172.';
 
 -- Only the functions below read and write it.
 alter table public.recurring_overrides enable row level security;
