@@ -26,7 +26,7 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
-import { CalendarIcon, ChartIcon, DocumentIcon, TrendUpIcon } from "../ui/icons";
+import { CalendarIcon, ChartIcon, DocumentIcon, TransferIcon, TrendUpIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
@@ -85,7 +85,7 @@ function NoBooksYet({ previewing, example, search, companyName, view }: { previe
         <Hero label={view === "cash" ? emptyHomeLabel : emptyProfitLabel} />
       </TopBand>
       <EmptyState
-        icon={<ChartIcon />}
+        icon={view === "cash" ? <TransferIcon /> : <ChartIcon />}
         title="עוד אין נתונים"
         body={view === "cash" ? "התזרים יופיע כאן אחרי חיבור בנק או SUMIT." : "הרווח יופיע כאן אחרי חיבור בנק או SUMIT."}
         action={holdWrites ? undefined : (
