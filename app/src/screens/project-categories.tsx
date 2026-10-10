@@ -22,7 +22,7 @@ function pendingApprovalTitle(count: number): string {
 /** The hidden word on a "—" row: a usual bill that has not come yet this month. */
 export const NOT_IN_YET = "עוד לא הגיע";
 /** FLOW-406 (decision 0164): a parent's own lines, last inside its fold. */
-export const OWN_LINES = "בלי תת-קטגוריה";
+export const OWN_LINES = "בלי תת־קטגוריה";
 
 /** FLOW-406: inside a fold, the sub-categories, then the parent's own lines, then the bills not in yet. */
 export function foldOrder(items: readonly CategoryItem[], own: ReadonlySet<string>): CategoryItem[] {
@@ -66,7 +66,7 @@ export function ProjectCategories({
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const groupOf = new Map<string, string>(Object.entries(sampleGroups ?? {}));
   // FLOW-406: a sub-category folds under its parent, and the parent's own lines join it as
-  // "בלי תת-קטגוריה". An older payload with no parent ids folds by group_name.
+  // "בלי תת־קטגוריה". An older payload with no parent ids folds by group_name.
   const own = new Set<string>();
   const listed = sampleCategories ?? categories.data ?? [];
   const names = new Map(listed.map((row) => [row.id, row.name]));

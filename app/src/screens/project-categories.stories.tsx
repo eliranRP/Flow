@@ -78,7 +78,7 @@ export const GroupOpen: Story = {
 export const GroupOpen320: Story = { ...GroupOpen, name: "Group open, 320", ...at320 };
 export const GroupOpenDark: Story = { ...GroupOpen, name: "Group open, dark", ...dark };
 
-/** FLOW-406: a parent folds its sub-categories, and its own lines sit last as "בלי תת-קטגוריה". */
+/** FLOW-406: a parent folds its sub-categories, and its own lines sit last as "בלי תת־קטגוריה". */
 const parentRow = (id: string, name: string, parent_id: string | null = null) => ({ id, name, kind: "expense" as const, hidden: false, is_default: false, parent_id });
 export const ParentOpen: Story = {
   name: "Parent open, its own lines last",

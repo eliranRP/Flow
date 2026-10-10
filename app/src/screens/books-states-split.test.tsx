@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
+import { roleShows } from "../test-waits";
 import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { HomeScreen } from "./HomeScreen";
@@ -524,7 +525,7 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review/change?item=r1");
-    expect(await screen.findByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
+    await roleShows("dialog", "שינוי שיוך");
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }, { timeout: 2500 }));
     fireEvent.click(await screen.findByRole("radio", { name: "אתר א" }));
     await waitFor(() => {

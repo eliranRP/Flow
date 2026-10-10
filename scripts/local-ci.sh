@@ -13,8 +13,11 @@
 #       flow-mcp smoke, the db types check, and the pgTAP files that name what changed
 #       (scripts/pgtap-specs.mjs).
 #   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
-#     merge of main that leaves the patch unchanged; lint and the file-size check only when the
-#     branch changes only docs/, Markdown or design images (a claim commit). Each run appends a line to
+#     merge of main that leaves the patch unchanged; the file-size check only when the branch
+#     changes only docs/, Markdown or design images (a claim commit). Lint checks the changed files
+#     and every file that imports them (scripts/gate-scope.mjs), and the dist builds run only when
+#     the change reaches the built app: the rest is as main left it, and main's CI lints and builds
+#     all of it. Each run appends a line to
 #     gate-times.log beside the shared cache: time, branch, mode, diff kind, seconds, result, and
 #     each phase's seconds (node scripts/gate-times.mjs sums it up).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
@@ -28,8 +31,9 @@
 # $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a folder
 # every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable; set it
 # empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
-# commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run
-# leaves the e2e specs to main and says which; a database change needs Docker.
+# commits, so a squash merge whose tree a lane passed counts too. A run that needs Docker (a
+# database change, or e2e specs that reach the change) starts it (containerd, then dockerd) and
+# fails when it can't. No required phase is skipped; a phase left to main says why.
 set -euo pipefail
 
 full=0
@@ -212,8 +216,8 @@ base_area() {
 # Only docs_files against main: lint and the file-size check, nothing else.
 if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then
   mode="docs"
-  phase "docs only: lint and the file-size check"
-  pnpm lint
+  phase "docs only: the file-size check"
+  echo "local-ci: lint skipped: eslint reads no docs, Markdown or design images (main lints all of it)."
   node scripts/check-file-size.mjs
   passed
   phase "passed on ${head:0:7} (docs only)"
@@ -232,15 +236,15 @@ branch_changes() {
 }
 
 # Where this branch left main, when every app input the branch changes is an app, e2e, shared or
-# _shared .ts/.tsx source, a migration (a test globs them) or app CSS (no test imports it): the vitest
-# module graph finds the tests and stories those reach. Anything else (setup, config, the design
-# package, scripts, lockfile, a deleted or renamed file) runs all (scripts/storybook-stories.mjs,
-# relatedRun).
+# _shared .ts/.tsx source, a migration (a test globs them), app CSS (no test imports it), or a
+# manifest, tsconfig or lockfile whose change the tests don't read: the vitest module graph finds the
+# tests and stories those reach. Anything else (setup, config, the design package, scripts, a
+# dependency, a deleted or renamed file) runs all (scripts/storybook-stories.mjs, relatedRun).
 changed_base() {
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
   [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
-    | node scripts/storybook-stories.mjs --related-run)" == related ]] || return 1
+    | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
   echo "$pr_fork"
 }
 
@@ -292,29 +296,64 @@ if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.to
 fi
 # The e2e specs read the database: they run again only when main moved it.
 if (( base_only )) && ! base_area database; then
+  (( ${#e2e_specs[@]} == 0 )) \
+    || echo "local-ci: this patch already passed its e2e specs, and main has not moved the database since; skipping them: ${e2e_specs[*]}"
   e2e_specs=()
   e2e_left=1
 fi
 
+# Starts Docker when it is down. In cloud containers dockerd alone can fail with "timeout waiting
+# for containerd", so containerd starts first and dockerd is pointed at its socket.
+start_docker() {
+  local sock=/run/containerd/containerd.sock retried=
+  docker info >/dev/null 2>&1 && return 0
+  start_dockerd() {
+    if [[ -S "$sock" ]]; then
+      (sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
+    else
+      (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
+    fi
+  }
+  if ! pgrep -x dockerd >/dev/null 2>&1; then
+    # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
+    # none runs, and wait for it to say it booted.
+    if ! pgrep -x containerd >/dev/null 2>&1; then
+      (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
+      for _ in $(seq 1 15); do
+        grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null && break
+        sleep 1
+      done
+    fi
+    start_dockerd
+  fi
+  for i in $(seq 1 30); do
+    docker info >/dev/null 2>&1 && return 0
+    # dockerd exits at once when containerd wasn't ready yet; start it once more.
+    if [[ -z $retried ]] && (( i >= 5 )) && ! pgrep -x dockerd >/dev/null 2>&1; then
+      retried=1
+      start_dockerd
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 supabase_exit=""
 if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
   phase "Docker and local Supabase"
-  if ! docker info >/dev/null 2>&1; then
-    (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
-    for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done
-  fi
-  if ! docker info >/dev/null 2>&1; then
-    if (( full )); then
-      echo "local-ci: Docker is not running and could not be started." >&2
-      exit 1
+  if ! start_docker; then
+    if (( full )); then need="the full run"
+    elif (( db_change )); then need="this change touches the database"
+    else need="these e2e specs reach this change: ${e2e_specs[*]}"
     fi
-    if (( db_change )); then
-      echo "local-ci: Docker is not running, and this change touches the database. Start Docker and push again." >&2
-      exit 1
-    fi
-    echo "local-ci: Docker is not running, so the e2e specs for this change are left to main: ${e2e_specs[*]}" >&2
-    e2e_specs=()
-    e2e_left=1
+    {
+      echo "local-ci: Docker is not running and could not be started, and $need. Nothing is left to main."
+      echo "  Start it, then push again:"
+      echo "    sudo containerd &   # wait until /run/containerd/containerd.sock exists"
+      echo "    sudo dockerd --containerd=/run/containerd/containerd.sock &"
+      echo "  Logs: /tmp/flow-containerd.log, /tmp/flow-dockerd.log"
+    } >&2
+    exit 1
   else
     supabase_log="$(mktemp)"
     supabase_exit="$(mktemp)"
@@ -372,7 +411,23 @@ wait_supabase() {
 
 phase "lint and check: lint, static checks, and builds, side by side"
 logs="$(mktemp -d)"
+# The lint rules read types, so a file's result can change only when the file or something it
+# imports changes: the branch's changed files and every file that imports them, all the way up
+# (scripts/gate-scope.mjs). A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all.
 lint_part() {
+  local scope
+  if (( skips )) && [[ -n "$pr_fork" ]]; then
+    scope="$(git diff --name-status "$pr_fork" HEAD | node scripts/gate-scope.mjs --lint)"
+    if [[ -z "$scope" ]]; then
+      echo "local-ci: lint skipped: this branch changes no file eslint reads (main lints all of it)."
+      return 0
+    fi
+    if [[ "$scope" != all ]]; then
+      echo "local-ci: linting the $(wc -l <<<"$scope") files this branch changes or that import them (main lints all of it)."
+      xargs -d '\n' pnpm exec eslint --no-warn-ignored <<<"$scope"
+      return
+    fi
+  fi
   pnpm lint
 }
 static_part() {
@@ -395,8 +450,29 @@ static_part() {
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }
+# The same tsc runs as pnpm typecheck, with --incremental: a tsbuildinfo per project in this
+# container's cache keeps what the last run checked, and tsc re-checks only the files a change
+# reaches (its own dependency tracking; a new TypeScript version starts over). --full, an
+# unexpected typecheck script, or a package with another script runs the scripts as they are.
 typecheck_part() {
-  pnpm typecheck
+  local info dir script
+  info="$(cd "$cache" && pwd)/tsbuildinfo"
+  if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
+    != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
+    pnpm typecheck
+    return
+  fi
+  mkdir -p "$info"
+  pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"
+  for dir in app packages/*/; do
+    dir="${dir%/}"
+    script="$(node -p "require('./$dir/package.json').scripts?.typecheck ?? ''")"
+    case "$script" in
+      "") ;;
+      "tsc --noEmit") (cd "$dir" && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile "$info/${dir//\//-}.tsbuildinfo") ;;
+      *) (cd "$dir" && pnpm run typecheck) ;;
+    esac
+  done
 }
 unit_part() {
   if (( ! skips )); then
@@ -416,12 +492,21 @@ unit_part() {
   pnpm test:connectors
   node scripts/check-deny-list.mjs
 }
+# Both dist builds. Skipped when every app input the branch changes is one the built app never
+# reads (tests, stories, e2e specs, test setups: scripts/gate-scope.mjs --build). Both run vite
+# build alone: the app's build script adds tsc --noEmit, the typecheck part's own check of the same
+# inputs (it runs beside this one, or passed on them before).
 build_part() {
-  pnpm build
+  if (( skips )) && [[ -n "$pr_fork" ]] \
+    && [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]; then
+    echo "local-ci: app builds skipped: this branch changes only tests, stories and specs, which the built app doesn't read (main builds it)."
+    return 0
+  fi
+  pnpm --filter @flow/app exec vite build
   node scripts/stamp-build.mjs "$head"
   pnpm check:bundle
   rm -rf app/dist
-  VITE_REVIEWER_BUILD=1 VITE_SUPABASE_URL="" VITE_SUPABASE_ANON_KEY="" pnpm build
+  VITE_REVIEWER_BUILD=1 VITE_SUPABASE_URL="" VITE_SUPABASE_ANON_KEY="" pnpm --filter @flow/app exec vite build
   pnpm check:reviewer-bundle
   test ! -f app/dist/build.txt
 }

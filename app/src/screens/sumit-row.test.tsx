@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultPeriod } from "../period";
 import { BooksProvider } from "../use-books";
 import { sheetStack } from "../ui/back";
+import { roleShows } from "../test-waits";
 import { ToastProvider } from "../ui/toast";
 import { OnboardingScreen, ConnectionsScreen } from "./flow-screens";
 
@@ -476,7 +477,7 @@ describe("SUMIT status row", () => {
       return Promise.resolve({ data: null, error: null });
     };
     const { unmount } = renderSettings();
-    expect(await screen.findByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
+    await roleShows("heading", "חיבורים");
     const title = await screen.findByText("SUMIT");
     expect(title.closest(".ui-row")).toHaveAttribute("aria-busy", "true");
     expect(title.closest("button")).toBeNull();

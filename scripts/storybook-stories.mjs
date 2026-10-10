@@ -2,7 +2,7 @@
 // The story files a set of changed files reaches, for the pre-push every-story check.
 // Usage: git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --index <index.json> [--budget N] [--base <base>]
 //        git diff --name-only <base> HEAD | node scripts/storybook-stories.mjs --setup [--base <base>]  (prints yes or no)
-//        git diff --name-status <base> HEAD -- <app inputs> | node scripts/storybook-stories.mjs --related-run
+//        git diff --name-status <base> HEAD -- <app inputs> | node scripts/storybook-stories.mjs --related-run [--base <base>]
 // Prints the story files to open, one per line as Storybook's index names them (./src/x.stories.tsx),
 // or "all" when a change reaches every story (the Storybook config, the lockfile, the smoke itself),
 // and a last line "partial" when the budget left some reached stories to main.
@@ -35,8 +35,8 @@ function jsonParts(text, pick) {
   }
 }
 
-const storybookScripts = (scripts = {}) =>
-  Object.fromEntries(Object.entries(scripts).filter(([name]) => /storybook/.test(name)).sort());
+const scriptsMatching = (scripts = {}, names) =>
+  Object.fromEntries(Object.entries(scripts).filter(([name]) => names.test(name)).sort());
 
 /** A pnpm-lock.yaml importer block ("  app:" up to the next importer), or "" when absent. */
 function importerBlock(text, importer) {
@@ -51,15 +51,20 @@ function importerBlock(text, importer) {
 /** Text before the lockfile's importers: settings and overrides, which change every install. */
 const lockHead = (text) => text.slice(0, Math.max(0, text.indexOf("\nimporters:")));
 
-// Files whose change reaches the Storybook build only through some of their content: the part
-// each rule returns. The root importer and the root package's other fields are the workspace's
-// tools (lint, wrangler, type generation), which the app's build never loads.
-const buildParts = [
-  [/^app\/package\.json$/, (text) => jsonParts(text, (pkg) => [pkg.type, pkg.dependencies, pkg.devDependencies, storybookScripts(pkg.scripts)])],
-  [/^package\.json$/, (text) => jsonParts(text, (pkg) => [pkg.pnpm, storybookScripts(pkg.scripts)])],
-  [/^(app\/tsconfig[^/]*|tsconfig\.base)\.json$/, (text) => jsonParts(text, (config) => [config.extends, config.compilerOptions])],
+// Files whose change reaches the Storybook build or the vitest runs only through some of their
+// content: the part each rule returns, with the scripts whose names match `scripts` (the ones that
+// start that build or run). The root importer and the root package's other fields are the
+// workspace's tools (lint, wrangler, type generation), which neither ever loads.
+const manifestParts = (scripts) => [
+  [/^(app|packages\/shared)\/package\.json$/, (text) => jsonParts(text, (pkg) =>
+    [pkg.type, pkg.exports, pkg.main, pkg.dependencies, pkg.devDependencies, scriptsMatching(pkg.scripts, scripts)])],
+  [/^package\.json$/, (text) => jsonParts(text, (pkg) => [pkg.pnpm, scriptsMatching(pkg.scripts, scripts)])],
+  [/^(app\/tsconfig[^/]*|packages\/shared\/tsconfig[^/]*|tsconfig\.base)\.json$/, (text) =>
+    jsonParts(text, (config) => [config.extends, config.compilerOptions])],
   [/^pnpm-lock\.yaml$/, (text) => [lockHead(text), importerBlock(text, "app"), importerBlock(text, "packages/shared")].join("\n")],
 ];
+const buildParts = manifestParts(/storybook/);
+const testParts = manifestParts(/storybook|^test(:unit)?$/);
 
 function readAt(root, ref, file) {
   try {
@@ -80,8 +85,24 @@ function readAt(root, ref, file) {
  */
 export function reachesBuild(file, { root, base }) {
   if (runsAll.some((pattern) => pattern.test(file))) return true;
-  const rule = buildParts.find(([pattern]) => pattern.test(file));
-  if (!rule) return false;
+  return partsChanged(buildParts, file, { root, base }) ?? false;
+}
+
+/**
+ * For a manifest, tsconfig or lockfile: whether the change reaches what the vitest runs read
+ * (dependencies, test and storybook scripts, compiler options, the app's and the shared package's
+ * lockfile entries). null for any other file.
+ * @param {string} file repo-relative
+ * @param {{ root: string, base?: string }} options
+ */
+export function reachesTests(file, { root, base }) {
+  return partsChanged(testParts, file, { root, base });
+}
+
+/** true or false for a file one of the rules covers (true without a base), else null. */
+function partsChanged(rules, file, { root, base }) {
+  const rule = rules.find(([pattern]) => pattern.test(file));
+  if (!rule) return null;
   if (!base) return true;
   const before = readAt(root, base, file);
   const after = readAt(root, null, file);
@@ -127,7 +148,8 @@ export function selectStories(changed, { root, base }) {
 // (vitest --changed, which follows the module graph to every test and story a source reaches) when
 // each changed app input is a source that graph follows, or a file no vitest test or story reads
 // by import. Anything else runs every test: a removed or renamed file, the test setup, the
-// Storybook or Vite config, the design package, the lockfile, a script.
+// Storybook or Vite config, the design package, a script, and (with a base) a manifest, tsconfig or
+// lockfile change the tests read (reachesTests; without a base, any change to one).
 // - CSS under app/src: no test imports it (the setup files load the whole stylesheet), so the
 //   graph can't scope it. A stylesheet rarely breaks a test; the every-story check takes no story
 //   for it either, and main runs every test before each deploy.
@@ -139,13 +161,16 @@ const unread = /^app\/src\/.*\.css$/;
 
 /**
  * @param {string[]} nameStatus lines of `git diff --name-status <base> HEAD -- <app inputs>`
+ * @param {{ root?: string, base?: string }} [options] with a base, a modified manifest, tsconfig or
+ *   lockfile counts only when the part the tests read changed (reachesTests)
  * @returns {boolean} true when the related tests are enough
  */
-export function relatedRun(nameStatus) {
+export function relatedRun(nameStatus, { root, base } = {}) {
   for (const line of nameStatus) {
     const [status, file] = line.split("\t");
     if (!/^[AM]$/.test(status ?? "") || !file) return false;
     if (file === "app/src/test-setup.ts") return false;
+    if (status === "M" && base && root && reachesTests(file, { root, base }) === false) continue;
     if (!relatedSources.test(file) && !unread.test(file)) return false;
   }
   return true;
@@ -179,7 +204,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv.includes("--related-run")) {
     // git diff --name-status on stdin; prints "related" or "all".
     const lines = fs.readFileSync(0, "utf8").split("\n").filter(Boolean);
-    console.log(relatedRun(lines) ? "related" : "all");
+    console.log(relatedRun(lines, { root, base: arg("--base") }) ? "related" : "all");
     process.exit(0);
   }
   const changed = fs
