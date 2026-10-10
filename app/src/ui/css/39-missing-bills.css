@@ -2,12 +2,17 @@
    so the Home entry stays in its budget (FLOW-804). */
 
 /* FLOW-415 (b-2): the קבועים screen. A row that can be hidden ends in a muted 44px ✕. */
-/* Every row sits on the surface, as a hideable row's swipe layer does, so the list reads as one. */
+/* Every row, and a hideable row's swipe layer, sits on the page background, so the list stays flat
+   in dark too (FLOW-424, C18-2; light is unchanged). */
 .ui-recurring-row {
   display: flex;
   align-items: center;
   min-inline-size: 0;
-  background: var(--color-surface);
+}
+
+.ui-recurring-row,
+.ui-recurring-section .ui-sremove-row {
+  background: var(--color-bg);
 }
 
 .ui-recurring-row > .ui-row {
@@ -56,9 +61,9 @@
 }
 
 /* FLOW-430: "אולי זה: <name> · <amount> · dd/mm" under a late row, then "כן" and "לא" (44px). It
-   sits on the row's surface, so the row and its hint read as one. */
+   sits on the row's background, so the row and its hint read as one. */
 .ui-missing-item {
-  background: var(--color-surface);
+  background: var(--color-bg);
 }
 
 .ui-missing-match {
