@@ -78,8 +78,9 @@ export default defineConfig(({ mode }) => {
   return {
     optimizeDeps: {
       // The books screens pull these in after sign-in. Pre-bundling them avoids a
-      // mid-session reload while Vite discovers the query client and Supabase.
-      include: ["@tanstack/react-query", "@supabase/supabase-js"],
+      // mid-session reload while Vite discovers the query client and Supabase. Vaul is only
+      // imported dynamically (FLOW-815), so without this a story run re-optimizes mid-run.
+      include: ["@tanstack/react-query", "@supabase/supabase-js", "vaul"],
     },
     base: "/",
     resolve: {

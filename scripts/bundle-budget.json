@@ -1,5 +1,5 @@
 {
-  "reason": "FLOW-804 option A (owner's pick 2026-10-09): Home loads only its own code. Set just over the sizes after the code split (#360), each file gzipped on its own: Home entry 228 KB, all JavaScript 415 KB. Raising a limit is a reviewed change that says why here. FLOW-419 (2026-10-10): the project page opens on its cash, with its own month and lines pages (a lazy chunk); all JavaScript 450 -> 460 KB. FLOW-434 (2026-10-10): main reached the Home limit (240.0) with #534; the loan page's three sub-page routes add 0.1 KB to Home and its lazy chunk 2.4 KB, so Home 240 -> 242 and all JavaScript 460 -> 464 KB.",
-  "homeEntryGzipKB": 242,
+  "reason": "FLOW-804 option A (owner's pick 2026-10-09): Home loads only its own code. Set just over the sizes after the code split (#360), each file gzipped on its own: Home entry 228 KB, all JavaScript 415 KB. Raising a limit is a reviewed change that says why here. FLOW-419 (2026-10-10): the project page opens on its cash, with its own month and lines pages (a lazy chunk); all JavaScript 450 -> 460 KB. FLOW-815 (2026-10-10): the entry sat at 239.6/240 KB; vaul and the Radix dialog under it moved to a chunk the first sheet loads after Home paints (ui/sheet-drawer.ts), entry 240.0 -> 219.6 KB, limits unchanged for headroom. FLOW-434 (2026-10-10): the loan page's next-payment, future and year pages add 2.4 KB to its lazy chunk; all JavaScript 460 -> 464 KB (Home unchanged).",
+  "homeEntryGzipKB": 240,
   "totalJsGzipKB": 464
 }
