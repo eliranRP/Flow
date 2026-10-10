@@ -30,6 +30,8 @@ export const screenLoaders = {
   legal: () => import("./screens/PlaceholderScreen"),
   install: () => import("./ui/install-screen"),
   setupSteps: () => import("./setup/steps"),
+  team: () => import("./screens/team-screen"),
+  invites: () => import("./screens/invites-screen"),
 };
 
 /**

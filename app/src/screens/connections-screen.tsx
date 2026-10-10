@@ -2,7 +2,7 @@ import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { useHoldWrites, useIsViewer, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { useCompanyRole, useHoldOwnerSettings, useIsViewer, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -41,6 +41,9 @@ import type { SettingsSample } from "./settings-screen";
  * Jev and the assistant under עזרים. The rows, sheets and focus returns moved
  * here from Settings unchanged. `?sheet=sumit|mercury|assistant` opens one.
  */
+/** FLOW-601: an editor reads the connections; the owner changes them. */
+export const EDITOR_CONNECTIONS_NOTE = "רק בעל העסק יכול לשנות חיבורים.";
+
 export function ConnectionsScreen({
   sample,
   sampleSecret,
@@ -58,7 +61,9 @@ export function ConnectionsScreen({
   const navigate = useNavigate();
   const { session } = useAuth();
   const viewer = useIsViewer();
-  const holdWrites = useHoldWrites();
+  // FLOW-601: connecting, refreshing and disconnecting are the owner's; an editor reads them.
+  const holdWrites = useHoldOwnerSettings();
+  const editor = useCompanyRole() === "editor";
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const mercuryStatus = useMercuryStatusQuery(sample == null);
@@ -440,6 +445,7 @@ export function ConnectionsScreen({
     <div>
       <ScreenHeader title="חיבורים" kicker="הגדרות" backTo={`/settings${search}`} />
       <ViewerNote />
+      {editor ? <p className="ui-page-pad t-hint">{EDITOR_CONNECTIONS_NOTE}</p> : null}
       <SectionHead title="ספרים ובנק" />
       {kind === "loading" || mercuryKind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}
       <List>
