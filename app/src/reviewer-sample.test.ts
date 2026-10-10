@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { reviewerBooks, reviewerBooksAddUp, reviewerFiled, reviewerFiledCount, reviewerFiledView, reviewerSharesFor } from "./reviewer-sample";
 
