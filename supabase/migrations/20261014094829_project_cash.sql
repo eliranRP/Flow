@@ -1,6 +1,6 @@
--- FLOW-417 (owner's option A "Like Home", 2026-10-10; decision 0173): a project opens on its cash.
--- - private.project_cash_parts: private.cash_parts' parts that are the project's. A part filed or
---   split to the project counts whole; a shared line counts its allocation's share (share_bp of
+-- FLOW-419 (owner's option A "Like Home", 2026-10-10; decision 0176): a project opens on its cash.
+-- - private.project_cash_parts: private.cash_parts' rules over the project's lines only (by
+--   transaction id, never the whole company). A part filed or split to the project counts whole; a shared line counts its allocation's share (share_bp of
 --   the part's gross), so a project shows its own part of a bill, never the whole bank amount.
 -- - public.project_cash_months(p_project, p_months, p_today): cash_months' shape for one project.
 --   profit_minor is the project's profit for the month on the company's basis (get_project's
@@ -12,9 +12,32 @@ begin;
 
 set local lock_timeout = '5s';
 
+-- The lines a project's figures can count: filed, shared or split to it. Every read below starts
+-- from these ids, never from the company's whole private.pnl_lines (that per-line work over a
+-- company is what made the overhead share slow).
+create or replace function private.project_line_ids(p_company uuid, p_project uuid)
+returns uuid[]
+language sql
+stable
+set search_path = ''
+as $$
+  select array(
+    select t.id from public.transactions t where t.company_id = p_company and t.project_id = p_project
+    union
+    select a.transaction_id from public.allocations a where a.company_id = p_company and a.project_id = p_project
+    union
+    select s.transaction_id from public.line_splits s where s.company_id = p_company and s.project_id = p_project
+  );
+$$;
+
+revoke all on function private.project_line_ids(uuid, uuid) from public, anon, authenticated;
+
+-- private.cash_parts' parts for the given lines only, then the project's: a part filed or split
+-- to it whole, a shared part at its allocation's share. Same month and gross rules as cash_parts.
 create or replace function private.project_cash_parts(
   p_company uuid,
   p_project uuid,
+  p_ids uuid[],
   p_basis text,
   p_from date,
   p_to date
@@ -35,6 +58,69 @@ language sql
 stable
 set search_path = ''
 as $$
+  with dated as (
+    select
+      l.*,
+      case
+        when p_basis = 'invoice' then l.doc_date
+        when l.cash_date is not null then l.cash_date
+        when l.doc_kind in ('invoice', 'credit') then null
+        else l.doc_date
+      end as month_date
+    from private.pnl_lines l
+    where l.transaction_id = any(p_ids)
+      and l.company_id = p_company
+      and (
+        l.kind = 'expense'
+        or l.direction = 'expense'
+        or (p_basis = 'paid' and l.doc_kind in ('receipt', 'invoice_receipt'))
+        or (p_basis = 'invoice' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+      )
+  ),
+  lines as (
+    select
+      l.transaction_id,
+      l.part,
+      l.currency,
+      l.kind,
+      l.category_id,
+      l.project_id,
+      l.pnl_role,
+      l.amount_net,
+      l.line_amount_net,
+      t.amount_gross as line_gross,
+      l.month_date,
+      count(*) over (partition by l.transaction_id) as parts,
+      coalesce(
+        t.in_cash_override,
+        not private.line_category_out(
+          c.in_cash is false,
+          t.category_suggested and l.category_id is not distinct from t.category_id,
+          l.part
+        )
+      ) as in_cash,
+      sum(l.amount_net) over (
+        partition by l.transaction_id
+        order by l.part nulls last, l.category_id, l.project_id, l.amount_net
+        rows between unbounded preceding and current row
+      ) as cum_net
+    from dated l
+    join public.transactions t on t.id = l.transaction_id
+    left join public.categories c on c.id = l.category_id
+    where l.month_date between p_from and p_to
+  ),
+  parts as (
+    select
+      x.*,
+      case
+        -- A VAT-only document (net 0) is its gross.
+        when x.line_amount_net = 0 then case when x.parts = 1 then x.line_gross else x.amount_net end
+        when x.line_gross = x.line_amount_net then x.amount_net
+        else private.div_half_even(x.cum_net * x.line_gross, x.line_amount_net)
+          - private.div_half_even((x.cum_net - x.amount_net) * x.line_gross, x.line_amount_net)
+      end::bigint as gross_minor
+    from lines x
+  )
   select
     p.transaction_id,
     p.part,
@@ -45,11 +131,11 @@ as $$
     p.pnl_role,
     p.month_date,
     case
-      when p.pnl_role = 'shared' then private.div_half_even(p.amount_minor::numeric * a.share_bp, 10000)
-      else p.amount_minor
+      when p.pnl_role = 'shared' then private.div_half_even(p.gross_minor::numeric * a.share_bp, 10000)
+      else p.gross_minor
     end::bigint,
     p.in_cash
-  from private.cash_parts(p_company, p_basis, p_from, p_to) p
+  from parts p
   left join public.allocations a
     on p.pnl_role = 'shared'
     and a.transaction_id = p.transaction_id
@@ -58,7 +144,7 @@ as $$
     or a.transaction_id is not null;
 $$;
 
-revoke all on function private.project_cash_parts(uuid, uuid, text, date, date) from public, anon, authenticated;
+revoke all on function private.project_cash_parts(uuid, uuid, uuid[], text, date, date) from public, anon, authenticated;
 
 -- The project's months, newest first, the current month included, in cash_months' shape. Null
 -- when no company is readable or the project is not the company's.
@@ -104,16 +190,10 @@ begin
   first_month := (this_month - make_interval(months => p_months - 1))::date;
   last_day := (this_month + interval '1 month' - interval '1 day')::date;
   -- The lines the project's profit can count, as get_project reads them.
-  ids := array(
-    select t.id from public.transactions t where t.company_id = cid and t.project_id = p_project
-    union
-    select a.transaction_id from public.allocations a where a.company_id = cid and a.project_id = p_project
-    union
-    select s.transaction_id from public.line_splits s where s.company_id = cid and s.project_id = p_project
-  );
+  ids := private.project_line_ids(cid, p_project);
 
   with parts as (
-    select * from private.project_cash_parts(cid, p_project, basis, first_month, last_day)
+    select * from private.project_cash_parts(cid, p_project, ids, basis, first_month, last_day)
   ),
   cash as (
     select
@@ -255,7 +335,7 @@ begin
       p.*,
       case when p.kind = 'income' then 'in' else 'out' end as side,
       case when p.kind = 'income' then p.amount_minor else -p.amount_minor end as side_minor
-    from private.project_cash_parts(cid, p_project, basis, month_start, (month_start + interval '1 month' - interval '1 day')::date) p
+    from private.project_cash_parts(cid, p_project, private.project_line_ids(cid, p_project), basis, month_start, (month_start + interval '1 month' - interval '1 day')::date) p
     where p.currency = coalesce(p_currency, base)
       and (
         (p_side = 'excluded' and not p.in_cash)
@@ -323,8 +403,8 @@ grant execute on function public.project_cash_months(uuid, integer, date) to aut
 grant execute on function public.project_cash_month_lines(uuid, date, text, text, integer, integer) to authenticated, service_role;
 
 comment on function public.project_cash_months(uuid, integer, date) is
-  'FLOW-417: one project''s cash per month (cash_months'' shape); a shared line counts the project''s share. profit_minor is the project''s profit on the company''s basis, before overhead.';
+  'FLOW-419: one project''s cash per month (cash_months'' shape); a shared line counts the project''s share. profit_minor is the project''s profit on the company''s basis, before overhead.';
 comment on function public.project_cash_month_lines(uuid, date, text, text, integer, integer) is
-  'FLOW-417: one project''s lines behind a month''s נכנס, יצא or kept-out (cash_month_lines'' shape); a shared line shows the project''s share.';
+  'FLOW-419: one project''s lines behind a month''s נכנס, יצא or kept-out (cash_month_lines'' shape); a shared line shows the project''s share.';
 
 commit;

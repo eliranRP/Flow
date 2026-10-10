@@ -72,7 +72,7 @@ describe("App", () => {
     await renderAt("/projects/a?preview=loading");
     expect(document.querySelector(".ui-project-skel")).not.toBeNull();
     expect(document.querySelector(".ui-skel-project-title")).not.toBeNull();
-    // FLOW-417: the project opens on its cash, which has no period pill (the profit page has it).
+    // FLOW-419: the project opens on its cash, which has no period pill (the profit page has it).
     expect(document.querySelector(".ui-skel-project-period")).toBeNull();
     expect(document.querySelector(".ui-skel-project-label")).not.toBeNull();
     expect(document.querySelector(".ui-skel-project-num")).not.toBeNull();

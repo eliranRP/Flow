@@ -34,7 +34,7 @@ import type { ProjectInvestment } from "./project-investment-data";
 type Project = NonNullable<ProjectDetail>;
 
 /**
- * FLOW-417 (owner's option A "Like Home", decision 0173). The project page is the project's cash,
+ * FLOW-419 (owner's option A "Like Home", decision 0176). The project page is the project's cash,
  * as Home is the company's: this month's תזרים, נכנס, יצא and רווח החודש, one row for השקעה
  * והלוואות, then the earlier months. An earlier month opens its own page, and נכנס or יצא the
  * project's lines.

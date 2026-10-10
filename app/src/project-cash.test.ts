@@ -17,7 +17,7 @@ function row(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "USD"
   };
 }
 
-describe("FLOW-417 project cash rows", () => {
+describe("FLOW-419 project cash rows", () => {
   it("opens the project's lines and the project's profit page on the month", () => {
     const rows = projectCashSummaryRows("p1", "2026-10", [row(310_000n, 75_000n, 128_000n)], "?preview=1", NOW);
     expect(rows.map((r) => r.label)).toEqual(["נכנס", "יצא", "רווח החודש"]);

@@ -809,7 +809,7 @@ Output `data`: `rows[]` newest first (`transaction_id`, `part`, `description`, `
 
 ### get_project_cash_months
 
-`project_cash_months(p_project, p_months)` ([0173](../decisions/0173-project-opens-on-cash.md), FLOW-417). One project's cash per month, in `get_cash_months`' shape. `project_id` is required (from `list_projects`); `months` is 1 to 24 (default 4). A line filed or split to the project counts whole (its part); a shared line counts the project's allocation share of its gross, so a project shows its own part of a bill. `profit_minor` is the project's profit for the month on the company's basis (income less direct and shared cost, as `get_profit_months` with `project_id`), before the overhead share. A project of another company, or an unknown one, is `not_found`.
+`project_cash_months(p_project, p_months)` ([0176](../decisions/0176-project-opens-on-cash.md), FLOW-419). One project's cash per month, in `get_cash_months`' shape. `project_id` is required (from `list_projects`); `months` is 1 to 24 (default 4). A line filed or split to the project counts whole (its part); a shared line counts the project's allocation share of its gross, so a project shows its own part of a bill. `profit_minor` is the project's profit for the month on the company's basis (income less direct and shared cost, as `get_profit_months` with `project_id`), before the overhead share. A project of another company, or an unknown one, is `not_found`.
 
 Input: `{ "project_id": "…", "months": 4 }`.
 

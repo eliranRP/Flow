@@ -10,7 +10,7 @@ import { cashAmountsText, type CashRow } from "./ui/cash-rows";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
- * FLOW-417 (owner's option A "Like Home", decision 0173). A project opens on its cash: this
+ * FLOW-419 (owner's option A "Like Home", decision 0176). A project opens on its cash: this
  * month's תזרים, נכנס and יצא, רווח החודש (the profit page), and the earlier months. A shared bill
  * counts the project's share. The words and rows are Home's (cash.ts); only the paths and the
  * reads are the project's.

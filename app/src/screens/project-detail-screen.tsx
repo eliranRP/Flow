@@ -69,7 +69,7 @@ function ProjectLoading({ search, example, pill = true }: { search: string; exam
             </span>
             <Skeleton tone="band" className="ui-skel-project-label" />
             {/* FLOW-359 (A): the period pill sits between the label and the figure, as on Home.
-                FLOW-417: only the profit page has it; the project page opens on its cash. */}
+                FLOW-419: only the profit page has it; the project page opens on its cash. */}
             {pill ? (
               <span className="ui-skel-project-period">
                 <Skeleton tone="band" className="ui-skel-project-period-bar" />
@@ -123,7 +123,7 @@ function projectRowProfit(
 }
 
 /**
- * FLOW-340 C: the overview, or one of the screens its rows open. FLOW-417: the overview is the
+ * FLOW-340 C: the overview, or one of the screens its rows open. FLOW-419: the overview is the
  * project's cash, and "profit" is the page the project used to open on.
  */
 export type ProjectSection = "overview" | "profit" | "expenses" | "investment" | "loans" | "transactions";
@@ -148,7 +148,7 @@ export function ProjectDetailScreen({
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
-  /** FLOW-417. A sample project's cash months; without it a sample project's cash is its by_currency, as this month. */
+  /** FLOW-419. A sample project's cash months; without it a sample project's cash is its by_currency, as this month. */
   sampleCash?: NonNullable<CashMonths>;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -174,7 +174,7 @@ export function ProjectDetailScreen({
   const [period, setPeriod] = useProjectPeriod();
   const [periodSheet, setPeriodSheet] = useState(false);
   const detail = useProjectQuery(sample ? "" : projectId, period);
-  // FLOW-417: the project page opens on its cash, read beside the project (its name, investment and loans).
+  // FLOW-419: the project page opens on its cash, read beside the project (its name, investment and loans).
   const cash = useProjectCashMonthsQuery(sample ? "" : projectId, section === "overview");
   // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
@@ -256,7 +256,7 @@ export function ProjectDetailScreen({
   if (section === "investment") {
     return (
       <div className="flex min-h-full flex-1 flex-col">
-        {/* FLOW-417: investment and loans share one page, one row from the project's cash. */}
+        {/* FLOW-419: investment and loans share one page, one row from the project's cash. */}
         <ScreenHeader title="השקעה והלוואות" kicker={project.name} backTo={sectionHref("overview")} />
         <ProjectInvestmentSection project={project} sample={sampleInvestment} />
         {(project.loans ?? []).length === 0 ? null : (
@@ -380,7 +380,7 @@ export function ProjectDetailScreen({
         wordmark={false}
         example={example}
         leading={
-          // FLOW-417: the profit page is one tap in from the project's cash.
+          // FLOW-419: the profit page is one tap in from the project's cash.
           <BackButton fallback={sectionHref("overview")} onBand />
         }
         // A new period shows the last figures until its read lands; the spinner says they are not its yet.
@@ -433,7 +433,7 @@ export function ProjectDetailScreen({
         project={project}
         investmentData={investmentData}
         currencyRows={currencyRows}
-        // FLOW-417: investment and loans have their own page, one row from the project's cash.
+        // FLOW-419: investment and loans have their own page, one row from the project's cash.
         profitOnly
         links={{
           income: `/search${withParams(projectSearch, { dir: "income" })}`,
@@ -450,7 +450,7 @@ export function ProjectDetailScreen({
 }
 
 /**
- * FLOW-417: a sample project with no sample cash shows its figures as this month's cash, so the
+ * FLOW-419: a sample project with no sample cash shows its figures as this month's cash, so the
  * stories and dev routes that pass only a project still draw the page.
  */
 function sampleCashOf(project: NonNullable<ProjectDetail>, now = new Date()): NonNullable<CashMonths> {

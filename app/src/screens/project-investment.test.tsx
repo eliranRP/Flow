@@ -108,7 +108,7 @@ function renderPage(entry = "/projects/p1") {
   );
 }
 
-/** FLOW-417: the project page opens on its cash; one quiet month is enough here. */
+/** FLOW-419: the project page opens on its cash; one quiet month is enough here. */
 const cashPayload = {
   basis: "paid",
   base_currency: "ILS",
@@ -193,7 +193,7 @@ describe("the card", () => {
 });
 
 describe("the project page", () => {
-  it("shows הון עצמי בנכס on the השקעה והלוואות row, and the card on its own screen (FLOW-417)", async () => {
+  it("shows הון עצמי בנכס on the השקעה והלוואות row, and the card on its own screen (FLOW-419)", async () => {
     rpc.impl = readsFor(payload());
     const overview = renderPage();
     const row = await screen.findByRole("link", { name: /^השקעה והלוואות/ });

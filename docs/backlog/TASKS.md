@@ -284,7 +284,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-413"></a>[FLOW-413](tasks/FLOW-413.md) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
-| <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Project page opens on its cash view | PLAN FIRST |
+| <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 

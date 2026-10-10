@@ -1,4 +1,4 @@
--- FLOW-417 (decision 0173): one project's cash per month and its lines. A line filed to the
+-- FLOW-419 (decision 0176): one project's cash per month and its lines. A line filed to the
 -- project counts whole, a shared line counts the project's allocation, and what the view leaves
 -- out stays out. Invented data only. Amounts are agorot. Today is 2026-06-15.
 

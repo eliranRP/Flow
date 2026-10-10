@@ -32,7 +32,7 @@ export function PrefetchProjects() {
       // The page starts on the link's period, else Home's (useProjectPeriod).
       const linkPeriod = periodFromSearch(new URLSearchParams(search)) ?? period;
       client.query({ ...projectQueryOptions(preview, projectId, linkPeriod), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
-      // FLOW-417: the page opens on the project's cash, read beside the project.
+      // FLOW-419: the page opens on the project's cash, read beside the project.
       client.query({ ...projectCashMonthsOptions(preview, projectId), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
     }
     function onPress(event: Event) {

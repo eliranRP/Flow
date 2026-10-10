@@ -331,7 +331,7 @@ export async function callTool(
     return ok({ ...(result.json as Review), basis });
   }
 
-  // FLOW-417 (decision 0173): one project's cash per month, and the lines behind it.
+  // FLOW-419 (decision 0176): one project's cash per month, and the lines behind it.
   if (name === "get_project_cash_months" || name === "get_project_cash_lines") {
     const projectId = args.project_id;
     if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");

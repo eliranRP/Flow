@@ -10,7 +10,7 @@ import { StoryRoute } from "../ui/story-route";
 import { ProjectDetailScreen } from "./flow-screens";
 import { ProjectCashLinesScreen, ProjectCashMonthScreen } from "./project-cash-screens";
 
-/** FLOW-417 (owner's option A "Like Home"): a project opens on its cash. Invented figures. */
+/** FLOW-419 (owner's option A "Like Home"): a project opens on its cash. Invented figures. */
 
 const meta = {
   title: "Screens/Project cash",

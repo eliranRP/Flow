@@ -79,7 +79,7 @@ export function ProjectOverviewRows({
   investmentData: ProjectInvestment;
   currencyRows: readonly ProjectCurrencyRow[];
   links: ProjectOverviewLinks;
-  /** FLOW-417: the profit page leaves השקעה and הלוואות to their own page. */
+  /** FLOW-419: the profit page leaves השקעה and הלוואות to their own page. */
   profitOnly?: boolean;
 }) {
   const investment = profitOnly ? null : investmentFigure(investmentData);

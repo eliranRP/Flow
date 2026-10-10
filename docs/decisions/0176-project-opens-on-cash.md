@@ -1,7 +1,7 @@
 # A project opens on its cash
 
 **Date:** 2026-10-10
-**Status:** Accepted (owner's card, option A "Like Home", 2026-10-10 09:19Z; FLOW-417)
+**Status:** Accepted (owner's card, option A "Like Home", 2026-10-10 09:19Z; FLOW-419)
 
 ## Context
 

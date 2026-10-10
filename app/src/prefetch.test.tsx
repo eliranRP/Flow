@@ -38,7 +38,7 @@ describe("PrefetchProjects (FLOW-804)", () => {
     fireEvent.pointerDown(view.getByText("הגדרות"));
     expect(query).not.toHaveBeenCalled();
     fireEvent.pointerDown(view.getByText("פרויקט"));
-    // The project and its cash (FLOW-417: the page opens on the cash).
+    // The project and its cash (FLOW-419: the page opens on the cash).
     expect(query).toHaveBeenCalledTimes(2);
     const options = query.mock.calls[0]?.[0] as { queryKey: unknown[]; staleTime: number };
     expect(options.queryKey.slice(0, 3)).toEqual(["project", "off", "p7"]);

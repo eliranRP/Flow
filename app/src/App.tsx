@@ -277,7 +277,7 @@ function AppRoutes() {
                 <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
                 <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
                 {/* FLOW-340 C: the screens the project page's rows open. */}
-                {/* FLOW-417: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
+                {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
                 <Route path="projects/:projectId/profit" element={<ProjectDetailScreen section="profit" />} />
                 <Route path="projects/:projectId/cash/:month" element={<ProjectCashMonthScreen />} />
                 <Route path="projects/:projectId/cash/:month/:side/:currency" element={<ProjectCashLinesScreen />} />
