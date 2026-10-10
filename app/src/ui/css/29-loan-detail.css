@@ -156,8 +156,14 @@
   text-align: start;
 }
 
+/* The amount keeps one width, numbers set right, so the shares line up in one column down the
+   list whatever each amount's length (owner, 2026-10-10). */
 .ui-share-amount .t-amount {
+  display: inline-block;
+  min-inline-size: 7ch;
   color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .ui-loan-next .t-meta {

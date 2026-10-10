@@ -169,12 +169,16 @@ export const FutureDemand: Story = { name: "Future payments, demand loan", ...lo
 
 /** The part rows add up to the "שולם השנה" total and their shares to 100%. */
 export const PaidThisYearAddsUp: Story = {
-  name: "Paid this year adds up",
+  name: "Paid this year adds up, shares in one column",
   ...loan("loan-mortgage"),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement);
     await expect(page.getByText(/^תשלום הבא · /)).toBeInTheDocument();
-    const shares = [...canvasElement.querySelectorAll(".ui-share-pct")].map((node) => Number(node.textContent.replace("%", "")));
-    if (shares.length > 0) await expect(shares.reduce((sum, value) => sum + value, 0)).toBe(100);
+    const pcts = [...canvasElement.querySelectorAll(".ui-share-pct")];
+    await expect(pcts.length).toBeGreaterThan(1);
+    await expect(pcts.map((node) => Number(node.textContent.replace("%", ""))).reduce((sum, value) => sum + value, 0)).toBe(100);
+    // The shares stand in one column whatever each amount's length (owner, 2026-10-10).
+    const edges = new Set(pcts.map((node) => Math.round(node.getBoundingClientRect().left)));
+    await expect(edges.size).toBe(1);
   },
 };
