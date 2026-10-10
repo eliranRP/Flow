@@ -165,7 +165,9 @@ export function ProjectDetailScreen({
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
+  // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
+  // refresh fails; the server is slow or away, and the figures it has are still the project's.
+  const phase = sample || (preview === "off" && detail.data != null) ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
   useEffect(() => {

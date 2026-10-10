@@ -6,6 +6,7 @@ import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-re
 import { forgetCompanyRole, keepOnlyCompanyRole } from "./company-role-cache";
 import { noteShownCompanyUser } from "./lib/company-header";
 import { keepSplitDraftsFor } from "./split-drafts";
+import { forgetProjectReads, keepProjectReadsFor } from "./project-cache";
 import { forgetThisDevice } from "./push";
 import { pinReviewLine } from "./review-pin";
 
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // FLOW-601: this user's shown company names the next requests; another user's is dropped.
       noteShownCompanyUser(nextId);
       keepSplitDraftsFor(nextId);
+      keepProjectReadsFor(nextId);
       if (previous != null && previous !== nextId) {
         // Sign-out, an expired session, another tab, or a user switch. The
         // query keys don't name the user, so nothing cached may outlive them.
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // The review pin names a line of the previous user's books.
         pinReviewLine(null);
         forgetCompanyRole(previous);
+        forgetProjectReads();
         queryClient.clear();
         setGeneration((count) => count + 1);
       }

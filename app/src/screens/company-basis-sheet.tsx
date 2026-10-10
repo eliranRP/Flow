@@ -1,5 +1,6 @@
 import { useRef, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
+import { forgetProjectReads } from "../project-cache";
 import { BasisSheet, type BasisChoice } from "../ui/basis-sheet";
 import { useToast } from "../ui/toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
@@ -23,6 +24,8 @@ async function setCompanyBasis(basis: BasisChoice): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   assertNoError(await supabase.rpc("set_cash_basis", { p_basis: basis === "cash" ? "paid" : "invoice" }));
+  // FLOW-804: the project figures saved on the phone count by the old date.
+  forgetProjectReads();
 }
 
 type Change = { basis: BasisChoice; previous: BasisChoice };

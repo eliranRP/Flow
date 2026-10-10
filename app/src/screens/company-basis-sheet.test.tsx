@@ -68,6 +68,15 @@ describe("CompanyBasisSheet (FLOW-103)", () => {
     expect(keys).toEqual(expect.arrayContaining(["dashboard", "project", "project-category", "profit-months", "breakdown", "breakdown-lines"]));
   });
 
+  it("drops the project figures saved on the phone, which count by the old date (FLOW-804)", async () => {
+    mockRpc(() => ({ error: null }));
+    localStorage.setItem("flow-project-reads", JSON.stringify({ user: "u", company: "c", entries: [] }));
+    renderSheet();
+    fireEvent.click(invoice());
+    await screen.findByText(BASIS_SAVED);
+    expect(localStorage.getItem("flow-project-reads")).toBeNull();
+  });
+
   it("writes the previous basis back on ביטול", async () => {
     const calls = mockRpc(() => ({ error: null }));
     renderSheet(() => false, "invoiced");
