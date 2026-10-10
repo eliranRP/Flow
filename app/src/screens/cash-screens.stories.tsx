@@ -65,6 +65,12 @@ export const CashMonth: Story = {
       </StoryRoute>
     );
   },
+  play: async ({ canvasElement }) => {
+    // FLOW-362: an earlier month's profit row names its month, not "רווח החודש".
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/^רווח ב/)).toBeInTheDocument();
+    await expect(canvas.queryByText("רווח החודש")).not.toBeInTheDocument();
+  },
 };
 export const CashMonthDark: Story = { ...CashMonth, name: "Cash, an earlier month, dark", ...dark };
 

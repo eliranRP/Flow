@@ -31,7 +31,7 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 
 /**
- * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and רווח החודש, as Home
+ * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and "רווח ב<month>", as Home
  * shows the current month), and the lines behind one month's נכנס or יצא, or (FLOW-418) the cash
  * profit leaves out. Decision 0168.
  */
