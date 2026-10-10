@@ -64,9 +64,26 @@ export const SECTION_ID: Record<RecurringSection, string> = { late: "late", arri
  * One row the user can close for themselves (FLOW-415, owner 08:41Z; FLOW-913, owner 16:05Z: it is a
  * dismiss, so "סגירה"): a swipe toward the start over "סגירה", and, while the list is in "עריכה", an
  * accent "סגירה" (44px) in place of the chevron. `peek` slides the row once to show the swipe.
+ * FLOW-428: in "עריכה", a row with nothing to close in a section that has a "סגירה" keeps a slot the
+ * same width, its word hidden and its chevron at the slot's end, so the section's amounts form one
+ * column. The slot opens the row too.
  */
-function HideableRow({ name, onHide, editing, peek, children }: { name: string; onHide?: () => void; editing: boolean; peek: boolean; children: ReactNode }) {
-  if (onHide == null) return <div className="ui-recurring-row">{children}</div>;
+function HideableRow({ name, to, onHide, editing, slot, peek, children }: { name: string; to: string; onHide?: () => void; editing: boolean; slot: boolean; peek: boolean; children: ReactNode }) {
+  if (onHide == null) {
+    return (
+      <div className="ui-recurring-row">
+        {children}
+        {editing && slot ? (
+          <Link to={to} tabIndex={-1} aria-hidden="true" className="ui-text-link ui-recurring-hide ui-recurring-slot">
+            <span className="ui-text-link-label ui-recurring-slot-word">סגירה</span>
+            <span className="ui-row-chevron ui-recurring-slot-chevron">
+              <ChevronIcon />
+            </span>
+          </Link>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <SwipeRemove label="סגירה" onRemove={onHide} peek={peek}>
       <div className="ui-recurring-row">
@@ -168,6 +185,9 @@ export function MissingBillList({
   }
   const hide = (kind: "missing" | "change", key: string | null | undefined, name: string) =>
     onHide == null || key == null ? undefined : () => { onHide(kind, key, name); };
+  // FLOW-428: a section where some row can close keeps one end slot on every row in "עריכה".
+  const lateSlot = onHide != null && rows.some((row) => row.alertKey != null);
+  const arrivedSlot = onHide != null && arrived.some((row) => row.alertKey != null);
   const peekId = peek && onHide != null ? [...rows, ...arrived].find((row) => row.alertKey != null)?.id : undefined;
   return (
     <>
@@ -179,7 +199,7 @@ export function MissingBillList({
               const onRowHide = hide("missing", row.alertKey, row.name);
               return (
                 <div key={row.id} className="ui-missing-item">
-                <HideableRow name={row.name} onHide={onRowHide} editing={editing} peek={row.id === peekId}>
+                <HideableRow name={row.name} to={row.href} onHide={onRowHide} editing={editing} slot={lateSlot} peek={row.id === peekId}>
                   <Link
                     to={row.href}
                     className="ui-row ui-hit"
@@ -191,7 +211,7 @@ export function MissingBillList({
                       </span>
                     </span>
                     <ApproxAmount minor={row.minor} currency={row.currency} income={row.income} />
-                    <RowChevron hidden={editing && onRowHide != null} />
+                    <RowChevron hidden={editing && (onRowHide != null || lateSlot)} />
                   </Link>
                 </HideableRow>
                 {row.match != null && onMatch != null ? (
@@ -211,7 +231,7 @@ export function MissingBillList({
               const amount = formatAmountText(row.minor, row.currency);
               const onRowHide = hide("change", row.alertKey, row.name);
               return (
-                <HideableRow key={row.id} name={row.name} onHide={onRowHide} editing={editing} peek={row.id === peekId}>
+                <HideableRow key={row.id} name={row.name} to={row.href} onHide={onRowHide} editing={editing} slot={arrivedSlot} peek={row.id === peekId}>
                   <Link
                     to={row.href}
                     className="ui-row ui-hit"
@@ -232,7 +252,7 @@ export function MissingBillList({
                         </span>
                       )}
                     </span>
-                    <RowChevron hidden={editing && onRowHide != null} />
+                    <RowChevron hidden={editing && (onRowHide != null || arrivedSlot)} />
                   </Link>
                 </HideableRow>
               );
