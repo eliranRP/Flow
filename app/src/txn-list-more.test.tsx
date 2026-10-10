@@ -27,9 +27,10 @@ function KeyedCard({ prefetch }: { prefetch: boolean }) {
   return <Card key={transactionId} prefetch={prefetch} />;
 }
 
-function renderWalk(id: string, load: TxnMoreLoad, { more = true, prefetch = false } = {}) {
+function renderWalk(id: string, load: TxnMoreLoad, { more = true, prefetch = false, total }: { more?: boolean; prefetch?: boolean; total?: number } = {}) {
+  const txnList = total == null ? { ids: ["a", "b"], from: "/list" } : { ids: ["a", "b"], from: "/list", total };
   return render(
-    <MemoryRouter initialEntries={[{ pathname: `/transactions/${id}`, state: { txnList: { ids: ["a", "b"], from: "/list" } } }]}>
+    <MemoryRouter initialEntries={[{ pathname: `/transactions/${id}`, state: { txnList } }]}>
       <List more={more} load={load} />
       <Routes>
         <Route path="/transactions/:transactionId" element={<KeyedCard prefetch={prefetch} />} />
@@ -57,6 +58,8 @@ describe("the next page of a paged list on the card (FLOW-314)", () => {
     renderWalk("b", load);
     const next = screen.getByRole("button", { name: "התנועה הבאה" });
     expect(next).not.toHaveClass("ui-txn-step-off");
+    // More rows are coming and the screen sent no count: the place alone, never "2 מתוך 2".
+    expect(screen.getByRole("group", { name: "מעבר בין תנועות" })).not.toHaveTextContent("מתוך");
     fireEvent.click(next);
     expect(load).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/b");
@@ -109,6 +112,11 @@ describe("the next page of a paged list on the card (FLOW-314)", () => {
     expect(load).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/c");
+  });
+
+  it("counts against the total the screen sent while more rows are coming", () => {
+    renderWalk("b", vi.fn(() => Promise.resolve(null)), { total: 7 });
+    expect(screen.getByRole("group", { name: "מעבר בין תנועות" })).toHaveTextContent(/2 מתוך 7/);
   });
 
   it("does nothing at the end of a list with no next page", () => {

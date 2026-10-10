@@ -34,6 +34,8 @@ for (const width of [320, 393]) {
 
     test("הבאה at the last loaded row waits, busy, on the card, then opens the first new row", async ({ page }) => {
       await openLast(page);
+      // More rows are coming and the list sent no count: the place alone, never "10 מתוך 10".
+      await expect(page.getByRole("group", stepRow)).not.toContainText("מתוך");
       const button = page.getByRole("button", next);
       await expect(button).toBeVisible();
       await button.click();

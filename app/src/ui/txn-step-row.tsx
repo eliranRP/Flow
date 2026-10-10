@@ -33,7 +33,8 @@ function useContentUnder(mark: RefObject<HTMLElement | null>, row: RefObject<HTM
 export type TxnStepRowProps = {
   /** 1-based place of this card in the list. */
   index: number;
-  total: number;
+  /** The list's row count; null while it is not known yet (FLOW-314): the counter shows the place alone. */
+  total: number | null;
   /** No previous card: הקודמת is hidden and keeps its box. */
   atStart: boolean;
   /** No next card: הבאה is hidden and keeps its box. */
@@ -58,8 +59,8 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
   const mark = useRef<HTMLDivElement>(null);
   const row = useRef<HTMLDivElement>(null);
   const under = useContentUnder(mark, row);
-  const digits = reviewCountDigits(total);
-  const place = `${String(index)} מתוך ${String(total)}`;
+  const digits = reviewCountDigits(total ?? index);
+  const place = total == null ? String(index) : `${String(index)} מתוך ${String(total)}`;
   return (
     <>
       <div ref={mark} className="ui-txn-step-end" aria-hidden="true" />
@@ -78,8 +79,12 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
           {/* The reserved digits are drawing only; a screen reader hears the plain place. */}
           <span aria-hidden="true">
             <ReviewCount value={index} digits={digits} side="index" />
-            {" מתוך "}
-            <ReviewCount value={total} digits={digits} side="total" />
+            {total == null ? null : (
+              <>
+                {" מתוך "}
+                <ReviewCount value={total} digits={digits} side="total" />
+              </>
+            )}
           </span>
           <span className="sr-only">{place}</span>
         </p>

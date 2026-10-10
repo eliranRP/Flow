@@ -20,7 +20,7 @@ function Demo({ start, total, rows, more = false }: { start: number; total: numb
       </List>
       <TxnStepRow
         index={at}
-        total={total}
+        total={more ? null : total}
         atStart={at === 1}
         atEnd={at === total && !more}
         nextBusy={more && at === total}
@@ -88,7 +88,10 @@ export const ContentUnder: Story = {
 };
 export const ContentUnderDark: Story = { ...ContentUnder, name: "Content under the row, dark", ...dark };
 
-/** FLOW-314: the last loaded row of a paged list. הבאה stays and shows busy while the next page loads; the card stays put. */
+/**
+ * FLOW-314: the last loaded row of a paged list. הבאה stays and shows busy while the next page loads; the
+ * card stays put. The list's full count is not known, so the counter shows the place alone.
+ */
 export const LoadingNextPage: Story = {
   name: "Last loaded row, next page loading",
   args: { start: 10, total: 10, rows: 2, more: true },
@@ -96,7 +99,8 @@ export const LoadingNextPage: Story = {
     const next = within(canvasElement).getByRole("button", { name: "התנועה הבאה" });
     await expect(next).toBeVisible();
     await expect(next).toHaveAttribute("aria-busy", "true");
-    await expect(within(canvasElement).getByText("10 מתוך 10")).toBeInTheDocument();
+    await expect(group(canvasElement)).toHaveTextContent("10");
+    await expect(group(canvasElement)).not.toHaveTextContent("מתוך");
   },
 };
 export const LoadingNextPage320: Story = { ...LoadingNextPage, name: "Last loaded row, next page loading, 320", ...at320 };

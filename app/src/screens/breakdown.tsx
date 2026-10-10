@@ -325,7 +325,7 @@ function LinesBody({
                 inWord={direction === "expense" ? "זיכוי" : undefined}
                 source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}
-                state={txnListState(ids, row.transaction_id, listFrom)}
+                state={txnListState(ids, row.transaction_id, listFrom, more ? sum?.count : undefined)}
               />
             );
           })}

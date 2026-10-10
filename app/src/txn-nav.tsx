@@ -8,8 +8,11 @@ import { scrollPageToTop, sheetStack } from "./ui/back";
 import { TxnStepRow } from "./ui/txn-step-row";
 import { grownIds, useTxnListMoreFor } from "./txn-list-more";
 
-/** The list a card was opened from: its rows in the order shown, and its address. */
-export type TxnList = { ids: readonly string[]; from: string };
+/**
+ * The list a card was opened from: its rows in the order shown, and its address. `total` is the
+ * list's full row count when the screen knows it and has not loaded every row (FLOW-314).
+ */
+export type TxnList = { ids: readonly string[]; from: string; total?: number };
 
 type Via = "next" | "prev" | "key" | "swipe";
 
@@ -21,20 +24,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Location state for a row link. The ids are a snapshot, so a refetch never reshuffles the walk. */
-export function txnListState(ids: readonly string[], id: string, from: string): { txnList: TxnList } {
+export function txnListState(ids: readonly string[], id: string, from: string, total?: number): { txnList: TxnList } {
+  const known = total == null ? {} : { total };
   // Every row of a list up to the window's size shares the one array: no copy per row.
-  if (ids.length <= SIDE * 2 + 1) return { txnList: { ids, from } };
+  if (ids.length <= SIDE * 2 + 1) return { txnList: { ids, from, ...known } };
   const at = ids.indexOf(id);
   const start = at > SIDE ? at - SIDE : 0;
-  return { txnList: { ids: ids.slice(start, start + SIDE * 2 + 1), from } };
+  return { txnList: { ids: ids.slice(start, start + SIDE * 2 + 1), from, ...known } };
 }
 
 export function readTxnList(state: unknown): TxnList | null {
   if (!isRecord(state) || !isRecord(state.txnList)) return null;
-  const { ids, from } = state.txnList;
+  const { ids, from, total } = state.txnList;
   if (!Array.isArray(ids) || typeof from !== "string") return null;
   if (!ids.every((id): id is string => typeof id === "string" && id !== "")) return null;
-  return { ids, from };
+  return typeof total === "number" && Number.isInteger(total) && total > 0 ? { ids, from, total } : { ids, from };
 }
 
 function readVia(state: unknown): Via | null {
@@ -65,7 +69,8 @@ export function dropTxnEnter(): void {
 export type TxnNav = {
   list: TxnList;
   index: number;
-  total: number;
+  /** The list's row count; null while more pages are left and the screen sent no count (FLOW-314). */
+  total: number | null;
   prev: string | null;
   next: string | null;
   /** How this card was reached: a button keeps focus on it, any move is announced. */
@@ -90,7 +95,7 @@ export function useTxnNav(transactionId: string): TxnNav | null {
   const list = useMemo(() => {
     if (sent == null) return null;
     const ids = grownIds(sent.ids, extra ?? []);
-    return ids === sent.ids ? sent : { ids, from: sent.from };
+    return ids === sent.ids ? sent : { ...sent, ids };
   }, [sent, extra]);
   const index = list == null ? -1 : list.ids.indexOf(transactionId);
   const prev = list != null && index > 0 ? list.ids[index - 1] ?? null : null;
@@ -116,7 +121,7 @@ export function useTxnNav(transactionId: string): TxnNav | null {
     if (list == null || target == null || movedFrom.current === transactionId) return;
     movedFrom.current = transactionId;
     // The list goes on as the card holds it, a loaded page included, sent as a window around the target.
-    const walk = list === sent ? list : txnListState(list.ids, target, list.from).txnList;
+    const walk = list === sent ? list : txnListState(list.ids, target, list.from, list.total).txnList;
     // Replace, so Back pops straight to the list at its saved scroll spot.
     void navigate(`/transactions/${target}${location.search}`, {
       replace: true,
@@ -139,7 +144,8 @@ export function useTxnNav(transactionId: string): TxnNav | null {
   return {
     list,
     index,
-    total: list.ids.length,
+    // A count the screen sent; else the rows, once no page is left to load. Never the rows loaded so far.
+    total: list.total != null ? Math.max(list.total, list.ids.length) : more?.more === true ? null : list.ids.length,
     prev,
     next,
     via: readVia(location.state),
@@ -307,7 +313,7 @@ export function TxnAnnouncer({ children }: { children: ReactNode }) {
 export function useAnnounceTxn(nav: TxnNav | null, text: string | null): void {
   const announce = useContext(AnnounceContext);
   const moved = nav?.via != null;
-  const position = nav == null ? "" : `תנועה ${String(nav.index + 1)} מתוך ${String(nav.total)}`;
+  const position = nav == null ? "" : nav.total == null ? `תנועה ${String(nav.index + 1)}` : `תנועה ${String(nav.index + 1)} מתוך ${String(nav.total)}`;
   useEffect(() => {
     if (!moved || text == null) return;
     announce(`${position}. ${text}`);

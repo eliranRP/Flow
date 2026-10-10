@@ -236,7 +236,7 @@ describe("Breakdown lines screen", () => {
   it("opens a line's card with the list, so ˄ ˅ and a swipe walk the lines (FLOW-314)", async () => {
     wrap("/flow/expense/category/ILS/c1");
     fireEvent.click(await screen.findByRole("link", { name: /ספק לדוגמה/ }));
-    expect(JSON.parse(screen.getByTestId("list").textContent)).toEqual({ ids: ["t1"], from: "/flow/expense/category/ILS/c1" });
+    expect(JSON.parse(screen.getByTestId("list").textContent)).toMatchObject({ ids: ["t1"], from: "/flow/expense/category/ILS/c1" });
   });
 
   it("titles a supplier group's lines by their description, not the supplier again", async () => {
