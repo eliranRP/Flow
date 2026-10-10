@@ -106,13 +106,15 @@ export function TxnChargeSwitches({
       cashMixed={cashOverride == null && cashState === "mixed"}
       noParty={recurring != null && recurring.party == null}
       disabled={holdWrites}
+      recurringDisabled={sample === undefined && query.isError}
       busy={{ cash: cash.isPending, recurring: mark.isPending || (sample === undefined && query.isLoading) }}
       onCash={(next) => {
         if (holdWrites || cash.isPending || (sample === undefined && blocked())) return;
         cash.mutate({ id: txn.id, party, next, previous: cashOverride, on: next, undo: false });
       }}
       onRecurring={(next) => {
-        if (!writes || mark.isPending || (sample === undefined && blocked())) return;
+        // A preview says why it can't save before anything else, so the switch never does nothing.
+        if (holdWrites || mark.isPending || (sample === undefined && blocked()) || !writes) return;
         mark.mutate({ id: txn.id, party, next, previous: override, on: next, income, undo: false });
       }}
     />

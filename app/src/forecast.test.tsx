@@ -67,8 +67,8 @@ describe("missing bills", () => {
     const rows = attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, changes: up ? [up] : [], search: "" });
     expect(rows.map((row) => row.id)).toEqual(["review", "missing", "change:t1"]);
     const { container } = render(<MemoryRouter><span>{rows[2]?.hint}</span></MemoryRouter>);
-    // Each half wraps whole: "₪2,550 ·" then "בדרך כלל ₪1,850".
-    expect([...container.querySelectorAll(".ui-nowrap")].map((part) => part.textContent)).toEqual(["₪2,550 ·", "בדרך כלל ₪1,850"]);
+    // Each half wraps whole, and the "·" opens the second half, where a wrap clips it.
+    expect([...container.querySelectorAll(".ui-hint-wrap-part")].map((part) => part.textContent)).toEqual(["₪2,550", " · בדרך כלל ₪1,850"]);
   });
 
   it("titles the Home row with a count only, singular for one", () => {

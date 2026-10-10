@@ -45,6 +45,7 @@ export function ChargeSwitches({
   cashMixed = false,
   noParty = false,
   disabled = false,
+  recurringDisabled = false,
   busy = {},
   onCash,
   onRecurring,
@@ -57,6 +58,8 @@ export function ChargeSwitches({
   /** No supplier or customer to mark: the recurring switch is locked off. */
   noParty?: boolean;
   disabled?: boolean;
+  /** The recurring state could not be read, so the switch has nothing to change. */
+  recurringDisabled?: boolean;
   busy?: { cash?: boolean; recurring?: boolean };
   onCash: (next: boolean) => void;
   onRecurring: (next: boolean) => void;
@@ -81,7 +84,7 @@ export function ChargeSwitches({
         hint={hint == null ? undefined : <HintParts text={hint} />}
         icon={<RepeatIcon />}
         checked={state.recurring}
-        disabled={disabled}
+        disabled={disabled || recurringDisabled}
         locked={noParty}
         busy={busy.recurring}
         onChange={onRecurring}

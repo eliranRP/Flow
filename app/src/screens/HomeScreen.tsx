@@ -26,6 +26,7 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
+import { HintParts } from "../ui/hint-parts";
 import { CalendarIcon, ChartIcon, DocumentIcon, TransferIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
@@ -603,7 +604,7 @@ export function attentionRows({
       icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: change.title,
       // Each half wraps whole at 320: "₪2,550 ·" then "בדרך כלל ₪1,850".
-      hint: <><span className="ui-nowrap"><bdi dir="ltr">{change.now}</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">{change.usual}</bdi></span></>,
+      hint: <HintParts parts={[<bdi key="now" dir="ltr">{change.now}</bdi>, <>בדרך כלל <bdi dir="ltr">{change.usual}</bdi></>]} />,
     });
   }
   return rows;
