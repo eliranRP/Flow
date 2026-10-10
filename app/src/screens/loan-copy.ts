@@ -129,7 +129,7 @@ export function loanRefusalText(reason: LoanRefusal, ctx: LoanCopyContext = {}):
     case "closed_on required":
       return "חסר תאריך סגירה.";
     case "loan_split_incomplete":
-      return "חסר חלק בחלוקה. עמלות צריכות להיות מעל 0.";
+      return "חסר חלק בפיצול. עמלות צריכות להיות מעל 0.";
     case "loan_split_sum":
     case "invalid loan parts":
       if (ctx.overMinor != null && ctx.overMinor > 0n) return `עוברים את השורה ב־${money(ctx.overMinor, ctx.currency)}.`;
@@ -174,7 +174,7 @@ export function loanRefusalText(reason: LoanRefusal, ctx: LoanCopyContext = {}):
       return "הפרויקט לא נמצא.";
     case "line has a loan split":
     case "loan line is fixed":
-      return "השורה משויכת להלוואה. משנים אותה מתוך החלוקה של ההלוואה.";
+      return "השורה משויכת להלוואה. משנים אותה מתוך הפיצול של ההלוואה.";
     case "loan is open":
       return "להלוואה פתוחה אין תאריך סגירה.";
     case "forbidden":

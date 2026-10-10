@@ -222,8 +222,8 @@ describe("LoanMatchOffer", () => {
     fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
     expect(screen.getByText("אין הלוואה בדולר.")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-    // FLOW-115: the next step, a new loan in the line's currency.
-    expect(screen.getByText("אפשר להוסיף הלוואה חדשה, ואז לשייך אליה את התשלום.")).toBeInTheDocument();
+    // FLOW-356: one line, then the tint button to a new loan.
+    expect(screen.queryByText(/ואז לשייך/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "הלוואה חדשה" })).toHaveAttribute("href", "/settings/loans?new=loan");
   });
 
@@ -566,13 +566,13 @@ describe("LoanTransactionSplit", () => {
     expect(within(radio).getByText("יש תשלום מאוחר יותר")).toBeInTheDocument();
   });
 
-  it("opens the split editor from חלוקה אחרת and saves fees with their category, kept on the loan (FLOW-106)", async () => {
+  it("opens the split editor from פיצול אחר and saves fees with their category, kept on the loan (FLOW-106)", async () => {
     db.txn = { ...db.txn, amount_original: 60_090 };
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
-    fireEvent.click(screen.getByRole("button", { name: "חלוקה אחרת" }));
-    const editor = await screen.findByRole("dialog", { name: "חלוקת התשלום" });
+    fireEvent.click(screen.getByRole("button", { name: "פיצול אחר" }));
+    const editor = await screen.findByRole("dialog", { name: "פיצול התשלום" });
     fireEvent.change(within(editor).getByLabelText("עמלות"), { target: { value: "1.35" } });
     expect(within(editor).getByText("בחרו לאן נרשמות העמלות.")).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
@@ -593,8 +593,8 @@ describe("LoanTransactionSplit", () => {
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
-    fireEvent.click(screen.getByRole("button", { name: "חלוקה אחרת" }));
-    const editor = await screen.findByRole("dialog", { name: "חלוקת התשלום" });
+    fireEvent.click(screen.getByRole("button", { name: "פיצול אחר" }));
+    const editor = await screen.findByRole("dialog", { name: "פיצול התשלום" });
     fireEvent.click(within(editor).getByRole("radio", { name: "סכומים מדויקים" }));
     const principal = within(editor).getByLabelText("סכום, קרן");
     expect(principal).toHaveValue("500");

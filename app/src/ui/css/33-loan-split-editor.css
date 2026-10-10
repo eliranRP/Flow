@@ -72,7 +72,7 @@
   font-weight: var(--type-amount-weight);
 }
 
-/* "חלוקה אחרת" under the match sheet's loans. */
+/* "פיצול אחר" under the match sheet's loans. */
 .ui-loan-other {
   margin-block-start: var(--space-2);
 }

@@ -160,3 +160,22 @@ describe("loan page: states and the viewer", () => {
     expect(screen.getByRole("radio", { name: "ברירת מחדל · ריבית" })).toHaveAttribute("aria-checked", "true");
   });
 });
+
+describe("loan page: a paid-off loan (FLOW-138 Hide, FLOW-356)", () => {
+  it("leads with נפרעה and its date only, with no balance, monthly payment or status row", () => {
+    renderLoan(sampleLoanStore(), "loan-old");
+    expect(screen.getByText(/^נפרעה · /)).toBeInTheDocument();
+    expect(screen.queryByText("יתרה")).not.toBeInTheDocument();
+    expect(screen.queryByText("תשלום חודשי")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שינוי מצב" }));
+    expect(screen.getByRole("radio", { name: "נפרעה" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("keeps the balance and the status row on an open loan", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage");
+    expect(screen.getByText("יתרה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^מצב פתוחה/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שינוי מצב" })).not.toBeInTheDocument();
+  });
+});

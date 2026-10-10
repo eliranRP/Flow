@@ -2,7 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useLocation } from "react-router-dom";
 import type { TransactionLoanSplit } from "@flow/shared";
-import { BankIcon, AlertIcon } from "../ui/icons";
+import { BankIcon, AlertIcon, PlusIcon } from "../ui/icons";
+import { Button } from "../ui/button";
 import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
@@ -101,7 +102,7 @@ export function LoanMatchOffer({
   /** FLOW-106 §3.4: what one tap writes per loan, or why the loan cannot take the line. */
   offers?: readonly LoanOffer[];
   onMatch: (loanId: string) => void;
-  /** FLOW-106: "חלוקה אחרת" (fees, several installments, exact parts) opens the split editor. */
+  /** FLOW-106: "פיצול אחר" (fees, several installments, exact parts) opens the split editor. */
   onOther?: () => void;
 }) {
   const setSheet = onSheetOpenChange;
@@ -132,13 +133,19 @@ export function LoanMatchOffer({
       </List>
       <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={returnFocus ? rowRef : undefined}>
         {selectableLoans.length === 0 ? (
-          // FLOW-115: no loan to pick is not a dead end. The sheet says why and offers the next
-          // step, a new loan in Settings → הלוואות (the + sheet's quick action, FLOW-331).
+          // FLOW-115/FLOW-356: no loan to pick is not a dead end. One line says why, and the tint
+          // button opens a new loan in Settings → הלוואות (the + sheet's quick action, FLOW-331).
           <div className="ui-loan-empty">
             <p className="t-hint">{`${loanEmptyLine(loans, lineCurrency)}.`}</p>
-            <p className="t-hint">{LOAN_EMPTY_NEXT_STEP}</p>
-            {/* The link replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
-            <TextLink to={quickNewPath("/settings/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</TextLink>
+            {/* The button replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
+            <Button
+              variant="pill"
+              icon={<PlusIcon />}
+              to={quickNewPath("/settings/loans", "", "loan")}
+              replace={sheetStack(location.state).includes("loan-match")}
+            >
+              הלוואה חדשה
+            </Button>
           </div>
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
@@ -166,7 +173,7 @@ export function LoanMatchOffer({
             disabled={savingId != null}
             onClick={onOther}
           >
-            חלוקה אחרת
+            פיצול אחר
           </TextLink>
         ) : null}
       </Sheet>
@@ -508,12 +515,6 @@ export function LoanMatchSkeleton() {
     </List>
   );
 }
-
-/**
- * FLOW-115: what to do when no loan fits. The line above already names the currency; the new-loan
- * form opens in the company's currency, so this line does not promise another one.
- */
-export const LOAN_EMPTY_NEXT_STEP = "אפשר להוסיף הלוואה חדשה, ואז לשייך אליה את התשלום.";
 
 /**
  * FLOW-115: why the match sheet has no loan to pick, in the same words on the row's hint and in the
