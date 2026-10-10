@@ -201,6 +201,14 @@ export function HomeBooks({
   const rankCurrency = primaryCurrency(data);
   const ranked = homeProjects(data.projects, rankCurrency);
   const leading = useHeldOrder(ranked, (project) => project.id);
+  const splitList = leading.length > HOME_PROJECTS_BEFORE_ATTENTION;
+  const allProjects = (
+    <p className="ui-page-pad">
+      <TextLink to={`/projects${search}`} tone="quiet">
+        לכל הפרויקטים
+      </TextLink>
+    </p>
+  );
   const currencyRows = companyRows(data, data.base_currency ?? companyCurrency);
   const heroFigures = currencyRows.map((row) => ({
     agorot: roundedHeroProfit(row.income_minor, row.expense_minor),
@@ -290,6 +298,8 @@ export function HomeBooks({
       ) : (
         <ProjectLines projects={leading.slice(0, HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
       )}
+      {/* FLOW-358: with two projects or fewer the link stays under the last project row, before the attention rows. */}
+      {splitList ? null : allProjects}
 
       {/* FLOW-355 (A): the review and invoices rows sit under the first projects, so a project shows on the first screen. */}
       {unpaidPhase === "error" ? (
@@ -305,14 +315,12 @@ export function HomeBooks({
 
       <BannerRows rows={attention} />
 
-      {leading.length > HOME_PROJECTS_BEFORE_ATTENTION ? (
-        <ProjectLines projects={leading.slice(HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
+      {splitList ? (
+        <>
+          <ProjectLines projects={leading.slice(HOME_PROJECTS_BEFORE_ATTENTION)} search={search} rankCurrency={rankCurrency} />
+          {allProjects}
+        </>
       ) : null}
-      <p className="ui-page-pad">
-        <TextLink to={`/projects${search}`} tone="quiet">
-          לכל הפרויקטים
-        </TextLink>
-      </p>
     </div>
   );
 }

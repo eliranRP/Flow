@@ -147,7 +147,8 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await periodSheet.getByRole("radio", { name: "שנה" }).click();
   await expect(periodSheet).toHaveCount(0);
   await expect(label).not.toHaveText(before ?? "");
-  await expect(page.getByText(/^רווח ב־\d{4}$/)).toBeVisible();
+  // FLOW-358: the pill names the year, so the label is the word alone.
+  await expect(page.locator(".ui-band .ui-band-label")).toHaveText(/^(רווח|הפסד|רווח והפסד)$/);
 
   await label.click();
   await page.getByRole("button", { name: "טווח מותאם" }).click();
