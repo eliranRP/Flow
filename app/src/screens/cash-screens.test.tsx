@@ -148,3 +148,23 @@ describe("Cash lines", () => {
     });
   });
 });
+
+describe("Cash lines profit leaves out (FLOW-418)", () => {
+  it("reads the not_in_profit side, shows net less profit, and gives money out its minus", async () => {
+    const capital = { ...lines.rows[0], transaction_id: "t2", part: null, supplier_name: "שותף לדוגמה", category_name: "השקעת בעלים", amount_minor: 45_000, side: "in" };
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: [lines.rows[0], capital], has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/kept/ILS`);
+    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
+    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_side: "not_in_profit", p_currency: "ILS" });
+    expect(screen.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    // Net −₪1,150 less profit −₪400; the month sends no categories, so all of it is the rest.
+    expect(screen.getByText("−₪750")).toBeInTheDocument();
+    expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
+    expect(screen.getByText("−₪1,200")).toBeInTheDocument();
+    expect(screen.getByText("₪450")).toHaveClass("ui-income");
+  });
+});

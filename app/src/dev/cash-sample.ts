@@ -7,9 +7,15 @@ import { israelToday } from "../ui/date-math";
  * The months end with the current one, so the band always names this month.
  */
 
-function row(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "ILS"): CashCurrencyRow {
+/** FLOW-418: the cash profit leaves out, by category; it adds up to net less profit. */
+const KEPT_OUT = [
+  { name: "שיפוץ והשבחה", amount_minor: -440_000n },
+  { name: "השקעת בעלים", amount_minor: 200_000n },
+];
+
+function row(inMinor: bigint, outMinor: bigint, profit: bigint, kept: CashCurrencyRow["not_in_profit_categories"] = []): CashCurrencyRow {
   return {
-    currency,
+    currency: "ILS",
     in_minor: inMinor,
     out_minor: outMinor,
     net_minor: inMinor - outMinor,
@@ -17,6 +23,7 @@ function row(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "ILS"
     excluded_count: 0,
     excluded_in_minor: 0n,
     excluded_out_minor: 0n,
+    not_in_profit_categories: kept,
   };
 }
 
@@ -27,7 +34,7 @@ export function sampleCashMonths(now = new Date()): NonNullable<CashMonths> {
     basis: "paid",
     base_currency: "ILS",
     months: [
-      { month: month(0), by_currency: [row(1_800_000n, 1_480_000n, 560_000n)] },
+      { month: month(0), by_currency: [row(1_800_000n, 1_480_000n, 560_000n, KEPT_OUT)] },
       { month: month(1), by_currency: [row(1_650_000n, 1_765_000n, 210_000n)] },
       { month: month(2), by_currency: [row(1_720_000n, 1_480_000n, 390_000n)] },
       { month: month(3), by_currency: [row(1_700_000n, 1_520_000n, 330_000n)] },
@@ -59,9 +66,16 @@ function line(id: string, day: string, supplier: string, project: string | null,
   };
 }
 
-export function sampleCashLines(side: "in" | "out", now = new Date()): CashLine[] {
+export function sampleCashLines(side: "in" | "out" | "kept", now = new Date()): CashLine[] {
   const current = israelToday(now).slice(0, 7);
   const day = (d: number) => `${current}-${String(d).padStart(2, "0")}`;
+  // FLOW-418: the month's cash profit leaves out (KEPT_OUT's lines), both sides mixed.
+  if (side === "kept") {
+    return [
+      line("8", day(7), "קבלן שיפוצים לדוגמה", "שיפוץ הרצל 12", "שיפוץ והשבחה", 440_000n, "out", "mercury"),
+      line("9", day(3), "שותף לדוגמה", null, "השקעת בעלים", 200_000n, "in", "mercury"),
+    ];
+  }
   if (side === "in") {
     return [
       line("1", day(9), "שוכר דירה לדוגמה", "בניין הדקל", "שכר דירה", 650_000n, "in", "mercury"),
