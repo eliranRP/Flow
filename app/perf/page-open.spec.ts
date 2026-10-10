@@ -1,11 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
+import { median, RUNS, runsLine } from "./runs";
 
 /**
  * FLOW-804, the owner's ask of 2026-10-09: projects and the pages inside the app open in under
  * 0.7 s after a tap. This runs on the production build at CPU ×4 (the mid-range phone of the Home
  * test), once Home has settled and its idle preload has fetched the other screens, as on a phone
  * that has been open a moment. The page is in preview, so this times the screen's code and its
- * first render; the data read is not part of it. Each tap takes the median of 3 tries.
+ * first render; the data read is not part of it. Each tap takes the median of 5 tries.
  */
 const CPU = 4;
 const LIMIT_MS = 700;
@@ -28,7 +29,7 @@ test("projects and inner pages open within 0.7 s of a tap on a mid-range phone",
   const slow: string[] = [];
   for (const { tab, heading } of taps) {
     const runs: number[] = [];
-    for (let run = 0; run < 3; run += 1) {
+    for (let run = 0; run < RUNS; run += 1) {
       const context = await browser.newContext();
       const page = await context.newPage();
       await openHome(page);
@@ -41,9 +42,8 @@ test("projects and inner pages open within 0.7 s of a tap on a mid-range phone",
       runs.push(Date.now() - start);
       await context.close();
     }
-    const median = [...runs].sort((a, b) => a - b)[1] ?? Number.POSITIVE_INFINITY;
-    lines.push(`${tab}: median ${String(median)} ms (${runs.join(", ")} ms)`);
-    if (median > LIMIT_MS) slow.push(tab);
+    lines.push(runsLine(tab, runs));
+    if (median(runs) > LIMIT_MS) slow.push(tab);
   }
   const summary = `${lines.join("; ")}; limit ${String(LIMIT_MS)} ms`;
   test.info().annotations.push({ type: "page-open", description: summary });
