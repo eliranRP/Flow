@@ -1,3 +1,4 @@
+// vitest-css: these queries rely on the app's CSS hiding elements.
 import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
