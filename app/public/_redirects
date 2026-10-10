@@ -75,6 +75,10 @@
 /projects/:projectId/transactions/ /projects/:projectId/transactions 301
 /projects/:projectId/profit /app-shell 200
 /projects/:projectId/profit/ /projects/:projectId/profit 301
+/projects/:projectId/cash/history /app-shell 200
+/projects/:projectId/cash/history/ /projects/:projectId/cash/history 301
+/projects/:projectId/cash/year/:year /app-shell 200
+/projects/:projectId/cash/year/:year/ /projects/:projectId/cash/year/:year 301
 /projects/:projectId/cash/:month/:side/:currency /app-shell 200
 /projects/:projectId/cash/:month/:side/:currency/ /projects/:projectId/cash/:month/:side/:currency 301
 /projects/:projectId/cash/:month /app-shell 200

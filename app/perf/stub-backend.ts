@@ -28,6 +28,8 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
       return demoProject(typeof args.p_id === "string" ? args.p_id : "");
     case "project_cash_months":
       return projectCash();
+    case "project_cash_years":
+      return projectCashYears();
     case "list_unpaid":
       return demoUnpaid();
     case "list_review":
@@ -69,6 +71,26 @@ function projectCash() {
     };
   });
   return { basis: "paid", base_currency: "ILS", months };
+}
+
+/** FLOW-435: the project's history, its net since its first month and per year (invented figures). */
+function projectCashYears() {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const total = (net: number) => [{ currency: "ILS", in_minor: 2_000_000 + net, out_minor: 2_000_000, net_minor: net }];
+  return {
+    project_name: "שיפוץ הרצל 12",
+    basis: "paid",
+    base_currency: "ILS",
+    this_month: `${now.toISOString().slice(0, 7)}-01`,
+    first_month: `${String(year - 2)}-03-01`,
+    by_currency: total(1_150_000),
+    years: [
+      { year, by_currency: total(410_000) },
+      { year: year - 1, by_currency: total(620_000) },
+      { year: year - 2, by_currency: total(120_000) },
+    ],
+  };
 }
 
 /** The one company the stub user owns; the app names it on every read once list_my_companies answers. */

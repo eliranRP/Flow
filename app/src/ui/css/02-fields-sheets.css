@@ -265,6 +265,13 @@
   contain: inline-size;
 }
 
+/* With the name's width out of the column's content size, the column would shrink to the hint and
+   cut a short name ("City Of Pri…") with room to spare. It takes the row's free width instead, so
+   the name is cut only when the row is really too narrow (FLOW-909). */
+.ui-row-set-aside:not(.ui-row-set-aside-tagged) .ui-row-text {
+  flex-grow: 1;
+}
+
 .ui-row-set-aside .ui-hint-parts {
   min-inline-size: min-content;
 }
