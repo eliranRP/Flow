@@ -147,7 +147,7 @@ export {
   recurringChangeSchema,
   recurringChangesSchema,
 } from "./forecast.ts";
-export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill, Pace, PaymentRecurring, RecurringChange } from "./forecast.ts";
+export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill, PaymentRecurring, RecurringPace, RecurringChange } from "./forecast.ts";
 export { cashBasisSchema, cashLinesSchema, cashMonthsSchema, cashLinesSideSchema, cashSideSchema, cashYearsSchema } from "./cash.ts";
 export type {
   CashBasis,

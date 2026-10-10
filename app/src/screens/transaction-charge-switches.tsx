@@ -1,4 +1,4 @@
-import type { Pace, PaymentRecurring, TransactionDetail } from "@flow/shared";
+import type { PaymentRecurring, RecurringPace, TransactionDetail } from "@flow/shared";
 import { useRef, useState } from "react";
 import { usePaymentRecurringQuery } from "../forecast";
 import { getSupabase } from "../lib/supabase";
@@ -12,7 +12,7 @@ import { useBlockedPreview } from "./screen-shared";
 type CashChange = { id: string; party: string; next: boolean | null; previous: boolean | null; on: boolean; undo: boolean };
 type RecurringChange = { id: string; party: string; next: boolean | null; previous: boolean | null; on: boolean; income: boolean; undo: boolean };
 /** `previous` and `shown` come back from set_payment_pace: the owner's pace before, and the pace now in use. */
-type PaceChange = { id: string; party: string; next: Pace | null; previous: Pace | null; shown: Pace; undo: boolean; close?: () => void };
+type PaceChange = { id: string; party: string; next: RecurringPace | null; previous: RecurringPace | null; shown: RecurringPace; undo: boolean; close?: () => void };
 
 /** The keys a cash or recurring switch changes: the line, Home's cash and attention box, the lists. */
 const CASH_KEYS = ["txn", "dashboard", "home", "breakdown-lines"];
@@ -40,9 +40,9 @@ export function TxnChargeSwitches({
   const query = usePaymentRecurringQuery(sample === undefined ? txn.id : "", sample === undefined);
   const [sampleCash, setSampleCash] = useState<boolean | null | undefined>(undefined);
   const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
-  const [samplePace, setSamplePace] = useState<Pace | null | undefined>(undefined);
+  const [samplePace, setSamplePace] = useState<RecurringPace | null | undefined>(undefined);
   const [paceOpen, setPaceOpen] = useState(false);
-  const [paceSaving, setPaceSaving] = useState<Pace | null>(null);
+  const [paceSaving, setPaceSaving] = useState<RecurringPace | null>(null);
   const paceRow = useRef<HTMLElement | null>(null);
   // A sample screen with no recurring state of its own: the line's party, not recurring yet.
   const recurring = sample === undefined
@@ -157,7 +157,7 @@ export function TxnChargeSwitches({
   const isRecurring = override ?? detected;
   const income = recurring?.party?.direction === "income" || (recurring?.party == null && txn.direction === "income");
   const writes = !holdWrites && recurring != null;
-  const currentPace: Pace = (samplePace !== undefined ? samplePace ?? recurring?.detected_pace : recurring?.pace) ?? "month";
+  const currentPace: RecurringPace = (samplePace !== undefined ? samplePace ?? recurring?.detected_pace : recurring?.pace) ?? "month";
 
   return (
     <>

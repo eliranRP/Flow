@@ -1,4 +1,4 @@
-import type { Pace } from "@flow/shared";
+import type { RecurringPace } from "@flow/shared";
 import { useId } from "react";
 import { HintParts } from "./hint-parts";
 import { LockIcon, RepeatIcon, TransferIcon } from "./icons";
@@ -16,7 +16,7 @@ export type ChargeSwitchState = {
   /** The server marked it recurring by itself, not the owner. */
   detected: boolean;
   /** How often it comes (FLOW-415, decision 0175); unknown reads as every month. */
-  pace?: Pace | null;
+  pace?: RecurringPace | null;
 };
 
 export const IN_CASH = "נספר בתזרים";
@@ -25,7 +25,7 @@ export const RECURRING = "חיוב קבוע";
 export const RECURRING_INCOME = "הכנסה קבועה";
 
 /** FLOW-415: the pace's words, on the hint, the "כל כמה זמן" sheet and the קבועים rows. */
-export const PACE_LABEL: Record<Pace, string> = {
+export const PACE_LABEL: Record<RecurringPace, string> = {
   month: "כל חודש",
   "2months": "כל חודשיים",
   quarter: "כל רבעון",
@@ -47,7 +47,7 @@ export function recurringHint(state: Pick<ChargeSwitchState, "typicalDay" | "det
 }
 
 /** The undo toast's words after a pace change: "אור חשמל · כל חודשיים". */
-export function paceToast(party: string, pace: Pace): string {
+export function paceToast(party: string, pace: RecurringPace): string {
   return `${party} · ${PACE_LABEL[pace]}`;
 }
 

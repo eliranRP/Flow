@@ -477,7 +477,8 @@ export function TransactionScreen({
     <Toggle
       label="נספר ברווח"
       hint={pnlHint}
-      icon={<ChartIcon />}
+      // FLOW-420: the row icons' 24px and 1.9 stroke, so the three switch rows share one start edge.
+      icon={<ChartIcon size={24} stroke={1.9} />}
       checked={!pnl.out}
       disabled={holdWrites}
       busy={pnlLine.isPending}

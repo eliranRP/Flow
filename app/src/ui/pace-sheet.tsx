@@ -1,4 +1,4 @@
-import type { Pace } from "@flow/shared";
+import type { RecurringPace } from "@flow/shared";
 import { useEffect, useRef, type RefObject } from "react";
 import { useSheetHistory } from "./back";
 import { PACE_LABEL, PACE_TITLE } from "./charge-switches";
@@ -6,7 +6,7 @@ import { RadioRow } from "./radio-row";
 import { Sheet } from "./sheet";
 
 /** Shortest first, as the owner listed them (FLOW-415, 08:40Z). */
-export const PACE_CHOICES: readonly Pace[] = ["month", "2months", "quarter", "year"];
+export const PACE_CHOICES: readonly RecurringPace[] = ["month", "2months", "quarter", "year"];
 
 /**
  * FLOW-415 step D: "כל כמה זמן" for a recurring charge (decision 0175). Four radio rows that apply
@@ -24,11 +24,11 @@ export function PaceSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The pace in use, the owner's or the detected one. */
-  value: Pace;
+  value: RecurringPace;
   /** The pace being written, or null. */
-  saving: Pace | null;
+  saving: RecurringPace | null;
   /** `close` closes the sheet once the save has settled. */
-  onPick: (pace: Pace, close: () => void) => void;
+  onPick: (pace: RecurringPace, close: () => void) => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const closing = useRef(false);

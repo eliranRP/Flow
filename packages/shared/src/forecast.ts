@@ -9,6 +9,10 @@ import { agorotSchema } from "./dashboard.ts";
 const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const daySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/** FLOW-415 (decision 0175): a recurring charge comes every month, 2 months, quarter or year. */
+export const paceSchema = z.enum(["month", "2months", "quarter", "year"]);
+export type RecurringPace = z.infer<typeof paceSchema>;
+
 /** One recurring supplier whose bill for this month has not come in (`missing_bills`). */
 export const missingBillSchema = z.object({
   supplier_id: z.string(),
@@ -59,9 +63,6 @@ export const recurringChangesSchema = z.array(recurringChangeSchema).nullable().
  * FLOW-415: one payment's recurring switch (`payment_recurring`, and `set_payment_recurring` with
  * `prior_override` for the undo). A null party (no supplier or customer) cannot be marked.
  */
-/** FLOW-415: every month, every 2 months, every quarter or every year. */
-export const paceSchema = z.enum(["month", "2months", "quarter", "year"]);
-
 export const paymentRecurringSchema = z.object({
   transaction_id: z.string(),
   party: z
@@ -130,7 +131,6 @@ export const expectedMonthsSchema = z.object({
 export type MissingBill = z.infer<typeof missingBillSchema>;
 export type RecurringChange = z.infer<typeof recurringChangeSchema>;
 export type PaymentRecurring = z.infer<typeof paymentRecurringSchema>;
-export type Pace = z.infer<typeof paceSchema>;
 export type ExpectedParty = z.infer<typeof expectedPartySchema>;
 export type ExpectedMonths = z.infer<typeof expectedMonthsSchema>;
 export type ExpectedMonth = ExpectedMonths["months"][number];

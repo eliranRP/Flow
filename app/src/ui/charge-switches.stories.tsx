@@ -17,7 +17,7 @@ function Demo(props: ChargeSwitchState & { disabled?: boolean; busy?: boolean })
   return (
     <>
       <List>
-        <Toggle label="נספר ברווח" icon={<ChartIcon />} checked disabled={props.disabled} onChange={() => undefined} />
+        <Toggle label="נספר ברווח" icon={<ChartIcon size={24} stroke={1.9} />} checked disabled={props.disabled} onChange={() => undefined} />
         <ChargeSwitches
           state={state}
           disabled={props.disabled}
