@@ -528,3 +528,25 @@ export function CoinIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** FLOW-601. The צוות row in Settings: two people, as in the mockup. */
+export function PeopleIcon(props: IconProps) {
+  return (
+    <Svg size={24} stroke={1.9} {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8" />
+      <path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />
+    </Svg>
+  );
+}
+
+/** FLOW-601. A pending invite: an envelope in the avatar circle. */
+export function MailIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={1.9} {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </Svg>
+  );
+}

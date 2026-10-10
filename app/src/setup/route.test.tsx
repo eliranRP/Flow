@@ -8,6 +8,7 @@ import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupStepScreen } from "./route";
 import { markCompanyCreated, readSetupStore, setupStorageKey } from "./storage";
+import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
 const companyId = "company-1";
@@ -73,6 +74,7 @@ const supabase = {
     },
   },
   rpc: (name: string, args?: unknown) => {
+    if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(userId, gate.owner), error: null });
     if (name === "apply_starter_categories") {
       starter.calls.push(args);
       return Promise.resolve({ data: starter.error ? null : { set: "rentals", categories: 14 }, error: starter.error });

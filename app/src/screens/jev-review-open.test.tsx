@@ -17,6 +17,7 @@ import {
   resetJevScopeMemory,
   writeJevConnectorFlag,
 } from "./jev-review";
+import { myCompaniesFor } from "../team-test-support";
 
 const scope = { userId: "user-1", companyId: "company-1" };
 
@@ -103,6 +104,14 @@ const supabase = {
     signOut: () => Promise.resolve({ error: null }),
   },
   rpc: (name: string, args?: Record<string, unknown>) => {
+    if (name === "list_my_companies") {
+      // FLOW-601: the role read waits on the same company read it replaced.
+      const user = db.session?.user.id ?? null;
+      const result = db.companyError
+        ? { data: null, error: { message: "companies down" } }
+        : { data: db.omitCompany ? null : myCompaniesFor(user, user, { companyId: db.companyId }), error: null };
+      return db.holdCompany == null ? Promise.resolve(result) : db.holdCompany.then(() => result);
+    }
     if (name === "list_review") {
       db.reviewReads += 1;
       return Promise.resolve({ data: db.review, error: null });

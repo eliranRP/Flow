@@ -5,6 +5,7 @@ import { safeAppPath } from "../safe-return";
 import { Button } from "../ui/button";
 import { ProgressBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
+import { useOpenCompany } from "../team-queries";
 import { useCompanyForm } from "./company-form";
 import { useBlockedPreview } from "./screen-shared";
 
@@ -17,12 +18,15 @@ export function OnboardingScreen({ initialName }: { initialName?: string } = {})
   const returnPath = safeAppPath(params.get("return")) ?? "/";
   const returnTo = keepPreview(returnPath, previewSearch);
   const writeGate = useWriteGate(returnPath);
+  const openCompany = useOpenCompany();
   const form = useCompanyForm({
     initialName,
     checked: initialName != null,
     reserveMessage: true,
     blocked,
-    onCreated: () => {
+    onCreated: (companyId) => {
+      // FLOW-601: create_company opened the new company; show it, and drop the last one's cached rows.
+      void openCompany(companyId, { opened: true }).catch(() => undefined);
       void navigate(returnTo, { replace: true });
     },
   });

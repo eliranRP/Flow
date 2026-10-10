@@ -33,6 +33,9 @@ vi.mock("./lib/supabase", () => ({
       return next;
     },
     rpc: (name: string) => {
+      if (name === "list_my_companies") {
+        return Promise.resolve({ data: { active_id: null, role: null, companies: [] }, error: null });
+      }
       if (name === "get_dashboard") {
         return Promise.resolve({
           data: {

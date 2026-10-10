@@ -37,7 +37,8 @@ import { breakdownPath } from "../breakdown";
 import { comparisonWords, heroProfitLabel, periodPhrase, windowLabel, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useHoldWrites } from "../use-is-viewer";
+import { useHoldOwnerSettings } from "../use-is-viewer";
+import { CompanySwitcher } from "./company-switcher";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
 import { missingBillsTitle, useMissingBillsQuery } from "../forecast";
@@ -55,7 +56,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const { status } = useAuth();
-  const holdWrites = useHoldWrites();
+  // FLOW-601: connecting a bank or SUMIT is the owner's.
+  const holdWrites = useHoldOwnerSettings();
   const previewing = preview !== "off";
   const books = useBooks();
   const dashboard = useDashboardQuery();
@@ -102,7 +104,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   if (!showBooks) {
     return (
       <div className="flex min-h-full min-w-0 flex-1 flex-col">
-        <TopBand preview={previewing} example={example} wordmark={false}>
+        <TopBand preview={previewing} example={example} wordmark={false} leading={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}>
           <Hero label={emptyHomeLabel} />
         </TopBand>
         <EmptyState
@@ -140,6 +142,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onPeriod={books.setPeriod}
       refreshing={dashboard.isPlaceholderData}
       checklist={<SetupHomeSlot emptyHome={false} />}
+      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
     />
   );
 }
@@ -166,7 +169,10 @@ export function HomeBooks({
   notice,
   checklist,
   companyCurrency = "ILS",
+  company,
 }: {
+  /** FLOW-601: the company's name, which opens the חברה sheet. */
+  company?: ReactNode;
   /** The company's currency, for an empty period's zeros (a USD company reads $0, not ₪0). */
   companyCurrency?: string;
   data: Dashboard;
@@ -240,6 +246,7 @@ export function HomeBooks({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
+        leading={company}
         trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
         {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150). */}
