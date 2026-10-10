@@ -1,0 +1,11 @@
+<a id="flow-358"></a>
+# FLOW-358 · Phone polish after the October 10 morning deploy (cycle 14)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Source:** cycle 14 phone review of main at 3c250a6 (deploy run 1082), 2026-10-10. Shots and findings in the project files under `reviews/ui-ux-cycle-14/`.
+- [ ] (UI lane 1) Home band: the label repeats the pill. With one stepped-back month or all time, "רווח בספטמבר 2026" sits over a pill that says "ספטמבר 2026", and "רווח בכל התקופה" over "כל התקופה". When the pill names the period, the label is just "רווח" ("הפסד", or "רווח והפסד" over mixed signs); keep "החודש" and "ב־3 חודשים" where the pill shows dates (§2.1).
+- [ ] (UI lane 1) Home: "לכל הפרויקטים" comes after the attention card when there are two projects or fewer, so it reads as part of the card. Keep the link right under the last project row it continues; the card follows it.
+- [ ] (UI lane 1, low) Home and Projects tab project rows cut a long name to one line. A project's name is its identity: wrap to two lines, then the ellipsis (§3.7). Check Home's first screen at 375x667 again after the change.
+- [ ] (UI lane 4) Loan page skeleton draws each row as a long bar over a short one, while the loaded row is a short label over a long value; it also draws a value bar where the loaded row has only a chevron, and has no icon slot. The loans list skeleton has no icon slot either. Short bar over long bar, keep the icon slot, no end-side bar on chevron-only rows (§2.8, §3.7 FLOW-115).
+- [ ] (UI lane 3) Grouped project picker: a search that matches through the group name ("לדוגמה") lists "דירה 1 / 2 / 3" with no group shown, so no visible row holds what was typed. Show the group name as the row's hint when the match came through it.
+- [ ] (UI lane 3) Group page, group not found: only the title "קבוצה" and the subtitle "הקבוצה לא נמצאה.". Use the standard empty state: icon, "הקבוצה לא נמצאה", one line, and the 44px tint button "לכל הפרויקטים" (§2.8, §3.7).
+- [ ] (UI lane 3, low) Setup SUMIT-failed note leaves "שוב." alone on its last line at 393. Give setup note bodies `text-wrap: pretty`.
