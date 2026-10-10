@@ -686,7 +686,7 @@ test("the gate treats design images as docs and asks storybook-stories.mjs wheth
   assert.equal(docsOnly(["design/screens/a.png", "app/src/a.tsx"]), false);
   assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then kind=docs'));
   assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then\n  mode="docs"'));
-  assert.ok(local.includes('"$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes'));
+  assert.ok(local.includes('setup="$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")"\n    if [[ "$setup" != yes* ]]; then'));
   assert.ok(local.includes('${base:+--base "$base"} <<<"$changed" >"$scope"'));
 });
 
