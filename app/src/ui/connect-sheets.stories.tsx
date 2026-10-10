@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { MercuryConnectSheet } from "./mercury-connect-sheet";
 import { SumitConnectSheet } from "./sumit-connect-sheet";
 import { padded } from "./story-support";
@@ -25,6 +25,16 @@ function SumitDemo({ initialFrom = null }: { initialFrom?: string | null }) {
   );
 }
 
+/**
+ * The open sheet, once it takes taps. While a sheet opens, the page under it holds pointer events off,
+ * so a play that taps at once fails in a browser that runs the animation (the Storybook manager).
+ */
+async function openSheet(canvasElement: HTMLElement, name: string): Promise<HTMLElement> {
+  const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name });
+  await waitFor(async () => { await expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"); });
+  return dialog;
+}
+
 const meta = {
   title: "Components/ConnectSheets",
   decorators: [padded],
@@ -40,7 +50,7 @@ export const MercuryEmpty: Story = { render: () => <MercuryDemo /> };
 export const MercuryMissingKey: Story = {
   render: () => <MercuryDemo />,
   play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור Mercury" });
+    const dialog = await openSheet(canvasElement, "חיבור Mercury");
     await userEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
     await expect(within(dialog).getByText("חסר מפתח.")).toBeInTheDocument();
     await expect(within(dialog).getByLabelText("מפתח API")).toHaveFocus();
@@ -58,7 +68,7 @@ export const MercuryBusy: Story = {
 export const SumitMissingFields: Story = {
   render: () => <SumitDemo />,
   play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור SUMIT" });
+    const dialog = await openSheet(canvasElement, "חיבור SUMIT");
     await userEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
     await expect(within(dialog).getByText("חסר מספר חברה.")).toBeInTheDocument();
     await expect(within(dialog).getByText("חסר מפתח.")).toBeInTheDocument();
@@ -86,7 +96,7 @@ export const SumitImportFromToggle: Story = {
   render: () => <SumitDemo />,
   parameters: { viewport: { defaultViewport: "flow320" } },
   play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור SUMIT" });
+    const dialog = await openSheet(canvasElement, "חיבור SUMIT");
     await expect(within(dialog).queryByRole("button", { name: /תאריך ייבוא/ })).toBeNull();
     await userEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
     await expect(within(dialog).getByRole("button", { name: /^תאריך ייבוא: 01\/01\/\d{4}$/ })).toBeInTheDocument();

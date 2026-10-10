@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type Ref } from "react";
+import { useLayoutEffect, useState, type CSSProperties, type Ref } from "react";
 import { formatAmountText } from "@flow/shared";
 import { lineSplitPartsLabel } from "../line-split-copy";
 import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewPaidView } from "../review-copy";
@@ -135,6 +135,8 @@ export function ReviewCard({
     detail: true,
     direction,
   });
+  // A long amount steps its size down to fit a narrow card; it is never cut or wrapped (FLOW-327).
+  const figureFit = { "--figure-chars": amountText.length } as CSSProperties;
   const shared = reason === "unallocated_shared";
   const projectValue = suggestion?.project;
   const categoryValue = suggestion?.category;
@@ -207,7 +209,7 @@ export function ReviewCard({
       </div>
       {spike?.pill ? (
         <div className="ui-review-amount">
-          <p className="t-display">
+          <p className="t-display ui-review-figure" style={figureFit}>
             <bdi dir="ltr">{amountText}</bdi>
           </p>
           <span className="ui-status ui-review-spike" aria-hidden="true">
@@ -216,7 +218,7 @@ export function ReviewCard({
           <span className="sr-only">{spike.spoken}</span>
         </div>
       ) : (
-        <p className="t-display">
+        <p className="t-display ui-review-figure" style={figureFit}>
           <bdi dir="ltr">{amountText}</bdi>
         </p>
       )}
