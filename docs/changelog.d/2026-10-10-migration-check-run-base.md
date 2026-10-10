@@ -1,0 +1,1 @@
+Main's "Migration filenames are append-only" check compares against the run commit's own parent instead of live origin/main, so a migration merged while a run waits no longer reads as removed and turns main red. The pre-push gate already used the branch's merge-base. No migration.
