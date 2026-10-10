@@ -5,6 +5,7 @@ import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import { searchHref } from "./search";
+import { PACE_LABEL } from "./ui/charge-switches";
 import { formatDayMonth } from "./ui/date-math";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -37,17 +38,9 @@ export function missingBillHref(name: string, search: string, income = false): s
   return searchHref(name, search, { dir: income ? "income" : "expense" });
 }
 
-/** FLOW-415 (owner, 08:40Z): how often a recurring party comes, in words. */
-export const PACE_WORDS: Record<RecurringPace, string> = {
-  month: "כל חודש",
-  "2months": "כל חודשיים",
-  quarter: "כל רבעון",
-  year: "כל שנה",
-};
-
 /** FLOW-415: the pace and day a recurring charge comes ("כל חודש ב־2"), and when the last one came. */
 export function usualDayText(typicalDay: number, lastDocDate: string | null | undefined, now = new Date(), pace: RecurringPace = "month"): string {
-  const day = `${PACE_WORDS[pace]} ב־${String(typicalDay)}`;
+  const day = `${PACE_LABEL[pace]} ב־${String(typicalDay)}`;
   return lastDocDate == null ? day : `${day} · אחרון ${formatDayMonth(lastDocDate, now)}`;
 }
 
