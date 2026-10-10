@@ -96,11 +96,10 @@ export const CashList: Story = {
   render: () => <Rows />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvas.getByText("מתוך", { exact: false, selector: "span" }),
-    ).toBeInTheDocument();
     await expect(canvas.getByText("$171.76")).toBeInTheDocument();
-    await expect(canvas.getByText("ועוד 2")).toBeInTheDocument();
+    await expect(canvas.getAllByText("$2,054.86")).toHaveLength(2);
+    await expect(canvas.getByText("$1,500")).toBeInTheDocument();
+    await expect(canvas.getByText("· ועוד 2", { exact: false })).toBeInTheDocument();
   },
 };
 
