@@ -48,9 +48,10 @@ describe("the project category lines' basis (FLOW-404)", () => {
     await waitFor(() => { expect(basis()).toBe("cash"); });
   });
 
-  it("keeps the books basis otherwise", async () => {
+  it("counts on the company's basis otherwise (FLOW-103)", async () => {
     open("/projects/p1/categories/c1?period=all");
-    await waitFor(() => { expect(basis()).toBe("invoiced"); });
+    await waitFor(() => { expect(rpc.calls.some((entry) => entry.name === "list_project_category")).toBe(true); });
+    expect(basis()).toBeUndefined();
   });
 
   it("leaves out the usual month, which is on the books basis, on the cash basis", () => {

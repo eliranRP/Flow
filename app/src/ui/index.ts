@@ -60,6 +60,7 @@ export { SearchEntry, SEARCH_FOCUS_STATE, wantsSearchFocus } from "./search-entr
 export { MatchText, matchRange } from "./match-text";
 export type { StatementDetail } from "./statement";
 export { CurrencySheet, CURRENCY_CHOICES, currencyChoiceLabel } from "./currency-sheet";
+export { BasisSheet, BASIS_CHOICES, basisChoiceLabel } from "./basis-sheet";
 export { PeriodSwipe } from "./period-swipe";
 export { ApproxAmount, approxAmountText } from "./approx-amount";
 export { MissingBillList } from "./missing-bill-list";
