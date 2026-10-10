@@ -126,6 +126,25 @@ describe("Cash month page", () => {
     expect(await screen.findByText("שנה")).toBeInTheDocument();
   });
 
+  it("steps months with the chevrons by the title, from the first month to this one (FLOW-362)", async () => {
+    const impl = rpc.impl;
+    rpc.impl = (name, args) =>
+      name === "cash_years"
+        ? Promise.resolve({ data: { basis: "paid", base_currency: "ILS", this_month: `${current}-01`, first_month: `${earlier}-01`, by_currency: [], years: [] }, error: null })
+        : impl(name, args);
+    wrap(`/cash/${earlier}`);
+    await screen.findByRole("link", { name: /^נכנס ב/ });
+    // The first month has no earlier chevron; the later one opens this month's page in place.
+    const later = await screen.findByRole("button", { name: /^תזרים / });
+    expect(screen.getAllByRole("button", { name: /^תזרים / })).toHaveLength(1);
+    fireEvent.click(later);
+    expect(await screen.findByRole("link", { name: /^נכנס ב.* ₪18,000 – פירוט$/ })).toHaveAttribute("href", `/cash/${current}/in/ILS`);
+    // This month has no later chevron, and its earlier one goes back.
+    expect(screen.getAllByRole("button", { name: /^תזרים / })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /^תזרים / }));
+    expect(await screen.findByRole("link", { name: /^יצא ב/ })).toHaveAttribute("href", `/cash/${earlier}/out/ILS`);
+  });
+
   it("sends a broken month back to Home without a read", () => {
     wrap("/cash/oct");
     expect(screen.getByText("בית")).toBeInTheDocument();
