@@ -9,6 +9,7 @@ import { redactMercury } from "./redact.ts";
 import { isVoidMercuryStatus } from "./rules.ts";
 import type {
   AccountLabel,
+  CardLabel,
   ClassifiedError,
   ConnectorErrorClass,
   ConnectorSession,
@@ -18,6 +19,8 @@ import type {
 } from "../types.ts";
 
 const API_BASE = "https://api.mercury.com/api/v1";
+/** A card nickname is short in Mercury; 80 characters is plenty for a row. */
+export const CARD_LABEL_LIMIT = 80;
 
 export class MercuryRequestError extends Error {
   readonly errorClass: ConnectorErrorClass;
@@ -290,6 +293,38 @@ function requireTreasuryLabel(row: unknown): AccountLabel {
 
 async function listTreasuryAccounts(session: ConnectorSession): Promise<unknown[]> {
   return await listCollection(session, "/treasury", "accounts", {}, true);
+}
+
+/**
+ * The nickname of each card, keyed by its last 4 (FLOW-707). A card with no nickname is left
+ * out, and a last 4 shared by two cards with different nicknames is left out, since a line
+ * keeps only the last 4. Null when the list can't be read: the names are extra, so the sync
+ * goes on and keeps the names it stored before.
+ */
+export async function listMercuryCardLabels(session: ConnectorSession): Promise<CardLabel[] | null> {
+  let cards: unknown[];
+  try {
+    cards = await listCollection(session, "/cards", "cards", {}, true);
+  } catch {
+    return null;
+  }
+  const byLast4 = new Map<string, string | null>();
+  for (const card of cards) {
+    if (!isRecord(card)) continue;
+    const last4 = typeof card.lastFour === "string" ? card.lastFour.trim() : "";
+    const nickname = typeof card.nickname === "string" ? card.nickname.trim() : "";
+    if (!/^[0-9]{4}$/.test(last4) || nickname === "") continue;
+    const label = String(redactMercury(nickname)).trim().slice(0, CARD_LABEL_LIMIT);
+    if (label === "") continue;
+    const seen = byLast4.get(last4);
+    if (seen === undefined) byLast4.set(last4, label);
+    else if (seen !== label) byLast4.set(last4, null);
+  }
+  const labels: CardLabel[] = [];
+  for (const [last4, label] of byLast4) {
+    if (label != null) labels.push({ last4, label });
+  }
+  return labels.sort((left, right) => left.last4.localeCompare(right.last4));
 }
 
 /**

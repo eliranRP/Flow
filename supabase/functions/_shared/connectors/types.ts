@@ -102,6 +102,12 @@ export interface AccountLabel {
   label: string;
 }
 
+/** A card's last 4 digits and the nickname the owner gave it in the bank (FLOW-707). Nothing else of the card. */
+export interface CardLabel {
+  last4: string;
+  label: string;
+}
+
 export interface ClassifiedError {
   class: ConnectorErrorClass;
   /** ISO-8601 timestamp, or null when the class has no wait. */

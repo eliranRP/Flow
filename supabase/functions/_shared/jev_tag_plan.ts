@@ -58,6 +58,10 @@ export type TagExpense = {
   userAssigned: boolean;
   pnlRole: string | null;
   allocationCount: number;
+  /** The paying card's last 4, when the bank sent one. */
+  cardLast4?: string | null;
+  /** The nickname the owner gave that card in the bank (FLOW-707), often a property or a purpose. */
+  cardName?: string | null;
 };
 
 export type TagDirection = "expense" | "income";
@@ -202,14 +206,21 @@ function choiceCriteria(
   return criteria;
 }
 
+/** Said once per question when the line's card has a nickname (FLOW-707). */
+export const CARD_NAME_HINT =
+  "card_name in the state is the name the owner gave the paying card in the bank, often a property or a purpose; weigh it.";
+
 export function buildTagQuestions(
   projects: readonly TagProject[],
   categories: readonly TagCategory[],
   direction: TagDirection = "expense",
   flagged = false,
+  cardNamed = false,
 ): Record<string, JevQuestion> {
   const questions: Record<string, JevQuestion> = {};
   const line = direction === "income" ? "income line" : "expense";
+  // FLOW-707: only lines with a named card say so, so other lines ask exactly as before.
+  const cardHint = cardNamed ? ` ${CARD_NAME_HINT}` : "";
   const projectCriteria = choiceCriteria(projects.map((project) => ({
     id: project.id,
     name: project.overhead
@@ -222,7 +233,7 @@ export function buildTagQuestions(
     projectCriteria[JEV_NO_PROJECT] = "No project: overhead, or not tied to one project.";
     questions.project = {
       type: "choice",
-      instructions: `Choose the project id for this ${line}.`,
+      instructions: `Choose the project id for this ${line}.${cardHint}`,
       criteria: projectCriteria,
     };
   }
@@ -230,7 +241,7 @@ export function buildTagQuestions(
   if (categoryCriteria) {
     questions.category = {
       type: "choice",
-      instructions: `Choose the ${direction} category id for this ${line}.`,
+      instructions: `Choose the ${direction} category id for this ${line}.${cardHint}`,
       criteria: categoryCriteria,
     };
   }
@@ -261,6 +272,7 @@ export function lineQuestions(expense: TagExpense, company: TagCompanyWork): Rec
     lineCategories(expense, company),
     direction,
     (expense.flags ?? []).length > 0,
+    Boolean(expense.cardName),
   );
 }
 
@@ -295,6 +307,8 @@ export function buildTagState(
     amount_net: expense.amountNet,
     vat_amount: expense.vatAmount,
   };
+  // The owner names cards by property or purpose ("<property> Utilities"): a strong project hint.
+  if (expense.cardName) state.card_name = expense.cardName;
   const flags = expense.flags ?? [];
   if (flags.length > 0) {
     state.flags = flags.map((flag) => ({ kind: flag.kind, ...flag.detail }));

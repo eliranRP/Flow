@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useState } from "react";
-import { methodLabel, sameParty, splitAccountLast4, type MethodIconKind, type TxnMeta } from "../txn-meta";
+import { methodLabel, sameParty, splitAccountLast4, type MethodIconKind, type MethodLabel, type TxnMeta } from "../txn-meta";
 import { BankIcon, BuildingIcon, CardIcon, ChevronDownIcon, DocumentIcon, InfoIcon, NoteIcon, TransferIcon } from "./icons";
 import { List, ListRow } from "./list-row";
 
@@ -43,19 +43,7 @@ export function BankDetails({
             variant="static"
             eyebrow="אמצעי תשלום"
             icon={<MethodIcon kind={method.icon} size={24} />}
-            title={
-              method.detail === method.spoken ? (
-                method.detail
-              ) : (
-                <>
-                  <span aria-hidden="true">
-                    {"כרטיס "}
-                    <span className="ui-num">{method.short}</span>
-                  </span>
-                  <span className="sr-only">{method.spoken}</span>
-                </>
-              )
-            }
+            title={<MethodTitle method={method} cardName={meta.method === "card" ? meta.card_name ?? null : null} />}
           />
         ) : null}
         {account ? (
@@ -91,6 +79,35 @@ export function BankDetails({
         ) : null}
       </List>
     </section>
+  );
+}
+
+/**
+ * "כרטיס ••1234", then the card's nickname from the bank (FLOW-707). The nickname is the part that
+ * clips; the card and its last 4 never do.
+ */
+function MethodTitle({ method, cardName }: { method: MethodLabel; cardName: string | null }) {
+  const card =
+    method.detail === method.spoken ? (
+      method.detail
+    ) : (
+      <>
+        <span aria-hidden="true">
+          {"כרטיס "}
+          <span className="ui-num">{method.short}</span>
+        </span>
+        <span className="sr-only">{method.spoken}</span>
+      </>
+    );
+  if (!cardName) return card;
+  return (
+    <span className="ui-bank-account">
+      <span className="ui-bank-last4">{card}</span>
+      <span className="ui-bank-sep" aria-hidden="true">·</span>
+      <bdi className="ui-bank-account-name" dir="auto" data-clip-ok="">
+        {cardName}
+      </bdi>
+    </span>
   );
 }
 

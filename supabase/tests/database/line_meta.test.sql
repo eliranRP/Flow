@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(14);
+select plan(16);
 
 do $users$
 begin
@@ -30,11 +30,12 @@ grant select on meta_co to authenticated;
 insert into public.connector_connections (
   company_id, provider,
   key_ciphertext, key_nonce, dek_ciphertext, dek_nonce,
-  kek_ref, kek_version, envelope_version, account_labels
+  kek_ref, kek_version, envelope_version, account_labels, card_labels
 )
 select id, 'mercury', '\x01'::bytea, '\x0201'::bytea, '\x03'::bytea, '\x0401'::bytea,
   'MERCURY_KEK', '1', '3',
-  '[{"id": "acct-1", "label": "Example Checking ••**** (1)"}]'::jsonb
+  '[{"id": "acct-1", "label": "Example Checking ••**** (1)"}]'::jsonb,
+  '[{"last4": "4242", "label": "Example Utilities"}, {"last4": "1111", "label": "Example General"}]'::jsonb
 from meta_co;
 
 do $$
@@ -149,11 +150,20 @@ select is(
     where (m->>'transaction_id')::uuid = (select id from meta_ids where external_id = 'meta-card')
   ),
   jsonb_build_object(
-    'method', 'card', 'card_last4', '4242', 'memo', 'Updated memo',
+    'method', 'card', 'card_last4', '4242', 'card_name', 'Example Utilities', 'memo', 'Updated memo',
     'account', 'Example Checking (1)', 'counterparty', 'Example Office Suite',
     'bank_description', 'Example Office Suite'
   ),
-  'the owner reads the card line normalized, with the masked account label tidied'
+  'the owner reads the card line normalized, with the masked account label tidied and the card''s nickname (FLOW-707)'
+);
+
+select ok(
+  (
+    select (m ? 'card_name') and m->'card_name' = 'null'::jsonb
+    from jsonb_array_elements(public.get_line_meta((select array_agg(id) from meta_ids))) as m
+    where (m->>'transaction_id')::uuid = (select id from meta_ids where external_id = 'meta-bad')
+  ),
+  'a line with no card last 4 has no card name'
 );
 
 select is(
@@ -200,6 +210,12 @@ select throws_ok(
 );
 
 reset role;
+
+select ok(
+  has_column_privilege('authenticated', 'public.connector_connections', 'card_labels', 'select')
+    and not has_column_privilege('authenticated', 'public.connector_connections', 'card_labels', 'update'),
+  'the owner reads the card names and only the service role writes them'
+);
 
 select ok(
   not has_function_privilege('authenticated', 'private.clean_provider_meta(jsonb, jsonb)', 'execute'),

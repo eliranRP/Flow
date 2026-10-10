@@ -9,6 +9,7 @@ import {
   getMercuryTransaction,
   mercuryTreasuryAccountCount,
   recheckMissingPending,
+  listMercuryCardLabels,
 } from "../_shared/connectors/mercury/client.ts";
 import { addCalendarDays, jerusalemDate } from "../_shared/connectors/mercury/dates.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
@@ -283,10 +284,13 @@ async function syncCompany(
       }
       const pendingMissing: Record<string, string> = {};
       for (const item of plan.pendingMissing) pendingMissing[item.externalId] = item.missingSince;
+      // The card nicknames are extra (FLOW-707): when Mercury doesn't list them, the stored ones stay.
+      const cardLabels = await listMercuryCardLabels(session);
       const labeled = await admin
         .from("connector_connections")
         .update({
           account_labels: plan.accounts.map(({ id, label }) => ({ id, label })),
+          ...(cardLabels == null ? {} : { card_labels: cardLabels.map(({ last4, label }) => ({ last4, label })) }),
           settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
         })
         .eq("company_id", companyId)

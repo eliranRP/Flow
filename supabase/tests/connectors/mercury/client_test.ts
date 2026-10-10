@@ -18,6 +18,7 @@ import {
   encodeMercuryResume,
   fetchMercurySince,
   getMercuryTransaction,
+  listMercuryCardLabels,
   mercuryAccountsChanged,
   mercuryFailureCode,
   mercuryStartDate,
@@ -841,4 +842,33 @@ Deno.test("a reconnect to other accounts is a change; the same accounts in anoth
   assertEquals(mercuryAccountsChanged([{ id: "acct-a" }, { id: "acct-b" }, { id: "acct-c" }], next), true);
   assertEquals(mercuryAccountsChanged(null, next), true);
   assertEquals(mercuryAccountsChanged([], []), false);
+});
+
+Deno.test("FLOW-707: card nicknames by last 4, only named cards, and an unreadable list is null", async () => {
+  assertMercuryGet("GET", "/cards");
+  const { fetchImpl, calls } = transport((url) => {
+    if (url.pathname.endsWith("/cards")) {
+      return jsonResponse({
+        cards: [
+          { id: "card-1", lastFour: "4242", nickname: "Example Street Utilities", nameOnCard: "Example Holder", kind: "credit" },
+          { id: "card-2", lastFour: "1111", nickname: null, kind: "credit" },
+          { id: "card-3", lastFour: "2222", nickname: "  ", kind: "debit" },
+          { id: "card-4", lastFour: "3333", nickname: "Example General", kind: "credit" },
+          { id: "card-5", lastFour: "3333", nickname: "Example Other", kind: "debit" },
+          { id: "card-6", lastFour: "123", nickname: "Too short", kind: "debit" },
+          { id: "card-7", lastFour: "4242", nickname: "Example Street Utilities", kind: "credit" },
+        ],
+        page: {},
+      });
+    }
+    return jsonResponse({}, 404);
+  });
+  const session = openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW });
+  assertEquals(await listMercuryCardLabels(session), [{ last4: "4242", label: "Example Street Utilities" }]);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].init.method, "GET");
+
+  const denied = transport(() => jsonResponse({ errors: { message: "forbidden" } }, 403));
+  const deniedSession = openMercury(`test-${crypto.randomUUID()}`, { fetch: denied.fetchImpl, now: () => NOW });
+  assertEquals(await listMercuryCardLabels(deniedSession), null);
 });

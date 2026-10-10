@@ -59,7 +59,7 @@ export function transactionsPath(companyId: string, limit: number, nowIso: strin
     `/rest/v1/transactions?company_id=eq.${companyId}`,
     "removed_at=is.null",
     "review_queue.status=eq.open",
-    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
+    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,card_last4:provider_meta->>card_last4,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
     `tagged.model_version=eq.${JEV_MODEL}`,
     "tagged=is.null",
     `failed.model_version=eq.${JEV_MODEL}`,
@@ -171,7 +171,47 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
     userAssigned: asBool(row.user_assigned),
     pnlRole: asString(row.pnl_role),
     allocationCount: embeddedRows(row.allocations).length,
+    cardLast4: cardLast4Of(row.card_last4),
   }];
+}
+
+function cardLast4Of(value: unknown): string | null {
+  const text = asString(value);
+  return text && /^[0-9]{4}$/.test(text) ? text : null;
+}
+
+export function cardLabelsPath(companyId: string): string {
+  return `/rest/v1/connector_connections?company_id=eq.${companyId}&provider=eq.mercury&select=card_labels`;
+}
+
+/**
+ * The nickname the owner gave the card in the bank (FLOW-707), a signal for the project and the
+ * category. One read per company, only when a line was paid by card. A failed read sends no names.
+ */
+async function attachCardNames(
+  get: (path: string) => Promise<unknown>,
+  companyId: string,
+  expenses: TagExpense[],
+): Promise<void> {
+  if (!expenses.some((expense) => expense.cardLast4)) return;
+  let connections: RestRow[];
+  try {
+    connections = rows(await get(cardLabelsPath(companyId)));
+  } catch {
+    return;
+  }
+  const names = new Map<string, string>();
+  for (const connection of connections) {
+    for (const label of embeddedRows(connection.card_labels)) {
+      const last4 = cardLast4Of(label.last4);
+      const name = asString(label.label)?.trim().slice(0, 80);
+      if (last4 && name && !names.has(last4)) names.set(last4, name);
+    }
+  }
+  for (const expense of expenses) {
+    const name = expense.cardLast4 ? names.get(expense.cardLast4) : undefined;
+    if (name) expense.cardName = name;
+  }
 }
 
 function uuidOrNull(value: unknown): string | null {
@@ -352,6 +392,7 @@ export function createTagStore(
         const expenses = capNewest(loaded, quota);
         await attachHistory(fetch, base, serviceKey, company.companyId, expenses);
         await attachFlags(fetch, base, serviceKey, company.companyId, expenses);
+        await attachCardNames(get, company.companyId, expenses);
         const incomeCategories = expenses.some((expense) => expense.direction === "income")
           ? rows(await get(categoriesPath(company.companyId, "income"))).flatMap((row) => {
             const id = asString(row.id);
