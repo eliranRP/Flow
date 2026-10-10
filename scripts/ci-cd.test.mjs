@@ -149,14 +149,15 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /pnpm check:reviewer-bundle/);
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
-  // FLOW-812: the sweeps on two runners and the rest of the suite on three, split by one title, so
-  // every test runs once; the database checks on a sixth runner.
+  // FLOW-812: the sweeps on two runners and the rest of the suite on four, split by one title, so
+  // every test runs once; the database checks on a seventh runner.
   assert.match(job("e2e-shard"), /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\} \$\{\{ matrix\.filter \}\} "no enabled control is a no-op"\n/);
   assert.ok(job("e2e-shard").includes(`        include:
           - part: database
-          - { part: 1/3, shard: 1/3, filter: --grep-invert }
-          - { part: 2/3, shard: 2/3, filter: --grep-invert }
-          - { part: 3/3, shard: 3/3, filter: --grep-invert }
+          - { part: 1/4, shard: 1/4, filter: --grep-invert }
+          - { part: 2/4, shard: 2/4, filter: --grep-invert }
+          - { part: 3/4, shard: 3/4, filter: --grep-invert }
+          - { part: 4/4, shard: 4/4, filter: --grep-invert }
           - { part: sweeps 1/2, shard: 1/2, filter: --grep }
           - { part: sweeps 2/2, shard: 2/2, filter: --grep }
     steps:

@@ -287,8 +287,8 @@ jobs:
           test "$STORYBOOK" = success
           test "$STORIES" = success
 
-  # Six runners, each with its own local Supabase (FLOW-812): one runs the database checks, and the main
-  # Playwright suite runs on the other five, its slow control sweeps on two and the rest on three.
+  # Seven runners, each with its own local Supabase (FLOW-812): one runs the database checks, and the main
+  # Playwright suite runs on the other six, its slow control sweeps on two and the rest on four.
   # --grep and --grep-invert on the sweep title split the suite in two with nothing left out.
   e2e-shard:
     name: e2e (${{ matrix.part }})
@@ -301,9 +301,10 @@ jobs:
       matrix:
         include:
           - part: database
-          - { part: 1/3, shard: 1/3, filter: --grep-invert }
-          - { part: 2/3, shard: 2/3, filter: --grep-invert }
-          - { part: 3/3, shard: 3/3, filter: --grep-invert }
+          - { part: 1/4, shard: 1/4, filter: --grep-invert }
+          - { part: 2/4, shard: 2/4, filter: --grep-invert }
+          - { part: 3/4, shard: 3/4, filter: --grep-invert }
+          - { part: 4/4, shard: 4/4, filter: --grep-invert }
           - { part: sweeps 1/2, shard: 1/2, filter: --grep }
           - { part: sweeps 2/2, shard: 2/2, filter: --grep }
     steps:
