@@ -4,6 +4,10 @@
 -- month and currency of every matching line, not only the page, with income and expense as the
 -- rows draw them (a kept-out line counts 0; an income line with a negative amount is money out,
 -- decision 0120). Later pages leave it out, so paging costs what it did.
+-- private.line_pnl_states is planned for the ids it gets: the first page asks it for every
+-- matching line, about 4,000 on a large company, and its one shared plan took 2 s for that
+-- (a nested loop over pnl_lines per line); planned per call it takes about 70 ms. It also reads
+-- the caller's company once per call instead of once per line. Same rows, same rule.
 
 begin;
 
@@ -52,7 +56,55 @@ begin
       ), '[]'::jsonb) end,
 $n$);
   execute def;
+
 end
 $patch$;
+
+create or replace function private.line_pnl_states(p_ids uuid[])
+returns table (transaction_id uuid, state text)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $function$
+begin
+  -- Executed, so each call is planned for its own ids (a generic plan nested-looped pnl_lines).
+  return query execute $q$
+    select t.id,
+      case
+        when t.line_status = 'posted' then coalesce(parts.state, pending.state)
+        else pending.state
+      end
+    from public.transactions t
+    left join public.categories c on c.id = t.category_id
+    left join (
+      select pl.transaction_id,
+        case
+          when bool_and(pl.in_pnl) then 'in'
+          when not bool_or(pl.in_pnl) then 'out'
+          else 'mixed'
+        end as state
+      from private.pnl_lines pl
+      where pl.transaction_id = any($1)
+      group by pl.transaction_id
+    ) parts on parts.transaction_id = t.id
+    -- A pending line, which pnl_lines does not hold yet, follows the line rule in_pnl uses.
+    cross join lateral (
+      select case when private.line_in_pnl(
+        case when not exists (
+          select 1 from public.loan_splits ls where ls.transaction_id = t.id and ls.company_id = t.company_id
+        ) then t.in_pnl_override end,
+        private.line_category_out(c.excluded_from_pnl, t.category_suggested, c.loan_part),
+        c.loan_part
+      ) then 'in' else 'out' end as state
+    ) pending
+    where t.id = any($1)
+      and ((select auth.role()) = 'service_role' or t.company_id = (select private.readable_company_id()))
+  $q$ using p_ids;
+end;
+$function$;
+
+revoke all on function private.line_pnl_states(uuid[]) from public, anon;
+grant execute on function private.line_pnl_states(uuid[]) to authenticated, service_role;
 
 commit;

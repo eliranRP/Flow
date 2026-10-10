@@ -233,6 +233,23 @@ describe("Search screen (FLOW-323)", () => {
     });
   });
 
+  it("shows the last loaded month's whole net from the server while it still pages (FLOW-908)", async () => {
+    // September has more lines than the page holds; its head shows the server's figure for all of them.
+    page = {
+      ...page,
+      total: 3,
+      months: [
+        { month: "2026-10", currency: "ILS", income_minor: 0, expense_minor: 12_400 },
+        { month: "2026-09", currency: "ILS", income_minor: 80_000, expense_minor: 0 },
+      ],
+    } as typeof page;
+    const { container } = wrap("/search");
+    expect(await screen.findByRole("button", { name: "עוד תנועות" })).toBeInTheDocument();
+    const heads = [...container.querySelectorAll(".ui-month-head")];
+    expect(heads).toHaveLength(2);
+    expect(heads[1]?.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪800");
+  });
+
   it("draws a line the next page repeats once, and still ends the paging", async () => {
     page = { total: 51, expenses: Array.from({ length: 50 }, (_, i) => line(`p${String(i)}`)) };
     wrap("/search");

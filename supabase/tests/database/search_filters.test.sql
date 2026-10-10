@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(46);
+select plan(48);
 
 do $users$
 begin
@@ -270,6 +270,27 @@ select is(pg_temp.keys(public.search_transactions()), 'sfl:other',
 select tests.authenticate_as('sfl_viewer');
 select is((public.search_transactions(p_project => pg_temp.id('alpha')::text)->>'total')::int, 4,
   'a viewer reads with the same filters');
+
+-- Month totals follow the rows' rules (decision 0120, 0135): an income line with a negative
+-- amount is money out, and a line split with one part kept out still counts in full. March holds
+-- only these two lines.
+reset role;
+insert into sfl (label, id) values
+  ('credit', tests.fixture_line(pg_temp.id('co'), 'sfl:credit', 5000, 'income',
+    pg_temp.id('alpha'), pg_temp.id('sales'), '2026-03-10')),
+  ('half_out', tests.fixture_line(pg_temp.id('co'), 'sfl:half_out', 10000, 'expense',
+    pg_temp.id('alpha'), pg_temp.id('materials'), '2026-03-12'));
+update public.transactions set amount_gross = -5000, amount_net = -5000 where id = pg_temp.id('credit');
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+values
+  (pg_temp.id('co'), pg_temp.id('half_out'), 1, pg_temp.id('materials'), null, 6000),
+  (pg_temp.id('co'), pg_temp.id('half_out'), 2, pg_temp.id('draws'), null, 4000);
+select tests.authenticate_as('sfl_owner');
+select ok(not (pg_temp.row_of('half_out')->>'kept_out')::boolean,
+  'a line split with one part kept out is not kept out (its row counts in full)');
+select is(public.search_transactions(p_from => '2026-03-01', p_to => '2026-03-31')->'months',
+  '[{"month": "2026-03", "currency": "ILS", "income_minor": 0, "expense_minor": 15000}]'::jsonb,
+  'an income credit counts as money out, and a partly kept-out split line counts in full');
 
 select * from finish();
 rollback;
