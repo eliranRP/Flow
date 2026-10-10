@@ -321,6 +321,74 @@ export const ProjectMenu: Story = {
 export const ProjectMenuDark: Story = { ...ProjectMenu, name: "Project, ⋯ menu, dark", ...dark };
 export const ProjectMenu320: Story = { ...ProjectMenu, name: "Project, ⋯ menu, 320", ...at320 };
 
+/** FLOW-360 A: the ⋯ menu's קבוצה row, then its picker and the new group sheet. */
+const sampleGroups = {
+  groups: [{ id: "g1", name: "בניין לדוגמה" }, { id: "g2", name: "מתחם לדוגמה" }],
+  currentId: null,
+};
+const groupedRender = (currentId: string | null) => () => (
+  <StoryRoute entry="/projects/p-a" tabs>
+    <ProjectDetailScreen
+      example={exampleOnBand}
+      sample={overviewProject}
+      sampleInvestment={filledInvestment}
+      sectionTo={sectionTo}
+      sampleGroups={{ ...sampleGroups, currentId }}
+    />
+  </StoryRoute>
+);
+export const ProjectMenuGroup: Story = {
+  name: "Project, ⋯ menu with קבוצה",
+  render: groupedRender(null),
+  play: ProjectMenu.play,
+};
+export const ProjectMenuGroupDark: Story = { ...ProjectMenuGroup, name: "Project, ⋯ menu with קבוצה, dark", ...dark };
+export const ProjectMenuGroup320: Story = { ...ProjectMenuGroup, name: "Project, ⋯ menu with קבוצה, 320", ...at320 };
+
+export const ProjectGroupPicker: Story = {
+  name: "Project, group picker",
+  render: groupedRender("g1"),
+  play: async (context) => {
+    await ProjectMenu.play?.(context);
+    await userEvent.click(await storyBody(context.canvasElement).findByRole("button", { name: /קבוצה/ }));
+    await storyBody(context.canvasElement).findByRole("radiogroup", { name: "קבוצה" });
+  },
+};
+export const ProjectGroupPickerDark: Story = { ...ProjectGroupPicker, name: "Project, group picker, dark", ...dark };
+export const ProjectGroupPicker320: Story = { ...ProjectGroupPicker, name: "Project, group picker, 320", ...at320 };
+
+export const ProjectGroupNew: Story = {
+  name: "Project, new group",
+  render: groupedRender(null),
+  play: async (context) => {
+    await ProjectGroupPicker.play?.(context);
+    await userEvent.click(storyBody(context.canvasElement).getByRole("button", { name: "קבוצה חדשה" }));
+    await userEvent.type(await storyBody(context.canvasElement).findByLabelText("שם הקבוצה"), "מתחם הגפן");
+  },
+};
+export const ProjectGroupNewDark: Story = { ...ProjectGroupNew, name: "Project, new group, dark", ...dark };
+
+/** A pick saves at once; the toast says where the project went and offers ביטול. */
+export const ProjectGroupMoved: Story = {
+  name: "Project, moved to a group",
+  render: groupedRender(null),
+  play: async (context) => {
+    await ProjectGroupPicker.play?.(context);
+    await userEvent.click(storyBody(context.canvasElement).getByRole("radio", { name: "בניין לדוגמה" }));
+    await storyBody(context.canvasElement).findByText("הפרויקט עבר לקבוצה בניין לדוגמה");
+  },
+};
+export const ProjectGroupRemoved: Story = {
+  name: "Project, taken out of its group",
+  render: groupedRender("g1"),
+  play: async (context) => {
+    await ProjectGroupPicker.play?.(context);
+    await userEvent.click(storyBody(context.canvasElement).getByRole("radio", { name: "בלי קבוצה" }));
+    await storyBody(context.canvasElement).findByText("הפרויקט הוצא מהקבוצה בניין לדוגמה");
+  },
+};
+export const ProjectGroupRemovedDark: Story = { ...ProjectGroupRemoved, name: "Project, taken out of its group, dark", ...dark };
+
 /** A finished project offers "החזרה לפעיל" in the same place. */
 export const ProjectMenuFinished: Story = {
   name: "Project, ⋯ menu, finished",

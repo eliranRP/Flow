@@ -33,6 +33,7 @@ import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
+import { ProjectGroupSheets, NO_GROUP, useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
@@ -133,6 +134,7 @@ export function ProjectDetailScreen({
   sampleExpected,
   section = "overview",
   sectionTo,
+  sampleGroups,
 }: {
   sample?: NonNullable<ProjectDetail>;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
@@ -148,6 +150,8 @@ export function ProjectDetailScreen({
   section?: ProjectSection;
   /** Dev fixtures send the overview's rows (and the sections' Back) here. Production builds the project routes. */
   sectionTo?: (section: ProjectSection) => string;
+  /** FLOW-360. A sample project's groups and its own, for the ⋯ menu's קבוצה row (stories). */
+  sampleGroups?: ProjectGroups;
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
@@ -155,6 +159,9 @@ export function ProjectDetailScreen({
   const [period, setPeriod] = useProjectPeriod();
   const [periodSheet, setPeriodSheet] = useState(false);
   const detail = useProjectQuery(sample ? "" : projectId, period);
+  // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
+  const liveGroups = useProjectGroups(projectId, sample == null);
+  const groups = sampleGroups ?? liveGroups;
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -330,6 +337,8 @@ export function ProjectDetailScreen({
             name={project.name}
             budget={project.budget_agorot ?? null}
             finished={project.status === "finished"}
+            groups={groups}
+            sample={sample != null}
             overhead={overhead}
             // FLOW-340 C: with no investment data the overview hides its row, so the menu keeps the way in.
             investmentTo={investmentShown || investmentData.isOverhead ? undefined : sectionHref("investment")}
@@ -428,6 +437,8 @@ function ProjectMenu({
   name,
   budget,
   finished,
+  groups,
+  sample = false,
   overhead,
   investmentTo,
 }: {
@@ -435,6 +446,9 @@ function ProjectMenu({
   name: string;
   budget: bigint | null;
   finished: boolean;
+  /** FLOW-360 A: the קבוצה row shows once the groups are read. */
+  groups?: ProjectGroups;
+  sample?: boolean;
   /** FLOW-340 C: the overhead switch left the page body for this menu. */
   overhead?: ReactNode;
   /** FLOW-340 C: set when the overview hides its השקעה row, so the data can still be added. */
@@ -443,6 +457,7 @@ function ProjectMenu({
   const blocked = useBlockedPreview();
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
   const save = useWrite({
@@ -480,6 +495,18 @@ function ProjectMenu({
           {investmentTo == null ? null : (
             <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
           )}
+          {groups == null ? null : (
+            <ListRow
+              variant="button"
+              title="קבוצה"
+              meta={groups.groups.find((group) => group.id === groups.currentId)?.name ?? NO_GROUP}
+              chevron
+              onClick={() => {
+                setMenu(false);
+                setGroupView("pick");
+              }}
+            />
+          )}
           <ListRow
             variant="button"
             title={action}
@@ -490,6 +517,22 @@ function ProjectMenu({
           />
         </List>
       </Sheet>
+      {groups == null ? null : (
+        <ProjectGroupSheets
+          projectId={projectId}
+          groups={groups.groups}
+          currentId={groups.currentId}
+          view={groupView}
+          onView={setGroupView}
+          onBack={() => {
+            setGroupView(null);
+            setMenu(true);
+          }}
+          blocked={blocked}
+          returnFocusRef={opener}
+          sample={sample}
+        />
+      )}
       {/* Either way can be undone, so the confirm is neutral: no red and no bin (FLOW-341 rule). */}
       <ConfirmSheet
         open={confirm}
