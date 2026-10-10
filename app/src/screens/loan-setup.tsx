@@ -636,8 +636,8 @@ export function LoanSettingsSection({
         <>
           <p className="sr-only" role="status">טוען…</p>
           <List className="ui-loan-skel-rows">
-            <ListRow variant="skeleton" />
-            <ListRow variant="skeleton" />
+            <ListRow variant="skeleton" icon />
+            <ListRow variant="skeleton" icon />
           </List>
         </>
       ) : failed ? (

@@ -162,6 +162,9 @@
   gap: var(--space-2);
 }
 
+/* FLOW-358: a loading row's icon slot, at the row icon's 24px. */
+.ui-skel-icon { inline-size: 24px; block-size: 24px; border-radius: var(--radius-check); }
+
 .ui-skel-label { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
 .ui-skel-hero-num { inline-size: var(--skel-lg); block-size: var(--skel-hero); border-radius: var(--radius-input); }
 .ui-skel-flow-label { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }

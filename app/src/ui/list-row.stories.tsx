@@ -52,6 +52,21 @@ export const Skeleton: Story = {
   ),
 };
 
+// FLOW-358: loading rows shaped like the loaded ones: an icon slot, and on an eyebrow row a short
+// label over a long value with nothing at the end (the loaded row has only a chevron there).
+export const SkeletonShaped: Story = {
+  tags: ["clip-no-text"],
+  args: { variant: "item", title: "טוען" },
+  render: () => (
+    <List>
+      <ListRow variant="skeleton" icon />
+      <ListRow variant="skeleton" icon eyebrow end={false} />
+    </List>
+  ),
+};
+export const SkeletonShaped320: Story = { ...SkeletonShaped, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const SkeletonShapedDark: Story = { ...SkeletonShaped, globals: { theme: "dark" } };
+
 export const Project: Story = {
   args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
 };
