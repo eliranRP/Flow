@@ -1,6 +1,6 @@
 <a id="flow-502"></a>
 # FLOW-502 · Web push notifications
-- **Type:** PLAN FIRST · **Status:** ready for a lane (owner picked option A, 2026-10-09: one quiet card on the review screen's empty state, "תזכורת בערב כשיש תנועות לאישור?" with כן / לא עכשיו, asked once; and Settings → התראות with three switches: תנועה חדשה "כשנכנסת תנועה מהבנק" (off by default, the owner's addition), תזכורת ערב, סיכום שבועי "ראשון בבוקר"; mockups in the project's mockups/plan-first/flow-502/) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#335, #343 server; #340, #358, #377 app) · **Depends on:** —
 - **What:** A pre-permission card after a user gesture (iOS needs the app on the Home Screen first), service-worker push, server send from an edge function, per-user opt-in. Start with the evening review nudge, then the Sunday summary. Add it to setup step 5 once it ships. About 2–3 PRs.
 - **Acceptance:** mockup approved; push received on Android and an installed iOS app; opt-out works.
 - [x] Option A approved by the owner (#324): one quiet card on the review empty state, Settings → התראות with three switches (תנועה חדשה, off by default; תזכורת ערב; סיכום שבועי, ראשון בבוקר).

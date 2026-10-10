@@ -1,0 +1,1 @@
+Backlog sweep: FLOW-110, 213, 309, 341, 343, 351, 401, 406, 412, 502 and 504 had every box ticked but a stale status line; each now reads done with the PRs that finished it. FLOW-504's Settings currency choice was built in #216. No code change.
