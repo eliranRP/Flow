@@ -40,7 +40,7 @@ select 'project', id from public.projects where name = 'שיפוץ הרצל';
 insert into ledger_ref (label, id)
 select 'materials', id from public.categories where name = 'חומרים' and kind = 'expense';
 insert into ledger_ref (label, id)
-select 'income_cat', id from public.categories where name = 'תקבול מלקוח' and kind = 'income';
+select 'income_cat', id from public.categories where name = 'הכנסה מלקוחות' and kind = 'income';
 
 reset role;
 do $$

@@ -1,0 +1,5 @@
+{
+  "reason": "FLOW-804 option A (owner's pick 2026-10-09): Home loads only its own code. Set just over the sizes after the code split (#360), each file gzipped on its own: Home entry 228 KB, all JavaScript 415 KB. Raising a limit is a reviewed change that says why here.",
+  "homeEntryGzipKB": 240,
+  "totalJsGzipKB": 450
+}

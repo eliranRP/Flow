@@ -13,9 +13,13 @@
 #       flow-mcp smoke, the db types check, and the pgTAP files that name what changed
 #       (scripts/pgtap-specs.mjs).
 #   Seconds instead when the branch's patch against main (git patch-id) already passed, as after a
-#     merge of main that leaves the patch unchanged; lint and the file-size check only when the
-#     branch changes only docs/ or Markdown (a claim commit). Each run appends a line to
-#     gate-times.log beside the shared cache: time, branch, mode, seconds, result, parts.
+#     merge of main that leaves the patch unchanged; the file-size check only when the branch
+#     changes only docs/, Markdown or design images (a claim commit). Lint checks the changed files
+#     and every file that imports them (scripts/gate-scope.mjs), and the dist builds run only when
+#     the change reaches the built app: the rest is as main left it, and main's CI lints and builds
+#     all of it. Each run appends a line to
+#     gate-times.log beside the shared cache: time, branch, mode, diff kind, seconds, result, and
+#     each phase's seconds (node scripts/gate-times.mjs sums it up).
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
@@ -27,8 +31,9 @@
 # $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache, and also $FLOW_LOCAL_CI_SHARED_CACHE, a folder
 # every lane's container mounts (/mnt/project-files/ci/local-ci-cache when that is writable; set it
 # empty to keep marks local), so one lane's pass counts for another. Marks name git trees, not
-# commits, so a squash merge whose tree a lane passed counts too. Without Docker the default run
-# leaves the e2e specs to main and says which; a database change needs Docker.
+# commits, so a squash merge whose tree a lane passed counts too. A run that needs Docker (a
+# database change, or e2e specs that reach the change) starts it (containerd, then dockerd) and
+# fails when it can't. No required phase is skipped; a phase left to main says why.
 set -euo pipefail
 
 full=0
@@ -43,11 +48,26 @@ cd "$root"
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
 
+# Each phase's start (seconds into the run) and its short name, for gate-times.log.
 ran=()
+phase_key() {
+  case "$1" in
+    "docs only"*) echo lint ;;
+    "lint and check"*) echo lint-build ;;
+    "check: app unit tests"* | "check: unit and connector tests"*) echo units ;;
+    "check: Storybook smoke"*) echo storybook-smoke ;;
+    "check: Storybook"*) echo storybook ;;
+    "Docker and local Supabase"* | "e2e: waiting for local Supabase"*) echo supabase ;;
+    "database:"* | "e2e: database checks"*) echo pgtap ;;
+    "e2e:"*) echo e2e ;;
+    "passed"*) echo end ;;
+    *) echo other ;;
+  esac
+}
 phase() {
   echo
   echo "== local-ci: $1 ($(( $(date +%s) - started ))s)"
-  ran+=("$(( $(date +%s) - started ))s ${1%%:*}")
+  ran+=("$(( $(date +%s) - started )) $(phase_key "$1")")
 }
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
@@ -68,16 +88,26 @@ fi
 shared="${FLOW_LOCAL_CI_SHARED_CACHE:-}"
 if [[ -n "$shared" ]] && mkdir -p "$shared" 2>/dev/null; then caches+=("$shared"); fi
 head_tree="$(git rev-parse 'HEAD^{tree}')"
-# One line per run in gate-times.log, next to the shared cache when there is one: time, branch, mode,
-# seconds, result, and when each part started. The lane manager reads it to see which part is slow.
+# One line per run in gate-times.log, next to the shared cache when there is one, tab-separated: time,
+# branch, mode, diff kind, seconds, result, and the seconds of each phase ("lint=40 units=95").
+# scripts/gate-times.mjs sums it up against the targets; the lane manager posts that every hour.
 mode="$( (( full )) && echo full || echo default)"
+kind="unknown"
 times_log="$cache/gate-times.log"
 [[ -z "$shared" ]] || times_log="$(dirname "$shared")/gate-times.log"
 log_time() {
-  local rc=$? parts
-  parts="$(IFS=','; echo "${ran[*]}")"
-  printf '%s\t%s\t%s\t%ss\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse --abbrev-ref HEAD)" "$mode" \
-    "$(( $(date +%s) - started ))" "$( (( rc == 0 )) && echo pass || echo "fail $rc")" "$parts" >>"$times_log" 2>/dev/null || true
+  local rc=$? total i start key next phases=""
+  total="$(( $(date +%s) - started ))"
+  for (( i = 0; i < ${#ran[@]}; i++ )); do
+    start="${ran[i]%% *}"
+    key="${ran[i]#* }"
+    [[ "$key" != end ]] || continue
+    next="$total"
+    (( i + 1 >= ${#ran[@]} )) || next="${ran[i + 1]%% *}"
+    phases+="${phases:+ }$key=$(( next - start ))"
+  done
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse --abbrev-ref HEAD)" "$mode" \
+    "$kind" "$total" "$( (( rc == 0 )) && echo pass || echo "fail $rc")" "$phases" >>"$times_log" 2>/dev/null || true
 }
 trap log_time EXIT
 skips=1
@@ -104,8 +134,8 @@ green() {
 # Marks a pass here and in the shared cache (a shared folder that can't be written is skipped).
 mark_green() {
   local dir
-  touch "$cache/$1"
-  for dir in "${caches[@]:1}"; do touch "$dir/$1" 2>/dev/null || true; done
+  printf '%s' "${2:-}" >"$cache/$1"
+  for dir in "${caches[@]:1}"; do printf '%s' "${2:-}" >"$dir/$1" 2>/dev/null || true; done
 }
 # Each ancestor of HEAD (within 200 commits) as "commit tree", newest first.
 ancestors() {
@@ -125,25 +155,69 @@ if [[ -z "$pr_fork" ]] && (( ! full )); then
 fi
 pr_files=""
 [[ -z "$pr_fork" ]] || pr_files="$(git diff --name-only "$pr_fork" HEAD)"
-# The branch's own patch against main. A run that passes marks it, so a merge of main that leaves the
-# patch unchanged (main's CI covers main) needs no second run.
+# Docs, Markdown and the design images (rendered screens, logo files): nothing the app, its
+# tests or Storybook reads. The app reads only design/system's CSS from design/.
+docs_files='^docs/|\.md$|^design/.*\.(png|jpe?g|webp|gif|svg)$'
+# The diff kind gate-times.log groups by: migration, server (other supabase/), docs (docs_files
+# only), ui (app, packages, design), else scripts.
+if grep -q '^supabase/migrations/' <<<"$pr_files"; then kind=migration
+elif grep -q '^supabase/' <<<"$pr_files"; then kind=server
+elif [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then kind=docs
+elif grep -qE '^(app|packages|design)/' <<<"$pr_files"; then kind=ui
+else kind=scripts
+fi
+# The branch's own patch against main. A run that passes marks it with the main commit it forked
+# from, so a merge of main that leaves the patch unchanged needs no second run, unless main changed a
+# migration, flow-mcp, packages/shared or the seed since that fork (scripts/gate-base-risk.mjs): the
+# same patch can break on a new main there (#364's viewer checks under #383's RPCs).
 patch_id=""
 [[ -z "$pr_fork" ]] || patch_id="$(git diff "$pr_fork" HEAD | git patch-id --stable | cut -d' ' -f1)"
 passed() {
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id"
+  [[ -z "$patch_id" ]] || mark_green "patch-$patch_id" "$pr_fork"
 }
+# The fork a patch mark was written on (empty for a mark from before the fork was stored).
+mark_fork() {
+  local dir fork
+  for dir in "${caches[@]}"; do
+    fork="$(head -c 40 "$dir/$1" 2>/dev/null || true)"
+    [[ -z "$fork" ]] || { echo "$fork"; return; }
+  done
+}
+# When main did change one of those areas, only the phases that area can affect run again (base_only):
+# database (a migration, the seed) the database step, with every pgTAP file on a database branch, and
+# the e2e specs; flow-mcp its Deno tests and the smoke; shared the typecheck, unit tests and builds.
+# A mark with no fork, or a fork no longer under main, runs the whole gate.
+base_risk=0
+base_only=0
+base_areas=""
 if (( skips )) && [[ -n "$patch_id" ]] && has_mark "patch-$patch_id"; then
-  mode="same patch"
-  echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
-  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  exit 0
+  risk_out="$(node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork")" && {
+    mode="same patch"
+    echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
+    echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+    exit 0
+  }
+  grep -v '^areas=' <<<"$risk_out" || true
+  base_risk=1
+  base_areas="$(sed -n 's/^areas=//p' <<<"$risk_out" | tr ',' ' ')"
+  if [[ -n "$base_areas" && "$base_areas" != all ]]; then
+    base_only=1
+    mode="base risk"
+    echo "local-ci: the same patch passed on an older main; re-running only what main's change reaches: $base_areas."
+  else
+    echo "local-ci: the same patch passed, but the mark can't show what main changed since; running the gate."
+  fi
 fi
-# Only docs or Markdown against main: lint and the file-size check, nothing else.
-if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE '^docs/|\.md$' <<<"$pr_files"; then
+# Whether this run re-checks area $1: always, unless only main's risky areas are re-run.
+base_area() {
+  (( ! base_only )) || [[ " $base_areas " == *" $1 "* ]]
+}
+# Only docs_files against main: lint and the file-size check, nothing else.
+if (( ! full )) && [[ -n "$pr_files" ]] && ! grep -qvE "$docs_files" <<<"$pr_files"; then
   mode="docs"
-  phase "docs only: lint and the file-size check"
-  pnpm lint
+  phase "docs only: the file-size check"
+  echo "local-ci: lint skipped: eslint reads no docs, Markdown or design images (main lints all of it)."
   node scripts/check-file-size.mjs
   passed
   phase "passed on ${head:0:7} (docs only)"
@@ -161,21 +235,16 @@ branch_changes() {
   grep -Fxf <(printf '%s\n' "$pr_files") <<<"$since" || true
 }
 
-# Where this branch left main, when every app input the branch changes is an app, shared or _shared
-# .ts/.tsx source or a migration (a test globs them): the vitest module graph finds the tests those
-# reach. Anything else (CSS, setup, config, scripts, lockfile, a deleted file) runs all.
+# Where this branch left main, when every app input the branch changes is an app, e2e, shared or
+# _shared .ts/.tsx source, a migration (a test globs them), app CSS (no test imports it), or a
+# manifest, tsconfig or lockfile whose change the tests don't read: the vitest module graph finds the
+# tests and stories those reach. Anything else (setup, config, the design package, scripts, a
+# dependency, a deleted or renamed file) runs all (scripts/storybook-stories.mjs, relatedRun).
 changed_base() {
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
-  local changed removed
-  # A deleted or renamed file, the setup file, or anything but a source or migration runs all.
-  # (No grep -q in a pipe: under pipefail its early exit would read as eligible.)
-  changed="$(git diff --name-only "$pr_fork" HEAD -- "${app_inputs[@]}")"
-  removed="$(git diff --name-only --diff-filter=DR "$pr_fork" HEAD -- "${app_inputs[@]}")"
-  if [[ -n "$removed" ]] || grep -qx 'app/src/test-setup.ts' <<<"$changed" \
-    || [[ -n "$(grep -vE '^(app/src|packages/shared/src|supabase/functions/_shared)/.*\.tsx?$|^supabase/migrations/[^/]+\.sql$' <<<"$changed" || true)" ]]; then
-    return 1
-  fi
+  [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
+    | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
   echo "$pr_fork"
 }
 
@@ -184,6 +253,7 @@ changed_base() {
 # to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
 e2e_specs=()
 e2e_left=0
+sweep_routes=""
 if (( ! full )); then
   e2e_base=""
   if (( skips )); then
@@ -198,6 +268,24 @@ if (( ! full )); then
   else
     e2e_list="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs)"
     [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
+    # The no-op sweep specs open only the routes whose files the change reaches, a sweep spec with
+    # none of them is left out, and one with some runs (scripts/gate-scope.mjs --sweep, from the
+    # routes in spec-sources.json). The gate names each route it sweeps and why.
+    sweep_out="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/gate-scope.mjs --sweep)"
+    sweep_routes="$(cut -f2 <<<"$sweep_out" | sed '/^$/d')"
+    mapfile -t e2e_specs < <(
+      { printf '%s\n' "${e2e_specs[@]}" | grep -v '^e2e/controls-sweep-' || true; cut -f1 <<<"$sweep_out"; } | sed '/^$/d' | sort -u
+    )
+    for spec in $(grep '^e2e/controls-sweep-' <<<"$e2e_list" || true); do
+      grep -q "^$spec"$'\t' <<<"$sweep_out" \
+        || echo "local-ci: $spec sweeps none of its routes: this change reaches no file they draw."
+    done
+    if [[ -n "$sweep_out" && "$(cut -f3 <<<"$sweep_out" | sort -u | wc -l)" == 1 ]]; then
+      echo "local-ci: the no-op sweep opens $(wc -l <<<"$sweep_routes") routes, all because $(head -n 1 <<<"$sweep_out" | cut -f3)."
+    elif [[ -n "$sweep_out" ]]; then
+      echo "local-ci: the no-op sweep opens the $(wc -l <<<"$sweep_routes") routes this change reaches:"
+      awk -F'\t' '{ print "  " $1 " " $2 ": " $3 }' <<<"$sweep_out"
+    fi
     # At most FLOW_E2E_MAX specs (default 6), the branch's own changed specs first; main runs the rest.
     if (( ${#e2e_specs[@]} > ${FLOW_E2E_MAX:-6} )); then
       mapfile -t e2e_specs < <(
@@ -220,45 +308,153 @@ if (( ! full )) && grep -qE '^supabase/(migrations/|tests/|seed\.sql$|config\.to
   db_change=1
   db_list="$(node scripts/pgtap-specs.mjs <<<"$pr_files")"
   [[ -z "$db_list" ]] || mapfile -t db_specs <<<"$db_list"
+  if (( base_risk )) && base_area database; then db_specs=(supabase/tests/database); fi
+  # Main moved only flow-mcp or the shared package: the smoke and the types check, no pgTAP.
+  if (( base_only )) && ! base_area database; then db_specs=(); fi
+  if (( base_only )) && ! base_area database && ! base_area flow-mcp; then db_change=0; fi
 fi
+# The e2e specs read the database: they run again only when main moved it.
+if (( base_only )) && ! base_area database; then
+  (( ${#e2e_specs[@]} == 0 )) \
+    || echo "local-ci: this patch already passed its e2e specs, and main has not moved the database since; skipping them: ${e2e_specs[*]}"
+  e2e_specs=()
+  e2e_left=1
+fi
+
+# Starts Docker when it is down. In cloud containers dockerd alone can fail with "timeout waiting
+# for containerd", so containerd starts first and dockerd is pointed at its socket.
+start_docker() {
+  local sock=/run/containerd/containerd.sock retried=
+  docker info >/dev/null 2>&1 && return 0
+  start_dockerd() {
+    if [[ -S "$sock" ]]; then
+      (sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
+    else
+      (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
+    fi
+  }
+  # The socket file appears before containerd serves it, and dockerd started then exits with
+  # "connection refused": ask containerd itself whether it answers.
+  containerd_serving() {
+    if command -v ctr >/dev/null 2>&1; then
+      sudo -n ctr --address "$sock" version >/dev/null 2>&1
+    else
+      grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null
+    fi
+  }
+  if ! pgrep -x dockerd >/dev/null 2>&1; then
+    # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
+    # none runs. Either way, start dockerd only once containerd answers, for at most 30 seconds.
+    if ! pgrep -x containerd >/dev/null 2>&1; then
+      (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
+    fi
+    for _ in $(seq 1 30); do
+      containerd_serving && break
+      sleep 1
+    done
+    start_dockerd
+  fi
+  for i in $(seq 1 30); do
+    docker info >/dev/null 2>&1 && return 0
+    # dockerd exits at once when containerd wasn't ready yet; start it once more.
+    if [[ -z $retried ]] && (( i >= 5 )) && ! pgrep -x dockerd >/dev/null 2>&1; then
+      retried=1
+      start_dockerd
+    fi
+    sleep 1
+  done
+  return 1
+}
 
 supabase_exit=""
 if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
   phase "Docker and local Supabase"
-  if ! docker info >/dev/null 2>&1; then
-    (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
-    for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done
-  fi
-  if ! docker info >/dev/null 2>&1; then
-    if (( full )); then
-      echo "local-ci: Docker is not running and could not be started." >&2
-      exit 1
+  if ! start_docker; then
+    if (( full )); then need="the full run"
+    elif (( db_change )); then need="this change touches the database"
+    else need="these e2e specs reach this change: ${e2e_specs[*]}"
     fi
-    if (( db_change )); then
-      echo "local-ci: Docker is not running, and this change touches the database. Start Docker and push again." >&2
-      exit 1
-    fi
-    echo "local-ci: Docker is not running, so the e2e specs for this change are left to main: ${e2e_specs[*]}" >&2
-    e2e_specs=()
-    e2e_left=1
+    {
+      echo "local-ci: Docker is not running and could not be started, and $need. Nothing is left to main."
+      echo "  Start it, then push again:"
+      echo "    sudo containerd &   # wait until /run/containerd/containerd.sock exists"
+      echo "    sudo dockerd --containerd=/run/containerd/containerd.sock &"
+      echo "  Logs: /tmp/flow-containerd.log, /tmp/flow-dockerd.log"
+    } >&2
+    exit 1
   else
     supabase_log="$(mktemp)"
     supabase_exit="$(mktemp)"
     rm -f "$supabase_exit"
-    # Starts in the background while the static checks run. An instance that is already up is reset,
-    # so it carries this branch's migrations and no rows from an earlier run.
+    # An instance that is already up keeps its database when it carries this tree's migrations, seed
+    # and config (the last reset here recorded them) and no reached spec reads the database. A spec
+    # reads it when it or an e2e helper it imports reads FLOW_E2E_SUPABASE_URL, the local API it signs in
+    # and writes rows through (signed-out screens only reach auth). Anything else resets it.
+    db_tree="$(git ls-tree -r HEAD -- supabase/migrations supabase/seed.sql supabase/config.toml | sha256sum | cut -c1-40)"
+    db_readers=()
+    for spec in "${e2e_specs[@]}"; do
+      readers=("app/$spec")
+      while IFS= read -r helper; do readers+=("app/e2e/$helper.ts"); done \
+        < <(sed -nE 's/.*from "\.\/([^"]+)".*/\1/p' "app/$spec" 2>/dev/null)
+      if grep -q FLOW_E2E_SUPABASE "${readers[@]}" 2>/dev/null; then db_readers+=("$spec"); fi
+    done
+    db_reset=""
+    if (( full )); then db_reset="the full run"
+    elif (( db_change )); then db_reset="this change touches the database"
+    elif [[ "$(cat "$cache/supabase-db-tree" 2>/dev/null)" != "$db_tree" ]]; then
+      db_reset="its migrations, seed or config differ from the last reset here"
+    elif (( ${#db_readers[@]} > 0 )); then db_reset="these specs read the database: ${db_readers[*]}"
+    fi
+    if supabase status >/dev/null 2>&1; then
+      if [[ -n "$db_reset" ]]; then echo "local-ci: resetting local Supabase in the background: $db_reset."
+      else echo "local-ci: local Supabase is up with this tree's migrations, seed and config, and no reached spec reads the database; keeping it without a reset."
+      fi
+    fi
+    # Starts in the background while the static checks run. A reset instance carries this branch's
+    # migrations and no rows from an earlier run.
+    # A stack that is still starting (another run's start, or containers coming back after a restart)
+    # fails the first reset or start: wait for its database to answer, then try once more.
     (
+      up() {
+        if supabase status >/dev/null 2>&1; then
+          [[ -n "$db_reset" ]] || return 0
+          rm -f "$cache/supabase-db-tree"
+          supabase db reset >>"$supabase_log" 2>&1 || return
+          printf '%s' "$db_tree" >"$cache/supabase-db-tree"
+        else
+          # A start can reuse an older database volume, so only a reset records the tree.
+          rm -f "$cache/supabase-db-tree"
+          supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >>"$supabase_log" 2>&1
+        fi
+      }
       rc=0
-      if supabase status >/dev/null 2>&1; then
-        supabase db reset >"$supabase_log" 2>&1 || rc=$?
-      else
-        supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >"$supabase_log" 2>&1 || rc=$?
+      if ! up; then
+        echo "local-ci: local Supabase was not ready; waiting for it and trying again." >>"$supabase_log"
+        # The CLI refuses a database container whose health check still reads "starting".
+        for _ in $(seq 1 60); do
+          health="$(docker inspect -f '{{.State.Health.Status}}' supabase_db_flow 2>/dev/null || echo missing)"
+          [[ "$health" == healthy || "$health" == missing ]] && break
+          sleep 2
+        done
+        up || rc=$?
       fi
       echo "$rc" >"${supabase_exit}.tmp"
       mv "${supabase_exit}.tmp" "$supabase_exit"
     ) >/dev/null 2>&1 &
   fi
 fi
+# flow-mcp answers 503 in a cloud container until the edge runtime's npm cache is seeded from the host.
+edge_ready() {
+  local api
+  api="$(supabase status -o env | sed -n 's/^API_URL=//p' | head -n 1 | tr -d '"')"
+  [[ "$(curl -s -o /dev/null -w '%{http_code}' "$api/functions/v1/flow-mcp" || true)" == 405 ]] && return 0
+  bash scripts/seed-edge-cache.sh || echo "local-ci: could not seed the edge runtime cache." >&2
+  for _ in $(seq 1 15); do
+    [[ "$(curl -s -o /dev/null -w '%{http_code}' "$api/functions/v1/flow-mcp" || true)" == 405 ]] && return 0
+    sleep 2
+  done
+  echo "local-ci: flow-mcp still does not answer after seeding its cache." >&2
+}
 wait_supabase() {
   phase "e2e: waiting for local Supabase"
   while [[ ! -f "$supabase_exit" ]]; do sleep 2; done
@@ -272,7 +468,23 @@ wait_supabase() {
 
 phase "lint and check: lint, static checks, and builds, side by side"
 logs="$(mktemp -d)"
+# The lint rules read types, so a file's result can change only when the file or something it
+# imports changes: the branch's changed files and every file that imports them, all the way up
+# (scripts/gate-scope.mjs). A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all.
 lint_part() {
+  local scope
+  if (( skips )) && [[ -n "$pr_fork" ]]; then
+    scope="$(git diff --name-status "$pr_fork" HEAD | node scripts/gate-scope.mjs --lint)"
+    if [[ -z "$scope" ]]; then
+      echo "local-ci: lint skipped: this branch changes no file eslint reads (main lints all of it)."
+      return 0
+    fi
+    if [[ "$scope" != all ]]; then
+      echo "local-ci: linting the $(wc -l <<<"$scope") files this branch changes or that import them (main lints all of it)."
+      xargs -d '\n' pnpm exec eslint --no-warn-ignored <<<"$scope"
+      return
+    fi
+  fi
   pnpm lint
 }
 static_part() {
@@ -295,8 +507,29 @@ static_part() {
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
   bash scripts/check-edge-functions.sh
 }
+# The same tsc runs as pnpm typecheck, with --incremental: a tsbuildinfo per project in this
+# container's cache keeps what the last run checked, and tsc re-checks only the files a change
+# reaches (its own dependency tracking; a new TypeScript version starts over). --full, an
+# unexpected typecheck script, or a package with another script runs the scripts as they are.
 typecheck_part() {
-  pnpm typecheck
+  local info dir script
+  info="$(cd "$cache" && pwd)/tsbuildinfo"
+  if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
+    != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
+    pnpm typecheck
+    return
+  fi
+  mkdir -p "$info"
+  pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"
+  for dir in app packages/*/; do
+    dir="${dir%/}"
+    script="$(node -p "require('./$dir/package.json').scripts?.typecheck ?? ''")"
+    case "$script" in
+      "") ;;
+      "tsc --noEmit") (cd "$dir" && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile "$info/${dir//\//-}.tsbuildinfo") ;;
+      *) (cd "$dir" && pnpm run typecheck) ;;
+    esac
+  done
 }
 unit_part() {
   if (( ! skips )); then
@@ -316,12 +549,21 @@ unit_part() {
   pnpm test:connectors
   node scripts/check-deny-list.mjs
 }
+# Both dist builds. Skipped when every app input the branch changes is one the built app never
+# reads (tests, stories, e2e specs, test setups: scripts/gate-scope.mjs --build). Both run vite
+# build alone: the app's build script adds tsc --noEmit, the typecheck part's own check of the same
+# inputs (it runs beside this one, or passed on them before).
 build_part() {
-  pnpm build
+  if (( skips )) && [[ -n "$pr_fork" ]] \
+    && [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]; then
+    echo "local-ci: app builds skipped: this branch changes only tests, stories and specs, which the built app doesn't read (main builds it)."
+    return 0
+  fi
+  pnpm --filter @flow/app exec vite build
   node scripts/stamp-build.mjs "$head"
   pnpm check:bundle
   rm -rf app/dist
-  VITE_REVIEWER_BUILD=1 VITE_SUPABASE_URL="" VITE_SUPABASE_ANON_KEY="" pnpm build
+  VITE_REVIEWER_BUILD=1 VITE_SUPABASE_URL="" VITE_SUPABASE_ANON_KEY="" pnpm --filter @flow/app exec vite build
   pnpm check:reviewer-bundle
   test ! -f app/dist/build.txt
 }
@@ -336,9 +578,14 @@ app_tests() {
   if [[ "$project" == storybook ]]; then
     pnpm --filter @flow/app exec playwright install chromium
   fi
+  # The jsdom tests on one worker per core: vitest's default (one fewer) left 16% of the CPU idle,
+  # since each test file spends about a second starting its own jsdom and setup (the full suite on
+  # 4 cores: 203 s on 3 workers, 178 s on 4; 4 and 6 passed every test twice).
+  local workers=()
+  [[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")
   if base="$(changed_base "$project")"; then
-    echo "local-ci: $project tests related to the changes since ${base:0:7}."
-    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests
+    echo "local-ci: $project tests related to the changes since ${base:0:7}${workers:+, on $(nproc) workers}."
+    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests "${workers[@]}"
     # The module graph doesn't see a glob of the migrations: run the tests that read them by name.
     local globbing
     globbing="$(git grep -l 'supabase/migrations' -- 'app/src/*.test.ts' 'app/src/*.test.tsx' || true)"
@@ -348,7 +595,7 @@ app_tests() {
       pnpm --filter @flow/app exec vitest run --project unit ${globbing//app\//}
     fi
   elif [[ "$project" == unit ]]; then
-    pnpm --filter @flow/app test
+    pnpm --filter @flow/app test "${workers[@]}"
   else
     pnpm test:storybook
   fi
@@ -383,7 +630,18 @@ run_parts() {
     exit 1
   fi
 }
-if (( skips )); then
+if (( base_only )); then
+  # Lint reads only this branch's unchanged sources. The static part holds flow-mcp's Deno tests.
+  parts=()
+  if base_area database || base_area flow-mcp; then parts+=(static); fi
+  if base_area shared; then parts+=(unit "$typecheck_key=typecheck" "$build_key=build"); fi
+  (( ${#parts[@]} == 0 )) || run_parts "${parts[@]}"
+  rm -rf "$logs"
+  if base_area shared; then
+    phase "check: app unit tests"
+    app_tests unit
+  fi
+elif (( skips )); then
   # The server tests are short and run beside the static checks.
   run_parts "$lint_key=lint" static unit "$typecheck_key=typecheck" "$build_key=build"
   rm -rf "$logs"
@@ -399,7 +657,9 @@ else
 fi
 
 phase "check: Storybook"
-if (( skips )); then
+if (( base_only )); then
+  echo "local-ci: Storybook skipped: this branch's stories passed, and main changed none of their inputs it can reach."
+elif (( skips )); then
   app_tests storybook
 else
   pnpm --filter @flow/app exec playwright install chromium
@@ -415,7 +675,7 @@ storybook_smoke() {
     echo "local-ci: Storybook smoke skipped: these app inputs already passed."
     return 0
   fi
-  local base="" commit tree changed scope logs_dir
+  local base="" commit tree changed scope logs_dir setup
   logs_dir="$(mktemp -d)"
   if (( skips )); then
     while read -r commit tree; do
@@ -426,12 +686,15 @@ storybook_smoke() {
   if [[ -n "$base" ]]; then
     changed="$(branch_changes "$base")"
     # The vitest Storybook project above already ran the stories the change reaches. The build and
-    # its layout, clip and secret specs run when a story spec or the Storybook setup changes.
-    if ! grep -qE '^app/e2e/storybook-|^app/\.storybook/|^app/playwright\.storybook\.config\.ts$|^scripts/storybook-stories\.mjs$|^(app/)?package\.json$|^pnpm-lock\.yaml$' <<<"$changed"; then
+    # its layout, clip and secret specs run when a story spec or the Storybook setup changes; a
+    # manifest, tsconfig or lockfile counts only when the part the build reads changed.
+    setup="$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")"
+    if [[ "$setup" != yes* ]]; then
       echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
     fi
+    echo "local-ci: Storybook build and smoke run: ${setup#yes } changed, which they read."
   else
     changed="pnpm-lock.yaml"
   fi
@@ -443,7 +706,7 @@ storybook_smoke() {
   scope="$logs_dir/storybook-scope.txt"
   pnpm build-storybook >"$logs_dir/build-storybook.log" 2>&1 || { cat "$logs_dir/build-storybook.log"; return 1; }
   node scripts/storybook-stories.mjs --index app/storybook-static/index.json --budget "${FLOW_STORY_BUDGET:-250}" \
-    <<<"$changed" >"$scope"
+    ${base:+--base "$base"} <<<"$changed" >"$scope"
   if grep -qx all "$scope"; then
     echo "local-ci: the every-story check opens every story."
   else
@@ -465,10 +728,15 @@ storybook_smoke() {
 
 if (( ! full )); then
   phase "check: Storybook smoke (layout specs and the stories this change reaches)"
-  storybook_smoke
+  if (( base_only )); then
+    echo "local-ci: Storybook smoke skipped (base risk only)."
+  else
+    storybook_smoke
+  fi
   if (( db_change )); then
     wait_supabase
     phase "database: the flow-mcp smoke, db types, and ${#db_specs[@]} pgTAP files that name the change"
+    edge_ready
     bash scripts/mcp-function-smoke.sh
     (( ${#db_specs[@]} == 0 )) || supabase test db "${db_specs[@]}"
     bash scripts/check-db-types.sh
@@ -478,8 +746,11 @@ if (( ! full )); then
     phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
     eval "$(bash scripts/ci-local-supabase-env.sh)"
     pnpm --filter @flow/app exec playwright install chromium
-    # Playwright's default workers (half the cores): on every core the toast timing specs time out.
-    pnpm --filter @flow/app exec playwright test --fully-parallel "${e2e_specs[@]}"
+    # One worker per core but one: on every core the toast timing specs time out, and Playwright's
+    # default (half the cores) left a core idle (the review set: 293 s on 2 of 4 cores, 246 s on 3).
+    e2e_workers="$(( $(nproc) > 2 ? $(nproc) - 1 : 1 ))"
+    echo "local-ci: running the e2e specs on $e2e_workers Playwright workers ($(nproc) cores)."
+    FLOW_SWEEP_ROUTES="$sweep_routes" pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"
@@ -491,9 +762,14 @@ fi
 pnpm build-storybook
 pnpm test:storybook:smoke
 
+phase "Home speed test (FLOW-804)"
+pnpm build
+pnpm --filter @flow/app test:perf
+
 wait_supabase
 
 phase "e2e: database checks"
+edge_ready
 bash scripts/mcp-function-smoke.sh
 supabase test db supabase/tests/database
 bash scripts/check-db-types.sh

@@ -1,5 +1,5 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -121,6 +121,17 @@ async function settle(): Promise<void> {
   for (let tick = 0; tick < 3; tick += 1) await act(async () => {});
 }
 
+/**
+ * Waits until the page shows the heading. A screen draws one heading while its reads load and
+ * another once they land, so an element found early can leave the page before the next line
+ * checks it; this asks the page again on every try instead of holding one element.
+ */
+async function headingShows(name: string): Promise<void> {
+  await waitFor(() => {
+    expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+  });
+}
+
 afterEach(() => {
   auth.handlers.length = 0;
   onlineManager.setOnline(true);
@@ -149,14 +160,14 @@ describe("auth guard when Supabase is configured", () => {
       emit("INITIAL_SESSION", session);
     });
     await settle();
-    expect(await screen.findByRole("heading", { name: "פרטי העסק" })).toBeInTheDocument();
+    await headingShows("פרטי העסק");
     expect(screen.queryByText("שלום, דנה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     act(() => {
       emit("SIGNED_OUT", null);
     });
     await settle();
-    expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
+    await headingShows("כניסה או הרשמה");
   });
 
   it("shows the offline screen when the home query is paused", async () => {
@@ -166,7 +177,9 @@ describe("auth guard when Supabase is configured", () => {
       emit("INITIAL_SESSION", session);
     });
     await settle();
-    expect(await screen.findByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+    });
     expect(screen.queryByText("עוד אין נתונים")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "העלאת דוח בנק" })).not.toBeInTheDocument();
   });
@@ -182,7 +195,7 @@ describe("auth guard when Supabase is configured", () => {
       emit("SIGNED_IN", session);
     });
     await settle();
-    expect(await screen.findByRole("heading", { name: "לאישור" })).toBeInTheDocument();
+    await headingShows("לאישור");
     first.unmount();
     auth.handlers.length = 0;
 
@@ -195,7 +208,7 @@ describe("auth guard when Supabase is configured", () => {
       emit("SIGNED_IN", session);
     });
     await settle();
-    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeInTheDocument();
+    await headingShows("כאן יופיע הרווח של העסק");
     expect(screen.queryByRole("heading", { name: "לאישור" })).not.toBeInTheDocument();
   });
 });

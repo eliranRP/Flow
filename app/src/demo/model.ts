@@ -13,7 +13,7 @@ import {
   type UnpaidRow,
 } from "@flow/shared";
 import { demoDataSchema, pnlFromDemo } from "@flow/shared/testing";
-import raw from "../../../packages/shared/fixtures/demo-data.json";
+import raw from "../../../packages/shared/fixtures/demo-data.json" with { type: "json" };
 
 const demo = demoDataSchema.parse(raw);
 const full = pnlFromDemo(demo);
@@ -183,7 +183,7 @@ export function demoCategories(): CategoryRow[] {
     ["הובלה", "expense"],
     ["ביטוח", "expense"],
     ["אחר", "expense"],
-    ["תקבול מלקוח", "income"],
+    ["הכנסה מלקוחות", "income"],
     ["הכנסה אחרת", "income"],
   ];
   return names.map(([name, kind], index) => ({

@@ -82,7 +82,7 @@ export async function callTool(
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const body = await dashboard(rpc, from, to, basis);
     if (isFail(body)) return body;
@@ -95,7 +95,7 @@ export async function callTool(
   if (name === "get_project") {
     const projectId = args.id;
     if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
@@ -121,7 +121,7 @@ export async function callTool(
   if (name === "get_project_group") {
     const groupId = args.id;
     if (typeof groupId !== "string" || !UUID.test(groupId)) return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
@@ -135,7 +135,7 @@ export async function callTool(
     // The RPC returns null for an unknown id and for another company's group.
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
-    return ok(result.json as Review);
+    return ok({ ...(result.json as Review), basis });
   }
 
   if (name === "get_project_categories") {
@@ -158,7 +158,7 @@ export async function callTool(
     if (typeof to !== "string" && to != null) return to;
     if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
     if (from != null && to != null && monthsBetween(from, to) >= PROFIT_MONTHS_MAX) return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const projectId = args.project_id == null ? null : args.project_id;
     if (projectId != null && (typeof projectId !== "string" || !UUID.test(projectId))) return fail("validation", "validation");
@@ -167,7 +167,7 @@ export async function callTool(
     // The RPC returns null for a project of another company or an unknown one.
     if (result.json == null) return projectId == null ? fail("refused", READ_REFUSED) : fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
-    return ok(result.json as Review);
+    return ok({ ...(result.json as Review), basis });
   }
 
   if (name === "get_jev_status") {
@@ -250,7 +250,7 @@ export async function callTool(
     const level = args.level == null ? "category" : args.level;
     if (level !== "category" && level !== "parent") return fail("validation", "validation");
     if (level === "parent" && groupBy !== "category") return fail("validation", "validation");
-    const basis = args.basis == null ? "cash" : args.basis;
+    const basis = args.basis == null ? "invoiced" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
@@ -269,7 +269,7 @@ export async function callTool(
       if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
         return fail("refused", READ_REFUSED);
       }
-      return ok(result.json as Review);
+      return ok({ ...(result.json as Review), basis });
     }
     const group = args.group == null ? null : args.group;
     if (group != null && (typeof group !== "string" || group.length === 0 || group.length > 64)) return fail("validation", "validation");
@@ -292,6 +292,62 @@ export async function callTool(
       p_limit: limit,
       p_offset: offset,
     });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok({ ...(result.json as Review), basis });
+  }
+
+  // FLOW-413 (decision 0168): money in and out per month, on the company's cash basis.
+  if (name === "get_cash_months") {
+    const months = args.months == null ? 6 : args.months;
+    if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 24) {
+      return fail("validation", "validation");
+    }
+    const result = await rpc("cash_months", { p_months: months });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(result.json as Review);
+  }
+
+  if (name === "get_cash_lines") {
+    // A month is YYYY-MM or any YYYY-MM-DD in it, as get_cash_months returns it.
+    const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
+    if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
+    const side = args.side;
+    if (side !== "in" && side !== "out" && side !== "excluded") return fail("validation", "validation");
+    const currency = args.currency ?? null;
+    if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
+    const limit = limitOf(args.limit, 40);
+    if (typeof limit !== "number") return limit;
+    if (limit === 0) return fail("validation", "validation");
+    const offset = offsetOf(args.offset);
+    if (typeof offset !== "number") return offset;
+    const result = await rpc("cash_month_lines", {
+      p_month: month,
+      p_side: side,
+      p_currency: currency,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(result.json as Review);
+  }
+
+  // FLOW-213: pairs an outside ledger's rows with Flow lines; the matching is SQL (decision 0084).
+  if (name === "match_lines") {
+    const rows = matchRowsOf(args.rows);
+    if (rows == null) return fail("validation", "validation");
+    const window = args.window_days ?? 5;
+    if (typeof window !== "number" || !Number.isInteger(window) || window < 0 || window > 31) return fail("validation", "validation");
+    const direction = args.direction ?? null;
+    if (direction != null && direction !== "income" && direction !== "expense") return fail("validation", "validation");
+    const currency = args.currency ?? null;
+    if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
+    const result = await rpc("match_lines", { p_rows: rows, p_window_days: window, p_direction: direction, p_currency: currency });
     if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
       return fail("refused", READ_REFUSED);
     }
@@ -558,7 +614,12 @@ export async function callTool(
   let out: Record<string, unknown> = row;
   if (Array.isArray(parts) && parts.length > 0 && typeof row === "object" && !Array.isArray(row)) {
     const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
-    out = { ...row, line_split: lineSplit };
+    // FLOW-212: the parts are what count, so the percent shares kept from before the split move
+    // to allocations_superseded and allocations reads empty, as on a line with no shares.
+    const { allocations: before, ...rest } = row;
+    out = Array.isArray(before) && before.length > 0
+      ? { ...rest, allocations: [], allocations_superseded: before, line_split: lineSplit }
+      : { ...row, line_split: lineSplit };
   }
   if (row.direction === "income") return ok({ ...out, loan_split: null });
   // get_transaction carries the loan split since FLOW-114; read it on its own only from a
@@ -567,4 +628,23 @@ export async function callTool(
   const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
   return ok({ ...out, loan_split: loanSplit.json ?? null });
+}
+
+const MATCH_ROW_KEYS = new Set(["date", "amount_minor", "ref"]);
+
+/** match_lines rows as the RPC takes them, or null when any row is malformed. */
+function matchRowsOf(value: unknown): { date: string; amount_minor: number; ref: string | null }[] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 500) return null;
+  const rows: { date: string; amount_minor: number; ref: string | null }[] = [];
+  for (const row of value) {
+    if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
+    const entry = row as Record<string, unknown>;
+    if (Object.keys(entry).some((key) => !MATCH_ROW_KEYS.has(key))) return null;
+    const { date, amount_minor: amount, ref = null } = entry;
+    if (typeof date !== "string" || !isCalendarDate(date)) return null;
+    if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) >= 1e15) return null;
+    if (ref != null && (typeof ref !== "string" || ref.length > 200)) return null;
+    rows.push({ date, amount_minor: amount, ref: ref as string | null });
+  }
+  return rows;
 }

@@ -28,16 +28,18 @@ function daysBefore(iso: string): number {
   return Math.max(0, Math.round((end - start) / 86_400_000));
 }
 
-/** "היום", "אתמול", else "לפני N ימים" (FLOW-353). */
+/** "היום", "אתמול", "לפני יומיים", else "לפני N ימים" (FLOW-353). */
 export function unpaidAge(days: number): string {
   if (days === 0) return "היום";
   if (days === 1) return "אתמול";
+  if (days === 2) return "לפני יומיים";
   return `לפני ${String(days)} ימים`;
 }
 
 /**
- * FLOW-353: the hint's parts, each carrying its "·" at its start, so at 320 the line breaks before a
- * separator. The date, the age and the mark stay whole; a long project name may still wrap.
+ * FLOW-356: the hint's parts, each but the last carrying its "·" at its end, so at 320 the line
+ * breaks after a separator and a wrapped line never starts with one. The date, the age and the mark
+ * stay whole; a long project name may still wrap.
  */
 function unpaidHint(row: UnpaidRow, marked: boolean): ReactNode {
   const parts: Array<{ text: string; whole: boolean }> = [
@@ -47,7 +49,7 @@ function unpaidHint(row: UnpaidRow, marked: boolean): ReactNode {
     { text: unpaidAge(daysBefore(row.doc_date)), whole: true },
   ];
   return parts.map((part, index) => {
-    const text = index === 0 ? part.text : `·\u00A0${part.text}`;
+    const text = index === parts.length - 1 ? part.text : `${part.text}\u00A0·`;
     return (
       <Fragment key={index}>
         {index === 0 ? null : " "}

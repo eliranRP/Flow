@@ -29,6 +29,9 @@ export const READ_TOOL_NAMES = [
   "get_expected_months",
   "list_unpaid",
   "list_team",
+  "get_cash_months",
+  "get_cash_lines",
+  "match_lines",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -75,6 +78,10 @@ export const WRITE_TOOL_NAMES = [
   "create_project_group",
   "set_project_group",
   "set_jev_mode",
+  "set_category_cash",
+  "set_line_cash",
+  "set_lines_cash",
+  "set_cash_basis",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -103,6 +110,9 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_expected_months: new Set(["months", "project_id"]),
   list_unpaid: new Set(),
   list_team: new Set(),
+  get_cash_months: new Set(["months"]),
+  get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
+  match_lines: new Set(["rows", "window_days", "direction", "currency"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -147,6 +157,10 @@ export const ALLOWED: Record<string, Set<string>> = {
   create_project_group: new Set(["idempotency_key", "name"]),
   set_project_group: new Set(["idempotency_key", "project_id", "group_id"]),
   set_jev_mode: new Set(["idempotency_key", "enabled", "mode", "threshold"]),
+  set_category_cash: new Set(["idempotency_key", "category_id", "in_cash"]),
+  set_line_cash: new Set(["idempotency_key", "transaction_id", "in_cash"]),
+  set_lines_cash: new Set(["idempotency_key", "items"]),
+  set_cash_basis: new Set(["idempotency_key", "basis"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -238,7 +252,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -580,6 +594,38 @@ export const setLinesPnlSchema = z.object({
     seen.add(item.transaction_id);
   }
 });
+// FLOW-413 (decision 0168). in_cash false takes the line out of the cash view, true keeps it in, null follows its category.
+export const setCategoryCashSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+  in_cash: z.boolean(),
+}).strict();
+export const setLineCashSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  in_cash: z.boolean().nullable(),
+}).strict();
+export const setLinesCashSchema = z.object({
+  idempotency_key: BATCH_KEY,
+  items: z.array(z.object({
+    transaction_id: UUID_TEXT,
+    in_cash: z.boolean().nullable(),
+  }).strict()).min(1).max(200),
+}).strict().superRefine((body, ctx) => {
+  const seen = new Set<string>();
+  for (const item of body.items) {
+    if (seen.has(item.transaction_id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      return;
+    }
+    seen.add(item.transaction_id);
+  }
+});
+// FLOW-103: paid counts a line in its payment month, invoice in its document month.
+export const setCashBasisSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  basis: z.enum(["paid", "invoice"]),
+}).strict();
 export const setInvoicePaidSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,

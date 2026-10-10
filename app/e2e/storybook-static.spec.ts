@@ -133,29 +133,90 @@ async function checkStoryShard(page: Page, context: BrowserContext, shard: numbe
   if (scoped.length === allStories.length) expect(stories.length).toBeGreaterThan(0);
 
   const failures: string[] = [];
+  // The manager loads once per shard; each next story opens in place through the manager's own
+  // router (a popstate on the new ?path=), as a click in the sidebar does, which skips reloading the
+  // manager and the preview for every story. A story that shows any problem in place is opened
+  // again on a fresh page, and only that result counts: a story can leave module state behind (a
+  // client, a flag) that the next one would not see on its own page.
+  let fresh = true;
   for (const entry of stories) {
     story = { id: entry.id, title: entry.title, name: entry.name };
-    const problems: string[] = [];
-    const stop = recordProblems(page, problems);
-    try {
-      await page.goto(`/?path=/story/${entry.id}`, { waitUntil: "domcontentloaded" });
-      const root = page.frameLocator("#storybook-preview-iframe").locator("#storybook-root");
-      await root.waitFor({ state: "attached", timeout: 20_000 });
-      await expect(page.locator("#storybook-explorer-tree, #storybook-preview-iframe").first()).toBeVisible();
-      // The manager stringifies args after the preview reports the story.
-      await page.waitForTimeout(200);
-      const body = (await page.locator("body").innerText()).trim();
-      if (!body) problems.push("manager body is blank");
-    } catch (error) {
-      problems.push(error instanceof Error ? error.message : String(error));
-    } finally {
-      stop();
+    const mark = blocked.length;
+    let problems = await checkStory(page, entry.id, fresh);
+    if (problems.length > 0 || blocked.length > mark) {
+      if (!fresh) {
+        // Leave the old document first: its in-flight requests abort on the way out, and that is
+        // not this story's doing.
+        await page.goto("about:blank");
+        blocked.length = mark;
+        problems = await checkStory(page, entry.id, true);
+      }
     }
+    fresh = problems.length > 0 || blocked.length > mark;
     if (problems.length > 0) failures.push(`${entry.title} / ${entry.name}: ${problems.join(" | ")}`);
   }
 
   for (const hit of blocked) failures.push(`${hit.title} / ${hit.name} [${hit.id}]: ${hit.kind} ${hit.url}`);
   expect(failures, failures.join("\n")).toEqual([]);
+}
+
+/** Opens one story and returns what went wrong: console errors, a page error, a failed render. */
+async function checkStory(page: Page, id: string, fresh: boolean): Promise<string[]> {
+  const problems: string[] = [];
+  const stop = recordProblems(page, problems);
+  try {
+    await openStory(page, id, fresh);
+    // The manager stringifies args after the preview reports the story.
+    await page.waitForTimeout(fresh ? 200 : 100);
+    const body = (await page.locator("body").innerText()).trim();
+    if (!body) problems.push("manager body is blank");
+  } catch (error) {
+    problems.push(error instanceof Error ? error.message : String(error));
+  } finally {
+    stop();
+  }
+  return problems;
+}
+
+/** The phases after which Storybook 8's preview is done with a story. */
+const DONE_PHASES = new Set(["completed", "finished", "played", "errored", "aborted"]);
+
+/**
+ * A fresh open waits until the story has rendered, not for its play: a play that drives a sheet can
+ * fail in the manager's desktop frame though it passes in the Storybook test run, which owns plays.
+ */
+const RENDERED_PHASES = new Set([...DONE_PHASES, "playing"]);
+
+/**
+ * Opens one story in the manager. A fresh open loads the story's URL; in place, the manager's router
+ * moves to it. Either way the wait is for the preview to finish rendering it. An errored or aborted
+ * render throws, so the story fails.
+ */
+async function openStory(page: Page, id: string, fresh: boolean): Promise<void> {
+  if (fresh) {
+    await page.goto(`/?path=/story/${id}`, { waitUntil: "domcontentloaded" });
+  } else {
+    await page.evaluate((next) => {
+      window.history.pushState({}, "", `/?path=/story/${next}`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }, id);
+  }
+  const root = page.frameLocator("#storybook-preview-iframe").locator("#storybook-root");
+  await root.waitFor({ state: "attached", timeout: 20_000 });
+  await expect(page.locator("#storybook-explorer-tree, #storybook-preview-iframe").first()).toBeVisible();
+  // Fresh or in place, wait for the preview to render this story (in place the root is already
+  // there from the story before). A request a story sends once it has rendered, such as a query a
+  // sample forgot to fill, then lands on this story and fails it, also on the fresh retry; the root
+  // alone is there before the story renders, so the old wait let such a request through.
+  const phase = await page.waitForFunction(({ want, done }) => {
+    const frame = document.querySelector<HTMLIFrameElement>("#storybook-preview-iframe");
+    const preview = (frame?.contentWindow as { __STORYBOOK_PREVIEW__?: { currentRender?: { id?: string; phase?: string } } } | null)
+      ?.__STORYBOOK_PREVIEW__;
+    const render = preview?.currentRender;
+    return render?.id === want && render.phase !== undefined && done.includes(render.phase) ? render.phase : false;
+  }, { want: id, done: [...(fresh ? RENDERED_PHASES : DONE_PHASES)] }, { timeout: 20_000 });
+  const reached = (await phase.jsonValue()) as string;
+  if (reached === "errored" || reached === "aborted") throw new Error(`the story ${reached}`);
 }
 
 test("the network guard aborts a fetch and a websocket outside storybook", async ({ page, context }) => {

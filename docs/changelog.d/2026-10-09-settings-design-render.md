@@ -1,0 +1,1 @@
+Design screens: `design/screens/14-settings-{light,dark}.png` are re-rendered from `design/src` with Rubik at 390×1492, scale 2, so the Google account row now shows the example address owner@example.com. Nothing else on the page changed. Closes FLOW-905. No app change.

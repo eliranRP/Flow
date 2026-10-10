@@ -377,8 +377,8 @@ select is(
   'get_project(uuid, text, date, date) is security invoker'
 );
 select is(
-  (select jsonb_agg(p.proconfig order by p.pronargs) from pg_proc p where p.oid in ('public.get_project(uuid)'::regprocedure, 'public.get_project(uuid, text, date, date)'::regprocedure)),
-  '[["search_path=\"\""], ["search_path=\"\""]]'::jsonb,
+  (select jsonb_agg('search_path=""' = any(p.proconfig) order by p.pronargs) from pg_proc p where p.oid in ('public.get_project(uuid)'::regprocedure, 'public.get_project(uuid, text, date, date)'::regprocedure)),
+  '[true, true]'::jsonb,
   'both get_project forms pin an empty search_path'
 );
 select is(

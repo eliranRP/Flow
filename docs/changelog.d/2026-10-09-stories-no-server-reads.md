@@ -1,0 +1,1 @@
+Main's stories check: the setup step 5 install stories pass an answered reminder sample, and every story route starts with the company currency, so no story asks the server for either (a late request was blamed on the next story in the shard).
