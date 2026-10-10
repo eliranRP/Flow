@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { STARTER_SETS, type StarterSetKey } from "@flow/shared";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { useAuth } from "../auth";
@@ -15,7 +16,9 @@ import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { Toggle } from "../ui/toggle";
 import { detectInstallMode, hasInstallPrompt, isStandalone, runInstallPrompt, type InstallMode } from "../ui/install-prompt";
-import { useWrite } from "../use-write";
+import { assertNoError, useWrite } from "../use-write";
+import { getSupabase } from "../lib/supabase";
+import { RadioRow } from "../ui/radio-row";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { CountTitle, NameHint } from "./card";
 import {
@@ -23,6 +26,9 @@ import {
   JEV_HINT,
   NO_PROJECTS_HINT,
   SAVE_ERROR,
+  STARTER_HINT,
+  STARTER_LINE,
+  STARTER_TITLE,
   STEP_TITLE,
   SUMIT_FAILURE_LINE,
   SUMIT_FAILURE_TITLE,
@@ -80,6 +86,65 @@ export function StepBusiness({
 
 export function SumitFailureNote() {
   return <Notice tone="bad" title={SUMIT_FAILURE_TITLE} body={SUMIT_FAILURE_LINE} />;
+}
+
+/** A refusal that means the books already have lines, so the default list stays (decision 0164). */
+export function isStarterLocked(error: Error): boolean {
+  return /starter_locked/.test(error.message);
+}
+
+/**
+ * FLOW-406: right after the company step, before step 1 brings lines in. כללי is picked on
+ * arrival and המשך is the one button; with the books no longer empty the step moves on silently.
+ */
+export function StepStarter({
+  initial,
+  onDone,
+}: {
+  /** The set already applied in this run, so back from step 1 shows it and does not re-apply it. */
+  initial?: StarterSetKey | null;
+  onDone: (set: StarterSetKey | null) => void;
+}) {
+  const [set, setSet] = useState<StarterSetKey>(initial ?? "general");
+  const apply = useWrite<StarterSetKey>({
+    failure: SAVE_ERROR,
+    keys: ["categories"],
+    onSuccess: onDone,
+    onError: (error) => {
+      if (isStarterLocked(error)) onDone(null);
+    },
+    silent: isStarterLocked,
+    run: async (key) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("apply_starter_categories", { p_set: key }));
+    },
+  });
+  return (
+    <SetupStep
+      step={0}
+      title={STARTER_TITLE}
+      line={STARTER_LINE}
+      primary={<Button type="button" full busy={apply.isPending} onClick={() => {
+        if (set === initial) onDone(set);
+        else apply.mutate(set);
+      }}>המשך</Button>}
+    >
+      <div className="ui-setup-starter" role="radiogroup" aria-label={STARTER_TITLE}>
+        {STARTER_SETS.map((row) => (
+          <RadioRow
+            key={row.key}
+            value={row.key}
+            label={row.label}
+            hint={STARTER_HINT[row.key]}
+            selected={set === row.key}
+            disabled={apply.isPending && set !== row.key}
+            onSelect={() => { setSet(row.key); }}
+          />
+        ))}
+      </div>
+    </SetupStep>
+  );
 }
 
 export function StepSumit({

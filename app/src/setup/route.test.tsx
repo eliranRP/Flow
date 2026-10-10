@@ -7,7 +7,7 @@ import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupStepScreen } from "./route";
-import { readSetupStore, setupStorageKey } from "./storage";
+import { markCompanyCreated, readSetupStore, setupStorageKey } from "./storage";
 
 const userId = "user-1";
 const companyId = "company-1";
@@ -24,6 +24,11 @@ const invoke = vi.hoisted(() => vi.fn(
   (_name: string, _options?: { body?: unknown }): Promise<{ data: unknown; error: null }> =>
     Promise.resolve({ data: null, error: null }),
 ));
+
+const starter = vi.hoisted(() => ({
+  calls: [] as unknown[],
+  error: null as { message: string; code?: string } | null,
+}));
 
 const dashboard = {
   company_id: companyId,
@@ -67,7 +72,11 @@ const supabase = {
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
   },
-  rpc: (name: string) => {
+  rpc: (name: string, args?: unknown) => {
+    if (name === "apply_starter_categories") {
+      starter.calls.push(args);
+      return Promise.resolve({ data: starter.error ? null : { set: "rentals", categories: 14 }, error: starter.error });
+    }
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "sumit_status") {
       return Promise.resolve({
@@ -219,5 +228,57 @@ describe("setup route history", () => {
     await waitFor(() => {
       expect(step.state.location.pathname).toBe("/setup/1");
     });
+  });
+
+  it("asks for the starter categories once the company exists, with כללי picked on arrival", async () => {
+    markCompanyCreated(userId);
+    starter.calls = [];
+    starter.error = null;
+    const router = renderRoute("/setup/0");
+    expect(await screen.findByRole("heading", { name: "קטגוריות לפתיחה" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "כללי" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("button", { name: "דלג" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "השכרת נכסים" }));
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    expect(starter.calls).toEqual([{ p_set: "rentals" }]);
+    expect(readSetupStore(userId, companyId).starter_set).toBe("rentals");
+  });
+
+  it("moves on without a word when the books already have lines", async () => {
+    markCompanyCreated(userId);
+    starter.calls = [];
+    starter.error = { message: "starter_locked", code: "55000" };
+    const router = renderRoute("/setup/0");
+    fireEvent.click(await screen.findByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    expect(starter.calls).toEqual([{ p_set: "general" }]);
+    expect(readSetupStore(userId, companyId).starter_set).toBeNull();
+    expect(document.querySelector(".ui-toast")).toBeNull();
+  });
+
+  it("back from step 1 shows the set already applied and does not apply it again", async () => {
+    markCompanyCreated(userId);
+    starter.calls = [];
+    starter.error = null;
+    const router = renderRoute("/setup/0");
+    fireEvent.click(await screen.findByRole("radio", { name: "השכרת נכסים" }));
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect((await screen.findByRole("radio", { name: "השכרת נכסים" })).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+    });
+    expect(starter.calls).toEqual([{ p_set: "rentals" }]);
   });
 });
