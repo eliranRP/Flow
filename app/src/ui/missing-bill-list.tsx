@@ -55,10 +55,18 @@ export const SECTION_ID: Record<RecurringSection, string> = { late: "late", arri
 
 /**
  * One row with an optional "הסתרה": a muted 44px ✕ at the row's end, and a swipe toward the start
- * that does the same (FLOW-415, owner 08:41Z). The hide is this user's only.
+ * that does the same (FLOW-415, owner 08:41Z). The hide is this user's only. A row with nothing to
+ * hide keeps the ✕'s place empty when its list can hide, so the amounts stay in one column.
  */
-function HideableRow({ name, onHide, children }: { name: string; onHide?: () => void; children: ReactNode }) {
-  if (onHide == null) return <div className="ui-recurring-row">{children}</div>;
+function HideableRow({ name, onHide, reserve = false, children }: { name: string; onHide?: () => void; reserve?: boolean; children: ReactNode }) {
+  if (onHide == null) {
+    return (
+      <div className="ui-recurring-row">
+        {children}
+        {reserve ? <span className="ui-recurring-hide-space" aria-hidden="true" /> : null}
+      </div>
+    );
+  }
   return (
     <SwipeRemove label="הסתרה" onRemove={onHide}>
       <div className="ui-recurring-row">
@@ -146,7 +154,7 @@ export function MissingBillList({
           <SectionHead title="לא הגיעו" />
           <List className="ui-missing-bills">
             {rows.map((row) => (
-              <HideableRow key={row.id} name={row.name} onHide={hide("missing", row.alertKey, row.name)}>
+              <HideableRow key={row.id} name={row.name} onHide={hide("missing", row.alertKey, row.name)} reserve={onHide != null}>
                 <Link
                   to={row.href}
                   className="ui-row ui-hit"
@@ -176,7 +184,7 @@ export function MissingBillList({
             {arrived.map((row) => {
               const amount = formatAmountText(row.minor, row.currency);
               return (
-                <HideableRow key={row.id} name={row.name} onHide={hide("change", row.alertKey, row.name)}>
+                <HideableRow key={row.id} name={row.name} onHide={hide("change", row.alertKey, row.name)} reserve={onHide != null}>
                   <Link
                     to={row.href}
                     className="ui-row ui-hit"
