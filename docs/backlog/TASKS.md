@@ -263,6 +263,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-420"></a>[FLOW-420](tasks/FLOW-420.md) | Phone polish after the profit-line deploy (cycle 16) | SMALL UI |
 | <a id="flow-422"></a>[FLOW-422](tasks/FLOW-422.md) | A project's month page steps months like Home's | SMALL UI |
 | <a id="flow-423"></a>[FLOW-423](tasks/FLOW-423.md) | A fixed way into קבועים from Home | SMALL UI |
+| <a id="flow-424"></a>[FLOW-424](tasks/FLOW-424.md) | Cycle 18 polish on lists, קבועים and the usual-amount chip | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
