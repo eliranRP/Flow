@@ -3,7 +3,14 @@ import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoProject } from "./demo/model";
 import { noteShownCompanyUser, resetShownCompanyForTests, setShownCompany } from "./lib/company-header";
-import { forgetProjectReads, keepProjectReadsFor, saveProjectRead, savedProjectRead } from "./project-cache";
+import {
+  forgetProjectReads,
+  keepProjectReadsFor,
+  saveCompanyCurrency,
+  savedCompanyCurrency,
+  saveProjectRead,
+  savedProjectRead,
+} from "./project-cache";
 import { projectQueryOptions } from "./use-books";
 
 const USER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -94,6 +101,21 @@ describe("saved project reads (FLOW-804)", () => {
     saveProjectRead("levi||", project("levi"));
     setItem.mockRestore();
     expect(localStorage.getItem("flow-project-reads")).toBeNull();
+  });
+
+  it("keeps the company currency beside the project reads, for the same user and company", () => {
+    saveProjectRead("herzl||", project());
+    saveCompanyCurrency("USD", 5);
+    expect(savedCompanyCurrency()).toEqual({ value: "USD", at: 5 });
+    // A project read saved later keeps the currency, and the currency keeps the reads.
+    saveProjectRead("levi||", project("levi"));
+    expect(savedCompanyCurrency()?.value).toBe("USD");
+    expect(savedProjectRead("herzl||")).not.toBeNull();
+    setShownCompany(USER_A, COMPANY_B);
+    expect(savedCompanyCurrency()).toBeNull();
+    setShownCompany(USER_A, COMPANY_A);
+    forgetProjectReads();
+    expect(savedCompanyCurrency()).toBeNull();
   });
 
   it("starts a project page's read from the saved one, stale, so it is read again", () => {

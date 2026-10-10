@@ -83,6 +83,8 @@ function session(): string {
 export interface StubBackend {
   /** RPC names read so far, in order. */
   rpcs: string[];
+  /** Every REST read so far, in order: an RPC's name, or a table's as "table:<name>", with when it was asked and answered. */
+  reads: { name: string; asked: number; answered: number | null }[];
   /** Requests to the stub not answered yet. */
   inflight: () => number;
 }
@@ -95,6 +97,7 @@ export interface StubOptions {
 /** Signs the page in and answers every request to the stub address from the demo books. */
 export async function stubBackend(page: Page, options: StubOptions = {}): Promise<StubBackend> {
   const rpcs: string[] = [];
+  const reads: StubBackend["reads"] = [];
   let open = 0;
   const key = `sb-${new URL(STUB_URL).hostname.split(".")[0] ?? "local"}-auth-token`;
   await page.addInitScript(({ storageKey, value }) => {
@@ -106,20 +109,26 @@ export async function stubBackend(page: Page, options: StubOptions = {}): Promis
       const request = route.request();
       const url = request.url();
       const name = rpcName(url);
+      const table = /\/rest\/v1\/(?!rpc\/)([^/?]+)/.exec(url)?.[1];
+      const read = name ?? (table ? `table:${table}` : null);
+      const entry = read == null ? null : { name: read, asked: Date.now(), answered: null as number | null };
+      if (entry) reads.push(entry);
       if (name) {
         rpcs.push(name);
         const args = (request.postDataJSON() ?? {}) as Record<string, unknown>;
         const wait = options.delay?.(name) ?? 0;
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
         await route.fulfill({ status: 200, contentType: "application/json", body: wire(rpcBody(name, args)) });
+        if (entry) entry.answered = Date.now();
       } else if (url.includes("/auth/v1/user")) {
         await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(USER) });
       } else {
         await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+        if (entry) entry.answered = Date.now();
       }
     } finally {
       open -= 1;
     }
   });
-  return { rpcs, inflight: () => open };
+  return { rpcs, reads, inflight: () => open };
 }
