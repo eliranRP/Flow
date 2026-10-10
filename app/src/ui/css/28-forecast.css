@@ -34,7 +34,7 @@
   list-style: none;
 }
 
-/* FLOW-415 (b-2): the קבועים screen. A row that can be hidden ends in a muted 44px ✕. */
+/* FLOW-415 (b-2): the קבועים screen. A row that can be hidden ends in a muted 44px eye-off button, with no chevron. */
 /* Every row sits on the surface, as a hideable row's swipe layer does, so the list reads as one. */
 .ui-recurring-row {
   display: flex;
@@ -53,7 +53,7 @@
   color: var(--color-text-muted);
 }
 
-/* The ✕'s place on a row with nothing to hide. */
+/* The eye-off button's place on a row with nothing to hide. */
 .ui-recurring-hide-space {
   flex: none;
   inline-size: var(--touch-min);

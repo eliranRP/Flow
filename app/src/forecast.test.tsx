@@ -180,7 +180,7 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     expect(rent?.worse).toBe(true);
   });
 
-  it("draws both sections, and hides a late row or a change with the ✕", () => {
+  it("draws both sections, and hides a late row or a change with the eye-off button, with no chevron", () => {
     const onHide = vi.fn();
     render(
       <MemoryRouter>
@@ -205,6 +205,21 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     fireEvent.click(within(arrived).getByRole("button", { name: "הסתרה, אור חשמל" }));
     expect(onHide).toHaveBeenCalledWith("change", "t-power-oct", "אור חשמל");
     expect(within(arrived).getAllByRole("button")).toHaveLength(1);
+    // One trailing control per row (owner, 2026-10-10): a list that can hide drops the chevron.
+    expect(late.querySelector(".ui-row-chevron")).toBeNull();
+    expect(arrived.querySelector(".ui-row-chevron")).toBeNull();
+    // A Latin project name ellipsizes at its own end.
+    expect(arrived.querySelector(".ui-place-head")?.getAttribute("dir")).toBe("auto");
+  });
+
+  it("keeps the chevron when the list cannot hide", () => {
+    render(
+      <MemoryRouter>
+        <MissingBillList rows={missingBillViews(SAMPLE_MISSING_BILLS, "", now)} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(document.querySelectorAll(".ui-row-chevron")).toHaveLength(2);
   });
 });
 

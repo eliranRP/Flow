@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { missingBillViews } from "../recurring";
-import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD } from "../forecast-sample";
+import { arrivedViews, missingBillViews } from "../recurring";
+import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
 
 const [water, power] = SAMPLE_MISSING_BILLS;
 import { MissingBillList } from "./missing-bill-list";
@@ -48,3 +48,26 @@ export const Empty: Story = { render: () => <MissingBillList rows={[]} /> };
 export const EmptyDark: Story = { name: "Empty, dark", render: () => <MissingBillList rows={[]} />, globals: { theme: "dark" } };
 export const Loading: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "loading" }} /> };
 export const Error: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "error", offline: false }} /> };
+
+// Owner, 2026-10-10: a list that can hide ends each row in one muted eye-off button, no chevron, and a
+// Latin project name keeps its start ("Example Holdings Compa…", not "…ny / Overhead").
+const latin = (name: string) => (row: (typeof SAMPLE_RECURRING_THIS_MONTH)[number]) => ({ ...row, project_name: name });
+const hideRows = missingBillViews(filed.map((row) => ({ ...row, project_name: "Example Holdings Company / Overhead" })), "", now);
+const hideArrived = arrivedViews(SAMPLE_RECURRING_THIS_MONTH.map(latin("Sample Street 2220")), SAMPLE_RECURRING_CHANGES, "");
+const noop = () => undefined;
+export const Hideable: Story = {
+  name: "Hideable, Latin projects",
+  render: () => <MissingBillList rows={hideRows} arrived={hideArrived} onHide={noop} />,
+  parameters: { viewport: { defaultViewport: "flow390" } },
+};
+export const HideableDark: Story = {
+  name: "Hideable, Latin projects, dark",
+  render: () => <MissingBillList rows={hideRows} arrived={hideArrived} onHide={noop} />,
+  parameters: { viewport: { defaultViewport: "flow390" } },
+  globals: { theme: "dark" },
+};
+export const Hideable320: Story = {
+  name: "Hideable, 320",
+  render: () => <MissingBillList rows={hideRows} arrived={hideArrived} onHide={noop} />,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};

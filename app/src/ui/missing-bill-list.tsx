@@ -6,7 +6,7 @@ import { cx } from "./cx";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
 import { IconButton } from "./icon-button";
-import { CheckIcon, ChevronIcon, CloseIcon } from "./icons";
+import { CheckIcon, ChevronIcon, EyeOffIcon } from "./icons";
 import { SectionHead } from "./layout";
 import { List } from "./list-row";
 import type { ScreenPhase } from "./screen-phase";
@@ -54,9 +54,11 @@ export type RecurringSection = "late" | "arrived";
 export const SECTION_ID: Record<RecurringSection, string> = { late: "late", arrived: "arrived" };
 
 /**
- * One row with an optional "הסתרה": a muted 44px ✕ at the row's end, and a swipe toward the start
- * that does the same (FLOW-415, owner 08:41Z). The hide is this user's only. A row with nothing to
- * hide keeps the ✕'s place empty when its list can hide, so the amounts stay in one column.
+ * One row with an optional "הסתרה": a muted 44px eye-off button at the row's end, and a swipe toward
+ * the start that does the same (FLOW-415, owner 08:41Z). The hide is this user's only. A list that
+ * can hide drops the chevron, so the row ends in one control (owner, 2026-10-10: ✕ beside the
+ * chevron read as unclear). A row with nothing to hide keeps that place empty, so the amounts stay
+ * in one column.
  */
 function HideableRow({ name, onHide, reserve = false, children }: { name: string; onHide?: () => void; reserve?: boolean; children: ReactNode }) {
   if (onHide == null) {
@@ -72,7 +74,7 @@ function HideableRow({ name, onHide, reserve = false, children }: { name: string
       <div className="ui-recurring-row">
         {children}
         <IconButton className="ui-recurring-hide" label={`הסתרה, ${name}`} onClick={onHide}>
-          <CloseIcon size={18} />
+          <EyeOffIcon size={20} />
         </IconButton>
       </div>
     </SwipeRemove>
@@ -85,9 +87,10 @@ function HideableRow({ name, onHide, reserve = false, children }: { name: string
  */
 function PlaceLine({ place }: { place: string }) {
   const [head, ...rest] = place.split(" · ");
+  // dir="auto": a Latin project name ellipsizes at its own end, so "Company / Overhead" keeps its start.
   return (
     <span className="ui-row-hint ui-place-line">
-      <span className="ui-place-head" data-clip-ok="">{head}</span>
+      <span className="ui-place-head" dir="auto" data-clip-ok="">{head}</span>
       {rest.length > 0 ? <span className="ui-place-tail">{` · ${rest.join(" · ")}`}</span> : null}
     </span>
   );
@@ -145,6 +148,7 @@ export function MissingBillList({
   if (phase.kind === "empty" || (rows.length === 0 && arrived.length === 0)) {
     return <EmptyState icon={<CheckIcon />} title="הכל הגיע" body="אין תשלומים קבועים שמאחרים החודש." />;
   }
+  const canHide = onHide != null;
   const hide = (kind: "missing" | "change", key: string | null | undefined, name: string) =>
     onHide == null || key == null ? undefined : () => { onHide(kind, key, name); };
   return (
@@ -154,7 +158,7 @@ export function MissingBillList({
           <SectionHead title="לא הגיעו" />
           <List className="ui-missing-bills">
             {rows.map((row) => (
-              <HideableRow key={row.id} name={row.name} onHide={hide("missing", row.alertKey, row.name)} reserve={onHide != null}>
+              <HideableRow key={row.id} name={row.name} onHide={hide("missing", row.alertKey, row.name)} reserve={canHide}>
                 <Link
                   to={row.href}
                   className="ui-row ui-hit"
@@ -168,9 +172,11 @@ export function MissingBillList({
                     </span>
                   </span>
                   <ApproxAmount minor={row.minor} currency={row.currency} income={row.income} />
-                  <span className="ui-row-chevron" aria-hidden="true">
-                    <ChevronIcon />
-                  </span>
+                  {canHide ? null : (
+                    <span className="ui-row-chevron" aria-hidden="true">
+                      <ChevronIcon />
+                    </span>
+                  )}
                 </Link>
               </HideableRow>
             ))}
@@ -184,7 +190,7 @@ export function MissingBillList({
             {arrived.map((row) => {
               const amount = formatAmountText(row.minor, row.currency);
               return (
-                <HideableRow key={row.id} name={row.name} onHide={hide("change", row.alertKey, row.name)} reserve={onHide != null}>
+                <HideableRow key={row.id} name={row.name} onHide={hide("change", row.alertKey, row.name)} reserve={canHide}>
                   <Link
                     to={row.href}
                     className="ui-row ui-hit"
@@ -206,9 +212,11 @@ export function MissingBillList({
                         </span>
                       )}
                     </span>
-                    <span className="ui-row-chevron" aria-hidden="true">
-                      <ChevronIcon />
-                    </span>
+                    {canHide ? null : (
+                      <span className="ui-row-chevron" aria-hidden="true">
+                        <ChevronIcon />
+                      </span>
+                    )}
                   </Link>
                 </HideableRow>
               );
