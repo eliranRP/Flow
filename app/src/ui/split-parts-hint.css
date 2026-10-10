@@ -1,0 +1,31 @@
+/* Loaded by split-parts-hint.tsx, so it ships with the cash lists, not Home's entry. */
+/* FLOW-432: one line; a part that would open a second is clipped whole. */
+.ui-hint-wrap-1 {
+  max-block-size: calc(1em * var(--type-meta-line));
+}
+
+/* FLOW-432: a split line's row hint: its parts, then "מתוך" and the date on a line of their own.
+   Part amounts line up like the row figures. With "ועוד N", the first part's name ellipsizes. */
+.ui-split-hint {
+  display: block;
+}
+
+.ui-split-hint-line {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.ui-split-hint-name {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.ui-split-hint-more {
+  flex: none;
+}
+
+.ui-split-hint-amount {
+  font-variant-numeric: tabular-nums lining-nums;
+}
