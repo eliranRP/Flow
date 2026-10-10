@@ -82,12 +82,14 @@ phase() {
 # bash with no TERM trap stops at once, mid-command, and still runs its EXIT trap (log_time).
 budget_pid=""
 budget_arm() {
+  local secs="${budgets[$1]:-0}" gate=$$ kids
   if [[ -n "$budget_pid" ]]; then
-    pkill -P "$budget_pid" 2>/dev/null || true
+    # The watchdog first, then its sleep: a sleep stopped under a live watchdog prints "Terminated".
+    kids="$(pgrep -P "$budget_pid" || true)"
     kill "$budget_pid" 2>/dev/null || true
+    [[ -z "$kids" ]] || kill $kids 2>/dev/null || true
     budget_pid=""
   fi
-  local secs="${budgets[$1]:-0}" gate=$$ kids
   [[ "${FLOW_LOCAL_CI_BUDGET:-1}" != 0 ]] && (( secs > 0 )) || return 0
   (
     sleep "$secs"
