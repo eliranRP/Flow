@@ -1,0 +1,1 @@
+Project pages open faster, above all when several open together: the server reads a project's lines once instead of eight times, builds its category lists in one pass, and works out the overhead share from the company's income and overhead lines only. On invented data the size of a busy company a project read went from about 330 ms to 125 ms. Figures are unchanged (FLOW-804).

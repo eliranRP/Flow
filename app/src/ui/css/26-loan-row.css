@@ -55,6 +55,13 @@
   gap: var(--space-1);
 }
 
+/* FLOW-362: "עריכת הפיצול" is the sheet's one action, the 44px tint button (as FLOW-356's הלוואה חדשה). */
+.ui-loan-parts-actions .ui-loan-parts-edit {
+  height: auto;
+  min-height: var(--touch-min);
+  border-radius: var(--radius-button);
+}
+
 .ui-loan-parts-retry {
   margin-block-start: var(--space-2);
 }

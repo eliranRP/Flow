@@ -1,0 +1,1 @@
+A matched loan payment's parts sheet shows the parts as amounts, and "עריכת הפיצול" is the one way to edit them (FLOW-362). The split editor fits a 375x667 phone, with the fees category and its switch above שמירה. No migration.
