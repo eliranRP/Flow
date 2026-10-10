@@ -1,10 +1,10 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useSheetHistory } from "./back";
 import { Button } from "./button";
 import { Chip } from "./chip";
 import { dayLabel, formatDisplay, israelToday, monthTitle, shiftDays, shiftMonth } from "./date-math";
 import { IconButton } from "./icon-button";
-import { OutwardChevron } from "./icons";
+import { ChevronDownIcon, OutwardChevron } from "./icons";
 import { MonthGrid } from "./month-grid";
 import { Sheet } from "./sheet";
 
@@ -67,6 +67,14 @@ export function DateSheet({
   const errorId = useId();
   const [pending, setPending] = useState(value);
   const [cursor, setCursor] = useState(() => monthOf(value));
+  // FLOW-115: a tap on the month title swaps the days for the years, so an old loan start is one tap away.
+  const [years, setYears] = useState(false);
+  const yearsRef = useRef<HTMLDivElement>(null);
+  const todayYear = Number(today.slice(0, 4));
+  const lastMonth = lastPickableMonth(today, allowFuture, max);
+  const firstMonth = min != null ? monthIndex(monthOf(min)) : null;
+  const yearFirst = firstMonth != null ? Math.floor(firstMonth / 12) : todayYear - YEARS_BACK;
+  const yearLast = lastMonth != null ? Math.floor(lastMonth / 12) : todayYear + YEARS_AHEAD;
   const nextDisabled = (!allowFuture && (
     cursor.year > Number(today.slice(0, 4)) ||
     (cursor.year === Number(today.slice(0, 4)) && cursor.month >= Number(today.slice(5, 7)) - 1)
@@ -78,7 +86,24 @@ export function DateSheet({
     if (!open) return;
     setPending(value);
     setCursor(monthOf(value));
+    setYears(false);
   }, [open, value]);
+
+  useEffect(() => {
+    if (!years) return;
+    // The picked year starts in the middle of the list; only the list scrolls, never the sheet.
+    const box = yearsRef.current;
+    const picked = box?.querySelector<HTMLElement>("[aria-pressed='true']");
+    if (box && picked) box.scrollTop = picked.offsetTop - (box.clientHeight - picked.offsetHeight) / 2;
+  }, [years]);
+
+  function chooseYear(year: number) {
+    let index = year * 12 + cursor.month;
+    if (lastMonth != null) index = Math.min(index, lastMonth);
+    if (firstMonth != null) index = Math.max(index, firstMonth);
+    setCursor({ year: Math.floor(index / 12), month: index % 12 });
+    setYears(false);
+  }
 
   function choose(iso: string) {
     if (busy || outside(iso)) return;
@@ -142,17 +167,29 @@ export function DateSheet({
       <div className="ui-band-row">
         <IconButton
           label="חודש קודם"
-          disabled={disabled || prevDisabled}
+          disabled={disabled || years || prevDisabled}
           onClick={() => {
             setCursor((current) => shiftMonth(current, -1));
           }}
         >
           <OutwardChevron side="start" />
         </IconButton>
-        <p className="t-label">{monthTitle(cursor.year, cursor.month)}</p>
+        <button
+          type="button"
+          className="t-label ui-date-title"
+          aria-expanded={years}
+          aria-label={`${monthTitle(cursor.year, cursor.month)}, בחירת שנה`}
+          disabled={disabled || busy || yearFirst >= yearLast}
+          onClick={() => {
+            setYears((current) => !current);
+          }}
+        >
+          {monthTitle(cursor.year, cursor.month)}
+          <ChevronDownIcon />
+        </button>
         <IconButton
           label="חודש הבא"
-          disabled={disabled || nextDisabled}
+          disabled={disabled || years || nextDisabled}
           onClick={() => {
             setCursor((current) => shiftMonth(current, 1));
           }}
@@ -160,17 +197,36 @@ export function DateSheet({
           <OutwardChevron side="end" />
         </IconButton>
       </div>
-      <MonthGrid
-        label={title}
-        year={cursor.year}
-        month={cursor.month}
-        today={today}
-        value={pending}
-        allowFuture={allowFuture}
-        min={min}
-        max={max}
-        onPick={choose}
-      />
+      {years ? (
+        <div ref={yearsRef} className="ui-date-years" role="group" aria-label="שנה">
+          {Array.from({ length: yearLast - yearFirst + 1 }, (_, offset) => yearLast - offset).map((year) => (
+            <button
+              key={year}
+              type="button"
+              className="ui-day ui-year"
+              aria-pressed={year === cursor.year}
+              aria-current={year === todayYear ? "date" : undefined}
+              onClick={() => {
+                chooseYear(year);
+              }}
+            >
+              <b className="ui-num">{year}</b>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <MonthGrid
+          label={title}
+          year={cursor.year}
+          month={cursor.month}
+          today={today}
+          value={pending}
+          allowFuture={allowFuture}
+          min={min}
+          max={max}
+          onPick={choose}
+        />
+      )}
       <p className="t-label">{dayLabel(pending)}</p>
       <p className="t-hint">
         <bdi className="ui-num" dir="ltr">{formatDisplay(pending)}</bdi>
@@ -178,6 +234,16 @@ export function DateSheet({
       {error ? <p id={errorId} className="ui-field-message ui-date-error" role="alert">{error}</p> : null}
     </Sheet>
   );
+}
+
+/** How far the year list reaches when no `min` or `max` bounds it: old loans start decades back. */
+const YEARS_BACK = 40;
+const YEARS_AHEAD = 10;
+
+/** The last month a day can be picked in, as a month index, or null when nothing bounds it. */
+function lastPickableMonth(today: string, allowFuture: boolean, max: string | null): number | null {
+  const bounds = [...(allowFuture ? [] : [monthIndex(monthOf(today))]), ...(max != null ? [monthIndex(monthOf(max))] : [])];
+  return bounds.length > 0 ? Math.min(...bounds) : null;
 }
 
 function monthIndex(cursor: { year: number; month: number }): number {
