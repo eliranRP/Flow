@@ -144,6 +144,8 @@ button.ui-tab-slot {
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+  /* No lone word on the last line, like ".SUMIT" at 320 (FLOW-362). */
+  text-wrap: pretty;
 }
 
 .ui-empty-action {

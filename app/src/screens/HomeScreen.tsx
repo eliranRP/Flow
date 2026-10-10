@@ -36,7 +36,7 @@ import { SearchEntry } from "../ui/search-entry";
 import { CashHomeSkeleton, HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
-import { emptyHomeLabel } from "../home-label";
+import { emptyHomeLabel, emptyProfitLabel } from "../home-label";
 import { breakdownPath } from "../breakdown";
 import { comparisonWords, heroProfitLabel, periodPhrase, windowLabel, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
@@ -72,19 +72,22 @@ function useBandMark(failed: boolean, showBooks: boolean) {
   }, [failed, showBooks]);
 }
 
-/** Before a bank or SUMIT is connected there are no books: the band names it and the action connects one. */
-function NoBooksYet({ previewing, example, search, companyName }: { previewing: boolean; example?: ReactNode; search: string; companyName?: string | null }) {
+/**
+ * Before a bank or SUMIT is connected there are no books: the band names it and the action connects one.
+ * Home is the cash view, so it promises the תזרים; the profit view keeps "רווח" (FLOW-362).
+ */
+function NoBooksYet({ previewing, example, search, companyName, view }: { previewing: boolean; example?: ReactNode; search: string; companyName?: string | null; view: "cash" | "profit" }) {
   // FLOW-601: connecting a bank or SUMIT is the owner's.
   const holdWrites = useHoldOwnerSettings();
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <TopBand preview={previewing} example={example} wordmark={false} leading={previewing ? undefined : <CompanySwitcher fallbackName={companyName} />}>
-        <Hero label={emptyHomeLabel} />
+        <Hero label={view === "cash" ? emptyHomeLabel : emptyProfitLabel} />
       </TopBand>
       <EmptyState
         icon={<ChartIcon />}
         title="עוד אין נתונים"
-        body="הרווח יופיע כאן אחרי חיבור בנק או SUMIT."
+        body={view === "cash" ? "התזרים יופיע כאן אחרי חיבור בנק או SUMIT." : "הרווח יופיע כאן אחרי חיבור בנק או SUMIT."}
         action={holdWrites ? undefined : (
           // FLOW-328: a bank or SUMIT both start the books, so the action opens the connections page.
           <Button variant="pill" to={`/settings/connections${search}`}>
@@ -141,7 +144,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   }
 
   if (!showBooks || cash.data == null) {
-    return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} />;
+    return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} view="cash" />;
   }
 
   const unpaidPhase = screenPhase(preview, unpaid);
@@ -279,7 +282,7 @@ export function ProfitScreen({ example }: { example?: ReactNode } = {}) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
   }
 
-  if (!showBooks) return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} />;
+  if (!showBooks) return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} view="profit" />;
 
   const unpaidPhase = screenPhase(preview, unpaid);
   return (
