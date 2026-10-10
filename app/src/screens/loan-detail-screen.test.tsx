@@ -14,15 +14,19 @@ import type { MemoryLoanStore } from "./loan-detail-store";
 // FLOW-106 B. The loan page on a memory store: the project sheet (moved here from the list,
 // FLOW-119), refusals, and the viewer's static rows.
 
-function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui) {
+// FLOW-434: the rows these tests open moved to the פרטי הלוואה page, so it is the default entry.
+function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui, path = "details") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <BooksProvider>
         <ToastProvider>
-          <MemoryRouter initialEntries={[`/settings/loans/${loanId}`]}>
+          <MemoryRouter initialEntries={[`/settings/loans/${loanId}${path === "" ? "" : `/${path}`}`]}>
             <Routes>
               <Route path="/settings/loans/:loanId" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" />)} />
+              <Route path="/settings/loans/:loanId/details" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="details" />)} />
+              <Route path="/settings/loans/:loanId/future" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="future" />)} />
+              <Route path="/settings/loans/:loanId/future/:period" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="period" />)} />
               <Route path="/settings/loans" element={<p>רשימת ההלוואות</p>} />
             </Routes>
           </MemoryRouter>
@@ -111,7 +115,7 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
 describe("loan page: states and the viewer", () => {
   it("shows a viewer static rows with no sheets and no delete", () => {
     renderLoan(sampleLoanStore(), "loan-bridge", (ui) => <ViewerPreview>{ui}</ViewerPreview>);
-    expect(screen.getByRole("heading", { name: "הלוואת גישור" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרטי הלוואה" })).toBeInTheDocument();
     expect(screen.getByText("בית דוגמה 9")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^פרויקט/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
@@ -119,16 +123,16 @@ describe("loan page: states and the viewer", () => {
   });
 
   it("leads a paid-off loan with נפרעה and its date only, and changes its status from there (FLOW-138, FLOW-356)", async () => {
-    renderLoan(sampleLoanStore(), "loan-old");
+    renderLoan(sampleLoanStore(), "loan-old", undefined, "");
     expect(screen.getByText(/^נפרעה · \d\d\/\d\d\/\d{4}$/)).toBeInTheDocument();
     expect(screen.queryByText("יתרה")).not.toBeInTheDocument();
     expect(screen.queryByText("תשלום חודשי")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "שינוי מצב" }));
     await waitFor(() => { expect(screen.getByRole("radio", { name: "נפרעה" })).toHaveAttribute("aria-checked", "true"); });
-    // Reopening swaps "שינוי" for the מצב row; focus lands on the row, not the page.
+    // Reopening brings the balance back; the מצב row lives on the פרטי הלוואה page (FLOW-434).
     fireEvent.click(screen.getByRole("radio", { name: "פתוחה" }));
-    await waitFor(() => { expect(screen.getByRole("button", { name: /^מצב/ })).toHaveFocus(); });
+    await waitFor(() => { expect(screen.getByText("יתרה")).toBeInTheDocument(); });
   });
 
   it("offers the tint ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
@@ -174,3 +178,73 @@ describe("loan page: states and the viewer", () => {
     expect(screen.getByRole("radio", { name: "ברירת מחדל · ריבית" })).toHaveAttribute("aria-checked", "true");
   });
 });
+
+function firstBack(): HTMLElement {
+  const [button] = screen.getAllByRole("button", { name: /^חזרה/ });
+  if (button == null) throw new Error("no Back button");
+  return button;
+}
+
+describe("loan page: what it leads with (FLOW-434)", () => {
+  it("leads an amortizing loan with the next payment and opens the years ahead", async () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
+    expect(screen.getByText(/^תשלום הבא · /)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "שולם השנה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: /^תשלומים הבאים/ }));
+    expect(await screen.findByRole("heading", { name: "לפי שנה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: /^2027,/ }));
+    expect(await screen.findByText("לתשלום בשנה")).toBeInTheDocument();
+    expect(screen.getByText("12 תשלומים")).toBeInTheDocument();
+  });
+
+  it("opens the part's category sheet from its שולם השנה row", async () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית,/ }));
+    expect(await screen.findByRole("dialog", { name: "ריבית" })).toBeInTheDocument();
+  });
+
+  it("steps Back one page at a time: a year to תשלומים הבאים, that to the loan", async () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/2027");
+    fireEvent.click(firstBack());
+    expect(await screen.findByRole("heading", { name: "לפי שנה" })).toBeInTheDocument();
+    fireEvent.click(firstBack());
+    expect(await screen.findByText(/^תשלום הבא · /)).toBeInTheDocument();
+  });
+
+  it("opens the rest of the loan, and says so for a year the schedule does not have", () => {
+    const { unmount } = renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/end");
+    expect(screen.getByText(/^לתשלום עד \d{4}$/)).toBeInTheDocument();
+    unmount();
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/1999");
+    expect(screen.getByText("אין לוח תשלומים להלוואה הזו")).toBeInTheDocument();
+  });
+
+  it("shows a viewer the שולם השנה rows without a sheet to open", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", (ui) => <ViewerPreview>{ui}</ViewerPreview>, "");
+    expect(screen.getByText(/^תשלום הבא · /)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^ריבית,/ })).not.toBeInTheDocument();
+  });
+
+  it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
+    const { container } = renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
+    expect(container.querySelector(".ui-loan-next")?.textContent).toMatch(/\$2,250(\.00)?$/);
+    expect(screen.getByRole("button", { name: /^ריבית,/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^קרן,/ })).not.toBeInTheDocument();
+  });
+
+  it("lists this year and the next four, then opens the rest with לכל השנים", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future");
+    expect(screen.getAllByRole("link", { name: /^\d{4},/ })).toHaveLength(5);
+    const more = screen.getByRole("button", { name: "לכל השנים" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    expect(screen.getAllByRole("link", { name: /^\d{4},/ }).length).toBeGreaterThan(5);
+    expect(screen.queryByRole("button", { name: "לכל השנים" })).not.toBeInTheDocument();
+  });
+
+  it("has no next payment for a demand loan, and the future page says why", () => {
+    renderLoan(sampleLoanStore(), "loan-partner", undefined, "future");
+    expect(screen.getByText("אין לוח תשלומים להלוואה הזו")).toBeInTheDocument();
+  });
+});
+

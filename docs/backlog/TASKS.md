@@ -181,6 +181,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-114"></a>[FLOW-114](tasks/FLOW-114.md) | Loans server follow-ups | BACKLOG NIT |
 | <a id="flow-115"></a>[FLOW-115](tasks/FLOW-115.md) | Loan screens UI follow-ups | BACKLOG NIT |
 | <a id="flow-414"></a>[FLOW-414](tasks/FLOW-414.md) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG |
+| <a id="flow-434"></a>[FLOW-434](tasks/FLOW-434.md) | Loan page: next payment, year total and what was paid | UI |
 
 ## MCP
 
