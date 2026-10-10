@@ -80,6 +80,8 @@
 }
 
 .ui-missing-bills .ui-recurring-row > .ui-row {
+  /* Tall enough to swipe with a thumb (owner 16:28Z). */
+  min-block-size: 64px;
   padding-inline: var(--space-4);
 }
 
