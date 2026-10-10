@@ -344,6 +344,9 @@ export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", a
 export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
 export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
 export const JevFilledFlag320: Story = { ...narrow, name: "Jev filled: with quiet flag, 320", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };
+// FLOW-702 plan item 3: the anomaly gate held the auto fill back. The flag shows, the values stay suggestions, no fill line.
+export const JevAutoHeldFlag: Story = { name: "Jev auto: held flagged line", args: { ...jevBoth, why: "usual_for_party", flags: [flag("duplicate", 0.8, { other_doc_date: "2026-10-03" })] } };
+export const JevAutoHeldFlag320: Story = { ...narrow, name: "Jev auto: held flagged line, 320", args: JevAutoHeldFlag.args };
 // FLOW-706: Jev is off. The stored values with הצעה, no הצעת Jev pill, and the fill still undoable.
 export const JevFilledOff: Story = { name: "Jev filled: Jev off", args: { ...jevCard, filled: "off" } };
 export const JevFilledOff320: Story = { ...narrow, name: "Jev filled: Jev off, 320", args: JevFilledOff.args };
