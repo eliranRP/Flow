@@ -1,6 +1,6 @@
 <a id="flow-352"></a>
 # FLOW-352 · Phone polish after the October 9 evening deploy (cycle 11)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** item 1 after #371, item 4 after #372 (same files)
+- **Type:** SMALL UI · **Status:** done (every box ticked, checked by UI lane 3 on 2026-10-09) · **Depends on:** item 1 after #371, item 4 after #372 (same files)
 - **Source:** cycle 11 phone review of deploy 23d1fd5, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-11/shots/`.
 - [x] (UI lane 2, #380: a value that doesn't fit beside its pill takes the row's width and the pill drops under it; the value clamps at two lines) Review card at 320: the project value gets about 99px beside the הצעה pill and cuts a 14-letter name ("וילה ..."). In the narrow-card rule let the value wrap to two lines, as the ✦ Jev pill already shrinks (css/17-action-bar.css:70; css/06-review-card.css:128).
 - [x] Picker sheets: `.ui-radio-desc` uses the label style (weight 500, secondary grey), so the line under an option reads as heavy as the option name. Use the row hint style: weight 400, `--color-text-muted` (css/12-split.css:163-171). Shots of 3-4 pickers before and after.

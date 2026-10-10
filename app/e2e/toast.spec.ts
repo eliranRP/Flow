@@ -181,7 +181,7 @@ function assertVisiblePosition(samples: ToastFrame[]): void {
 /**
  * FLOW-309 (the ramp check dropped in 263b1d25): after a pad move the toast fades in over
  * `--dur-base`; with no pad move it appears at its settled position in one frame (0075).
- * None of these flows pads the sheet today, so they check the one-frame case.
+ * No real flow pads the sheet today; "a pad move ramps the fade" forces one with a test-only safe area.
  */
 function assertFade(samples: ToastFrame[]): void {
   const start = samples[0]?.pad ?? 0;
@@ -321,4 +321,36 @@ for (const viewport of viewports) {
       expect(short.every((sample) => sample.pad <= Math.max(above.pad, GAP) + 1)).toBe(true);
     });
   }
+}
+
+for (const viewport of viewports) {
+  const label = `${String(viewport.width)}×${String(viewport.height)}`;
+
+  // FLOW-309: no real flow pads the sheet, so a test-only safe area reaching 20px past the
+  // category sheet's top leaves no room above it: the toast keeps --space-2 under the safe area
+  // and the sheet pads once. The pad settles before the toast shows, then the fade ramps (0075).
+  // The fake inset leaves this fit sheet room to grow upward, so where ✕ ends up says nothing
+  // about a real phone; the other cases check that.
+  test(`a pad move settles first, then the fade ramps, at ${label}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/reviewer/save?save=offline");
+    await openCategory(page, 0);
+    await page.waitForTimeout(400);
+    const sheetTop = await page.evaluate(() => document.querySelector("[data-vaul-drawer][data-state='open']")?.getBoundingClientRect().top ?? 0);
+    expect(sheetTop).toBeGreaterThan(100);
+    const safe = Math.round(sheetTop) - 20;
+    await armSampler(page, safe, 1200);
+    await page.getByRole("radio", { name: "שינוע" }).click();
+    const samples = await readFrames(page);
+    const settled = await readSettled(page);
+    expect(settled.pad).toBeGreaterThan(GAP + 1);
+    assertFade(samples);
+    const shown = samples.findIndex((sample) => sample.opacity > 0.02);
+    expect(shown).toBeGreaterThan(0);
+    for (const sample of samples.slice(shown)) {
+      expect(Math.abs(sample.pad - settled.pad)).toBeLessThanOrEqual(1);
+      expect(Math.abs((sample.top ?? 0) - settled.toastTop)).toBeLessThanOrEqual(1);
+    }
+    expect(Math.abs(settled.toastTop - (safe + GAP))).toBeLessThanOrEqual(1);
+  });
 }

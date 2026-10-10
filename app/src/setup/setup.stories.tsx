@@ -4,9 +4,9 @@ import { Toggle } from "../ui/toggle";
 import { TagIcon } from "../ui/icons";
 import { longHebrew } from "../ui/story-support";
 import { SetupCard } from "./card";
-import { JEV_HINT } from "./copy";
+import { JEV_HINT, STEP_TITLE } from "./copy";
 import { SetupStep } from "./shell";
-import { StepBusiness, StepInstall, StepSumit } from "./steps";
+import { StepBusiness, StepInstall, StepSumit, SumitFailureNote } from "./steps";
 import { StoryRoute } from "../ui/story-route";
 import { NO_PREFS } from "../push";
 
@@ -89,6 +89,36 @@ export const ConnectStep320: Story = {
   parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };
 
+/** FLOW-506: a failed SUMIT connect leaves the note under the demo, at the demo frame's inset. */
+const connectFailed = {
+  args: SmartTag.args,
+  parameters: { flowRouter: false },
+  render: () => (
+    <StoryRoute entry="/setup/1">
+      <SetupStep
+        step={1}
+        title={STEP_TITLE[1] ?? ""}
+        line="ההכנסות וההוצאות נכנסות לבד."
+        demo="sumit"
+        onBack={() => undefined}
+        onSkip={() => undefined}
+        primary={<Button type="button" full>ניסיון חוזר</Button>}
+        secondary={<Button type="button" variant="secondary" full>חיבור Mercury</Button>}
+      >
+        <SumitFailureNote />
+      </SetupStep>
+    </StoryRoute>
+  ),
+};
+
+export const ConnectFailed: Story = { ...connectFailed, name: "Connect step, SUMIT failed" };
+export const ConnectFailed320: Story = {
+  ...connectFailed,
+  name: "Connect step, SUMIT failed, 320",
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
+};
+export const ConnectFailedDark: Story = { ...connectFailed, name: "Connect step, SUMIT failed, dark", globals: { theme: "dark" } };
+
 /** FLOW-506: step 5 draws the install screen's numbered steps. */
 const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
   args: SmartTag.args,
@@ -97,7 +127,8 @@ const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
     <StoryRoute entry="/setup/5">
       <StepInstall
         initialMode={mode}
-        pushSample={reminder ? { prefs: NO_PREFS, support: "ok" } : undefined}
+        // An answered sample hides the card without a server read (a story never fetches).
+        pushSample={{ prefs: reminder ? NO_PREFS : { ...NO_PREFS, prompt_answered: true }, support: "ok" }}
         onBack={() => undefined}
         onSkip={() => undefined}
         onFinish={() => undefined}

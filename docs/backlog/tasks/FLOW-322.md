@@ -1,6 +1,6 @@
 <a id="flow-322"></a>
 # FLOW-322 · Copy and dead-end fixes from the UX review
-- **Type:** SMALL UI · **Status:** ready; split: UI lane 2 takes the transaction detail's document-row hint, UI lane 1 the rest. Mark `done` only when both PRs merged · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (both lanes' PRs merged; every box ticked, checked by UI lane 3 on 2026-10-09) · **Depends on:** —
 - **What:** From the 2026-10-07 UX review: a period control on the group-lines screen and an empty state that offers choosing a period (today a dead end); singular copy for one waiting item on the breakdown; the detail's document-row hint names only what the row shows; the Review subtitle covers bank lines too; category rows in Settings open that category's lines; the `/notifications` route that nothing links to is removed or linked.
 - **MCP:** none.
 - **Acceptance:** each string in a test; no empty state is a dead end; a category row opens its lines; design review.

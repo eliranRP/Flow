@@ -337,6 +337,23 @@ export async function callTool(
     return ok(result.json as Review);
   }
 
+  // FLOW-213: pairs an outside ledger's rows with Flow lines; the matching is SQL (decision 0084).
+  if (name === "match_lines") {
+    const rows = matchRowsOf(args.rows);
+    if (rows == null) return fail("validation", "validation");
+    const window = args.window_days ?? 5;
+    if (typeof window !== "number" || !Number.isInteger(window) || window < 0 || window > 31) return fail("validation", "validation");
+    const direction = args.direction ?? null;
+    if (direction != null && direction !== "income" && direction !== "expense") return fail("validation", "validation");
+    const currency = args.currency ?? null;
+    if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
+    const result = await rpc("match_lines", { p_rows: rows, p_window_days: window, p_direction: direction, p_currency: currency });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(result.json as Review);
+  }
+
   if (name === "list_categories") {
     const result = await rpc("list_categories", {});
     if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", "The read was refused.");
@@ -597,7 +614,12 @@ export async function callTool(
   let out: Record<string, unknown> = row;
   if (Array.isArray(parts) && parts.length > 0 && typeof row === "object" && !Array.isArray(row)) {
     const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
-    out = { ...row, line_split: lineSplit };
+    // FLOW-212: the parts are what count, so the percent shares kept from before the split move
+    // to allocations_superseded and allocations reads empty, as on a line with no shares.
+    const { allocations: before, ...rest } = row;
+    out = Array.isArray(before) && before.length > 0
+      ? { ...rest, allocations: [], allocations_superseded: before, line_split: lineSplit }
+      : { ...row, line_split: lineSplit };
   }
   if (row.direction === "income") return ok({ ...out, loan_split: null });
   // get_transaction carries the loan split since FLOW-114; read it on its own only from a
@@ -606,4 +628,23 @@ export async function callTool(
   const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
   return ok({ ...out, loan_split: loanSplit.json ?? null });
+}
+
+const MATCH_ROW_KEYS = new Set(["date", "amount_minor", "ref"]);
+
+/** match_lines rows as the RPC takes them, or null when any row is malformed. */
+function matchRowsOf(value: unknown): { date: string; amount_minor: number; ref: string | null }[] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 500) return null;
+  const rows: { date: string; amount_minor: number; ref: string | null }[] = [];
+  for (const row of value) {
+    if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
+    const entry = row as Record<string, unknown>;
+    if (Object.keys(entry).some((key) => !MATCH_ROW_KEYS.has(key))) return null;
+    const { date, amount_minor: amount, ref = null } = entry;
+    if (typeof date !== "string" || !isCalendarDate(date)) return null;
+    if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) >= 1e15) return null;
+    if (ref != null && (typeof ref !== "string" || ref.length > 200)) return null;
+    rows.push({ date, amount_minor: amount, ref: ref as string | null });
+  }
+  return rows;
 }

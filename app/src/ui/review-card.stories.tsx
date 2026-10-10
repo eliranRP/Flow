@@ -286,7 +286,7 @@ export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ra
 export const FlagSpikeLong320: Story = {
   ...narrow,
   name: "Flag: amount spike, long amount, 320",
-  args: { ...jevCard, netAgorot: "-123456700", flags: [flag("amount_spike", 0.4, { ratio: 12.5, typical_amount_minor: 9_876_500 })] },
+  args: { ...jevCard, projectJev: true, categoryJev: true, netAgorot: "-123456700", flags: [flag("amount_spike", 0.4, { ratio: 12.5, typical_amount_minor: 9_876_500 })] },
   play: async ({ canvasElement }) => {
     const amount = canvasElement.querySelector<HTMLElement>(".ui-review-amount > .t-display");
     const pill = canvasElement.querySelector<HTMLElement>(".ui-review-spike");

@@ -1,0 +1,1 @@
+Push gate: in a cloud container the gate seeds the local edge runtime's npm cache from the host (scripts/seed-edge-cache.sh, also run by the cloud install) and restarts a stopped runtime, so the flow-mcp smoke no longer answers 503; and a local Supabase that is still starting is waited for and tried once more instead of failing the gate.

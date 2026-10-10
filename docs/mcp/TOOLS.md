@@ -187,7 +187,7 @@ A line split with `split_line` whose amount the bank sync changed is queued with
 
 ### get_expense
 
-`get_transaction` with the transaction id. A missing row is `not_found`. `review_status` is the line's latest review state; while it is `open`, `review_reason` is its reason and `review_id` its review-queue id (the `id` in `list_review`), else `review_id` is null. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
+`get_transaction` with the transaction id. A missing row is `not_found`. `review_status` is the line's latest review state; while it is `open`, `review_reason` is its reason and `review_id` its review-queue id (the `id` in `list_review`), else `review_id` is null. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)); its parts are what counts, so shares kept from before the split move to `allocations_superseded` and `allocations` is then empty ([FLOW-212](../backlog/TASKS.md#flow-212)).
 
 Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, then fees when the payment has a fees part ([0130](../decisions/0130-loan-fees-installments.md)), each `{part, amount_minor, in_pnl}`. `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, or four with fees, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read. Since [0136](../decisions/0136-loan-unmatch.md) `get_transaction` carries `loan_split` itself, so `get_expense` makes no second read.
 
@@ -790,6 +790,14 @@ Output `data`: `basis` (`paid` or `invoice`), `base_currency`, and `months[]` ne
 Input: `{ "month": "2026-09", "side": "out" }`.
 
 Output `data`: `rows[]` newest first (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `cash_month_date`, `currency`, `amount_minor`, `side`, `shared`, `source`, `kept_out`) and `has_more`. A loan payment has a row per part; a line split's parts on one side are one row.
+
+### match_lines
+
+`match_lines(p_rows, p_window_days, p_direction, p_currency)`, read only ([FLOW-213](../backlog/tasks/FLOW-213.md)). Reconciles an outside ledger export against Flow in one call. `rows` is 1 to 500 of `{ "date": "YYYY-MM-DD", "amount_minor": <non-zero integer>, "ref": "<optional, up to 200 characters>" }`; the sign of `amount_minor` is ignored. A row matches a line of the same gross amount in `currency` (the base currency by default) whose document date or payment date is within `window_days` (0 to 31, default 5) of the row's date. `direction` (`income` or `expense`) narrows the lines. Removed and void lines never match; pending lines do. Each row gets at most one line and each line at most one row, closest dates first, then row order.
+
+Input: `{ "rows": [{ "date": "2026-09-05", "amount_minor": -12000, "ref": "INV-1" }], "window_days": 3 }`.
+
+Output `data`: `currency`, `window_days`, `direction`, `from` and `to` (the rows' first and last date), `rows[]` (`index`, `date`, `amount_minor`, `ref`, `match` or null, `candidate_count`, and `candidates`: up to 5 lines, closest first), `matched_count`, `unmatched_rows` (row indexes), `unclaimed_count` and `unclaimed_lines` (up to 200 lines dated `from` to `to` that no row took, oldest first). A line is `transaction_id`, `doc_date`, `cash_date`, `amount_minor` (signed gross), `currency`, `direction`, `line_status`, `party`, `description`, `project_name`, `pnl_role` and `category_name`, plus `day_diff` on a match or a candidate.
 
 ### set_category_cash
 

@@ -212,6 +212,13 @@ describe("day heads (FLOW-305)", () => {
     );
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪201.00");
     expect(screen.getByRole("group", { name: "אוגוסט 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪1.00");
+    // The agorot are drawn small and raised, as on the rows (FLOW-334).
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals .ui-num-cents")?.textContent).toBe(".00");
+  });
+
+  it("draws no small agorot when the totals are whole", () => {
+    render(<MonthList rows={[row("a", "2026-09-01", 10_000n, "expense")]} keyOf={(r) => r.id} dateOf={dateOf} amountOf={amountOf} renderRow={(r) => <p>{r.id}</p>} />);
+    expect(document.querySelector(".ui-month-totals .ui-num-cents")).toBeNull();
   });
 });
 

@@ -23,7 +23,13 @@ export function StoryRoute({
   viewer?: boolean;
   children: ReactNode;
 }) {
-  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  const [client] = useState(() => {
+    const next = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // A story never reads the server: the company currency is the shekel a failed read falls back to.
+    // A story for a USD company sets this key itself.
+    next.setQueryData(["company-currency", "off"], "ILS");
+    return next;
+  });
   return (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[state === undefined ? entry : { ...parsePath(entry), state }]}>

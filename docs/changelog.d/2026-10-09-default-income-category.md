@@ -1,0 +1,1 @@
+The default income category is now "הכנסה מלקוחות" instead of "תקבול מלקוח", as the money-terms glossary says (a receipt is any money in, a loan too; income is what counts in profit). New companies get the new name, and existing companies whose default still has the old name are renamed. A name the owner changed stays as it is.

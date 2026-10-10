@@ -1,0 +1,1 @@
+The pre-push gate runs only the unit tests and stories a change reaches when the change also touches app styles or e2e specs. Before, one CSS or e2e file in a UI change ran every unit test and every story, which was most of a UI gate's time.

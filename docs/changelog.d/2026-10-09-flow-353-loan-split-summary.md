@@ -1,0 +1,1 @@
+The "חלוקת התשלום" sheet now says "חסרים" or "עודף" right in its summary when the parts don't add up to the payment, instead of a separate line that hid under the save button on small phones. (FLOW-353)
