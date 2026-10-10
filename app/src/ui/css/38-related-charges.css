@@ -1,36 +1,8 @@
-/* FLOW-431 (owner's pick B): the "לעומת הרגיל" chip under the status pills and the party's sheet. */
-
-.ui-charge-chip {
-  gap: var(--space-1);
-  margin-top: var(--space-3);
-  border: 0;
-  font: inherit;
-  font-size: var(--type-micro-size);
-  font-weight: var(--type-micro-weight);
-  text-align: start;
-}
-
-.ui-status-row + .ui-charge-chip {
-  margin-top: var(--space-2);
-}
-
-.ui-charge-chip:active {
-  background: var(--color-tint-pressed);
-}
-
-.ui-charge-chip-text {
-  min-width: 0;
-}
+/* FLOW-431 (the owner's layout A): "חיובים קודמים" under the transaction's switches, and the sheet with all of them. */
 
 .ui-charge-pct {
   white-space: nowrap;
   font-weight: 600;
-}
-
-.ui-charge-chip-chevron {
-  display: inline-flex;
-  flex: none;
-  color: var(--color-text-muted);
 }
 
 .ui-charges-change {
@@ -117,4 +89,35 @@
 
 .ui-charges-date {
   color: var(--color-text-secondary);
+}
+
+/* On the screen: the line, bars and rows sit on the page gutter; the rows run edge to edge. */
+.ui-charges-section .ui-charges-line,
+.ui-charges-section .ui-charge-bars,
+.ui-charges-all {
+  margin-inline: var(--space-side);
+}
+
+.ui-charges-line {
+  margin-block: var(--space-1) var(--space-3);
+}
+
+.ui-charges-section .ui-charges-list {
+  margin: 0;
+}
+
+.ui-charges-section .ui-charges-row {
+  padding-inline: var(--space-side);
+}
+
+.ui-charges-all {
+  display: inline-flex;
+  min-height: var(--touch-min);
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-weight: 500;
 }

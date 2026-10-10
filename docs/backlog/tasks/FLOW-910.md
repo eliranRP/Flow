@@ -1,0 +1,4 @@
+<a id="flow-910"></a>
+# FLOW-910 · An open tab moves to a new deploy without a second load
+- **Type:** BUG · **Status:** in-progress · **Source:** dev lane 4 and the lane manager, 2026-10-10 14:10Z: after a deploy, an open tab kept running the old bundle until it loaded a second time. The owner's tab ran a build from before #523 at 14:07Z, so its invites sent no email.
+- [x] When a deploy's new service worker takes control of a page that already had one, the page reloads once onto the new bundle (`app/src/sw-reload.ts`, called from `main.tsx`). It waits while a sheet is open or a field has focus, and reloads when the page is free or goes to the background. A 10-second guard in sessionStorage stops a reload loop. A first install doesn't reload, and the app checks for a new worker each time it comes back to the front. No visible row.

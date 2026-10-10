@@ -50,6 +50,7 @@ import {
   setJevModeSchema,
   setLineCashSchema,
   setLinePaceSchema,
+  answerRecurringMatchSchema,
   setLineRecurringSchema,
   setLinesCashSchema,
   setLinePnlSchema,
@@ -337,6 +338,17 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_pace: parsed.data.pace,
+    };
+  } else if (name === "answer_recurring_match") {
+    const parsed = answerRecurringMatchSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_answer_recurring_match";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_direction: parsed.data.direction,
+      p_party_id: parsed.data.party_id,
+      p_match_party_id: parsed.data.match_party_id,
+      p_same: parsed.data.same,
     };
   } else if (name === "set_invoice_paid") {
     const parsed = setInvoicePaidSchema.safeParse(args);

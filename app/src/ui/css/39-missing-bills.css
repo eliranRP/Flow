@@ -1,0 +1,107 @@
+/* FLOW-415, FLOW-430 and FLOW-913: the קבועים screen's own rules, loaded by missing-bill-list.tsx (a lazy screen),
+   so the Home entry stays in its budget (FLOW-804). */
+
+/* FLOW-415 (b-2): the קבועים screen. FLOW-913 layout A: one line per row; in עריכה a row that can close ends in "סגירה". */
+/* Every row sits on the surface, as a hideable row's swipe layer does, so the list reads as one. */
+.ui-recurring-row {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  background: var(--color-surface);
+}
+
+.ui-recurring-row > .ui-row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-recurring-hide {
+  flex: none;
+  padding-inline: var(--space-4);
+}
+
+.ui-recurring-amount {
+  display: inline-flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-recurring-change {
+  white-space: nowrap;
+}
+
+/*
+  FLOW-913 (owner 16:14Z): the list is one card inside the page gutter, with rounded corners and its
+  own inner space, so no name, amount or chevron touches its edge. A row sliding over "סגירה" (a
+  swipe or the one-time peek) stays inside the card.
+*/
+.ui-recurring-section .ui-missing-bills {
+  inline-size: auto;
+  margin-inline: var(--space-side);
+  padding-inline: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: clip;
+}
+
+.ui-missing-bills .ui-recurring-row > .ui-row {
+  /* Tall enough to swipe with a thumb (owner 16:28Z). */
+  min-block-size: 64px;
+  padding-inline: var(--space-4);
+}
+
+/* Its title lines up with the rows' text and keeps a gap above the card (owner 16:19Z). */
+.ui-recurring-section .ui-section-head {
+  padding-inline: calc(var(--space-side) + var(--space-4));
+  margin-bottom: var(--space-2);
+}
+
+/* FLOW-430's hint sits inside the card with the rows' inner space. */
+.ui-missing-bills .ui-missing-match {
+  padding-inline: var(--space-4);
+}
+
+/* FLOW-430: "אולי זה: <name> · <amount> · dd/mm" under a late row, then "כן" and "לא" (44px). It
+   sits on the row's surface, so the row and its hint read as one. */
+.ui-missing-item {
+  background: var(--color-surface);
+}
+
+.ui-missing-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block-end: var(--row-pad);
+  min-inline-size: 0;
+}
+
+.ui-missing-match-text {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+  text-wrap: balance;
+}
+
+/* The amount and the date are whole or gone: they never shrink into an ellipsis. */
+.ui-missing-match-whole {
+  flex-shrink: 0;
+}
+
+.ui-missing-match-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+.ui-missing-match-actions .ui-btn-pill {
+  height: var(--touch-min);
+  min-height: var(--touch-min);
+}
+
+/* "לא" is the quiet, neutral pill; the accent stays on yes. */
+.ui-missing-match-actions .ui-btn-pill.ui-missing-match-no {
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-text-secondary);
+}

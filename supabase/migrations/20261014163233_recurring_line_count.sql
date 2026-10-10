@@ -49,7 +49,9 @@ as $$
     select count(*)::integer as line_count
     from public.transactions t
     where t.company_id = p_company and t.direction = a.direction and t.currency = a.currency
-      and a.party_id = case when a.direction = 'expense' then t.supplier_id else t.customer_id end
+      -- FLOW-430: a party answered "the same" counts as the recurring one.
+      and a.party_id = private.recurring_party_of(p_company, t.direction,
+        case when a.direction = 'expense' then t.supplier_id else t.customer_id end)
       and t.removed_at is null
       and t.line_status <> 'void'
       and (t.direction = 'expense' or t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))

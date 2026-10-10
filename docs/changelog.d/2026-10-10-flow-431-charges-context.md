@@ -1,0 +1,1 @@
+FLOW-431 follow-up (decision [0178](decisions/0178-party-charges.md)): the "לעומת הרגיל" chip and its sheet compare a charge only with the same loan's payments, or else with the party's charges in the same project and category. A lender that holds two loans no longer shows one payment as far over a usual amount that summed both.

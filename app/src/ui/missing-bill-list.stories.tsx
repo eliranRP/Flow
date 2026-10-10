@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { arrivedViews, missingBillViews } from "../recurring";
-import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
+import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_RENAMED, SAMPLE_MISSING_USD, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
 
 const [water, power] = SAMPLE_MISSING_BILLS;
 import { MissingBillList } from "./missing-bill-list";
@@ -75,4 +75,21 @@ export const Editing320: Story = {
 export const Peek: Story = {
   name: "First visit: the top row peeks",
   render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} peek />,
+};
+// FLOW-430: "אולי זה: <name> · <amount> · dd/mm" with "כן, אותו ספק" and "לא" under the row.
+const matched = missingBillViews([...filed, SAMPLE_MISSING_RENAMED], "", now);
+const answer = () => undefined;
+const suggested = SAMPLE_MISSING_RENAMED.suggestion;
+export const SuggestedMatch: Story = { name: "Suggested match", render: () => <MissingBillList rows={matched} onMatch={answer} onHide={answer} /> };
+export const SuggestedMatch320: Story = { ...SuggestedMatch, name: "Suggested match, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
+export const SuggestedMatchDark: Story = { ...SuggestedMatch, name: "Suggested match, dark", globals: { theme: "dark" } };
+export const SuggestedMatchLongHebrew: Story = {
+  name: "Suggested match, long Hebrew",
+  render: () => (
+    <MissingBillList
+      rows={missingBillViews([{ ...SAMPLE_MISSING_RENAMED, suggestion: suggested == null ? null : { ...suggested, party_name: longHebrew } }], "", now)}
+      onMatch={answer}
+    />
+  ),
+  parameters: { viewport: { defaultViewport: "flow320" } },
 };

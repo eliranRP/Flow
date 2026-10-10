@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -10,8 +10,11 @@ const script = new URL("./ci-deploy-plan.sh", import.meta.url).pathname;
 
 export { isolatedEnv };
 
-/** A repo with `merges` commits after the deployed one, and a fake gh that reports deployments. */
-function setup({ merges, deployments }) {
+/**
+ * A repo with `merges` commits after the deployed one (each changes app code, or only docs/ for the
+ * last `docsOnly` of them), and a fake gh that reports deployments.
+ */
+function setup({ merges, deployments, docsOnly = 0 }) {
   const dir = mkdtempSync(join(tmpdir(), "ci-deploy-plan-"));
   const env = isolatedEnv();
   const git = (...args) => execFileSync("git", ["-C", dir, ...args], { cwd: dir, encoding: "utf8", env }).trim();
@@ -20,7 +23,13 @@ function setup({ merges, deployments }) {
   git("config", "user.name", "CI");
   git("commit", "-q", "--allow-empty", "-m", "deployed");
   const deployed = git("rev-parse", "HEAD");
-  for (let i = 0; i < merges; i += 1) git("commit", "-q", "--allow-empty", "-m", `merge ${i}`);
+  for (let i = 0; i < merges; i += 1) {
+    const file = i >= merges - docsOnly ? `docs/note-${String(i)}.md` : `app/change-${String(i)}.ts`;
+    mkdirSync(join(dir, file, ".."), { recursive: true });
+    writeFileSync(join(dir, file), `${String(i)}\n`);
+    git("add", "-A");
+    git("commit", "-q", "-m", `merge ${String(i)}`);
+  }
   const rows = deployments(deployed, git("rev-parse", "HEAD"));
   const list = rows.map((row) => `${row.id}\t${row.sha}`).join("\n");
   const states = rows.map((row) => `${row.id}) echo ${row.state} ;;`).join("\n");
@@ -68,6 +77,18 @@ test("the fifth merge runs CI and the deploy", () => {
   try {
     assert.equal(ctx.run().status, 0);
     assert.equal(ctx.output(), "run=true\n");
+  } finally {
+    rmSync(ctx.dir, { recursive: true, force: true });
+  }
+});
+
+test("a merge that changes only docs/ does not count toward the batch", () => {
+  const ctx = setup({ merges: 5, docsOnly: 1, deployments: (sha) => [{ id: 7, sha, state: "success" }] });
+  try {
+    const result = ctx.run();
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(ctx.output(), "run=false\n");
+    assert.match(result.stdout, /4 of 5 merges/);
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
   }

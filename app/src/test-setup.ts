@@ -25,6 +25,8 @@ if (dom) {
 }
 const library = dom ? await import("@testing-library/react") : null;
 const back = dom ? await import("./ui/back") : null;
+// FLOW-815: sheets load vaul on first mount; a test reads an open sheet right after render.
+if (dom) await (await import("./ui/sheet")).loadSheetDrawer();
 
 if (dom && typeof globalThis.ResizeObserver === "undefined") {
   globalThis.ResizeObserver = class {

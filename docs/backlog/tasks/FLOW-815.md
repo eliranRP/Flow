@@ -1,0 +1,4 @@
+<a id="flow-815"></a>
+# FLOW-815 · Headroom under the Home entry size budget
+- **Type:** SMALL CYCLE · **Status:** done (#550) · **Depends on:** — · **Source:** lane manager, 2026-10-10: the Home entry was 239.6 of its 240 KB gzip budget, so every UI PR was one CSS rule from red.
+- [ ] Vaul and the Radix dialog, focus and scroll-lock code under it (about a tenth of the entry) leave Home's entry for their own chunk, `ui/sheet-drawer.ts`. The first sheet that mounts loads it, so it is there before a tap opens one; an open sheet that mounts before it arrives (a deep link to a route sheet) opens as soon as it does. Unit tests and Storybook load it up front. Measured: entry 240.0 -> 219.6 KB gzip, all JavaScript about the same; the limits in `scripts/bundle-budget.json` stay, so the headroom is about 20 KB.

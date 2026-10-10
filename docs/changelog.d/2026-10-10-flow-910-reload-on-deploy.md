@@ -1,0 +1,1 @@
+FLOW-910: after a deploy, an open Flow tab now moves to the new version by itself. When the new version's service worker takes over, the page reloads once, but not while a sheet is open or a field is being typed in; then it waits until the page is free or in the background. Before, a tab kept running the old version until it was loaded a second time. No migration.
