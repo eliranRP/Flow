@@ -6,7 +6,7 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07. Lanes table: 2026-10-10 13:45Z.
+Last full sync: 2026-10-07. Lanes table: 2026-10-10 14:45Z.
 
 ## Lanes now
 
@@ -15,14 +15,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 3 | Parked (FLOW-309 pairing server done); takes the next server task | Server side of the next plan-first feature |
-| Dev lane 4 | Team invites (FLOW-601, FLOW-421 #523 done); real-user `get_project` timing after #508 (next snapshot 15:00Z) | Compute-size evidence for the owner only if project opens stay over 0.7 s |
-| UI lane 1 | FLOW-422 (#537): a project's month page steps months like Home | Next cycle item from the design lead |
-| UI lane 2 | FLOW-423: a fixed "לכל הקבועים" link on Home (after #529 קבועים rows) | Next item on the review and transaction screens |
-| UI lane 3 | Idle after the gate work (#521, #527); takes the next small UI task outside the review and transaction screens | Settings, project screens, and other areas outside the review and transaction screens |
-| Temporary lanes (owner asks, one thread each) | FLOW-430 #528 missing-bill suggested match · FLOW-431 #530 related charges (plan-first, card) · FLOW-432 #531 split parts on the list row · FLOW-434 #536 loan page (plan-first, card) · FLOW-435 #534 project page like Home · FLOW-707 #532 card nickname · FLOW-908 search month totals · FLOW-909 uncounted row names. Shared file `project-cash-screens.tsx`: #531 lines screen, #537 month body, #534 overview; whoever merges later rebases | Each closes at its merge; FLOW-433 #535 closed 13:38Z |
-| UI/UX review cycle | Design lead; cycle 17 reviewed the 12:59Z deploy (#533, FLOW-422/423) and signs off UI PRs in a PR comment; ids FLOW-424–429 free | Next deploy batch (2 merges away) |
-| Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Idle; bugs from the owner run in their own threads today (FLOW-908, FLOW-909) | Next bug the lane manager routes |
+| Dev lane 4 | FLOW-911 done (#542); real-user `get_project` snapshot at 15:00Z (edge logs, read-only) | Compute-size evidence for the owner only if typical project opens stay over 0.7 s |
+| UI lane 1 | FLOW-422 done (#537); idle | Next cycle 18 item from the design lead |
+| UI lane 2 | FLOW-423 done (#538); idle | Next cycle 18 item on the review and transaction screens |
+| UI lane 3 | FLOW-912: steadier page-speed check (median of 5 opens, same 700 ms limit, `app/perf`), then FLOW-910: reload once when a new service worker takes control (`app/src/sw-reload.ts`) | Settings, project screens, and other areas outside the review and transaction screens |
+| Temporary lanes (owner asks, one thread each) | FLOW-430 #528 missing-bill suggested match · FLOW-432 #531 split parts on the list row (merges after #540, migration order) · FLOW-434 #536 loan page (owner picked A plus percentages and a future-payments view; building) · FLOW-908 #540 search month totals. Closed today at their merge: FLOW-422, 423, 431, 433, 435, 707, 909, 911 | Each closes at its merge |
+| UI/UX review cycle | Design lead; cycle 18 on the 14:31Z deploy (e645191), findings from FLOW-424; signs off UI PRs in a PR comment | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only (13:50Z and 14:31Z deploys verified) | Next deploy batch |
+| Backlog bug fixes | Idle; the owner's bugs run in their own threads today | Next bug the lane manager routes |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 | Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
 ## Priority queue
