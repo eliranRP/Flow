@@ -62,6 +62,11 @@
   margin-block-start: var(--space-5);
 }
 
+/* A note's last line never holds one word alone (FLOW-358). */
+.ui-setup-body .ui-notice-body {
+  text-wrap: pretty;
+}
+
 /* A note in a step with a demo lines up with the demo frame, a card, not with the text (FLOW-506). */
 .ui-setup-stage-host ~ .ui-setup-body > .ui-notice {
   max-width: none;

@@ -59,6 +59,50 @@
   margin: 0;
 }
 
+/* FLOW-115: the month title opens the year list, so an old loan start is one tap away. */
+.ui-date-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.ui-date-title[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.ui-date-title:disabled svg {
+  display: none;
+}
+
+/* The years take the days' place at about the month's height, newest first; the picked one is filled. */
+.ui-date-years {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  position: relative;
+  block-size: calc(var(--touch-min) * 6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ui-year b {
+  inline-size: auto;
+  aspect-ratio: auto;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-chip);
+}
+
+.ui-year[aria-pressed="true"] b {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
 /* A row's value on the loan page wraps to two lines instead of losing its end at 320
    ("ריבית בלבד · 6 מתוך 24 חודשים"), like the loans list's names (FLOW-339, design lead). */
 .ui-loan-page .ui-project-list .ui-row-title {

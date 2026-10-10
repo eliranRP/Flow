@@ -66,6 +66,9 @@ export type ListRowProps =
     mark?: ReactNode;
     /** No amount yet: a muted "—" with this hidden word instead (FLOW-401: a bill not in yet). */
     missing?: string;
+    /** With no href, the row is a button (an open invoice opens its sheet, FLOW-357). */
+    onClick?: () => void;
+    buttonRef?: Ref<HTMLButtonElement>;
   })
   | (Common & {
     variant: "transaction";
@@ -309,7 +312,18 @@ export function ListRow(props: ListRowProps) {
     props.setAside === true && "ui-row-set-aside",
     props.className,
   );
-  const row = props.href && props.external === true ? (
+  const row = props.variant === "project" && props.href == null && props.onClick != null ? (
+    <button
+      ref={props.buttonRef}
+      type="button"
+      className={className}
+      aria-label={described ? rowName(props) : props.label}
+      aria-describedby={described}
+      onClick={props.onClick}
+    >
+      {body}
+    </button>
+  ) : props.href && props.external === true ? (
     <a
       href={props.href}
       target="_blank"

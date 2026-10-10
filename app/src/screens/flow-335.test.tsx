@@ -176,17 +176,20 @@ const unpaid: UnpaidRow[] = [
 ];
 
 describe("FLOW-335 Unpaid", () => {
-  it("offers the SUMIT sync only once a row is marked", () => {
+  it("offers the SUMIT sync only once a row is marked", async () => {
     render(wrap(<UnpaidScreen sample={unpaid} />));
     expect(screen.queryByRole("button", { name: /רענון מ־SUMIT/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "סימון כשולם" }));
+    // FLOW-357: the mark is in the invoice's sheet.
+    fireEvent.click(screen.getByRole("button", { name: /לקוח לדוגמה/ }));
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "לקוח לדוגמה" })).getByRole("button", { name: "סימון כשולם" }));
     const sync = screen.getByRole("button", { name: /רענון מ־SUMIT/ });
     fireEvent.click(sync);
     expect(screen.getByText("הרענון הסתיים.")).toBeInTheDocument();
   });
 
   it("lays the total out as a column on the start side", () => {
-    render(wrap(<UnpaidScreen sample={unpaid} />));
+    // Two invoices: with one, the head is the title alone (FLOW-357).
+    render(wrap(<UnpaidScreen sample={[...unpaid, { ...(unpaid[0] as UnpaidRow), id: "u2", customer_name: "לקוח נוסף" }]} />));
     const totals = document.querySelector(".ui-unpaid-totals");
     expect(totals).not.toBeNull();
     const style = getComputedStyle(totals as Element);

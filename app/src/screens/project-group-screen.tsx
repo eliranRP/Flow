@@ -5,11 +5,16 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { findGroup, projectCountLabel } from "../project-groups";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useBooks, useDashboardQuery } from "../use-books";
+import { Button } from "../ui/button";
+import { EmptyState } from "../ui/empty-state";
+import { ProjectsIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { ListSkeleton } from "../ui/skeleton";
 import { ProjectRowItem } from "./projects-screen";
+
+export const GROUP_MISSING_TITLE = "הקבוצה לא נמצאה";
 
 /**
  * FLOW-406 (proj-b-2): one project group's page. The group's projects, active first, from the same
@@ -26,9 +31,19 @@ export function ProjectGroupScreen({ sample, groupId: groupIdProp }: { sample?: 
   const data = sample ?? dashboard.data;
   const back = `/projects${search}`;
   const entry = data ? findGroup(data, groupId) : null;
-  // Ready (or the empty preview) with no such group: a stale link says so instead of a blank page.
+  // Ready (or the empty preview) with no such group: a stale link gets the standard empty state, with a way back (FLOW-358).
   if ((phase.kind === "ready" || phase.kind === "empty") && entry == null) {
-    return <ScreenHeader title="קבוצה" kicker="פרויקטים" subtitle="הקבוצה לא נמצאה." backTo={back} />;
+    return (
+      <div>
+        <ScreenHeader barOnly kicker="פרויקטים" backTo={back} />
+        <EmptyState
+          icon={<ProjectsIcon />}
+          title={GROUP_MISSING_TITLE}
+          body="ייתכן שנמחקה או שייכת לעסק אחר."
+          action={<Button variant="pill" to={back}>לכל הפרויקטים</Button>}
+        />
+      </div>
+    );
   }
   const projects = entry == null
     ? []
