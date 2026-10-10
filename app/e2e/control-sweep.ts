@@ -72,6 +72,27 @@ async function gotoSettled(page: Page, url: string) {
   }));
 }
 
+/** A control list's shape: the sweep finds each control again by its place in this list. */
+function shape(controls: Control[]): string[] {
+  return controls.map((control) => `${String(control.index)} ${control.tag} ${control.name} ${control.href}`);
+}
+
+/**
+ * The controls once the route's screen has drawn. A screen loads on demand and renders nothing
+ * until it does (screen-suspense.tsx), so a fast load can show only the tab bar at first: read until
+ * two reads 250 ms apart agree.
+ */
+async function settledControls(page: Page): Promise<Control[]> {
+  let last = await describeControls(page);
+  for (let tries = 0; tries < 40; tries += 1) {
+    await page.waitForTimeout(250);
+    const next = await describeControls(page);
+    if (JSON.stringify(shape(next)) === JSON.stringify(shape(last))) return next;
+    last = next;
+  }
+  return last;
+}
+
 function hitTarget(el: Element): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const rect = el.getBoundingClientRect();
@@ -114,7 +135,7 @@ export function sweepControls(spec: string): void {
     test(`no enabled control is a no-op on ${url}`, async ({ page }) => {
       test.setTimeout(180_000);
       await gotoSettled(page, url);
-      const found = await describeControls(page);
+      const found = await settledControls(page);
       // Every control below starts from this same fresh page, so the checks that read only the
       // control's description run before the reload.
       const here = page.url();
@@ -131,6 +152,8 @@ export function sweepControls(spec: string): void {
         const field = (control.tag === "input" || control.tag === "textarea") && control.type !== "checkbox" && control.type !== "radio";
         if (!field && control.checked === "true") continue;
         await gotoSettled(page, url);
+        // The same controls as the first look, so nth() below is this control and not its neighbour.
+        await expect.poll(async () => shape(await describeControls(page)), { timeout: 10_000 }).toEqual(shape(found));
         const target = page.locator("a[href], button, input, textarea").nth(control.index);
         if (field) {
           await target.click();
