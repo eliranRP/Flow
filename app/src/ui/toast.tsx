@@ -565,8 +565,18 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
             {tone === "ok" ? <CheckIcon size={18} /> : <InfoIcon size={18} />}
           </span>
           <span className="ui-toast-text" dir="rtl">
-            {/* FLOW-426: a message in parts ("a · b") wraps only between whole parts. */}
-            {typeof children === "string" && children.includes(" · ") ? <HintParts text={children} /> : children}
+            {/* FLOW-426: a message in parts ("a · b") wraps only between whole parts. Screen readers
+                and searches read it whole, from the hidden copy. */}
+            {typeof children === "string" && children.includes(" · ") ? (
+              <>
+                <span className="sr-only">{children}</span>
+                <span aria-hidden="true">
+                  <HintParts text={children} />
+                </span>
+              </>
+            ) : (
+              children
+            )}
           </span>
           {action && onAction ? (
             <button type="button" className="ui-toast-action" aria-label={action} onClick={onAction}>
