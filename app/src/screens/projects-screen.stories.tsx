@@ -1,8 +1,10 @@
 import type { Dashboard } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "@storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
+import { projectsGroupDone, projectsGrouped } from "./project-groups-sample";
 
 function listedProject(id: string, name: string, status: "active" | "finished" = "active"): Dashboard["projects"][number] {
   return {
@@ -150,4 +152,55 @@ export const ProjectsError: Story = {
       <ProjectsScreen />
     </StoryRoute>
   ),
+};
+
+/** FLOW-406 (proj-b): a group is one row with its project count and summed profit; it opens the group. */
+export const ProjectsGrouped: Story = {
+  name: "Projects, grouped",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsGrouped} />
+    </StoryRoute>
+  ),
+};
+export const ProjectsGroupedDark: Story = { ...ProjectsGrouped, name: "Projects, grouped, dark", globals: { theme: "dark" } };
+export const ProjectsGrouped320: Story = {
+  ...ProjectsGrouped,
+  name: "Projects, grouped, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const ProjectsGroupedDark320: Story = {
+  ...ProjectsGrouped,
+  name: "Projects, grouped, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
+/** A query finds a project inside a group, and the group by its own name. */
+export const ProjectsGroupedSearch: Story = {
+  name: "Projects, grouped, search",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsGrouped} initialQuery="דירה 2" />
+    </StoryRoute>
+  ),
+};
+
+/** A group whose projects have all finished folds under עוד N שהסתיימו, and comes back when opened. */
+export const ProjectsGroupDone: Story = {
+  name: "Projects, a finished group folds",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsGroupDone} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByText("מרכז מסחרי לדוגמה")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: /עוד 3 שהסתיימו/ }));
+    await expect(canvas.getByText("מרכז מסחרי לדוגמה")).toBeInTheDocument();
+  },
 };

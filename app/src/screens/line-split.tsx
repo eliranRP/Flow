@@ -20,6 +20,7 @@ import { ScreenState } from "../ui/screen-state";
 import { ReversalTag } from "../ui/suggest-tag";
 import { Amount, type LineInfo, type LineSplitApi, money, partProjectLabel, Percent } from "./line-split-parts";
 import { LineSplitEditor } from "./line-split-editor";
+import { projectChoices } from "../project-groups";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
 export { LINE_SPLIT_KEYS, LINE_SPLIT_MAX_PARTS, type LineInfo, type LineSplitApi } from "./line-split-parts";
@@ -298,7 +299,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
     );
   }
   const line = lineInfo(txn.data, loan.data === true);
-  const projects: ChangeChoice[] = (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status }));
+  const projects: ChangeChoice[] = projectChoices(dashboard.data);
   const initial = readLineDraft(transactionId) ?? draftFromRead(split.data, line.categoryId);
   return (
     <LineSplitEditor

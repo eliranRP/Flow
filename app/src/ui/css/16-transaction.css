@@ -270,3 +270,16 @@
     animation: none;
   }
 }
+
+/* FLOW-406 (picker): a project group's name over its projects, then שאר הפרויקטים. */
+.ui-pick-group-head {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-pick-group + .ui-pick-group {
+  margin-top: var(--space-2);
+}
