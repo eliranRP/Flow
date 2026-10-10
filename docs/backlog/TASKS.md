@@ -135,6 +135,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST |
 | 83 | [FLOW-356](#flow-356) | Phone polish after the October 9 late deploy (cycle 13) | SMALL UI |
 | 84 | [FLOW-357](#flow-357) | Open invoices fit more than three rows at 320 | PLAN FIRST |
+| 85 | [FLOW-358](#flow-358) | Phone polish after the October 10 morning deploy (cycle 14) | SMALL UI |
+| 86 | [FLOW-359](#flow-359) | One way to change the period on Home and the project band | PLAN FIRST |
+| 87 | [FLOW-360](#flow-360) | Put a project in a group from the app | PLAN FIRST |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -255,6 +258,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-138"></a>[FLOW-138](tasks/FLOW-138.md) | A paid-off loan's leftover balance has no word | PLAN FIRST |
 | <a id="flow-356"></a>[FLOW-356](tasks/FLOW-356.md) | Phone polish after the October 9 late deploy (cycle 13) | SMALL UI |
 | <a id="flow-357"></a>[FLOW-357](tasks/FLOW-357.md) | Open invoices fit more than three rows at 320 | PLAN FIRST |
+| <a id="flow-358"></a>[FLOW-358](tasks/FLOW-358.md) | Phone polish after the October 10 morning deploy (cycle 14) | SMALL UI |
+| <a id="flow-359"></a>[FLOW-359](tasks/FLOW-359.md) | One way to change the period on Home and the project band | PLAN FIRST |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 
 ## Projects and reports
@@ -267,6 +272,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-404"></a>[FLOW-404](tasks/FLOW-404.md) | Project as an investment | PLAN FIRST |
 | <a id="flow-405"></a>[FLOW-405](tasks/FLOW-405.md) | Category management | PLAN FIRST |
 | <a id="flow-406"></a>[FLOW-406](tasks/FLOW-406.md) | Sub-categories and project groups | PLAN FIRST |
+| <a id="flow-360"></a>[FLOW-360](tasks/FLOW-360.md) | Put a project in a group from the app | PLAN FIRST |
 | <a id="flow-407"></a>[FLOW-407](tasks/FLOW-407.md) | Export for the accountant | PLAN FIRST |
 | <a id="flow-408"></a>[FLOW-408](tasks/FLOW-408.md) | Currency alignment in project lists | SMALL UI |
 | <a id="flow-409"></a>[FLOW-409](tasks/FLOW-409.md) | Overhead weights on the cash basis | BACKLOG NIT |
