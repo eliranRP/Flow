@@ -11,6 +11,7 @@ export const screenLoaders = {
   projects: () => import("./screens/projects-screen"),
   projectDetail: () => import("./screens/project-detail-screen"),
   projectCash: () => import("./screens/project-cash-screens"),
+  projectCashHistory: () => import("./screens/project-cash-history"),
   projectGroup: () => import("./screens/project-group-screen"),
   filedToday: () => import("./screens/filed-today-screen"),
   projectCategory: () => import("./screens/project-category-screen"),

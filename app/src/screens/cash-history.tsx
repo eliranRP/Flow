@@ -66,7 +66,7 @@ export function CashHistorySkeleton({ back, section }: { back: string; section: 
   );
 }
 
-function NotReady({
+export function CashHistoryNotReady({
   phase,
   back,
   title,
@@ -85,7 +85,7 @@ function NotReady({
   return <Navigate to={back} replace />;
 }
 
-function Band({ back, label, figures }: { back: string; label: string; figures: { agorot: bigint; currency: string; loss: boolean }[] }) {
+export function CashHistoryBand({ back, label, figures }: { back: string; label: string; figures: { agorot: bigint; currency: string; loss: boolean }[] }) {
   const search = usePreviewSearch();
   return (
     <TopBand
@@ -108,7 +108,7 @@ export function CashHistoryScreen({ sample }: { sample?: NonNullable<CashYears> 
   const data = sample ?? query.data ?? null;
   if (phase.kind !== "ready" || data == null) {
     return (
-      <NotReady
+      <CashHistoryNotReady
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         back={back}
         title="תזרים"
@@ -122,7 +122,7 @@ export function CashHistoryScreen({ sample }: { sample?: NonNullable<CashYears> 
   const totals = shownTotalRows(data.by_currency, data.base_currency);
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
-      <Band
+      <CashHistoryBand
         back={back}
         label={cashHistoryLabel(data.first_month)}
         figures={totals.map((row) => ({ agorot: row.net_minor, currency: row.currency, loss: row.net_minor < 0n }))}
@@ -169,7 +169,7 @@ function CashYearBody({
   const history = sample?.years ?? years.data ?? null;
   if (phase.kind !== "ready" || data == null || history == null) {
     return (
-      <NotReady
+      <CashHistoryNotReady
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         back={back}
         title={cashYearTitle(year)}
@@ -188,7 +188,7 @@ function CashYearBody({
   const totals = cashYearTotals(shown, data.base_currency);
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
-      <Band
+      <CashHistoryBand
         back={back}
         label={cashYearTitle(year)}
         figures={totals.map((row) => ({ agorot: row.net_minor, currency: row.currency, loss: row.net_minor < 0n }))}
