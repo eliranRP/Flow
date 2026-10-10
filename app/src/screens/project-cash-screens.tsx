@@ -42,6 +42,7 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
+import { useProjectQuery } from "../use-books";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
 
@@ -154,13 +155,14 @@ export function ProjectCashMonthScreen({
   sample,
   monthKey,
   projectId: sampleProjectId,
-}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string } = {}) {
+  projectName,
+}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string; projectName?: string } = {}) {
   const params = useParams();
   const month = monthKey ?? params.month;
   const projectId = sampleProjectId ?? params.projectId ?? "";
   const search = usePreviewSearch();
   if (!isCashMonthKey(month)) return <Navigate to={`/projects/${projectId}${search}`} replace />;
-  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} />;
+  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} sampleName={projectName} />;
 }
 
 function ProjectCashMonthBody({
@@ -168,17 +170,22 @@ function ProjectCashMonthBody({
   monthKey,
   search,
   sample,
+  sampleName,
 }: {
   projectId: string;
   monthKey: string;
   search: string;
   sample?: NonNullable<CashMonths>;
+  sampleName?: string;
 }) {
   const preview = useHomePreview();
   const query = useProjectCashMonthsQuery(projectId, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
   const back = `/projects/${projectId}${search}`;
+  // FLOW-422 (design lead): Back names the project it returns to; the page says which project it is.
+  const project = useProjectQuery(sample ? "" : projectId);
+  const kicker = sampleName ?? project.data?.name ?? undefined;
   const navigate = useNavigate();
   const data = sample ?? query.data ?? null;
   // FLOW-422: Home's month pager and swipe, within the months the project's read holds.
@@ -198,7 +205,7 @@ function ProjectCashMonthBody({
     />
   );
   if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
   const month = monthOf(data ?? undefined, monthKey);
   // The project page reads the last few months; a month outside them has no page.
@@ -206,7 +213,7 @@ function ProjectCashMonthBody({
   const rows = shownCashRows(month, data.base_currency);
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker="תזרים" titleAside={stepper} />
+      <ScreenHeader layout="stacked" title={title} backTo={back} kicker={kicker} titleAside={stepper} />
       <PeriodSwipe
         period={monthPeriod(monthKey)}
         allow={(next: PeriodChoice) => opens(anchorOf(next))}

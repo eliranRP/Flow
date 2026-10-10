@@ -194,12 +194,13 @@ export const ProjectCashMonth: Story = {
   name: "Project, an earlier month",
   render: () => (
     <StoryRoute entry={`/projects/p-c/cash/${earlier}`} tabs>
-      <ProjectCashMonthScreen sample={cash} monthKey={earlier} projectId="p-c" />
+      <ProjectCashMonthScreen sample={cash} monthKey={earlier} projectId="p-c" projectName={project.name} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
-    // FLOW-422: Home's ‹ › pager by the title, both ways from a middle month.
+    // FLOW-422: Home's ‹ › pager by the title, both ways from a middle month; Back names the project.
     const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: new RegExp(project.name) })).toBeVisible();
     await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(2);
   },
 };
@@ -213,7 +214,7 @@ export const ProjectCashMonthOldest: Story = {
   name: "Project, the oldest month it reads",
   render: () => (
     <StoryRoute entry={`/projects/p-c/cash/${oldest}`} tabs>
-      <ProjectCashMonthScreen sample={cash} monthKey={oldest} projectId="p-c" />
+      <ProjectCashMonthScreen sample={cash} monthKey={oldest} projectId="p-c" projectName={project.name} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
