@@ -60,11 +60,14 @@ test("Project band: a swipe right on the profit steps the project's own period",
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.goto("/e2e/project-detail?preview=1");
   await expect(page.getByText(/^רווח ב־3 חודשים/)).toBeVisible();
+  // FLOW-359 (A): the project band has Home's one pill; it names the window the swipe moved to.
+  const pill = page.locator(".ui-band").getByRole("button", { name: /בחירת תקופה$/ });
+  const before = await pill.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
   await touchSwipe(cdp, { x: 80, y: row.y }, { x: 280, y: row.y });
   await expect(page.getByText(/^רווח ב־3 חודשים/)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "3 חודשים הבאים" })).not.toHaveAttribute("aria-disabled", "true");
+  await expect(pill).not.toHaveText(before ?? "");
 });
 
 test("Reduced motion: the figure stays put during the drag and the period swaps on release", async ({ page, browserName }) => {

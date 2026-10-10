@@ -566,7 +566,7 @@ Deno.test("get_project calls get_project with the id and each basis", async () =
   }
 });
 
-Deno.test("get_project defaults to the invoiced basis, like list_projects and get_totals (FLOW-103)", async () => {
+Deno.test("get_project defaults to the company's basis, like list_projects and get_totals (FLOW-103)", async () => {
   const { calls, rpc } = rpcOf((name) => name === "get_project" || name === "get_dashboard"
     ? { status: 200, json: name === "get_project" ? PROJECT_FIXTURE : { projects: [], basis: "invoiced" } }
     : { status: 500, json: null });
@@ -608,17 +608,17 @@ Deno.test("get_project rejects a bad id, a bad basis, and an extra argument befo
 
 Deno.test("get_project maps an RPC error to a read refusal and null to not found", async () => {
   for (const status of [400, 401, 403, 404, 500]) {
-    const result = await callTool("get_project", { id: PROJECT }, ["read"], () => Promise.resolve({ status, json: { message: "permission denied" } }));
+    const result = await callTool("get_project", { id: PROJECT, basis: "invoiced" }, ["read"], () => Promise.resolve({ status, json: { message: "permission denied" } }));
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) {
       assertEquals(result.structuredContent.error, { code: "refused", message: "The read was refused." });
     }
   }
-  const missing = await callTool("get_project", { id: PROJECT }, ["read"], () => Promise.resolve({ status: 200, json: null }));
+  const missing = await callTool("get_project", { id: PROJECT, basis: "invoiced" }, ["read"], () => Promise.resolve({ status: 200, json: null }));
   assertEquals(missing.isError, true);
   if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error, { code: "not_found", message: "not found" });
   for (const json of [[PROJECT_FIXTURE], "x", 1]) {
-    const odd = await callTool("get_project", { id: PROJECT }, ["read"], () => Promise.resolve({ status: 200, json }));
+    const odd = await callTool("get_project", { id: PROJECT, basis: "invoiced" }, ["read"], () => Promise.resolve({ status: 200, json }));
     assertEquals(odd.isError, true);
     if (!odd.structuredContent.ok) assertEquals(odd.structuredContent.error.code, "refused");
   }

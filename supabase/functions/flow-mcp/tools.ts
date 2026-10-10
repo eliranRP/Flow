@@ -6,6 +6,7 @@
 import { demandStatement, LoanScheduleError } from "../../../packages/shared/src/loan-schedule.ts";
 import {
   argsOf,
+  basisArgOf,
   companyCurrency,
   dateOf,
   fail,
@@ -20,6 +21,7 @@ import {
   NO_LINE_META,
   offsetOf,
   ok,
+  pnlBasis,
   PROFIT_MONTHS_MAX,
   READ_REFUSED,
   scheduleLimitOf,
@@ -82,8 +84,10 @@ export async function callTool(
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
-    const basis = args.basis == null ? "invoiced" : args.basis;
-    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const asked = basisArgOf(args.basis);
+    if (asked != null && typeof asked !== "string") return asked;
+    const basis = await pnlBasis(rpc, asked);
+    if (typeof basis !== "string") return basis;
     const body = await dashboard(rpc, from, to, basis);
     if (isFail(body)) return body;
     if (name === "get_totals") return ok(totalsOf(body));
@@ -95,13 +99,15 @@ export async function callTool(
   if (name === "get_project") {
     const projectId = args.id;
     if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
-    const basis = args.basis == null ? "invoiced" : args.basis;
-    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const asked = basisArgOf(args.basis);
+    if (asked != null && typeof asked !== "string") return asked;
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
     if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
+    const basis = await pnlBasis(rpc, asked);
+    if (typeof basis !== "string") return basis;
     const body: Record<string, unknown> = { p_id: projectId, p_basis: basis };
     if (from != null) Object.assign(body, { p_from: from, p_to: to });
     const result = await rpc("get_project", body);
@@ -121,13 +127,15 @@ export async function callTool(
   if (name === "get_project_group") {
     const groupId = args.id;
     if (typeof groupId !== "string" || !UUID.test(groupId)) return fail("validation", "validation");
-    const basis = args.basis == null ? "invoiced" : args.basis;
-    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const asked = basisArgOf(args.basis);
+    if (asked != null && typeof asked !== "string") return asked;
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
     if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
+    const basis = await pnlBasis(rpc, asked);
+    if (typeof basis !== "string") return basis;
     const body: Record<string, unknown> = { p_id: groupId.toLowerCase(), p_basis: basis };
     if (from != null) Object.assign(body, { p_from: from, p_to: to });
     const result = await rpc("get_project_group", body);
@@ -158,10 +166,12 @@ export async function callTool(
     if (typeof to !== "string" && to != null) return to;
     if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
     if (from != null && to != null && monthsBetween(from, to) >= PROFIT_MONTHS_MAX) return fail("validation", "validation");
-    const basis = args.basis == null ? "invoiced" : args.basis;
-    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const asked = basisArgOf(args.basis);
+    if (asked != null && typeof asked !== "string") return asked;
     const projectId = args.project_id == null ? null : args.project_id;
     if (projectId != null && (typeof projectId !== "string" || !UUID.test(projectId))) return fail("validation", "validation");
+    const basis = await pnlBasis(rpc, asked);
+    if (typeof basis !== "string") return basis;
     const result = await rpc("get_profit_months", { p_from: from, p_to: to, p_basis: basis, p_project_id: projectId });
     if (result.status >= 400) return fail("refused", READ_REFUSED);
     // The RPC returns null for a project of another company or an unknown one.
@@ -250,27 +260,20 @@ export async function callTool(
     const level = args.level == null ? "category" : args.level;
     if (level !== "category" && level !== "parent") return fail("validation", "validation");
     if (level === "parent" && groupBy !== "category") return fail("validation", "validation");
-    const basis = args.basis == null ? "invoiced" : args.basis;
-    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const asked = basisArgOf(args.basis);
+    if (asked != null && typeof asked !== "string") return asked;
     const from = dateOf(args.from);
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
     // get_totals counts nothing for a period with one date; refuse it so totals stay equal.
     if ((from == null) !== (to == null)) return fail("validation", "validation");
-    const range = { p_direction: direction, p_from: from, p_to: to, p_group_by: level === "parent" ? "parent" : groupBy, p_basis: basis };
     const excluded = args.excluded == null ? false : args.excluded;
     if (typeof excluded !== "boolean") return fail("validation", "validation");
     // The kept-out list has no group; a group with excluded would be silently ignored.
     if (excluded && args.group != null) return fail("validation", "validation");
-    if (args.group == null && !excluded) {
-      if (args.currency != null || args.limit != null || args.offset != null) return fail("validation", "validation");
-      const result = await rpc("get_breakdown", range);
-      if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
-        return fail("refused", READ_REFUSED);
-      }
-      return ok({ ...(result.json as Review), basis });
-    }
+    const totals = args.group == null && !excluded;
+    if (totals && (args.currency != null || args.limit != null || args.offset != null)) return fail("validation", "validation");
     const group = args.group == null ? null : args.group;
     if (group != null && (typeof group !== "string" || group.length === 0 || group.length > 64)) return fail("validation", "validation");
     let currency = args.currency;
@@ -279,6 +282,16 @@ export async function callTool(
     if (typeof limit !== "number") return limit;
     const offset = offsetOf(args.offset);
     if (typeof offset !== "number") return offset;
+    const basis = await pnlBasis(rpc, asked);
+    if (typeof basis !== "string") return basis;
+    const range = { p_direction: direction, p_from: from, p_to: to, p_group_by: level === "parent" ? "parent" : groupBy, p_basis: basis };
+    if (totals) {
+      const result = await rpc("get_breakdown", range);
+      if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+        return fail("refused", READ_REFUSED);
+      }
+      return ok({ ...(result.json as Review), basis });
+    }
     if (currency == null) {
       const base = await companyCurrency(rpc);
       if (typeof base !== "string") return base;

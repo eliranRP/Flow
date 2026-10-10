@@ -45,20 +45,13 @@
   padding-top: var(--space-2);
 }
 
-.ui-band-hero-project .ui-pbar {
-  margin-block-start: var(--space-2);
-}
-
-.ui-band-hero-project .ui-pbar-step {
-  padding-inline: var(--space-2);
-}
-
 .ui-band-hero-project .ui-project-period-label {
   margin-block: var(--space-1) 0;
 }
 
-.ui-band-hero-project .ui-band-figures {
-  padding-top: var(--space-2);
+/* FLOW-359 (A): Home's one period pill, with Home's --space-2 above and below it. */
+.ui-band-hero-project .ui-hero-pill {
+  margin-block: var(--space-2);
 }
 
 /* "לפי חודש" is a plain row right under the band (FLOW-335), not the tinted pending card. */

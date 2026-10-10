@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(71);
+select plan(75);
 
 do $users$
 begin
@@ -177,7 +177,9 @@ select is(
 select tests.authenticate_as('cfm_owner');
 
 insert into cfm_val (label, v)
-select 'pnl_before', public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'invoiced') -> 'by_currency' -> 0;
+select 'pnl_before', public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'cash') -> 'by_currency' -> 0;
+insert into cfm_val (label, v)
+select 'pnl_invoiced', public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'invoiced') -> 'by_currency' -> 0;
 
 select is(
   (select (c ->> 'in_cash')::boolean from jsonb_array_elements(public.list_categories()) c
@@ -205,12 +207,23 @@ select is(
   '{"n": 2, "in": 5000000, "out": 50000}'::jsonb,
   'what the view leaves out: the loan money and the transfer'
 );
-select is(pg_temp.june('profit_minor'), 850000::bigint, 'the month''s profit leaves loan principal out');
+select is(
+  pg_temp.june('profit_minor'), 880000::bigint,
+  'the month''s profit leaves loan principal out, and on the payment date the open invoice waits'
+);
 select is(
   pg_temp.june('profit_minor'),
   ((select v ->> 'net_profit_minor' from cfm_val where label = 'pnl_before'))::bigint,
-  'profit_minor is company_pnl''s invoiced net profit for the month'
+  'profit_minor is company_pnl''s net profit for the month on the company''s basis (FLOW-103)'
 );
+select lives_ok($$select public.set_cash_basis('invoice')$$, 'the invoice date');
+select is(
+  pg_temp.june('profit_minor'),
+  ((select v ->> 'net_profit_minor' from cfm_val where label = 'pnl_invoiced'))::bigint,
+  'on the invoice date, profit_minor is company_pnl''s invoiced net profit'
+);
+select is(pg_temp.june('profit_minor'), 850000::bigint, 'and the open invoice counts');
+select lives_ok($$select public.set_cash_basis('paid')$$, 'back to the payment date');
 select is(
   (select jsonb_agg(r ->> 'currency')
    from jsonb_array_elements(public.cash_months(2, '2026-06-15') -> 'months' -> 0 -> 'by_currency') r),
@@ -304,7 +317,7 @@ select is(
 select lives_ok($$select public.set_category_cash(pg_temp.cat('חומרים', 'expense'), true)$$, 'and back');
 select is(
   public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'invoiced') -> 'by_currency' -> 0,
-  (select v from cfm_val where label = 'pnl_before'),
+  (select v from cfm_val where label = 'pnl_invoiced'),
   'the cash switches leave the P&L as it was'
 );
 
@@ -343,7 +356,7 @@ select is(pg_temp.april('in_minor'), 100000::bigint, 'on the invoice basis the i
 select lives_ok($$select public.set_cash_basis('paid')$$, 'paid basis');
 select is(
   (pg_temp.month_row('2026-05-01', 'USD') ->> 'profit_minor')::bigint,
-  ((public.company_pnl(pg_temp.id('co'), '2026-05-01', '2026-05-31', 'invoiced') -> 'by_currency')
+  ((public.company_pnl(pg_temp.id('co'), '2026-05-01', '2026-05-31', 'cash') -> 'by_currency')
      -> 1 ->> 'net_profit_minor')::bigint,
   'profit_minor matches company_pnl in a second currency'
 );
