@@ -113,15 +113,19 @@ trap log_time EXIT
 skips=1
 if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi
 # What the app reads: its sources, the shared packages, the design tokens, _shared and the
-# migrations (tests import both), the scripts (vite.config.ts imports one), the root configs and the
-# untracked .env (vite's envDir).
-app_inputs=(app packages design supabase/functions/_shared supabase/migrations scripts package.json
-  pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json eslint.config.js)
+# migrations (tests import both), the scripts its checks read or that pick what they run
+# (scripts/app-scripts.mjs), the root configs and the untracked .env (vite's envDir). Any other
+# script runs the scripts suite, lint and typecheck only.
+mapfile -t app_scripts < <(node scripts/app-scripts.mjs)
+(( ${#app_scripts[@]} )) || { echo "local-ci: scripts/app-scripts.mjs listed no scripts." >&2; exit 1; }
+app_inputs=(app packages design supabase/functions/_shared supabase/migrations "${app_scripts[@]}"
+  package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json eslint.config.js)
 inputs_hash() {
   { git ls-tree -r HEAD -- "$@"; sha256sum .env 2>/dev/null || true; } | sha256sum | cut -c1-40
 }
 app_key="$(inputs_hash "${app_inputs[@]}")"
-typecheck_key="typecheck-$app_key"
+# The typecheck also checks every script (scripts/tsconfig.json).
+typecheck_key="typecheck-$(inputs_hash "${app_inputs[@]}" scripts)"
 build_key="build-$app_key"
 has_mark() {
   local dir
