@@ -365,6 +365,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-815"></a>[FLOW-815](tasks/FLOW-815.md) | Headroom under the Home entry size budget | SMALL CYCLE |
 | <a id="flow-816"></a>[FLOW-816](tasks/FLOW-816.md) | The project-open speed check scales to the container in local gates | SMALL CYCLE |
 | <a id="flow-817"></a>[FLOW-817](tasks/FLOW-817.md) | Docs-only merges don't count toward the deploy batch | SMALL CYCLE |
+| <a id="flow-818"></a>[FLOW-818](tasks/FLOW-818.md) | vitest 4 bump (dependabot #566, #567) | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
