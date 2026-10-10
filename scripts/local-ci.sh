@@ -695,8 +695,11 @@ if (( ! full )); then
     phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
     eval "$(bash scripts/ci-local-supabase-env.sh)"
     pnpm --filter @flow/app exec playwright install chromium
-    # Playwright's default workers (half the cores): on every core the toast timing specs time out.
-    pnpm --filter @flow/app exec playwright test --fully-parallel "${e2e_specs[@]}"
+    # One worker per core but one: on every core the toast timing specs time out, and Playwright's
+    # default (half the cores) left a core idle (the review set: 293 s on 2 of 4 cores, 246 s on 3).
+    e2e_workers="$(( $(nproc) > 2 ? $(nproc) - 1 : 1 ))"
+    echo "local-ci: running the e2e specs on $e2e_workers Playwright workers ($(nproc) cores)."
+    pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"
