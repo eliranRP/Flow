@@ -98,7 +98,7 @@ describe("missing bills", () => {
     expect(missing?.hint).toBeUndefined();
   });
 
-  it("draws one row per bill with its hint lines and the amount after כ־, and a calm empty state", () => {
+  it("draws one line per bill, the name and the amount after כ־, and a calm empty state", () => {
     const rows = missingBillViews([...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_USD], "", now);
     const { unmount } = render(
       <MemoryRouter>
@@ -108,9 +108,8 @@ describe("missing bills", () => {
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
     expect(links[1]?.getAttribute("aria-label")).toBe("אור חשמל, בניין הדקל · חשמל, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850");
-    // FLOW-415: a bill that files nowhere has one hint line, when it usually comes.
-    expect(links[1]?.querySelectorAll(".ui-row-hint")).toHaveLength(2);
-    expect(links[2]?.querySelectorAll(".ui-row-hint")).toHaveLength(1);
+    // FLOW-913 (owner, layout A): no hint lines; where and when stay in the accessible name.
+    expect(links[1]?.querySelectorAll(".ui-row-hint")).toHaveLength(0);
     expect(links[2]?.textContent).toContain("$20");
     unmount();
     render(
@@ -180,31 +179,61 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     expect(rent?.worse).toBe(true);
   });
 
-  it("draws both sections, and hides a late row or a change with the ✕", () => {
+  it("opens every one of this month's lines when several make the amount (FLOW-913)", () => {
+    const [rent] = arrivedViews([{ ...SAMPLE_RECURRING_THIS_MONTH[0], direction: "income", line_count: 3 } as (typeof SAMPLE_RECURRING_THIS_MONTH)[number]], [], "?preview=1");
+    expect(rent?.place).toBe("3 תשלומים");
+    expect(rent?.href).toMatch(/^\/search\?preview=1&q=.+&dir=income&period=month$/);
+    const [one] = arrivedViews([{ ...SAMPLE_RECURRING_THIS_MONTH[0], line_count: 1 } as (typeof SAMPLE_RECURRING_THIS_MONTH)[number]], [], "");
+    expect(one?.href).toBe(`/transactions/${SAMPLE_RECURRING_THIS_MONTH[0]?.transaction_id ?? ""}`);
+  });
+
+  it("draws both sections one line per row, and closes a late row or a change with סגירה in עריכה (FLOW-913)", () => {
     const onHide = vi.fn();
-    render(
+    const props = {
+      rows: missingBillViews(SAMPLE_MISSING_BILLS, "", now),
+      arrived: arrivedViews(SAMPLE_RECURRING_THIS_MONTH, SAMPLE_RECURRING_CHANGES, ""),
+      onHide,
+    };
+    const { rerender } = render(
       <MemoryRouter>
-        <MissingBillList
-          rows={missingBillViews(SAMPLE_MISSING_BILLS, "", now)}
-          arrived={arrivedViews(SAMPLE_RECURRING_THIS_MONTH, SAMPLE_RECURRING_CHANGES, "")}
-          onHide={onHide}
-        />
+        <MissingBillList {...props} />
       </MemoryRouter>,
     );
     const late = screen.getByRole("region", { name: "לא הגיעו" });
     const arrived = screen.getByRole("region", { name: "הגיעו החודש" });
     expect(late.id).toBe("late");
     expect(arrived.id).toBe("arrived");
+    // The details stay in the name a screen reader hears; the row shows only the name and the amount.
     expect(within(arrived).getAllByRole("link").map((link) => link.getAttribute("aria-label"))).toEqual([
       "אור חשמל, בניין הדקל · חשמל, ₪2,550, עלייה של 38%",
       "ארנונה עירונית, שיפוץ הרצל 12, ₪1,320",
       "ביטוח דוגמה, ביטוח, ₪410",
     ]);
-    // Only the change carries a ✕ in הגיעו החודש; every late row does.
-    expect(within(late).getAllByRole("button", { name: /^הסתרה, / })).toHaveLength(2);
-    fireEvent.click(within(arrived).getByRole("button", { name: "הסתרה, אור חשמל" }));
+    expect(document.querySelectorAll(".ui-row-hint")).toHaveLength(0);
+    // At rest: no buttons, a chevron on every row.
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(document.querySelectorAll(".ui-row-chevron")).toHaveLength(5);
+    rerender(
+      <MemoryRouter>
+        <MissingBillList {...props} editing />
+      </MemoryRouter>,
+    );
+    // Only the change closes in הגיעו החודש; every late row does. סגירה takes the chevron's place.
+    expect(within(late).getAllByRole("button", { name: /^סגירה, / })).toHaveLength(2);
+    expect(late.querySelector(".ui-row-chevron")).toBeNull();
+    expect(arrived.querySelectorAll(".ui-row-chevron")).toHaveLength(2);
+    fireEvent.click(within(arrived).getByRole("button", { name: "סגירה, אור חשמל" }));
     expect(onHide).toHaveBeenCalledWith("change", "t-power-oct", "אור חשמל");
-    expect(within(arrived).getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("peeks only the first row that can close", () => {
+    render(
+      <MemoryRouter>
+        <MissingBillList rows={missingBillViews(SAMPLE_MISSING_BILLS, "", now)} onHide={vi.fn()} peek />
+      </MemoryRouter>,
+    );
+    expect(document.querySelectorAll(".ui-sremove[data-peek]").length).toBeLessThanOrEqual(1);
+    expect(document.querySelectorAll(".ui-sremove-under")[0]?.textContent).toBe("סגירה");
   });
 });
 

@@ -108,6 +108,21 @@ Deno.test("get_cash_lines refuses bad arguments before any read", async () => {
   assertEquals(calls.length, 0);
 });
 
+Deno.test("get_cash_lines names a missing or unknown month or side (FLOW-215)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { rows: [], has_more: false } }));
+  const message = async (tool: string, args: Record<string, unknown>) => {
+    const result = await callTool(tool, args, ["read"], rpc);
+    return result.structuredContent.ok ? null : result.structuredContent.error;
+  };
+  assertEquals(await message("get_cash_lines", { month: "2026-09" }), {
+    code: "validation",
+    message: "side is required: one of in, out, excluded, not_in_profit (call once per side)",
+  });
+  assertEquals((await message("get_cash_lines", { side: "in" }))?.message, "month is required: YYYY-MM, or a YYYY-MM-DD date in that month");
+  assertEquals((await message("get_project_cash_lines", { project_id: PROJECT, month: "2026-09", side: "both" }))?.message?.startsWith("side is required"), true);
+  assertEquals(calls.length, 0);
+});
+
 Deno.test("the cash switches and the basis call their writers, and undo takes their kinds", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_cash" } } }));
   const writes: [string, Record<string, unknown>][] = [

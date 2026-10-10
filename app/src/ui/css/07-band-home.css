@@ -105,6 +105,12 @@
   flex: none;
 }
 
+/* On the band too, Back's chevron point sits on the title's and rows' start edge (owner,
+   2026-10-10), as on stacked pages and sheets. Only the band's own row: sheets reuse .ui-band-row. */
+.ui-band > .ui-band-row > .ui-back-btn:first-child {
+  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
+}
+
 .ui-band-hero {
   min-width: 0;
   padding: var(--space-6) var(--space-side) 0;

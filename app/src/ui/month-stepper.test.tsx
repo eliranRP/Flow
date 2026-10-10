@@ -11,9 +11,14 @@ describe("MonthStepper (FLOW-362)", () => {
     expect(onStep.mock.calls).toEqual([[-1], [1]]);
   });
 
-  it("keeps a slot where there is no month to open", () => {
-    const { container } = render(<MonthStepper earlier="תזרים ספטמבר" later={null} onStep={() => undefined} />);
-    expect(screen.getAllByRole("button")).toHaveLength(1);
-    expect(container.querySelectorAll(".ui-month-step-slot")).toHaveLength(1);
+  it("shows a disabled chevron where there is no month to open", () => {
+    const onStep = vi.fn();
+    render(<MonthStepper earlier="תזרים ספטמבר" later={null} onStep={onStep} />);
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    const next = screen.getByRole("button", { name: "חודש הבא" });
+    expect(next).toHaveAttribute("aria-disabled", "true");
+    expect(next).toHaveAccessibleDescription("זה החודש הנוכחי");
+    fireEvent.click(next);
+    expect(onStep).not.toHaveBeenCalled();
   });
 });

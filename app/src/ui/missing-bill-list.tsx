@@ -6,13 +6,13 @@ import { Button } from "./button";
 import { cx } from "./cx";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
-import { IconButton } from "./icon-button";
-import { CheckIcon, ChevronIcon, CloseIcon } from "./icons";
+import { CheckIcon, ChevronIcon } from "./icons";
 import { SectionHead } from "./layout";
 import { List } from "./list-row";
 import type { ScreenPhase } from "./screen-phase";
 import { ListSkeleton } from "./skeleton";
 import { SwipeRemove } from "./swipe-remove";
+import { TextLink } from "./text-link";
 import "./css/39-missing-bills.css";
 
 export type MissingBillRow = {
@@ -61,60 +61,31 @@ export type RecurringSection = "late" | "arrived";
 export const SECTION_ID: Record<RecurringSection, string> = { late: "late", arrived: "arrived" };
 
 /**
- * One row with an optional "הסתרה": a muted 44px ✕ at the row's end, and a swipe toward the start
- * that does the same (FLOW-415, owner 08:41Z). The hide is this user's only. A row with nothing to
- * hide keeps the ✕'s place empty when its list can hide, so the amounts stay in one column.
+ * One row the user can close for themselves (FLOW-415, owner 08:41Z; FLOW-913, owner 16:05Z: it is a
+ * dismiss, so "סגירה"): a swipe toward the start over "סגירה", and, while the list is in "עריכה", an
+ * accent "סגירה" (44px) in place of the chevron. `peek` slides the row once to show the swipe.
  */
-function HideableRow({ name, onHide, reserve = false, children }: { name: string; onHide?: () => void; reserve?: boolean; children: ReactNode }) {
-  if (onHide == null) {
-    return (
-      <div className="ui-recurring-row">
-        {children}
-        {reserve ? <span className="ui-recurring-hide-space" aria-hidden="true" /> : null}
-      </div>
-    );
-  }
+function HideableRow({ name, onHide, editing, peek, children }: { name: string; onHide?: () => void; editing: boolean; peek: boolean; children: ReactNode }) {
+  if (onHide == null) return <div className="ui-recurring-row">{children}</div>;
   return (
-    <SwipeRemove label="הסתרה" onRemove={onHide}>
+    <SwipeRemove label="סגירה" onRemove={onHide} peek={peek}>
       <div className="ui-recurring-row">
         {children}
-        <IconButton className="ui-recurring-hide" label={`הסתרה, ${name}`} onClick={onHide}>
-          <CloseIcon size={18} />
-        </IconButton>
+        {editing ? (
+          <TextLink className="ui-recurring-hide" chevron={false} label={`סגירה, ${name}`} onClick={onHide}>
+            סגירה
+          </TextLink>
+        ) : null}
       </div>
     </SwipeRemove>
   );
 }
 
-/**
- * The place line (design lead, FLOW-420 item 3): one line, "project · category". Only the project
- * ends in an ellipsis; "· category" stays whole.
- */
-function PlaceLine({ place }: { place: string }) {
-  const [head, ...rest] = place.split(" · ");
+function RowChevron({ hidden }: { hidden: boolean }) {
+  if (hidden) return null;
   return (
-    <span className="ui-row-hint ui-place-line">
-      <span className="ui-place-head" data-clip-ok="">{head}</span>
-      {rest.length > 0 ? <span className="ui-place-tail">{` · ${rest.join(" · ")}`}</span> : null}
-    </span>
-  );
-}
-
-/**
- * The pace line (FLOW-124): one line of whole parts. A part that does not fit drops with its "·"
- * ("אחרון dd/mm" first), so at 320 it reads "כל חודש ב־2".
- */
-function PaceLine({ text }: { text: string }) {
-  return (
-    <span className="ui-row-hint">
-      <span className="ui-hint-parts">
-        {text.split(" · ").map((part, index) => (
-          <span key={part} className="ui-hint-part" data-clip-ok="">
-            {index > 0 ? " · " : null}
-            {part}
-          </span>
-        ))}
-      </span>
+    <span className="ui-row-chevron" aria-hidden="true">
+      <ChevronIcon />
     </span>
   );
 }
@@ -164,8 +135,9 @@ function changeWords(percent: number): string {
  * FLOW-415 (owner 08:43Z, frame b-2): the קבועים screen's list. "לא הגיעו", the recurring suppliers
  * and customers whose payment for the month is late (a tap opens Search on the party), then
  * "הגיעו החודש", every recurring party seen this month, with ▲/▼ % on a change of 20% or more (a tap
- * opens the payment). A late row and a change can be hidden for this user; a late row comes back
- * next month.
+ * opens the payment, or Search when several lines make the amount). FLOW-913 (owner 16:03Z, layout
+ * A): one line per row, the name and the amount, no hint lines. A late row and a change can be
+ * hidden for this user, by swipe or by "סגירה" while `editing`; a late row comes back next month.
  */
 export function MissingBillList({
   rows,
@@ -173,6 +145,8 @@ export function MissingBillList({
   phase = { kind: "ready" },
   onRetry,
   onHide,
+  editing = false,
+  peek = false,
   onMatch,
 }: {
   rows: readonly MissingBillRow[];
@@ -180,6 +154,10 @@ export function MissingBillList({
   phase?: ScreenPhase;
   onRetry?: () => void;
   onHide?: (kind: "missing" | "change", key: string, name: string) => void;
+  /** "עריכה" is on: each row that can close ends in "סגירה" instead of the chevron. */
+  editing?: boolean;
+  /** The first row that can close slides once to show its swipe (the screen's first visit). */
+  peek?: boolean;
   /** FLOW-430: the user's answer to a row's suggestion. */
   onMatch?: (rowId: string, same: boolean) => void;
 }) {
@@ -190,15 +168,18 @@ export function MissingBillList({
   }
   const hide = (kind: "missing" | "change", key: string | null | undefined, name: string) =>
     onHide == null || key == null ? undefined : () => { onHide(kind, key, name); };
+  const peekId = peek && onHide != null ? [...rows, ...arrived].find((row) => row.alertKey != null)?.id : undefined;
   return (
     <>
       {rows.length > 0 ? (
         <section id={SECTION_ID.late} aria-label="לא הגיעו" className="ui-recurring-section">
           <SectionHead title="לא הגיעו" />
           <List className="ui-missing-bills">
-            {rows.map((row) => (
-              <div key={row.id} className="ui-missing-item">
-                <HideableRow name={row.name} onHide={hide("missing", row.alertKey, row.name)} reserve={onHide != null}>
+            {rows.map((row) => {
+              const onRowHide = hide("missing", row.alertKey, row.name);
+              return (
+                <div key={row.id} className="ui-missing-item">
+                <HideableRow name={row.name} onHide={onRowHide} editing={editing} peek={row.id === peekId}>
                   <Link
                     to={row.href}
                     className="ui-row ui-hit"
@@ -207,21 +188,18 @@ export function MissingBillList({
                     <span className="ui-row-main">
                       <span className="ui-row-text">
                         <span className="ui-row-title">{row.name}</span>
-                        {row.place != null ? <PlaceLine place={row.place} /> : null}
-                        <PaceLine text={row.usual} />
                       </span>
                     </span>
                     <ApproxAmount minor={row.minor} currency={row.currency} income={row.income} />
-                    <span className="ui-row-chevron" aria-hidden="true">
-                      <ChevronIcon />
-                    </span>
+                    <RowChevron hidden={editing && onRowHide != null} />
                   </Link>
                 </HideableRow>
                 {row.match != null && onMatch != null ? (
                   <MatchHint match={row.match} income={row.income} onAnswer={(same) => { onMatch(row.id, same); }} />
                 ) : null}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </List>
         </section>
       ) : null}
@@ -231,8 +209,9 @@ export function MissingBillList({
           <List className="ui-missing-bills">
             {arrived.map((row) => {
               const amount = formatAmountText(row.minor, row.currency);
+              const onRowHide = hide("change", row.alertKey, row.name);
               return (
-                <HideableRow key={row.id} name={row.name} onHide={hide("change", row.alertKey, row.name)} reserve={onHide != null}>
+                <HideableRow key={row.id} name={row.name} onHide={onRowHide} editing={editing} peek={row.id === peekId}>
                   <Link
                     to={row.href}
                     className="ui-row ui-hit"
@@ -243,7 +222,6 @@ export function MissingBillList({
                     <span className="ui-row-main">
                       <span className="ui-row-text">
                         <span className="ui-row-title">{row.name}</span>
-                        {row.place != null ? <PlaceLine place={row.place} /> : null}
                       </span>
                     </span>
                     <span className="ui-recurring-amount">
@@ -254,9 +232,7 @@ export function MissingBillList({
                         </span>
                       )}
                     </span>
-                    <span className="ui-row-chevron" aria-hidden="true">
-                      <ChevronIcon />
-                    </span>
+                    <RowChevron hidden={editing && onRowHide != null} />
                   </Link>
                 </HideableRow>
               );
@@ -266,4 +242,9 @@ export function MissingBillList({
       ) : null}
     </>
   );
+}
+
+/** FLOW-913: true when any row can be hidden, so the screen offers "עריכה". */
+export function canHideAny(rows: readonly MissingBillRow[], arrived: readonly ArrivedRow[]): boolean {
+  return rows.some((row) => row.alertKey != null) || arrived.some((row) => row.alertKey != null);
 }

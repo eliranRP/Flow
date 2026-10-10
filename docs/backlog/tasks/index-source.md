@@ -194,6 +194,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-208
 - FLOW-209
 - FLOW-213
+- FLOW-214
+- FLOW-215
 
 ## Transactions and app UX
 
@@ -262,6 +264,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-424
 - FLOW-425
 - FLOW-426
+- FLOW-427
 - FLOW-346
 - FLOW-431
 
@@ -291,6 +294,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-419
 - FLOW-433
 - FLOW-435
+- FLOW-437
 
 ## Onboarding, Settings and connectors
 
@@ -358,6 +362,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-910
 - FLOW-911
 - FLOW-912
+- FLOW-913
 
 ## Future features
 

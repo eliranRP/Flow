@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { missingBillViews } from "../recurring";
-import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_RENAMED, SAMPLE_MISSING_USD } from "../forecast-sample";
+import { arrivedViews, missingBillViews } from "../recurring";
+import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_RENAMED, SAMPLE_MISSING_USD, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
 
 const [water, power] = SAMPLE_MISSING_BILLS;
 import { MissingBillList } from "./missing-bill-list";
@@ -48,6 +48,34 @@ export const Empty: Story = { render: () => <MissingBillList rows={[]} /> };
 export const EmptyDark: Story = { name: "Empty, dark", render: () => <MissingBillList rows={[]} />, globals: { theme: "dark" } };
 export const Loading: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "loading" }} /> };
 export const Error: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "error", offline: false }} /> };
+
+// FLOW-913 (owner 16:03Z, layout A): one line per row. A row closes by swipe over "סגירה"; עריכה
+// shows "סגירה" in place of the chevron; the first visit peeks the top row once.
+const closeRows = missingBillViews(filed, "", now);
+const closeArrived = arrivedViews(SAMPLE_RECURRING_THIS_MONTH, SAMPLE_RECURRING_CHANGES, "");
+const noop = () => undefined;
+export const Closable: Story = {
+  name: "Closable",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} />,
+};
+export const Editing: Story = {
+  name: "Editing: סגירה",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
+};
+export const EditingDark: Story = {
+  name: "Editing: סגירה, dark",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
+  globals: { theme: "dark" },
+};
+export const Editing320: Story = {
+  name: "Editing: סגירה, 320",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const Peek: Story = {
+  name: "First visit: the top row peeks",
+  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} peek />,
+};
 // FLOW-430: "אולי זה: <name> · <amount> · dd/mm" with "כן, אותו ספק" and "לא" under the row.
 const matched = missingBillViews([...filed, SAMPLE_MISSING_RENAMED], "", now);
 const answer = () => undefined;

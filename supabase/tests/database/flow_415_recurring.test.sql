@@ -110,6 +110,8 @@ select is(
 select is(
   (select e - 'supplier_id' - 'project_id' - 'category_id' - 'transaction_id'
      - 'direction' - 'party_id' - 'party_name' - 'pace' - 'changed' - 'alert_key'
+     -- FLOW-913: how many lines the amount sums.
+     - 'line_count'
    from jsonb_array_elements(public.recurring_changes('2026-10-20')) e where e ->> 'supplier_name' = 'Example Power'),
   jsonb_build_object(
     'supplier_name', 'Example Power', 'currency', 'ILS', 'amount_minor', -255300, 'typical_amount_minor', -185000,

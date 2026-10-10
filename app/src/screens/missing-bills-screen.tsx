@@ -7,10 +7,24 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
-import { MissingBillList } from "../ui/missing-bill-list";
+import { canHideAny, MissingBillList } from "../ui/missing-bill-list";
 import { ScreenHeader } from "../ui/screen-header";
+import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
+
+/** FLOW-913: the swipe peek shows once per device. */
+const PEEK_KEY = "flow-recurring-peek";
+
+function firstPeek(): boolean {
+  try {
+    if (localStorage.getItem(PEEK_KEY) != null) return false;
+    localStorage.setItem(PEEK_KEY, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 type Hide = { kind: "missing" | "change"; key: string; name: string; undo: boolean };
 /** FLOW-430: an answer to a row's suggestion; `same` null takes it back (ביטול). */
@@ -48,6 +62,8 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const changes = useRecurringChangesQuery(live);
   // A sample screen hides locally, so a story and the e2e show the row leave and come back.
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const [editing, setEditing] = useState(false);
+  const [peek, setPeek] = useState(false);
   // FLOW-430: a sample screen keeps its answers too: "same" takes the row out, "not" its hint.
   const [answered, setAnswered] = useState<ReadonlyMap<string, boolean>>(new Map());
   const base = sample ? ({ kind: "ready" } as const) : screenPhase(preview, missing);
@@ -64,11 +80,11 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
   const projectName = projectId == null ? undefined : ([...late, ...seen].find((row) => row.project_name != null && row.project_name !== "")?.project_name ?? undefined);
 
   const write = useWrite<Hide>({
-    failure: () => "לא הצלחנו להסתיר את ההתראה.",
+    failure: () => "לא הצלחנו לסגור את ההתראה.",
     keys: HIDE_KEYS,
     onSuccess: (done) => {
       toast.show({
-        message: done.undo ? "ההתראה חזרה" : "ההתראה הוסתרה",
+        message: done.undo ? "ההתראה חזרה" : "ההתראה נסגרה",
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -137,14 +153,31 @@ export function MissingBillsScreen({ sample }: { sample?: RecurringSample } = {}
     document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
   }, [ready, hash]);
 
+  const closable = phase.kind === "ready" && canHideAny(rows, arrived);
+  // The first time rows can close, the top one slides once to show the swipe.
+  useEffect(() => {
+    if (closable && firstPeek()) setPeek(true);
+  }, [closable]);
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="קבועים" kicker={projectName} backTo={projectId == null ? `/${search}` : `/projects/${projectId}${search}`} />
+      <ScreenHeader
+        title="קבועים"
+        kicker={projectName}
+        backTo={projectId == null ? `/${search}` : `/projects/${projectId}${search}`}
+        action={closable || editing ? (
+          <TextLink chevron={false} onClick={() => { setEditing((on) => !on); }}>
+            {editing ? "סיום" : "עריכה"}
+          </TextLink>
+        ) : undefined}
+      />
       <MissingBillList
         rows={rows}
         arrived={arrived}
         phase={phase}
         onRetry={() => { void missing.refetch(); }}
+        editing={editing}
+        peek={peek}
         onHide={(kind, key, name) => {
           if (write.isPending || (live && blocked())) return;
           write.mutate({ kind, key, name, undo: false });

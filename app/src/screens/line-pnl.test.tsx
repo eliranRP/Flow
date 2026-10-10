@@ -7,6 +7,9 @@ import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { linePnlState, TransactionScreen } from "./flow-screens";
 
+// The pill, not the toast's parts: a toast in parts shows them hidden from queries (FLOW-426).
+const VISIBLE_TOAST_PARTS = "script, style, [aria-hidden='true'] *";
+
 const base: NonNullable<TransactionDetail> = {
   id: "t-1",
   description: "ספק לדוגמה",
@@ -71,27 +74,27 @@ describe("linePnlState", () => {
 describe("one line out of the P&L", () => {
   it("takes the line out with the switch row, shows the pill, and undoes from the toast", async () => {
     show(base);
-    expect(screen.queryByText("לא נספר ברווח")).toBeNull();
+    expect(screen.queryByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeNull();
     expect(pnlSwitch()).toBeChecked();
     // On: no hint (design review).
     expect(pnlSwitch()).not.toHaveAttribute("aria-describedby");
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · לא נספר ברווח")).toBeTruthy();
-    expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     expect(screen.getByText("רק השורה הזו. הקטגוריה לא משתנה.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
-    await waitFor(() => { expect(screen.queryByText("לא נספר ברווח")).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeNull(); });
   });
 
   it("brings one line of a kept-out category back in and marks it", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });
-    expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
     expect(screen.getByText("הקטגוריה חומרים לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.")).toBeTruthy();
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
-    expect(screen.queryByText("לא נספר ברווח")).toBeNull();
+    expect(screen.queryByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeNull();
     expect(within(document.querySelector(".ui-status-row") as HTMLElement).getByText("נספר ברווח")).toBeTruthy();
   });
 
@@ -140,7 +143,7 @@ describe("one line out of the P&L", () => {
 
   it("marks a split line whose parts are all kept out, and brings it back in with true", async () => {
     show({ ...base, pnl_state: "out" });
-    expect(screen.getByText("לא נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
     expect(screen.getByText("הקטגוריות בפיצול לא נספרות ברווח. אפשר לספור ברווח רק את השורה הזו.")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     fireEvent.click(pnlSwitch());

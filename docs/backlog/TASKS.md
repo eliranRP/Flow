@@ -200,6 +200,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-208"></a>[FLOW-208](tasks/FLOW-208.md) | Split and undo follow-ups (#88 review) | BACKLOG NIT |
 | <a id="flow-209"></a>[FLOW-209](tasks/FLOW-209.md) | get_project follow-ups (#90 review) | BACKLOG NIT |
 | <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
+| <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
+| <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
 
 ## Transactions and app UX
 
@@ -270,6 +272,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-424"></a>[FLOW-424](tasks/FLOW-424.md) | Cycle 18 polish on lists, קבועים and the usual-amount chip | SMALL UI |
 | <a id="flow-425"></a>[FLOW-425](tasks/FLOW-425.md) | Split rows keep their amounts whole, and the first sheet opens at once | SMALL UI |
 | <a id="flow-426"></a>[FLOW-426](tasks/FLOW-426.md) | The viewer toast wraps whole, and the update reload never drops the user's place | SMALL UI |
+| <a id="flow-427"></a>[FLOW-427](tasks/FLOW-427.md) | Loan pages: figures that agree, one row style, whole parts at 320 | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
@@ -301,6 +304,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
 | <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
+| <a id="flow-437"></a>[FLOW-437](tasks/FLOW-437.md) | Month pager keeps a disabled chevron; band Back lines up with the text | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
@@ -378,6 +382,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-910"></a>[FLOW-910](tasks/FLOW-910.md) | An open tab moves to a new deploy without a second load | BUG |
 | <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
 | <a id="flow-912"></a>[FLOW-912](tasks/FLOW-912.md) | The speed checks hold the median of 5 opens | TASK |
+| <a id="flow-913"></a>[FLOW-913](tasks/FLOW-913.md) | קבועים: a lighter list, swipe to close, and a row that opens all its payments | SMALL UI |
 
 ## Future features
 
