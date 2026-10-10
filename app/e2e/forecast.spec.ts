@@ -11,9 +11,10 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
   // A count only: no total on the row.
   await expect(row).not.toContainText("₪");
   await row.click();
-  await expect(page).toHaveURL(/\/e2e\/missing-bills\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "לא הגיעו" })).toBeVisible();
-  const bills = page.locator(".ui-missing-bills a");
+  // FLOW-415 (b-2): the קבועים screen, at its לא הגיעו section.
+  await expect(page).toHaveURL(/\/e2e\/missing-bills\?preview=1#late$/);
+  await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
+  const bills = page.getByRole("region", { name: "לא הגיעו" }).getByRole("link");
   await expect(bills).toHaveCount(2);
   // FLOW-415: the row says when the bill usually comes and when the last one came.
   const power = page.getByRole("link", { name: "אור חשמל, בניין הדקל · חשמל, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850" });
@@ -24,6 +25,21 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
   expect(url.searchParams.get("q")).toBe("אור חשמל");
   expect(url.searchParams.get("dir")).toBe("expense");
   await expect(page.getByRole("searchbox")).toHaveValue("אור חשמל");
+});
+
+test("קבועים: a late row hides for this user with ✕ and comes back on ביטול; a change opens its payment", async ({ page }) => {
+  await page.goto("/e2e/missing-bills?preview=1");
+  const late = page.getByRole("region", { name: "לא הגיעו" });
+  await expect(late.getByRole("link")).toHaveCount(2);
+  await late.getByRole("button", { name: "הסתרה, מים טובים" }).click();
+  await expect(page.getByText("ההתראה הוסתרה")).toBeVisible();
+  await expect(late.getByRole("link")).toHaveCount(1);
+  await page.getByRole("button", { name: "ביטול" }).click();
+  await expect(late.getByRole("link")).toHaveCount(2);
+  const arrived = page.getByRole("region", { name: "הגיעו החודש" });
+  await expect(arrived.getByRole("link")).toHaveCount(3);
+  await arrived.getByRole("link", { name: /^אור חשמל, .*עלייה של 38%$/ }).click();
+  await expect(page).toHaveURL(/\/transactions\/t-power-oct\?preview=1$/);
 });
 
 test("Project: a צפוי month opens the sheet of its parties, and the sheet closes", async ({ page }) => {

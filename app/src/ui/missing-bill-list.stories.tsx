@@ -41,7 +41,7 @@ export const DueLastDay: Story = {
 };
 export const LongHebrew: Story = {
   name: "Long Hebrew",
-  render: () => <MissingBillList rows={missingBillViews(power == null ? [] : [{ ...power, supplier_name: longHebrew, typical_amount_minor: -12_345_600n, project_name: longHebrew }], "", now)} />,
+  render: () => <MissingBillList rows={missingBillViews(power == null ? [] : [{ ...power, supplier_name: longHebrew, party_name: longHebrew, typical_amount_minor: -12_345_600n, project_name: longHebrew }], "", now)} />,
   parameters: { viewport: { defaultViewport: "flow320" } },
 };
 export const Empty: Story = { render: () => <MissingBillList rows={[]} /> };
