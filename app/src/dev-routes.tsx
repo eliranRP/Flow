@@ -5,6 +5,7 @@ import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
+export { DevTxnList, DevTxnPagedList } from "./dev/txn-lists";
 import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
@@ -527,24 +528,6 @@ export function DevTransactionGate() {
 }
 
 /** A tall list whose rows open sample cards, for the prev and next e2e. */
-export function DevTxnList() {
-  return (
-    <FiledTodayScreen
-      backTo="/e2e/project"
-      sample={Array.from({ length: 24 }, (_, i) => ({
-        id: `t-step-${String(i + 1)}`,
-        description: `תנועה ${String(i + 1)}`,
-        doc_date: "2026-09-29",
-        amount_net: BigInt(-(i + 1) * 10_000),
-        direction: "expense" as const,
-        supplier_name: `ספק ${String(i + 1)}`,
-        project_name: "שיפוץ הרצל 12",
-        category_name: "חומרים",
-      }))}
-    />
-  );
-}
-
 function stepSample(n: number): NonNullable<TransactionDetail> {
   return {
     id: `t-step-${String(n)}`,

@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { lineCountHint } from "../breakdown";
@@ -10,6 +10,7 @@ import { usualFor, useProjectCategoryMonthsQuery, type UpKind } from "../project
 import { useProjectCategoryQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
+import { useTxnListMore } from "../txn-list-more";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
 import { UpMark } from "../ui/category-group-row";
@@ -79,6 +80,15 @@ export function ProjectCategoryScreen({
   const heldRows = useHeldOrder(loadedRows, (row) => row.id);
   const liveMarks = useLoanMarks(heldRows.map((row) => row.id), sample == null);
   const back = categoryBack(projectId, search, location.state);
+  // FLOW-314: a card at the last loaded row loads the next page through here, even with this screen gone.
+  const fetchNext = category.fetchNextPage;
+  const loadMore = useCallback(async () => {
+    const page = await fetchNext();
+    const data = page.data;
+    if (data == null) return null;
+    return { ids: data.pages.flatMap((part) => part?.rows ?? []).map((row) => row.id), more: page.hasNextPage };
+  }, [fetchNext]);
+  useTxnListMore(`${location.pathname}${location.search}`, !sample && !rowHref && category.hasNextPage, sample || rowHref ? null : loadMore);
   if (phase.kind === "loading" || phase.kind === "error") {
     return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
   }
