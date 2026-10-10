@@ -1,6 +1,5 @@
 import { formatAmountText } from "@flow/shared";
 import type { ReactNode } from "react";
-import { withCents } from "./big-number";
 import { methodLabel, type TxnMeta } from "../txn-meta";
 import { BankIcon, CameraIcon, CardIcon, DocumentIcon, TransferIcon } from "./icons";
 
@@ -77,19 +76,17 @@ export function statementRowLabel(input: {
   inWord?: string;
   pending?: boolean;
   details?: readonly StatementDetail[];
-  realCents?: boolean;
 }): string {
   const abs = input.agorot < 0n ? -input.agorot : input.agorot;
   const income = input.sign === "in" && input.agorot >= 0n;
   const text = formatAmountText(abs, input.currency ?? "ILS", { detail: true, direction: income ? "income" : "expense" });
-  const amount = input.realCents === true ? text : withCents(text);
   const word = input.sign === "in" ? input.inWord ?? "הכנסה" : "הוצאה";
   const parts = [
     input.title,
     input.method ? input.method.spoken ?? input.method.text : null,
     input.suggestion ? `${input.suggestionJev === true ? "הצעת Jev" : "הצעה"}: ${input.suggestion}` : null,
     ...(input.details ?? []).map((detail) => detail.text),
-    `${word} ${amount}`,
+    `${word} ${text}`,
     input.pending ? "בהמתנה" : null,
   ];
   return parts.filter((part): part is string => part != null && part !== "").join(", ");

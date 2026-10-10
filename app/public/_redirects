@@ -17,6 +17,8 @@
 /help/ /help 301
 /onboarding /app-shell 200
 /onboarding/ /onboarding 301
+/invites /app-shell 200
+/invites/ /invites 301
 /setup /app-shell 200
 /setup/ /setup 301
 /install /app-shell 200
@@ -51,6 +53,8 @@
 /settings/connections/ /settings/connections 301
 /settings/notifications /app-shell 200
 /settings/notifications/ /settings/notifications 301
+/settings/team /app-shell 200
+/settings/team/ /settings/team 301
 /settings/loans /app-shell 200
 /settings/loans/ /settings/loans 301
 /settings/loans/:loanId /app-shell 200

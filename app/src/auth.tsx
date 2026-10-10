@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "./lib/supabase";
 import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-review";
 import { forgetCompanyRole, keepOnlyCompanyRole } from "./company-role-cache";
+import { noteShownCompanyUser } from "./lib/company-header";
 import { keepSplitDraftsFor } from "./split-drafts";
 import { forgetThisDevice } from "./push";
 import { pinReviewLine } from "./review-pin";
@@ -42,6 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       noteJevAuthUser(nextId);
       // Also covers a session that ended while no tab was open: no "previous" here.
       keepOnlyCompanyRole(nextId);
+      // FLOW-601: this user's shown company names the next requests; another user's is dropped.
+      noteShownCompanyUser(nextId);
       keepSplitDraftsFor(nextId);
       if (previous != null && previous !== nextId) {
         // Sign-out, an expired session, another tab, or a user switch. The

@@ -399,6 +399,8 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
   const assistant = params.get("assistant");
   const noCompany = params.get("nocompany") === "1";
   const emailParam = params.get("email");
+  // FLOW-601 (mockup a-1-settings): ?team=3 shows the owner's צוות row with that count.
+  const teamParam = params.get("team");
   const email = emailParam === "none"
     ? ""
     : emailParam === "long"
@@ -411,6 +413,7 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
         lastError: mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
+        teamCount: teamParam == null || noCompany ? undefined : Number(teamParam),
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"

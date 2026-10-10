@@ -45,7 +45,7 @@ describe("statement row details and tint", () => {
       </MemoryRouter>,
     );
     const link = screen.getByRole("link");
-    expect(link).toHaveAccessibleName("חומרי בניין לדוגמה, 08/10, ממתינה לאישור, הוצאה −₪124.00");
+    expect(link).toHaveAccessibleName("חומרי בניין לדוגמה, 08/10, ממתינה לאישור, הוצאה −₪124");
     expect(within(link).getByText("בניין", { selector: "mark" })).toHaveClass("ui-match");
     expect(within(link).getByText("ממתינה לאישור")).toHaveClass("ui-statement-accent");
   });

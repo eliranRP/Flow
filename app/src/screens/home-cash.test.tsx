@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
+import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { HomeScreen, ProfitScreen } from "./HomeScreen";
 
@@ -84,14 +85,16 @@ function wrap(reviewCount = 0, path = "/") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BooksProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route path="/" element={<HomeScreen />} />
-            <Route path="/profit" element={<ProfitScreen />} />
-          </Routes>
-        </MemoryRouter>
-      </BooksProvider>
+      <ToastProvider>
+        <BooksProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <Routes>
+              <Route path="/" element={<HomeScreen />} />
+              <Route path="/profit" element={<ProfitScreen />} />
+            </Routes>
+          </MemoryRouter>
+        </BooksProvider>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }

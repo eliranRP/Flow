@@ -161,6 +161,12 @@
       "screens/review-queue.tsx",
       "dev/review-e2e-fixture.ts"
     ],
+    "review-keyboard.spec.ts": [
+      "reviewer-preview.tsx",
+      "ui/change-sheet.tsx",
+      "ui/keyboard-inset.ts",
+      "ui/sheet.tsx"
+    ],
     "review-list.spec.ts": [
       "screens/review-screen.tsx",
       "screens/review-queue.tsx"

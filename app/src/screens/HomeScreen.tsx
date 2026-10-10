@@ -41,7 +41,8 @@ import { breakdownPath } from "../breakdown";
 import { comparisonWords, heroProfitLabel, periodPhrase, windowLabel, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useHoldWrites } from "../use-is-viewer";
+import { useHoldOwnerSettings } from "../use-is-viewer";
+import { CompanySwitcher } from "./company-switcher";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
 import { missingBillsTitle, useMissingBillsQuery } from "../forecast";
@@ -72,11 +73,12 @@ function useBandMark(failed: boolean, showBooks: boolean) {
 }
 
 /** Before a bank or SUMIT is connected there are no books: the band names it and the action connects one. */
-function NoBooksYet({ previewing, example, search }: { previewing: boolean; example?: ReactNode; search: string }) {
-  const holdWrites = useHoldWrites();
+function NoBooksYet({ previewing, example, search, companyName }: { previewing: boolean; example?: ReactNode; search: string; companyName?: string | null }) {
+  // FLOW-601: connecting a bank or SUMIT is the owner's.
+  const holdWrites = useHoldOwnerSettings();
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
-      <TopBand preview={previewing} example={example} wordmark={false}>
+      <TopBand preview={previewing} example={example} wordmark={false} leading={previewing ? undefined : <CompanySwitcher fallbackName={companyName} />}>
         <Hero label={emptyHomeLabel} />
       </TopBand>
       <EmptyState
@@ -139,7 +141,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   }
 
   if (!showBooks || cash.data == null) {
-    return <NoBooksYet previewing={previewing} example={example} search={search} />;
+    return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} />;
   }
 
   const unpaidPhase = screenPhase(preview, unpaid);
@@ -161,6 +163,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         void unpaid.refetch();
       }}
       checklist={<SetupHomeSlot emptyHome={false} />}
+      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
     />
   );
 }
@@ -179,6 +182,7 @@ export function CashHome({
   onUnpaidRetry,
   example,
   checklist,
+  company,
   now,
 }: {
   data: NonNullable<CashMonths>;
@@ -190,6 +194,8 @@ export function CashHome({
   /** Storybook sample label. The live home never passes it. */
   example?: ReactNode;
   checklist?: ReactNode;
+  /** FLOW-601: the company's name, which opens the חברה sheet, on the band next to search. */
+  company?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
 }) {
@@ -200,7 +206,7 @@ export function CashHome({
   const earlier = earlierMonthRows(data, search, now);
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
-      <TopBand wordmark={false} preview={previewing} example={example} trailing={<SearchEntry to={`/search${search}`} onBand />}>
+      <TopBand wordmark={false} preview={previewing} example={example} leading={company} trailing={<SearchEntry to={`/search${search}`} onBand />}>
         <Hero
           label={key == null ? "תזרים" : cashTitle(key, now)}
           figures={rows.map((row) => ({ agorot: row.net_minor, currency: row.currency, loss: row.net_minor < 0n }))}
@@ -273,7 +279,7 @@ export function ProfitScreen({ example }: { example?: ReactNode } = {}) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
   }
 
-  if (!showBooks) return <NoBooksYet previewing={previewing} example={example} search={search} />;
+  if (!showBooks) return <NoBooksYet previewing={previewing} example={example} search={search} companyName={dashboard.data?.name} />;
 
   const unpaidPhase = screenPhase(preview, unpaid);
   return (
@@ -321,7 +327,10 @@ export function HomeBooks({
   checklist,
   back,
   companyCurrency = "ILS",
+  company,
 }: {
+  /** FLOW-601: the company's name, which opens the חברה sheet. */
+  company?: ReactNode;
   /** The company's currency, for an empty period's zeros (a USD company reads $0, not ₪0). */
   companyCurrency?: string;
   data: Dashboard;
@@ -397,7 +406,7 @@ export function HomeBooks({
             <span className="ui-spinner" role="status" aria-label="מרענן" />
           </div>
         ) : null}
-        leading={back}
+        leading={back ?? company}
         trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
         {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150). */}

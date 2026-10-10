@@ -4,7 +4,7 @@ import { quickNewPath, quickNewState } from "../open-from-query";
 import { usePreviewSearch } from "../preview";
 import { readSheetBackground } from "../sheet-background";
 import { useMercuryStatusQuery } from "../use-books";
-import { useWriteGate } from "../use-is-viewer";
+import { useHoldOwnerSettings, useWriteGate } from "../use-is-viewer";
 import { BankIcon, LoanIcon, ProjectsIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { RouteSheet } from "../ui/route-sheet";
@@ -29,6 +29,8 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
   const navigate = useNavigate();
   const over = readSheetBackground(useLocation().state)?.pathname;
   const writeGate = useWriteGate("/");
+  // FLOW-601: an editor adds projects and loans; connecting a bank is the owner's.
+  const ownerOnlyHeld = useHoldOwnerSettings();
   if (writeGate === "wait") return null;
   if (writeGate !== "show") return writeGate;
   function go(to: string) {
@@ -55,6 +57,7 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
           chevron
           onClick={() => { go(quickNewPath("/settings/loans", search, "loan")); }}
         />
+        {ownerOnlyHeld ? null : (
         <ListRow
           variant="button"
           title="חיבור בנק"
@@ -70,6 +73,7 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
             go(`/settings/connections${query === "" ? "" : `?${query}`}`);
           }}
         />
+        )}
       </div>
     </RouteSheet>
   );
