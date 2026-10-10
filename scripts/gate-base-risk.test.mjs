@@ -6,6 +6,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { riskAreas, riskyChanges } from "./gate-base-risk.mjs";
+import { isolatedEnv, scrubGitEnv } from "./test-git-env.mjs";
+
+// The throwaway repos must never reach the repo being pushed (see test-git-env.mjs).
+scrubGitEnv();
 
 const SCRIPT = fileURLToPath(new URL("./gate-base-risk.mjs", import.meta.url));
 
@@ -33,7 +37,7 @@ test("riskyChanges keeps migrations, flow-mcp, the shared package and the seed",
 // moving on under it.
 function repo() {
   const dir = mkdtempSync(join(tmpdir(), "gate-base-risk-"));
-  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" }).trim();
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8", env: isolatedEnv() }).trim();
   git("init", "-q", "-b", "main");
   git("config", "user.email", "ci@example.com");
   git("config", "user.name", "CI");
@@ -48,7 +52,7 @@ function repo() {
 }
 
 function run(dir, marked, current) {
-  return spawnSync("node", [SCRIPT, marked, current], { cwd: dir, encoding: "utf8" });
+  return spawnSync("node", [SCRIPT, marked, current], { cwd: dir, encoding: "utf8", env: isolatedEnv() });
 }
 
 test("the #364-then-#383 shape is not skipped: main changed a migration under an unchanged patch", () => {
@@ -107,4 +111,44 @@ test("riskAreas names each area main touched, in a fixed order", () => {
   );
   assert.deepEqual(riskAreas(["supabase/seed.sql"]), ["database"]);
   assert.deepEqual(riskAreas(["packages/shared/src/index.ts"]), ["shared"]);
+});
+
+test("a hook's GIT_DIR does not send the temp repo's config or commits to the outer repo", () => {
+  const outer = mkdtempSync(join(tmpdir(), "gate-base-risk-outer-"));
+  const keys = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"];
+  const saved = keys.map((key) => [key, process.env[key]]);
+  const restore = () => {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+  const outerGit = (...args) =>
+    execFileSync("git", ["-C", outer, ...args], { encoding: "utf8", env: isolatedEnv() }).trim();
+  let dir;
+  try {
+    outerGit("init", "-q", "-b", "main");
+    outerGit("-c", "user.name=Outer", "-c", "user.email=outer@example.com", "commit", "-q", "--allow-empty", "-m", "outer");
+    const head = outerGit("rev-parse", "HEAD");
+    // As in a pre-push hook run from a worktree of the outer repo.
+    process.env.GIT_DIR = join(outer, ".git");
+    process.env.GIT_WORK_TREE = outer;
+    process.env.GIT_INDEX_FILE = join(outer, ".git", "index");
+    const made = repo();
+    dir = made.dir;
+    const fork = made.commit("supabase/migrations/20261013162756_rollups.sql", "select 1;\n", "main");
+    made.git("checkout", "-q", "-b", "lane");
+    const moved = made.commit("app/src/screens/home.tsx", "export {};\n", "ui");
+    assert.equal(run(dir, fork, moved).status, 0);
+    restore();
+    assert.equal(outerGit("rev-parse", "HEAD"), head);
+    assert.equal(outerGit("rev-list", "--count", "HEAD"), "1");
+    assert.equal(outerGit("branch", "--list", "lane"), "");
+    assert.equal(spawnSync("git", ["-C", outer, "config", "--local", "user.name"], { env: isolatedEnv() }).status, 1);
+    assert.equal(outerGit("config", "--local", "core.bare"), "false");
+  } finally {
+    restore();
+    if (dir) rmSync(dir, { recursive: true, force: true });
+    rmSync(outer, { recursive: true, force: true });
+  }
 });
