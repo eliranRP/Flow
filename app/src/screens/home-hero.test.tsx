@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeBooks } from "./HomeScreen";
-import { heroExplanation, periodPhrase, stepPeriod, thisMonth } from "../period";
+import { heroExplanation, periodPhrase, stepPeriod, thisMonth, windowLabel } from "../period";
 
 function books(overrides: Partial<Dashboard> = {}): Dashboard {
   return {
@@ -47,7 +47,7 @@ function renderHome(data: Dashboard, period = thisMonth()) {
 }
 
 describe("Home hero", () => {
-  it("shows one label, the figure, and the explanation, and keeps income outside the band", () => {
+  it("shows one label, one period pill and the figure, and keeps income outside the band (FLOW-355)", () => {
     renderHome(books());
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.queryByText(/שלום/)).not.toBeInTheDocument();
@@ -58,14 +58,16 @@ describe("Home hero", () => {
     expect(style.paddingInlineEnd === "0px" || style.paddingInlineEnd === "0").toBe(true);
     expect(style.textAlign === "start" || style.textAlign === "right").toBe(true);
     expect(screen.getByRole("heading", { name: "₪39,164" })).toBeInTheDocument();
-    expect(screen.getByText(heroExplanation())).toBeInTheDocument();
+    // FLOW-355 (A): no explanation line, no period tabs or stepper; one pill names the window.
+    expect(screen.queryByText(heroExplanation())).not.toBeInTheDocument();
     const income = screen.getByText("הכנסות");
     const spent = screen.getByText("הוצאות");
     expect(income.closest(".ui-band")).toBeNull();
     expect(spent.closest(".ui-band")).toBeNull();
     expect(document.querySelector(".ui-band .ui-band-figures")).toBeNull();
     expect(screen.getByText("מחודש שעבר").closest(".ui-band")).toBeNull();
-    expect(screen.getByRole("radiogroup", { name: "תקופה" }).closest(".ui-band")).not.toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "תקופה" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${windowLabel(thisMonth())} – בחירת תקופה` }).closest(".ui-band .ui-hero")).not.toBeNull();
   });
 
   it("shows USD-only books without shekel placeholders or change pill", () => {
@@ -168,7 +170,7 @@ describe("Home hero", () => {
     renderHome(books({ income_agorot: 10_000_000n, expense_agorot: 20_000_000n, net_profit_agorot: -10_000_000n }), period);
     expect(screen.getByText(`הפסד ${periodPhrase(period)}`)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "−₪100,000" })).toBeInTheDocument();
-    expect(screen.getByText(heroExplanation())).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${windowLabel(period)} – בחירת תקופה` })).toBeInTheDocument();
   });
 
   it("names both a profit and a loss when the currencies disagree (FLOW-339)", () => {
