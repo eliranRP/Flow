@@ -250,7 +250,6 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-350"></a>[FLOW-350](tasks/FLOW-350.md) | Phone polish after the October 9 midday builds (cycle 9) | SMALL UI |
 | <a id="flow-351"></a>[FLOW-351](tasks/FLOW-351.md) | Phone polish after the October 9 afternoon deploy (cycle 10) | SMALL UI |
 | <a id="flow-352"></a>[FLOW-352](tasks/FLOW-352.md) | Phone polish after the October 9 evening deploy (cycle 11) | SMALL UI |
-| <a id="flow-436"></a>[FLOW-436](tasks/FLOW-436.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 | <a id="flow-353"></a>[FLOW-353](tasks/FLOW-353.md) | Phone polish after the October 9 night deploy (cycle 12) | SMALL UI |
 | <a id="flow-354"></a>[FLOW-354](tasks/FLOW-354.md) | The default income category in the money terms word | PLAN FIRST |
 | <a id="flow-355"></a>[FLOW-355](tasks/FLOW-355.md) | A project row on Home's first screen at 375x667 | PLAN FIRST |
@@ -356,6 +355,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-905"></a>[FLOW-905](tasks/FLOW-905.md) | Example data in the rendered design screens | BACKLOG NIT |
 | <a id="flow-906"></a>[FLOW-906](tasks/FLOW-906.md) | Confirm the public help contact | BACKLOG NIT |
 | <a id="flow-907"></a>[FLOW-907](tasks/FLOW-907.md) | Data clean-up after PR B | MCP |
+| <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
 
 ## Future features
 

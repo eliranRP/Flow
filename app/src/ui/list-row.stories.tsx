@@ -229,7 +229,7 @@ export const SetAsideDark: Story = {
   globals: { theme: "dark" },
   render: () => <SetAsideRows />,
 };
-/** FLOW-436: a kept-out line's name uses the row's free width like a counted line's; it was cut to "City Of Pri…" with room to spare. */
+/** FLOW-909: a kept-out line's name uses the row's free width like a counted line's; it was cut to "City Of Pri…" with room to spare. */
 export const SetAsideShortName: Story = {
   args: { variant: "transaction", title: "Sample City Water" },
   render: () => (
