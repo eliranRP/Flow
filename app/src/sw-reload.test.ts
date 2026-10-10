@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { busy, LOOP_MS, RELOADED_KEY, RETRY_MS, watchServiceWorker } from "./sw-reload";
+import { busy, LOOP_MS, RELOADED_KEY, watchServiceWorker } from "./sw-reload";
 
 function fakeWindow({ controller = true } = {}) {
   const sw = new EventTarget() as EventTarget & { controller: object | null; getRegistration: () => Promise<{ update: () => Promise<void> } | undefined> };
@@ -9,28 +9,45 @@ function fakeWindow({ controller = true } = {}) {
   const reload = vi.fn();
   let visibility: DocumentVisibilityState = "visible";
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
+  const target = new EventTarget();
+  const pushed: unknown[] = [];
+  const location = { reload, pathname: "/" };
+  const moveTo = (url: string) => {
+    location.pathname = new URL(url, "https://flow.test").pathname;
+  };
+  const history = {
+    pushState: (_state: unknown, _unused: string, url?: string | null) => {
+      pushed.push(url);
+      if (url != null) moveTo(url);
+    },
+  };
   const win = {
     navigator: { serviceWorker: sw },
     document,
-    location: { reload },
+    location,
     sessionStorage: window.sessionStorage,
-    setInterval: window.setInterval.bind(window),
-    clearInterval: window.clearInterval.bind(window),
+    history,
+    addEventListener: target.addEventListener.bind(target),
   } as unknown as Window;
-  let clock = 100_000;
+  const clock = 100_000;
   const now = () => clock;
   return {
     win,
     now,
     reload,
     update,
+    pushed,
     takeControl: () => sw.dispatchEvent(new Event("controllerchange")),
+    navigate: (url: string) => {
+      win.history.pushState(null, "", url);
+    },
+    back: (url: string) => {
+      moveTo(url);
+      target.dispatchEvent(new Event("popstate"));
+    },
     setVisibility: (state: DocumentVisibilityState) => {
       visibility = state;
       document.dispatchEvent(new Event("visibilitychange"));
-    },
-    tick: (ms: number) => {
-      clock += ms;
     },
   };
 }
@@ -38,25 +55,67 @@ function fakeWindow({ controller = true } = {}) {
 afterEach(() => {
   document.body.innerHTML = "";
   window.sessionStorage.clear();
-  vi.useRealTimers();
 });
 
-describe("FLOW-910: a new service worker reloads the open tab once", () => {
-  it("reloads when a new worker replaces the one that served the page", () => {
+describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, never under the user", () => {
+  it("keeps an idle page in front, then reloads on the next move to another screen", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
     tab.takeControl();
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.navigate("/projects");
+    expect(tab.pushed).toEqual(["/projects"]);
     expect(tab.reload).toHaveBeenCalledTimes(1);
     expect(window.sessionStorage.getItem(RELOADED_KEY)).toBe(String(tab.now()));
+    tab.navigate("/settings");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the page when a push stays on the same screen: a sheet or a query", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.takeControl();
+    tab.navigate("/?sheet=add");
+    tab.navigate("/?period=2026-09");
+    tab.back("/");
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.navigate("/projects");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads on Back", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.takeControl();
+    tab.back("/projects");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads when the app goes to the background", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.takeControl();
+    tab.setVisibility("hidden");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads at once when the new worker arrives while the app is in the background", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.setVisibility("hidden");
+    tab.takeControl();
+    expect(tab.reload).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the page on a first install: it already runs the new bundle", () => {
     const tab = fakeWindow({ controller: false });
     watchServiceWorker(tab.win, tab.now);
     tab.takeControl();
+    tab.navigate("/projects");
     expect(tab.reload).not.toHaveBeenCalled();
     // A later deploy reloads.
     tab.takeControl();
+    tab.navigate("/settings");
     expect(tab.reload).toHaveBeenCalledTimes(1);
   });
 
@@ -65,33 +124,25 @@ describe("FLOW-910: a new service worker reloads the open tab once", () => {
     window.sessionStorage.setItem(RELOADED_KEY, String(tab.now() - LOOP_MS + 1));
     watchServiceWorker(tab.win, tab.now);
     tab.takeControl();
+    tab.navigate("/projects");
     expect(tab.reload).not.toHaveBeenCalled();
   });
 
-  it("waits while a sheet is open, then reloads once it closes", () => {
-    vi.useFakeTimers();
+  it("waits while a sheet is open or a field has focus, then reloads on the next move", () => {
     const tab = fakeWindow();
-    document.body.innerHTML = '<div role="dialog"><input /></div>';
+    document.body.innerHTML = '<div role="dialog"></div>';
     watchServiceWorker(tab.win, tab.now);
     tab.takeControl();
+    tab.navigate("/projects");
+    tab.setVisibility("hidden");
     expect(tab.reload).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(RETRY_MS * 3);
-    expect(tab.reload).not.toHaveBeenCalled();
-    document.body.innerHTML = "";
-    vi.advanceTimersByTime(RETRY_MS);
-    expect(tab.reload).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(RETRY_MS * 3);
-    expect(tab.reload).toHaveBeenCalledTimes(1);
-  });
-
-  it("reloads a busy page when it goes to the background", () => {
-    const tab = fakeWindow();
     document.body.innerHTML = '<input id="amount" />';
     document.getElementById("amount")?.focus();
-    watchServiceWorker(tab.win, tab.now);
-    tab.takeControl();
+    tab.setVisibility("visible");
+    tab.navigate("/settings");
     expect(tab.reload).not.toHaveBeenCalled();
-    tab.setVisibility("hidden");
+    document.body.innerHTML = "";
+    tab.navigate("/");
     expect(tab.reload).toHaveBeenCalledTimes(1);
   });
 

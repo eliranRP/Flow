@@ -215,6 +215,17 @@ describe("Toast", () => {
     expect(status.querySelector(".ui-toast-bad")).toBeNull();
   });
 
+  it("wraps a message in parts only between whole parts (FLOW-426)", () => {
+    render(
+      <ToastProvider>
+        <Probe tone="info" message="צפייה בלבד · שינויים נעשים על ידי בעל העסק" />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    const parts = [...screen.getByRole("status").querySelectorAll(".ui-hint-wrap-part")].map((part) => part.textContent);
+    expect(parts).toEqual(["צפייה בלבד", " · שינויים נעשים על ידי בעל העסק"]);
+  });
+
   it("keeps a confirmation under the header after the sheet closes", async () => {
     const innerHeight = window.innerHeight;
     const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
