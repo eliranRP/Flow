@@ -1,6 +1,8 @@
 -- FLOW-413 + FLOW-103, server PR 1 (decision 0168). The monthly cash view: every line's money
--- in and out by its parts, gross, with the full loan payment out, transfers and loan money out
--- of the view by default, a category and a line switch, and the paid or invoice basis.
+-- in and out by its parts, gross, with the full loan payment out, transfers out of the view by
+-- default, a category and a line switch, and the paid or invoice basis. Loan money counts in cash
+-- for a new company (FLOW-416, decision 0171); this company takes it out, as a company made
+-- before FLOW-416 has it, so the view's left-out figures cover it.
 -- Invented data only. Amounts are agorot (cents for USD). Today is 2026-06-15.
 
 begin;
@@ -150,9 +152,9 @@ where l.company_id = pg_temp.id('co');
 
 -- 1-6. Defaults.
 select ok(
-  (select excluded_from_pnl and not in_cash and is_default
+  (select excluded_from_pnl and in_cash and is_default
    from public.categories where id = pg_temp.cat('כסף שהתקבל מהלוואות', 'income')),
-  'a new company has a loan money category, out of the P&L and out of cash'
+  'a new company has a loan money category, out of the P&L and in cash'
 );
 select is(
   (select count(*)::integer from public.categories
@@ -173,6 +175,9 @@ select is(
   'paid',
   'the cash basis defaults to the payment date'
 );
+
+-- Loan money out of cash, as in a company made before FLOW-416.
+update public.categories set in_cash = false where id = pg_temp.cat('כסף שהתקבל מהלוואות', 'income');
 
 select tests.authenticate_as('cfm_owner');
 

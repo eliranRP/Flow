@@ -1,0 +1,1 @@
+Saying yes to the notifications card now also turns on the new-transaction push (תנועה חדשה), so a new bank line reaches your phone without a trip to Settings. Counting starts from the moment you say yes. FLOW-502.

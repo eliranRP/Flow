@@ -33,6 +33,6 @@ All need a signed-in user (42501 otherwise). Preferences are per user, not per c
 - `push_unsubscribe(p_endpoint)` removes this device.
 - `get_notification_prefs()` returns `new_transaction`, `evening_reminder`, `weekly_summary`, `prompt_answered` and `has_subscription`. All three switches are off until the user turns one on.
 - `set_notification_prefs(p_new_transaction, p_evening_reminder, p_weekly_summary)`. A null leaves that switch as it is. Returns the same object.
-- `answer_push_prompt(p_yes)` records that the review-screen card was answered; yes also turns on תזכורת ערב.
+- `answer_push_prompt(p_yes)` records that the review-screen card was answered; yes also turns on תזכורת ערב, and on the first answer תנועה חדשה.
 
-All three switches send. Each starts off.
+All three switches send. Each starts off; a first yes on the card turns on תזכורת ערב and תנועה חדשה.
