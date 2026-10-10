@@ -37,6 +37,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
+import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
@@ -75,7 +76,8 @@ export function ProjectCashOverview({
   now,
 }: {
   project: Project;
-  data: NonNullable<CashMonths>;
+  /** Null while the cash read is still out: the band paints the project's name from its own read. */
+  data: NonNullable<CashMonths> | null;
   search: string;
   investmentData: ProjectInvestment;
   investmentHref: string;
@@ -86,10 +88,10 @@ export function ProjectCashOverview({
   /** Stories and tests pin the month names. */
   now?: Date;
 }) {
-  const month = data.months[0];
+  const month = data?.months[0];
   const key = month == null ? null : cashMonthKey(month.month);
-  const rows = shownCashRows(month, data.base_currency);
-  const earlier = projectEarlierMonthRows(project.id, data, search, now);
+  const rows = data == null ? [] : shownCashRows(month, data.base_currency);
+  const earlier = data == null ? [] : projectEarlierMonthRows(project.id, data, search, now);
   const investment = investmentLoansRow(investmentData, project);
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -103,15 +105,20 @@ export function ProjectCashOverview({
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
           {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
           <p className="ui-band-label t-label">{key == null ? "תזרים" : cashTitle(key, now)}</p>
-          <div className="t-display ui-project-profits">
-            {rows.map((row) => (
-              <p key={row.currency}>
-                <BigNumber agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
-              </p>
-            ))}
-          </div>
+          {data == null ? (
+            <Skeleton tone="band" className="ui-skel-project-num" />
+          ) : (
+            <div className="t-display ui-project-profits">
+              {rows.map((row) => (
+                <p key={row.currency}>
+                  <BigNumber agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
+                </p>
+              ))}
+            </div>
+          )}
         </BandHero>
       </TopBand>
+      {data == null ? <ListSkeleton /> : null}
       {key == null ? null : <CashRows rows={projectCashSummaryRows(project.id, key, rows, search, now)} />}
       {investment == null ? null : (
         <List className="ui-project-cash-more">
