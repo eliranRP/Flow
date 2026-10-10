@@ -189,7 +189,7 @@ describe("FLOW-335 Unpaid", () => {
 
   it("lays the total out as a column on the start side", () => {
     // Two invoices: with one, the head is the title alone (FLOW-357).
-    render(wrap(<UnpaidScreen sample={[...unpaid, { ...unpaid[0]!, id: "u2", customer_name: "לקוח נוסף" }]} />));
+    render(wrap(<UnpaidScreen sample={[...unpaid, { ...(unpaid[0] as UnpaidRow), id: "u2", customer_name: "לקוח נוסף" }]} />));
     const totals = document.querySelector(".ui-unpaid-totals");
     expect(totals).not.toBeNull();
     const style = getComputedStyle(totals as Element);

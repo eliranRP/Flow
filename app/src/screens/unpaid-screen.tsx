@@ -89,6 +89,8 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const setInvoiceSheet = useSheetHistory("unpaid-invoice", sheetOpen, setSheetOpen);
   const rowRefs = useRef(new Map<string, HTMLButtonElement>());
   const returnRef = useRef<HTMLButtonElement | null>(null);
+  const openIdRef = useRef(openId);
+  openIdRef.current = openId;
   const all = (sample ?? unpaid.data ?? []).map((row) => (row.id in sampleMarks ? { ...row, marked_paid_at: sampleMarks[row.id] ?? null } : row));
   const rows = useHeldOrder(all, (row) => row.id);
   const totals = unpaidTotals(all);
@@ -97,7 +99,8 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
     failure: (error) => (isTransientWriteError(error) ? { message: "לא הצלחנו לעדכן את הסימון.", retry: true } : "לא הצלחנו לעדכן את הסימון."),
     onSuccess: ({ id, paid }) => {
       setBusyId(null);
-      setInvoiceSheet(false);
+      // Close only the invoice that was marked, not one opened while the write saved.
+      if (openIdRef.current === id) setInvoiceSheet(false);
       showDone(id, paid);
     },
     run: async ({ id, paid }) => {
@@ -128,10 +131,10 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
     if (blocked()) return;
     sync.mutate();
   }
-  /** A mark's toast offers ביטול, which clears the mark again. */
+  /** A mark's toast offers ביטול, which clears the mark again with the latest render's setPaid (the toast outlives the render). */
   function showDone(id: string, paid: boolean) {
     toast.show(paid
-      ? { message: UNPAID_MARK_DONE, action: "ביטול", onAction: () => { setPaid(id, false); } }
+      ? { message: UNPAID_MARK_DONE, action: "ביטול", onAction: () => { setPaidRef.current(id, false); } }
       : { message: UNPAID_CLEAR_DONE });
   }
   function setPaid(id: string, paid: boolean) {
@@ -146,6 +149,8 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
     setBusyId(id);
     mark.mutate({ id, paid }, { onError: () => { setBusyId(null); } });
   }
+  const setPaidRef = useRef(setPaid);
+  setPaidRef.current = setPaid;
   function openInvoice(id: string) {
     returnRef.current = rowRefs.current.get(id) ?? null;
     setOpenId(id);
@@ -214,7 +219,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       <Sheet
         open={sheetOpen}
         onOpenChange={setInvoiceSheet}
-        title={openRow == null ? "" : openRow.customer_name ?? openRow.description}
+        title={openRow == null ? "חשבונית" : openRow.customer_name ?? openRow.description}
         returnFocusRef={returnRef}
         onClosed={() => { setOpenId(null); }}
         action={openRow == null || holdWrites ? undefined : (
