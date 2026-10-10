@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { expectedMonthLabel, expectedMonthViews, hasExpectedHistory, missingBillHref, missingBillPlace, missingBillViews, missingBillsTitle, usualDayText, chargeChangePercent, chargeChangeViews } from "./forecast";
+import { expectedMonthLabel, expectedMonthViews, hasExpectedHistory, missingBillHref, missingBillPlace, missingBillViews, missingBillsTitle, usualDayText, chargeChangeViews } from "./forecast";
 import {
   SAMPLE_EXPECTED,
   SAMPLE_EXPECTED_EMPTY,
@@ -55,18 +55,14 @@ describe("missing bills", () => {
     expect(usualDayText(4, "2025-12-04", now)).toBe("בדרך כלל ב־4 לחודש · אחרון 04/12/2025");
   });
 
-  it("words a payment off its usual amount for Home, rounding the percent half away from zero (FLOW-415)", () => {
-    expect(chargeChangePercent(255_000n, 185_000n)).toBe(38);
-    expect(chargeChangePercent(150_000n, 200_000n)).toBe(-25);
-    expect(chargeChangePercent(100_500n, 100_000n)).toBe(1);
-    expect(chargeChangePercent(99_500n, 100_000n)).toBe(-1);
-    expect(chargeChangePercent(100n, 0n)).toBe(0);
+  it("words a payment off its usual amount for Home from the server's percent (FLOW-415)", () => {
     const [up, down] = chargeChangeViews([
-      { transaction_id: "t1", category_name: "חשמל", currency: "ILS", amount_minor: 255_000n, usual_minor: 185_000n },
-      { transaction_id: "t2", category_name: "", currency: "USD", amount_minor: 15_000n, usual_minor: 20_000n },
+      { transaction_id: "t1", category_name: "חשמל", currency: "ILS", amount_minor: -255_000n, typical_amount_minor: -185_000n, change_percent: 38 },
+      { transaction_id: "t2", category_name: null, currency: "USD", amount_minor: -15_000n, typical_amount_minor: -20_000n, change_percent: -25 },
     ], "?preview=1");
     expect(up).toEqual({ id: "t1", title: "חשמל עלה ב־38%", now: "₪2,550", usual: "₪1,850", href: "/transactions/t1?preview=1" });
     expect(down?.title).toBe("ללא קטגוריה ירד ב־25%");
+    expect(down?.now).toBe("$150");
     const rows = attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, changes: up ? [up] : [], search: "" });
     expect(rows.map((row) => row.id)).toEqual(["review", "missing", "change:t1"]);
     render(<MemoryRouter><span>{rows[2]?.hint}</span></MemoryRouter>);

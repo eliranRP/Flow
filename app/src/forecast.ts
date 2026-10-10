@@ -79,49 +79,41 @@ export function missingBillsTitle(count: number): string {
 
 /**
  * FLOW-415 (layout A): one payment this month that is 20% or more off its usual amount, as Home's
- * attention card shows it. The server picks the payments and computes both amounts; the app only
- * words them. Until the server read lands, stories and tests pass these in.
+ * attention card shows it (`recurring_changes`). The server picks the payments and computes the
+ * change; the app only words it.
  */
 export type ChargeChange = {
   transaction_id: string;
-  category_name: string;
+  category_name: string | null;
   currency: string;
-  /** This payment, unsigned. */
+  /** This payment, signed. */
   amount_minor: bigint;
-  /** The usual amount, unsigned and above zero. */
-  usual_minor: bigint;
+  /** The usual amount, signed. */
+  typical_amount_minor: bigint;
+  /** Whole percent, signed: 38 is up 38%. */
+  change_percent: number;
 };
 
 export type ChargeChangeView = {
   id: string;
   /** "חשמל עלה ב־38%" or "חשמל ירד ב־25%". */
   title: string;
-  /** "₪2,550 · בדרך כלל ₪1,850". */
+  /** "₪2,550" and "₪1,850", unsigned. */
   now: string;
   usual: string;
   /** The payment's page. */
   href: string;
 };
 
-/** The change in whole percent, rounded half away from zero, from bigint amounts. */
-export function chargeChangePercent(amount: bigint, usual: bigint): number {
-  if (usual <= 0n) return 0;
-  const diff = (amount - usual) * 100n;
-  const whole = diff / usual;
-  const rest = diff % usual;
-  const half = (rest < 0n ? -rest : rest) * 2n >= usual;
-  return Number(half ? whole + (diff < 0n ? -1n : 1n) : whole);
-}
-
 export function chargeChangeViews(rows: readonly ChargeChange[], search: string): ChargeChangeView[] {
   return rows.map((row) => {
-    const percent = chargeChangePercent(row.amount_minor, row.usual_minor);
-    const name = row.category_name === "" ? "ללא קטגוריה" : row.category_name;
+    const name = row.category_name == null || row.category_name === "" ? "ללא קטגוריה" : row.category_name;
+    const percent = row.change_percent;
     return {
       id: row.transaction_id,
       title: `${name} ${percent < 0 ? "ירד" : "עלה"} ב־${String(Math.abs(percent))}%`,
-      now: formatAmountText(row.amount_minor, row.currency),
-      usual: formatAmountText(row.usual_minor, row.currency),
+      now: formatAmountText(abs(row.amount_minor), row.currency),
+      usual: formatAmountText(abs(row.typical_amount_minor), row.currency),
       href: `/transactions/${row.transaction_id}${search}`,
     };
   });
