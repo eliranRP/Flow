@@ -350,6 +350,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-812"></a>[FLOW-812](tasks/FLOW-812.md) | Faster CI | SMALL CYCLE |
 | <a id="flow-813"></a>[FLOW-813](tasks/FLOW-813.md) | Faster pre-push local CI | SMALL CYCLE |
 | <a id="flow-814"></a>[FLOW-814](tasks/FLOW-814.md) | A migration that main overtook fails in seconds, and one command renames it | SMALL CYCLE |
+| <a id="flow-815"></a>[FLOW-815](tasks/FLOW-815.md) | Headroom under the Home entry size budget | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
