@@ -379,6 +379,30 @@ describe("useIsViewer", () => {
     expect(screen.queryByText("loading")).not.toBeInTheDocument();
   });
 
+  it("reads again on the next mount after a no-company answer, so a just-joined viewer loses the owner's controls", async () => {
+    state.ownerId = null;
+    const { client, unmount } = renderProbe();
+    await waitFor(() => {
+      expect(state.calls).toBe(1);
+      expect(screen.getByText("owner")).toBeInTheDocument();
+    });
+    unmount();
+    // An invite accepted in another tab: this user now only reads the company.
+    state.ownerId = ownerId;
+    render(
+      <QueryClientProvider client={client}>
+        <AuthProvider>
+          <Probe />
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => {
+      expect(state.calls).toBe(2);
+      expect(screen.getByText("viewer")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+  });
+
   it("clears the owner key when the session signs out", async () => {
     const { client } = renderProbe();
     expect(await screen.findByText("viewer")).toBeInTheDocument();

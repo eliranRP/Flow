@@ -8,7 +8,7 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07. Lanes table: 2026-10-10 11:40Z.
+Last full sync: 2026-10-07. Lanes table: 2026-10-10 14:45Z.
 
 ## Lanes now
 
@@ -17,14 +17,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 3 | Parked (FLOW-309 pairing server done); takes the next server task | Server side of the next plan-first feature |
-| Dev lane 4 | Team invites (FLOW-601 done); reviews FLOW-421 invite emails via Resend (built by the "Invite email not arriving" thread, claims through the lane manager); real-user `get_project` timing after #508 (12:00Z snapshot) | Compute-size evidence for the owner only if project opens stay over 0.7 s |
-| UI lane 1 | FLOW-415 step D: the "כל כמה זמן" pace sheet and hint, plus FLOW-420 item 1 (the "נספר ברווח" icon size) | Next cycle item from the design lead |
-| UI lane 2 | FLOW-415 steps A–C done (#500, #512, #514); the #514 review nits and the red-main spec fix after #504, then the switch to lane 1's `PACE_LABEL` | Next item on the review and transaction screens |
-| UI lane 3 | Gate: per-phase timeout and helper-process cleanup in `scripts/local-ci.sh` (after #516 fresh servers) | Settings, project screens, and other areas outside the review and transaction screens |
-| Plan-first threads | One temporary lane per owner-approved layout, listed here while it runs: none open (FLOW-417 cash history #496, FLOW-418 Home profit line #495, FLOW-419 project page #504 all merged) | The next plan-first feature the owner approves |
-| UI/UX review cycle | Design lead; reviews each deploy (cycle 16 reviewed 333b55f, FLOW-420) and signs off UI PRs in a PR comment | Next deploy batch (cash history, month page, recurring on Home) |
-| Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Idle; takes the next bug or red-main fix the lane manager routes | Next bug |
+| Dev lane 4 | FLOW-911 done (#542); real-user `get_project` snapshot at 15:00Z (edge logs, read-only) | Compute-size evidence for the owner only if typical project opens stay over 0.7 s |
+| UI lane 1 | FLOW-422 done (#537); idle | Next cycle 18 item from the design lead |
+| UI lane 2 | FLOW-423 done (#538); idle | Next cycle 18 item on the review and transaction screens |
+| UI lane 3 | FLOW-912: steadier page-speed check (median of 5 opens, same 700 ms limit, `app/perf`), then FLOW-910: reload once when a new service worker takes control (`app/src/sw-reload.ts`) | Settings, project screens, and other areas outside the review and transaction screens |
+| Temporary lanes (owner asks, one thread each) | FLOW-430 #528 missing-bill suggested match · FLOW-432 #531 split parts on the list row (merges after #540, migration order) · FLOW-434 #536 loan page (owner picked A plus percentages and a future-payments view; building) · FLOW-908 #540 search month totals. Closed today at their merge: FLOW-422, 423, 431, 433, 435, 707, 909, 911 | Each closes at its merge |
+| UI/UX review cycle | Design lead; cycle 18 on the 14:31Z deploy (e645191), findings from FLOW-424; signs off UI PRs in a PR comment | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only (13:50Z and 14:31Z deploys verified) | Next deploy batch |
+| Backlog bug fixes | Idle; the owner's bugs run in their own threads today | Next bug the lane manager routes |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 | Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
 ## Priority queue
@@ -262,7 +262,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-361"></a>[FLOW-361](tasks/FLOW-361.md) | Loan setup story shows Hebrew letters in reverse order | SMALL BUG |
 | <a id="flow-362"></a>[FLOW-362](tasks/FLOW-362.md) | Phone polish after the cash Home deploy (cycle 15) | SMALL UI |
 | <a id="flow-420"></a>[FLOW-420](tasks/FLOW-420.md) | Phone polish after the profit-line deploy (cycle 16) | SMALL UI |
+| <a id="flow-422"></a>[FLOW-422](tasks/FLOW-422.md) | A project's month page steps months like Home's | SMALL UI |
+| <a id="flow-423"></a>[FLOW-423](tasks/FLOW-423.md) | A fixed way into קבועים from Home | SMALL UI |
+| <a id="flow-424"></a>[FLOW-424](tasks/FLOW-424.md) | Cycle 18 polish on lists, קבועים and the usual-amount chip | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
+| <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
 ## Projects and reports
 
@@ -282,11 +286,14 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-411"></a>[FLOW-411](tasks/FLOW-411.md) | Project screen: lines on open, honest period label | SMALL UI |
 | <a id="flow-412"></a>[FLOW-412](tasks/FLOW-412.md) | Category drill-down on the cash basis | BACKLOG NIT |
 | <a id="flow-413"></a>[FLOW-413](tasks/FLOW-413.md) | Monthly cash-flow view (תזרים חודשי) | PLAN FIRST |
+| <a id="flow-432"></a>[FLOW-432](tasks/FLOW-432.md) | Show a split line's parts on the list row | UI |
 | <a id="flow-418"></a>[FLOW-418](tasks/FLOW-418.md) | Home shows what profit leaves out of the month's cash | PLAN FIRST |
 | <a id="flow-415"></a>[FLOW-415](tasks/FLOW-415.md) | Recurring charges: where they're paid from, a big change on Home, and the user's say on each payment | PLAN FIRST (layout approved) |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |
 | <a id="flow-419"></a>[FLOW-419](tasks/FLOW-419.md) | Project page opens on its cash view | PLAN FIRST |
+| <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
+| <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
@@ -324,6 +331,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-702"></a>[FLOW-702](tasks/FLOW-702.md) | Jev auto mode | PLAN FIRST |
 | <a id="flow-703"></a>[FLOW-703](tasks/FLOW-703.md) | Jev corrections write-back | SMALL CYCLE |
 | <a id="flow-704"></a>[FLOW-704](tasks/FLOW-704.md) | Jev review card follow-ups | BACKLOG NIT |
+| <a id="flow-707"></a>[FLOW-707](tasks/FLOW-707.md) | The card's nickname from the bank, on the transaction and for Jev | SMALL UI |
 
 ## Infra and CI
 
@@ -342,6 +350,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-811"></a>[FLOW-811](tasks/FLOW-811.md) | CI and deploy follow-ups | BACKLOG NIT |
 | <a id="flow-812"></a>[FLOW-812](tasks/FLOW-812.md) | Faster CI | SMALL CYCLE |
 | <a id="flow-813"></a>[FLOW-813](tasks/FLOW-813.md) | Faster pre-push local CI | SMALL CYCLE |
+| <a id="flow-814"></a>[FLOW-814](tasks/FLOW-814.md) | A migration that main overtook fails in seconds, and one command renames it | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
@@ -354,6 +363,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-905"></a>[FLOW-905](tasks/FLOW-905.md) | Example data in the rendered design screens | BACKLOG NIT |
 | <a id="flow-906"></a>[FLOW-906](tasks/FLOW-906.md) | Confirm the public help contact | BACKLOG NIT |
 | <a id="flow-907"></a>[FLOW-907](tasks/FLOW-907.md) | Data clean-up after PR B | MCP |
+| <a id="flow-908"></a>[FLOW-908](tasks/FLOW-908.md) | Search: every month head shows its net | Bug |
+| <a id="flow-909"></a>[FLOW-909](tasks/FLOW-909.md) | A kept-out line's name uses the row's width | BUG (small UI) |
+| <a id="flow-911"></a>[FLOW-911](tasks/FLOW-911.md) | A just-joined viewer kept an owner's controls | BUG |
+| <a id="flow-912"></a>[FLOW-912](tasks/FLOW-912.md) | The speed checks hold the median of 5 opens | TASK |
 
 ## Future features
 

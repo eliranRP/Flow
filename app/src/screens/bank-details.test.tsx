@@ -142,6 +142,26 @@ describe("transaction פרטי הבנק (FLOW-304)", () => {
     expect(within(section).queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("shows the card's nickname from the bank after its last 4 (FLOW-707)", async () => {
+    db.meta = [{ ...empty, method: "card", card_last4: "4242", card_name: " Example Street Utilities " }];
+    renderDetail();
+    const heading = await screen.findByRole("heading", { name: "פרטי הבנק" });
+    const section = heading.closest("section") as HTMLElement;
+    expect(within(section).getByText("כרטיס שמסתיים ב־4242")).toHaveClass("sr-only");
+    const name = within(section).getByText("Example Street Utilities");
+    expect(name).toHaveAttribute("dir", "auto");
+    expect(name).toHaveAttribute("data-clip-ok");
+  });
+
+  it("shows no nickname on a line that is not a card", async () => {
+    db.meta = [{ ...empty, method: "ach", card_name: "Example Street Utilities" }];
+    renderDetail();
+    const heading = await screen.findByRole("heading", { name: "פרטי הבנק" });
+    const section = heading.closest("section") as HTMLElement;
+    expect(within(section).getByText("העברת ACH")).toBeInTheDocument();
+    expect(within(section).queryByText("Example Street Utilities")).not.toBeInTheDocument();
+  });
+
   it("shows a פרטי הבנק retry row when the meta read fails, and the rows after a retry", async () => {
     db.metaError = true;
     renderDetail();

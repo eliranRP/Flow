@@ -96,6 +96,10 @@ export const cashLinesSchema = z
         amount_minor: minorSchema,
         side: cashSideSchema,
         source: z.string().nullable().optional().catch(undefined),
+        /** FLOW-432: on a line split by category, the parts this row counts, signed like amount_minor, largest first. */
+        parts: z.array(z.object({ name: z.string().nullable(), amount_minor: minorSchema })).nullable().optional().catch(undefined),
+        /** FLOW-432: on a line split by category, the whole line's amount (positive). */
+        line_minor: minorSchema.nullable().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

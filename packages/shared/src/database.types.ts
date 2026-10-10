@@ -196,13 +196,13 @@ isOneToOne: false
                   ]
                 },"connector_connections": {
                   Row: {
-                    "account_labels": NonNullable<Json>,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id": string,"import_from": string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts": number,"settings": NonNullable<Json>,"sync_claimed_at": string | null,"sync_cursor": string | null,"updated_at": string
+                    "account_labels": NonNullable<Json>,"card_labels": NonNullable<Json>,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id": string,"import_from": string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts": number,"settings": NonNullable<Json>,"sync_claimed_at": string | null,"sync_cursor": string | null,"updated_at": string
                   }
                   Insert: {
-                    "account_labels"?: NonNullable<Json>,"company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id"?: string,"import_from"?: string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
+                    "account_labels"?: NonNullable<Json>,"card_labels"?: NonNullable<Json>,"company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id"?: string,"import_from"?: string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "account_labels"?: NonNullable<Json>,"company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string,"id"?: string,"import_from"?: string | null,"kek_ref"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
+                    "account_labels"?: NonNullable<Json>,"card_labels"?: NonNullable<Json>,"company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string,"id"?: string,"import_from"?: string | null,"kek_ref"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1443,6 +1443,9 @@ isOneToOne: false
 "owner_company_for":
 { Args: { "p_hint"?: string,"p_user": string }; Returns: string
                            },
+"party_charges":
+{ Args: { "p_id": string,"p_today"?: string }; Returns: Json
+                           },
 "payment_recurring":
 { Args: { "p_id": string,"p_today"?: string }; Returns: Json
                            },
@@ -1451,6 +1454,12 @@ isOneToOne: false
                            },
 "project_cash_months":
 { Args: { "p_months"?: number,"p_project": string,"p_today"?: string }; Returns: Json
+                           },
+"project_cash_year_months":
+{ Args: { "p_project": string,"p_today"?: string,"p_year": number }; Returns: Json
+                           },
+"project_cash_years":
+{ Args: { "p_project": string,"p_today"?: string }; Returns: Json
                            },
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json

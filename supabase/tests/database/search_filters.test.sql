@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(42);
+select plan(48);
 
 do $users$
 begin
@@ -236,6 +236,20 @@ select throws_ok($$select public.search_transactions(p_amount_min => 5, p_amount
 select throws_ok($$select public.search_transactions(p_amount_min => -1)$$,
   'P0001', 'validation', 'a negative amount is validation');
 
+-- Month totals (search month totals bug): the first page carries every matching line's totals
+-- per month and currency, as the rows draw them; a kept-out line adds nothing.
+select is(public.search_transactions(p_from => '2026-06-01', p_to => '2026-06-15', p_limit => 1)->'months',
+  '[{"month": "2026-06", "currency": "ILS", "income_minor": 500000, "expense_minor": 260000}]'::jsonb,
+  'the first page carries the month totals of every matching line, not only the page');
+select is(public.search_transactions(p_from => '2026-06-21', p_to => '2026-06-21')->'months', '[]'::jsonb,
+  'a kept-out line adds nothing to its month');
+select is(
+  (select string_agg((e->>'month') || ' ' || (e->>'currency'), ',' order by n)
+   from jsonb_array_elements(public.search_transactions(p_project => pg_temp.id('beta')::text)->'months')
+     with ordinality as m(e, n)),
+  '2026-07 USD,2026-06 ILS', 'newest month first, each currency on its own row');
+select is(public.search_transactions(p_offset => 1)->'months', 'null'::jsonb, 'a later page leaves the months out');
+
 -- Paging: lines on the same date never repeat across pages.
 select is(
   (select count(distinct e->>'id')::int from (
@@ -256,6 +270,27 @@ select is(pg_temp.keys(public.search_transactions()), 'sfl:other',
 select tests.authenticate_as('sfl_viewer');
 select is((public.search_transactions(p_project => pg_temp.id('alpha')::text)->>'total')::int, 4,
   'a viewer reads with the same filters');
+
+-- Month totals follow the rows' rules (decision 0120, 0135): an income line with a negative
+-- amount is money out, and a line split with one part kept out still counts in full. March holds
+-- only these two lines.
+reset role;
+insert into sfl (label, id) values
+  ('credit', tests.fixture_line(pg_temp.id('co'), 'sfl:credit', 5000, 'income',
+    pg_temp.id('alpha'), pg_temp.id('sales'), '2026-03-10')),
+  ('half_out', tests.fixture_line(pg_temp.id('co'), 'sfl:half_out', 10000, 'expense',
+    pg_temp.id('alpha'), pg_temp.id('materials'), '2026-03-12'));
+update public.transactions set amount_gross = -5000, amount_net = -5000 where id = pg_temp.id('credit');
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+values
+  (pg_temp.id('co'), pg_temp.id('half_out'), 1, pg_temp.id('materials'), null, 6000),
+  (pg_temp.id('co'), pg_temp.id('half_out'), 2, pg_temp.id('draws'), null, 4000);
+select tests.authenticate_as('sfl_owner');
+select ok(not (pg_temp.row_of('half_out')->>'kept_out')::boolean,
+  'a line split with one part kept out is not kept out (its row counts in full)');
+select is(public.search_transactions(p_from => '2026-03-01', p_to => '2026-03-31')->'months',
+  '[{"month": "2026-03", "currency": "ILS", "income_minor": 0, "expense_minor": 15000}]'::jsonb,
+  'an income credit counts as money out, and a partly kept-out split line counts in full');
 
 select * from finish();
 rollback;

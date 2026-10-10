@@ -24,6 +24,7 @@ const txnMetaSchema = z.object({
   card_last4: z
     .unknown()
     .transform((value) => (typeof value === "string" && /^\d{4}$/.test(value) ? value : null)),
+  card_name: text,
   memo: text,
   account: text,
   counterparty: text,

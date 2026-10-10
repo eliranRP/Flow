@@ -41,7 +41,25 @@ const MIXED: Row[] = [
 
 const SETS = { three: ROWS, large: LARGE, one: ROWS.slice(0, 2), two: TWO, mixed: MIXED } as const;
 
-function MonthListView({ set, complete = true, days = false }: { set: keyof typeof SETS; complete?: boolean; days?: boolean }) {
+/** Every matching line's totals, as search's first page sends them: more lines than are loaded. */
+const SERVER_TOTALS = new Map([
+  ["2026-09", [{ currency: "ILS", incomeMinor: 1_200_000n, expenseMinor: 350_000n }]],
+  ["2026-08", [{ currency: "ILS", incomeMinor: 800_000n, expenseMinor: 1_420_000n }, { currency: "USD", incomeMinor: 150_000n, expenseMinor: 40_000n }]],
+  ["2026-07", [{ currency: "ILS", incomeMinor: 0n, expenseMinor: 1_034_267n }]],
+]);
+
+function MonthListView({
+  set,
+  complete = true,
+  days = false,
+  server = false,
+}: {
+  set: keyof typeof SETS;
+  complete?: boolean;
+  days?: boolean;
+  /** Search's net heads with the server's month totals while the list is still paging. */
+  server?: boolean;
+}) {
   const rows: readonly Row[] = SETS[set];
   return (
     <MonthList
@@ -51,7 +69,9 @@ function MonthListView({ set, complete = true, days = false }: { set: keyof type
       amountOf={(row) => ({ minor: row.minor, currency: row.currency, direction: row.direction })}
       complete={complete}
       days={days}
-      cents={days}
+      cents={days || server}
+      net={server}
+      monthTotals={server ? SERVER_TOTALS : undefined}
       renderRow={(row) => (
         <ListRow
           variant="transaction"
@@ -78,6 +98,9 @@ type Story = StoryObj<typeof meta>;
 
 export const ThreeMonths: Story = { args: { set: "three" } };
 export const StillLoading: Story = { args: { set: "three", complete: false } };
+/** Search: every month shows its whole net from the server, July too while its lines page in. */
+export const ServerTotalsWhilePaging: Story = { args: { set: "three", complete: false, server: true } };
+export const ServerTotalsWhilePagingDark: Story = { args: { set: "three", complete: false, server: true }, globals: { theme: "dark" } };
 export const LargeAmounts: Story = { args: { set: "large" } };
 export const TwoCurrenciesOneRow: Story = { args: { set: "mixed" } };
 export const OneMonth: Story = { args: { set: "one" } };

@@ -6,7 +6,7 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07. Lanes table: 2026-10-10 11:40Z.
+Last full sync: 2026-10-07. Lanes table: 2026-10-10 14:45Z.
 
 ## Lanes now
 
@@ -15,14 +15,14 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 3 | Parked (FLOW-309 pairing server done); takes the next server task | Server side of the next plan-first feature |
-| Dev lane 4 | Team invites (FLOW-601 done); reviews FLOW-421 invite emails via Resend (built by the "Invite email not arriving" thread, claims through the lane manager); real-user `get_project` timing after #508 (12:00Z snapshot) | Compute-size evidence for the owner only if project opens stay over 0.7 s |
-| UI lane 1 | FLOW-415 step D: the "כל כמה זמן" pace sheet and hint, plus FLOW-420 item 1 (the "נספר ברווח" icon size) | Next cycle item from the design lead |
-| UI lane 2 | FLOW-415 steps A–C done (#500, #512, #514); the #514 review nits and the red-main spec fix after #504, then the switch to lane 1's `PACE_LABEL` | Next item on the review and transaction screens |
-| UI lane 3 | Gate: per-phase timeout and helper-process cleanup in `scripts/local-ci.sh` (after #516 fresh servers) | Settings, project screens, and other areas outside the review and transaction screens |
-| Plan-first threads | One temporary lane per owner-approved layout, listed here while it runs: none open (FLOW-417 cash history #496, FLOW-418 Home profit line #495, FLOW-419 project page #504 all merged) | The next plan-first feature the owner approves |
-| UI/UX review cycle | Design lead; reviews each deploy (cycle 16 reviewed 333b55f, FLOW-420) and signs off UI PRs in a PR comment | Next deploy batch (cash history, month page, recurring on Home) |
-| Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Idle; takes the next bug or red-main fix the lane manager routes | Next bug |
+| Dev lane 4 | FLOW-911 done (#542); real-user `get_project` snapshot at 15:00Z (edge logs, read-only) | Compute-size evidence for the owner only if typical project opens stay over 0.7 s |
+| UI lane 1 | FLOW-422 done (#537); idle | Next cycle 18 item from the design lead |
+| UI lane 2 | FLOW-423 done (#538); idle | Next cycle 18 item on the review and transaction screens |
+| UI lane 3 | FLOW-912: steadier page-speed check (median of 5 opens, same 700 ms limit, `app/perf`), then FLOW-910: reload once when a new service worker takes control (`app/src/sw-reload.ts`) | Settings, project screens, and other areas outside the review and transaction screens |
+| Temporary lanes (owner asks, one thread each) | FLOW-430 #528 missing-bill suggested match · FLOW-432 #531 split parts on the list row (merges after #540, migration order) · FLOW-434 #536 loan page (owner picked A plus percentages and a future-payments view; building) · FLOW-908 #540 search month totals. Closed today at their merge: FLOW-422, 423, 431, 433, 435, 707, 909, 911 | Each closes at its merge |
+| UI/UX review cycle | Design lead; cycle 18 on the 14:31Z deploy (e645191), findings from FLOW-424; signs off UI PRs in a PR comment | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only (13:50Z and 14:31Z deploys verified) | Next deploy batch |
+| Backlog bug fixes | Idle; the owner's bugs run in their own threads today | Next bug the lane manager routes |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 | Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
 ## Priority queue
@@ -254,7 +254,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-361
 - FLOW-362
 - FLOW-420
+- FLOW-422
+- FLOW-423
+- FLOW-424
 - FLOW-346
+- FLOW-431
 
 ## Projects and reports
 
@@ -272,11 +276,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-411
 - FLOW-412
 - FLOW-413
+- FLOW-432
 - FLOW-418
 - FLOW-415
 - FLOW-416
 - FLOW-417
 - FLOW-419
+- FLOW-433
+- FLOW-435
 
 ## Onboarding, Settings and connectors
 
@@ -308,6 +315,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-702
 - FLOW-703
 - FLOW-704
+- FLOW-707
 
 ## Infra and CI
 
@@ -324,6 +332,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-811
 - FLOW-812
 - FLOW-813
+- FLOW-814
 
 ## Data hygiene (public repo)
 
@@ -334,6 +343,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-905
 - FLOW-906
 - FLOW-907
+- FLOW-908
+- FLOW-909
+- FLOW-911
+- FLOW-912
 
 ## Future features
 

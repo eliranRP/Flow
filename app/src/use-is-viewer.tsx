@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useId, type ReactElement, type Re
 import { Navigate } from "react-router-dom";
 import { shownCompanyFor } from "./lib/company-header";
 import { usePreviewSearch } from "./preview";
-import { readRoleCache } from "./company-role-cache";
+import { readRoleCache, VIEWER_NOTE } from "./company-role-cache";
 import { MY_COMPANIES_KEY, useMyCompaniesQuery, useTeamUser } from "./team-queries";
 import { TextLink } from "./ui/text-link";
 
@@ -12,8 +12,7 @@ type PinnedRole = "owner" | "editor" | "viewer";
 const PinnedRoleContext = createContext<PinnedRole | null>(null);
 const ViewerNoteContext = createContext<string | null>(null);
 
-/** One quiet line. Settings puts it under the header. Review puts it where the actions were. */
-export const VIEWER_NOTE = "צפייה בלבד · שינויים נעשים על ידי בעל העסק";
+export { VIEWER_NOTE };
 
 /** Pins the viewer role for a story or a test. No session and no companies read. */
 export function ViewerPreview({ children }: { children: ReactNode }) {

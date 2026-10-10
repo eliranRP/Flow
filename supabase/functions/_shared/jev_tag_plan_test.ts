@@ -34,6 +34,7 @@ import {
   projects,
   txnRow,
 } from "./jev_tag_test_support.ts";
+import { CARD_NAME_HINT, lineQuestions } from "./jev_tag_plan.ts";
 
 Deno.test("questions use project and category ids, and 256 options omit that question", () => {
   const questions = buildTagQuestions(projects, categories);
@@ -417,4 +418,76 @@ Deno.test("a returned model other than the pin is stored on the suggestion", asy
     model_version: "jev-1.13.0",
     response_model: "jev-1.99.0",
   });
+});
+
+Deno.test("FLOW-707: the card's nickname reaches Jev in the state and the questions", async () => {
+  const fetch: typeof globalThis.fetch = (input) => {
+    const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/connector_connections")) {
+      assert(url.includes(`company_id=eq.${COMPANY}`) && url.includes("select=provider,card_labels,account_labels"));
+      return Promise.resolve(Response.json([
+        { provider: "bankb", card_labels: [{ last4: "7777", label: "Other Bank Card" }] },
+        { provider: "banka", card_labels: [
+          { last4: "4242", label: "Example Street Utilities" },
+          { last4: "12345", label: "not a last 4" },
+        ], account_labels: [
+          { id: "acct-1", label: "Example Street" },
+          { id: "acct-2", label: "Bank Checking ••1234" },
+        ] },
+      ]));
+    }
+    if (url.includes("/transactions")) {
+      assert(url.includes("card_last4:provider_meta->>card_last4"));
+      return Promise.resolve(Response.json([
+        txnRow({ source: "banka", card_last4: "4242", account_id: "acct-1" }),
+        txnRow({ id: "99999999-9999-4999-8999-999999999999", doc_date: "2026-04-11", source: "banka", card_last4: "1111", account_id: "acct-2" }),
+        txnRow({ id: "88888888-8888-4888-8888-888888888888", doc_date: "2026-04-10" }),
+        txnRow({ id: "77777777-7777-4777-8777-777777777777", doc_date: "2026-04-09", source: "banka", card_last4: "7777" }),
+      ]));
+    }
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
+  const [named, unnamed, noCard, otherProvider] = work[0].expenses;
+  // A name from one provider's card list never reaches a line from another source.
+  assertEquals([otherProvider.cardLast4, otherProvider.cardName], ["7777", undefined]);
+  assertEquals([named.cardLast4, named.cardName], ["4242", "Example Street Utilities"]);
+  assertEquals([unnamed.cardLast4, unnamed.cardName], ["1111", undefined]);
+  // The account's own name, tidied like get_line_meta: the masked last 4 is dropped.
+  assertEquals([named.accountName, unnamed.accountName, noCard.accountName], ["Example Street", "Bank Checking", undefined]);
+  assertEquals([noCard.cardLast4, noCard.cardName], [null, undefined]);
+
+  const state = buildTagState(named, projects, categories) as Record<string, unknown>;
+  assertEquals(state.card_name, "Example Street Utilities");
+  assertEquals(state.account_name, "Example Street");
+  const unnamedState = buildTagState(unnamed, projects, categories) as Record<string, unknown>;
+  assertEquals("card_name" in unnamedState, false);
+  assertEquals(unnamedState.account_name, "Bank Checking");
+  const asked = lineQuestions(named, work[0]);
+  assert(String(asked.project.instructions).endsWith(CARD_NAME_HINT));
+  assert(String(asked.category.instructions).endsWith(CARD_NAME_HINT));
+  assert(String(lineQuestions(unnamed, work[0]).project.instructions).endsWith(CARD_NAME_HINT));
+  assertEquals(lineQuestions(noCard, work[0]).project.instructions, "Choose the project id for this expense.");
+});
+
+Deno.test("FLOW-707: a failed card-name read still lists the lines, without names", async () => {
+  const fetch: typeof globalThis.fetch = (input) => {
+    const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/connector_connections")) return Promise.resolve(new Response(null, { status: 500 }));
+    if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow({ card_last4: "4242" })]));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
+  assertEquals(work[0].expenses.length, 1);
+  assertEquals(work[0].expenses[0].cardName, undefined);
 });

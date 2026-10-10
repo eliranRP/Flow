@@ -291,3 +291,43 @@ describe("MonthList net heads (FLOW-339 option C)", () => {
     expect(container.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪400");
   });
 });
+
+describe("MonthList server month totals (search month totals bug)", () => {
+  it("shows every month's server total, the last one too while it is still paging", () => {
+    const { container } = render(
+      <MonthList
+        rows={[row("a", "2026-09-14", 50_000n, "income"), row("b", "2026-08-10", 100n, "expense")]}
+        keyOf={(r) => r.id}
+        dateOf={dateOf}
+        amountOf={amountOf}
+        complete={false}
+        monthTotals={new Map([
+          ["2026-09", [{ currency: "ILS", incomeMinor: 50_000n, expenseMinor: 0n }]],
+          ["2026-08", [{ currency: "ILS", incomeMinor: 0n, expenseMinor: 1_034_267n }]],
+        ])}
+        cents
+        net
+        renderRow={(r) => <div key={r.id}>{r.id}</div>}
+      />,
+    );
+    const heads = [...container.querySelectorAll(".ui-month-head")];
+    expect(heads[0]?.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪500");
+    expect(heads[1]?.querySelector(".ui-month-totals")?.textContent).toBe("נטו −₪10,342.67");
+  });
+
+  it("shows no total for a month the server has none for", () => {
+    const { container } = render(
+      <MonthList
+        rows={[row("a", "2026-09-14", 50_000n, "income"), row("b", "2026-08-10", 100n, "expense")]}
+        keyOf={(r) => r.id}
+        dateOf={dateOf}
+        amountOf={amountOf}
+        monthTotals={new Map([["2026-09", [{ currency: "ILS", incomeMinor: 50_000n, expenseMinor: 0n }]]])}
+        cents
+        net
+        renderRow={(r) => <div key={r.id}>{r.id}</div>}
+      />,
+    );
+    expect(container.querySelectorAll(".ui-month-totals")).toHaveLength(1);
+  });
+});
