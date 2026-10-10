@@ -290,8 +290,9 @@ export const ProjectInvestment: Story = {
 const overviewProject: NonNullable<ProjectDetailData> = {
   ...periodProject,
   loans: [
-    { id: "l1", name: "הלוואת גישור לדוגמה", currency: "ILS", balance_minor: 80_000_000n, status: "open" },
-    { id: "l2", name: "משכנתא לדוגמה", currency: "ILS", balance_minor: 40_000_000n, status: "open" },
+    // The open balances add up to the investment card's יתרת הלוואות (FILLED, ₪800,000).
+    { id: "l1", name: "הלוואת גישור לדוגמה", currency: "ILS", balance_minor: 50_000_000n, status: "open" },
+    { id: "l2", name: "משכנתא לדוגמה", currency: "ILS", balance_minor: 30_000_000n, status: "open" },
   ],
 };
 const sectionTo = (target: string) => (target === "overview" ? "/projects/p-a" : `/projects/p-a/${target}`);

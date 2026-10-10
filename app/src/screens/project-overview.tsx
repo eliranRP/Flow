@@ -94,7 +94,9 @@ export function ProjectOverviewRows({
       {loans == null ? null : (
         <ListRow variant="item" title="הלוואות" meta={<span className="ui-project-row-figure">{loans}</span>} href={links.loans} chevron />
       )}
-      <ListRow variant="item" title="תנועות" meta={<Figure>{transactionsFigure(project)}</Figure>} href={links.transactions} chevron />
+      {project.transactions.length === 0 ? null : (
+        <ListRow variant="item" title="תנועות" meta={<Figure>{transactionsFigure(project)}</Figure>} href={links.transactions} chevron />
+      )}
       <ListRow variant="item" title="לפי חודש" href={links.months} chevron />
     </List>
   );

@@ -1,8 +1,9 @@
 import type { CashLine, CashMonths, ProjectDetail } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
-import { cashMonthKey } from "../cash";
-import { shiftMonthKey } from "../period";
+import { cashMonthKey, cashMonthName } from "../cash";
+import { monthPeriod, shiftMonthKey } from "../period";
+import { withPeriodSearch } from "../project-period";
 import { israelToday } from "../ui/date-math";
 import { FILLED } from "../ui/investment-card.stories-support";
 import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
@@ -32,6 +33,8 @@ function cashRow(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "
     excluded_out_minor: 0n,
   };
 }
+
+const thisMonth = israelToday().slice(0, 7);
 
 function months(rows: ReturnType<typeof cashRow>[][], base = "USD"): NonNullable<CashMonths> {
   const current = israelToday().slice(0, 7);
@@ -64,7 +67,11 @@ const project: NonNullable<ProjectDetail> = {
   categories: [],
   pending_count: 0,
   pending_agorot: 0n,
-  transactions: [],
+  transactions: [
+    { id: "t1", description: "שכירות לדוגמה", doc_date: `${thisMonth}-03`, amount_net: 310_000n, currency: "USD", direction: "income", category: null },
+    { id: "t2", description: "חנות חומרים לדוגמה", doc_date: `${thisMonth}-02`, amount_net: -15_000n, currency: "USD", direction: "expense", category: "שיפוץ" },
+    { id: "t3", description: "מלווה לדוגמה", doc_date: `${thisMonth}-06`, amount_net: -60_000n, currency: "USD", direction: "expense", category: "תשלומי הלוואה" },
+  ],
   loans: [{ id: "l1", name: "הלוואת DSCR לדוגמה", currency: "USD", balance_minor: 21_360_000n, status: "open" }],
 };
 
@@ -149,10 +156,31 @@ export const ProjectCashTwoCurrencies320: Story = { ...ProjectCashTwoCurrencies,
 export const ProjectProfitPage: Story = {
   name: "Project, profit page",
   render: () => (
-    <StoryRoute entry="/projects/p-c/profit" tabs>
+    // As the רווח החודש row opens it: on that row's month.
+    <StoryRoute entry={`/projects/p-c/profit${withPeriodSearch("", monthPeriod(thisMonth))}`} tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={project} sampleInvestment={investment} section="profit" sectionTo={sectionTo} />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The page is the row's month, and its figure is the row's (cash's profit_minor, $1,280).
+    await expect(canvas.getAllByText(new RegExp(cashMonthName(thisMonth))).length).toBeGreaterThan(0);
+    await expect(canvas.getAllByText("$1,280").length).toBeGreaterThan(0);
+  },
+};
+
+/** The same project's השקעה והלוואות page: the loan row's balance is the card's יתרת הלוואות. */
+export const ProjectInvestmentLoans: Story = {
+  name: "Project, investment and loans",
+  render: () => (
+    <StoryRoute entry="/projects/p-c/investment" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={project} sampleInvestment={investment} section="investment" sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByText("$213,600").length).toBe(2);
+  },
 };
 export const ProjectProfitPage320: Story = { ...ProjectProfitPage, name: "Project, profit page, 320", ...at320 };
 
