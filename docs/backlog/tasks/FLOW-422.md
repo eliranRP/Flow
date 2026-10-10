@@ -1,0 +1,4 @@
+<a id="flow-422"></a>
+# FLOW-422 · A project's month page steps months like Home's
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Source:** cycle 17 phone review of main at 88d4ee8, 2026-10-10 (C17-2). Shots are in the project files under `reviews/ui-ux-cycle-17/`. The design lead signs it off; there is no owner card.
+- [ ] (UI lane 1) An earlier month's project page (`/projects/:id/cash/:month`) has the same shape as Home's month page, but it has no ‹ › pager and no swipe (FLOW-362). Seeing the next month takes 2 taps (Back, then another row), and only the 3 months listed on the project page are reachable. Use the same `MonthStepper` segment and `PeriodSwipe` in `ProjectCashMonthScreen` as in `CashMonthScreen`, stepping only within the months the project's read holds. An end month keeps its empty slot, and the current month has no later step. Shots needed: 390 light and dark, plus 320.
