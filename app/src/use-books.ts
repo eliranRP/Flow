@@ -20,6 +20,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type Quer
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
+import { saveProjectRead, savedProjectRead } from "./project-cache";
 import { waitForAccessToken } from "./wait-for-session";
 import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
@@ -341,9 +342,20 @@ export function useMercuryStatusQuery(active = true) {
   });
 }
 
-/** The read behind the project page. Shared by the page and the prefetch (FLOW-804). */
+/**
+ * The read behind the project page. Shared by the page and the prefetch (FLOW-804). A project read
+ * before starts from that read saved on the phone, dated when it was read, so the page paints at
+ * once and the fresh read replaces it in the background (project-cache.ts).
+ */
 export function projectQueryOptions(preview: HomePreview, projectId: string, period: PeriodChoice | null) {
   const range = period ? rangeOf(period) : null;
+  const savedKey = [projectId, BOOKS_BASIS, range?.p_from ?? "", range?.p_to ?? ""].join("|");
+  // Read from storage only when the query is created, once for the data and its date.
+  let saved: { value: ReturnType<typeof savedProjectRead> } | null = null;
+  const savedRead = () => {
+    saved ??= { value: preview === "off" && projectId !== "" ? savedProjectRead(savedKey) : null };
+    return saved.value;
+  };
   return {
     queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null] as const,
     queryFn: async (): Promise<ProjectDetail> => {
@@ -352,8 +364,12 @@ export function projectQueryOptions(preview: HomePreview, projectId: string, per
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: BOOKS_BASIS, ...(range ?? {}) });
       if (error) throw error;
-      return (await loadReadSchemas()).projectDetailSchema.parse(data);
+      const project = (await loadReadSchemas()).projectDetailSchema.parse(data);
+      if (project != null) saveProjectRead(savedKey, project);
+      return project;
     },
+    initialData: () => savedRead()?.data,
+    initialDataUpdatedAt: () => savedRead()?.at,
   };
 }
 

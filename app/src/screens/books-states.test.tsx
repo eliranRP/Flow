@@ -4,6 +4,9 @@ import type { Session } from "@supabase/supabase-js";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
+import { demoProject } from "../demo/model";
+import { resetShownCompanyForTests, setShownCompany } from "../lib/company-header";
+import { forgetProjectReads } from "../project-cache";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
@@ -137,6 +140,35 @@ describe("rejected reads", () => {
     renderAt("/projects/abc");
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.queryByText("הפרויקט לא נמצא.")).not.toBeInTheDocument();
+  });
+
+  it("keeps a project read before on screen when its fresh read fails (FLOW-804)", async () => {
+    setShownCompany(session.user.id, "cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+    const wire = JSON.parse(JSON.stringify(demoProject("herzl"), (_key, value: unknown) => (
+      typeof value === "bigint" ? value.toString() : value
+    ))) as unknown;
+    rpc.impl = (name) => Promise.resolve(name === "get_project" ? { data: wire, error: null } : { data: null, error: { message: "db down" } });
+    const first = renderAt("/projects/herzl");
+    expect(await screen.findByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    first.unmount();
+    // That visit was an hour ago, so the saved read is stale and is read again.
+    const saved = JSON.parse(localStorage.getItem("flow-project-reads") ?? "null") as { entries: { at: number }[] };
+    for (const entry of saved.entries) entry.at -= 3_600_000;
+    localStorage.setItem("flow-project-reads", JSON.stringify(saved));
+    // The next open (a reload): the server is away, and the saved read is the page.
+    const reads: string[] = [];
+    rpc.impl = (name) => {
+      reads.push(name);
+      return Promise.resolve({ data: null, error: { message: "db down" } });
+    };
+    renderAt("/projects/herzl");
+    expect(screen.getByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    await waitFor(() => { expect(reads).toContain("get_project"); });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole("heading", { level: 1, name: "שיפוץ הרצל 12" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    forgetProjectReads();
+    resetShownCompanyForTests();
   });
 
   it("does not call a failed transaction load not found", async () => {

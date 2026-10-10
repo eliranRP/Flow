@@ -44,6 +44,9 @@ export function useMyCompaniesQuery(active = true) {
     queryKey: [MY_COMPANIES_KEY, userId],
     enabled: active && signedIn && userId != null && canRead,
     retry: false,
+    // FLOW-804: read once a minute at most, not on every screen that asks for the role. A switch,
+    // an accepted invite and sign-out start every read over; the server checks each write anyway.
+    staleTime: 60_000,
     queryFn: async ({ signal }): Promise<MyCompanies> => {
       if (userId == null) throw new Error("no user");
       const sent = shownCompanyFor(userId);

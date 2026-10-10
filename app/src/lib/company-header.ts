@@ -52,6 +52,11 @@ export function shownCompanyId(): string | null {
   return shown.companyId;
 }
 
+/** The user the shown company belongs to (the signed-in user once the session is known). */
+export function shownCompanyUser(): string | null {
+  return shown.userId;
+}
+
 /** The shown company for this user, or null when this user has none saved. */
 export function shownCompanyFor(userId: string | null): string | null {
   if (userId == null) return null;

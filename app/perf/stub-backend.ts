@@ -34,10 +34,19 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
       return { connected: true, sumit_company_id: 1, last_sync_at: "2026-10-09T06:00:00Z", last_error: null };
     case "mcp_company_loan_currency":
       return "ILS";
+    case "list_my_companies":
+      return {
+        active_id: COMPANY_ID,
+        role: "owner",
+        companies: [{ id: COMPANY_ID, name: "Example Renovations", role: "owner", is_demo: false, active: true }],
+      };
     default:
       return [];
   }
 }
+
+/** The one company the stub user owns; the app names it on every read once list_my_companies answers. */
+const COMPANY_ID = "00000000-0000-4000-8000-000000000805";
 
 const USER = {
   id: "00000000-0000-4000-8000-000000000804",
@@ -78,8 +87,13 @@ export interface StubBackend {
   inflight: () => number;
 }
 
+export interface StubOptions {
+  /** How long the server takes to answer an RPC, in ms: the REST floor or a spike (default 0). */
+  delay?: (rpc: string) => number;
+}
+
 /** Signs the page in and answers every request to the stub address from the demo books. */
-export async function stubBackend(page: Page): Promise<StubBackend> {
+export async function stubBackend(page: Page, options: StubOptions = {}): Promise<StubBackend> {
   const rpcs: string[] = [];
   let open = 0;
   const key = `sb-${new URL(STUB_URL).hostname.split(".")[0] ?? "local"}-auth-token`;
@@ -95,6 +109,8 @@ export async function stubBackend(page: Page): Promise<StubBackend> {
       if (name) {
         rpcs.push(name);
         const args = (request.postDataJSON() ?? {}) as Record<string, unknown>;
+        const wait = options.delay?.(name) ?? 0;
+        if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
         await route.fulfill({ status: 200, contentType: "application/json", body: wire(rpcBody(name, args)) });
       } else if (url.includes("/auth/v1/user")) {
         await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(USER) });
