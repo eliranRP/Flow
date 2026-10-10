@@ -39,6 +39,13 @@ describe("cashSummaryRows", () => {
     expect(rows[0]?.name).toBe("נכנס באוקטובר ₪18,000 – פירוט");
   });
 
+  it("names an earlier month on its profit row, and keeps רווח החודש on the current month (FLOW-362)", () => {
+    const rows = cashSummaryRows("2026-09", [row("ILS", 1_800_000n, 1_480_000n)], "", now);
+    expect(rows[2]?.label).toBe("רווח בספטמבר");
+    expect(rows[2]?.name).toBe("רווח בספטמבר ₪3,200");
+    expect(cashSummaryRows("2025-12", [row("ILS", 0n, 0n)], "", now)[2]?.label).toBe("רווח בדצמבר 2025");
+  });
+
   it("adds לא נספר ברווח, the rest of the month's figure, with a hint and its lines (FLOW-418)", () => {
     const kept = [
       { name: "שיפוץ והשבחה", amount_minor: -440_000n },

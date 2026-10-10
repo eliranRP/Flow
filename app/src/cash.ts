@@ -110,8 +110,8 @@ export function profitPath(search: string): string {
 }
 
 /**
- * The rows under a month's cash figure: נכנס and יצא open the month's lines, רווח החודש opens the
- * profit view for the month, and (FLOW-418) לא נספר ברווח, the rest of the month's figure, opens
+ * The rows under a month's cash figure: נכנס and יצא open the month's lines, רווח החודש (on an
+ * earlier month "רווח ב<month>") opens the profit view for the month, and (FLOW-418) לא נספר ברווח, the rest of the month's figure, opens
  * the lines profit leaves out; it shows only when some currency has any. Each row lists the base
  * currency, then any other that moved.
  */
@@ -155,7 +155,8 @@ export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: st
     },
     {
       id: "profit",
-      label: "רווח החודש",
+      // FLOW-362: an earlier month's row names its month; the current month keeps "רווח החודש".
+      label: key === israelToday(now).slice(0, 7) ? "רווח החודש" : `רווח ב${name}`,
       tone: "quiet",
       amounts: profit,
       href: profitPath(search),
