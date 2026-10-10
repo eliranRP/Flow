@@ -277,6 +277,34 @@
   white-space: nowrap;
 }
 
+/* HintParts (FLOW-415): whole parts that wrap, with no "·" at either end of a line. Each part but
+   the first opens with a 1em dot box; the inner row starts 1em before the clip, so the box of a part
+   that opens a line is cut off, and the first part pads the same 1em instead. */
+.ui-hint-wrap {
+  display: block;
+  overflow: hidden;
+}
+
+.ui-hint-wrap-in {
+  display: flex;
+  flex-wrap: wrap;
+  margin-inline-start: -1em;
+}
+
+.ui-hint-wrap-part {
+  white-space: nowrap;
+}
+
+.ui-hint-wrap-first {
+  padding-inline-start: 1em;
+}
+
+.ui-hint-wrap-sep {
+  display: inline-block;
+  inline-size: 1em;
+  text-align: center;
+}
+
 .ui-row-icon {
   color: var(--color-text-secondary);
 }

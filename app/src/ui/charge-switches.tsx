@@ -1,5 +1,6 @@
 import { HintParts } from "./hint-parts";
-import { RepeatIcon, TransferIcon } from "./icons";
+import { LockIcon, RepeatIcon, TransferIcon } from "./icons";
+import { ListRow } from "./list-row";
 import { Toggle } from "./toggle";
 
 /** FLOW-415 (layout A): a payment's place in the cash view, and whether it is a recurring charge. */
@@ -16,6 +17,8 @@ export type ChargeSwitchState = {
 
 export const IN_CASH = "נספר בתזרים";
 export const RECURRING = "חיוב קבוע";
+/** FLOW-415 (b-2 addition): the same switch on an income line. */
+export const RECURRING_INCOME = "הכנסה קבועה";
 
 /** "כל חודש ב־4 · זוהה לבד", either half alone, or nothing. */
 export function recurringHint(state: Pick<ChargeSwitchState, "typicalDay" | "detected">): string | undefined {
@@ -27,8 +30,8 @@ export function recurringHint(state: Pick<ChargeSwitchState, "typicalDay" | "det
 }
 
 /** The undo toast's words after a switch: "אור חשמל · לא חיוב קבוע". */
-export function chargeSwitchToast(party: string, kind: "cash" | "recurring", on: boolean): string {
-  const word = kind === "cash" ? IN_CASH : RECURRING;
+export function chargeSwitchToast(party: string, kind: "cash" | "recurring" | "income", on: boolean): string {
+  const word = kind === "cash" ? IN_CASH : kind === "income" ? RECURRING_INCOME : RECURRING;
   return `${party} · ${on ? word : `לא ${word}`}`;
 }
 
@@ -38,34 +41,51 @@ export function chargeSwitchToast(party: string, kind: "cash" | "recurring", on:
  */
 export function ChargeSwitches({
   state,
+  income = false,
+  cashMixed = false,
+  noParty = false,
   disabled = false,
+  recurringDisabled = false,
   busy = {},
   onCash,
   onRecurring,
 }: {
   state: ChargeSwitchState;
+  /** An income line reads הכנסה קבועה. */
+  income?: boolean;
+  /** A split whose parts differ on the cash view: locked, its parts decide (like נספר ברווח). */
+  cashMixed?: boolean;
+  /** No supplier or customer to mark: the recurring switch is locked off. */
+  noParty?: boolean;
   disabled?: boolean;
+  /** The recurring state could not be read, so the switch has nothing to change. */
+  recurringDisabled?: boolean;
   busy?: { cash?: boolean; recurring?: boolean };
   onCash: (next: boolean) => void;
   onRecurring: (next: boolean) => void;
 }) {
-  const hint = recurringHint(state);
+  const hint = noParty ? "אין ספק או לקוח בשורה" : state.recurring ? recurringHint(state) : undefined;
   return (
     <>
+      {cashMixed ? (
+        <ListRow variant="static" title={IN_CASH} icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" />
+      ) : (
+        <Toggle
+          label={IN_CASH}
+          icon={<TransferIcon />}
+          checked={state.inCash}
+          disabled={disabled}
+          busy={busy.cash}
+          onChange={onCash}
+        />
+      )}
       <Toggle
-        label={IN_CASH}
-        icon={<TransferIcon />}
-        checked={state.inCash}
-        disabled={disabled}
-        busy={busy.cash}
-        onChange={onCash}
-      />
-      <Toggle
-        label={RECURRING}
+        label={income ? RECURRING_INCOME : RECURRING}
         hint={hint == null ? undefined : <HintParts text={hint} />}
         icon={<RepeatIcon />}
         checked={state.recurring}
-        disabled={disabled}
+        disabled={disabled || recurringDisabled}
+        locked={noParty}
         busy={busy.recurring}
         onChange={onRecurring}
       />

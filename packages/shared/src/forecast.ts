@@ -21,10 +21,62 @@ export const missingBillSchema = z.object({
   last_doc_date: daySchema.nullable().optional(),
   project_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
+  /** FLOW-415 (decision 0172): the last bill's net, and the names of where it files. */
+  last_amount_minor: agorotSchema.nullable().optional(),
+  project_name: z.string().nullable().optional(),
+  category_name: z.string().nullable().optional(),
+  /** `auto` found by the rule, `user` marked recurring by the owner. */
+  source: z.enum(["auto", "user"]).optional(),
 });
 
 /** `missing_bills` returns a JSON array, ordered by the typical day. */
 export const missingBillsSchema = z.array(missingBillSchema).nullable().transform((rows) => rows ?? []);
+
+/**
+ * FLOW-415 (decision 0172): a recurring supplier seen this month whose lines so far differ from the
+ * usual amount by 20% or more, either way (`recurring_changes`). Largest change first.
+ */
+export const recurringChangeSchema = z.object({
+  supplier_id: z.string(),
+  supplier_name: z.string().nullable().transform((name) => name ?? ""),
+  currency: currencySchema,
+  amount_minor: agorotSchema,
+  typical_amount_minor: agorotSchema,
+  /** Signed whole percent: 38 is up 38%. */
+  change_percent: z.number().int(),
+  typical_day: z.number().int().nullable().optional(),
+  transaction_id: z.string(),
+  project_id: z.string().nullable().optional(),
+  project_name: z.string().nullable().optional(),
+  category_id: z.string().nullable().optional(),
+  category_name: z.string().nullable().optional(),
+  source: z.enum(["auto", "user"]).optional(),
+});
+
+export const recurringChangesSchema = z.array(recurringChangeSchema).nullable().transform((rows) => rows ?? []);
+
+/**
+ * FLOW-415: one payment's recurring switch (`payment_recurring`, and `set_payment_recurring` with
+ * `prior_override` for the undo). A null party (no supplier or customer) cannot be marked.
+ */
+export const paymentRecurringSchema = z.object({
+  transaction_id: z.string(),
+  party: z
+    .object({
+      direction: z.enum(["income", "expense"]),
+      id: z.string(),
+      name: z.string().nullable().transform((name) => name ?? ""),
+      currency: currencySchema,
+    })
+    .nullable(),
+  recurring: z.boolean(),
+  /** true or false: the owner's switch; null: the rule decides. */
+  override: z.boolean().nullable(),
+  detected: z.boolean(),
+  typical_day: z.number().int().nullable(),
+  typical_amount_minor: agorotSchema.nullable(),
+  prior_override: z.boolean().nullable().optional(),
+});
 
 const expectedCurrencySchema = z.object({
   currency: currencySchema,
@@ -64,6 +116,8 @@ export const expectedMonthsSchema = z.object({
 });
 
 export type MissingBill = z.infer<typeof missingBillSchema>;
+export type RecurringChange = z.infer<typeof recurringChangeSchema>;
+export type PaymentRecurring = z.infer<typeof paymentRecurringSchema>;
 export type ExpectedParty = z.infer<typeof expectedPartySchema>;
 export type ExpectedMonths = z.infer<typeof expectedMonthsSchema>;
 export type ExpectedMonth = ExpectedMonths["months"][number];

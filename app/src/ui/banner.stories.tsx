@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
 import { CalendarIcon, CloseIcon, DocumentIcon, ReviewIcon, TrendUpIcon } from "./icons";
+import { HintParts } from "./hint-parts";
 import { IconButton } from "./icon-button";
 import { filedTodayBannerTitle } from "../filed-today-copy";
 import { longHebrew, padded } from "./story-support";
@@ -112,7 +113,7 @@ const changeRow: BannerRow = {
   to: "/transactions/t1",
   icon: <TrendUpIcon size={24} stroke={1.9} />,
   title: "חשמל עלה ב־38%",
-  hint: <><span className="ui-nowrap"><bdi dir="ltr">₪2,550</bdi> ·</span> <span className="ui-nowrap">בדרך כלל <bdi dir="ltr">₪1,850</bdi></span></>,
+  hint: <HintParts parts={[<bdi key="now" dir="ltr">₪2,550</bdi>, <>בדרך כלל <bdi dir="ltr">₪1,850</bdi></>]} />,
 };
 export const RowsChargeUp: Story = {
   name: "Rows, a charge above usual",

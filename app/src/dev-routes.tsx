@@ -18,6 +18,7 @@ import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
 import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
+import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
 import { sampleCashLines, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
@@ -42,7 +43,7 @@ import { LoanDetailScreen } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS } from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "./forecast-sample";
 
 const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
@@ -324,7 +325,10 @@ export function DevCash() {
         pending: 7,
         unpaidCount: 3,
         unpaidGross: 460_000n,
-        missingCount: 0,
+        // FLOW-415: `?recurring=1` adds the late bills and a charge above its usual amount.
+        missingCount: params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0,
+        missingTo: "/e2e/missing-bills",
+        changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
     />

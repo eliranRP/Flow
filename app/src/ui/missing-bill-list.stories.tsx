@@ -7,13 +7,11 @@ import { MissingBillList } from "./missing-bill-list";
 import { longHebrew } from "./story-support";
 
 const now = new Date("2026-10-08T09:00:00Z");
-// FLOW-415: invented names for where each bill files.
-const NAMES: Record<string, string> = { "p-water": "שיפוץ לדוגמה", "c-water": "מים", p1: "בניין הדקל", "c-power": "חשמל" };
-const names = { project: (id: string) => NAMES[id], category: (id: string) => NAMES[id] };
+// FLOW-415: both invented bills file to a project and a category.
 const filed = SAMPLE_MISSING_BILLS.map((row) =>
-  row.supplier_id === "s-water" ? { ...row, project_id: "p-water", category_id: "c-water" } : { ...row, category_id: "c-power" },
+  row.supplier_id === "s-water" ? { ...row, project_name: "שיפוץ לדוגמה", category_name: "מים" } : row,
 );
-const rows = missingBillViews(filed, "", now, names);
+const rows = missingBillViews(filed, "", now);
 
 // Rows carry bigint amounts, so they stay in render: story args go through JSON.
 const meta = {
@@ -31,7 +29,7 @@ export const Several320: Story = { name: "Several, 320", render: () => <MissingB
 export const One: Story = { render: () => <MissingBillList rows={rows.slice(1)} /> };
 export const NoPlace: Story = {
   name: "Files nowhere: one hint line",
-  render: () => <MissingBillList rows={missingBillViews(SAMPLE_MISSING_BILLS, "", now)} />,
+  render: () => <MissingBillList rows={missingBillViews(SAMPLE_MISSING_BILLS.map((row) => ({ ...row, project_name: null, category_name: null })), "", now)} />,
 };
 export const OtherCurrency: Story = {
   name: "Other currency (USD)",
@@ -43,7 +41,7 @@ export const DueLastDay: Story = {
 };
 export const LongHebrew: Story = {
   name: "Long Hebrew",
-  render: () => <MissingBillList rows={missingBillViews(power == null ? [] : [{ ...power, supplier_name: longHebrew, typical_amount_minor: -12_345_600n, category_id: "c-power" }], "", now, { project: () => longHebrew, category: () => "חשמל" })} />,
+  render: () => <MissingBillList rows={missingBillViews(power == null ? [] : [{ ...power, supplier_name: longHebrew, typical_amount_minor: -12_345_600n, project_name: longHebrew }], "", now)} />,
   parameters: { viewport: { defaultViewport: "flow320" } },
 };
 export const Empty: Story = { render: () => <MissingBillList rows={[]} /> };
