@@ -35,7 +35,7 @@ export function ProjectGroupScreen({ sample, groupId: groupIdProp }: { sample?: 
   if ((phase.kind === "ready" || phase.kind === "empty") && entry == null) {
     return (
       <div>
-        <ScreenHeader title="קבוצה" kicker="פרויקטים" backTo={back} />
+        <ScreenHeader barOnly kicker="פרויקטים" backTo={back} />
         <EmptyState
           icon={<ProjectsIcon />}
           title={GROUP_MISSING_TITLE}

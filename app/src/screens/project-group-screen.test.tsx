@@ -18,6 +18,8 @@ describe("project group page", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText(GROUP_MISSING_TITLE)).toBeTruthy();
+    // The empty state names what's missing, so no big title repeats it.
+    expect(screen.queryByText("קבוצה")).toBeNull();
     expect(screen.getByRole("link", { name: "לכל הפרויקטים" }).getAttribute("href")).toBe("/projects");
   });
 });
