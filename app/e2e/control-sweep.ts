@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 type Control = {
@@ -92,39 +93,51 @@ function sameUrl(href: string, current: string) {
 // The change fixture draws the tab bar under its sheet like the real route (FLOW-334), so its tabs are covered too.
 const sheetOnLoad = new Set(["/add?preview=1", "/review/change?preview=1", "/e2e/change?preview=1"]);
 
+/** Each sweep spec's routes and the files they draw (scripts/gate-scope.mjs --sweep reads them too). */
+const sweeps = (JSON.parse(readFileSync(new URL("./spec-sources.json", import.meta.url), "utf8")) as {
+  sweeps: { routes: Record<string, Record<string, string[]>> };
+}).sweeps.routes;
+
 /**
- * Registers one test per route: every enabled link, button and field on it must do something when
- * used (navigate, open, toggle, focus, or show a message). The specs split the routes by screen
- * (FLOW-813), so a push runs only the sweeps for the screens it changed.
+ * Registers one test per route of `spec` in spec-sources.json: every enabled link, button and field
+ * on it must do something when used (navigate, open, toggle, focus, or show a message). The specs
+ * split the routes by screen (FLOW-813), and the pre-push gate names the routes whose files its
+ * change reaches in FLOW_SWEEP_ROUTES, one per line; without it (main) every route is swept.
  */
-export function sweepControls(urls: readonly string[]): void {
+export function sweepControls(spec: string): void {
   test.use({ viewport: { width: 390, height: 844 } });
   test.describe.configure({ mode: "parallel" });
-  for (const url of urls) {
+  const urls = Object.keys(sweeps[spec] ?? {});
+  if (urls.length === 0) throw new Error(`${spec} has no routes under sweeps in spec-sources.json`);
+  const only = (process.env.FLOW_SWEEP_ROUTES ?? "").split("\n").filter(Boolean);
+  for (const url of only.length > 0 ? urls.filter((route) => only.includes(route)) : urls) {
     test(`no enabled control is a no-op on ${url}`, async ({ page }) => {
       test.setTimeout(180_000);
       await gotoSettled(page, url);
       const found = await describeControls(page);
+      // Every control below starts from this same fresh page, so the checks that read only the
+      // control's description run before the reload.
+      const here = page.url();
       const failures: string[] = [];
       let skipped = 0;
       for (const control of found) {
         if (control.name.includes("המשך עם Google")) continue;
         if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
-        await gotoSettled(page, url);
-        const target = page.locator("a[href], button, input, textarea").nth(control.index);
-        const here = page.url();
         if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
           failures.push(`${control.name || control.tag} links to the current page`);
           continue;
         }
         if (control.tag === "a" && control.current === "page" && sameUrl(control.href, here)) continue;
-        if ((control.tag === "input" || control.tag === "textarea") && control.type !== "checkbox" && control.type !== "radio") {
+        const field = (control.tag === "input" || control.tag === "textarea") && control.type !== "checkbox" && control.type !== "radio";
+        if (!field && control.checked === "true") continue;
+        await gotoSettled(page, url);
+        const target = page.locator("a[href], button, input, textarea").nth(control.index);
+        if (field) {
           await target.click();
           const focused = await target.evaluate((node) => document.activeElement === node);
           if (!focused) failures.push(`${control.name || "field"} did not focus`);
           continue;
         }
-        if (control.checked === "true") continue;
         await target.scrollIntoViewIfNeeded();
         let reachable = await target.evaluate(hitTarget);
         if (!reachable) {

@@ -616,8 +616,18 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.indexOf("if (( ! full )); then") < fast);
   assert.ok(local.indexOf('\npassed\nphase "passed on ${head:0:7}"') > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
   // FLOW-813: the fast gate runs the e2e specs that reach the change before it stamps.
-  const picked = local.indexOf('playwright test --fully-parallel "${e2e_specs[@]}"');
+  const picked = local.indexOf('FLOW_SWEEP_ROUTES="$sweep_routes" pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"');
   assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < fast);
+  // The no-op sweep opens only the routes the change reaches, and the gate names each one.
+  const swept = local.indexOf('sweep_out="$(branch_changes "$e2e_base" | sed \'/^$/d\' | node scripts/gate-scope.mjs --sweep)"');
+  assert.ok(swept > 0 && swept < local.indexOf("At most FLOW_E2E_MAX specs"));
+  assert.ok(local.includes("awk -F'\\t' '{ print \"  \" $1 \" \" $2 \": \" $3 }' <<<\"$sweep_out\""));
+  // A warm instance skips the reset only when the last reset here applied this tree's migrations,
+  // seed and config, the change leaves the database alone, and no reached spec reads it; it says so.
+  assert.ok(local.includes("[[ -n \"$db_reset\" ]] || return 0"));
+  assert.ok(local.includes('elif (( db_change )); then db_reset="this change touches the database"'));
+  assert.ok(local.includes('if grep -q FLOW_E2E_SUPABASE "${readers[@]}" 2>/dev/null; then db_readers+=("$spec"); fi'));
+  assert.ok(local.includes("keeping it without a reset."));
   assert.match(local, /--full\) full=1 ;;/);
   // The scoped vitest runs (unit and storybook) follow scripts/storybook-stories.mjs's relatedRun.
   assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1'));
@@ -626,7 +636,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.includes("xargs -d '\\n' pnpm exec eslint --no-warn-ignored <<<\"$scope\""));
   assert.ok(local.includes('-- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]'));
   assert.ok(local.includes('pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"'));
-  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests'));
+  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests "${workers[@]}"'));
+  // The jsdom unit tests run on one worker per core; the Storybook browser tests keep vitest's default.
+  assert.ok(local.includes('[[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")'));
   // The same-patch skip holds only when main left the database surface alone since the marked fork;
   // otherwise the gate runs, and a database branch runs every pgTAP file.
   assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));
@@ -674,7 +686,7 @@ test("the gate treats design images as docs and asks storybook-stories.mjs wheth
   assert.equal(docsOnly(["design/screens/a.png", "app/src/a.tsx"]), false);
   assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then kind=docs'));
   assert.ok(local.includes('! grep -qvE "$docs_files" <<<"$pr_files"; then\n  mode="docs"'));
-  assert.ok(local.includes('"$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes'));
+  assert.ok(local.includes('setup="$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")"\n    if [[ "$setup" != yes* ]]; then'));
   assert.ok(local.includes('${base:+--base "$base"} <<<"$changed" >"$scope"'));
 });
 

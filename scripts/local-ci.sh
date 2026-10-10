@@ -253,6 +253,7 @@ changed_base() {
 # to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
 e2e_specs=()
 e2e_left=0
+sweep_routes=""
 if (( ! full )); then
   e2e_base=""
   if (( skips )); then
@@ -267,6 +268,24 @@ if (( ! full )); then
   else
     e2e_list="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs)"
     [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
+    # The no-op sweep specs open only the routes whose files the change reaches, a sweep spec with
+    # none of them is left out, and one with some runs (scripts/gate-scope.mjs --sweep, from the
+    # routes in spec-sources.json). The gate names each route it sweeps and why.
+    sweep_out="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/gate-scope.mjs --sweep)"
+    sweep_routes="$(cut -f2 <<<"$sweep_out" | sed '/^$/d')"
+    mapfile -t e2e_specs < <(
+      { printf '%s\n' "${e2e_specs[@]}" | grep -v '^e2e/controls-sweep-' || true; cut -f1 <<<"$sweep_out"; } | sed '/^$/d' | sort -u
+    )
+    for spec in $(grep '^e2e/controls-sweep-' <<<"$e2e_list" || true); do
+      grep -q "^$spec"$'\t' <<<"$sweep_out" \
+        || echo "local-ci: $spec sweeps none of its routes: this change reaches no file they draw."
+    done
+    if [[ -n "$sweep_out" && "$(cut -f3 <<<"$sweep_out" | sort -u | wc -l)" == 1 ]]; then
+      echo "local-ci: the no-op sweep opens $(wc -l <<<"$sweep_routes") routes, all because $(head -n 1 <<<"$sweep_out" | cut -f3)."
+    elif [[ -n "$sweep_out" ]]; then
+      echo "local-ci: the no-op sweep opens the $(wc -l <<<"$sweep_routes") routes this change reaches:"
+      awk -F'\t' '{ print "  " $1 " " $2 ": " $3 }' <<<"$sweep_out"
+    fi
     # At most FLOW_E2E_MAX specs (default 6), the branch's own changed specs first; main runs the rest.
     if (( ${#e2e_specs[@]} > ${FLOW_E2E_MAX:-6} )); then
       mapfile -t e2e_specs < <(
@@ -314,16 +333,25 @@ start_docker() {
       (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
     fi
   }
+  # The socket file appears before containerd serves it, and dockerd started then exits with
+  # "connection refused": ask containerd itself whether it answers.
+  containerd_serving() {
+    if command -v ctr >/dev/null 2>&1; then
+      sudo -n ctr --address "$sock" version >/dev/null 2>&1
+    else
+      grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null
+    fi
+  }
   if ! pgrep -x dockerd >/dev/null 2>&1; then
     # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
-    # none runs, and wait for it to say it booted.
+    # none runs. Either way, start dockerd only once containerd answers, for at most 30 seconds.
     if ! pgrep -x containerd >/dev/null 2>&1; then
       (sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
-      for _ in $(seq 1 15); do
-        grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null && break
-        sleep 1
-      done
     fi
+    for _ in $(seq 1 30); do
+      containerd_serving && break
+      sleep 1
+    done
     start_dockerd
   fi
   for i in $(seq 1 30); do
@@ -358,15 +386,44 @@ if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
     supabase_log="$(mktemp)"
     supabase_exit="$(mktemp)"
     rm -f "$supabase_exit"
-    # Starts in the background while the static checks run. An instance that is already up is reset,
-    # so it carries this branch's migrations and no rows from an earlier run.
+    # An instance that is already up keeps its database when it carries this tree's migrations, seed
+    # and config (the last reset here recorded them) and no reached spec reads the database. A spec
+    # reads it when it or an e2e helper it imports reads FLOW_E2E_SUPABASE_URL, the local API it signs in
+    # and writes rows through (signed-out screens only reach auth). Anything else resets it.
+    db_tree="$(git ls-tree -r HEAD -- supabase/migrations supabase/seed.sql supabase/config.toml | sha256sum | cut -c1-40)"
+    db_readers=()
+    for spec in "${e2e_specs[@]}"; do
+      readers=("app/$spec")
+      while IFS= read -r helper; do readers+=("app/e2e/$helper.ts"); done \
+        < <(sed -nE 's/.*from "\.\/([^"]+)".*/\1/p' "app/$spec" 2>/dev/null)
+      if grep -q FLOW_E2E_SUPABASE "${readers[@]}" 2>/dev/null; then db_readers+=("$spec"); fi
+    done
+    db_reset=""
+    if (( full )); then db_reset="the full run"
+    elif (( db_change )); then db_reset="this change touches the database"
+    elif [[ "$(cat "$cache/supabase-db-tree" 2>/dev/null)" != "$db_tree" ]]; then
+      db_reset="its migrations, seed or config differ from the last reset here"
+    elif (( ${#db_readers[@]} > 0 )); then db_reset="these specs read the database: ${db_readers[*]}"
+    fi
+    if supabase status >/dev/null 2>&1; then
+      if [[ -n "$db_reset" ]]; then echo "local-ci: resetting local Supabase in the background: $db_reset."
+      else echo "local-ci: local Supabase is up with this tree's migrations, seed and config, and no reached spec reads the database; keeping it without a reset."
+      fi
+    fi
+    # Starts in the background while the static checks run. A reset instance carries this branch's
+    # migrations and no rows from an earlier run.
     # A stack that is still starting (another run's start, or containers coming back after a restart)
     # fails the first reset or start: wait for its database to answer, then try once more.
     (
       up() {
         if supabase status >/dev/null 2>&1; then
-          supabase db reset >>"$supabase_log" 2>&1
+          [[ -n "$db_reset" ]] || return 0
+          rm -f "$cache/supabase-db-tree"
+          supabase db reset >>"$supabase_log" 2>&1 || return
+          printf '%s' "$db_tree" >"$cache/supabase-db-tree"
         else
+          # A start can reuse an older database volume, so only a reset records the tree.
+          rm -f "$cache/supabase-db-tree"
           supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >>"$supabase_log" 2>&1
         fi
       }
@@ -521,9 +578,14 @@ app_tests() {
   if [[ "$project" == storybook ]]; then
     pnpm --filter @flow/app exec playwright install chromium
   fi
+  # The jsdom tests on one worker per core: vitest's default (one fewer) left 16% of the CPU idle,
+  # since each test file spends about a second starting its own jsdom and setup (the full suite on
+  # 4 cores: 203 s on 3 workers, 178 s on 4; 4 and 6 passed every test twice).
+  local workers=()
+  [[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")
   if base="$(changed_base "$project")"; then
-    echo "local-ci: $project tests related to the changes since ${base:0:7}."
-    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests
+    echo "local-ci: $project tests related to the changes since ${base:0:7}${workers:+, on $(nproc) workers}."
+    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests "${workers[@]}"
     # The module graph doesn't see a glob of the migrations: run the tests that read them by name.
     local globbing
     globbing="$(git grep -l 'supabase/migrations' -- 'app/src/*.test.ts' 'app/src/*.test.tsx' || true)"
@@ -533,7 +595,7 @@ app_tests() {
       pnpm --filter @flow/app exec vitest run --project unit ${globbing//app\//}
     fi
   elif [[ "$project" == unit ]]; then
-    pnpm --filter @flow/app test
+    pnpm --filter @flow/app test "${workers[@]}"
   else
     pnpm test:storybook
   fi
@@ -613,7 +675,7 @@ storybook_smoke() {
     echo "local-ci: Storybook smoke skipped: these app inputs already passed."
     return 0
   fi
-  local base="" commit tree changed scope logs_dir
+  local base="" commit tree changed scope logs_dir setup
   logs_dir="$(mktemp -d)"
   if (( skips )); then
     while read -r commit tree; do
@@ -626,11 +688,13 @@ storybook_smoke() {
     # The vitest Storybook project above already ran the stories the change reaches. The build and
     # its layout, clip and secret specs run when a story spec or the Storybook setup changes; a
     # manifest, tsconfig or lockfile counts only when the part the build reads changed.
-    if [[ "$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")" != yes ]]; then
+    setup="$(node scripts/storybook-stories.mjs --setup --base "$base" <<<"$changed")"
+    if [[ "$setup" != yes* ]]; then
       echo "local-ci: Storybook build and smoke skipped: no story spec or Storybook setup change (main runs them)."
       rm -rf "$logs_dir"
       return 0
     fi
+    echo "local-ci: Storybook build and smoke run: ${setup#yes } changed, which they read."
   else
     changed="pnpm-lock.yaml"
   fi
@@ -682,8 +746,11 @@ if (( ! full )); then
     phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
     eval "$(bash scripts/ci-local-supabase-env.sh)"
     pnpm --filter @flow/app exec playwright install chromium
-    # Playwright's default workers (half the cores): on every core the toast timing specs time out.
-    pnpm --filter @flow/app exec playwright test --fully-parallel "${e2e_specs[@]}"
+    # One worker per core but one: on every core the toast timing specs time out, and Playwright's
+    # default (half the cores) left a core idle (the review set: 293 s on 2 of 4 cores, 246 s on 3).
+    e2e_workers="$(( $(nproc) > 2 ? $(nproc) - 1 : 1 ))"
+    echo "local-ci: running the e2e specs on $e2e_workers Playwright workers ($(nproc) cores)."
+    FLOW_SWEEP_ROUTES="$sweep_routes" pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"

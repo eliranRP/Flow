@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { projectCategorySchema } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { categoryRowsTotal } from "./category-line";
