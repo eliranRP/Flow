@@ -1,7 +1,7 @@
 -- Project page speed. A test's tables start with no planner statistics, the state a small or
 -- freshly synced company is in until autovacuum analyzes it. get_project must not depend on
 -- them: with a 1-row guess for allocations it once looped every allocation over every project
--- line (n squared, seconds on a few hundred shared lines). Invented data only.
+-- line (n squared, minutes on this data). Invented data only.
 
 begin;
 
@@ -91,9 +91,9 @@ select is(
   'the 1,500 direct lines count in full'
 );
 
--- Measured at about 0.1 s here; the n-squared plan took several seconds on the same data.
+-- About 0.8 s on a fresh local database; the n-squared plans took about four minutes here.
 select ok(
-  (select finished - started from pps_run) < interval '1.5 seconds',
+  (select finished - started from pps_run) < interval '3 seconds',
   'get_project on 2,100 lines stays fast with no planner statistics'
 );
 

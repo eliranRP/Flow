@@ -5,6 +5,7 @@
 --      allocations the planner looped every allocation over every project line (n squared).
 --      They now read the project's lines first and look up each line's allocation by index
 --      (lateral, kept a subquery by offset 0 so the planner can't flatten it back).
+--      The category entries look up each line's transaction the same way.
 --   2. private.overhead_share_for reads only the company's income and overhead lines, so the
 --      company's project costs drop out before any split lookup.
 -- Nothing a caller sees changes. Functions are as in 20261013233845_project_page_speed.sql
@@ -202,9 +203,24 @@ language sql
 stable
 set search_path = ''
 as $$
+  -- Each branch reads the project's lines first and looks up each line's own rows by index
+  -- (lateral, offset 0 so the planner can't flatten it), whatever row counts it guesses.
   select l.category_id, l.transaction_id, t.description, l.doc_date, l.amount_net, t.created_at, false, l.currency
   from private.pnl_lines l
-  join public.transactions t on t.id = l.transaction_id
+  cross join lateral (
+    select t.description, t.created_at
+    from public.transactions t
+    where t.id = l.transaction_id
+      and not t.category_suggested
+      and not exists (
+        select 1
+        from public.review_queue q
+        where q.transaction_id = t.id
+          and q.company_id = t.company_id
+          and q.status = 'open'
+      )
+    offset 0
+  ) t
   where l.project_id = p_project
     and l.transaction_id = any(array(
       select t2.id from public.transactions t2 where t2.project_id = p_project
@@ -214,14 +230,6 @@ as $$
     and l.company_id = (select private.readable_company_id())
     and l.kind = 'expense'
     and l.pnl_role = 'project'
-    and not t.category_suggested
-    and not exists (
-      select 1
-      from public.review_queue q
-      where q.transaction_id = t.id
-        and q.company_id = t.company_id
-        and q.status = 'open'
-    )
   union all
   select l.category_id, l.transaction_id, t.description, l.doc_date,
     case
@@ -233,16 +241,21 @@ as $$
   cross join lateral (
     select a.amount_net from public.allocations a
     where a.transaction_id = l.transaction_id and a.project_id = p_project
-    offset 0 -- keeps this a per-line lookup
+    offset 0
   ) a
-  join public.transactions t on t.id = l.transaction_id
+  cross join lateral (
+    select t.description, t.created_at
+    from public.transactions t
+    where t.id = l.transaction_id
+      and not t.category_suggested
+    offset 0
+  ) t
   where l.transaction_id = any(array(
       select a2.transaction_id from public.allocations a2 where a2.project_id = p_project
     ))
     and l.company_id = (select private.readable_company_id())
     and l.kind = 'expense'
     and l.pnl_role = 'shared'
-    and not t.category_suggested
     and l.category_id is not null;
 $$;
 
