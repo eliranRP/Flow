@@ -7,7 +7,7 @@ const meta = {
   title: "Components/PromptCard",
   component: PromptCard,
   decorators: [padded],
-  args: { question: "תזכורת בערב כשיש תנועות לאישור?", onYes: () => undefined, onNo: () => undefined },
+  args: { question: "התראה על תנועה חדשה ותזכורת בערב?", onYes: () => undefined, onNo: () => undefined },
 } satisfies Meta<typeof PromptCard>;
 
 export default meta;
