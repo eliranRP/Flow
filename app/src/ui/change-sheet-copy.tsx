@@ -31,4 +31,8 @@ export type ChangeChoice = {
   status?: "active" | "finished";
   /** Hidden categories stay out of the picker. The current row can still show. */
   hidden?: boolean;
+  /** A project's group (FLOW-406): the picker lists each group under its name, then שאר הפרויקטים. */
+  group?: string;
+  /** The group's id, so two groups with one name stay two sections. */
+  groupId?: string;
 };

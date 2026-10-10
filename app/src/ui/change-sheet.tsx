@@ -131,7 +131,9 @@ function ordered(options: ChangeChoice[], suggestionId: string, currentId: strin
   const needle = query.trim();
   const matched = needle === ""
     ? active
-    : active.filter((option) => option.name.includes(needle) || (option.code ?? "").toLowerCase().includes(needle.toLowerCase()));
+    : active.filter((option) => option.name.includes(needle)
+      || (option.code ?? "").toLowerCase().includes(needle.toLowerCase())
+      || (option.group ?? "").includes(needle));
   if (needle !== "") return matched;
   const suggestion = matched.find((option) => option.id === suggestionId);
   const rest = matched.filter((option) => option.id !== suggestionId);
