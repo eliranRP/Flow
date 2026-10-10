@@ -3,7 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } 
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { useAuth } from "./auth";
 import { SessionProviders } from "./session-providers";
-import { HomeSkeleton } from "./screens/home-skeleton";
+import { CashHomeSkeleton } from "./screens/home-skeleton";
 import { TabBar, type TabSection } from "./ui/tab-bar";
 import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
@@ -19,7 +19,7 @@ import { useCompanyRole, useHoldWrites, useIsViewer } from "./use-is-viewer";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
-import { HomeScreen } from "./screens/HomeScreen";
+import { HomeScreen, ProfitScreen } from "./screens/HomeScreen";
 // Before the router mounts: the split screen holds Back through this listener.
 import "./screens/split-pop";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
@@ -45,6 +45,8 @@ const LoansScreen = lazy(() => screenLoaders.settings().then((m) => ({ default: 
 const ConnectionsScreen = lazy(() => screenLoaders.connections().then((m) => ({ default: m.ConnectionsScreen })));
 const NotificationsScreen = lazy(() => screenLoaders.notifications().then((m) => ({ default: m.NotificationsScreen })));
 const CategoriesScreen = lazy(() => screenLoaders.categories().then((m) => ({ default: m.CategoriesScreen })));
+const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
+const CashLinesScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashLinesScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => ({ default: m.ProfitMonthsScreen })));
@@ -74,6 +76,9 @@ const DevConnections = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ def
 const DevExpense = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevExpense })));
 const DevFiled = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevFiled })));
 const DevHome = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevHome })));
+const DevCash = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCash })));
+const DevCashMonth = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashMonth })));
+const DevCashLines = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashLines })));
 const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
@@ -200,6 +205,9 @@ function AppRoutes() {
                 </Route>
                 <Route element={<DevShell section="home" />}>
                   <Route path="/e2e/home" element={<DevHome />} />
+                  <Route path="/e2e/cash" element={<DevCash />} />
+                  <Route path="/e2e/cash-month" element={<DevCashMonth />} />
+                  <Route path="/e2e/cash-lines" element={<DevCashLines />} />
                   <Route path="/e2e/unpaid" element={<DevUnpaid />} />
                   <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
                 </Route>
@@ -243,6 +251,10 @@ function AppRoutes() {
                   <Route index element={null} />
                   <Route path="add" element={<AddForm />} />
                 </Route>
+                {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
+                <Route path="profit" element={<ProfitScreen />} />
+                <Route path="cash/:month" element={<CashMonthScreen />} />
+                <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
                 <Route path="projects" element={<ProjectsScreen />} />
                 <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
                 <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
@@ -295,7 +307,7 @@ function RequireAuth() {
   const { status } = useAuth();
   const location = useLocation();
   if (preview) return <Outlet />;
-  if (status === "loading") return <HomeSkeleton />;
+  if (status === "loading") return <CashHomeSkeleton />;
   if (status !== "authed") return <Navigate to={signInPathFor(`${location.pathname}${location.search}`)} replace />;
   return <Outlet />;
 }

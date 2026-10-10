@@ -30,6 +30,8 @@ type Section = TabSection;
 /** Pushed screens keep the tab of the section they belong to. /add highlights none. */
 export function tabSection(pathname: string): Section | null {
   if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
+  // FLOW-413: the profit view and the cash months open from Home.
+  if (pathname === "/profit" || pathname.startsWith("/cash/")) return "home";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/review")) return "review";
   if (pathname.startsWith("/settings")) return "settings";

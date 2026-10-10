@@ -58,6 +58,8 @@ vi.mock("./lib/supabase", () => ({
           error: null,
         });
       }
+      // FLOW-413: Home's cash read. A session with no company reads null.
+      if (name === "cash_months") return Promise.resolve({ data: null, error: null });
       if (name === "list_unpaid" || name === "list_review" || name === "list_categories") {
         return Promise.resolve({ data: [], error: null });
       }

@@ -225,6 +225,21 @@
           "screens/HomeScreen.tsx",
           "dev-routes.tsx#DevHome"
         ],
+        "/profit?preview=1": [
+          "screens/HomeScreen.tsx"
+        ],
+        "/e2e/cash?preview=1": [
+          "screens/HomeScreen.tsx",
+          "dev-routes.tsx#DevCash"
+        ],
+        "/e2e/cash-month?preview=1": [
+          "screens/cash-screens.tsx",
+          "dev-routes.tsx#DevCashMonth"
+        ],
+        "/e2e/cash-lines?preview=1": [
+          "screens/cash-screens.tsx",
+          "dev-routes.tsx#DevCashLines"
+        ],
         "/add?preview=1": [
           "screens/HomeScreen.tsx",
           "screens/add-sheet.tsx"

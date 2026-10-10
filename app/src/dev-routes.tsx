@@ -17,7 +17,10 @@ import { ProgressBar } from "./ui/progress-bar";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
-import { HomeBooks } from "./screens/HomeScreen";
+import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
+import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
+import { sampleCashLines, sampleCashMonths } from "./dev/cash-sample";
+import { cashMonthKey } from "./cash";
 import {
   CategoriesScreen,
   ConnectionsScreen,
@@ -286,8 +289,11 @@ const devDashboard: Dashboard = {
 
 export function DevHome() {
   const [period, setPeriod] = useState(defaultPeriod());
+  const [params] = useSearchParams();
   return (
     <HomeBooks
+      // FLOW-413: `?back=1` draws the profit view as /profit opens it, with its way back to the cash.
+      back={params.get("back") === "1" ? <BackButton fallback="/e2e/cash" onBand text="תזרים" label="חזרה לתזרים" /> : undefined}
       data={devDashboard}
       previewing
       search="?preview=1"
@@ -297,6 +303,48 @@ export function DevHome() {
       missingTo="/e2e/missing-bills"
       period={period}
       onPeriod={setPeriod}
+    />
+  );
+}
+
+/**
+ * FLOW-413: Home's cash with invented figures (frame b). `?box=none` hides the attention box,
+ * as a month with nothing waiting does.
+ */
+export function DevCash() {
+  const [params] = useSearchParams();
+  const data = sampleCashMonths();
+  return (
+    <CashHome
+      data={data}
+      previewing={params.get("preview") != null}
+      search="?preview=1"
+      attention={params.get("box") === "none" ? [] : attentionRows({
+        pending: 7,
+        unpaidCount: 3,
+        unpaidGross: 460_000n,
+        missingCount: 0,
+        search: "?preview=1",
+      })}
+    />
+  );
+}
+
+/** FLOW-413: the earlier month's cash page. */
+export function DevCashMonth() {
+  const data = sampleCashMonths();
+  return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
+}
+
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס. */
+export function DevCashLines() {
+  const [params] = useSearchParams();
+  const side = params.get("side") === "in" ? "in" : "out";
+  const data = sampleCashMonths();
+  return (
+    <CashLinesScreen
+      sample={{ months: data, lines: sampleCashLines(side) }}
+      at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
 }

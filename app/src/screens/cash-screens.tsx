@@ -14,7 +14,7 @@ import {
 import { useHeldOrder } from "../list-hold";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useCashLinesQuery, useCashMonthsQuery } from "../use-cash";
+import { useCashLinesQuery, useCashMonthsQuery, useOpenCashRow } from "../use-cash";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { CashRows } from "../ui/cash-rows";
@@ -36,8 +36,10 @@ function monthOf(data: CashMonths | undefined, key: string) {
   return data?.months.find((month) => cashMonthKey(month.month) === key);
 }
 
-export function CashMonthScreen({ sample }: { sample?: NonNullable<CashMonths> } = {}) {
-  const { month } = useParams();
+/** Dev fixtures pass the month and the sample; the app reads the month from the path. */
+export function CashMonthScreen({ sample, monthKey }: { sample?: NonNullable<CashMonths>; monthKey?: string } = {}) {
+  const params = useParams();
+  const month = monthKey ?? params.month;
   const search = usePreviewSearch();
   if (!isCashMonthKey(month)) return <Navigate to={`/${search}`} replace />;
   return <CashMonthBody monthKey={month} search={search} sample={sample} />;
@@ -45,6 +47,7 @@ export function CashMonthScreen({ sample }: { sample?: NonNullable<CashMonths> }
 
 function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search: string; sample?: NonNullable<CashMonths> }) {
   const preview = useHomePreview();
+  const open = useOpenCashRow();
   const query = useCashMonthsQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
@@ -67,15 +70,18 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
           </span>
         ))}
       </p>
-      <CashRows rows={cashSummaryRows(monthKey, rows, search)} />
+      <CashRows rows={cashSummaryRows(monthKey, rows, search)} onOpen={open} />
     </div>
   );
 }
 
 type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
 
-export function CashLinesScreen({ sample }: { sample?: LinesSample } = {}) {
-  const { month, side, currency = "" } = useParams();
+export function CashLinesScreen({ sample, at }: { sample?: LinesSample; at?: { month: string; side: CashSide; currency: string } } = {}) {
+  const params = useParams();
+  const month = at?.month ?? params.month;
+  const side = at?.side ?? params.side;
+  const currency = at?.currency ?? params.currency ?? "";
   const search = usePreviewSearch();
   if (!isCashMonthKey(month) || !isCashSide(side) || !/^[A-Z]{3}$/.test(currency)) {
     return <Navigate to={`/${search}`} replace />;

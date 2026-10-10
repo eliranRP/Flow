@@ -104,7 +104,7 @@ describe("Cash month page", () => {
     expect(screen.getAllByText("−₪1,150").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /^נכנס ב/ })).toHaveAttribute("href", `/cash/${earlier}/in/ILS`);
     expect(screen.getByRole("link", { name: /^יצא ב/ })).toHaveAttribute("href", `/cash/${earlier}/out/ILS`);
-    expect(screen.getByRole("link", { name: /^רווח ב/ })).toHaveAttribute("href", `/profit?period=month&at=${earlier}`);
+    expect(screen.getByRole("link", { name: /^רווח ב/ })).toHaveAttribute("href", "/profit");
     expect(screen.getAllByText("$300").length).toBeGreaterThan(0);
   });
 

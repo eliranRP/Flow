@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { cashMonthName, cashSummaryRows, cashTitle, earlierMonthRows, profitMonthPath, shownCashRows } from "./cash";
+import { cashMonthName, cashSummaryRows, cashTitle, earlierMonthRows, shownCashRows } from "./cash";
 
 const now = new Date("2026-10-10T08:00:00Z");
 
@@ -23,11 +23,6 @@ describe("cash words and paths", () => {
     expect(cashMonthName("2025-12", now)).toBe("דצמבר 2025");
     expect(cashTitle("2026-09", now)).toBe("תזרים ספטמבר");
   });
-
-  it("opens the profit view on the month, keeping a preview flag", () => {
-    expect(profitMonthPath("2026-09", "")).toBe("/profit?period=month&at=2026-09");
-    expect(profitMonthPath("2026-09", "?preview=1")).toBe("/profit?period=month&at=2026-09&preview=1");
-  });
 });
 
 describe("cashSummaryRows", () => {
@@ -36,8 +31,10 @@ describe("cashSummaryRows", () => {
     expect(rows.map((r) => [r.label, r.tone, r.href])).toEqual([
       ["נכנס", "in", "/cash/2026-10/in/ILS"],
       ["יצא", "out", "/cash/2026-10/out/ILS"],
-      ["רווח החודש", "quiet", "/profit?period=month&at=2026-10"],
+      ["רווח החודש", "quiet", "/profit"],
     ]);
+    // The profit view opens on the row's month.
+    expect(rows[2]?.profitMonth).toBe("2026-10");
     expect(rows[0]?.name).toBe("נכנס באוקטובר ₪18,000 – פירוט");
   });
 });
