@@ -72,13 +72,17 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # The base is this run's own first parent, not live origin/main: main can move on while the run
+      # waits, and a migration added by that later merge would read as removed here.
       - name: Migration filenames are append-only
+        env:
+          RUN_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          git fetch origin main --depth=1
-          if git cat-file -e origin/main:supabase/migrations.lock 2>/dev/null; then
+          git fetch --no-tags --depth=2 origin "$RUN_SHA"
+          if git cat-file -e "$RUN_SHA~1:supabase/migrations.lock" 2>/dev/null; then
             base="$(mktemp)"
-            git show origin/main:supabase/migrations.lock > "$base"
+            git show "$RUN_SHA~1:supabase/migrations.lock" > "$base"
             node scripts/check-migration-order.mjs --base "$base"
             rm -f "$base"
           else

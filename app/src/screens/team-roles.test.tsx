@@ -53,6 +53,8 @@ describe("Settings by role (FLOW-601)", () => {
     const google = screen.getByText("dana@example.com");
     expect(google.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("button", { name: "שם העסק: חברה לדוגמה" })).toBeInTheDocument();
+    // FLOW-103: the owner changes the company's date; payment date is the default.
+    expect(screen.getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" })).toBeInTheDocument();
   });
 
   it.each(["editor", "viewer"] as const)("keeps the team, the name and the currency from a %s", async (role) => {
@@ -61,6 +63,9 @@ describe("Settings by role (FLOW-601)", () => {
     expect(screen.queryByRole("link", { name: /צוות/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /שם העסק/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /מטבע העסק/ })).toBeNull();
+    // FLOW-103: they see the company's date without a way to change it.
+    expect(screen.queryByRole("button", { name: /רווח ותזרים לפי/ })).toBeNull();
+    expect(screen.getByText("רווח ותזרים לפי")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /הגדרה ראשונה/ })).toBeNull();
   });
 

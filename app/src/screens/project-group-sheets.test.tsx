@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { groupMoveMessage, groupNameError, ProjectGroupSheets } from "./project-group-sheets";
+import { cleanGroupName, groupMoveMessage, groupNameError, ProjectGroupSheets } from "./project-group-sheets";
 
 const rpc = vi.hoisted(() => vi.fn((name: string, _args?: unknown) =>
   Promise.resolve({ data: name === "upsert_project_group" ? "g-new" : null, error: null })));
@@ -81,5 +81,33 @@ describe("project group sheets (FLOW-360)", () => {
     await screen.findByText("הפרויקט עבר לקבוצה מתחם הגפן");
     expect(rpc).toHaveBeenCalledWith("upsert_project_group", { p_id: null, p_name: "מתחם הגפן" });
     expect(rpc).toHaveBeenCalledWith("set_project_group", { p_project_id: "p1", p_group_id: "g-new" });
+  });
+
+  it("cleans a name the way the server stores it, so the local duplicate check matches", () => {
+    expect(cleanGroupName("  בניין\u00A0לדוגמה ")).toBe("בניין לדוגמה");
+    expect(cleanGroupName("בניין  א")).toBe("בניין  א");
+  });
+
+  it("puts an existing name on the field instead of making a group", async () => {
+    rpc.mockClear();
+    renderSheets(null, "new");
+    fireEvent.change(screen.getByLabelText("שם הקבוצה"), { target: { value: " בניין\u00A0לדוגמה" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await screen.findByText("הפרויקט עבר לקבוצה בניין לדוגמה");
+    expect(rpc).not.toHaveBeenCalledWith("upsert_project_group", expect.anything());
+  });
+
+  it("shows a refused name on the field, not in a toast", async () => {
+    rpc.mockClear();
+    rpc.mockImplementationOnce(() => Promise.resolve({ data: null, error: { message: "project group already exists" } as never }));
+    renderSheets(null, "new");
+    fireEvent.change(screen.getByLabelText("שם הקבוצה"), { target: { value: "מתחם הגפן" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    const field = screen.getByLabelText("שם הקבוצה");
+    await waitFor(() => {
+      expect(field.getAttribute("aria-invalid")).toBe("true");
+    });
+    expect(screen.getAllByText("כבר יש קבוצה בשם הזה.")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
   });
 });

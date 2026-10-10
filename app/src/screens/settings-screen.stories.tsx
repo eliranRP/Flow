@@ -132,6 +132,45 @@ export const SettingsCurrencySheet: Story = {
 };
 export const SettingsCurrencySheetDark: Story = { ...SettingsCurrencySheet, name: "Company currency sheet, dark", ...dark };
 
+/** FLOW-103: the company's one date for profit, the תזרים and the agent, under the currency. */
+export const SettingsBasisRow: Story = {
+  name: "Company date row, invoice date",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...renameBusiness, basis: "invoiced" }} />
+    </StoryRoute>
+  ),
+};
+export const SettingsBasisRow320: Story = { ...SettingsBasisRow, name: "Company date row, invoice date, 320", ...at320 };
+
+export const SettingsBasisRowViewer: Story = {
+  name: "Company date row, viewer",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <SettingsScreen sample={renameBusiness} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const SettingsBasisSheet: Story = {
+  name: "Company date sheet",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "רווח ותזרים לפי" });
+  },
+};
+export const SettingsBasisSheetDark: Story = { ...SettingsBasisSheet, name: "Company date sheet, dark", ...dark };
+
 export const SettingsAssistantScope: Story = {
   name: "Assistant scope",
   render: () => (

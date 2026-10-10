@@ -96,11 +96,12 @@ afterEach(() => {
 });
 
 describe("Breakdown screen", () => {
-  it("asks for Home's basis and period, and lists the groups with their totals", async () => {
+  it("asks for Home's period on the company's basis, and lists the groups with their totals", async () => {
     wrap("/flow/expense");
     expect(await screen.findByText("חומרי בנייה לדוגמה")).toBeInTheDocument();
     const call = rpc.calls.find((c) => c.name === "get_breakdown");
-    expect(call?.args).toMatchObject({ p_direction: "expense", p_group_by: "category", p_basis: "invoiced" });
+    expect(call?.args).toMatchObject({ p_direction: "expense", p_group_by: "category" });
+    expect(call?.args).not.toHaveProperty("p_basis");
     expect(call?.args).toHaveProperty("p_from");
     expect(screen.getByText("בלי קטגוריה")).toBeInTheDocument();
     expect(screen.getByText("12 תנועות · כולל חלק משותף")).toBeInTheDocument();

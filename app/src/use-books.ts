@@ -80,17 +80,20 @@ export function useOptionalBooks(): BooksContextValue | null {
   return useContext(BooksContext);
 }
 
-/** The one books basis (decision 0060). Home and the project screen both read it, so project income counts the same doc kinds as Home. */
-export const BOOKS_BASIS = "invoiced";
+/**
+ * The P&L reads send no basis of their own: the server counts on the company's choice,
+ * `companies.cash_basis`, and echoes it as `basis` (FLOW-103, decision 0170). Home, the
+ * breakdowns and the project page still count the same way, now the company's way.
+ */
+const COMPANY_BASIS = null;
 
 /** Both dates or neither: the project reads refuse one alone. */
 function rangeOf(period: PeriodChoice): { p_from: string; p_to: string } | null {
   return period.from && period.to ? { p_from: period.from, p_to: period.to } : null;
 }
 
-function rpcArgs(period: PeriodChoice): { p_basis: typeof BOOKS_BASIS; p_from?: string; p_to?: string } {
+function rpcArgs(period: PeriodChoice): { p_from?: string; p_to?: string } {
   return {
-    p_basis: BOOKS_BASIS,
     ...(period.from && period.to ? { p_from: period.from, p_to: period.to } : {}),
   };
 }
@@ -362,7 +365,12 @@ export function projectQueryOptions(preview: HomePreview, projectId: string, per
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: BOOKS_BASIS, ...(range ?? {}) });
+      const { data, error } = await supabase.rpc("get_project", {
+        p_id: projectId,
+        // get_project's period overload needs p_basis present; null is the company's basis (0170).
+        p_basis: COMPANY_BASIS as unknown as string,
+        ...(range ?? {}),
+      });
       if (error) throw error;
       const project = (await loadReadSchemas()).projectDetailSchema.parse(data);
       if (project != null) saveProjectRead(savedKey, project);
@@ -392,13 +400,13 @@ const CATEGORY_PAGE = 40;
  * `currency` is the bucket the project page row was in; empty lets the server pick (ILS first).
  * `period` is the project's period, so the lines match the row that opened them (FLOW-411).
  */
-/** FLOW-404: `basis` "cash" matches the rehab list, which reads the cash basis; the default is the books basis. */
+/** FLOW-404: `basis` "cash" matches the rehab list, which reads the cash basis; null is the company's basis. */
 export function useProjectCategoryQuery(
   projectId: string,
   categoryId: string,
   currency = "",
   period: PeriodChoice | null = null,
-  basis: "cash" | "invoiced" = BOOKS_BASIS,
+  basis: "cash" | null = COMPANY_BASIS,
 ) {
   const preview = useHomePreview();
   const range = period ? rangeOf(period) : null;
@@ -415,7 +423,7 @@ export function useProjectCategoryQuery(
         p_category: categoryId,
         p_offset: pageParam,
         p_limit: CATEGORY_PAGE,
-        p_basis: basis,
+        ...(basis == null ? {} : { p_basis: basis }),
         ...(currency === "" ? {} : { p_currency: currency }),
         ...(range ?? {}),
       });
@@ -500,7 +508,6 @@ export function useProfitMonthsQuery(projectId: string, period: PeriodChoice) {
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_profit_months", {
-        p_basis: BOOKS_BASIS,
         p_project_id: projectId,
         ...(range ?? {}),
       });

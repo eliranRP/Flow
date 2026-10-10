@@ -7,7 +7,7 @@ import { periodFromSearch, periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { usualFor, useProjectCategoryMonthsQuery, type UpKind } from "../project-category-months";
-import { BOOKS_BASIS, useProjectCategoryQuery } from "../use-books";
+import { useProjectCategoryQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { Button } from "../ui/button";
@@ -70,7 +70,7 @@ export function ProjectCategoryScreen({
   // The project's period travels in the URL, so the lines match the category row that opened them.
   const period = periodFromSearch(new URLSearchParams(location.search));
   // FLOW-404: the rehab list opens a category on the cash basis (`?basis=cash`), so its lines add up to the row.
-  const basis = params.get("basis") === "cash" ? "cash" : BOOKS_BASIS;
+  const basis = params.get("basis") === "cash" ? "cash" : null;
   const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period, basis);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const months = useProjectCategoryMonthsQuery(sample ? "" : projectId, period);

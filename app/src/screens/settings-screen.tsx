@@ -14,14 +14,16 @@ import { assertNoError, useWrite } from "../use-write";
 import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
 import { RenameCompanySheet } from "./rename-company";
 import { CompanyCurrencySheet } from "./company-currency-sheet";
+import { CompanyBasisSheet } from "./company-basis-sheet";
 import { useCompanyCurrencyQuery } from "../company-currency";
 import { currencyChoiceLabel } from "../ui/currency-sheet";
+import { basisChoiceLabel, BASIS_TITLE, type BasisChoice } from "../ui/basis-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BellIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
+import { AlertIcon, BellIcon, BuildingIcon, CalendarIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -57,6 +59,8 @@ export type SettingsSample = {
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */
   loanCurrency?: LoanCurrency;
+  /** FLOW-103. Preview only; live settings read the company's basis from the dashboard. */
+  basis?: BasisChoice;
   /** FLOW-119. Projects for the loan's project picker. */
   loanProjects?: LoanProjectChoice[];
   /** FLOW-501. The Loans page and the Settings הלוואות hint. */
@@ -182,6 +186,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRowRef = useRef<HTMLButtonElement>(null);
   const currencyQuery = useCompanyCurrencyQuery(liveCompany);
+  const [basisOpen, setBasisOpen] = useState(false);
+  const basisRowRef = useRef<HTMLButtonElement>(null);
   const [overheadOn, setOverheadOn] = useState(false);
   const wantedOverhead = useRef(false);
   useEffect(() => {
@@ -244,6 +250,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const currencyFailed = live && currencyQuery.isError;
   const companyCurrency = live ? (currencyQuery.data ?? "ILS") : (sample?.loanCurrency ?? "ILS");
   const currencyHint = currencyChoiceLabel(companyCurrency);
+  // FLOW-103: the dashboard echoes the company's basis (0170); a sample or preview shows its own.
+  const companyBasis: BasisChoice = live ? (dashboard.data?.basis ?? "cash") : (sample?.basis ?? "cash");
+  const basisHint = basisChoiceLabel(companyBasis);
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const namedBusiness = (businessName ?? "").trim();
   const showInstall = !isStandalone();
@@ -363,6 +372,21 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
               icon={<CoinIcon />}
             />
           )}
+          {/* FLOW-103: only the owner changes the company's date; others see it without a chevron. */}
+          {holdOwner ? (
+            <ListRow variant="static" title={BASIS_TITLE} hint={basisHint} icon={<CalendarIcon />} />
+          ) : (
+            <ListRow
+              variant="button"
+              title={BASIS_TITLE}
+              hint={basisHint}
+              label={`${BASIS_TITLE}: ${basisHint}`}
+              icon={<CalendarIcon />}
+              chevron
+              buttonRef={basisRowRef}
+              onClick={() => { setBasisOpen(true); }}
+            />
+          )}
           {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
           {teamCount !== undefined ? (
             <SettingsPageRow
@@ -383,6 +407,15 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           currency={companyCurrency}
           blocked={() => blocked(sample != null ? "empty" : undefined)}
           returnFocusRef={currencyRowRef}
+        />
+      ) : null}
+      {!noCompany && !holdOwner && namedBusiness !== "" ? (
+        <CompanyBasisSheet
+          open={basisOpen}
+          onOpenChange={setBasisOpen}
+          basis={companyBasis}
+          blocked={() => blocked(sample != null ? "empty" : undefined)}
+          returnFocusRef={basisRowRef}
         />
       ) : null}
       {!noCompany && !holdOwner && namedBusiness !== "" ? (

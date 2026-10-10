@@ -1,6 +1,6 @@
 <a id="flow-351"></a>
 # FLOW-351 · Phone polish after the October 9 afternoon deploy (cycle 10)
-- **Type:** SMALL UI · **Status:** in-progress (UI lane 4: items 3-5 done #372; items 1 and 2 in the second PR) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#372, #384) · **Depends on:** —
 - **Source:** cycle 10 phone review of deploy a2503e3, 2026-10-09. Shots in the project files under `reviews/ui-ux-cycle-10/shots/`.
 - [x] Transaction card at 320: with a five-digit assumed VAT, the amount's meta line ("לפני מע״מ · מע״מ משוער ₪15,300 · date") breaks right after a "·" and the date sits alone. Break before the separator, or drop the date part with its "·" first, as loan hints do (transaction-screen.tsx:513-524).
 - [x] Period pill and Search chip words: after a pick, חודש reads "החודש", שנה reads "2026" and הכול reads "כל התקופה" on the breakdown pill, while 3 and 6 months repeat the row's name. Use the shared תקופה sheet's own words for every option (period.ts:168, :201-210).

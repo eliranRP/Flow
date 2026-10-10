@@ -4,21 +4,11 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { isolatedEnv } from "./test-git-env.mjs";
 
 const script = new URL("./ci-deploy-plan.sh", import.meta.url).pathname;
 
-/**
- * The environment without git's repository overrides. A pre-push hook runs with GIT_DIR (and
- * often GIT_WORK_TREE and GIT_INDEX_FILE) set, and git obeys them over `cwd`: the temp repo's
- * config and commits would land in the repo being pushed.
- */
-export function isolatedEnv(env = process.env) {
-  const clean = { ...env };
-  for (const key of Object.keys(clean)) {
-    if (key.startsWith("GIT_")) delete clean[key];
-  }
-  return clean;
-}
+export { isolatedEnv };
 
 /** A repo with `merges` commits after the deployed one, and a fake gh that reports deployments. */
 function setup({ merges, deployments }) {
