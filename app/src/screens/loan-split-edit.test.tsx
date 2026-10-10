@@ -21,7 +21,12 @@ const SPLIT: TransactionLoanSplit = {
   ],
 };
 
-function api(saves: Array<{ loanId: string; parts: SavePart[] }>, { needsReview = false, balanceMinor = 90_000_000n } = {}): LoanMatchApi {
+function api(saves: Array<{ loanId: string; parts: SavePart[] }>, {
+  needsReview = false,
+  balanceMinor = 90_000_000n,
+  loanFees = "cat-f",
+  kept = [],
+}: { needsReview?: boolean; balanceMinor?: bigint; loanFees?: string | null; kept?: string[] } = {}): LoanMatchApi {
   const scheduled: Record<string, bigint> = { interest: 160_000n, escrow: 38_000n, principal: 418_000n, fees: 4_000n };
   const categories: Record<string, string> = { interest: "cat-i", escrow: "cat-e", principal: "cat-p", fees: "cat-f" };
   return {
@@ -42,7 +47,7 @@ function api(saves: Array<{ loanId: string; parts: SavePart[] }>, { needsReview 
         paymentMinor: 620_000,
         escrowMinor: 38_000,
         balanceMinor,
-        categoryIds: { principal: "cat-p", fees: "cat-f" },
+        categoryIds: { principal: "cat-p", fees: loanFees },
       }],
       categoryIds: {},
     }),
@@ -66,6 +71,10 @@ function api(saves: Array<{ loanId: string; parts: SavePart[] }>, { needsReview 
       return Promise.resolve();
     },
     clear: () => Promise.reject(new Error("unused")),
+    setFeesCategory: (_loanId, categoryId) => {
+      kept.push(categoryId);
+      return Promise.resolve();
+    },
   };
 }
 
@@ -140,6 +149,17 @@ describe("עריכת הפיצול on a matched line (FLOW-106 §3.4)", () => {
     fireEvent.change(within(editor).getByLabelText("סכום, ריבית"), { target: { value: "1520" } });
     expect(within(editor).getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
+  });
+
+  it("leaves keeping the fees category off when the stored fees name one the loan doesn't keep", async () => {
+    const saves: Array<{ loanId: string; parts: SavePart[] }> = [];
+    const kept: string[] = [];
+    renderRow(api(saves, { loanFees: null, kept }));
+    const editor = await openEditor();
+    expect(within(editor).getByRole("switch", { name: "לשמור להלוואה הזו" })).not.toBeChecked();
+    fireEvent.click(within(editor).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(saves).toHaveLength(1); });
+    expect(kept).toEqual([]);
   });
 
   it("keeps a flagged split on its own correction, with no editor link", async () => {

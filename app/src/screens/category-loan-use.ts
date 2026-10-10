@@ -32,9 +32,9 @@ export function categoryLoanUses(loans: readonly LoanCategoryColumns[]): Map<str
   return uses;
 }
 
-/** FLOW-106 §3.5: "קטגוריה של הלוואה · <loan> · ריבית", the locked line in the category's ⋯ sheet. */
+/** FLOW-106 §3.5: "קטגוריה של הלוואה · <loan> · ריבית", the locked line in the category's ⋯ sheet. The name is isolated, as a bdi would. */
 export function loanUseLine(use: CategoryLoanUse): string {
-  return `קטגוריה של הלוואה\u00a0· ${use.loanName}\u00a0· ${PART_WORD[use.part]}`;
+  return `קטגוריה של הלוואה\u00a0· \u2068${use.loanName}\u2069\u00a0· ${PART_WORD[use.part]}`;
 }
 
 /** The company's loans' own categories, for Settings → Categories. */

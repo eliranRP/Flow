@@ -112,7 +112,7 @@ export function LoanCategoryRow({
   const [opens, setOpens] = useState(0);
   // FLOW-106 §3.4: "עריכת הפיצול" opens the split editor on the stored parts.
   const [editorOpen, setEditorOpen] = useState(false);
-  const setEditor = useSheetHistory("loan-split-editor", editorOpen, setEditorOpen);
+  const setEditor = useSheetHistory("loan-split-edit", editorOpen, setEditorOpen);
   const editable = docDate != null && !readOnly;
   // The match read names the loan the editor needs (its balance and categories); read with the sheet.
   const loaded = useQuery({
@@ -328,11 +328,12 @@ export function LoanCategoryRow({
           setSheet(false);
           setEditor(true);
         } : undefined}
-        editDisabled={storedData == null || editLoan == null}
+        // A refetch may be bringing newer parts (another save, another device): the editor waits for them.
+        editDisabled={storedData == null || editLoan == null || stored.isFetching || loaded.isFetching}
       />
-      {canEdit && storedData != null && editLoan != null ? (
+      {editable && storedData != null && editLoan != null ? (
         <MatchedSplitEditor
-          open={editorOpen}
+          open={editorOpen && canEdit}
           onOpenChange={setEditor}
           transactionId={transactionId}
           docDate={docDate}

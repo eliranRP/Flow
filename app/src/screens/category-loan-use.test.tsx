@@ -42,12 +42,12 @@ describe("a loan's own category in Settings → Categories (FLOW-106 §3.5)", ()
     expect(uses.get("x")).toEqual({ loanName: "א הלוואה", part: "interest" });
     expect(uses.get("y")).toEqual({ loanName: "ב הלוואה", part: "escrow" });
     expect(uses.get("z")).toEqual({ loanName: "א הלוואה", part: "principal" });
-    expect(loanUseLine({ loanName: "א הלוואה", part: "escrow" })).toBe("קטגוריה של הלוואה\u00a0· א הלוואה\u00a0· מסים וביטוח");
+    expect(loanUseLine({ loanName: "א הלוואה", part: "escrow" })).toBe("קטגוריה של הלוואה\u00a0· \u2068א הלוואה\u2069\u00a0· מסים וביטוח");
   });
 
   it("shows the locked line and hides the P&L action on a category a loan names", async () => {
     const sheet = await openMenu("ריבית בנק");
-    expect(sheet.querySelector(".ui-cat-fixed")).toHaveTextContent("קטגוריה של הלוואה · משכנתא לדוגמה · ריבית");
+    expect(sheet.querySelector(".ui-cat-fixed")).toHaveTextContent("קטגוריה של הלוואה · \u2068משכנתא לדוגמה\u2069 · ריבית");
     expect(within(sheet).queryByRole("button", { name: /לספור ברווח/ })).not.toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: "מחיקה" })).not.toBeInTheDocument();
   });

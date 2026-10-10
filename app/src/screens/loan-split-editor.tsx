@@ -96,9 +96,10 @@ export function LoanSplitEditor({
     setCount(1);
     setFeesRaw("");
     setExact(edit == null ? {} : draftFrom(edit.parts));
-    const feesCategory = edit?.parts.find((part) => part.part === "fees")?.categoryId ?? first?.categoryIds?.fees ?? null;
-    setFeesCategoryId(feesCategory);
-    setKeep(first?.categoryIds?.fees == null);
+    const storedFees = edit?.parts.find((part) => part.part === "fees")?.categoryId ?? null;
+    setFeesCategoryId(storedFees ?? first?.categoryIds?.fees ?? null);
+    // An edit whose fees already name a category the loan doesn't keep was a "no" to keeping it.
+    setKeep(storedFees != null && storedFees !== (first?.categoryIds?.fees ?? null) ? false : first?.categoryIds?.fees == null);
     // The loans list is new on each render; the open is what resets the editor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
