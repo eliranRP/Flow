@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(4);
+select plan(5);
 
 do $users$
 begin
@@ -88,6 +88,23 @@ select ok(
   'the month totals add under 0.4 s to a page'
 );
 
+-- The plan main's CI picked (2.3 s): with no statistics the planner may nested-loop every join.
+-- Forcing nested loops shows the totals pass has no join that turns 4,000 x 4,000.
+set local enable_hashjoin = off;
+set local enable_mergejoin = off;
+insert into smts_run (label, started) values ('nested', clock_timestamp());
+update smts_run set out = public.search_transactions() where label = 'nested';
+update smts_run set finished = clock_timestamp() where label = 'nested';
+reset enable_hashjoin;
+reset enable_mergejoin;
+
+select ok(
+  (select finished - started from smts_run where label = 'nested')
+    < (select finished - started from smts_run where label = 'later') + interval '400 milliseconds',
+  'with only nested loops the month totals still add under 0.4 s'
+);
+
+select diag('nested-loop first page ' || (select (finished - started)::text from smts_run where label = 'nested'));
 select diag('first page ' || (select (finished - started)::text from smts_run where label = 'first')
   || ', later page ' || (select (finished - started)::text from smts_run where label = 'later'));
 
