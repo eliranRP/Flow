@@ -127,6 +127,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_jev_accuracy",
     "get_profit_months",
     "get_cash_months",
+    "get_cash_years",
     "get_cash_lines",
     "match_lines",
     "get_anomalies",

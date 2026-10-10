@@ -20,3 +20,9 @@
 .ui-band .ui-back-labelled:active {
   background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
 }
+
+/* FLOW-416: a year row's quiet line under its label ("10 חודשים", "מאז מרץ"). */
+.ui-flow-hint {
+  display: block;
+  color: var(--color-text-muted);
+}

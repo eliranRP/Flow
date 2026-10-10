@@ -1,10 +1,10 @@
-import type { CashLinesPage, CashMonths, CashSide } from "@flow/shared";
+import type { CashLinesPage, CashMonths, CashSide, CashYears } from "@flow/shared";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { CASH_MONTHS } from "./cash";
+import { CASH_MONTHS, cashMonthKey } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { monthPeriod } from "./period";
-import { useHomePreview } from "./preview";
+import { useHomePreview, type HomePreview } from "./preview";
 import type { CashRow } from "./ui/cash-rows";
 import { useOptionalBooks } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
@@ -29,6 +29,57 @@ export function useCashMonthsQuery(active = true) {
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
     },
   });
+}
+
+/** FLOW-416: the net since the first cash month and per year, for the history page. */
+export function cashYearsQueryOptions(preview: HomePreview) {
+  return {
+    queryKey: ["dashboard", "cash-years", preview],
+    queryFn: async (): Promise<CashYears> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("cash_years", {});
+      if (error) throw error;
+      return (await loadReadSchemas()).cashYearsSchema.parse(data);
+    },
+  };
+}
+
+export function useCashYearsQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({ ...cashYearsQueryOptions(preview), enabled: active && preview === "off" });
+}
+
+/** FLOW-416: one year's months, in the shape Home's months read (the current year to this month). */
+export function cashYearMonthsQueryOptions(preview: HomePreview, year: number) {
+  return {
+    queryKey: ["dashboard", "cash-year-months", preview, year],
+    queryFn: async (): Promise<CashMonths> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("cash_year_months", { p_year: year });
+      if (error) throw error;
+      return (await loadReadSchemas()).cashMonthsSchema.parse(data);
+    },
+  };
+}
+
+export function useCashYearMonthsQuery(year: number, active = true) {
+  const preview = useHomePreview();
+  return useQuery({ ...cashYearMonthsQueryOptions(preview, year), enabled: active && preview === "off" });
+}
+
+/**
+ * The months a month page reads: Home's recent months, or, for an older month (opened from the
+ * history), its year's months.
+ */
+export function useCashMonthData(monthKey: string, active = true) {
+  const recent = useCashMonthsQuery(active);
+  const older = recent.data != null && !recent.data.months.some((month) => cashMonthKey(month.month) === monthKey);
+  const year = useCashYearMonthsQuery(Number(monthKey.slice(0, 4)), active && older);
+  return { query: older ? year : recent, recent: !older };
 }
 
 const CASH_LINES_PAGE = 40;

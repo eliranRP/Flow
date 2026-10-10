@@ -30,6 +30,7 @@ export const READ_TOOL_NAMES = [
   "list_unpaid",
   "list_team",
   "get_cash_months",
+  "get_cash_years",
   "get_cash_lines",
   "match_lines",
 ] as const;
@@ -110,7 +111,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_expected_months: new Set(["months", "project_id"]),
   list_unpaid: new Set(),
   list_team: new Set(),
-  get_cash_months: new Set(["months"]),
+  get_cash_months: new Set(["months", "year"]),
+  get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),

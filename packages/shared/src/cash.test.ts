@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { cashLinesSchema, cashMonthsSchema } from "./cash";
+import { cashLinesSchema, cashMonthsSchema, cashYearsSchema } from "./cash";
 
 describe("cashMonthsSchema", () => {
   it("reads cash_months: minor units as bigint, base currency first, an empty month's null rows as none", () => {
@@ -33,6 +33,27 @@ describe("cashMonthsSchema", () => {
   it("keeps a signed-out read as null and refuses an unknown basis", () => {
     expect(cashMonthsSchema.parse(null)).toBeNull();
     expect(() => cashMonthsSchema.parse({ basis: "cash", base_currency: "ILS", months: [] })).toThrow();
+  });
+});
+
+describe("cashYearsSchema", () => {
+  it("reads cash_years: the total and each year as bigint, an empty book's first month as null", () => {
+    const parsed = cashYearsSchema.parse({
+      basis: "paid",
+      base_currency: "ILS",
+      this_month: "2026-10-01",
+      first_month: "2023-03-01",
+      by_currency: [{ currency: "ILS", in_minor: 900000, out_minor: "400000", net_minor: 500000 }],
+      years: [
+        { year: 2026, by_currency: [{ currency: "ILS", in_minor: 300000, out_minor: 100000, net_minor: 200000 }] },
+        { year: 2025, by_currency: null },
+      ],
+    });
+    expect(parsed?.by_currency[0]?.out_minor).toBe(400_000n);
+    expect(parsed?.years[1]?.by_currency).toEqual([]);
+    const empty = { basis: "paid", base_currency: "ILS", this_month: "2026-10-01", first_month: null, by_currency: [], years: [] };
+    expect(cashYearsSchema.parse(empty)?.first_month).toBeNull();
+    expect(cashYearsSchema.parse(null)).toBeNull();
   });
 });
 

@@ -30,6 +30,8 @@ export const CashHomeMonth: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
+    // FLOW-416: the whole history opens from under the last month.
+    await expect(canvas.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
   },
 };
 export const CashHomeMonthDark: Story = { ...CashHomeMonth, name: "Home cash, attention box, dark", ...dark };
