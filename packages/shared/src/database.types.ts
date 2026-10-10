@@ -1477,6 +1477,12 @@ isOneToOne: false
 "project_cash_months":
 { Args: { "p_months"?: number,"p_project": string,"p_today"?: string }; Returns: Json
                            },
+"project_cash_year_months":
+{ Args: { "p_project": string,"p_today"?: string,"p_year": number }; Returns: Json
+                           },
+"project_cash_years":
+{ Args: { "p_project": string,"p_today"?: string }; Returns: Json
+                           },
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
                            },

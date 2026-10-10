@@ -42,6 +42,7 @@ import { ProjectExpectedMonths } from "./project-expected-months";
 import { investmentFigure, openLoans, ProjectOverviewRows } from "./project-overview";
 import { ProjectTransactions } from "./project-transactions";
 import { ProjectCashOverview } from "./project-cash-screens";
+import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment } from "./project-investment-data";
 
 function ProjectLoading({ search, example, pill = true }: { search: string; example?: ReactNode; pill?: boolean }) {
@@ -145,9 +146,12 @@ export function ProjectDetailScreen({
   sectionTo,
   sampleGroups,
   sampleCash,
+  sampleRecurring,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
+  /** A sample project's late bills and changed charges, for Home's rows on the page (stories). */
+  sampleRecurring?: ProjectRecurringSample;
   /** FLOW-419. A sample project's cash months; without it a sample project's cash is its by_currency, as this month. */
   sampleCash?: NonNullable<CashMonths>;
   /** Stories and tests pin the month names. */
@@ -176,6 +180,8 @@ export function ProjectDetailScreen({
   const detail = useProjectQuery(sample ? "" : projectId, period);
   // FLOW-419: the project page opens on its cash, read beside the project (its name, investment and loans).
   const cash = useProjectCashMonthsQuery(sample ? "" : projectId, section === "overview");
+  // Home's late bills and changed charges; the page shows the project's own.
+  const recurring = useProjectRecurring(sample == null && section === "overview", sampleRecurring);
   // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
@@ -370,6 +376,13 @@ export function ProjectDetailScreen({
         investmentHref={sectionHref("investment")}
         stateLine={stateLine}
         menu={menu}
+        attention={projectAttentionRows({
+          projectId: project.id,
+          pending: project.pending_count ?? 0,
+          late: recurring.late,
+          changes: recurring.changes,
+          search,
+        })}
         example={example}
         now={now}
       />
