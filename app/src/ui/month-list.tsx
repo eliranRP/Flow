@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { Fragment, useId, type ReactNode } from "react";
-import { splitCents, withCents } from "./big-number";
+import { splitCents } from "./big-number";
 import { List } from "./list-row";
 import { groupByDay, groupByMonth, type MonthAmount, type MonthGroup, type MonthTotal } from "./month-groups";
 
@@ -252,8 +252,7 @@ function MonthNet({ totals }: { totals: readonly MonthTotal[] }) {
 function MonthTotalLine({ total, cents, cost, first }: { total: MonthTotal; cents: boolean; cost: boolean; first: boolean }) {
   const text = (minor: bigint, direction: "income" | "expense") => {
     // In a cost list the expense figure is the list's own subject, so it needs no minus.
-    const formatted = formatAmountText(minor, total.currency, { direction: cost && direction === "expense" ? undefined : direction, detail: cents });
-    return cents ? withCents(formatted) : formatted;
+    return formatAmountText(minor, total.currency, { direction: cost && direction === "expense" ? undefined : direction, detail: cents });
   };
   const income = total.incomeMinor > 0n ? text(total.incomeMinor, "income") : null;
   const expense = total.expenseMinor > 0n ? text(total.expenseMinor, "expense") : null;
