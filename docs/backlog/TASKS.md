@@ -199,6 +199,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-208"></a>[FLOW-208](tasks/FLOW-208.md) | Split and undo follow-ups (#88 review) | BACKLOG NIT |
 | <a id="flow-209"></a>[FLOW-209](tasks/FLOW-209.md) | get_project follow-ups (#90 review) | BACKLOG NIT |
 | <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
+| <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
+| <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
 
 ## Transactions and app UX
 

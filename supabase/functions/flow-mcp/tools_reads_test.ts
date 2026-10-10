@@ -111,6 +111,12 @@ Deno.test("search_expenses passes its filters to search_transactions (FLOW-323)"
     { amount_min: 5, amount_max: 4 },
     { amount_max: -1 },
     { amount_min: "abc" },
+    { amount: 5, amount_minor: 500 },
+    { amount_minor: 0 },
+    { amount_minor: 12.5 },
+    { amount_minor: "1,432" },
+    { amount_minor: 5, amount_max_minor: 9 },
+    { amount_min_minor: 9, amount_max_minor: 5 },
   ]) {
     const result = await callTool("search_expenses", { scope: "all", ...bad }, ["read"], rpc);
     assertEquals(result.isError, true);

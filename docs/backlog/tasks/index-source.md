@@ -193,6 +193,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-208
 - FLOW-209
 - FLOW-213
+- FLOW-214
+- FLOW-215
 
 ## Transactions and app UX
 

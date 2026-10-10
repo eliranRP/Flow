@@ -278,3 +278,68 @@ export function envelopeOf(json: unknown, refused = WRITE_REFUSED): ToolResult {
   }
   return fail("refused", refused);
 }
+
+const CASH_SIDES = ["in", "out", "excluded", "not_in_profit"] as const;
+
+/**
+ * FLOW-215: get_cash_lines' and get_project_cash_lines' month and side. A missing or unknown one
+ * names the field and what it takes, so a caller can fix the call without the docs.
+ */
+export function cashLineArgsOf(args: Record<string, unknown>): { month: string; side: string } | ToolResult {
+  const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
+  if (typeof month !== "string" || !isCalendarDate(month)) {
+    return fail("validation", "month is required: YYYY-MM, or a YYYY-MM-DD date in that month");
+  }
+  const side = args.side;
+  if (typeof side !== "string" || !(CASH_SIDES as readonly string[]).includes(side)) {
+    return fail("validation", `side is required: one of ${CASH_SIDES.join(", ")} (call once per side)`);
+  }
+  return { month, side };
+}
+
+/** A whole number of minor units: a safe integer, or a string of digits. */
+function minorIntegerOf(value: unknown, least: bigint): bigint | ToolResult {
+  const text = typeof value === "number" && Number.isSafeInteger(value) ? String(value) : value;
+  if (typeof text !== "string" || !/^\d+$/.test(text.trim())) return fail("validation", "validation");
+  const minor = BigInt(text.trim());
+  if (minor < least || minor > SAFE_MINOR) return fail("validation", "validation");
+  return minor;
+}
+
+const AMOUNT_FIELDS = [["amount", "amount_minor"], ["amount_min", "amount_min_minor"], ["amount_max", "amount_max_minor"]] as const;
+
+/**
+ * search_expenses' amount filter (FLOW-211, FLOW-214): the bank amount without its sign, in the
+ * line's own currency. amount, amount_min and amount_max are major units (6245.12); amount_minor,
+ * amount_min_minor and amount_max_minor are minor units (624512), like the rest of the API. A call
+ * uses one kind. hint is set when a major-unit value is a whole number of 100000 or more, which
+ * reads like minor units: the tool returns it when nothing matched.
+ */
+export function amountFilterOf(
+  args: Record<string, unknown>,
+): { min: bigint | null; max: bigint | null; hint: string | null } | ToolResult {
+  const majors = AMOUNT_FIELDS.map(([major]) => args[major]);
+  const minors = AMOUNT_FIELDS.map(([, minor]) => args[minor]);
+  const usesMajor = majors.some((value) => value != null);
+  if (usesMajor && minors.some((value) => value != null)) {
+    return fail("validation", "amount: pass amount, amount_min and amount_max (major units) or amount_minor, amount_min_minor and amount_max_minor (minor units), not both");
+  }
+  const [one, low, high] = usesMajor ? majors : minors;
+  if (one != null && (low != null || high != null)) return fail("validation", "validation");
+  const exact = (value: unknown) => (usesMajor ? minorFromMajor(value) : minorIntegerOf(value, 1n));
+  const bound = (value: unknown) => (value == null ? null : usesMajor ? minorFromMajorNonNegative(value) : minorIntegerOf(value, 0n));
+  const min = one != null ? exact(one) : bound(low);
+  if (min != null && typeof min !== "bigint") return min;
+  const max = one != null ? min : bound(high);
+  if (max != null && typeof max !== "bigint") return max;
+  if (min != null && max != null && min > max) return fail("validation", "validation");
+  let hint: string | null = null;
+  AMOUNT_FIELDS.forEach(([major, minor], index) => {
+    const value = majors[index];
+    const text = typeof value === "number" || typeof value === "string" ? decimalText(value).trim() : "";
+    if (hint == null && /^[1-9]\d{5,}$/.test(text)) {
+      hint = `${major} is in major units, so ${text} was read as ${text}.00. If you meant minor units (${text.slice(0, -2)}.${text.slice(-2)}), pass ${minor}: ${text}.`;
+    }
+  });
+  return { min, max, hint };
+}
