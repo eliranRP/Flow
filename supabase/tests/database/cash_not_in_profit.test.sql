@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(12);
+select plan(13);
 
 select tests.create_supabase_user('cnp_owner', 'cnp-owner@example.com');
 select tests.create_supabase_user('cnp_other', 'cnp-other@example.com');
@@ -82,6 +82,12 @@ select is(
   jsonb_array_length(public.cash_month_lines('2026-06-01', 'out') -> 'rows'),
   2,
   'the out side still lists every expense in the view'
+);
+select is(
+  (select jsonb_agg(jsonb_build_array(r ->> 'description', r ->> 'side', (r ->> 'amount_minor')::bigint) order by r ->> 'description')
+   from jsonb_array_elements(public.cash_month_lines('2026-06-01', 'in_profit') -> 'rows') r),
+  '[["cnp:rent", "in", 1000000], ["cnp:repairs", "out", 300000]]'::jsonb,
+  'FLOW-438: the in_profit side lists money in and out that profit counts, and none it leaves out'
 );
 select throws_ok(
   $$ select public.cash_month_lines('2026-06-01', 'sideways') $$,

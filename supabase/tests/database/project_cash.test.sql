@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(19);
+select plan(20);
 
 do $users$
 begin
@@ -101,6 +101,12 @@ select is(
    from jsonb_array_elements(public.project_cash_month_lines(pg_temp.id('cedar'), '2026-06-01', 'not_in_profit') -> 'rows') r),
   '[500000]'::jsonb,
   'Cedar June not in profit: the renovation line'
+);
+select is(
+  (select sum(case when r ->> 'side' = 'in' then 1 else -1 end * (r ->> 'amount_minor')::bigint)::bigint
+   from jsonb_array_elements(public.project_cash_month_lines(pg_temp.id('cedar'), '2026-06-01', 'in_profit') -> 'rows') r),
+  640000::bigint,
+  'FLOW-438: Cedar June in profit: its lines add up to the profit, the renovation left out'
 );
 select is(pg_temp.cell('maple', '2026-06-01', 'out_minor'), 90000::bigint, 'Maple June: its cost and 40% of the shared bill');
 select is(pg_temp.cell('cedar', '2026-05-01', 'out_minor'), 200000::bigint, 'Cedar May: the transfer stays out of cash');

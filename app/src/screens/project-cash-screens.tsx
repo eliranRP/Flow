@@ -11,7 +11,6 @@ import {
   notInProfitRest,
   shownCashRows,
   type CashListSide,
-  cashLineSplit,
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
 import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
@@ -24,24 +23,25 @@ import {
   projectEarlierMonthRows,
   useProjectCashLinesQuery,
   useProjectCashMonthData,
+  useProjectCashMonthLinesQuery,
+  type ProjectCashMonthLines,
   useProjectCashMonthsQuery,
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
 import { BackButton } from "../ui/back";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
+import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
 import { CashRows } from "../ui/cash-rows";
-import { formatDayMonth, israelToday } from "../ui/date-math";
+import { israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { FocusTitle } from "../ui/focus-title";
 import { DocumentIcon } from "../ui/icons";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero, SectionHead } from "../ui/layout";
-import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
-import { SplitPartsHint } from "../ui/split-parts-hint";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -173,13 +173,14 @@ export function ProjectCashMonthScreen({
   monthKey,
   projectId: sampleProjectId,
   projectName,
-}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string; projectName?: string } = {}) {
+  sampleLines,
+}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string; projectName?: string; sampleLines?: ProjectCashMonthLines } = {}) {
   const params = useParams();
   const month = monthKey ?? params.month;
   const projectId = sampleProjectId ?? params.projectId ?? "";
   const search = usePreviewSearch();
   if (!isCashMonthKey(month)) return <Navigate to={`/projects/${projectId}${search}`} replace />;
-  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} sampleName={projectName} />;
+  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} sampleName={projectName} sampleLines={sampleLines} />;
 }
 
 function ProjectCashMonthBody({
@@ -188,12 +189,14 @@ function ProjectCashMonthBody({
   search,
   sample,
   sampleName,
+  sampleLines,
 }: {
   projectId: string;
   monthKey: string;
   search: string;
   sample?: NonNullable<CashMonths>;
   sampleName?: string;
+  sampleLines?: ProjectCashMonthLines;
 }) {
   const preview = useHomePreview();
   // An older month (opened from the history) reads its year's months.
@@ -206,6 +209,9 @@ function ProjectCashMonthBody({
   const kicker = sampleName ?? project.data?.name ?? undefined;
   const navigate = useNavigate();
   const data = sample ?? query.data ?? null;
+  // FLOW-438: the month's lines, in the base currency's figures (the first row's currency).
+  const linesCurrency = data == null ? "" : (shownCashRows(monthOf(data, monthKey), data.base_currency)[0]?.currency ?? "");
+  const lines = useProjectCashMonthLinesQuery(projectId, monthKey, linesCurrency, sample == null);
   // FLOW-422: Home's month pager and swipe, within the months the project's read holds.
   const opens = (key: string) => monthOf(data ?? undefined, key) != null && key <= israelToday().slice(0, 7);
   const go = (key: string) => {
@@ -248,7 +254,20 @@ function ProjectCashMonthBody({
         </p>
       </PeriodSwipe>
       <CashRows rows={projectCashSummaryRows(projectId, monthKey, rows, search)} />
+      <ProjectMonthLines lines={sampleLines ?? lines.data} loading={sampleLines == null && lines.isPending} search={search} />
     </div>
+  );
+}
+
+/** FLOW-438 (owner, 2026-10-10): the month's תנועות under its figures; a month with none shows nothing more. */
+function ProjectMonthLines({ lines, loading, search }: { lines: ProjectCashMonthLines | undefined; loading: boolean; search: string }) {
+  if (loading) return <ListSkeleton />;
+  if (lines == null || lines.counted.length + lines.kept.length === 0) return null;
+  return (
+    <section aria-label="תנועות">
+      <SectionHead title="תנועות" />
+      <CashMonthLines counted={lines.counted} kept={lines.kept} search={search} />
+    </section>
   );
 }
 
@@ -256,13 +275,6 @@ type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
 
 // Home's words and signs for the lines pages (cash-screens.tsx), for the project's own lines.
 const KEPT_NOTE = "כסף שזז בבנק, אבל אינו הכנסה או הוצאה.";
-
-function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
-  const back = row.amount_minor < 0n;
-  if (side === "in") return back ? "out" : "in";
-  if (side === "out") return back ? "in" : "cost";
-  return (row.side === "in") !== back ? "in" : "out";
-}
 
 /** The project's lines behind one month's נכנס, יצא or לא נספר ברווח; a shared bill shows the project's share. */
 export function ProjectCashLinesScreen({
@@ -302,7 +314,7 @@ function ProjectCashLinesBody({
   const lines = useProjectCashLinesQuery(projectId, monthKey, side, currency, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
   const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
-  const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
+  const rows = useHeldOrder(loaded, cashLineKey);
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);
   const data = sample?.months ?? months.data ?? null;
@@ -355,31 +367,7 @@ function ProjectCashLinesBody({
           body="תנועות שנכנסות לתזרים יופיעו כאן."
         />
       ) : (
-        <List>
-          {rows.map((row) => {
-            // The page is one project's, so the hint names the category; a shared bill's amount is the project's share.
-            const hint = [formatDayMonth(row.cash_month_date), row.category_name]
-              .filter((part): part is string => part != null && part !== "")
-              .join(" · ");
-            // FLOW-432: a split line names the parts this list counts, out of the whole line.
-            const split = cashLineSplit(row);
-            return (
-              <ListRow
-                key={`${row.transaction_id}:${row.part ?? ""}`}
-                variant="transaction"
-                title={row.supplier_name ?? row.description}
-                hint={split == null ? hint : <SplitPartsHint parts={split.parts} total={split.total} date={formatDayMonth(row.cash_month_date)} />}
-                wrapHint={split != null}
-                agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
-                currency={row.currency}
-                sign={lineSign(side, row)}
-                inWord={side === "out" ? "זיכוי" : undefined}
-                source={rowSource(row.source)}
-                href={`/transactions/${row.transaction_id}${search}`}
-              />
-            );
-          })}
-        </List>
+        <CashLineRows rows={rows} list={side} search={search} />
       )}
       {more ? (
         <div className="ui-page-pad">

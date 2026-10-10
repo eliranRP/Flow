@@ -58,7 +58,8 @@ test("marking a loan paid off takes a date from the last payment on, then undo r
   await dateSheet.getByRole("button", { name: "החלה" }).click();
   await expect(toast(page, "סומנה כנפרעה · נשארה יתרה $240,000 בספרים")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^מצב נפרעה · 01\/10\/2026/ })).toBeVisible();
+  // FLOW-427: a value in parts reads without its dots (HintParts hides them from screen readers).
+  await expect(page.getByRole("button", { name: /^מצב נפרעה\W*01\/10\/2026/ })).toBeVisible();
 
   await toast(page, "סומנה כנפרעה").getByRole("button", { name: "ביטול" }).click();
   await expect(toast(page, "השינוי בוטל")).toBeVisible();
@@ -133,7 +134,7 @@ test("the kind sheet turns a mortgage interest-only with its months, and checks 
   await months.fill("24");
   await sheet.getByRole("button", { name: "שמירה" }).click();
   await expect(toast(page, "סוג · ריבית בלבד · 24 מתוך 360 חודשים")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^סוג ריבית בלבד · 24 מתוך 360 חודשים/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^סוג ריבית בלבד\W*24 מתוך 360 חודשים/ })).toBeVisible();
 });
 
 test("the next payments open by year, and a year opens its parts (FLOW-434)", async ({ page }) => {

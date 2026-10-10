@@ -21,6 +21,24 @@
   padding-inline: var(--space-4);
 }
 
+/* FLOW-428: a row with nothing to close keeps "סגירה"'s width in עריכה, its chevron at the slot's end
+   where the row's own chevron sits outside עריכה, so the section's amounts form one column. */
+.ui-recurring-slot {
+  position: relative;
+}
+
+.ui-recurring-slot-word {
+  visibility: hidden;
+}
+
+.ui-recurring-slot-chevron {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--space-4);
+  display: flex;
+  align-items: center;
+}
+
 .ui-recurring-amount {
   display: inline-flex;
   flex: none;

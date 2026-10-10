@@ -207,6 +207,12 @@
       "screens/transaction-screen.tsx",
       "screens/filed-today-screen.tsx"
     ],
+    "txn-paged.spec.ts": [
+      "txn-list-more.ts",
+      "txn-nav.tsx",
+      "ui/txn-step-row.tsx",
+      "dev/txn-lists.tsx"
+    ],
     "txn-swipe.spec.ts": [
       "ui/card-swipe.tsx",
       "txn-nav.tsx",

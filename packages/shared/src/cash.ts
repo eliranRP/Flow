@@ -76,8 +76,8 @@ export const cashYearsSchema = z
 
 export const cashSideSchema = z.enum(["in", "out"]);
 
-/** `cash_month_lines`' sides: נכנס, יצא, or (FLOW-418) the lines the P&L leaves out of the view's cash. */
-export const cashLinesSideSchema = z.enum(["in", "out", "not_in_profit"]);
+/** `cash_month_lines`' sides: נכנס, יצא, (FLOW-418) the lines the P&L leaves out of the view's cash, or (FLOW-438) the lines it counts. */
+export const cashLinesSideSchema = z.enum(["in", "out", "not_in_profit", "in_profit"]);
 
 /** `cash_month_lines`: the lines behind one month's נכנס, יצא or לא נספר ברווח, newest first. Amounts are positive on their side. */
 export const cashLinesSchema = z

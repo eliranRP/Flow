@@ -1,4 +1,4 @@
-import type { CashCurrencyRow, CashLinesPage, CashMonths, CashYears } from "@flow/shared";
+import type { CashCurrencyRow, CashLine, CashLinesPage, CashMonths, CashYears } from "@flow/shared";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { cashMonthKey, cashMonthName, cashSummaryRows, cashTitle, cashYearMonthRows, cashYearRows, shownCashRows, type CashListSide } from "./cash";
 import { getSupabase } from "./lib/supabase";
@@ -138,6 +138,38 @@ export function useProjectCashLinesQuery(projectId: string, month: string, side:
       return (await loadReadSchemas()).cashLinesSchema.parse(data);
     },
     getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * LINES_PAGE : undefined),
+  });
+}
+
+/** FLOW-438: a month's lines on its page, the counted and the kept-out, up to the read's 200 each. */
+export type ProjectCashMonthLines = { counted: CashLine[]; kept: CashLine[]; more: boolean };
+
+/** FLOW-438: the project's lines for one month, as its cash month page lists them under the figures. */
+export function useProjectCashMonthLinesQuery(projectId: string, month: string, currency: string, active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["breakdown-lines", "project-cash-month", preview, projectId, month, currency],
+    enabled: active && preview === "off" && projectId !== "" && currency !== "",
+    queryFn: async (): Promise<ProjectCashMonthLines> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const schemas = await loadReadSchemas();
+      const read = async (side: "in_profit" | "not_in_profit") => {
+        const { data, error } = await supabase.rpc("project_cash_month_lines", {
+          p_project: projectId,
+          p_month: `${month}-01`,
+          p_side: side,
+          p_currency: currency,
+          p_limit: 200,
+          p_offset: 0,
+        });
+        if (error) throw error;
+        return schemas.cashLinesSchema.parse(data);
+      };
+      const [counted, kept] = await Promise.all([read("in_profit"), read("not_in_profit")]);
+      return { counted: counted?.rows ?? [], kept: kept?.rows ?? [], more: counted?.has_more === true || kept?.has_more === true };
+    },
   });
 }
 

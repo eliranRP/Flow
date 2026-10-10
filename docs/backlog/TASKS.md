@@ -8,7 +8,7 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07. Lanes table: 2026-10-10 16:45Z.
+Last full sync: 2026-10-07. Lanes table: 2026-10-10 17:45Z.
 
 ## Lanes now
 
@@ -16,19 +16,19 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 3 | Parked again (FLOW-436 done #558, the owner's loan-proceeds call); takes the next server task | Server side of the next plan-first feature |
-| Dev lane 4 | The Flow MCP agent's requests, top of the queue: FLOW-214 search_expenses amount filters in minor units with a hint, FLOW-215 get_cash_lines side default and paging docs (one PR); then the FLOW-816 follow-up (set `CI_BENCH_MS` from main's full run). Done today: FLOW-814 #545, 815 #550, 816 #552, 817 #554 | Next MCP request, else the next gate improvement |
-| UI lane 1 | FLOW-425: cycle 19, split-row hint amounts at 320–375 and vaul preload on idle and pointerdown | Next cycle item from the design lead |
-| UI lane 2 | FLOW-424 #553: cycle 18 polish (signed off, one fix: no project name when the list is filtered to one project) | Next cycle item on the review and transaction screens |
-| UI lane 3 | FLOW-426: cycle 19, viewer toast breaks only at "·", the FLOW-910 reload waits for the next navigation or a hidden page. Done today: FLOW-912 #546, FLOW-910 #555 | Settings, project screens, and other areas outside the review and transaction screens |
-| Temporary lanes (owner asks, one thread each) | None open. Closed today at their merge: FLOW-422, 423, 430 (#528), 431 (#530, #551, #556), 432, 433, 434 (#536), 435, 436 (#558, dev lane 3), 707, 908, 909, 911 | Each closes at its merge |
-| UI/UX review cycle | Design lead; cycle 19 done on 9b2d1ac (#557, FLOW-425 and 426); next cycle on the next deploy; signs off UI PRs in a PR comment | Next deploy batch |
-| Production QA | Deploy and prod check after each deploy, sandbox QA company only (15:13Z and 16:28Z deploys verified; a tab left open to see the FLOW-910 reload on the next deploy) | Next deploy batch |
-| Backlog bug fixes | Idle; the owner's bugs run in their own threads today | Next bug the lane manager routes |
-| MCP/data agent | Real data through the MCP tools; never changes the repo; its requests go to dev lane 4 first | Requests go to the top of the queue |
+| Dev lane 3 | Parked (FLOW-436 done #558); takes the next server task | Server side of the next plan-first feature |
+| Dev lane 4 | FLOW-812 faster CI (#571; the lane manager times its merge, since it changes main's workflow). Done today: FLOW-214 and 215 (#570, with the FLOW-816 follow-up `CI_BENCH_MS` 98 ms and the Storybook sheet-drawer fix), 814 #545, 815 #550, 816 #552, 817 #554 | The Flow MCP agent's next request (FLOW-216), top of the queue |
+| UI lane 1 | FLOW-914, the red-main fix: the SplitPartsHint "long names, 320" story reports its date spans clipped on main 8cc332c (first full run after #561, 564, 565, 570, 562). Done today: FLOW-425 #561. Parked 17:21Z to 17:40Z, cycle 20 found nothing on Home, profit and project | Next cycle item from the design lead, or other work from the lane manager |
+| UI lane 2 | FLOW-314 follow-ups #563: the review-card swipe walk on a project's waiting list, the next page at the last row, the Home breakdown list. Done today: FLOW-424 #553 | Next cycle item on the review and transaction screens |
+| UI lane 3 | FLOW-427: cycle 20, the loan pages (schedule matches the balance, one row style, part count skips $0 parts, no lone word at 320). Done today: FLOW-426 #564, 912 #546, 910 #555 | Settings, project screens, and other areas outside the review and transaction screens |
+| Backlog bug fixes | FLOW-818: the vitest 4 bump (dependabot #566 and #567 on one branch, #569); closes the dependabot PRs at its merge | Next bug the lane manager routes |
+| Temporary lanes (owner asks, one thread each) | Cash month thread: FLOW-438 #572, the month's transactions on the project cash month page and the profit section (FLOW-437 done #562). Closed today at their merge: FLOW-422, 423, 430 (#528), 431 (#530, #551, #556), 432, 433, 434 (#536), 435, 436 (#558), 707, 908, 909, 911, 913 (#565) | Each closes at its merge |
+| UI/UX review cycle | Design lead; cycle 20 done on cd4d7a9 (#568, FLOW-427); next cycle on the next deploy; signs off UI PRs in a PR comment | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only (17:01Z deploy of cd4d7a9 verified; the 8cc332c run failed, so production stays on cd4d7a9) | Next deploy batch |
+| MCP/data agent | Real data through the MCP tools; never changes the repo; its requests go to dev lane 4 first (nothing pending at 17:21Z) | Requests go to the top of the queue |
 | Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
 
-Merge rule since 15:22Z: right before merging, a lane looks at main's latest workflow run; if it is a full suite and deploy run still in progress, the lane holds its merge until that run completes. The lane manager still announces holds, to every lane.
+Merge rule since 15:22Z: right before merging, a lane looks at main's latest workflow run; if it is a full suite and deploy run still in progress, the lane holds its merge until that run completes. The lane manager still announces holds, to every lane. Since 17:35Z: only the deploy run exercises the stories and e2e; the plan-only runs between deploys do not, so a merge can turn main red up to four merges later than it lands.
 
 ## Priority queue
 
@@ -273,6 +273,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-425"></a>[FLOW-425](tasks/FLOW-425.md) | Split rows keep their amounts whole, and the first sheet opens at once | SMALL UI |
 | <a id="flow-426"></a>[FLOW-426](tasks/FLOW-426.md) | The viewer toast wraps whole, and the update reload never drops the user's place | SMALL UI |
 | <a id="flow-427"></a>[FLOW-427](tasks/FLOW-427.md) | Loan pages: figures that agree, one row style, whole parts at 320 | SMALL UI |
+| <a id="flow-428"></a>[FLOW-428](tasks/FLOW-428.md) | קבועים edit mode keeps one amount column | SMALL UI |
+| <a id="flow-429"></a>[FLOW-429](tasks/FLOW-429.md) | A hint part wider than its line wraps instead of clipping | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
@@ -305,6 +307,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-433"></a>[FLOW-433](tasks/FLOW-433.md) | Every category on the rehab sheet opens its lines, and Back returns to the sheet | UI |
 | <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
 | <a id="flow-437"></a>[FLOW-437](tasks/FLOW-437.md) | Month pager keeps a disabled chevron; band Back lines up with the text | SMALL UI |
+| <a id="flow-438"></a>[FLOW-438](tasks/FLOW-438.md) | The month's transactions on the project's cash month page, and the profit page in the same layout | UI (plan-first, owner card) |
 
 ## Onboarding, Settings and connectors
 
@@ -365,6 +368,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-815"></a>[FLOW-815](tasks/FLOW-815.md) | Headroom under the Home entry size budget | SMALL CYCLE |
 | <a id="flow-816"></a>[FLOW-816](tasks/FLOW-816.md) | The project-open speed check scales to the container in local gates | SMALL CYCLE |
 | <a id="flow-817"></a>[FLOW-817](tasks/FLOW-817.md) | Docs-only merges don't count toward the deploy batch | SMALL CYCLE |
+| <a id="flow-818"></a>[FLOW-818](tasks/FLOW-818.md) | vitest 4 bump (dependabot #566, #567) | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 

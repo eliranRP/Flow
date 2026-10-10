@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SAMPLE_AMORTIZING, SAMPLE_DEMAND, SAMPLE_LOAN_CATEGORIES, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
+import { SAMPLE_AMORTIZING, SAMPLE_BALLOON, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
 import type { LoanPayment } from "./loan-detail-data";
 import { dueDayLabel, loanOutlook, paidInYear, partCategoryHint, partShares, wholeMinor } from "./loan-outlook";
 
@@ -19,7 +19,44 @@ describe("loanOutlook", () => {
     const yearsSum = outlook?.years.reduce((sum, year) => sum + year.totalMinor, 0n);
     expect(yearsSum).toBe(outlook?.toEnd.totalMinor);
     expect(outlook?.toEnd.payments).toBe(outlook?.years.reduce((sum, year) => sum + year.payments, 0));
-    expect(outlook?.endYear).toBe("2054");
+    // Its balance is below where the original terms put it, so at its own payment it ends before 2054.
+    expect(outlook?.endYear).toBe("2050");
+  });
+
+  // FLOW-427 (C20-1): the principal still to pay is the balance in the books, for every kind.
+  it.each([
+    ["amortizing", SAMPLE_AMORTIZING],
+    ["interest only", SAMPLE_INTEREST_ONLY],
+    ["balloon", SAMPLE_BALLOON],
+  ])("starts the payments left from the balance: %s", (_kind, loan) => {
+    const outlook = loanOutlook(loan, "2026-10-09");
+    expect(outlook?.toEnd.totals.principal).toBe(loan.balanceMinor);
+    // The next payment is the loan's own, outside months of interest only.
+    if (loan.kind !== "interest_only") expect(outlook?.next.paymentMinor).toBe(loan.paymentMinor);
+  });
+
+  it("keeps the months of interest only still ahead, then amortizes over the rest of the term", () => {
+    const outlook = loanOutlook({ ...SAMPLE_INTEREST_ONLY, balanceMinor: 23_000_000n }, "2026-10-09");
+    // Started 2026-03-01 with 12 months of interest only: November to February pay no principal.
+    expect(outlook?.next).toMatchObject({ dueDate: "2026-11-01", principalMinor: 0n });
+    expect(outlook?.years[0]).toMatchObject({ key: "2026", payments: 2 });
+    expect(outlook?.years[0]?.totals.principal).toBe(0n);
+    expect(outlook?.toEnd.totals.principal).toBe(23_000_000n);
+    expect(outlook?.endYear).toBe("2028");
+    // Past them, a balance above the schedule leaves more for the last payment.
+    const later = loanOutlook({ ...SAMPLE_INTEREST_ONLY, balanceMinor: 23_000_000n }, "2027-06-09");
+    expect(later?.next.principalMinor).toBeGreaterThan(0n);
+    expect(later?.toEnd.totals.principal).toBe(23_000_000n);
+  });
+
+  it("keeps the balloon at the end of the term", () => {
+    const outlook = loanOutlook(SAMPLE_BALLOON, "2026-10-09");
+    expect(outlook?.endYear).toBe("2031");
+    expect(outlook?.toEnd.payments).toBe(56);
+  });
+
+  it("has none once the balance is paid", () => {
+    expect(loanOutlook({ ...SAMPLE_AMORTIZING, balanceMinor: 0n }, "2026-10-09")).toBeNull();
   });
 
   it("counts the payment due today as next", () => {

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect } from "@storybook/test";
 import { ActionBar, ActionBarRow } from "./action-bar";
 import { Button } from "./button";
 import { SegmentedControl } from "./segmented-control";
@@ -182,4 +183,48 @@ export const ViewerNote320: Story = {
   args: { children: "צפייה בלבד · שינויים נעשים על ידי בעל העסק", tone: "info" },
   render: () => <AboveBar>צפייה בלבד · שינויים נעשים על ידי בעל העסק</AboveBar>,
   parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
+/** The text of each hint part, without its "·" box, as boxes on screen. */
+function partTextRects(part: Element): DOMRect[] {
+  const walker = document.createTreeWalker(part, NodeFilter.SHOW_TEXT);
+  const rects: DOMRect[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.parentElement?.closest(".ui-hint-wrap-sep")) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    rects.push(...[...range.getClientRects()].filter((rect) => rect.width > 0));
+  }
+  return rects;
+}
+
+/**
+ * FLOW-429: in the toast at 320 (288px wide between the gutters, with ביטול) the line is narrower than the part
+ * "שינויים נעשים על ידי בעל העסק", so that part wraps at its own spaces; no word is clipped.
+ */
+export const ViewerNoteWidePart320: Story = {
+  args: { children: "צפייה בלבד · שינויים נעשים על ידי בעל העסק", tone: "info" },
+  render: () => (
+    <div style={{ inlineSize: 288 }}>
+      <Toast action="ביטול" onAction={() => undefined} tone="info">
+        צפייה בלבד · שינויים נעשים על ידי בעל העסק
+      </Toast>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const clip = canvasElement.querySelector(".ui-hint-wrap");
+    if (!clip) throw new Error("the toast has no hint parts");
+    const box = clip.getBoundingClientRect();
+    const parts = [...clip.querySelectorAll(".ui-hint-wrap-part")];
+    await expect(parts).toHaveLength(2);
+    const [, widePart] = parts;
+    if (!widePart) throw new Error("the second part is missing");
+    const wide = partTextRects(widePart);
+    // The part is wider than its line, so it takes more than one line.
+    await expect(new Set(wide.map((rect) => Math.round(rect.top))).size).toBeGreaterThan(1);
+    const cut = parts.flatMap(partTextRects).filter(
+      (rect) => rect.left < box.left - 0.5 || rect.right > box.right + 0.5 || rect.top < box.top - 0.5 || rect.bottom > box.bottom + 0.5,
+    );
+    await expect(cut).toEqual([]);
+  },
 };
