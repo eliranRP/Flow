@@ -23,7 +23,7 @@ export const CashHomeMonth: Story = {
   name: "Home cash, attention box",
   render: () => (
     <StoryRoute entry="/" tabs>
-      <CashHome data={sampleCashMonths()} previewing={false} search="" attention={box} example={exampleOnBand} />
+      <CashHome data={sampleCashMonths()} previewing={false} search="" attention={box} example={exampleOnBand} recurringTo="/missing-bills" />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -34,6 +34,8 @@ export const CashHomeMonth: Story = {
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
     // FLOW-417: the whole history opens from under the last month.
     await expect(canvas.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
+    // FLOW-423: קבועים stays one tap away with no alert in the box.
+    await expect(canvas.getByRole("link", { name: "לכל הקבועים" })).toHaveAttribute("href", "/missing-bills");
   },
 };
 export const CashHomeMonthDark: Story = { ...CashHomeMonth, name: "Home cash, attention box, dark", ...dark };
