@@ -1,6 +1,7 @@
-import type { CashLine, CashMonths, CashSide } from "@flow/shared";
+import { formatAmountText, type CashLine, type CashMonths } from "@flow/shared";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import {
+  type CashListSide,
   cashMonthKey,
   cashLinesPath,
   cashMonthPath,
@@ -10,6 +11,8 @@ import {
   cashYearPath,
   isCashMonthKey,
   isCashSide,
+  notInProfitMinor,
+  notInProfitRest,
   shownCashRows,
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
@@ -30,7 +33,8 @@ import { SegmentedControl } from "../ui/segmented-control";
 
 /**
  * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and רווח החודש, as Home
- * shows the current month), and the lines behind one month's נכנס or יצא. Decision 0168.
+ * shows the current month), and the lines behind one month's נכנס or יצא, or (FLOW-418) the cash
+ * profit leaves out. Decision 0168.
  */
 
 function monthOf(data: CashMonths | undefined, key: string) {
@@ -77,9 +81,19 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
   );
 }
 
+/** FLOW-418: the lines page's one line on what these are. */
+const KEPT_NOTE = "כסף שזז בבנק, אבל אינו הכנסה או הוצאה.";
+
+function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
+  const back = row.amount_minor < 0n;
+  if (side === "in") return back ? "out" : "in";
+  if (side === "out") return back ? "in" : "cost";
+  return (row.side === "in") !== back ? "in" : "out";
+}
+
 type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
 
-export function CashLinesScreen({ sample, at }: { sample?: LinesSample; at?: { month: string; side: CashSide; currency: string } } = {}) {
+export function CashLinesScreen({ sample, at }: { sample?: LinesSample; at?: { month: string; side: CashListSide; currency: string } } = {}) {
   const params = useParams();
   const month = at?.month ?? params.month;
   const side = at?.side ?? params.side;
@@ -99,7 +113,7 @@ function CashLinesBody({
   sample,
 }: {
   monthKey: string;
-  side: CashSide;
+  side: CashListSide;
   currency: string;
   search: string;
   sample?: LinesSample;
@@ -125,7 +139,9 @@ function CashLinesBody({
   const month = data == null ? undefined : monthOf(data, monthKey);
   const shown = data == null ? [] : shownCashRows(month, data.base_currency);
   const total = shown.find((row) => row.currency === currency);
-  const figure = total == null ? null : side === "in" ? total.in_minor : total.out_minor;
+  const figure = total == null ? null : side === "in" ? total.in_minor : side === "out" ? total.out_minor : notInProfitMinor(total);
+  // FLOW-418: VAT, and lines out of the view but in profit, are in the figure but have no row here.
+  const rest = side === "kept" && total != null ? notInProfitRest(total) : 0n;
   const more = sample ? false : lines.hasNextPage;
   return (
     <div>
@@ -135,6 +151,11 @@ function CashLinesBody({
           <span className="ui-breakdown-total-line">
             <BigNumber agorot={figure} currency={currency} size="display" income={side === "in"} />
           </span>
+        </p>
+      ) : null}
+      {side === "kept" ? (
+        <p className="ui-breakdown-hint ui-page-pad t-hint">
+          {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
         </p>
       ) : null}
       {shown.length > 1 ? (
@@ -153,7 +174,7 @@ function CashLinesBody({
       {rows.length === 0 ? (
         <EmptyState
           icon={<DocumentIcon />}
-          title={side === "in" ? "לא נכנס כסף בחודש הזה" : "לא יצא כסף בחודש הזה"}
+          title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"}
           body="תנועות שנכנסות לתזרים יופיעו כאן."
         />
       ) : (
@@ -172,7 +193,8 @@ function CashLinesBody({
                 agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
                 currency={row.currency}
                 // Under "יצא" a payment is already named, so it carries no minus; a refund on either side reads as money the other way.
-                sign={side === "in" ? (row.amount_minor < 0n ? "out" : "in") : row.amount_minor < 0n ? "in" : "cost"}
+                // Under "לא נספר ברווח" both sides mix, so money out keeps its minus.
+                sign={lineSign(side, row)}
                 inWord={side === "out" ? "זיכוי" : undefined}
                 source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}

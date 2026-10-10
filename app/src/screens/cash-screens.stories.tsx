@@ -29,6 +29,8 @@ export const CashHomeMonth: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
+    // FLOW-418: under רווח החודש, the rest of the month's figure with what it holds.
+    await expect(canvas.getByRole("link", { name: /^לא נספר ברווח ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
     // FLOW-417: the whole history opens from under the last month.
     await expect(canvas.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
@@ -83,3 +85,26 @@ export const CashLinesOut: Story = {
   },
 };
 export const CashLinesOut320: Story = { ...CashLinesOut, name: "Cash, the month's יצא, 320", ...at320 };
+
+/** FLOW-418: the lines behind לא נספר ברווח, money in and out mixed. */
+export const CashLinesKept: Story = {
+  name: "Cash, the month's לא נספר ברווח",
+  render: () => {
+    const data = sampleCashMonths();
+    return (
+      <StoryRoute entry="/" tabs>
+        <CashLinesScreen
+          sample={{ months: data, lines: sampleCashLines("kept") }}
+          at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side: "kept", currency: "ILS" }}
+        />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    await expect(canvas.getByText("כסף שזז בבנק, אבל אינו הכנסה או הוצאה.")).toBeInTheDocument();
+  },
+};
+export const CashLinesKeptDark: Story = { ...CashLinesKept, name: "Cash, the month's לא נספר ברווח, dark", ...dark };
+export const CashLinesKept320: Story = { ...CashLinesKept, name: "Cash, the month's לא נספר ברווח, 320", ...at320 };

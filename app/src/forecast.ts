@@ -1,4 +1,4 @@
-import type { ExpectedMonths, ExpectedParty, MissingBill } from "@flow/shared";
+import { formatAmountText, type ExpectedMonths, type ExpectedParty, type MissingBill } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -23,8 +23,10 @@ function abs(minor: bigint): bigint {
 export type MissingBillView = {
   id: string;
   name: string;
-  /** "עד 07/10": the day the bill is late from. */
-  due: string;
+  /** FLOW-415: "project · category" when the bill files to one; null when neither is known. */
+  place: string | null;
+  /** FLOW-415: "כל חודש ב־2 · אחרון 02/09". */
+  usual: string;
   /** The typical amount, unsigned (the list is all expenses). */
   minor: bigint;
   currency: string;
@@ -37,11 +39,33 @@ export function missingBillHref(name: string, search: string): string {
   return searchHref(name, search, { dir: "expense" });
 }
 
-export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date()): MissingBillView[] {
+/** FLOW-415: the pace and day a recurring charge comes ("כל חודש ב־2"), and when the last one came. */
+export function usualDayText(typicalDay: number, lastDocDate: string | null | undefined, now = new Date()): string {
+  const day = `כל חודש ב־${String(typicalDay)}`;
+  return lastDocDate == null ? day : `${day} · אחרון ${formatDayMonth(lastDocDate, now)}`;
+}
+
+/** Names for the ids a late bill files to. A name not found leaves its half of the line out. */
+export type MissingBillNames = {
+  project?: (id: string) => string | undefined;
+  category?: (id: string) => string | undefined;
+};
+
+/** FLOW-415: "project · category", either half alone, or null. */
+export function missingBillPlace(row: Pick<MissingBill, "project_id" | "category_id">, names: MissingBillNames = {}): string | null {
+  const parts = [
+    row.project_id == null ? undefined : names.project?.(row.project_id),
+    row.category_id == null ? undefined : names.category?.(row.category_id),
+  ].filter((part): part is string => part != null && part !== "");
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+export function missingBillViews(rows: readonly MissingBill[], search: string, now = new Date(), names: MissingBillNames = {}): MissingBillView[] {
   return rows.map((row) => ({
     id: `${row.supplier_id}:${row.currency}`,
     name: row.supplier_name === "" ? "ללא שם" : row.supplier_name,
-    due: `עד ${formatDayMonth(row.expected_by, now)}`,
+    place: missingBillPlace(row, names),
+    usual: usualDayText(row.typical_day, row.last_doc_date, now),
     minor: abs(row.typical_amount_minor),
     currency: row.currency,
     href: missingBillHref(row.supplier_name, search),
@@ -51,6 +75,48 @@ export function missingBillViews(rows: readonly MissingBill[], search: string, n
 /** The Home pending card's third row: a count, never a total (plan default 3). */
 export function missingBillsTitle(count: number): string {
   return count === 1 ? "חשבון אחד לא הגיע" : `${String(count)} חשבונות לא הגיעו`;
+}
+
+/**
+ * FLOW-415 (layout A): one payment this month that is 20% or more off its usual amount, as Home's
+ * attention card shows it (`recurring_changes`). The server picks the payments and computes the
+ * change; the app only words it.
+ */
+export type ChargeChange = {
+  transaction_id: string;
+  category_name: string | null;
+  currency: string;
+  /** This payment, signed. */
+  amount_minor: bigint;
+  /** The usual amount, signed. */
+  typical_amount_minor: bigint;
+  /** Whole percent, signed: 38 is up 38%. */
+  change_percent: number;
+};
+
+export type ChargeChangeView = {
+  id: string;
+  /** "חשמל עלה ב־38%" or "חשמל ירד ב־25%". */
+  title: string;
+  /** "₪2,550" and "₪1,850", unsigned. */
+  now: string;
+  usual: string;
+  /** The payment's page. */
+  href: string;
+};
+
+export function chargeChangeViews(rows: readonly ChargeChange[], search: string): ChargeChangeView[] {
+  return rows.map((row) => {
+    const name = row.category_name == null || row.category_name === "" ? "ללא קטגוריה" : row.category_name;
+    const percent = row.change_percent;
+    return {
+      id: row.transaction_id,
+      title: `${name} ${percent < 0 ? "ירד" : "עלה"} ב־${String(Math.abs(percent))}%`,
+      now: formatAmountText(abs(row.amount_minor), row.currency),
+      usual: formatAmountText(abs(row.typical_amount_minor), row.currency),
+      href: `/transactions/${row.transaction_id}${search}`,
+    };
+  });
 }
 
 export type ExpectedPartyView = {

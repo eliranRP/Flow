@@ -25,6 +25,11 @@ test("a waiting card keeps the settled height for a fill, an auto fill, one row,
       const waiting = page.locator(`[data-layout="${id}"] [data-phase="waiting"] .ui-review`);
       const settled = page.locator(`[data-layout="${id}"] [data-phase="settled"] .ui-review`);
       await expect(waiting).toBeVisible();
+      // Rubik is still loading on the first paint: in the fallback face the supplier wraps to two
+      // lines, so a card read before it swaps in came out 316 against 311.875 at 320.
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+      });
       const waitingBox = await waiting.boundingBox();
       const settledBox = await settled.boundingBox();
       expect(waitingBox?.height, `${id} at ${String(width)}`).toBe(settledBox?.height);

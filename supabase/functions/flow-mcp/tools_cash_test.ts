@@ -78,9 +78,11 @@ Deno.test("get_cash_lines takes a month as YYYY-MM or a date, a side, a currency
   assertEquals(result.isError, false);
   if (result.structuredContent.ok) assertEquals(result.structuredContent.data, page);
   await callTool("get_cash_lines", { month: "2026-09-15", side: "excluded", currency: "USD", limit: 10, offset: 20 }, ["read"], rpc);
+  await callTool("get_cash_lines", { month: "2026-09", side: "not_in_profit" }, ["read"], rpc);
   assertEquals(calls, [
     { name: "cash_month_lines", body: { p_month: "2026-09-01", p_side: "out", p_currency: null, p_limit: 40, p_offset: 0 } },
     { name: "cash_month_lines", body: { p_month: "2026-09-15", p_side: "excluded", p_currency: "USD", p_limit: 10, p_offset: 20 } },
+    { name: "cash_month_lines", body: { p_month: "2026-09-01", p_side: "not_in_profit", p_currency: null, p_limit: 40, p_offset: 0 } },
   ]);
 });
 

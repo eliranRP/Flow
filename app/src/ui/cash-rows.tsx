@@ -5,20 +5,24 @@ import { ChevronIcon } from "./icons";
 
 /**
  * FLOW-413, frame b. The cash view's rows: נכנס (green), יצא and a quiet רווח החודש under its
- * figure, and the earlier months. They share the look of Home's income and expense rows
- * (ui-flow-line), and each row opens what is behind it. A currency other than the base adds a line under the first amount.
+ * figure, then (FLOW-418) a quiet לא נספר ברווח with a hint naming what it holds, and the earlier
+ * months. They share the look of Home's income and expense rows (ui-flow-line), and each row opens
+ * what is behind it. A currency other than the base adds a line under the first amount.
  */
 
-/** "in" is green; "net" (a month row) and "quiet" (רווח החודש) show a loss in red with its minus. */
-export type CashRowTone = "in" | "out" | "net" | "quiet";
+/**
+ * "in" is green; "net" (a month row) and "quiet" (רווח החודש) show a loss in red with its minus.
+ * "aside" (FLOW-418, לא נספר ברווח) reads quiet and keeps its minus without red: it is not a loss.
+ */
+export type CashRowTone = "in" | "out" | "net" | "quiet" | "aside";
 
 export type CashRow = {
   id: string;
   label: string;
+  /** A short line under the label: FLOW-418 "שיפוץ והשבחה, השקעת בעלים", FLOW-417 "10 חודשים". */
+  hint?: string;
   tone: CashRowTone;
   amounts: { currency: string; minor: bigint }[];
-  /** FLOW-417: a quiet line under the label ("10 חודשים", "מאז מרץ"). */
-  hint?: string;
   /** Where the row opens. A row without one is a figure only (a year's נכנס and יצא). */
   href?: string;
   /** רווח החודש: the month the profit view opens on. */
@@ -39,10 +43,14 @@ export function CashRows({ rows, onOpen, months = false }: { rows: CashRow[]; on
       {rows.map((row) => {
         const body = (
           <>
-            <span className="ui-flow-label t-body">
-              {row.label}
-              {row.hint ? <span className="ui-flow-hint t-hint">{row.hint}</span> : null}
-            </span>
+            {row.hint == null ? (
+              <span className="ui-flow-label t-body">{row.label}</span>
+            ) : (
+              <span className="ui-flow-labels">
+                <span className="ui-flow-label t-body">{row.label}</span>
+                <span className="ui-flow-hint t-hint">{row.hint}</span>
+              </span>
+            )}
             <span className="ui-flow-amounts">
               {row.amounts.map((amount) => (
                 <BigNumber
@@ -68,7 +76,7 @@ export function CashRows({ rows, onOpen, months = false }: { rows: CashRow[]; on
           <Link
             key={row.id}
             to={row.href}
-            className={row.tone === "quiet" ? "ui-flow-line ui-flow-link ui-hit ui-cash-quiet" : "ui-flow-line ui-flow-link ui-hit"}
+            className={row.tone === "quiet" || row.tone === "aside" ? "ui-flow-line ui-flow-link ui-hit ui-cash-quiet" : "ui-flow-line ui-flow-link ui-hit"}
             aria-label={row.name}
             onClick={onOpen == null ? undefined : () => {
               onOpen(row);

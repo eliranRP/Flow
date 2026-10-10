@@ -15,11 +15,21 @@ const cashCurrencyRowSchema = z.object({
   /** יצא: money out, positive (a month where refunds beat costs is negative). */
   out_minor: minorSchema,
   net_minor: minorSchema,
-  /** The month's profit on the P&L's invoiced basis, for the "רווח החודש" row. */
+  /** The month's profit on the company's basis, for the "רווח החודש" row. */
   profit_minor: minorSchema,
   excluded_count: z.number().int().nonnegative(),
   excluded_in_minor: minorSchema,
   excluded_out_minor: minorSchema,
+  /**
+   * FLOW-418: the cash the P&L leaves out, by category, signed like net (money in positive),
+   * largest first. "לא נספר ברווח" is net minus profit; what these don't cover is VAT and lines
+   * out of the view but in profit.
+   */
+  not_in_profit_categories: z
+    .array(z.object({ name: z.string(), amount_minor: minorSchema }))
+    .optional()
+    .catch(undefined)
+    .transform((rows) => rows ?? []),
 });
 
 /** `cash_months`: the months newest first, the current month included; each month's base currency comes first. */
@@ -66,7 +76,10 @@ export const cashYearsSchema = z
 
 export const cashSideSchema = z.enum(["in", "out"]);
 
-/** `cash_month_lines`: the lines behind one month's נכנס or יצא, newest first. Amounts are positive on their side. */
+/** `cash_month_lines`' sides: נכנס, יצא, or (FLOW-418) the lines the P&L leaves out of the view's cash. */
+export const cashLinesSideSchema = z.enum(["in", "out", "not_in_profit"]);
+
+/** `cash_month_lines`: the lines behind one month's נכנס, יצא or לא נספר ברווח, newest first. Amounts are positive on their side. */
 export const cashLinesSchema = z
   .object({
     rows: z.array(
@@ -97,5 +110,6 @@ export type CashYears = z.infer<typeof cashYearsSchema>;
 export type CashYear = NonNullable<CashYears>["years"][number];
 export type CashTotalRow = CashYear["by_currency"][number];
 export type CashSide = z.infer<typeof cashSideSchema>;
+export type CashLinesSide = z.infer<typeof cashLinesSideSchema>;
 export type CashLinesPage = z.infer<typeof cashLinesSchema>;
 export type CashLine = NonNullable<CashLinesPage>["rows"][number];

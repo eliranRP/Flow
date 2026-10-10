@@ -251,6 +251,26 @@ export async function callTool(
     return ok(data);
   }
 
+  // FLOW-415 (decision 0172).
+  if (name === "get_recurring_changes" || name === "get_recurring_this_month") {
+    const changes = name === "get_recurring_changes";
+    const result = await rpc(changes ? "recurring_changes" : "recurring_this_month", {});
+    const data = result.json;
+    if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
+    return ok(changes ? { changes: data } : { arrived: data });
+  }
+
+  if (name === "get_line_recurring") {
+    const id = args.transaction_id;
+    if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");
+    const result = await rpc("payment_recurring", { p_id: id });
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(data);
+  }
+
   if (name === "get_breakdown") {
     const direction = args.direction;
     if (direction !== "income" && direction !== "expense") return fail("validation", "validation");
@@ -350,7 +370,7 @@ export async function callTool(
     const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
     if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
     const side = args.side;
-    if (side !== "in" && side !== "out" && side !== "excluded") return fail("validation", "validation");
+    if (side !== "in" && side !== "out" && side !== "excluded" && side !== "not_in_profit") return fail("validation", "validation");
     const currency = args.currency ?? null;
     if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
     const limit = limitOf(args.limit, 40);

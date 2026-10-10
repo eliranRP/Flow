@@ -139,7 +139,7 @@ export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";
 export { expectedMonthsSchema, expectedPartySchema, missingBillSchema, missingBillsSchema } from "./forecast.ts";
 export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill } from "./forecast.ts";
-export { cashBasisSchema, cashLinesSchema, cashMonthsSchema, cashSideSchema, cashYearsSchema } from "./cash.ts";
+export { cashBasisSchema, cashLinesSchema, cashMonthsSchema, cashLinesSideSchema, cashSideSchema, cashYearsSchema } from "./cash.ts";
 export type {
   CashBasis,
   CashCurrencyRow,
@@ -147,6 +147,7 @@ export type {
   CashLinesPage,
   CashMonth,
   CashMonths,
+  CashLinesSide,
   CashSide,
   CashTotalRow,
   CashYear,

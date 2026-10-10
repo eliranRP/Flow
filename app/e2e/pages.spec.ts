@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const pages: Array<[string, string]> = [
-  ["/", "כאן יופיע הרווח של העסק"],
+  ["/", "כאן יופיע התזרים של העסק"],
   ["/projects", "פרויקטים"],
   ["/projects/herzl", "פרויקט"],
   ["/review", "לאישור"],
@@ -54,7 +54,7 @@ test("a failed load is not an empty or missing record", async ({ page }) => {
 test("preview home has no fixture profit", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");
-  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
   await expect(page.getByText("37,700")).toHaveCount(0);
   await expect(page.getByText("76,300")).toHaveCount(0);
 });

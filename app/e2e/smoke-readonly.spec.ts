@@ -188,7 +188,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
     await expect(page.getByText("נכנס", { exact: true })).toBeVisible();
     await expect(page.getByText("יצא", { exact: true })).toBeVisible();
   } else {
-    await expect(page.getByRole("heading", { name: "כאן יופיע הרווח של העסק" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
   }
   await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);

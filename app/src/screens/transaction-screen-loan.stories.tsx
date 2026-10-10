@@ -127,7 +127,10 @@ export const TransactionLoanMatched: Story = {
   render: () => <LoanMatchStory />,
 };
 
-/** The row opens the split sheet: the parts, the total, שמירה and a quiet ביטול השיוך. */
+/**
+ * The row opens the split sheet: the parts and the total as static amounts, "עריכת הפיצול" (the one
+ * way to edit them, FLOW-362) and a quiet ביטול השיוך.
+ */
 export const TransactionLoanEditing: Story = {
   name: "Loan payment, split sheet",
   parameters: { viewport: { defaultViewport: "flow375-se" } },
@@ -135,7 +138,7 @@ export const TransactionLoanEditing: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeEnabled());
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "עריכת הפיצול" })).toBeEnabled());
   },
 };
 
@@ -162,6 +165,12 @@ export const TransactionLoanEditSplit320: Story = {
   name: "Loan payment, edit the split, 320",
   parameters: { viewport: { defaultViewport: "flow320" } },
 };
+/** FLOW-362: at 375x667 the fees category and "לשמור להלוואה הזו" show above שמירה. */
+export const TransactionLoanEditSplitSe: Story = {
+  ...TransactionLoanEditSplit,
+  name: "Loan payment, edit the split, 375x667",
+  parameters: { viewport: { defaultViewport: "flow375-se" } },
+};
 export const TransactionLoanEditSplitDark: Story = {
   ...TransactionLoanEditSplit,
   name: "Loan payment, edit the split, dark",
@@ -176,9 +185,13 @@ export const TransactionLoanSaveError: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     const body = storyBody(canvasElement);
-    const dialog = await body.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    const sheet = await body.findByRole("dialog", { name: "משכנתא לדוגמה" });
+    const edit = within(sheet).getByRole("button", { name: "עריכת הפיצול" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await userEvent.click(edit);
+    const dialog = await body.findByRole("dialog", { name: "פיצול התשלום" });
     const save = within(dialog).getByRole("button", { name: "שמירה" });
-    await waitFor(() => expect(save).toBeEnabled());
+    await waitFor(() => expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"));
     await userEvent.clear(within(dialog).getByLabelText("סכום, קרן"));
     await userEvent.type(within(dialog).getByLabelText("סכום, קרן"), "4100");
     await userEvent.clear(within(dialog).getByLabelText("סכום, ריבית"));

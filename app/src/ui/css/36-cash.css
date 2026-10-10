@@ -21,8 +21,20 @@
   background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
 }
 
-/* FLOW-417: a year row's quiet line under its label ("10 חודשים", "מאז מרץ"). */
+/* FLOW-418: לא נספר ברווח names what it holds on a quiet line under its label; FLOW-417's year rows
+   use the same line ("10 חודשים", "מאז מרץ"). */
+.ui-flow-labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .ui-flow-hint {
-  display: block;
-  color: var(--color-text-muted);
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
