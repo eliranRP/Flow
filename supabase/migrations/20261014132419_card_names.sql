@@ -4,6 +4,8 @@
 -- line synced before this change gets its card's name too. The sync leaves out a last 4 that two
 -- cards with different nicknames share. No other card field is stored.
 -- Like account, card_name reads as null for a demo viewer: the connection's RLS is the owner's.
+-- The account label is the nickname the owner gave the account when there is one, and each
+-- account_labels entry may carry its last 4; get_line_meta then returns "<label> ••1234".
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
@@ -44,6 +46,17 @@ begin
         and card.value->>'last4' = t.provider_meta->>'card_last4'
       limit 1
     ) end,$new$);
+
+  def := pg_get_functiondef('public.get_line_meta(uuid[])'::regprocedure);
+  anchor := $a$'[0-9]{5,}', '', 'g'
+      )), '')$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'get_line_meta account anchor was not found once';
+  end if;
+  execute replace(def, anchor, anchor || $new$ || case
+        when label.value->>'last4' ~ '^[0-9]{4}$' then ' ••' || (label.value->>'last4')
+        else ''
+      end$new$);
 end
 $patch$;
 

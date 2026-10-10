@@ -34,7 +34,7 @@ insert into public.connector_connections (
 )
 select id, 'mercury', '\x01'::bytea, '\x0201'::bytea, '\x03'::bytea, '\x0401'::bytea,
   'MERCURY_KEK', '1', '3',
-  '[{"id": "acct-1", "label": "Example Checking ••**** (1)"}]'::jsonb,
+  '[{"id": "acct-1", "label": "Example Checking ••**** (1)", "last4": "1234"}]'::jsonb,
   '[{"last4": "4242", "label": "Example Utilities"}, {"last4": "1111", "label": "Example General"}]'::jsonb
 from meta_co;
 
@@ -151,7 +151,7 @@ select is(
   ),
   jsonb_build_object(
     'method', 'card', 'card_last4', '4242', 'card_name', 'Example Utilities', 'memo', 'Updated memo',
-    'account', 'Example Checking (1)', 'counterparty', 'Example Office Suite',
+    'account', 'Example Checking (1) ••1234', 'counterparty', 'Example Office Suite',
     'bank_description', 'Example Office Suite'
   ),
   'the owner reads the card line normalized, with the masked account label tidied and the card''s nickname (FLOW-707)'

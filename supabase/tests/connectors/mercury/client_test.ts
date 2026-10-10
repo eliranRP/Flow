@@ -200,8 +200,10 @@ Deno.test("validate reads accounts, credit, and treasury and returns ids and lab
     result.accounts.length,
     accountsFile.accounts.length + creditFile.accounts.length + treasuryFile.accounts.length,
   );
-  const text = JSON.stringify(result.accounts);
+  const text = JSON.stringify(result.accounts.map(({ id, label }) => ({ id, label })));
   assertEquals(text.includes(token), false);
+  // Only the last 4 sits beside a label (FLOW-707), never more of the number.
+  assertEquals(result.accounts.every((account) => account.last4 == null || /^[0-9]{4}$/.test(account.last4)), true);
   assertEquals(text.includes("availableBalance"), false);
   assertEquals(text.includes("routingNumber"), false);
   assertEquals(text.includes("0000"), false);
@@ -901,5 +903,6 @@ Deno.test("FLOW-707: an account's nickname is its label; without one the bank's 
   assertEquals(result.ok, true);
   if (!result.ok) return;
   assertEquals(result.accounts.find((account) => account.id === first.id)?.label, "Example Street");
+  assertEquals(result.accounts.find((account) => account.id === first.id)?.last4, "0000");
   assertEquals(result.accounts.find((account) => account.id === second.id)?.label.startsWith("Mercury Savings"), true);
 });

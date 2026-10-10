@@ -280,7 +280,23 @@ function accountLabel(row: unknown, fallback: string): AccountLabel | null {
   // "Mercury Checking ••1234" (FLOW-707).
   const nickname = typeof row.nickname === "string" ? row.nickname.trim() : "";
   const name = nickname || (typeof row.name === "string" && row.name.trim() ? row.name.trim() : fallback);
-  return { id, label: String(redactMercury(name)).slice(0, 300) };
+  const label: AccountLabel = { id, label: String(redactMercury(name)).slice(0, 300) };
+  const last4 = accountLast4(row);
+  if (last4) label.last4 = last4;
+  return label;
+}
+
+/**
+ * The account's last 4, kept beside the label so a nickname still shows ••1234 (FLOW-707):
+ * from lastFour, else the "••1234" in Mercury's name, else the account number's end. Only the
+ * 4 digits are kept.
+ */
+function accountLast4(row: Record<string, unknown>): string | null {
+  if (typeof row.lastFour === "string" && /^[0-9]{4}$/.test(row.lastFour.trim())) return row.lastFour.trim();
+  const named = typeof row.name === "string" ? /(?:••|\*\*)\s?([0-9]{4})\b/.exec(row.name) : null;
+  if (named?.[1]) return named[1];
+  const number = typeof row.accountNumber === "string" ? row.accountNumber.replace(/\D/g, "") : "";
+  return number.length >= 4 ? number.slice(-4) : null;
 }
 
 /** A treasury row with no usable id is a rejected validation, not a silent drop. The log has no payload. */

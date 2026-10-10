@@ -290,7 +290,7 @@ async function syncCompany(
       const labeled = await admin
         .from("connector_connections")
         .update({
-          account_labels: plan.accounts.map(({ id, label }) => ({ id, label })),
+          account_labels: plan.accounts.map(({ id, label, last4 }) => (last4 ? { id, label, last4 } : { id, label })),
           ...cardLabelsUpdate(cardLabels),
           settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
         })
