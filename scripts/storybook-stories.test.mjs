@@ -6,6 +6,10 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { pickStories, reachesBuild, relatedRun, selectStories } from "./storybook-stories.mjs";
+import { isolatedEnv, scrubGitEnv } from "./test-git-env.mjs";
+
+// The throwaway repos must never reach the repo being pushed (see test-git-env.mjs).
+scrubGitEnv();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const select = (...changed) => selectStories(changed, { root });
@@ -52,7 +56,7 @@ function configRepo() {
     fs.writeFileSync(path.join(dir, file), text);
   };
   const json = (file, value) => write(file, `${JSON.stringify(value, null, 2)}\n`);
-  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" }).trim();
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8", env: isolatedEnv() }).trim();
   const app = {
     name: "@flow/app",
     type: "module",
@@ -108,11 +112,11 @@ test("a dependency, storybook script, compiler option or app lockfile change rea
       ["app/tsconfig.json", () => r.write("app/tsconfig.json", "{ // not JSON\n}")],
     ];
     for (const [file, change] of cases) {
-      execFileSync("git", ["checkout", "-q", "--", "."], { cwd: r.dir });
+      execFileSync("git", ["checkout", "-q", "--", "."], { cwd: r.dir, env: isolatedEnv() });
       change();
       assert.equal(r.reaches(file), true, file);
     }
-    execFileSync("git", ["checkout", "-q", "--", "."], { cwd: r.dir });
+    execFileSync("git", ["checkout", "-q", "--", "."], { cwd: r.dir, env: isolatedEnv() });
     assert.equal(reachesBuild("app/package.json", { root: r.dir }), true, "no base: any manifest change reaches");
     assert.equal(reachesBuild("app/new-tsconfig.json", { root: r.dir, base: r.base }), false, "not an app tsconfig name");
     assert.equal(reachesBuild("app/tsconfig.perf.json", { root: r.dir, base: r.base }), true, "a new tsconfig has no base side");

@@ -5,6 +5,10 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { importers, lintScope, reachesApp, sweepRoutes } from "./gate-scope.mjs";
+import { scrubGitEnv } from "./test-git-env.mjs";
+
+// git ls-files must read the tree a test names, never a hook's GIT_DIR (see test-git-env.mjs).
+scrubGitEnv();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
