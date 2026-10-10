@@ -1,15 +1,26 @@
-import { afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { afterEach, expect } from "vitest";
 import { pinReviewLine } from "./review-pin";
 
 // A file under `// @vitest-environment node` tests logic only: it skips the DOM setup below
 // (Testing Library, the jest-dom matchers, the CSS and the sheet history), about half a second a file.
 const dom = typeof document !== "undefined";
 
+// The app's CSS is 180 KB: jsdom parses it for each file and matches it on every getByRole, about
+// a fifth of the unit run. Only a file that reads styles loads it: one that measures or checks
+// visibility, uses the style helpers in ui/test-support, or says `vitest-css` because its queries
+// rely on CSS hiding (a hidden copy of a control). Without the CSS, a hidden element counts as
+// visible, so a check that something is hidden fails loudly rather than passing by mistake. The
+// other way round, a file without it no longer notices CSS that hides a control it finds by role;
+// Storybook and e2e check what is really visible.
+const readsStyles = /getComputedStyle|styleSheets|toBeVisible|toHaveStyle|test-support|vitest-css/;
+const testPath = expect.getState().testPath;
+const css = dom && (testPath == null || readsStyles.test(readFileSync(testPath, "utf8")));
+
 if (dom) {
   await Promise.all([
     import("@testing-library/jest-dom/vitest"),
-    import("../../design/system/implementation-tokens.css"),
-    import("./ui/ui.css"),
+    ...(css ? [import("../../design/system/implementation-tokens.css"), import("./ui/ui.css")] : []),
   ]);
 }
 const library = dom ? await import("@testing-library/react") : null;

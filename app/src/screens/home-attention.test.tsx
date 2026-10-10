@@ -1,3 +1,4 @@
+// vitest-css: these queries rely on the app's CSS hiding elements.
 import type { Dashboard, ProjectRow } from "@flow/shared";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";

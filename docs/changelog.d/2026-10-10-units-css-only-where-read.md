@@ -1,0 +1,1 @@
+The unit tests load the app's 180 KB stylesheet only in the 51 files that read styles. Those are the files that measure, check visibility, use the style helpers, or mark `vitest-css`. The full jsdom suite drops from about 278 s to 237 s on 4 workers, with the same 1,872 tests and isolation kept.
