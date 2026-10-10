@@ -72,12 +72,12 @@
   font-weight: var(--type-amount-weight);
 }
 
-/* "חלוקה אחרת" under the match sheet's loans. */
+/* "פיצול אחר" under the match sheet's loans. */
 .ui-loan-other {
   margin-block-start: var(--space-2);
 }
 
-/* FLOW-115: the match sheet with no loan to pick says why, then offers הלוואה חדשה. */
+/* FLOW-115, FLOW-356: the match sheet with no loan to pick offers הלוואה חדשה; the row's hint says why. */
 .ui-loan-empty {
   display: flex;
   flex-direction: column;
@@ -87,4 +87,9 @@
 
 .ui-loan-empty > .t-hint {
   margin: 0;
+}
+
+/* The empty state's 44px button sits the gap under its one line, not 24px away as on a page (FLOW-356). */
+.ui-loan-empty > .ui-empty-action {
+  margin-top: 0;
 }

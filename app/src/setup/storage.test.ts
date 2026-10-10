@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { emptySetupStore, parseSetupStore, readSetupStore, setupStorageKey, writeSetupStore } from "./storage";
+import { emptySetupStore, mergeSetupStores, parseSetupStore, readSetupStore, setupStorageKey, writeSetupStore } from "./storage";
 
 afterEach(() => {
   localStorage.clear();
@@ -38,5 +38,17 @@ describe("setup storage", () => {
       writeSetupStore("user-a", "company-a", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
     }).not.toThrow();
     setItem.mockRestore();
+  });
+
+  it("keeps a starter pick only with a known set and its stamp, and the later pick wins a merge", () => {
+    const at = "2026-10-09T21:00:00.000Z";
+    expect(parseSetupStore(JSON.stringify({ starter_set: "rentals", starter_at: at }))).toMatchObject({ starter_set: "rentals", starter_at: at });
+    expect(parseSetupStore(JSON.stringify({ starter_set: "farm", starter_at: at }))).toMatchObject({ starter_set: null, starter_at: null });
+    expect(parseSetupStore(JSON.stringify({ starter_set: "rentals" }))).toMatchObject({ starter_set: null, starter_at: null });
+    const server = { ...emptySetupStore(), starter_set: "rentals" as const, starter_at: at };
+    const local = { ...emptySetupStore(), starter_set: "renovation" as const, starter_at: "2026-10-09T21:05:00.000Z" };
+    expect(mergeSetupStores(server, local)).toMatchObject({ starter_set: "renovation", starter_at: local.starter_at });
+    expect(mergeSetupStores(local, server)).toMatchObject({ starter_set: "renovation", starter_at: local.starter_at });
+    expect(mergeSetupStores(server, emptySetupStore())).toMatchObject({ starter_set: "rentals", starter_at: at });
   });
 });

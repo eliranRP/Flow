@@ -22,7 +22,7 @@ type Common = {
 type AsButton = Common &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { to?: undefined };
 
-type AsLink = Common & { to: string; state?: unknown };
+type AsLink = Common & { to: string; state?: unknown; /** Replaces the current history entry, as a sheet's own entry does. */ replace?: boolean };
 
 export type ButtonProps = AsButton | AsLink;
 
@@ -74,6 +74,7 @@ export function Button(props: ButtonProps) {
       <Link
         to={props.to}
         state={props.state}
+        replace={props.replace}
         className={classes}
         aria-label={named["aria-label"]}
         aria-disabled={props.busy || undefined}
