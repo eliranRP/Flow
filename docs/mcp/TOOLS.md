@@ -815,6 +815,18 @@ Input: `{ "month": "2026-09", "side": "out" }`.
 
 Output `data`: `rows[]` newest first (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `cash_month_date`, `currency`, `amount_minor`, `side`, `shared`, `source`, `kept_out`) and `has_more`. A loan payment has a row per part; a line split's parts on one side are one row.
 
+### get_project_cash_months
+
+`project_cash_months(p_project, p_months)` ([0176](../decisions/0176-project-opens-on-cash.md), FLOW-419). One project's cash per month, in `get_cash_months`' shape. `project_id` is required (from `list_projects`); `months` is 1 to 24 (default 4). A line filed or split to the project counts whole (its part); a shared line counts the project's allocation share of its gross, so a project shows its own part of a bill. `profit_minor` is the project's profit for the month on the company's basis (income less direct and shared cost, as `get_profit_months` with `project_id`), before the overhead share. `not_in_profit_minor` and `not_in_profit_categories` are `get_cash_months`' לא נספר ברווח for the project (FLOW-418). A project of another company, or an unknown one, is `not_found`.
+
+Input: `{ "project_id": "…", "months": 4 }`.
+
+### get_project_cash_lines
+
+`project_cash_month_lines(p_project, p_month, p_side, p_currency, p_limit, p_offset)`. The lines behind a `get_project_cash_months` figure, with `get_cash_lines`' arguments and rows plus `project_id`, side `not_in_profit` included. A shared line's `amount_minor` is the project's share, and its row has `shared: true`; `project_name` is null.
+
+Input: `{ "project_id": "…", "month": "2026-09", "side": "out" }`.
+
 ### match_lines
 
 `match_lines(p_rows, p_window_days, p_direction, p_currency)`, read only ([FLOW-213](../backlog/tasks/FLOW-213.md)). Reconciles an outside ledger export against Flow in one call. `rows` is 1 to 500 of `{ "date": "YYYY-MM-DD", "amount_minor": <non-zero integer>, "ref": "<optional, up to 200 characters>" }`; the sign of `amount_minor` is ignored. A row matches a line of the same gross amount in `currency` (the base currency by default) whose document date or payment date is within `window_days` (0 to 31, default 5) of the row's date. `direction` (`income` or `expense`) narrows the lines. Removed and void lines never match; pending lines do. Each row gets at most one line and each line at most one row, closest dates first, then row order.

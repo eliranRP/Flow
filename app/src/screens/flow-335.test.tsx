@@ -93,12 +93,12 @@ describe("FLOW-335 project band", () => {
     expect(projectStateLine({ status: "active", state_label: "פעיל" })).toBeNull();
     expect(projectStateLine({ status: "active", state_label: null })).toBeNull();
     expect(projectStateLine({ status: "finished", state_label: null })).toBe("הסתיים");
-    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1"));
+    render(wrap(<ProjectDetailScreen sample={project()} section="profit" />, "/projects/p1"));
     expect(screen.queryByText("פעיל")).not.toBeInTheDocument();
   });
 
   it("keeps the overhead switch in the ⋯ menu, and לפי חודש is a plain row with a chevron (FLOW-340 C)", () => {
-    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1?period=month&at=2026-09"));
+    render(wrap(<ProjectDetailScreen sample={project()} section="profit" />, "/projects/p1?period=month&at=2026-09"));
     const row = screen.getByRole("link", { name: /לפי חודש/ });
     expect(row).toHaveClass("ui-row");
     expect(row.closest(".ui-banner")).toBeNull();
@@ -113,7 +113,7 @@ describe("FLOW-337 by month is the whole project", () => {
     months.periods.length = 0;
     render(wrap(
       <Routes>
-        <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={project()} />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={project()} section="profit" />} />
       </Routes>,
       "/projects/p1?period=month&at=2026-09",
     ));

@@ -226,10 +226,10 @@ const periodProject: NonNullable<ProjectDetailData> = {
 };
 
 export const ProjectPeriod: Story = {
-  name: "Project, own period, summary first",
+  name: "Project, profit page, own period",
   render: () => (
-    <StoryRoute entry="/projects/p-a" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} />
+    <StoryRoute entry="/projects/p-a/profit" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} section="profit" />
     </StoryRoute>
   ),
 };
@@ -240,8 +240,8 @@ export const ProjectPeriodDark320: Story = { ...ProjectPeriod, name: "Project, o
 export const ProjectOneMonth: Story = {
   name: "Project, one month opened from by month",
   render: () => (
-    <StoryRoute entry="/projects/p-a?period=month&at=2026-09" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={{ ...periodProject, transactions: periodProject.transactions.filter((txn) => txn.doc_date.startsWith("2026-09")) }} />
+    <StoryRoute entry="/projects/p-a/profit?period=month&at=2026-09" tabs>
+      <ProjectDetailScreen example={exampleOnBand} section="profit" sample={{ ...periodProject, transactions: periodProject.transactions.filter((txn) => txn.doc_date.startsWith("2026-09")) }} />
     </StoryRoute>
   ),
 };
@@ -249,8 +249,8 @@ export const ProjectOneMonth: Story = {
 export const ProjectFromStart: Story = {
   name: "Project, from the start",
   render: () => (
-    <StoryRoute entry="/projects/p-a?period=all" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} />
+    <StoryRoute entry="/projects/p-a/profit?period=all" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} section="profit" />
     </StoryRoute>
   ),
 };
@@ -290,8 +290,9 @@ export const ProjectInvestment: Story = {
 const overviewProject: NonNullable<ProjectDetailData> = {
   ...periodProject,
   loans: [
-    { id: "l1", name: "הלוואת גישור לדוגמה", currency: "ILS", balance_minor: 80_000_000n, status: "open" },
-    { id: "l2", name: "משכנתא לדוגמה", currency: "ILS", balance_minor: 40_000_000n, status: "open" },
+    // The open balances add up to the investment card's יתרת הלוואות (FILLED, ₪800,000).
+    { id: "l1", name: "הלוואת גישור לדוגמה", currency: "ILS", balance_minor: 50_000_000n, status: "open" },
+    { id: "l2", name: "משכנתא לדוגמה", currency: "ILS", balance_minor: 30_000_000n, status: "open" },
   ],
 };
 const sectionTo = (target: string) => (target === "overview" ? "/projects/p-a" : `/projects/p-a/${target}`);
@@ -469,11 +470,11 @@ export const ProjectLoansSection: Story = {
 export const ProjectLoansSection320: Story = { ...ProjectLoansSection, name: "Project, loans section, 320", ...at320 };
 
 export const ProjectInvestmentScreen: Story = {
-  name: "Project, investment section",
+  name: "Project, investment and loans section",
   render: () => (
     <StoryRoute entry="/projects/p-a/investment" tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} section="investment" sectionTo={sectionTo} />
     </StoryRoute>
   ),
 };
-export const ProjectInvestmentScreen320: Story = { ...ProjectInvestmentScreen, name: "Project, investment section, 320", ...at320 };
+export const ProjectInvestmentScreen320: Story = { ...ProjectInvestmentScreen, name: "Project, investment and loans section, 320", ...at320 };
