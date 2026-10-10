@@ -1,7 +1,7 @@
 # Invite emails through Resend
 
 **Date:** 2026-10-10
-**Status:** Accepted (FLOW-607, the owner's pick: send real invite emails)
+**Status:** Accepted (FLOW-421, the owner's pick: send real invite emails)
 
 ## Context
 
