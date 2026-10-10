@@ -26,6 +26,8 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
       return demoDashboard(from, to, "invoiced");
     case "get_project":
       return demoProject(typeof args.p_id === "string" ? args.p_id : "");
+    case "project_cash_months":
+      return projectCash();
     case "list_unpaid":
       return demoUnpaid();
     case "list_review":
@@ -43,6 +45,30 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
     default:
       return [];
   }
+}
+
+/** FLOW-419: a project opens on its cash; four months of invented figures, the current one first. */
+function projectCash() {
+  const now = new Date();
+  const months = [0, 1, 2, 3].map((back) => {
+    const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+    return {
+      month: day.toISOString().slice(0, 10),
+      by_currency: [{
+        currency: "ILS",
+        in_minor: 1_250_000 - back * 100_000,
+        out_minor: 840_000 + back * 50_000,
+        net_minor: 410_000 - back * 150_000,
+        profit_minor: 380_000 - back * 120_000,
+        excluded_count: 0,
+        excluded_in_minor: 0,
+        excluded_out_minor: 0,
+        not_in_profit_minor: 30_000 - back * 30_000,
+        not_in_profit_categories: [],
+      }],
+    };
+  });
+  return { basis: "paid", base_currency: "ILS", months };
 }
 
 /** The one company the stub user owns; the app names it on every read once list_my_companies answers. */
