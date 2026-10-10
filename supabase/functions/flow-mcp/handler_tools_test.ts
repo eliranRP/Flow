@@ -145,6 +145,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "set_cash_basis",
     "set_line_recurring",
     "set_line_pace",
+    "answer_recurring_match",
     "undo_jev_prefill",
     "undo",
     "undo_batch",

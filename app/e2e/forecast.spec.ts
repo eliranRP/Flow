@@ -74,3 +74,20 @@ test("Project: with no history the section says so in one line", async ({ page }
   await expect(section).toContainText("אין עדיין צפי.");
   await expect(section.getByRole("button")).toHaveCount(0);
 });
+
+test("קבועים: a late bill suggests a renamed supplier; כן takes the row out and לא its hint, each with ביטול", async ({ page }) => {
+  await page.goto("/e2e/missing-bills?preview=1&match=1");
+  const late = page.getByRole("region", { name: "לא הגיעו" });
+  const hint = late.getByRole("group", { name: "אולי זה: Riverside Water Works" });
+  await expect(hint).toContainText("אולי זה: Riverside Water Works · $57.79 · 06/10");
+  await expect(late.getByRole("link")).toHaveCount(3);
+  await hint.getByRole("button", { name: "כן, אותו ספק: Riverside Water Works" }).click();
+  await expect(page.getByText("סומן כאותו ספק")).toBeVisible();
+  await expect(late.getByRole("link")).toHaveCount(2);
+  await page.getByRole("button", { name: "ביטול" }).click();
+  await expect(late.getByRole("link")).toHaveCount(3);
+  await hint.getByRole("button", { name: /^לא, Riverside Water Works/ }).click();
+  await expect(page.getByText("לא נציע שוב")).toBeVisible();
+  await expect(hint).toBeHidden();
+  await expect(late.getByRole("link")).toHaveCount(3);
+});
