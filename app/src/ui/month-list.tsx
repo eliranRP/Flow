@@ -25,6 +25,12 @@ type MonthListProps<T> = {
    * Real agorot only, no ".00". Search, option C (FLOW-339).
    */
   net?: boolean;
+  /**
+   * Each month's totals from the server, keyed by month (YYYY-MM), for every matching line, not
+   * only the rows loaded. When given, every month head shows them, the last one too while it is
+   * still paging, and a month missing from the map shows none. Search (month totals bug).
+   */
+  monthTotals?: ReadonlyMap<string, readonly MonthTotal[]>;
 };
 
 /**
@@ -45,6 +51,7 @@ export function MonthList<T>({
   cents = false,
   cost = false,
   net = false,
+  monthTotals,
 }: MonthListProps<T>) {
   const baseId = useId();
   const groups = groupByMonth(rows, dateOf, amountOf, cents);
@@ -76,8 +83,8 @@ export function MonthList<T>({
         <MonthSection
           key={group.key}
           id={`${baseId}-${group.key}`}
-          group={group}
-          showTotals={complete || index < groups.length - 1}
+          group={monthTotals == null ? group : { ...group, totals: [...(monthTotals.get(group.key) ?? [])] }}
+          showTotals={monthTotals != null || complete || index < groups.length - 1}
           keyOf={keyOf}
           dateOf={dateOf}
           renderRow={renderRow}
