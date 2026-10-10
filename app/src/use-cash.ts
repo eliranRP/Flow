@@ -1,6 +1,6 @@
-import type { CashLinesPage, CashMonths, CashSide } from "@flow/shared";
+import type { CashLinesPage, CashMonths } from "@flow/shared";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { CASH_MONTHS } from "./cash";
+import { CASH_MONTHS, type CashListSide } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { monthPeriod } from "./period";
@@ -33,8 +33,8 @@ export function useCashMonthsQuery(active = true) {
 
 const CASH_LINES_PAGE = 40;
 
-/** One month's נכנס or יצא lines in one currency, newest first. */
-export function useCashLinesQuery(month: string, side: CashSide, currency: string, active = true) {
+/** One month's נכנס, יצא or לא נספר ברווח lines in one currency, newest first. */
+export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true) {
   const preview = useHomePreview();
   return useInfiniteQuery({
     queryKey: ["breakdown-lines", "cash", preview, month, side, currency],
@@ -46,7 +46,7 @@ export function useCashLinesQuery(month: string, side: CashSide, currency: strin
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("cash_month_lines", {
         p_month: `${month}-01`,
-        p_side: side,
+        p_side: side === "kept" ? "not_in_profit" : side,
         p_currency: currency,
         p_limit: CASH_LINES_PAGE,
         p_offset: pageParam,

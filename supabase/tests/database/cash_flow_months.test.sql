@@ -241,7 +241,7 @@ select is(
 );
 select is(
   pg_temp.month_row('2026-05-01', 'ILS'),
-  '{"currency": "ILS", "in_minor": 0, "out_minor": 0, "net_minor": 0, "profit_minor": 0, "excluded_count": 0, "excluded_in_minor": 0, "excluded_out_minor": 0}'::jsonb,
+  '{"currency": "ILS", "in_minor": 0, "out_minor": 0, "net_minor": 0, "profit_minor": 0, "excluded_count": 0, "excluded_in_minor": 0, "excluded_out_minor": 0, "not_in_profit_minor": 0, "not_in_profit_categories": []}'::jsonb,
   'a quiet month still has its base currency row'
 );
 
