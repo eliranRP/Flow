@@ -72,7 +72,7 @@ function installDepsStep(body) {
 function playwrightProblems(text) {
   /** @type {string[]} */
   const problems = [];
-  for (const name of ["check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     const body = jobIn(text, name);
     if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
     if (body.includes("env.ImageOS") || body.includes("env.ImageVersion")) problems.push(`${name} runner image`);
@@ -134,13 +134,13 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("plan"), /FLOW_DEPLOY_BATCH: "5"\n/);
   assert.match(job("plan"), /fetch-depth: 0\n/);
   assert.match(job("plan"), /deployments: read\n/);
-  for (const name of ["lint", "check-core", "check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     assert.match(job(name), /\n {4}needs: \[plan\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/, name);
   }
   // check and e2e are the required checks. They are gates that run always and pass only on success.
-  assert.match(job("check"), /needs: \[plan, check-core, check-storybook, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
+  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-perf, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("check"), /test "\$CORE" = success\n/);
-  for (const name of ["CORE", "STORYBOOK", "STORIES"]) {
+  for (const name of ["CORE", "APP", "STORYBOOK", "STORIES"]) {
     assert.match(job("check"), new RegExp(`test "\\$${name}" = success\n`), name);
   }
   assert.match(job("e2e"), /needs: \[plan, e2e-shard\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
@@ -149,10 +149,31 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /pnpm check:reviewer-bundle/);
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
-  assert.match(ci, /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\}\/3\n/);
-  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/4\n/);
-  assert.match(job("check-storybook"), /pnpm test:storybook:smoke --grep-invert "every static story"\n/);
+  // FLOW-812: the sweeps on two runners and the rest of the suite on four, split by one title, so
+  // every test runs once; the database checks on a seventh runner.
+  assert.match(job("e2e-shard"), /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\} \$\{\{ matrix\.filter \}\} "no enabled control is a no-op"\n/);
+  assert.ok(job("e2e-shard").includes(`        include:
+          - part: database
+          - { part: 1/4, shard: 1/4, filter: --grep-invert }
+          - { part: 2/4, shard: 2/4, filter: --grep-invert }
+          - { part: 3/4, shard: 3/4, filter: --grep-invert }
+          - { part: 4/4, shard: 4/4, filter: --grep-invert }
+          - { part: sweeps 1/2, shard: 1/2, filter: --grep }
+          - { part: sweeps 2/2, shard: 2/2, filter: --grep }
+    steps:
+`));
+  assert.equal((job("e2e-shard").match(/if: matrix\.part == 'database'\n/g) ?? []).length, 5);
+  assert.match(job("e2e-shard"), /if: matrix\.part != 'database'\n {8}run: \|\n {10}set -euo pipefail\n {10}eval "\$\(bash scripts\/ci-local-supabase-env\.sh\)"\n/);
+  // Seven story runners, each with three of the every-story test's groups and a seventh of the other specs.
+  // With them the run holds 20 jobs at once, GitHub Free's limit: an eighth runner waited for a free slot.
+  assert.match(job("check-stories"), /shard: \[1, 2, 3, 4, 5, 6, 7\]\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/7\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/7\n/);
+  const storySpec = readFileSync(new URL("../app/e2e/storybook-static.spec.ts", import.meta.url), "utf8");
+  assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 7, 0);
   assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
+  assert.match(job("check-perf"), /pnpm --filter @flow\/app test:perf\n/);
+  assert.equal(job("check-storybook").includes("test:perf"), false);
   assert.equal(ci.includes("check-unit"), false);
   assert.match(
     job("check-core"),
@@ -168,9 +189,15 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   const deno2 = "deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors";
   assert.equal(rootScripts["test:unit"], `node --test scripts/*.test.mjs && pnpm -r --if-present test && ${deno1} && ${deno2}`);
   const unitStep = job("check-core").slice(job("check-core").indexOf("- name: Unit tests"));
-  for (const part of ["node --test scripts/*.test.mjs", "pnpm -r --if-present --filter '!flow' test", deno1, deno2]) {
+  for (const part of ["node --test scripts/*.test.mjs", "pnpm -r --if-present --filter '!flow' --filter '!@flow/app' test", deno1, deno2]) {
     assert.ok(unitStep.includes(`\n          ${part}\n`), part);
   }
+  // check-app runs the @flow/app part, in two halves.
+  const appPackage = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8"));
+  assert.equal(appPackage.name, "@flow/app");
+  assert.equal(appPackage.scripts.test, "vitest run --project unit");
+  assert.match(job("check-app"), /shard: \[1, 2\]\n/);
+  assert.match(job("check-app"), /run: pnpm --filter @flow\/app test --shard=\$\{\{ matrix\.shard \}\}\/2\n/);
   assert.equal((job("check-core").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);
   assert.match(job("check-core"), /run: \|\n {10}pnpm test:connectors\n {10}node scripts\/check-deny-list\.mjs\n/);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
@@ -311,7 +338,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check-core", "check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
   }
   for (const name of ["check", "e2e"]) {
@@ -383,7 +410,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
-  for (const name of ["check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     const step = installDepsStep(job(name));
     assert.equal(step.includes(INSTALL_DEPS), true, `${name} install-deps`);
     assert.equal(/\bif:/.test(step), false, `${name} install-deps condition`);
