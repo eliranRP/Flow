@@ -36,7 +36,18 @@ export function TxnChargeSwitches({
   const query = usePaymentRecurringQuery(sample === undefined ? txn.id : "", sample === undefined);
   const [sampleCash, setSampleCash] = useState<boolean | null | undefined>(undefined);
   const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
-  const recurring = sample === undefined ? query.data : sample;
+  // A sample screen with no recurring state of its own: the line's party, not recurring yet.
+  const recurring = sample === undefined
+    ? query.data
+    : (sample ?? {
+        transaction_id: txn.id,
+        party: { direction: txn.direction === "income" ? "income" as const : "expense" as const, id: "sample", name: party, currency: "ILS" },
+        recurring: false,
+        override: null,
+        detected: false,
+        typical_day: null,
+        typical_amount_minor: null,
+      });
 
   const cash = useWrite<CashChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
