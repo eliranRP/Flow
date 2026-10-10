@@ -1,6 +1,6 @@
 <a id="flow-356"></a>
 # FLOW-356 · Phone polish after the October 9 late deploy (cycle 13)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (dev lane 1, 2026-10-10: the three loan items; the setup, Projects tab and onboarding items wait for #420, #418 and #421) · **Depends on:** —
 - **Source:** cycle 13 phone review of main at 13bc011 (deploy run 1045), 2026-10-09. Shots and findings in the project files under `reviews/ui-ux-cycle-13/`.
 - [ ] Paid-off loan page: it still leads with "$1,240.00 יתרה" beside the נפרעה pill, keeps the תשלום חודשי row, and repeats the status as a "מצב: נפרעה" row. The owner's FLOW-138 pick is "Hide": lead with "נפרעה · date" only, drop the figure and יתרה, hide תשלום חודשי, and don't repeat the status as a row (screens/loan-detail-screen.tsx:333). #394 did this for the list rows only.
 - [ ] Setup step 0 "פרטי העסק": the title box starts 8px under the top edge (steps 1 to 5 start at 79px), because step 0 has no bar and runs in a browser tab before install, where the safe area is 0. The title then jumps about 70px when step 1 opens. Render the empty 44px `.ui-setup-bar` slot on step 0 too (setup/shell.tsx:38-57).
