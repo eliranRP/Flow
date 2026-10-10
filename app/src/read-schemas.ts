@@ -15,6 +15,7 @@ export {
   homeSummarySchema,
   mercuryStatusSchema,
   missingBillsSchema,
+  partyChargesSchema,
   paymentRecurringSchema,
   profitMonthsSchema,
   recurringChangesSchema,

@@ -96,9 +96,17 @@ export const CONNECTOR_SCHEDULE: ConnectorSchedule = {
   drain: "*/5 * * * *",
 };
 
-/** id and label only. Never an account number or a routing number. */
+/** id, label and the last 4 only. Never an account number or a routing number. */
 export interface AccountLabel {
   id: string;
+  label: string;
+  /** The account's last 4 digits (FLOW-707), shown after the label as ••1234. */
+  last4?: string;
+}
+
+/** A card's last 4 digits and the nickname the owner gave it in the bank (FLOW-707). Nothing else of the card. */
+export interface CardLabel {
+  last4: string;
   label: string;
 }
 

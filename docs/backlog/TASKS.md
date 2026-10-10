@@ -264,6 +264,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-422"></a>[FLOW-422](tasks/FLOW-422.md) | A project's month page steps months like Home's | SMALL UI |
 | <a id="flow-423"></a>[FLOW-423](tasks/FLOW-423.md) | A fixed way into קבועים from Home | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
+| <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
 ## Projects and reports
 
@@ -327,6 +328,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-702"></a>[FLOW-702](tasks/FLOW-702.md) | Jev auto mode | PLAN FIRST |
 | <a id="flow-703"></a>[FLOW-703](tasks/FLOW-703.md) | Jev corrections write-back | SMALL CYCLE |
 | <a id="flow-704"></a>[FLOW-704](tasks/FLOW-704.md) | Jev review card follow-ups | BACKLOG NIT |
+| <a id="flow-707"></a>[FLOW-707](tasks/FLOW-707.md) | The card's nickname from the bank, on the transaction and for Jev | SMALL UI |
 
 ## Infra and CI
 

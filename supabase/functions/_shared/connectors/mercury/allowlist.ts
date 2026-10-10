@@ -5,7 +5,8 @@
  * listing from the Mercury reference.
  * `/treasury/{treasuryId}/transactions` is the treasury ledger. Yield and
  * dividends are read from that GET. `/categories` is the custom-category
- * list named by the L1b brief. See docs/tech/connector-contract.md.
+ * list named by the L1b brief. `/cards` lists the cards with the nickname the
+ * owner gave each one (FLOW-707). See docs/tech/connector-contract.md.
  */
 export const MERCURY_GET_ALLOWLIST = [
   "/accounts",
@@ -13,6 +14,7 @@ export const MERCURY_GET_ALLOWLIST = [
   "/treasury",
   "/treasury/{treasuryId}/transactions",
   "/categories",
+  "/cards",
   "/transactions",
   "/transaction/{transactionId}",
 ] as const;

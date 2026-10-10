@@ -6,6 +6,8 @@ export type TxnMeta = {
   transaction_id: string;
   method: TxnMethod | null;
   card_last4: string | null;
+  /** FLOW-707: the nickname the owner gave the card in the bank. Absent before that read. */
+  card_name?: string | null;
   memo: string | null;
   account: string | null;
   counterparty: string | null;

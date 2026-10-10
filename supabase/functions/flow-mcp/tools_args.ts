@@ -76,6 +76,7 @@ export function limitOf(value: unknown, fallback: number): number | ToolResult {
 export const NO_LINE_META = {
   method: null,
   card_last4: null,
+  card_name: null,
   memo: null,
   account: null,
   counterparty: null,
