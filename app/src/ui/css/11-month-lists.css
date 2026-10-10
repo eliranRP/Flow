@@ -243,6 +243,13 @@
   text-wrap: balance;
 }
 
+/* FLOW-362: "קטגוריה של הלוואה" on line 1, "<loan> · <part>" on line 2. */
+.ui-cat-fixed-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
 .ui-section-head {
   display: flex;
   justify-content: space-between;
