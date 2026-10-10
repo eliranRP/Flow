@@ -139,3 +139,5 @@ export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";
 export { expectedMonthsSchema, expectedPartySchema, missingBillSchema, missingBillsSchema } from "./forecast.ts";
 export type { ExpectedMonth, ExpectedMonths, ExpectedParty, MissingBill } from "./forecast.ts";
+export { cashBasisSchema, cashLinesSchema, cashMonthsSchema, cashSideSchema } from "./cash.ts";
+export type { CashBasis, CashCurrencyRow, CashLine, CashLinesPage, CashMonth, CashMonths, CashSide } from "./cash.ts";
