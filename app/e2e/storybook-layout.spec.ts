@@ -767,8 +767,12 @@ test("split between projects pins its totals and keeps names on one line", async
   expect(await layoutProblems(page)).toEqual([]);
 });
 
-/** The route stories are checked in quarters, so workers or shards share the work and each part stays well under its 120 s (about 1 s a story). */
-const FOCUS_PARTS = 4;
+/**
+ * The route stories are checked in parts, so workers or shards share the work and each part stays well
+ * under its 120 s (about 1 s a story, up to 1.3 s on a loaded gate). 383 stories in quarters put 96 in
+ * part 1, which ran out of time in the pre-push gate; sixths keep each part near 64.
+ */
+const FOCUS_PARTS = 6;
 
 for (let part = 0; part < FOCUS_PARTS; part += 1) {
   test(`a title focused on open draws no ring (part ${String(part + 1)}/${String(FOCUS_PARTS)})`, async ({ page }) => {
