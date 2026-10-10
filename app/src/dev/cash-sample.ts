@@ -104,7 +104,7 @@ export function sampleCashYears(now = new Date(), currencies: "one" | "two" = "o
 /** FLOW-417: last year's twelve months, newest first, for the year page. */
 export function sampleCashYearMonths(now = new Date()): NonNullable<CashMonths> {
   const year = Number(israelToday(now).slice(0, 4)) - 1;
-  const nets = [210_000n, 340_000n, -90_000n, 150_000n, 280_000n, 60_000n, 190_000n, -130_000n, 220_000n, 170_000n, 250_000n, 300_000n];
+  const nets = [210_000n, 340_000n, -90_000n, 150_000n, 280_000n, 60_000n, 190_000n, -130_000n, 220_000n, 170_000n, 250_000n, 310_000n];
   return {
     basis: "paid",
     base_currency: "ILS",

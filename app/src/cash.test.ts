@@ -138,3 +138,14 @@ describe("FLOW-417: cash history", () => {
     expect(cashYearSummaryRows(2023, totals).every((r) => r.href == null)).toBe(true);
   });
 });
+
+describe("FLOW-417: the year row and the year page agree", () => {
+  it("sums the sample year's months to the history's row for that year", async () => {
+    const { sampleCashYearMonths, sampleCashYears } = await import("./dev/cash-sample");
+    const months = sampleCashYearMonths(now);
+    const year = Number(months.months[0]?.month.slice(0, 4));
+    const page = cashYearTotals(cashYearMonths(months, null), "ILS")[0]?.net_minor;
+    const row = sampleCashYears(now).years.find((entry) => entry.year === year)?.by_currency[0]?.net_minor;
+    expect(page).toBe(row);
+  });
+});
