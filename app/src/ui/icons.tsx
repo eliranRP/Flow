@@ -133,6 +133,17 @@ export function RefreshIcon(props: IconProps) {
   );
 }
 
+/** An outside page: a box with an arrow leaving it (FLOW-357, the invoice's SUMIT link). */
+export function ExternalIcon(props: IconProps) {
+  return (
+    <Svg size={16} stroke={2} {...props}>
+      <path d="M14 4h6v6" />
+      <path d="M20 4 11 13" />
+      <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+    </Svg>
+  );
+}
+
 export function DocumentIcon(props: IconProps) {
   return (
     <Svg size={36} stroke={1.6} {...props}>
