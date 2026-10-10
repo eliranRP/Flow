@@ -72,7 +72,7 @@ function installDepsStep(body) {
 function playwrightProblems(text) {
   /** @type {string[]} */
   const problems = [];
-  for (const name of ["check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     const body = jobIn(text, name);
     if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
     if (body.includes("env.ImageOS") || body.includes("env.ImageVersion")) problems.push(`${name} runner image`);
@@ -134,11 +134,11 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("plan"), /FLOW_DEPLOY_BATCH: "5"\n/);
   assert.match(job("plan"), /fetch-depth: 0\n/);
   assert.match(job("plan"), /deployments: read\n/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     assert.match(job(name), /\n {4}needs: \[plan\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/, name);
   }
   // check and e2e are the required checks. They are gates that run always and pass only on success.
-  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
+  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-perf, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("check"), /test "\$CORE" = success\n/);
   for (const name of ["CORE", "APP", "STORYBOOK", "STORIES"]) {
     assert.match(job("check"), new RegExp(`test "\\$${name}" = success\n`), name);
@@ -164,14 +164,15 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
 `));
   assert.equal((job("e2e-shard").match(/if: matrix\.part == 'database'\n/g) ?? []).length, 5);
   assert.match(job("e2e-shard"), /if: matrix\.part != 'database'\n {8}run: \|\n {10}set -euo pipefail\n {10}eval "\$\(bash scripts\/ci-local-supabase-env\.sh\)"\n/);
-  // Six story runners, each with two of the every-story test's groups and a sixth of the other specs.
-  assert.match(job("check-stories"), /shard: \[1, 2, 3, 4, 5, 6\]\n/);
-  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/6\n/);
-  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/6\n/);
+  // Eight story runners, each with three of the every-story test's groups and an eighth of the other specs.
+  assert.match(job("check-stories"), /shard: \[1, 2, 3, 4, 5, 6, 7, 8\]\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/8\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/8\n/);
   const storySpec = readFileSync(new URL("../app/e2e/storybook-static.spec.ts", import.meta.url), "utf8");
-  assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 6, 0);
+  assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 8, 0);
   assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
-  assert.match(job("check-storybook"), /pnpm --filter @flow\/app test:perf\n/);
+  assert.match(job("check-perf"), /pnpm --filter @flow\/app test:perf\n/);
+  assert.equal(job("check-storybook").includes("test:perf"), false);
   assert.equal(ci.includes("check-unit"), false);
   assert.match(
     job("check-core"),
@@ -336,7 +337,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
   }
   for (const name of ["check", "e2e"]) {
@@ -408,7 +409,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
-  for (const name of ["check-storybook", "check-stories", "e2e-shard"]) {
+  for (const name of ["check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
     const step = installDepsStep(job(name));
     assert.equal(step.includes(INSTALL_DEPS), true, `${name} install-deps`);
     assert.equal(/\bif:/.test(step), false, `${name} install-deps condition`);
