@@ -39,7 +39,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category_cash"` | `id` | the category id `set_category_cash` returned |
 | `undo` `kind: "line_cash"` | `id` | the transaction id `set_line_cash` used |
 | `undo` `kind: "cash_basis"` | `id` | the company id `set_cash_basis` returned |
-| `set_line_recurring`, `get_line_recurring` | `transaction_id` | `get_recurring_changes` `changes[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
+| `set_line_recurring`, `get_line_recurring`, `get_line_charges` | `transaction_id` | `get_recurring_changes` `changes[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
 | `undo` `kind: "line_recurring"` | `id` | the transaction id `set_line_recurring` used |
 | `set_line_pace` | `transaction_id` | as `set_line_recurring` |
 | `undo` `kind: "line_pace"` | `id` | the transaction id `set_line_pace` used |
@@ -540,6 +540,10 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 ### get_line_recurring
 
 `payment_recurring`, `transaction_id` required ([0172](../decisions/0172-recurring-charges.md)). Read tool. Output `data`: `{ "transaction_id", "party", "recurring", "override", "detected", "typical_day", "typical_amount_minor" }`. `party` is the line's supplier (expense) or customer (income) with `direction`, `id`, `name`, `currency`, or `null` when it has neither. `recurring` is what counts: `override` (the owner's switch, `null` when the rule decides) and otherwise `detected` (the rule alone). `typical_day` and `typical_amount_minor` are `null` when not recurring. `pace` is what counts, `pace_override` the owner's (`set_line_pace`), `detected_pace` the rule's, and `next_due_month` (YYYY-MM) when the next bill is due. Another company's line is `refused`.
+
+### get_line_charges
+
+`party_charges`, `transaction_id` required ([0178](../decisions/0178-party-charges.md)). Read tool. Output `data`: the line's charges from the same supplier (expense) or customer (income) in its currency, as the app's "לעומת הרגיל" sheet shows them. `party` as in `get_line_recurring` (`null` with no party, and then empty lists). `month` (YYYY-MM) is the line's; `month_amount_minor` the party's total that month. `typical_amount_minor` is the recurring rule's usual amount when the party recurs (`typical_source: "recurring"`), else the median of its earlier complete months when it has at least 2 of the last 6 (`"earlier_months"`), else `null`. `change_percent` is signed and rounded, by size (92 is 92% more than usual; for income, a negative one is less money in). `others` counts its other charges in the last 24 months. `months[]` are the 6 months up to the line's, oldest first (`month`, `amount_minor`); `charges[]` the 12 newest (`id`, `doc_date`, `amount_minor`, `pending`). Expenses are negative. Another company's line is `refused`.
 
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
 

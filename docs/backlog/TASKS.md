@@ -264,6 +264,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-422"></a>[FLOW-422](tasks/FLOW-422.md) | A project's month page steps months like Home's | SMALL UI |
 | <a id="flow-423"></a>[FLOW-423](tasks/FLOW-423.md) | A fixed way into קבועים from Home | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
+| <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 
 ## Projects and reports
 

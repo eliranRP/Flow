@@ -35,6 +35,7 @@ export const readRpcs = new Set([
   "mcp_loan_payments",
   "missing_bills",
   "my_invites",
+  "party_charges",
   "payment_recurring",
   "project_cash_month_lines",
   "project_cash_months",
