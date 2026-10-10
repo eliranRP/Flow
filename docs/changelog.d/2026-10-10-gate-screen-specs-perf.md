@@ -1,0 +1,1 @@
+The pre-push gate now runs the e2e specs that open a changed screen first, and allows 8 specs instead of 6 for a screen change, so its cap no longer leaves them out (#504 broke three of them on main). It also runs the page-speed checks (app/perf) for the pages a change reaches, after the e2e specs; a slow page fails the gate. No migration.

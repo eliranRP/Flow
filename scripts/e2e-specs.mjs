@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // FLOW-813: the e2e specs that a set of changed files reaches, from app/e2e/spec-sources.json.
-// Usage: git diff --name-only <base> HEAD | node scripts/e2e-specs.mjs
-// Prints one spec path per line, relative to app/ (e2e/x.spec.ts).
+// Usage: git diff --name-only <base> HEAD | node scripts/e2e-specs.mjs [--routes | --perf]
+// Prints one spec path per line, relative to app/ (e2e/x.spec.ts). --routes prints the specs that open
+// a route a changed screen serves (the gate runs them first); --perf the page-speed specs
+// (app/perf) whose page the change reaches.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -139,6 +141,61 @@ export function selectSpecs(changed, { root, map }) {
     .sort();
 }
 
+/**
+ * The specs that open a route a changed screen serves: the screen is an entry of that route in
+ * `map.sweeps.routes`, and the spec names the route's path (/projects/, /e2e/project-detail) in a
+ * string. The selection reaches far more specs through shared imports; the gate runs these first, so
+ * its cap keeps the specs of the changed screen (#504 changed the project page and its cap left out
+ * the three specs that open it). The sweep specs pick their own routes (gate-scope.mjs --sweep).
+ * @param {string[]} changed repo-relative paths
+ * @param {{ root: string, map: any }} options
+ * @returns {string[]} spec file names
+ */
+export function routeSpecs(changed, { root, map }) {
+  const prefixes = new Set();
+  for (const urls of Object.values(map.sweeps.routes)) {
+    for (const [url, entries] of Object.entries(urls)) {
+      if (!entries.some((entry) => changed.includes(`app/src/${entry.split("#")[0]}`))) continue;
+      const parts = url.split("?")[0].split("/").filter(Boolean);
+      // /e2e/<page> is one page; elsewhere the first segment names it and the rest is an id.
+      if (parts.length === 0) continue;
+      prefixes.add(parts[0] === "e2e" ? `/${parts.slice(0, 2).join("/")}` : parts.length > 1 ? `/${parts[0]}/` : `/${parts[0]}`);
+    }
+  }
+  if (prefixes.size === 0) return [];
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [...prefixes].map((prefix) => new RegExp(`["'\`]${escape(prefix)}${prefix.endsWith("/") ? "" : "(?![\\w-])"}`));
+  return Object.keys(map.specs)
+    .filter((spec) => !spec.startsWith("controls-sweep-"))
+    .filter((spec) => {
+      const text = fs.readFileSync(path.join(root, "app/e2e", spec), "utf8");
+      return patterns.some((pattern) => pattern.test(text));
+    })
+    .sort();
+}
+
+/**
+ * The page-speed specs (app/perf, `map.perf`) whose page the change reaches, the same way a spec is
+ * reached: its entries, the spec and what they import; a change matching `map.all` runs them all.
+ * @param {string[]} changed repo-relative paths
+ * @param {{ root: string, map: any }} options
+ * @returns {string[]} spec file names
+ */
+export function perfSpecs(changed, { root, map }) {
+  const all = map.all.map((pattern) => new RegExp(pattern));
+  if (changed.some((file) => all.some((pattern) => pattern.test(file)) || file.startsWith("app/perf/") || file === "app/playwright.perf.config.ts")) {
+    return Object.keys(map.perf).sort();
+  }
+  const walker = importWalker(root);
+  return Object.entries(map.perf)
+    .filter(([spec, entries]) => {
+      const closure = walker([`app/perf/${spec}`, ...entries.map((entry) => `app/src/${entry}`)], (file) => all.some((pattern) => pattern.test(file)));
+      return changed.some((file) => closure.has(file));
+    })
+    .map(([spec]) => spec)
+    .sort();
+}
+
 export function readMap(root) {
   return JSON.parse(fs.readFileSync(path.join(root, "app/e2e/spec-sources.json"), "utf8"));
 }
@@ -150,5 +207,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  for (const spec of selectSpecs(changed, { root, map: readMap(root) })) console.log(`e2e/${spec}`);
+  const map = readMap(root);
+  if (process.argv[2] === "--routes") for (const spec of routeSpecs(changed, { root, map })) console.log(`e2e/${spec}`);
+  else if (process.argv[2] === "--perf") for (const spec of perfSpecs(changed, { root, map })) console.log(`perf/${spec}`);
+  else for (const spec of selectSpecs(changed, { root, map })) console.log(`e2e/${spec}`);
 }

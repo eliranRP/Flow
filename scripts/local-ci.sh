@@ -6,7 +6,9 @@
 #     branch changes against main (git diff origin/main...HEAD), so a merge of main re-runs nothing
 #     for main's own changes:
 #     - the app unit and Storybook vitest tests those files reach;
-#     - up to FLOW_E2E_MAX (6) e2e specs that reach them, the branch's own specs first (Docker);
+#     - up to FLOW_E2E_MAX (6, 8 for a screen change) e2e specs that reach them, the branch's own
+#       specs first, then those that open the changed screen (Docker), and the page-speed specs
+#       (app/perf) whose page they reach;
 #     - the Storybook build with its layout, clip and secret specs, only when a story spec or the
 #       Storybook setup changes;
 #     - for a migration, pgTAP, seed or flow-mcp change: a fresh local database (every migration applied), the
@@ -239,6 +241,7 @@ changed_base() {
 # (or since main, which runs them all before each deploy). app/e2e/spec-sources.json maps each spec
 # to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
 e2e_specs=()
+perf_specs=()
 e2e_left=0
 sweep_routes=""
 if (( ! full )); then
@@ -260,8 +263,11 @@ if (( ! full )); then
     # routes in spec-sources.json). The gate names each route it sweeps and why.
     sweep_out="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/gate-scope.mjs --sweep)"
     sweep_routes="$(cut -f2 <<<"$sweep_out" | sed '/^$/d')"
+    # The specs that open a route a changed screen serves run first, and lift the cap to 8.
+    route_specs="$(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs --routes)"
+    mapfile -t perf_specs < <(branch_changes "$e2e_base" | sed '/^$/d' | node scripts/e2e-specs.mjs --perf)
     mapfile -t e2e_specs < <(
-      { printf '%s\n' "${e2e_specs[@]}" | grep -v '^e2e/controls-sweep-' || true; cut -f1 <<<"$sweep_out"; } | sed '/^$/d' | sort -u
+      { printf '%s\n' "${e2e_specs[@]}" | grep -v '^e2e/controls-sweep-' || true; cut -f1 <<<"$sweep_out"; echo "$route_specs"; } | sed '/^$/d' | sort -u
     )
     for spec in $(grep '^e2e/controls-sweep-' <<<"$e2e_list" || true); do
       grep -q "^$spec"$'\t' <<<"$sweep_out" \
@@ -273,14 +279,18 @@ if (( ! full )); then
       echo "local-ci: the no-op sweep opens the $(wc -l <<<"$sweep_routes") routes this change reaches:"
       awk -F'\t' '{ print "  " $1 " " $2 ": " $3 }' <<<"$sweep_out"
     fi
-    # At most FLOW_E2E_MAX specs (default 6), the branch's own changed specs first; main runs the rest.
-    if (( ${#e2e_specs[@]} > ${FLOW_E2E_MAX:-6} )); then
+    # At most FLOW_E2E_MAX specs (6, or 8 for a screen change), the branch's own changed specs first,
+    # then the changed screen's; main runs the rest.
+    e2e_max="${FLOW_E2E_MAX:-$([[ -n "$route_specs" ]] && echo 8 || echo 6)}"
+    if (( ${#e2e_specs[@]} > e2e_max )); then
+      own="$(sed -n 's|^app/||p' <<<"$pr_files")"
       mapfile -t e2e_specs < <(
-        printf '%s\n' "${e2e_specs[@]}" | grep -Fxf <(sed -n 's|^app/||p' <<<"$pr_files") || true
-        printf '%s\n' "${e2e_specs[@]}" | grep -vFxf <(sed -n 's|^app/||p' <<<"$pr_files") || true
+        printf '%s\n' "${e2e_specs[@]}" | grep -Fxf <(echo "$own") || true
+        printf '%s\n' "${e2e_specs[@]}" | grep -vFxf <(echo "$own") | grep -Fxf <(echo "$route_specs") || true
+        printf '%s\n' "${e2e_specs[@]}" | grep -vFxf <(echo "$own"; echo "$route_specs") || true
       )
-      echo "local-ci: ${#e2e_specs[@]} e2e specs reach this change; running ${FLOW_E2E_MAX:-6}, main runs the rest: ${e2e_specs[*]:${FLOW_E2E_MAX:-6}}"
-      e2e_specs=("${e2e_specs[@]:0:${FLOW_E2E_MAX:-6}}")
+      echo "local-ci: ${#e2e_specs[@]} e2e specs reach this change; running $e2e_max, main runs the rest: ${e2e_specs[*]:$e2e_max}"
+      e2e_specs=("${e2e_specs[@]:0:$e2e_max}")
       e2e_left=1
     fi
   fi
@@ -746,6 +756,12 @@ if (( ! full )); then
     e2e_workers="$(( $(nproc) > 2 ? $(nproc) - 1 : 1 ))"
     echo "local-ci: running the e2e specs on $e2e_workers Playwright workers ($(nproc) cores)."
     FLOW_SWEEP_ROUTES="$sweep_routes" pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"
+  fi
+  # FLOW-804: the page-speed specs whose page the change reaches, alone, since they time the page.
+  if (( ${#perf_specs[@]} > 0 && ! base_only )); then
+    phase "perf: ${#perf_specs[@]} page-speed specs on the pages this change reaches"
+    pnpm --filter @flow/app exec playwright install chromium
+    pnpm --filter @flow/app exec playwright test -c playwright.perf.config.ts "${perf_specs[@]}"
   fi
   # Only a run that checked every spec the change reaches moves the next run's base here.
   (( e2e_left )) || mark_green "tree-e2e-$head_tree"

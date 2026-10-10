@@ -8,8 +8,8 @@
 
 # Seconds a phase may run before the gate stops with its name: well past the slowest pass in
 # gate-times.log (storybook p90 102 s, max 337; smoke max 1341; e2e max 340; --full's whole e2e suite
-# gets twice that). FLOW_LOCAL_CI_BUDGET=0 turns budgets off.
-declare -A budgets=([storybook]=600 [storybook-smoke]=1800 [e2e]=$(( ${full:-0} ? 1800 : 900 )))
+# gets twice that; the 4 perf specs take 75 s). FLOW_LOCAL_CI_BUDGET=0 turns budgets off.
+declare -A budgets=([storybook]=600 [storybook-smoke]=1800 [e2e]=$(( ${full:-0} ? 1800 : 900 )) [perf]=600)
 
 # Runs this script again as its own process group and waits; returns at once inside that run.
 guard_session() {
@@ -67,6 +67,7 @@ phase_key() {
     "Docker and local Supabase"* | "e2e: waiting for local Supabase"*) echo supabase ;;
     "database:"* | "e2e: database checks"*) echo pgtap ;;
     "e2e:"*) echo e2e ;;
+    "perf:"*) echo perf ;;
     "passed"*) echo end ;;
     *) echo other ;;
   esac

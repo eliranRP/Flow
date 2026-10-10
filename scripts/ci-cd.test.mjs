@@ -817,3 +817,20 @@ test("local-ci.sh sources the guard first, and Docker's daemons start outside th
   assert.match(guard, /declare -A budgets=\(\[storybook\]=\d+ \[storybook-smoke\]=\d+ \[e2e\]=/);
   assert.match(guard, /setsid bash "\$0" "\$@" <&0 &/);
 });
+
+test("the gate runs a changed screen's specs first under a cap of 8, then the page-speed specs it reaches", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  assert.ok(local.includes('route_specs="$(branch_changes "$e2e_base" | sed \'/^$/d\' | node scripts/e2e-specs.mjs --routes)"'));
+  assert.ok(local.includes('mapfile -t perf_specs < <(branch_changes "$e2e_base" | sed \'/^$/d\' | node scripts/e2e-specs.mjs --perf)'));
+  assert.ok(local.includes('e2e_max="${FLOW_E2E_MAX:-$([[ -n "$route_specs" ]] && echo 8 || echo 6)}"'));
+  // Own specs, then the screen's, then the rest, before the cap cuts.
+  const own = local.indexOf('printf \'%s\\n\' "${e2e_specs[@]}" | grep -Fxf <(echo "$own") || true');
+  const screen = local.indexOf('grep -vFxf <(echo "$own") | grep -Fxf <(echo "$route_specs") || true');
+  const rest = local.indexOf('grep -vFxf <(echo "$own"; echo "$route_specs") || true');
+  assert.ok(own > 0 && own < screen && screen < rest && rest < local.indexOf('e2e_specs=("${e2e_specs[@]:0:$e2e_max}")'));
+  // Perf runs alone after the e2e specs, fails the gate like any step, and before the e2e mark.
+  const perf = local.indexOf('pnpm --filter @flow/app exec playwright test -c playwright.perf.config.ts "${perf_specs[@]}"');
+  const e2e = local.indexOf('pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"');
+  assert.ok(e2e > 0 && perf > e2e && perf < local.indexOf('(( e2e_left )) || mark_green "tree-e2e-$head_tree"'));
+  assert.ok(local.includes('phase "perf: ${#perf_specs[@]} page-speed specs on the pages this change reaches"'));
+});
