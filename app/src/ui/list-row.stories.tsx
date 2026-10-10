@@ -3,6 +3,7 @@ import { expect, within } from "@storybook/test";
 import type { ReactElement } from "react";
 import { BigNumber } from "./big-number";
 import { BankIcon } from "./icons";
+import { KeptOutTag } from "./line-marks";
 import { List, ListRow } from "./list-row";
 import { statementMethodOf } from "./statement";
 import { largeAgorot, longHebrew, padded, storyMeta } from "./story-support";
@@ -208,6 +209,16 @@ function SetAsideRows() {
     </List>
   );
 }
+
+/** A category's lines mark a kept-out line with the ⊘ tag; the name keeps the row's width. */
+export const SetAsideTagged: Story = {
+  args: { variant: "transaction", title: "Sample supplier" },
+  render: () => (
+    <List>
+      <ListRow variant="transaction" title="Sample supplier" hint="10/05" agorot={-170_000n} sign="cost" source="bank" href="/transactions/1" tag={<KeptOutTag label="לא נספר ברווח" />} setAside />
+    </List>
+  ),
+};
 
 export const SetAside: Story = {
   args: { variant: "transaction", title: "החזר ציוד לדוגמה" },

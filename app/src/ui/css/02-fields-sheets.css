@@ -254,12 +254,14 @@
 
 /* The kept-out words lead the hint and are the reason the row is faded, so they are never cut
    (FLOW-352): the row's text column is at least as wide as those words, and the name takes the
-   ellipsis instead. The name's own width no longer counts toward that minimum. */
-.ui-row-set-aside :is(.ui-row-main, .ui-row-text) {
+   ellipsis instead. The name's own width no longer counts toward that minimum. A row marked by the
+   ⊘ tag instead of the words (a category's lines) has none to protect, so its name keeps the width
+   (it was cut to "S.." there). */
+.ui-row-set-aside:not(.ui-row-set-aside-tagged) :is(.ui-row-main, .ui-row-text) {
   min-inline-size: min-content;
 }
 
-.ui-row-set-aside .ui-row-title {
+.ui-row-set-aside:not(.ui-row-set-aside-tagged) .ui-row-title {
   contain: inline-size;
 }
 
