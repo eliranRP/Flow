@@ -44,6 +44,8 @@ export type TxnStepRowProps = {
   nextRef?: Ref<HTMLButtonElement>;
   /** The counter; focus waits here when the pressed word is hidden at a list end. */
   countRef?: Ref<HTMLParagraphElement>;
+  /** FLOW-314: הבאה is loading the list's next page; the card stays put until it lands. */
+  nextBusy?: boolean;
 };
 
 /**
@@ -52,7 +54,7 @@ export type TxnStepRowProps = {
  * A hairline shows on top only while card content is scrolled under the row. Render it after the
  * stepped content: a 1px mark before the row tells it where that content ends.
  */
-export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevRef, nextRef, countRef }: TxnStepRowProps) {
+export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevRef, nextRef, countRef, nextBusy = false }: TxnStepRowProps) {
   const mark = useRef<HTMLDivElement>(null);
   const row = useRef<HTMLDivElement>(null);
   const under = useContentUnder(mark, row);
@@ -81,7 +83,7 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
           </span>
           <span className="sr-only">{place}</span>
         </p>
-        <TextLink className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")} chevron={false} label="התנועה הבאה" buttonRef={nextRef} onClick={onNext}>
+        <TextLink className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")} chevron={false} label="התנועה הבאה" buttonRef={nextRef} onClick={onNext} busy={nextBusy}>
           הבאה
         </TextLink>
       </div>

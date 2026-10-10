@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
 import { scrollPageToTop, sheetStack } from "./ui/back";
 import { TxnStepRow } from "./ui/txn-step-row";
+import { grownIds, useTxnListMoreFor } from "./txn-list-more";
 
 /** The list a card was opened from: its rows in the order shown, and its address. */
 export type TxnList = { ids: readonly string[]; from: string };
@@ -72,38 +73,100 @@ export type TxnNav = {
   /** Set when a swipe opened this card: the direction it moved. */
   enter: "next" | "prev" | null;
   move: (direction: "next" | "prev", via: Via) => void;
+  /** FLOW-314: the last loaded row of a paged list with another page: ˅ loads it. */
+  canLoadNext: boolean;
+  /** FLOW-314: that page is loading; the card stays put. */
+  loadingNext: boolean;
 };
 
 /** Prev and next for a card opened from a list. Null for a deep link or a one-row list. */
 export function useTxnNav(transactionId: string): TxnNav | null {
   const location = useLocation();
   const navigate = useNavigate();
-  const list = readTxnList(location.state);
+  const sent = readTxnList(location.state);
+  // FLOW-314: a paged list's next page, loaded from the card, joins the walk after its last row.
+  const more = useTxnListMoreFor(sent?.from ?? null, sent?.ids ?? []);
+  const extra = more?.extra;
+  const list = useMemo(() => {
+    if (sent == null) return null;
+    const ids = grownIds(sent.ids, extra ?? []);
+    return ids === sent.ids ? sent : { ids, from: sent.from };
+  }, [sent, extra]);
   const index = list == null ? -1 : list.ids.indexOf(transactionId);
   const prev = list != null && index > 0 ? list.ids[index - 1] ?? null : null;
   const next = list != null && index >= 0 ? list.ids[index + 1] ?? null : null;
+  const canLoad = list != null && index >= 0 && next == null && more?.more === true;
+  // ˅ pressed while the next page loads: the card moves once it is in.
+  const [waiting, setWaiting] = useState(false);
   // The URL changes before the next card renders. A second press in between still
   // sees this card's neighbours, so it would only replace the same target again
   // under a fresh history key; one move per card keeps that from happening.
   // No test can tell the two apart, which is why this guard has none.
   const movedFrom = useRef<string | null>(null);
+  const loadMore = more?.loadMore;
   const move = useCallback((direction: "next" | "prev", via: Via) => {
     const target = direction === "next" ? next : prev;
+    if (target == null && direction === "next" && canLoad && via !== "swipe") {
+      setWaiting(true);
+      void loadMore?.().then(() => {
+        setWaiting(false);
+      });
+      return;
+    }
     if (list == null || target == null || movedFrom.current === transactionId) return;
     movedFrom.current = transactionId;
+    // The list goes on as the card holds it, a loaded page included, sent as a window around the target.
+    const walk = list === sent ? list : txnListState(list.ids, target, list.from).txnList;
     // Replace, so Back pops straight to the list at its saved scroll spot.
     void navigate(`/transactions/${target}${location.search}`, {
       replace: true,
-      state: via === "swipe" ? { txnList: list, txnVia: via, txnEnter: direction } : { txnList: list, txnVia: via },
+      state: via === "swipe" ? { txnList: walk, txnVia: via, txnEnter: direction } : { txnList: walk, txnVia: via },
     });
     scrollPageToTop();
-  }, [list, next, prev, navigate, location.search, transactionId]);
+  }, [list, sent, next, prev, canLoad, loadMore, navigate, location.search, transactionId]);
+  // The page landed while ˅ waited: go on to the first new row.
+  useEffect(() => {
+    if (waiting && next != null) {
+      setWaiting(false);
+      move("next", "next");
+    }
+  }, [waiting, next, move]);
   const enter = readEnter(location.state);
   useEffect(() => {
     if (enter != null) dropTxnEnter();
   }, [enter, location.key]);
-  if (list == null || index < 0 || list.ids.length < 2) return null;
-  return { list, index, total: list.ids.length, prev, next, via: readVia(location.state), enter, move };
+  if (list == null || index < 0 || (list.ids.length < 2 && !canLoad)) return null;
+  return {
+    list,
+    index,
+    total: list.ids.length,
+    prev,
+    next,
+    via: readVia(location.state),
+    enter,
+    move,
+    canLoadNext: canLoad,
+    loadingNext: more != null && canLoad && more.loading,
+  };
+}
+
+/**
+ * FLOW-314: at the last loaded row of a paged list, read the next page once the card is ready, so
+ * ˅ and a swipe usually find the next row already there.
+ */
+export function usePrefetchNextPage(transactionId: string, ready: boolean): void {
+  const location = useLocation();
+  const sent = readTxnList(location.state);
+  const from = sent?.from ?? null;
+  const more = useTxnListMoreFor(from, sent?.ids ?? []);
+  const ids = sent == null ? [] : grownIds(sent.ids, more?.extra ?? []);
+  const want = more?.more === true && ids.at(-1) === transactionId;
+  const load = useRef(more?.loadMore);
+  load.current = more?.loadMore;
+  // Once per card and list: a failed read is not retried here, ˅ tries again.
+  useEffect(() => {
+    if (ready && want) void load.current?.();
+  }, [ready, want, from, transactionId]);
 }
 
 /** Warm the neighbours' reads once the card is ready. */
@@ -184,7 +247,8 @@ export function TxnStepNav({ nav, ready = true }: { nav: TxnNav; ready?: boolean
   const countRef = useRef<HTMLParagraphElement>(null);
   const via = nav.via;
   const atStart = nav.prev == null;
-  const atEnd = nav.next == null;
+  // A list with a next page to load has no end yet: ˅ stays, and shows busy while the page loads.
+  const atEnd = nav.next == null && !nav.canLoadNext;
   useEffect(() => {
     // Runs after the title takes focus, so a button move keeps the finger's place.
     if (via !== "next" && via !== "prev") return;
@@ -206,6 +270,7 @@ export function TxnStepNav({ nav, ready = true }: { nav: TxnNav; ready?: boolean
       countRef={countRef}
       onPrev={() => { move("prev", "prev"); }}
       onNext={() => { move("next", "next"); }}
+      nextBusy={nav.loadingNext}
     />
   );
 }

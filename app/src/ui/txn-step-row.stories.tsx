@@ -9,7 +9,7 @@ import { TxnStepRow } from "./txn-step-row";
  * list end that side's word is hidden and keeps its box, so the counter stays centred. The row is filled
  * with the page colour; a hairline shows on top only while content is scrolled under it.
  */
-function Demo({ start, total, rows }: { start: number; total: number; rows: number }) {
+function Demo({ start, total, rows, more = false }: { start: number; total: number; rows: number; more?: boolean }) {
   const [at, setAt] = useState(start);
   return (
     <div className="ui-txn-stepped">
@@ -22,7 +22,8 @@ function Demo({ start, total, rows }: { start: number; total: number; rows: numb
         index={at}
         total={total}
         atStart={at === 1}
-        atEnd={at === total}
+        atEnd={at === total && !more}
+        nextBusy={more && at === total}
         onPrev={() => { setAt((n) => Math.max(1, n - 1)); }}
         onNext={() => { setAt((n) => Math.min(total, n + 1)); }}
       />
@@ -86,3 +87,17 @@ export const ContentUnder: Story = {
   },
 };
 export const ContentUnderDark: Story = { ...ContentUnder, name: "Content under the row, dark", ...dark };
+
+/** FLOW-314: the last loaded row of a paged list. הבאה stays and shows busy while the next page loads; the card stays put. */
+export const LoadingNextPage: Story = {
+  name: "Last loaded row, next page loading",
+  args: { start: 10, total: 10, rows: 2, more: true },
+  play: async ({ canvasElement }) => {
+    const next = within(canvasElement).getByRole("button", { name: "התנועה הבאה" });
+    await expect(next).toBeVisible();
+    await expect(next).toHaveAttribute("aria-busy", "true");
+    await expect(within(canvasElement).getByText("10 מתוך 10")).toBeInTheDocument();
+  },
+};
+export const LoadingNextPage320: Story = { ...LoadingNextPage, name: "Last loaded row, next page loading, 320", ...at320 };
+export const LoadingNextPageDark: Story = { ...LoadingNextPage, name: "Last loaded row, next page loading, dark", ...dark };

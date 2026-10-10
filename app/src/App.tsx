@@ -107,6 +107,7 @@ const DevSplit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: 
 const DevTransaction = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTransaction })));
 const DevTransactionGate = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTransactionGate })));
 const DevTxnList = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTxnList })));
+const DevTxnPagedList = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTxnPagedList })));
 const DevUnpaid = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevUnpaid })));
 const devTeam = () => import("./dev/team-fixtures");
 const DevCompany = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevCompany })));
@@ -217,6 +218,7 @@ function AppRoutes() {
                   <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
                   <Route path="/e2e/filed" element={<DevFiled />} />
                   <Route path="/e2e/txn-list" element={<DevTxnList />} />
+                  <Route path="/e2e/txn-paged" element={<DevTxnPagedList />} />
                   <Route path="/e2e/change" element={<DevChange />} />
                 </Route>
                 <Route element={<DevShell section="home" />}>
