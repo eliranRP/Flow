@@ -332,6 +332,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-811
 - FLOW-812
 - FLOW-813
+- FLOW-814
+- FLOW-815
 
 ## Data hygiene (public repo)
 
@@ -345,6 +347,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-908
 - FLOW-909
 - FLOW-911
+- FLOW-912
 
 ## Future features
 

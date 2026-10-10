@@ -180,8 +180,12 @@ export function ProjectDetailScreen({
   const detail = useProjectQuery(sample ? "" : projectId, period);
   // FLOW-419: the project page opens on its cash, read beside the project (its name, investment and loans).
   const cash = useProjectCashMonthsQuery(sample ? "" : projectId, section === "overview");
-  // Home's late bills and changed charges; the page shows the project's own.
-  const recurring = useProjectRecurring(sample == null && section === "overview", sampleRecurring);
+  // Home's late bills and changed charges; the page shows the project's own. FLOW-912: read once the
+  // project's own read has landed, like its groups, so two more reads stay out of the page's paint.
+  const recurring = useProjectRecurring(
+    sample == null && section === "overview" && detail.data != null && !detail.isFetching,
+    sampleRecurring,
+  );
   // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
