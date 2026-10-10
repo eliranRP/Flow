@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { hebrewSumitError, israelSyncPhrase, israelUsePhrase, msUntilNextIsraelDay, retryClock } from "./sumit-copy";
 
