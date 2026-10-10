@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { allocate, basisToPercents, bpToPercent, evenBasis, incomeBasis, percentToBp, sharesForSave, splitIsValid, summaryKind } from "./split-math";
 

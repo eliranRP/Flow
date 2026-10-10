@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { loanFinalLine, type LoanPreview } from "./loan-form";
 

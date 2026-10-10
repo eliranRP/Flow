@@ -1,3 +1,4 @@
+// @vitest-environment node
 import type { Dashboard, ProjectRow } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { companyRows, primaryCurrency, profitSign, projectRows } from "./by-currency";

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { copyText, flagTone, jevReasonText, REVIEW_FLAG_LOUD, reviewFlagView, spikePercentText, type ReviewFlag } from "./review-copy";
 

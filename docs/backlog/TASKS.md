@@ -133,6 +133,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 80 | [FLOW-354](#flow-354) | The default income category in the money terms word | PLAN FIRST |
 | 81 | [FLOW-355](#flow-355) | A project row on Home's first screen at 375x667 | PLAN FIRST |
 | 82 | [FLOW-138](#flow-138) | A paid-off loan's leftover balance has no word | PLAN FIRST |
+| 83 | [FLOW-356](#flow-356) | Phone polish after the October 9 late deploy (cycle 13) | SMALL UI |
+| 84 | [FLOW-357](#flow-357) | Open invoices fit more than three rows at 320 | PLAN FIRST |
 | 78 | [FLOW-346](#flow-346) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -188,9 +190,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-206"></a>[FLOW-206](tasks/FLOW-206.md) | Bulk setup without rate-limit stalls | MCP |
 | <a id="flow-210"></a>[FLOW-210](tasks/FLOW-210.md) | Bulk setup follow-ups (#119 review) | BACKLOG NIT |
 | <a id="flow-211"></a>[FLOW-211](tasks/FLOW-211.md) | Flow MCP agent requests (2026-10-08) | MCP |
+| <a id="flow-212"></a>[FLOW-212](tasks/FLOW-212.md) | Flow MCP agent requests (2026-10-09 night) | MCP |
 | <a id="flow-207"></a>[FLOW-207](tasks/FLOW-207.md) | sync_bank job follow-ups (#75 review) | BACKLOG NIT |
 | <a id="flow-208"></a>[FLOW-208](tasks/FLOW-208.md) | Split and undo follow-ups (#88 review) | BACKLOG NIT |
 | <a id="flow-209"></a>[FLOW-209](tasks/FLOW-209.md) | get_project follow-ups (#90 review) | BACKLOG NIT |
+| <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
 
 ## Transactions and app UX
 
@@ -249,6 +253,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-354"></a>[FLOW-354](tasks/FLOW-354.md) | The default income category in the money terms word | PLAN FIRST |
 | <a id="flow-355"></a>[FLOW-355](tasks/FLOW-355.md) | A project row on Home's first screen at 375x667 | PLAN FIRST |
 | <a id="flow-138"></a>[FLOW-138](tasks/FLOW-138.md) | A paid-off loan's leftover balance has no word | PLAN FIRST |
+| <a id="flow-356"></a>[FLOW-356](tasks/FLOW-356.md) | Phone polish after the October 9 late deploy (cycle 13) | SMALL UI |
+| <a id="flow-357"></a>[FLOW-357](tasks/FLOW-357.md) | Open invoices fit more than three rows at 320 | PLAN FIRST |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 
 ## Projects and reports

@@ -1,0 +1,1 @@
+The gate starts dockerd only once containerd answers (`ctr version`), for at most 30 seconds, also when another containerd is still starting. Before, it waited for a line in its own log, so a containerd it hadn't started, or one whose socket existed before it served, made dockerd exit with "connection refused" and the push fail with Docker down.
