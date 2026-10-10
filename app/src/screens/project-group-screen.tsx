@@ -1,6 +1,6 @@
 import type { Dashboard } from "@flow/shared";
 import { useParams } from "react-router-dom";
-import { periodLabel } from "../period";
+import { periodPhrase } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { findGroup, projectCountLabel } from "../project-groups";
 import { screenPhase, type ScreenPhase } from "../query-phase";
@@ -37,7 +37,7 @@ export function ProjectGroupScreen({ sample, groupId: groupIdProp }: { sample?: 
     <ScreenState
       title={entry?.group.name ?? "קבוצה"}
       kicker="פרויקטים"
-      subtitle={entry ? `${projectCountLabel(entry.projects.length)} · רווח ${periodLabel(books.period)}` : undefined}
+      subtitle={entry ? `${projectCountLabel(entry.projects.length)} · רווח ${periodPhrase(books.period)}` : undefined}
       backTo={back}
       stacked
       phase={phase}

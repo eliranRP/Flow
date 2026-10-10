@@ -17,7 +17,7 @@ import type { LoanChoice, SavePart } from "./loan-match-api";
 import { LOAN_INSTALLMENTS_MAX, type OfferLine } from "./loan-match-offer";
 
 /**
- * FLOW-106 §3.4, the split editor "חלוקת התשלום": the schedule's figures for 1 to 12 installments
+ * FLOW-106 §3.4, the split editor "פיצול התשלום": the schedule's figures for 1 to 12 installments
  * (a demand loan: its accrued interest), and the parts a save sends.
  */
 export type SchedulePlan = {

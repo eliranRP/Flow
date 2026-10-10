@@ -5,7 +5,7 @@ import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
 import { getSupabase } from "../lib/supabase";
 import { groupAsProjectRow, groupHref, projectCountLabel, splitByGroup, type ProjectGroupEntry } from "../project-groups";
-import { periodLabel } from "../period";
+import { periodPhrase } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { searchHref } from "../search";
@@ -68,10 +68,10 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
     <>
       <ScreenState
         title="פרויקטים"
-        subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
+        subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodPhrase(books.period)}` : undefined}
         // FLOW-331: פרויקט חדש moved to the + tab's quick actions; the empty state keeps its button.
         // FLOW-342 (A): no header magnifier; the filter below is the page's one search, and a miss offers the transactions.
-        stacked
+        // FLOW-356: a tab root, so the 34px title the other tabs and its own empty state use, not `stacked`.
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
         loading={
