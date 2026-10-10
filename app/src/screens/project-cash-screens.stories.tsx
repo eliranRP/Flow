@@ -274,3 +274,31 @@ export const ProjectCashKept: Story = {
     await expect(canvas.getAllByText("$1,070").length).toBeGreaterThan(0);
   },
 };
+
+/** FLOW-438 (owner, 2026-10-10): the month's תנועות under its figures, a kept-out line in place. */
+const monthLines = {
+  counted: [
+    { ...line("3", "שוכר לדוגמה", "שכירות", 310_000n), side: "in" as const },
+    line("2", "חנות חומרים לדוגמה", "תיקונים ותחזוקה", 15_000n),
+    line("6", "מלווה לדוגמה", "ריבית משכנתא", 60_000n),
+  ],
+  kept: [{ ...line("4", "השקעת בעלים לדוגמה", "השקעת בעלים", 107_000n), supplier_name: null, side: "in" as const }],
+  more: false,
+};
+
+export const ProjectCashMonthWithLines: Story = {
+  name: "Project, a month with its lines",
+  render: () => (
+    <StoryRoute entry={`/projects/p-c/cash/${earlier}`} tabs>
+      <ProjectCashMonthScreen sample={cash} monthKey={earlier} projectId="p-c" projectName={project.name} sampleLines={monthLines} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const list = canvas.getByRole("region", { name: "תנועות" });
+    await expect(within(list).getAllByRole("link")).toHaveLength(4);
+    await expect(within(list).getByText("לא נספר ברווח")).toBeInTheDocument();
+  },
+};
+export const ProjectCashMonthWithLinesDark: Story = { ...ProjectCashMonthWithLines, name: "Project, a month with its lines, dark", ...dark };
+export const ProjectCashMonthWithLines320: Story = { ...ProjectCashMonthWithLines, name: "Project, a month with its lines, 320", ...at320 };

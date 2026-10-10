@@ -1,0 +1,6 @@
+# 2026-10-10 · The month's transactions on the cash month page, and the profit page on the white layout
+
+- PR: FLOW-438, owner asks in the cash month thread (Eliran, 2026-10-10). The owner turned down both mockup options and asked for the existing page with the month's list under it, in the project transactions page's rows; then approved the build and asked for the same on the profit page.
+- What: the project's cash month page keeps its total and rows, then shows "תנועות": every transaction of that month in the transactions page's row (category · date hint, signed amount). Kept-out lines sit in the same list, dated in order, with the "לא נספר ברווח" hint and the set-aside look. The month chevrons switch the list with the month.
+- What: the project's profit page moves off the purple band to the stacked white layout: the project name as a labelled back, the title (רווח / הפסד / רווח והפסד) with the period pill beside it, the big figure with "רווחיות X%" under it, the summary rows, then "תנועות" with the project's transactions.
+- Rule: a page that sums transactions lists them under its summary in the transactions page's row, kept-out ones inline with their hint, not in a separate page.

@@ -38,3 +38,8 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
+
+/* FLOW-438: on the white profit page, the rows keep the cash month page's gap under the figure. */
+.ui-profit-rows {
+  margin-block-start: var(--space-4);
+}

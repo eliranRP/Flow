@@ -129,7 +129,7 @@ describe("ProjectDetailScreen currency", () => {
     expect(usdRow?.querySelector(".ui-num")?.textContent).toBe("$35");
   });
 
-  it("names the loss on the band whatever the currencies (FLOW-339)", () => {
+  it("names the loss in the title whatever the currencies (FLOW-339)", () => {
     const rows = (ils: bigint, usd: bigint) => ({
       ...usdProject(),
       by_currency: [
@@ -138,13 +138,14 @@ describe("ProjectDetailScreen currency", () => {
       ],
     });
     const mixed = renderProject(rows(80_000n, -50_000n));
-    expect(document.querySelector(".ui-project-period-label")?.textContent).toMatch(/^רווח והפסד /);
+    // FLOW-438: the profit page's title names it.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^רווח והפסד$/);
     mixed.unmount();
     const losses = renderProject(rows(-80_000n, -50_000n));
-    expect(document.querySelector(".ui-project-period-label")?.textContent).toMatch(/^הפסד /);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^הפסד$/);
     losses.unmount();
     renderProject(rows(80_000n, 50_000n));
-    expect(document.querySelector(".ui-project-period-label")?.textContent).toMatch(/^רווח (?!והפסד)/);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^רווח$/);
   });
 
   it("keeps ILS rendering for older payloads", () => {

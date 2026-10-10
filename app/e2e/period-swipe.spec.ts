@@ -56,18 +56,17 @@ test("Home: a swipe right on the figure goes to the earlier window, left comes b
   await expect(label).toHaveText(current ?? "");
 });
 
-test("Project band: a swipe right on the profit steps the project's own period", async ({ page, browserName }) => {
+test("Project profit page: a swipe right on the profit steps the project's own period", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
   // FLOW-419: the project opens on its cash; the profit and its period live on the profit page.
   await page.goto("/e2e/project-detail?preview=1&section=profit");
-  await expect(page.getByText(/^רווח ב־3 חודשים/)).toBeVisible();
-  // FLOW-359 (A): the project band has Home's one pill; it names the window the swipe moved to.
-  const pill = page.locator(".ui-band").getByRole("button", { name: /בחירת תקופה$/ });
+  // FLOW-438: the pill sits by the title on the white page; it names the window the swipe moved to.
+  const pill = page.getByRole("button", { name: /בחירת תקופה$/ });
+  await expect(pill).toBeVisible();
   const before = await pill.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
   await touchSwipe(cdp, { x: 80, y: row.y }, { x: 280, y: row.y });
-  await expect(page.getByText(/^רווח ב־3 חודשים/)).toHaveCount(0);
   await expect(pill).not.toHaveText(before ?? "");
 });
 

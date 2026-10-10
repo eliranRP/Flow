@@ -414,7 +414,7 @@ test("a project's by-month list opens a month, and Back steps back one screen at
   await page.goto("/e2e/project-detail?preview=1&section=profit");
   await page.getByRole("link", { name: /לפי חודש/ }).click();
   await expect(page).toHaveURL(/\/projects\/p1\/months\?preview=1&period=months3&at=\d{4}-\d{2}$/);
-  await page.getByRole("button", { name: "חזרה" }).click();
+  await page.getByRole("button", { name: /^חזרה/ }).first().click();
   await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1&section=profit$/);
   await page.goto("/e2e/project-months?preview=1");
   await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();

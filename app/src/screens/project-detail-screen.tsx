@@ -7,7 +7,7 @@ import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { periodPhrase, pillNamesPeriod, windowLabel } from "../period";
+import { periodPhrase, windowLabel } from "../period";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
 import { PeriodPicker } from "../ui/period-picker";
 import { PeriodSwipe } from "../ui/period-swipe";
@@ -218,7 +218,11 @@ export function ProjectDetailScreen({
     },
   });
   const holdWrites = useHoldWrites();
-  if (phase.kind === "loading") return <ProjectLoading search={search} example={example} pill={section !== "overview"} />;
+  if (phase.kind === "loading") {
+    // FLOW-438: the profit page waits in its own white layout, so nothing jumps when it lands.
+    if (section === "profit") return <ScreenState stacked title="רווח" backTo={`/projects/${projectId}${search}`} phase={phase} onRetry={() => { void detail.refetch(); }} />;
+    return <ProjectLoading search={search} example={example} pill={section !== "overview"} />;
+  }
   if (phase.kind === "error") {
     return (
       <ScreenState
@@ -392,61 +396,51 @@ export function ProjectDetailScreen({
       />
     );
   }
+  // FLOW-438 (owner, 2026-10-10): the profit page takes the cash month page's layout: a white
+  // stacked header that names the project on Back, the period pill by the title, then the figure.
+  // The pill names the period, so the line under the figure carries the margin only.
+  const profitHint = marginShown == null ? "" : `רווחיות ${marginShown}`;
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <TopBand
-        wordmark={false}
-        example={example}
-        leading={
-          // FLOW-419: the profit page is one tap in from the project's cash.
-          <BackButton fallback={sectionHref("overview")} onBand />
-        }
-        // A new period shows the last figures until its read lands; the spinner says they are not its yet.
-        status={!sample && detail.isPlaceholderData ? (
-          <div className="ui-ptr">
-            <span className="ui-spinner" role="status" aria-label="מרענן" />
-          </div>
-        ) : null}
+      {/* A new period shows the last figures until its read lands; the spinner says they are not its yet. */}
+      {!sample && detail.isPlaceholderData ? (
+        <div className="ui-ptr">
+          <span className="ui-spinner" role="status" aria-label="מרענן" />
+        </div>
+      ) : null}
+      <ScreenHeader
+        layout="stacked"
+        title={bandWord}
+        kicker={project.name}
+        backTo={sectionHref("overview")}
         trailing={menu}
-      >
-        <BandHero className="ui-band-hero-project">
-          <FocusTitle className="t-band-title">{project.name}</FocusTitle>
-          {/* FLOW-335: an active project says nothing here; only another state takes the line. */}
-          {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
-          {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150).
-              FLOW-359 (A): Home's one period pill replaces the presets and the stepper. */}
-          <PeriodSwipe period={period} onChange={setPeriod}>
-            <p className="ui-band-label t-label ui-project-period-label">
-              {pillNamesPeriod(period) ? bandWord : `${bandWord} ${periodWords}`}
-              {marginShown == null ? null : (
-                <>
-                  {" · רווחיות "}
-                  <bdi dir="ltr">{marginShown}</bdi>
-                </>
-              )}
-            </p>
-            <div className="ui-hero-pill">
-              <PeriodPicker
-                pill={windowLabel(period, undefined, "project")}
-                name={`${windowLabel(period, undefined, "project")} – בחירת תקופה`}
-                open={periodSheet}
-                onOpenChange={setPeriodSheet}
-                period={period}
-                onChange={setPeriod}
-                scope="project"
-              />
-            </div>
-            {/* FLOW-340 C: the band holds the profit only; income and expenses are the first rows below. */}
-            <div className="t-display ui-project-profits">
-              {profitRows.map(({ row, profit: rowProfit }) => (
-                <p key={row.currency}>
-                  <BigNumber agorot={rowProfit} currency={row.currency} loss={rowProfit < 0n} />
-                </p>
-              ))}
-            </div>
-          </PeriodSwipe>
-        </BandHero>
-      </TopBand>
+        titleAside={
+          <PeriodPicker
+            pill={windowLabel(period, undefined, "project")}
+            name={`${windowLabel(period, undefined, "project")} – בחירת תקופה`}
+            open={periodSheet}
+            onOpenChange={setPeriodSheet}
+            period={period}
+            onChange={setPeriod}
+            tone="page"
+            scope="project"
+          />
+        }
+      />
+      {/* FLOW-335: an active project says nothing here; only another state takes the line. */}
+      {stateLine == null ? null : <p className="ui-page-pad t-hint">{stateLine}</p>}
+      {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150). */}
+      <PeriodSwipe period={period} onChange={setPeriod}>
+        <p className="ui-breakdown-total ui-page-pad">
+          {profitRows.map(({ row, profit: rowProfit }) => (
+            <span key={row.currency} className="ui-breakdown-total-line">
+              <BigNumber agorot={rowProfit} currency={row.currency} size="display" loss={rowProfit < 0n} />
+            </span>
+          ))}
+        </p>
+        {profitHint === "" ? null : <p className="ui-breakdown-hint ui-page-pad t-hint">{profitHint}</p>}
+      </PeriodSwipe>
+      <div className="ui-profit-rows">
       <ProjectOverviewRows
         project={project}
         investmentData={investmentData}
@@ -463,6 +457,14 @@ export function ProjectDetailScreen({
           months: `/projects/${project.id}/months${periodQuery}`,
         }}
       />
+      </div>
+      {/* FLOW-438 (owner, 2026-10-10): the period's lines under the rows, as the project's תנועות page lists them. */}
+      {project.transactions.length === 0 ? null : (
+        <section aria-label="תנועות">
+          <SectionHead title="תנועות" />
+          <ProjectTransactions transactions={project.transactions} search={search} live={sample == null} />
+        </section>
+      )}
     </div>
   );
 }
