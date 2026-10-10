@@ -26,6 +26,7 @@ function Rows() {
       <List>
         <ListRow
           variant="transaction"
+          source="bank"
           title="Example Water Co"
           hint="07/10 · מים וביוב"
           agorot={5_779n}
@@ -35,6 +36,7 @@ function Rows() {
         />
         <ListRow
           variant="transaction"
+          source="bank"
           title="EXAMPLE RENT PORTAL; TRANSFER"
           hint={
             <SplitPartsHint parts={refunds} total="$2,054.86" date="07/10" />
@@ -48,6 +50,7 @@ function Rows() {
         />
         <ListRow
           variant="transaction"
+          source="bank"
           title="Example Property Manager"
           hint={
             <SplitPartsHint
@@ -68,6 +71,7 @@ function Rows() {
         />
         <ListRow
           variant="transaction"
+          source="bank"
           title="Example Tenant"
           hint={
             <SplitPartsHint
