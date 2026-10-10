@@ -45,7 +45,7 @@ function usdProject(): NonNullable<ProjectDetail> {
   };
 }
 
-function renderProject(sample: NonNullable<ProjectDetail>, section: ProjectSection = "overview") {
+function renderProject(sample: NonNullable<ProjectDetail>, section: ProjectSection = "profit") {
   const client = new QueryClient();
   return render(
     <QueryClientProvider client={client}>

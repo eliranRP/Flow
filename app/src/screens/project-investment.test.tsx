@@ -108,6 +108,23 @@ function renderPage(entry = "/projects/p1") {
   );
 }
 
+/** FLOW-419: the project page opens on its cash; one quiet month is enough here. */
+const cashPayload = {
+  basis: "paid",
+  base_currency: "ILS",
+  months: [{
+    month: "2026-10-01",
+    by_currency: [{ currency: "ILS", in_minor: 0, out_minor: 0, net_minor: 0, profit_minor: 0, excluded_count: 0, excluded_in_minor: 0, excluded_out_minor: 0 }],
+  }],
+};
+
+function readsFor(project: unknown) {
+  return (name: string) => Promise.resolve({
+    data: name === "get_project" ? project : name === "project_cash_months" ? cashPayload : [],
+    error: null,
+  });
+}
+
 function saves(): Call[] {
   return rpc.calls.filter((call) => call.name === "set_project_investment");
 }
@@ -176,11 +193,12 @@ describe("the card", () => {
 });
 
 describe("the project page", () => {
-  it("shows הון עצמי בנכס on the overview row, and the card on its own screen (FLOW-340 C)", async () => {
-    rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? payload() : [], error: null });
+  it("shows הון עצמי בנכס on the השקעה והלוואות row, and the card on its own screen (FLOW-419)", async () => {
+    rpc.impl = readsFor(payload());
     const overview = renderPage();
-    const row = await screen.findByRole("link", { name: /^השקעה/ });
-    expect(row).toHaveTextContent("הון עצמי בנכס ₪850,000");
+    const row = await screen.findByRole("link", { name: /^השקעה והלוואות/ });
+    expect(row).toHaveTextContent("הון עצמי בנכס");
+    expect(row).toHaveTextContent("₪850,000");
     expect(row).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment\?period=/));
     overview.unmount();
     renderPage("/projects/p1/investment");
@@ -189,20 +207,29 @@ describe("the project page", () => {
     expect(reads.every((call) => basisOf(call) !== "cash")).toBe(true);
   });
 
-  it("shows no investment row on the overhead project", async () => {
-    rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? payload({}, { is_overhead: true }) : [], error: null });
+  it("shows no equity on the overhead project, only its loans", async () => {
+    rpc.impl = readsFor(payload({}, { is_overhead: true }));
     renderPage();
-    await screen.findByRole("link", { name: /^הכנסות/ });
-    expect(screen.queryByRole("link", { name: /^השקעה/ })).not.toBeInTheDocument();
+    await screen.findByRole("link", { name: /^נכנס ב/ });
+    const row = screen.getByRole("link", { name: /^השקעה והלוואות/ });
+    expect(row).not.toHaveTextContent("הון עצמי בנכס");
+    expect(row).toHaveTextContent("הלוואה לדוגמה");
   });
 
-  it("parses an older payload with no investment, hides the row, and keeps the way in under עוד", async () => {
-    rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? { ...base, is_overhead: undefined } : [], error: null });
+  it("hides the row with no investment and no loan, and keeps the way in under עוד", async () => {
+    rpc.impl = readsFor({ ...base, is_overhead: undefined, loans: [] });
     renderPage();
-    await screen.findByRole("link", { name: /^הכנסות/ });
+    await screen.findByRole("link", { name: /^נכנס ב/ });
     expect(screen.queryByRole("link", { name: /^השקעה/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     expect(screen.getByRole("link", { name: /נתוני השקעה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
+  });
+
+  it("parses an older payload with no investment, and its loans still open the investment and loans page", async () => {
+    rpc.impl = readsFor({ ...base, is_overhead: undefined });
+    renderPage();
+    const row = await screen.findByRole("link", { name: /^השקעה והלוואות/ });
+    expect(row).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
   });
 
   it("shows the new figure after a save", async () => {

@@ -331,6 +331,45 @@ export async function callTool(
     return ok({ ...(result.json as Review), basis });
   }
 
+  // FLOW-419 (decision 0176): one project's cash per month, and the lines behind it.
+  if (name === "get_project_cash_months" || name === "get_project_cash_lines") {
+    const projectId = args.project_id;
+    if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
+    let result;
+    if (name === "get_project_cash_months") {
+      const months = args.months == null ? 4 : args.months;
+      if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 24) {
+        return fail("validation", "validation");
+      }
+      result = await rpc("project_cash_months", { p_project: projectId, p_months: months });
+    } else {
+      const month = typeof args.month === "string" && /^\d{4}-\d{2}$/.test(args.month) ? `${args.month}-01` : args.month;
+      if (typeof month !== "string" || !isCalendarDate(month)) return fail("validation", "validation");
+      const side = args.side;
+      if (side !== "in" && side !== "out" && side !== "excluded" && side !== "not_in_profit") return fail("validation", "validation");
+      const currency = args.currency ?? null;
+      if (currency != null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return fail("validation", "validation");
+      const limit = limitOf(args.limit, 40);
+      if (typeof limit !== "number") return limit;
+      if (limit === 0) return fail("validation", "validation");
+      const offset = offsetOf(args.offset);
+      if (typeof offset !== "number") return offset;
+      result = await rpc("project_cash_month_lines", {
+        p_project: projectId,
+        p_month: month,
+        p_side: side,
+        p_currency: currency,
+        p_limit: limit,
+        p_offset: offset,
+      });
+    }
+    if (result.status >= 400) return fail("refused", READ_REFUSED);
+    // The RPC returns null for a project of another company or an unknown one.
+    if (result.json == null) return fail("not_found", "not found");
+    if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+    return ok(result.json as Review);
+  }
+
   // FLOW-413 (decision 0168): money in and out per month, on the company's cash basis.
   if (name === "get_cash_months") {
     // FLOW-417: year (with no months) reads that calendar year's months instead.

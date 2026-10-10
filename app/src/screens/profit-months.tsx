@@ -135,7 +135,8 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
     : rows.length === 0
       ? windowLabel(whole, undefined, "project")
       : `${windowLabel(whole, undefined, "project")} · ${shownTotal < 0n ? "הפסד" : "רווח"} ${formatAmountText(shownTotal, mainCurrency)}${afterOverhead ? " · אחרי הוצאות כלליות" : ""}`;
-  const projectPath = `/projects/${projectId || (data?.project_id ?? "")}`;
+  // FLOW-419: the project opens on its cash, so the months return to (and open) its profit page.
+  const projectPath = `/projects/${projectId || (data?.project_id ?? "")}/profit`;
   return (
     <ScreenState
       title="לפי חודש"

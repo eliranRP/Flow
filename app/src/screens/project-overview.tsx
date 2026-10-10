@@ -73,14 +73,17 @@ export function ProjectOverviewRows({
   investmentData,
   currencyRows,
   links,
+  profitOnly = false,
 }: {
   project: Project;
   investmentData: ProjectInvestment;
   currencyRows: readonly ProjectCurrencyRow[];
   links: ProjectOverviewLinks;
+  /** FLOW-419: the profit page leaves השקעה and הלוואות to their own page. */
+  profitOnly?: boolean;
 }) {
-  const investment = investmentFigure(investmentData);
-  const loans = loansFigure(project);
+  const investment = profitOnly ? null : investmentFigure(investmentData);
+  const loans = profitOnly ? null : loansFigure(project);
   return (
     <List className="ui-project-overview">
       <ListRow variant="item" title="הכנסות" meta={<Figure>{figures(currencyRows, (row) => row.income_minor)}</Figure>} href={links.income} chevron />
@@ -91,7 +94,9 @@ export function ProjectOverviewRows({
       {loans == null ? null : (
         <ListRow variant="item" title="הלוואות" meta={<span className="ui-project-row-figure">{loans}</span>} href={links.loans} chevron />
       )}
-      <ListRow variant="item" title="תנועות" meta={<Figure>{transactionsFigure(project)}</Figure>} href={links.transactions} chevron />
+      {project.transactions.length === 0 ? null : (
+        <ListRow variant="item" title="תנועות" meta={<Figure>{transactionsFigure(project)}</Figure>} href={links.transactions} chevron />
+      )}
       <ListRow variant="item" title="לפי חודש" href={links.months} chevron />
     </List>
   );
