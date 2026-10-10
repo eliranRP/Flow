@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
-import { MemoryRouter } from "react-router-dom";
 import { CashRows, type CashRow } from "./cash-rows";
 
 /** FLOW-413 / FLOW-417: the cash view's rows. Invented figures. Rows hold bigints, so stories render them rather than pass args. */
@@ -9,11 +8,9 @@ const meta = {
   title: "Components/CashRows",
   decorators: [
     (Story) => (
-      <MemoryRouter>
-        <div className="ui-page-pad">
-          <Story />
-        </div>
-      </MemoryRouter>
+      <div className="ui-page-pad">
+        <Story />
+      </div>
     ),
   ],
 } satisfies Meta;
