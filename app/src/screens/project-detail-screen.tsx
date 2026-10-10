@@ -186,9 +186,11 @@ export function ProjectDetailScreen({
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
   const detailPhase = sample || (preview === "off" && detail.data != null) ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
-  const cashPhase = sample || section !== "overview" || (preview === "off" && cash.data != null)
+  const cashRead = sample || section !== "overview" || (preview === "off" && cash.data != null)
     ? ({ kind: "ready" } as const)
     : screenPhase(preview, cash);
+  // FLOW-419: the page paints the project's name from its own read while the cash read is still out.
+  const cashPhase = cashRead.kind === "loading" ? ({ kind: "ready" } as const) : cashRead;
   const phase = detailPhase.kind === "ready" ? cashPhase : detailPhase;
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
@@ -358,8 +360,7 @@ export function ProjectDetailScreen({
     />
   );
   if (section === "overview") {
-    const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data);
-    if (cashData == null) return <ProjectLoading search={search} example={example} pill={false} />;
+    const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
     return (
       <ProjectCashOverview
         project={project}

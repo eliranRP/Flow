@@ -58,7 +58,8 @@ test("Home: a swipe right on the figure goes to the earlier window, left comes b
 
 test("Project band: a swipe right on the profit steps the project's own period", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
-  await page.goto("/e2e/project-detail?preview=1");
+  // FLOW-419: the project opens on its cash; the profit and its period live on the profit page.
+  await page.goto("/e2e/project-detail?preview=1&section=profit");
   await expect(page.getByText(/^רווח ב־3 חודשים/)).toBeVisible();
   // FLOW-359 (A): the project band has Home's one pill; it names the window the swipe moved to.
   const pill = page.locator(".ui-band").getByRole("button", { name: /בחירת תקופה$/ });
