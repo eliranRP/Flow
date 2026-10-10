@@ -8,7 +8,7 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07. Lanes table: 2026-10-10 14:45Z.
+Last full sync: 2026-10-07. Lanes table: 2026-10-10 15:45Z.
 
 ## Lanes now
 
@@ -17,16 +17,19 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 3 | Parked (FLOW-309 pairing server done); takes the next server task | Server side of the next plan-first feature |
-| Dev lane 4 | FLOW-911 done (#542); real-user `get_project` snapshot at 15:00Z (edge logs, read-only) | Compute-size evidence for the owner only if typical project opens stay over 0.7 s |
+| Dev lane 4 | Gate work, since the backlog has no ready dev task: FLOW-814 done (#545, one-second migration-order check and rename helper); FLOW-815 Home entry split (vaul and the Radix dialog in their own chunk, 240.0 to 219.6 KB gzip), the fix for the bundle budget at its limit, merges first | Next gate improvement or the next dev task the lane manager routes |
 | UI lane 1 | FLOW-422 done (#537); idle | Next cycle 18 item from the design lead |
-| UI lane 2 | FLOW-423 done (#538); idle | Next cycle 18 item on the review and transaction screens |
-| UI lane 3 | FLOW-912: steadier page-speed check (median of 5 opens, same 700 ms limit, `app/perf`), then FLOW-910: reload once when a new service worker takes control (`app/src/sw-reload.ts`) | Settings, project screens, and other areas outside the review and transaction screens |
-| Temporary lanes (owner asks, one thread each) | FLOW-430 #528 missing-bill suggested match · FLOW-432 #531 split parts on the list row (merges after #540, migration order) · FLOW-434 #536 loan page (owner picked A plus percentages and a future-payments view; building) · FLOW-908 #540 search month totals. Closed today at their merge: FLOW-422, 423, 431, 433, 435, 707, 909, 911 | Each closes at its merge |
-| UI/UX review cycle | Design lead; cycle 18 on the 14:31Z deploy (e645191), findings from FLOW-424; signs off UI PRs in a PR comment | Next deploy batch |
-| Production QA | Deploy and prod check after each deploy, sandbox QA company only (13:50Z and 14:31Z deploys verified) | Next deploy batch |
+| UI lane 2 | FLOW-424: cycle 18 polish, five small UI items on lists, קבועים and the usual-amount chip (design lead signs off in a PR comment) | Next cycle 18 item on the review and transaction screens |
+| UI lane 3 | FLOW-912 done (#546, median of 5 opens, every open printed); FLOW-910: reload once when a new service worker takes control (`app/src/sw-reload.ts`), goes up after FLOW-815 | Settings, project screens, and other areas outside the review and transaction screens |
+| Temporary lanes (owner asks, one thread each) | FLOW-430 #528 missing-bill suggested match (gate after FLOW-815) · FLOW-434 #536 loan page (owner picked A plus percentages and a future-payments view; design r1 done, gate after FLOW-815). Closed today at their merge: FLOW-422, 423, 431, 432, 433, 435, 707, 908, 909, 911 | Each closes at its merge |
+| UI/UX review cycle | Design lead; cycle 18 done on e645191 (#544, findings in FLOW-424); next cycle on the deploy after FLOW-815; signs off UI PRs in a PR comment | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only (13:50Z, 14:31Z and 15:13Z deploys verified) | Next deploy batch |
 | Backlog bug fixes | Idle; the owner's bugs run in their own threads today | Next bug the lane manager routes |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 | Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
+
+Merge rule since 15:22Z: right before merging, a lane looks at main's latest workflow run; if it is a full suite and deploy run still in progress, the lane holds its merge until that run completes. The lane manager still announces holds, to every lane.
+
 ## Priority queue
 
 Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
@@ -351,6 +354,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-813"></a>[FLOW-813](tasks/FLOW-813.md) | Faster pre-push local CI | SMALL CYCLE |
 | <a id="flow-814"></a>[FLOW-814](tasks/FLOW-814.md) | A migration that main overtook fails in seconds, and one command renames it | SMALL CYCLE |
 | <a id="flow-815"></a>[FLOW-815](tasks/FLOW-815.md) | Headroom under the Home entry size budget | SMALL CYCLE |
+| <a id="flow-816"></a>[FLOW-816](tasks/FLOW-816.md) | The project-open speed check scales to the container in local gates | SMALL CYCLE |
+| <a id="flow-817"></a>[FLOW-817](tasks/FLOW-817.md) | Docs-only merges don't count toward the deploy batch | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
