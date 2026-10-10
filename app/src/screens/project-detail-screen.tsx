@@ -7,9 +7,9 @@ import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { periodPhrase } from "../period";
+import { periodPhrase, pillNamesPeriod, windowLabel } from "../period";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
-import { PeriodBar } from "../ui/period-bar";
+import { PeriodPicker } from "../ui/period-picker";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -63,10 +63,11 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
             <span className="ui-skel-project-title">
               <Skeleton tone="band" className="ui-skel-project-title-bar" />
             </span>
+            <Skeleton tone="band" className="ui-skel-project-label" />
+            {/* FLOW-359 (A): the period pill sits between the label and the figure, as on Home. */}
             <span className="ui-skel-project-period">
               <Skeleton tone="band" className="ui-skel-project-period-bar" />
             </span>
-            <Skeleton tone="band" className="ui-skel-project-label" />
             <Skeleton tone="band" className="ui-skel-project-num" />
             <span className="ui-band-figures">
               <Skeleton tone="band" className="ui-skel-project-figure" />
@@ -155,6 +156,7 @@ export function ProjectDetailScreen({
   const search = usePreviewSearch();
   // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
   const [period, setPeriod] = useProjectPeriod();
+  const [periodSheet, setPeriodSheet] = useState(false);
   const detail = useProjectQuery(sample ? "" : projectId, period);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
@@ -341,11 +343,11 @@ export function ProjectDetailScreen({
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
           {/* FLOW-335: an active project says nothing here; only another state takes the line. */}
           {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
-          <PeriodBar period={period} onChange={setPeriod} scope="project" toDateHint={false} />
-          {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0150). */}
+          {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150).
+              FLOW-359 (A): Home's one period pill replaces the presets and the stepper. */}
           <PeriodSwipe period={period} onChange={setPeriod}>
             <p className="ui-band-label t-label ui-project-period-label">
-              {bandWord} {periodWords}
+              {pillNamesPeriod(period) ? bandWord : `${bandWord} ${periodWords}`}
               {marginShown == null ? null : (
                 <>
                   {" · רווחיות "}
@@ -353,6 +355,17 @@ export function ProjectDetailScreen({
                 </>
               )}
             </p>
+            <div className="ui-hero-pill">
+              <PeriodPicker
+                pill={windowLabel(period, undefined, "project")}
+                name={`${windowLabel(period, undefined, "project")} – בחירת תקופה`}
+                open={periodSheet}
+                onOpenChange={setPeriodSheet}
+                period={period}
+                onChange={setPeriod}
+                scope="project"
+              />
+            </div>
             {/* FLOW-340 C: the band holds the profit only; income and expenses are the first rows below. */}
             <div className="t-display ui-project-profits">
               {profitRows.map(({ row, profit: rowProfit }) => (

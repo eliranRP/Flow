@@ -191,12 +191,15 @@
 }
 
 .ui-skel-project-period {
-  block-size: calc(var(--type-label-size) * var(--type-label-line));
+  block-size: var(--size-period);
+  margin-bottom: var(--space-2);
 }
 
+/* FLOW-359 (A): the loading pill has the loaded pill's height and shape. */
 .ui-skel-project-period-bar {
   inline-size: var(--skel-lg);
-  block-size: calc(var(--type-label-size) * var(--type-label-line) - var(--space-1));
+  block-size: var(--size-period);
+  border-radius: var(--radius-chip);
 }
 
 .ui-skel-project-label {
