@@ -106,7 +106,7 @@ function scopedStories(all: StoryEntry[]): StoryEntry[] {
  * Every story is opened once. The stories are split round-robin into shards so Playwright workers
  * can open them side by side; together the shards cover the whole index.
  */
-const STORY_SHARDS = 24;
+const STORY_SHARDS = 21;
 
 test.describe("every static story", () => {
   test.describe.configure({ mode: "parallel" });

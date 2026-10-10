@@ -164,12 +164,13 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
 `));
   assert.equal((job("e2e-shard").match(/if: matrix\.part == 'database'\n/g) ?? []).length, 5);
   assert.match(job("e2e-shard"), /if: matrix\.part != 'database'\n {8}run: \|\n {10}set -euo pipefail\n {10}eval "\$\(bash scripts\/ci-local-supabase-env\.sh\)"\n/);
-  // Eight story runners, each with three of the every-story test's groups and an eighth of the other specs.
-  assert.match(job("check-stories"), /shard: \[1, 2, 3, 4, 5, 6, 7, 8\]\n/);
-  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/8\n/);
-  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/8\n/);
+  // Seven story runners, each with three of the every-story test's groups and a seventh of the other specs.
+  // With them the run holds 20 jobs at once, GitHub Free's limit: an eighth runner waited for a free slot.
+  assert.match(job("check-stories"), /shard: \[1, 2, 3, 4, 5, 6, 7\]\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep "every static story" --shard=\$\{\{ matrix\.shard \}\}\/7\n/);
+  assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/7\n/);
   const storySpec = readFileSync(new URL("../app/e2e/storybook-static.spec.ts", import.meta.url), "utf8");
-  assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 8, 0);
+  assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 7, 0);
   assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
   assert.match(job("check-perf"), /pnpm --filter @flow\/app test:perf\n/);
   assert.equal(job("check-storybook").includes("test:perf"), false);
