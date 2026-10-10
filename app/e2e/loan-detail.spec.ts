@@ -73,6 +73,8 @@ test("marking a loan paid off takes a date from the last payment on, then undo r
   // Back twice in the app (a reload would reset the dev store): פרטי הלוואה, the loan, the list.
   await page.getByRole("button", { name: "חזרה" }).first().click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge$/);
+  // The loan page is in before its חזרה: a click while the details page leaves can miss (red main on d5365c0).
+  await expect(page.getByRole("link", { name: /^פרטי הלוואה/ })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).first().click();
   await expect(page).toHaveURL(/\/e2e\/loans$/);
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toHaveCount(0);

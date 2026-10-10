@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { afterEach, expect } from "vitest";
+import { afterAll, afterEach, expect } from "vitest";
 import { pinReviewLine } from "./review-pin";
 
 // A file under `// @vitest-environment node` tests logic only: it skips the DOM setup below
@@ -70,3 +70,8 @@ afterEach(() => {
   window.history.replaceState(null, "");
   document.documentElement.dataset.theme = "light";
 });
+
+// Radix's FocusScope dispatches its unmount event on a 0 ms timer. Left for after the file, it fires
+// once jsdom is torn down and fails the run with "parameter 1 is not of type 'Event'" (red main on
+// d5365c0, sumit-row-nav.test.tsx). One tick at the end of each file lets it run first.
+afterAll(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
