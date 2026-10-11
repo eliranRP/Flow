@@ -378,6 +378,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-819"></a>[FLOW-819](tasks/FLOW-819.md) | Remove the stories and components the app no longer uses | SMALL CYCLE |
 | <a id="flow-820"></a>[FLOW-820](tasks/FLOW-820.md) | Rule: a change removes what it leaves unused | SMALL CYCLE |
 | <a id="flow-821"></a>[FLOW-821](tasks/FLOW-821.md) | Faster local CI and main CI: build once, reuse it | SMALL CYCLE |
+| <a id="flow-822"></a>[FLOW-822](tasks/FLOW-822.md) | Remove CSS rules no screen uses | SMALL CYCLE |
+| <a id="flow-823"></a>[FLOW-823](tasks/FLOW-823.md) | Shared package: drop exports nothing uses | SMALL CYCLE |
+| <a id="flow-824"></a>[FLOW-824](tasks/FLOW-824.md) | One copy of the code two screens duplicate | SMALL CYCLE |
+| <a id="flow-825"></a>[FLOW-825](tasks/FLOW-825.md) | One render helper for the app's tests | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
