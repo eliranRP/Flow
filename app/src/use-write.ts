@@ -50,7 +50,10 @@ function failureRetries(failure: WriteFailure, error: Error): boolean {
 /** A query the write changed, with the value it held before, so a failure can put it back. */
 type Snapshot = { key: QueryKey; before: unknown };
 
-/** A write that checks the PostgREST error, stays busy, and toasts a retry for a transient failure. */
+/**
+ * A write that checks the PostgREST error and toasts a retry for a transient failure. It stays busy
+ * until the server answers, unless `optimistic` draws its result at once (decision 0180).
+ */
 export function useWrite<T = void>(options: {
   run: (payload: T) => Promise<void>;
   keys: string[];
