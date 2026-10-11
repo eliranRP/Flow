@@ -208,7 +208,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  min-inline-size: 0;
   white-space: nowrap;
+}
+
+/* FLOW-439: the card or account name after the last 4; the name ellipsizes, the last 4 never does. */
+.ui-review-meta-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ui-method-icon {

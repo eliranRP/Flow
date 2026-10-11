@@ -62,6 +62,17 @@ export function methodLabel(meta: Pick<TxnMeta, "method" | "card_last4"> | null 
   }
 }
 
+/**
+ * FLOW-439: the name of what paid, for the review card's method line: a card's nickname from the
+ * bank (FLOW-707), or the name of the account a transfer left from, without its last 4.
+ */
+export function methodSourceName(meta: Pick<TxnMeta, "method" | "card_name" | "account"> | null | undefined): string | null {
+  if (meta == null) return null;
+  if (meta.method === "card") return meta.card_name?.trim() || null;
+  if (meta.account == null) return null;
+  return splitAccountLast4(meta.account).name || null;
+}
+
 /** The counterparty row is hidden when it repeats the party shown above. */
 export function sameParty(a: string | null | undefined, b: string | null | undefined): boolean {
   if (a == null || b == null) return false;

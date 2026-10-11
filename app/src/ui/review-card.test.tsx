@@ -243,6 +243,19 @@ describe("ReviewCard bank details (FLOW-304)", () => {
     expect(document.querySelector(".ui-review-meta")).toHaveTextContent("כרטיס");
   });
 
+  it("names the card from the bank, or the account a transfer left from (FLOW-439)", () => {
+    const { rerender } = render(card({ ...noMeta, method: "card", card_last4: "8408", card_name: "כרטיס חשמל", account: "Operating ••1234" }));
+    const name = () => document.querySelector(".ui-review-meta-name");
+    expect(name()).toHaveTextContent("כרטיס חשמל");
+    expect(document.querySelector(".ui-review-meta")).toHaveTextContent("כרטיס שמסתיים ב־8408·כרטיס חשמל");
+    rerender(card({ ...noMeta, method: "card", card_last4: "8408", account: "Operating ••1234" }));
+    expect(name()).toBeNull();
+    rerender(card({ ...noMeta, method: "ach", account: "Operating ••1234" }));
+    expect(name()).toHaveTextContent(/^Operating$/);
+    rerender(card({ ...noMeta, method: "other", account: "Operating ••1234" }));
+    expect(document.querySelector(".ui-review-meta")).toBeNull();
+  });
+
   it("keeps a short memo as plain text, and makes a clipped memo a toggle", () => {
     const { unmount } = render(card({ ...noMeta, memo: "Invoice 1042" }));
     expect(screen.queryByRole("button", { name: /הערה/ })).not.toBeInTheDocument();
