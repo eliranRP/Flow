@@ -1,10 +1,10 @@
-import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { onlineManager } from "@tanstack/react-query";
+import { act, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { preloadScreens } from "./screen-loaders";
+import { renderWithProviders } from "./test-render";
 
 const auth = vi.hoisted(() => {
   const handlers: Array<(event: string, session: Session | null) => void> = [];
@@ -110,14 +110,7 @@ beforeAll(async () => {
 }, 60_000);
 
 async function renderAt(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  const view = renderWithProviders(<App />, { route: path });
   await settle();
   return view;
 }

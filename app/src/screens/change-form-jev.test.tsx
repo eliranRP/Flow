@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { screen, waitFor } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import type { JevReviewState } from "./jev-review";
 import { ChangeForm } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 const state = vi.hoisted((): { jev: JevReviewState; row: Record<string, unknown> } => ({
   jev: { connectorOn: false, prefill: null },
@@ -79,19 +77,11 @@ function row(extra: Record<string, unknown> = {}) {
 }
 
 function renderChange() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={["/review/change?item=r1"]}>
-          <BooksProvider>
-            <Routes>
-              <Route path="/review/change" element={<ChangeForm />} />
-            </Routes>
-          </BooksProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/review/change" element={<ChangeForm />} />
+    </Routes>,
+    { route: "/review/change?item=r1" },
   );
 }
 

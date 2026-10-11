@@ -1,10 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { screen, waitFor } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "../ui/toast";
 import type { UpKind } from "../project-category-months";
 import { categoryBack, ProjectCategoryScreen } from "./project-category-screen";
+import { renderWithProviders } from "../test-render";
 
 type Call = { name: string; args: unknown };
 const rpc = vi.hoisted(() => ({ calls: [] as Call[] }));
@@ -23,17 +22,11 @@ afterEach(() => {
 });
 
 function open(url: string, sample?: NonNullable<Parameters<typeof ProjectCategoryScreen>[0]>["sample"]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[url]}>
-          <Routes>
-            <Route path="/projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen sample={sample} />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <Routes>
+      <Route path="/projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen sample={sample} />} />
+    </Routes>,
+    { route: url },
   );
 }
 

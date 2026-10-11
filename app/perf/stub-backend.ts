@@ -1,5 +1,5 @@
 import type { Page, Route } from "@playwright/test";
-import { demoDashboard, demoProject, demoReview, demoUnpaid } from "../src/demo/model";
+import { demoCategories, demoDashboard, demoProject, demoTransaction, demoUnpaid } from "../src/demo/model";
 
 /**
  * FLOW-804: the perf build talks to this address (playwright.perf.config.ts). Nothing listens
@@ -33,7 +33,15 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
     case "list_unpaid":
       return demoUnpaid();
     case "list_review":
-      return demoReview();
+      return reviewCards();
+    case "approve_review_item":
+      return { ok: true };
+    case "list_categories":
+      return demoCategories();
+    case "get_transaction":
+      return demoTransaction(typeof args.p_id === "string" ? args.p_id : "");
+    case "payment_recurring":
+      return recurringState(typeof args.p_id === "string" ? args.p_id : "");
     case "sumit_status":
       return { connected: true, sumit_company_id: 1, last_sync_at: "2026-10-09T06:00:00Z", last_error: null };
     case "mcp_company_loan_currency":
@@ -93,6 +101,42 @@ function projectCashYears() {
   };
 }
 
+/** FLOW-830: the two review cards the tap gate approves (invented suppliers, in queue order). */
+export const REVIEW_CARDS = ["ספק לבדיקה א", "ספק לבדיקה ב"] as const;
+
+function reviewCards() {
+  return REVIEW_CARDS.map((supplier, index) => ({
+    id: `perf-review-${String(index + 1)}`,
+    transaction_id: `perf-line-${String(index + 1)}`,
+    description: `חשבונית לבדיקה ${String(index + 1)}`,
+    doc_date: "2026-10-01",
+    amount_net: 125_000 + index * 1000,
+    currency: "ILS",
+    direction: "expense",
+    reason: null,
+    project_id: "herzl",
+    category_id: "cat-0",
+    supplier_name: supplier,
+    project_name: "שיפוץ הרצל 12",
+    category_name: "חומרים",
+    category_suggested: false,
+    project_suggested: false,
+  }));
+}
+
+/** FLOW-830: a payment that is not recurring yet, so both charge switches start off. */
+function recurringState(transactionId: string) {
+  return {
+    transaction_id: transactionId,
+    party: { direction: "expense", id: "perf-party", name: "ספק לדוגמה", currency: "ILS" },
+    recurring: false,
+    override: null,
+    detected: false,
+    typical_day: null,
+    typical_amount_minor: null,
+  };
+}
+
 /** The one company the stub user owns; the app names it on every read once list_my_companies answers. */
 const COMPANY_ID = "00000000-0000-4000-8000-000000000805";
 
@@ -128,6 +172,71 @@ function session(): string {
   });
 }
 
+/** The writes a session has made, so the reads after them show the change (as the server would). */
+type Writes = {
+  approved: Set<string>;
+  paid: Map<string, boolean>;
+  cash: Map<string, boolean>;
+  hidden: Map<string, boolean>;
+  projects: Map<string, string>;
+};
+
+function newWrites(): Writes {
+  return { approved: new Set(), paid: new Map(), cash: new Map(), hidden: new Map(), projects: new Map() };
+}
+
+function text(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function projectName(id: string): string | null {
+  return demoDashboard(null, null, "invoiced").projects.find((project) => project.id === id)?.name ?? null;
+}
+
+/**
+ * FLOW-830: records a write the tap gate makes and applies it to the reads that follow. A write
+ * answers as the stub always did; a read returns what the session has written to it.
+ */
+function persist(name: string, args: Record<string, unknown>, writes: Writes, answer: unknown): unknown {
+  const rows = (value: unknown) => (Array.isArray(value) ? value as Array<Record<string, unknown>> : null);
+  switch (name) {
+    case "approve_review_item":
+      writes.approved.add(text(args.p_id));
+      return answer;
+    case "set_invoice_paid":
+      writes.paid.set(text(args.p_id), args.p_paid === true);
+      return [];
+    case "set_transaction_cash":
+      writes.cash.set(text(args.p_id), args.p_in_cash === true);
+      return [];
+    case "set_category_hidden":
+      writes.hidden.set(text(args.p_id), args.p_hidden === true);
+      return [];
+    case "reassign_transaction":
+      writes.projects.set(text(args.p_id), text(args.p_project_id));
+      return [];
+    case "list_review":
+      return rows(answer)?.filter((row) => !writes.approved.has(text(row.id))) ?? answer;
+    case "list_unpaid":
+      return rows(answer)?.map((row) => ({ ...row, marked_paid_at: writes.paid.get(text(row.id)) === true ? "2026-10-11T08:00:00Z" : null })) ?? answer;
+    case "list_categories":
+      return rows(answer)?.map((row) => ({ ...row, hidden: writes.hidden.get(text(row.id)) ?? row.hidden })) ?? answer;
+    case "get_transaction": {
+      if (answer == null || typeof answer !== "object") return answer;
+      const id = text(args.p_id);
+      const cash = writes.cash.get(id);
+      const project = writes.projects.get(id);
+      return {
+        ...answer,
+        ...(cash === undefined ? {} : { in_cash_override: cash }),
+        ...(project === undefined ? {} : { project_id: project, project_name: projectName(project) }),
+      };
+    }
+    default:
+      return answer;
+  }
+}
+
 export interface StubBackend {
   /** RPC names read so far, in order. */
   rpcs: string[];
@@ -145,6 +254,7 @@ export interface StubOptions {
 /** Signs the page in and answers every request to the stub address from the demo books. */
 export async function stubBackend(page: Page, options: StubOptions = {}): Promise<StubBackend> {
   const rpcs: string[] = [];
+  const written = newWrites();
   const reads: StubBackend["reads"] = [];
   let open = 0;
   const key = `sb-${new URL(STUB_URL).hostname.split(".")[0] ?? "local"}-auth-token`;
@@ -166,7 +276,8 @@ export async function stubBackend(page: Page, options: StubOptions = {}): Promis
         const args = (request.postDataJSON() ?? {}) as Record<string, unknown>;
         const wait = options.delay?.(name) ?? 0;
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-        await route.fulfill({ status: 200, contentType: "application/json", body: wire(rpcBody(name, args)) });
+        const answer = persist(name, args, written, rpcBody(name, args));
+        await route.fulfill({ status: 200, contentType: "application/json", body: wire(answer) });
         if (entry) entry.answered = Date.now();
       } else if (url.includes("/auth/v1/user")) {
         await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(USER) });

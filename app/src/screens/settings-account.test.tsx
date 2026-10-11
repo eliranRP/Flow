@@ -1,12 +1,10 @@
 import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 /** FLOW-501 moved the connector rows to their own page. These account tests read both. */
 function SettingsAndConnections(props: Parameters<typeof ConnectionsScreen>[0]) {
@@ -70,24 +68,16 @@ vi.mock("../lib/supabase", () => ({
 
 describe("settings account", () => {
   it("shows the business row and a separate Google email row", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-          <MemoryRouter>
-            <SettingsScreen
-              sample={{
-                name: "אלפא",
-                connected: false,
-                companyId: null,
-                lastError: null,
-                email: "owner@example.com",
-              }}
-            />
-          </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <SettingsScreen
+        sample={{
+          name: "אלפא",
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner@example.com",
+        }}
+      />,
     );
     const business = screen.getByText("אלפא").closest(".ui-row");
     const account = screen.getByText("owner@example.com").closest(".ui-row");
@@ -125,25 +115,17 @@ describe("settings account", () => {
 
   it("shows a static email row when there is no company", async () => {
     auth.signOuts = 0;
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-          <MemoryRouter>
-            <SettingsAndConnections
-              sample={{
-                name: null,
-                connected: false,
-                companyId: null,
-                lastError: null,
-                email: "owner@example.com",
-                noCompany: true,
-              }}
-            />
-          </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    const { unmount } = renderWithProviders(
+      <SettingsAndConnections
+        sample={{
+          name: null,
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner@example.com",
+          noCompany: true,
+        }}
+      />,
     );
     const email = screen.getByText("owner@example.com");
     expect(email.tagName).toBe("BDI");
@@ -190,25 +172,18 @@ describe("settings account", () => {
     expect(within(mercurySheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dmercury");
     unmount();
 
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-          <MemoryRouter initialEntries={["/settings?preview=empty"]}>
-            <SettingsAndConnections
-              sample={{
-                name: null,
-                connected: false,
-                companyId: null,
-                lastError: null,
-                email: "   ",
-                noCompany: true,
-              }}
-            />
-          </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <SettingsAndConnections
+        sample={{
+          name: null,
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "   ",
+          noCompany: true,
+        }}
+      />,
+      { route: "/settings?preview=empty" },
     );
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
     expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
@@ -256,18 +231,11 @@ describe("settings account", () => {
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/settings"]}>
-              <AuthProvider>
-                <SettingsAndConnections />
-              </AuthProvider>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <SettingsAndConnections />
+      </AuthProvider>,
+      { route: "/settings" },
     );
     act(() => {
       for (const handler of auth.handlers) {
@@ -295,25 +263,17 @@ describe("settings account", () => {
   });
 
   it("keeps ניתוק inside the SUMIT sheet", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: true,
-                  companyId: 1001,
-                  lastError: null,
-                  email: "owner@example.com",
-                  assistant: { state: "connected", scope: "read", id: "mcp-1" },
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ConnectionsScreen
+        sample={{
+          name: "אלפא",
+          connected: true,
+          companyId: 1001,
+          lastError: null,
+          email: "owner@example.com",
+          assistant: { state: "connected", scope: "read", id: "mcp-1" },
+        }}
+      />,
     );
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
@@ -336,25 +296,19 @@ describe("settings account", () => {
       layer = typeof state.flowLayer === "string" ? state.flowLayer : null;
       return null;
     }
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <Layer />
-              <ConnectionsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: true,
-                  companyId: 1001,
-                  lastError: null,
-                  email: "owner@example.com",
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <>
+        <Layer />
+        <ConnectionsScreen
+          sample={{
+            name: "אלפא",
+            connected: true,
+            companyId: 1001,
+            lastError: null,
+            email: "owner@example.com",
+          }}
+        />
+      </>,
     );
     fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
     await waitFor(() => { expect(layer).toBe("sumit-status"); });
@@ -369,18 +323,11 @@ describe("settings account", () => {
 
   it("keeps other previews on their sample and hides sign-out", () => {
     auth.handlers.length = 0;
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/settings?preview=1"]}>
-              <AuthProvider>
-                <SettingsAndConnections />
-              </AuthProvider>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <SettingsAndConnections />
+      </AuthProvider>,
+      { route: "/settings?preview=1" },
     );
     act(() => {
       for (const handler of auth.handlers) {
@@ -439,18 +386,11 @@ describe("settings account", () => {
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/settings"]}>
-              <AuthProvider>
-                <SettingsAndConnections />
-              </AuthProvider>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <SettingsAndConnections />
+      </AuthProvider>,
+      { route: "/settings" },
     );
     act(() => {
       for (const handler of auth.handlers) {
@@ -513,25 +453,17 @@ describe("settings account", () => {
 
   it("uses the single-line height for the account rows, with or without a company", () => {
     document.documentElement.style.setProperty("--row-pad", "14px");
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <SettingsScreen
-                sample={{
-                  name: null,
-                  connected: false,
-                  companyId: null,
-                  lastError: null,
-                  email: "owner@example.com",
-                  noCompany: true,
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    const { unmount } = renderWithProviders(
+      <SettingsScreen
+        sample={{
+          name: null,
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner@example.com",
+          noCompany: true,
+        }}
+      />,
     );
     const single = screen.getByText("owner@example.com").closest(".ui-row");
     expect(single).not.toBeNull();
@@ -540,24 +472,16 @@ describe("settings account", () => {
     expect(rowHeight(false)).toBe(53);
     unmount();
 
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <SettingsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: false,
-                  companyId: null,
-                  lastError: null,
-                  email: "owner@example.com",
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <SettingsScreen
+        sample={{
+          name: "אלפא",
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner@example.com",
+        }}
+      />,
     );
     const paired = screen.getByText("owner@example.com").closest(".ui-row");
     expect(paired?.querySelector(".ui-row-hint")).toBeNull();
@@ -567,37 +491,25 @@ describe("settings account", () => {
   });
 
   it("sends categories with no company back to settings", () => {
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/settings/categories?preview=empty"]}>
-              <Routes>
-                <Route path="/settings/categories" element={<CategoriesScreen />} />
-                <Route path="/settings" element={<h1>הגדרות</h1>} />
-              </Routes>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    const { unmount } = renderWithProviders(
+      <Routes>
+        <Route path="/settings/categories" element={<CategoriesScreen />} />
+        <Route path="/settings" element={<h1>הגדרות</h1>} />
+      </Routes>,
+      { route: "/settings/categories?preview=empty" },
     );
     expect(screen.getByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "קטגוריות" })).not.toBeInTheDocument();
     unmount();
 
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/settings/categories?preview=1"]}>
-              <Routes>
-                <Route path="/settings/categories" element={<CategoriesScreen />} />
-                <Route path="/settings" element={<h1>הגדרות</h1>} />
-              </Routes>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <>
+        <Routes>
+          <Route path="/settings/categories" element={<CategoriesScreen />} />
+          <Route path="/settings" element={<h1>הגדרות</h1>} />
+        </Routes>
+      </>,
+      { route: "/settings/categories?preview=1" },
     );
     expect(screen.getByRole("heading", { name: "קטגוריות" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "הגדרות" })).not.toBeInTheDocument();
@@ -608,23 +520,15 @@ describe("settings account", () => {
       data: null,
       error: new FunctionsHttpError({ json: () => Promise.resolve({ error: "sumit_auth" }) }),
     });
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: false,
-                  companyId: null,
-                  lastError: null,
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ConnectionsScreen
+        sample={{
+          name: "אלפא",
+          connected: false,
+          companyId: null,
+          lastError: null,
+        }}
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
     fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
@@ -638,23 +542,15 @@ describe("settings account", () => {
       data: null,
       error: new Error("Failed to fetch"),
     });
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: false,
-                  companyId: null,
-                  lastError: null,
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ConnectionsScreen
+        sample={{
+          name: "אלפא",
+          connected: false,
+          companyId: null,
+          lastError: null,
+        }}
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
     fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
@@ -666,24 +562,16 @@ describe("settings account", () => {
 
   it("disables refresh until the retry time and asks to reconnect after a bad key", () => {
     const later = new Date(Date.now() + 60 * 60_000).toISOString();
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: true,
-                  companyId: 1001,
-                  lastError: "sumit_rejected",
-                  nextAttemptAt: later,
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    const { unmount } = renderWithProviders(
+      <ConnectionsScreen
+        sample={{
+          name: "אלפא",
+          connected: true,
+          companyId: 1001,
+          lastError: "sumit_rejected",
+          nextAttemptAt: later,
+        }}
+      />,
     );
     const row = screen.getByRole("button", { name: "SUMIT" });
     expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר");
@@ -713,24 +601,16 @@ describe("settings account", () => {
     vi.useFakeTimers();
     try {
       const soon = new Date(Date.now() + 5_000).toISOString();
-      const held = render(
-        <QueryClientProvider client={new QueryClient()}>
-          <ToastProvider>
-            <BooksProvider>
-              <MemoryRouter>
-                <ConnectionsScreen
-                  sample={{
-                    name: "אלפא",
-                    connected: true,
-                    companyId: 1001,
-                    lastError: "sumit_rejected",
-                    nextAttemptAt: soon,
-                  }}
-                />
-              </MemoryRouter>
-            </BooksProvider>
-          </ToastProvider>
-        </QueryClientProvider>,
+      const held = renderWithProviders(
+        <ConnectionsScreen
+          sample={{
+            name: "אלפא",
+            connected: true,
+            companyId: 1001,
+            lastError: "sumit_rejected",
+            nextAttemptAt: soon,
+          }}
+        />,
       );
       fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
       expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
@@ -743,24 +623,16 @@ describe("settings account", () => {
       vi.useRealTimers();
     }
 
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen
-                sample={{
-                  name: "אלפא",
-                  connected: true,
-                  companyId: 1001,
-                  lastError: "sumit_auth",
-                  nextAttemptAt: null,
-                }}
-              />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ConnectionsScreen
+        sample={{
+          name: "אלפא",
+          connected: true,
+          companyId: 1001,
+          lastError: "sumit_auth",
+          nextAttemptAt: null,
+        }}
+      />,
     );
     const reconnect = screen.getByRole("button", { name: "SUMIT" });
     expect(reconnect).toHaveClass("ui-row-tone-warning");

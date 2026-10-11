@@ -10,11 +10,11 @@ const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const daySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 /** FLOW-415 (decision 0175): how often a recurring party comes. */
-export const paceSchema = z.enum(["month", "2months", "quarter", "year"]);
+const paceSchema = z.enum(["month", "2months", "quarter", "year"]);
 export type RecurringPace = z.infer<typeof paceSchema>;
 
 /** One recurring supplier whose bill for this month has not come in (`missing_bills`). */
-export const missingBillSchema = z.object({
+const missingBillSchema = z.object({
   /** null on an income row (decision 0175): the party is a customer. */
   supplier_id: z.string().nullable(),
   supplier_name: z.string().nullable().transform((name) => name ?? ""),
@@ -64,7 +64,7 @@ export const missingBillsSchema = z.array(missingBillSchema).nullable().transfor
  * FLOW-415 (decision 0172): a recurring supplier seen this month whose lines so far differ from the
  * usual amount by 20% or more, either way (`recurring_changes`). Largest change first.
  */
-export const recurringChangeSchema = z.object({
+const recurringChangeSchema = z.object({
   supplier_id: z.string().nullable(),
   supplier_name: z.string().nullable().transform((name) => name ?? ""),
   direction: z.enum(["expense", "income"]).optional(),
@@ -139,7 +139,7 @@ const expectedCurrencySchema = z.object({
 });
 
 /** One recurring party behind the expected figures. */
-export const expectedPartySchema = z.object({
+const expectedPartySchema = z.object({
   direction: z.enum(["income", "expense"]),
   party_id: z.string(),
   name: z.string().nullable().transform((name) => name ?? ""),
@@ -174,4 +174,3 @@ export type RecurringChange = z.infer<typeof recurringChangeSchema>;
 export type PaymentRecurring = z.infer<typeof paymentRecurringSchema>;
 export type ExpectedParty = z.infer<typeof expectedPartySchema>;
 export type ExpectedMonths = z.infer<typeof expectedMonthsSchema>;
-export type ExpectedMonth = ExpectedMonths["months"][number];

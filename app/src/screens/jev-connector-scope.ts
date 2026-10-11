@@ -8,6 +8,15 @@ export function jevConnectorQueryKey(scope: JevConnectorScope | null = boundJevC
     : (["jev-connector", scope.userId, scope.companyId] as const);
 }
 
+/** Stable id list for the queue query, so a card does not start its own read. */
+export function jevQueueKey(transactionIds: readonly string[]): string {
+  return [...new Set(transactionIds.filter((id) => id !== ""))].sort().join("\0");
+}
+
+export function jevQueueQueryKey(transactionIds: readonly string[]) {
+  return ["jev-review-queue", jevQueueKey(transactionIds)] as const;
+}
+
 /** FLOW-704: a minute, so a change made elsewhere (MCP, another device) reaches the card soon. */
 export const JEV_CONNECTOR_STALE_MS = 60 * 1000;
 

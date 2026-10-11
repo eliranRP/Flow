@@ -21,6 +21,8 @@
     "check:bundle": "node scripts/check-prod-bundle.mjs && node scripts/check-jev-bundle.mjs && node scripts/check-bundle-budget.mjs",
     "check:reviewer-bundle": "node scripts/check-prod-bundle.mjs --reviewer && node scripts/check-jev-bundle.mjs",
     "check:jev-bundle": "node scripts/check-jev-bundle.mjs",
+    "load:report": "node scripts/load-report.mjs --speed 7 --report-only",
+    "check:cleanup": "bash scripts/check-cleanup.sh",
     "storybook": "pnpm --filter @flow/app storybook",
     "build-storybook": "pnpm --filter @flow/app build-storybook",
     "clip-check": "node scripts/clip-check.mjs",

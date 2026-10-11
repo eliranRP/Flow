@@ -9,7 +9,7 @@ import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
+import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { BigNumber } from "../ui/big-number";
@@ -123,6 +123,15 @@ function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
   if (pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
   return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.`;
 }
+
+/** What a change to a line's project or category refreshes. */
+const ASSIGN_KEYS = ["txn", "dashboard", "project", "project-category", "project-waiting", "review"];
+
+/** A pick's write: the next ids, and the screen as it was before the tap, for a rollback. */
+type PickBack = {
+  next: { projectId: string; categoryId: string };
+  back: { projectId: string; categoryId: string; projectName: string; categoryName: string; committed: { projectId: string; categoryId: string } };
+};
 
 export function TransactionScreen({
   sample,
@@ -276,9 +285,25 @@ export function TransactionScreen({
     if (complete) setHold("");
   }, [hold, txn, categoryId, projectId]);
   const undoId = useRef<string | null>(null);
+  /** The transaction's cache takes the picked names at once (decision 0180). */
+  const pickCache = (payload: PickBack, withProject: boolean) => {
+    const current = detail.data;
+    if (sample || current == null) return [];
+    const project = namesRef.current.projects.find((entry) => entry.id === payload.next.projectId);
+    const category = namesRef.current.categories.find((entry) => entry.id === payload.next.categoryId);
+    return [{
+      key: transactionQueryOptions(preview, current.id).queryKey,
+      update: (old: unknown) => (old == null ? old : {
+        ...(old),
+        ...(withProject ? { project_id: payload.next.projectId, project_name: project?.name ?? null } : {}),
+        category_id: payload.next.categoryId,
+        category_name: category?.name ?? null,
+      }),
+    }];
+  };
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
+    keys: ASSIGN_KEYS,
     success: "השיוך הקודם חזר",
     onSuccess: () => {
       committed.current = { projectId: "", categoryId: "" };
@@ -291,8 +316,28 @@ export function TransactionScreen({
       assertNoError(await supabase.rpc("undo_reassign", { p_id: undoId.current }));
     },
   });
-  const reassign = useWrite({
+  // A saved project or category: the screen takes the write, and ביטול undoes it when the server kept an undo id.
+  const assignSaved = () => {
+    applyRef.current();
+    const id = undoId.current;
+    toast.show({
+      message: "השיוך נשמר",
+      ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+    });
+  };
+  // The pick is the check, the summary and the row at once; a failure goes back to the pick before (decision 0075).
+  const restorePick = (payload: PickBack | undefined) => {
+    if (payload == null) return;
+    committed.current = payload.back.committed;
+    setProjectId(payload.back.projectId);
+    setCategoryId(payload.back.categoryId);
+    setProjectName(payload.back.projectName);
+    setCategoryName(payload.back.categoryName);
+  };
+  const reassign = useWrite<PickBack>({
     failure: changeSaveFailure,
+    onError: (_error, payload) => { restorePick(payload); },
+    optimistic: (payload) => pickCache(payload, true),
     onSplit: () => {
       if (onOpenSplit) {
         onOpenSplit();
@@ -300,18 +345,10 @@ export function TransactionScreen({
       }
       void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
     },
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
-    run: async () => {
+    keys: ASSIGN_KEYS,
+    onSuccess: assignSaved,
+    run: async ({ next }) => {
       const current = sample ?? detail.data;
-      const next = writeTarget.current;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
       if (!supabase || next.projectId === "" || next.categoryId === "") throw new Error("supabase");
@@ -324,23 +361,18 @@ export function TransactionScreen({
       undoId.current = typeof saved.data === "string" ? saved.data : null;
     },
   });
-  const setCategory = useWrite({
+  const setCategory = useWrite<PickBack>({
     failure: changeSaveFailure,
+    onError: (_error, payload) => { restorePick(payload); },
+    optimistic: (payload) => pickCache(payload, false),
     onSplit: () => {
       void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
     },
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
-    run: async () => {
+    keys: ASSIGN_KEYS,
+    onSuccess: assignSaved,
+    run: async ({ next }) => {
       const current = sample ?? detail.data;
-      const nextCategory = writeTarget.current.categoryId;
+      const nextCategory = next.categoryId;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
       if (!supabase || nextCategory === "") throw new Error("supabase");
@@ -383,7 +415,7 @@ export function TransactionScreen({
     }
     void navigate(`/transactions/${detailRow.id}/split${search}`);
   }
-  async function commitPick(kind: "project" | "category", id: string) {
+  function commitPick(kind: "project" | "category", id: string) {
     const previous = { projectId, categoryId };
     // A split's project row opens the split screen, so a split only picks a category here.
     const categoryOnly = splitRow && kind === "category";
@@ -399,20 +431,24 @@ export function TransactionScreen({
       return "hold" as const;
     }
     setHold("");
-    try {
-      if (sample) {
-        applyRef.current();
-        toast.show({ message: "השיוך נשמר" });
-        return undefined;
-      }
-      if (blocked()) throw new Error("preview");
-      if (categoryOnly) await setCategory.mutateAsync();
-      else await reassign.mutateAsync();
-    } catch (error) {
-      setProjectId(previous.projectId);
-      setCategoryId(previous.categoryId);
-      throw error;
+    if (sample) {
+      applyRef.current();
+      toast.show({ message: "השיוך נשמר" });
+      return undefined;
     }
+    if (blocked()) throw new Error("preview");
+    // The check, the summary and the row take the pick now; the write runs behind them.
+    const back: PickBack["back"] = {
+      projectId: previous.projectId,
+      categoryId: previous.categoryId,
+      projectName,
+      categoryName,
+      committed: committed.current,
+    };
+    applyRef.current();
+    const payload: PickBack = { back, next };
+    if (categoryOnly) setCategory.mutate(payload);
+    else reassign.mutate(payload);
     return undefined;
   }
   const party = txnParty(txn);

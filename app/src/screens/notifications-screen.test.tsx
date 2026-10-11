@@ -1,23 +1,16 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { NO_PREFS, prefsFromData, pushSupport, type NotificationPrefs } from "../push";
-import { ToastProvider } from "../ui/toast";
 import { notificationsHint, NotificationsScreen } from "./notifications-screen";
 import { IOS_HOME_NOTE, PUSH_QUESTION, ReviewPushPrompt } from "./review-push-prompt";
+import { renderWithProviders } from "../test-render";
 
 // FLOW-502 option A: the review card asked once, and Settings → התראות with three switches.
 
 function renderAt(ui: ReactNode, path = "/settings/notifications") {
-  return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(ui, { route: path });
 }
 
 const evening: NotificationPrefs = { ...NO_PREFS, evening_reminder: true, prompt_answered: true, has_subscription: true };

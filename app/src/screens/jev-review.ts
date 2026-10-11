@@ -1,6 +1,9 @@
 import { getSupabase } from "../lib/supabase";
 import { isJevReasonKind, type JevReasonInfo, type ReviewFlag, type ReviewFlagKind } from "../review-copy";
 import { writeJevConnectorFlag } from "./jev-connector-scope";
+import { jevQueueKey } from "./jev-connector-scope";
+import { abortError, signalled, withJevDeadline } from "./jev-deadline";
+export { JEV_READ_MS, withJevDeadline } from "./jev-deadline";
 
 export {
   jevConnectorQueryKey,
@@ -26,6 +29,8 @@ export {
   readJevConnectorFlag,
   writeJevConnectorFlag,
   clearJevConnectorFlag,
+  jevQueueKey,
+  jevQueueQueryKey,
 } from "./jev-connector-scope";
 export type { JevConnectorScope, JevScopePhase, JevScopeLookup } from "./jev-connector-scope";
 
@@ -264,18 +269,6 @@ export function jevReadable(): boolean {
   return supabase != null && typeof supabase.from === "function";
 }
 
-/** Stable id list for the queue query, so a card does not start its own read. */
-export function jevQueueKey(transactionIds: readonly string[]): string {
-  return [...new Set(transactionIds.filter((id) => id !== ""))].sort().join("\0");
-}
-
-export function jevQueueQueryKey(transactionIds: readonly string[]) {
-  return ["jev-review-queue", jevQueueKey(transactionIds)] as const;
-}
-
-/** A hung read gives the card back. Longer than this, the card keeps today's values. */
-export const JEV_READ_MS = 1000;
-
 const JEV_OFF_QUEUE: JevQueueData = { connectorOn: false, byId: {} };
 
 /**
@@ -293,60 +286,6 @@ export class JevConnectorStall extends Error {
 }
 
 const STALLED = Symbol("stalled");
-
-function abortError(reason?: unknown): Error {
-  return reason instanceof Error ? reason : new DOMException("The operation was aborted.", "AbortError");
-}
-
-function signalled<T>(query: T, signal?: AbortSignal): T {
-  if (signal == null || query == null || typeof query !== "object") return query;
-  const candidate = query as { abortSignal?: (next: AbortSignal) => T };
-  if (typeof candidate.abortSignal !== "function") return query;
-  return candidate.abortSignal(signal);
-}
-
-/**
- * One second, no retry. A stall returns `fallback`. The caller's abort still rejects
- * so React Query can drop the read when the card unmounts.
- */
-export function withJevDeadline<T>(
-  caller: AbortSignal | undefined,
-  work: (signal: AbortSignal) => Promise<T>,
-  fallback: T,
-): Promise<T> {
-  if (caller?.aborted) return Promise.reject(abortError(caller.reason));
-  const controller = new AbortController();
-  const timer = setTimeout(() => {
-    controller.abort();
-  }, JEV_READ_MS);
-  const onCaller = () => {
-    controller.abort(caller?.reason);
-  };
-  caller?.addEventListener("abort", onCaller, { once: true });
-  const attempt = work(controller.signal).then(
-    (value) => {
-      if (caller?.aborted) throw abortError(caller.reason);
-      return value;
-    },
-    (error: unknown) => {
-      if (caller?.aborted) throw abortError(error);
-      if (controller.signal.aborted) return fallback;
-      throw error;
-    },
-  );
-  const deadline = new Promise<T>((resolve, reject) => {
-    const settle = () => {
-      if (caller?.aborted) reject(abortError(caller.reason));
-      else resolve(fallback);
-    };
-    if (controller.signal.aborted) settle();
-    else controller.signal.addEventListener("abort", settle, { once: true });
-  });
-  return Promise.race([attempt, deadline]).finally(() => {
-    clearTimeout(timer);
-    caller?.removeEventListener("abort", onCaller);
-  });
-}
 
 export function jevConnectorOn(stored: { enabled?: boolean | null; mode?: string | null } | null | undefined): boolean {
   return stored?.enabled === true && (stored.mode === "shadow" || stored.mode === "auto");

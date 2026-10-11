@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import { usePaymentRecurringQuery } from "../forecast";
 import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
+import { useHomePreview } from "../preview";
+import { transactionQueryOptions } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
 import { ChargeSwitches, chargeSwitchToast, paceToast } from "../ui/charge-switches";
 import { PaceSheet } from "../ui/pace-sheet";
@@ -36,6 +38,7 @@ export function TxnChargeSwitches({
   sample?: PaymentRecurring | null;
 }) {
   const toast = useToast();
+  const preview = useHomePreview();
   const blocked = useBlockedPreview();
   const query = usePaymentRecurringQuery(sample === undefined ? txn.id : "", sample === undefined);
   const [sampleCash, setSampleCash] = useState<boolean | null | undefined>(undefined);
@@ -57,9 +60,14 @@ export function TxnChargeSwitches({
         typical_amount_minor: null,
       });
 
+  // A switch flips at once and the server's answer only corrects it (decision 0180).
   const cash = useWrite<CashChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
     keys: CASH_KEYS,
+    optimistic: (change) => (sample !== undefined ? [] : [{
+      key: transactionQueryOptions(preview, txn.id).queryKey,
+      update: (old: unknown) => (old == null ? old : { ...(old), in_cash_override: change.next }),
+    }]),
     onSuccess: (done) => {
       toast.show({
         message: chargeSwitchToast(done.party, "cash", done.on),
@@ -86,6 +94,10 @@ export function TxnChargeSwitches({
   const mark = useWrite<RecurringChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
     keys: RECURRING_KEYS,
+    optimistic: (change) => (sample !== undefined ? [] : [{
+      key: ["payment-recurring", preview, txn.id],
+      update: (old: unknown) => (old == null ? old : { ...(old), override: change.next }),
+    }]),
     onSuccess: (done) => {
       toast.show({
         message: chargeSwitchToast(done.party, done.income ? "income" : "recurring", done.on),
@@ -168,14 +180,14 @@ export function TxnChargeSwitches({
         noParty={recurring != null && recurring.party == null}
         disabled={holdWrites}
         recurringDisabled={sample === undefined && query.isError}
-        busy={{ cash: cash.isPending, recurring: mark.isPending || (sample === undefined && query.isLoading) }}
+        busy={{ recurring: sample === undefined && query.isLoading }}
         onCash={(next) => {
-          if (holdWrites || cash.isPending || (sample === undefined && blocked())) return;
+          if (holdWrites || (sample === undefined && blocked())) return;
           cash.mutate({ id: txn.id, party, next, previous: cashOverride, on: next, undo: false });
         }}
         onRecurring={(next) => {
           // A preview says why it can't save before anything else, so the switch never does nothing.
-          if (holdWrites || mark.isPending || (sample === undefined && blocked()) || !writes) return;
+          if (holdWrites || (sample === undefined && blocked()) || !writes) return;
           mark.mutate({ id: txn.id, party, next, previous: override, on: next, income, undo: false });
         }}
         onPace={() => {

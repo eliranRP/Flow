@@ -137,6 +137,7 @@ async function pickReversal(page: import("@playwright/test").Page, line: Line) {
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("radiogroup", { name: line.heading }).getByRole("radio", { name: line.otherName }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
   await expect(page.getByRole("button", { name: `קטגוריה: ${line.otherName}, החזר` })).toBeVisible();
 

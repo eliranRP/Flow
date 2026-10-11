@@ -378,6 +378,16 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-819"></a>[FLOW-819](tasks/FLOW-819.md) | Remove the stories and components the app no longer uses | SMALL CYCLE |
 | <a id="flow-820"></a>[FLOW-820](tasks/FLOW-820.md) | Rule: a change removes what it leaves unused | SMALL CYCLE |
 | <a id="flow-821"></a>[FLOW-821](tasks/FLOW-821.md) | Faster local CI and main CI: build once, reuse it | SMALL CYCLE |
+| <a id="flow-822"></a>[FLOW-822](tasks/FLOW-822.md) | Remove CSS rules no screen uses | SMALL CYCLE |
+| <a id="flow-823"></a>[FLOW-823](tasks/FLOW-823.md) | Shared package: drop exports nothing uses | SMALL CYCLE |
+| <a id="flow-824"></a>[FLOW-824](tasks/FLOW-824.md) | One copy of the code two screens duplicate | SMALL CYCLE |
+| <a id="flow-825"></a>[FLOW-825](tasks/FLOW-825.md) | One render helper for the app's tests | SMALL CYCLE |
+| <a id="flow-826"></a>[FLOW-826](tasks/FLOW-826.md) | A load report and the cleanup check order | SMALL CYCLE |
+| <a id="flow-827"></a>[FLOW-827](tasks/FLOW-827.md) | Keep what Home doesn't need out of its first load | SMALL CYCLE |
+| <a id="flow-828"></a>[FLOW-828](tasks/FLOW-828.md) | useWrite draws a tap's result at once and rolls back on failure | SMALL CYCLE |
+| <a id="flow-829"></a>[FLOW-829](tasks/FLOW-829.md) | The everyday taps take effect at once | SMALL CYCLE |
+| <a id="flow-830"></a>[FLOW-830](tasks/FLOW-830.md) | A gate on how fast a tap answers | SMALL CYCLE |
+| <a id="flow-831"></a>[FLOW-831](tasks/FLOW-831.md) | The picker keeps the choice until שמירה, then saves in the background | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 

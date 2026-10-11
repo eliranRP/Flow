@@ -15,6 +15,7 @@ export const appScripts = [
   "scripts/check-bundle-budget.mjs",
   "scripts/hosted-env.mjs",
   "scripts/stamp-build.mjs",
+  "scripts/load-report.mjs",
   // The e2e specs and the perf config.
   "scripts/clip-check.mjs",
   "scripts/serve-dist.mjs",

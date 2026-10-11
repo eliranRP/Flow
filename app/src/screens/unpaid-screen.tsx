@@ -82,7 +82,6 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const toast = useToast();
   // A sample (Storybook, dev routes) keeps its marks on the screen; a live mark is the server's (0133).
   const [sampleMarks, setSampleMarks] = useState<Record<string, string | null>>({});
-  const [busyId, setBusyId] = useState<string | null>(null);
   // FLOW-357: a tap on a row opens that invoice's sheet; its main action marks it paid.
   const [openId, setOpenId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -97,10 +96,14 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const mark = useWrite<{ id: string; paid: boolean }>({
     keys: ["unpaid"],
     failure: (error) => (isTransientWriteError(error) ? { message: "לא הצלחנו לעדכן את הסימון.", retry: true } : "לא הצלחנו לעדכן את הסימון."),
+    // The row takes its mark at once; the server's time replaces this one on the refresh (decision 0180).
+    optimistic: ({ id, paid }) => [{
+      key: ["unpaid", preview],
+      update: (old: unknown) => (Array.isArray(old)
+        ? (old as UnpaidRow[]).map((row) => (row.id === id ? { ...row, marked_paid_at: paid ? new Date().toISOString() : null } : row))
+        : old),
+    }],
     onSuccess: ({ id, paid }) => {
-      setBusyId(null);
-      // Close only the invoice that was marked, not one opened while the write saved.
-      if (openIdRef.current === id) setInvoiceSheet(false);
       showDone(id, paid);
     },
     run: async ({ id, paid }) => {
@@ -138,7 +141,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       : { message: UNPAID_CLEAR_DONE });
   }
   function setPaid(id: string, paid: boolean) {
-    if (holdWrites || mark.isPending) return;
+    if (holdWrites) return;
     if (sample) {
       setSampleMarks((current) => ({ ...current, [id]: paid ? new Date().toISOString() : null }));
       setInvoiceSheet(false);
@@ -146,8 +149,9 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       return;
     }
     if (blocked()) return;
-    setBusyId(id);
-    mark.mutate({ id, paid }, { onError: () => { setBusyId(null); } });
+    // Close only the invoice that was marked, not one opened while the write saves.
+    if (openIdRef.current === id) setInvoiceSheet(false);
+    mark.mutate({ id, paid });
   }
   const setPaidRef = useRef(setPaid);
   setPaidRef.current = setPaid;
@@ -158,7 +162,6 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   }
   const openRow = all.find((row) => row.id === openId) ?? null;
   const openMarked = openRow != null && unpaidIsMarked(openRow);
-  const openBusy = openRow != null && busyId === openRow.id && mark.isPending;
   const openUrl = openRow == null ? null : unpaidDocumentUrl(openRow);
   return (
     <ScreenState
@@ -227,10 +230,9 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
             full
             variant={openMarked ? "secondary" : undefined}
             icon={openMarked ? undefined : <CheckIcon />}
-            busy={openBusy}
             onClick={() => { setPaid(openRow.id, !openMarked); }}
           >
-            {openBusy ? (openMarked ? "מבטל…" : "מסמן…") : openMarked ? "ביטול הסימון" : "סימון כשולם"}
+            {openMarked ? "ביטול הסימון" : "סימון כשולם"}
           </Button>
         )}
       >

@@ -410,11 +410,13 @@ test("change sheet picks a project and a category without a summary save", async
   await page.getByRole("button", { name: "פרויקט: בניין מגורים חולון, שינוי" }).click();
   await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
   await page.getByRole("radio", { name: "וילה רעננה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
   await expect(page.getByRole("button", { name: "פרויקט: וילה רעננה, שינוי" })).toBeVisible();
   await page.getByRole("button", { name: "קטגוריה: חומרים, שינוי" }).click();
   await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("button", { name: "קטגוריה: הובלה, שינוי" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();

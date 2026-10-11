@@ -20,10 +20,6 @@
   opacity: 1;
 }
 
-.ui-split-detail .ui-split-link {
-  margin-top: 0;
-}
-
 .ui-split-card .ui-row-title {
   display: -webkit-box;
   overflow: hidden;
@@ -37,11 +33,6 @@
   margin-top: var(--space-6);
   padding-inline: var(--space-side);
   text-align: start;
-}
-
-.ui-split-meta {
-  margin: var(--space-2) 0 0;
-  color: var(--color-text-secondary);
 }
 
 .ui-split-question {
@@ -76,88 +67,8 @@
   font-weight: var(--type-body-weight);
 }
 
-.ui-split-detail {
-  margin-top: var(--space-4);
-}
-
-.ui-split-link {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--space-6);
-}
-
 .ui-split-bad {
   color: var(--color-bad);
-}
-
-.ui-split-method {
-  margin-top: var(--space-6);
-}
-
-.ui-split-method .ui-seg-btn {
-  padding-inline: var(--space-1);
-}
-
-.ui-split-scope {
-  margin-top: var(--space-4);
-}
-
-.ui-chip-scope {
-  block-size: auto;
-  height: auto;
-  max-inline-size: 100%;
-  min-block-size: var(--size-chip);
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-  white-space: normal;
-}
-
-.ui-chip-scope .ui-chip-label {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-}
-
-.ui-split-note {
-  margin-top: var(--space-4);
-}
-
-.ui-split-list {
-  margin-top: var(--space-4);
-}
-
-.ui-split-list .ui-row-title {
-  display: -webkit-box;
-  overflow: hidden;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.ui-split-share {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.ui-split-figure {
-  color: var(--color-text);
-  font-size: var(--type-body-size);
-  font-weight: var(--type-title-3-weight);
-}
-
-.ui-split-remain .ui-figure {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  inline-size: 100%;
-  margin: 0;
-}
-
-.ui-split-balanced .ui-figure bdi {
-  color: var(--color-good);
 }
 
 /* The line under an option reads as a row hint, lighter than the option's name (FLOW-352). */
@@ -256,30 +167,6 @@ div.ui-check-row {
 .ui-split-manual .ui-row-title {
   flex: 1 1 auto;
   min-inline-size: 0;
-}
-
-.ui-split-manual-end {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-}
-
-.ui-split-manual-money {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.ui-split-remain {
-  margin: var(--space-4) 0 0;
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-.ui-split-summary {
-  margin: 0;
-  text-align: center;
 }
 
 .ui-split-cta {

@@ -212,15 +212,20 @@ export function CategoriesScreen({
         : { p_name: categoryName, p_kind: kind, p_parent_id: parent.id }));
     },
   });
-  const hide = useWrite({
+  // The row moves to or from the hidden list at once; a failure puts it back (decision 0180).
+  const hide = useWrite<CategoryRow>({
     failure: "לא הצלחנו לעדכן את הקטגוריה.",
     keys: ["categories"],
-    onSuccess: () => { setHideTarget(null); },
-    run: async () => {
-      if (!hideTarget) throw new Error("missing");
+    optimistic: (target) => [{
+      key: ["categories", preview],
+      update: (old: unknown) => (Array.isArray(old)
+        ? (old as CategoryRow[]).map((row) => (row.id === target.id ? { ...row, hidden: !target.hidden } : row))
+        : old),
+    }],
+    run: async (target) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("set_category_hidden", { p_id: hideTarget.id, p_hidden: !hideTarget.hidden }));
+      assertNoError(await supabase.rpc("set_category_hidden", { p_id: target.id, p_hidden: !target.hidden }));
     },
   });
   const merge = useWrite({
@@ -426,11 +431,12 @@ export function CategoriesScreen({
         consequence={hideTarget?.hidden ? "הקטגוריה תופיע שוב ברשימה." : "הקטגוריה לא נמחקת. אפשר להחזיר אותה מ״מוסתרות״."}
         // FLOW-341: hiding can be undone, so its button is neutral; the bin stays on real deletes.
         confirmLabel={hideTarget?.hidden ? "החזרה לרשימה" : "הסתרה"}
-        busy={hide.isPending}
         returnFocusRef={menuOpener}
         onConfirm={() => {
-          if (writeBlocked()) return;
-          hide.mutate();
+          if (writeBlocked() || hideTarget == null) return;
+          const target = hideTarget;
+          setHideTarget(null);
+          hide.mutate(target);
         }}
       />
       <ConfirmSheet

@@ -22,7 +22,7 @@ import { EdgeSwipeBack } from "./ui/edge-back";
 import { HomeScreen, ProfitScreen } from "./screens/HomeScreen";
 // Before the router mounts: the split screen holds Back through this listener.
 import "./screens/split-pop";
-import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
+import { SetupLanding, SetupResume } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, preloadSheet, screenLoaders } from "./screen-loaders";
@@ -67,6 +67,8 @@ const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.L
 const InstallScreen = lazy(() => screenLoaders.install().then((m) => ({ default: m.InstallScreen })));
 const TeamScreen = lazy(() => screenLoaders.team().then((m) => ({ default: m.TeamScreen })));
 const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default: m.InvitesScreen })));
+const SetupIndex = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupIndex })));
+const SetupStepScreen = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupStepScreen })));
 
 /**
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops

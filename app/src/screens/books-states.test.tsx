@@ -1,14 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { demoProject } from "../demo/model";
 import { resetShownCompanyForTests, setShownCompany } from "../lib/company-header";
 import { forgetProjectReads } from "../project-cache";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
+import { renderWithProviders } from "../test-render";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { HomeScreen } from "./HomeScreen";
 
@@ -83,30 +81,22 @@ const cashMonths = {
 };
 
 function renderAt(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <BooksProvider>
-              <Routes>
-                <Route path="/" element={<HomeScreen />} />
-                <Route path="/projects" element={<ProjectsScreen />} />
-                <Route path="/projects/:projectId" element={<ProjectDetailScreen section="profit" />} />
-                <Route path="/review" element={<ReviewScreen />} />
-                <Route path="/review/change" element={<ChangeForm />} />
-                <Route path="/unpaid" element={<UnpaidScreen />} />
-                <Route path="/settings" element={<SettingsScreen />} />
-                <Route path="/settings/categories" element={<CategoriesScreen />} />
-                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-              </Routes>
-            </BooksProvider>
-          </AuthProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<HomeScreen />} />
+        <Route path="/projects" element={<ProjectsScreen />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen section="profit" />} />
+        <Route path="/review" element={<ReviewScreen />} />
+        <Route path="/review/change" element={<ChangeForm />} />
+        <Route path="/unpaid" element={<UnpaidScreen />} />
+        <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/settings/categories" element={<CategoriesScreen />} />
+        <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      </Routes>
+    </AuthProvider>,
+    { route: path },
   );
   act(() => {
     for (const handler of rpc.handlers) handler("INITIAL_SESSION", session);
@@ -471,6 +461,7 @@ describe("rejected writes", () => {
 
   it("focuses אישור before retrying a serialization failure", async () => {
     let attempts = 0;
+    let focusedAtRetry: string | null = null;
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -499,6 +490,7 @@ describe("rejected writes", () => {
             error: { message: "could not serialize access due to concurrent update", code: "40001" },
           });
         }
+        focusedAtRetry = document.activeElement?.textContent ?? null;
         return new Promise(() => undefined);
       }
       return Promise.resolve({ data: null, error: null });
@@ -509,12 +501,15 @@ describe("rejected writes", () => {
     expect(screen.getByText("לא הצלחנו לאשר.")).toBeInTheDocument();
     retry.focus();
     fireEvent.click(retry);
-    const approve = screen.getByRole("button", { name: "אישור" });
     await waitFor(() => {
-      expect(approve).toHaveFocus();
+      expect(attempts).toBe(2);
     });
-    expect(approve).toHaveAttribute("aria-busy", "true");
-    expect(document.body).not.toHaveFocus();
+    // The retry starts from אישור, which had the focus, as before.
+    expect(focusedAtRetry).toBe("אישור");
+    // Decision 0180: the card leaves at once while the retry is still pending, so no approve is busy.
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
+    });
   });
 
   it("refreshes the queue when the item is gone", async () => {
@@ -657,6 +652,7 @@ describe("an unchanged complete review", () => {
     fireEvent.click(screen.getByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
     fireEvent.click(await screen.findByRole("button", { name: "החזר ללקוח" }));
     fireEvent.click(await screen.findByRole("radio", { name: "שכירות" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(writes(calls)).toContain("resolve_review");
     });
