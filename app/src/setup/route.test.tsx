@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
-import { SetupStepScreen } from "./route";
+import { SetupStepScreen } from "./route-screens";
 import { markCompanyCreated, readSetupStore, setupStorageKey } from "./storage";
 import { myCompaniesFor } from "../team-test-support";
 
