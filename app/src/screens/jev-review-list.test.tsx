@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import type { ReviewRow } from "@flow/shared";
-import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "../ui/toast";
 import { ReviewAllList } from "./flow-screens";
 import { bindJevConnectorScope, jevConnectorStorageKey, type JevConnectorScope } from "./jev-review";
+import { renderWithProviders } from "../test-render";
 
 const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 
@@ -74,16 +72,7 @@ const ruled: ReviewRow = {
 };
 
 function renderList(rows: ReviewRow[]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter>
-          <ReviewAllList rows={rows} search="" backTo="/review" skipped={false} />
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<ReviewAllList rows={rows} search="" backTo="/review" skipped={false} />);
 }
 
 describe("Review list rows on a Jev fill (FLOW-704)", () => {

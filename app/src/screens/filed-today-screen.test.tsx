@@ -1,9 +1,8 @@
 import { filedTodaySchema, type FiledTodayRow } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FiledTodayScreen } from "./filed-today-screen";
+import { renderWithProviders } from "../test-render";
 
 const row: FiledTodayRow = {
   id: "t-ils",
@@ -23,13 +22,8 @@ describe("FiledTodayScreen (FLOW-408)", () => {
   });
 
   it("shows a dollar line in dollars", () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <FiledTodayScreen sample={[{ ...row, id: "t-usd", description: "USD line", supplier_name: "USD supplier", currency: "USD" }, row]} />
-        </MemoryRouter>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <FiledTodayScreen sample={[{ ...row, id: "t-usd", description: "USD line", supplier_name: "USD supplier", currency: "USD" }, row]} />,
     );
     const usdRow = screen.getByText("USD supplier").closest("a");
     expect(usdRow?.textContent).toContain("$");

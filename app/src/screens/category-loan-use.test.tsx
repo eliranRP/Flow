@@ -1,11 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen } from "./categories-screen";
 import { categoryLoanUses, loanUseLine } from "./category-loan-use";
+import { renderWithProviders } from "../test-render";
 
 // FLOW-106 §3.5. Invented data.
 const CATEGORIES = [
@@ -18,17 +15,7 @@ const LOANS = [
 ];
 
 function openMenu(name: string) {
-  render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter>
-            <CategoriesScreen sample={CATEGORIES} sampleLoans={LOANS} />
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  renderWithProviders(<CategoriesScreen sample={CATEGORIES} sampleLoans={LOANS} />);
   fireEvent.click(screen.getByRole("button", { name: `עוד, ${name}` }));
   return screen.findByRole("dialog", { name });
 }

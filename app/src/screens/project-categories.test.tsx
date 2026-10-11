@@ -1,9 +1,8 @@
 import type { ProjectCategoryMonthRow, ProjectDetail } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { foldOrder, ProjectCategories } from "./project-categories";
+import { renderWithProviders } from "../test-render";
 
 const project: NonNullable<ProjectDetail> = {
   id: "a",
@@ -31,17 +30,13 @@ function month(id: string, flag: ProjectCategoryMonthRow["flag"]): ProjectCatego
 }
 
 function renderList(months: ProjectCategoryMonthRow[] | null = [month("c1", "high"), month("c3", "new"), month("c7", "missing")]) {
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>
-        <ProjectCategories
-          project={project}
-          search=""
-          sampleGroups={{ c5: "חשבונות", c6: "חשבונות", c7: "חשבונות" }}
-          sampleMonths={months ?? undefined}
-        />
-      </MemoryRouter>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <ProjectCategories
+      project={project}
+      search=""
+      sampleGroups={{ c5: "חשבונות", c6: "חשבונות", c7: "חשבונות" }}
+      sampleMonths={months ?? undefined}
+    />,
   );
 }
 
@@ -77,17 +72,13 @@ describe("project categories list (FLOW-401)", () => {
 
   it("folds sub-categories under their parent, with the parent's own lines last (FLOW-406)", () => {
     const row = (id: string, name: string, parent_id: string | null = null) => ({ id, name, kind: "expense" as const, hidden: false, is_default: false, parent_id });
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter>
-          <ProjectCategories
-            project={{ ...project, categories: [...project.categories, { id: "c8", name: "תחזוקה", amount_agorot: 10_000n }] }}
-            search=""
-            sampleCategories={[row("c1", "חומרים"), row("c8", "תחזוקה"), row("c5", "חשמל", "c8"), row("c6", "גז", "c8")]}
-            sampleMonths={[]}
-          />
-        </MemoryRouter>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ProjectCategories
+        project={{ ...project, categories: [...project.categories, { id: "c8", name: "תחזוקה", amount_agorot: 10_000n }] }}
+        search=""
+        sampleCategories={[row("c1", "חומרים"), row("c8", "תחזוקה"), row("c5", "חשמל", "c8"), row("c6", "גז", "c8")]}
+        sampleMonths={[]}
+      />,
     );
     const group = screen.getByRole("button", { name: /תחזוקה/ });
     // 455 + 155 + 100.

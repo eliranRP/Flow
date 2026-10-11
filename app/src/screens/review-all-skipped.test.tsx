@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
+import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
 import { ReviewScreen, resetReviewListFocus } from "./flow-screens";
 
@@ -77,7 +75,6 @@ afterEach(() => {
 });
 
 function renderWithLine(path: string, options?: { viewer?: boolean }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const routes = (
     <Routes>
       <Route path="/review" element={<ReviewScreen />} />
@@ -87,18 +84,11 @@ function renderWithLine(path: string, options?: { viewer?: boolean }) {
       <Route path="/transactions/:transactionId" element={<h1>תנועה</h1>} />
     </Routes>
   );
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <BooksProvider>
-              {options?.viewer ? <ViewerPreview>{routes}</ViewerPreview> : routes}
-            </BooksProvider>
-          </AuthProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <AuthProvider>
+      {options?.viewer ? <ViewerPreview>{routes}</ViewerPreview> : routes}
+    </AuthProvider>,
+    { route: path },
   );
 }
 

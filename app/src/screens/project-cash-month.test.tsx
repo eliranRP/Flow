@@ -1,12 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { fireEvent, screen } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { CashMonths } from "@flow/shared";
 import { cashTitle } from "../cash";
 import { shiftMonthKey } from "../period";
+import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { BooksProvider } from "../use-books";
 import { ProjectCashMonthScreen } from "./project-cash-screens";
 
 const current = israelToday().slice(0, 7);
@@ -36,18 +35,12 @@ const sample: NonNullable<CashMonths> = {
 };
 
 function wrap(month: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <BooksProvider>
-        <MemoryRouter initialEntries={[`/projects/p-1/cash/${month}`]}>
-          <Routes>
-            <Route path="/projects/:projectId/cash/:month" element={<ProjectCashMonthScreen sample={sample} projectName="בית לדוגמה" />} />
-            <Route path="/projects/:projectId" element={<p>פרויקט</p>} />
-          </Routes>
-        </MemoryRouter>
-      </BooksProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/projects/:projectId/cash/:month" element={<ProjectCashMonthScreen sample={sample} projectName="בית לדוגמה" />} />
+      <Route path="/projects/:projectId" element={<p>פרויקט</p>} />
+    </Routes>,
+    { route: `/projects/p-1/cash/${month}` },
   );
 }
 

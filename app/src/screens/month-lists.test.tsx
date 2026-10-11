@@ -1,24 +1,16 @@
 import type { ProjectDetail, ReviewRow } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { ToastProvider } from "../ui/toast";
 import { ProjectCategoryScreen, ProjectDetailScreen, ReviewAllList } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 /** FLOW-302 wiring: each list hands MonthList the amount, currency, and completeness its rows show. */
 
 type Txn = NonNullable<ProjectDetail>["transactions"][number];
 
 function wrap(node: ReactNode) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ToastProvider>
-        <MemoryRouter>{node}</MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(node);
 }
 
 function project(transactions: Txn[]): NonNullable<ProjectDetail> {

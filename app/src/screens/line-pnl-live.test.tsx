@@ -1,10 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { TransactionScreen } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 // The pill, not the toast's parts: a toast in parts shows them hidden from queries (FLOW-426).
 const VISIBLE_TOAST_PARTS = "script, style, [aria-hidden='true'] *";
@@ -68,20 +66,12 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 function showLive() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={["/transactions/tx"]}>
-            <Routes>
-              <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-              <Route path="/transactions/:transactionId/split-category" element={<p>split-category</p>} />
-            </Routes>
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <Routes>
+      <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+      <Route path="/transactions/:transactionId/split-category" element={<p>split-category</p>} />
+    </Routes>,
+    { route: "/transactions/tx" },
   );
 }
 

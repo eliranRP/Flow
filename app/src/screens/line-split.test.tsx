@@ -1,7 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import {
   SAMPLE_EXPENSE_LINE,
@@ -11,9 +10,8 @@ import {
   sampleSplitApi,
 } from "../dev/line-split-sample";
 import type { LineSplitRead, PartDraft, PayloadPart } from "../line-split";
-import { BooksProvider } from "../use-books";
+import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
-import { ToastProvider } from "../ui/toast";
 import { SplitScreen, TransactionScreen } from "./flow-screens";
 import { LineSplitScreen, type LineInfo, type LineSplitApi, type LineSplitSample } from "./line-split";
 
@@ -26,19 +24,12 @@ function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {})
     api: sampleSplitApi(line),
     ...sample,
   };
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={[`/transactions/${line.id}/split-category`]}>
-            <Routes>
-              <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen sample={full} />} />
-              <Route path="/transactions/:transactionId" element={<p>פרטי התנועה</p>} />
-            </Routes>
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen sample={full} />} />
+      <Route path="/transactions/:transactionId" element={<p>פרטי התנועה</p>} />
+    </Routes>,
+    { route: `/transactions/${line.id}/split-category` },
   );
 }
 
@@ -404,15 +395,7 @@ const savedSplit: LineSplitRead = {
 
 function showDetail(sample: NonNullable<TransactionDetail>, split: LineSplitRead | null, viewer = false) {
   const screenNode = <TransactionScreen sample={sample} sampleCategories={SAMPLE_SPLIT_CATEGORIES} sampleLineSplit={split} />;
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter>{viewer ? <ViewerPreview>{screenNode}</ViewerPreview> : screenNode}</MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  renderWithProviders(viewer ? <ViewerPreview>{screenNode}</ViewerPreview> : screenNode);
 }
 
 describe("the פיצול section on the transaction detail (FLOW-325)", () => {
@@ -470,33 +453,26 @@ describe("the פיצול section on the transaction detail (FLOW-325)", () => {
 describe("the project split on a line split by category (FLOW-325)", () => {
   it("says why instead of offering ניסיון חוזר", async () => {
     const onSave = vi.fn(() => Promise.reject(new Error("line has a split by category")));
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/split"]}>
-              <Routes>
-                <Route
-                  path="/split"
-                  element={
-                    <SplitScreen
-                      sampleAmount={100_000n}
-                      sampleProjects={[
-                        { id: "p1", name: "פרויקט הרצליה" },
-                        { id: "p2", name: "פרויקט רעננה" },
-                      ]}
-                      sampleParts={[{ projectId: "p2", value: "250" }]}
-                      backTo="/back"
-                      onSave={onSave}
-                    />
-                  }
-                />
-                <Route path="/back" element={<h1>חזרה</h1>} />
-              </Routes>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/split"
+          element={
+            <SplitScreen
+              sampleAmount={100_000n}
+              sampleProjects={[
+                { id: "p1", name: "פרויקט הרצליה" },
+                { id: "p2", name: "פרויקט רעננה" },
+              ]}
+              sampleParts={[{ projectId: "p2", value: "250" }]}
+              backTo="/back"
+              onSave={onSave}
+            />
+          }
+        />
+        <Route path="/back" element={<h1>חזרה</h1>} />
+      </Routes>,
+      { route: "/split" },
     );
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום, פרויקט רעננה" }), { target: { value: "300" } });
     await act(async () => {

@@ -1,12 +1,10 @@
 // vitest-css: these queries rely on the app's CSS hiding elements.
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
-import { ToastProvider } from "../ui/toast";
-import { BooksProvider } from "../use-books";
+import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
 import { LoanDetailScreen } from "./loan-detail-screen";
 import type { MemoryLoanStore } from "./loan-detail-store";
@@ -16,23 +14,15 @@ import type { MemoryLoanStore } from "./loan-detail-store";
 
 // FLOW-434: the rows these tests open moved to the פרטי הלוואה page, so it is the default entry.
 function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui, path = "details") {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <BooksProvider>
-        <ToastProvider>
-          <MemoryRouter initialEntries={[`/settings/loans/${loanId}${path === "" ? "" : `/${path}`}`]}>
-            <Routes>
-              <Route path="/settings/loans/:loanId" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" />)} />
-              <Route path="/settings/loans/:loanId/details" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="details" />)} />
-              <Route path="/settings/loans/:loanId/future" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="future" />)} />
-              <Route path="/settings/loans/:loanId/future/:period" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="period" />)} />
-              <Route path="/settings/loans" element={<p>רשימת ההלוואות</p>} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
-      </BooksProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/settings/loans/:loanId" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" />)} />
+      <Route path="/settings/loans/:loanId/details" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="details" />)} />
+      <Route path="/settings/loans/:loanId/future" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="future" />)} />
+      <Route path="/settings/loans/:loanId/future/:period" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="period" />)} />
+      <Route path="/settings/loans" element={<p>רשימת ההלוואות</p>} />
+    </Routes>,
+    { route: `/settings/loans/${loanId}${path === "" ? "" : `/${path}`}` },
   );
 }
 
