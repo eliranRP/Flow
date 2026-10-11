@@ -1,4 +1,4 @@
 <a id="flow-831"></a>
-# FLOW-831 · A pick saves once, in the background, after the user settles
+# FLOW-831 · The picker keeps the choice until שמירה, then saves in the background
 - **Type:** SMALL CYCLE · **Status:** claimed (temporary lane, owner request, 2026-10-11, claude/compassionate-goldberg-ubfcqg) · **Depends on:** FLOW-829 · **Source:** owner, 2026-10-11: the user should not feel the time between a click and the server; the server works behind the scene ([0180](../../decisions/0180-instant-tap-notify-on-failure.md) point 6).
-- [ ] `useWrite` takes a `settle` option (a key per item and a wait, 600 ms): each call draws the optimistic result at once and restarts the wait; only the last payload is written. A pending write is sent at once on unmount and on `pagehide` or a hidden page. A failure restores the value from before the burst. The change sheet's project, category and field picks use it.
+- [ ] In the change sheet's project and category pickers a tap only moves the check and the picker stays open. A pinned שמירה (disabled while nothing changed) closes it, draws the change at once through \`optimistic\` and sends one write in the background; ✕, the scrim, swipe or Back discard the choice. The tap gate's project case taps a row, then שמירה.

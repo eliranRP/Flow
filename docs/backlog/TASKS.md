@@ -387,7 +387,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-828"></a>[FLOW-828](tasks/FLOW-828.md) | useWrite draws a tap's result at once and rolls back on failure | SMALL CYCLE |
 | <a id="flow-829"></a>[FLOW-829](tasks/FLOW-829.md) | The everyday taps take effect at once | SMALL CYCLE |
 | <a id="flow-830"></a>[FLOW-830](tasks/FLOW-830.md) | A gate on how fast a tap answers | SMALL CYCLE |
-| <a id="flow-831"></a>[FLOW-831](tasks/FLOW-831.md) | A pick saves once, in the background, after the user settles | SMALL CYCLE |
+| <a id="flow-831"></a>[FLOW-831](tasks/FLOW-831.md) | The picker keeps the choice until שמירה, then saves in the background | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
