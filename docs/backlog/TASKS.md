@@ -308,6 +308,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-435"></a>[FLOW-435](tasks/FLOW-435.md) | The project page like Home: "לכל החודשים" and Home's alerts | SMALL UI |
 | <a id="flow-437"></a>[FLOW-437](tasks/FLOW-437.md) | Month pager keeps a disabled chevron; band Back lines up with the text | SMALL UI |
 | <a id="flow-438"></a>[FLOW-438](tasks/FLOW-438.md) | The month's transactions on the project's cash month page, and the profit page in the same layout | UI (plan-first, owner card) |
+| <a id="flow-439"></a>[FLOW-439](tasks/FLOW-439.md) | The card or account name on the לאישור card | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

@@ -298,6 +298,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-435
 - FLOW-437
 - FLOW-438
+- FLOW-439
 
 ## Onboarding, Settings and connectors
 
