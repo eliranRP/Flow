@@ -23,6 +23,6 @@
 
 **Scroll**
 - [ ] The band's figures fade as the page scrolls (opacity follows scroll from 60px to 220px). Past 220px the compact bar slides down (240ms): ‹ · "<month> ▾" with the net figure · ›; its arrows change month and its name opens the drawer. Back at the top it hides. Changing month from the drawer scrolls to the top; the arrows keep the scroll position.
-- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md) (pending approval; until it is approved, keep today's parts and invent none).
+- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md).
 - **MCP:** reads only; the figures come from the existing cash reads (`get_cash_months`, `get_recurring_changes`, `list_unpaid`, `get_missing_bills`, `list_review`). If the change pill's "same day last month" comparison needs a new field, add it to `get_cash_months` and TOOLS.md.
 - **Acceptance:** stories of Home current month, scrolled (compact bar), drawer open, past month, and an empty דורש טיפול, at 320 and 393, invented figures only; a unit test that the pill colour follows "helps or hurts" for both directions; a unit test of the forecast line's sum and that it hides at zero; a test that the drawer disables future months and the next arrow on the current month; an e2e that the 4 tabs open their screens and the old paths still land; reduced motion shows the compact bar without sliding; design review against the boards.

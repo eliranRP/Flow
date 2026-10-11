@@ -10,6 +10,6 @@
 - [ ] Detail (push from the left): status, customer, amount, invoice number and date, project, how long it is open, a note that it isn't in cash until paid but is in the month-end forecast, the PDF from SUMIT, and סימון כשולם when there is no match.
 - [ ] "רענון מ־SUMIT · לפני N דק׳" refreshes (shows מרענן…).
 - [ ] Empty: "הכל שולם" with חזרה לבית.
-- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md) (pending approval; until it is approved, keep today's parts and invent none).
+- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md).
 - **MCP:** `list_unpaid`, `set_invoice_paid` and `sync_bank` exist. Linking an invoice to a deposit and "לא זה" are new writes: add them (or extend `match_lines`) with an idempotency key, the write rate limit and undo, and list them in TOOLS.md. `list_unpaid` returns the match candidate and the issued-since-last-month totals the bar needs.
 - **Acceptance:** stories of the list with and without a 30-day line, a card with a match, a marked card, the detail with and without a match, and the empty state, at 320 and 393 with invented customers and round amounts; a sample test that the list adds up to Home's open-invoices figure; a pgTAP or unit test that a match needs the same amount and customer; a test that ביטול undoes the mark; design review against the boards.

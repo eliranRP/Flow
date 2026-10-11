@@ -12,6 +12,6 @@
 - [ ] Approve or skip: the card leaves to the right (240ms, ease-exit), the next one comes in from the left; toast "הפריט אושר · ביטול" for 3s. דלג sends the item to the end of the queue.
 - [ ] Last item: the "הכל מאושר" screen with what was done and "חזרה לבית".
 - [ ] The review tab and whatever only it used are removed.
-- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md) (pending approval; until it is approved, keep today's parts and invent none).
+- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md).
 - **MCP:** the existing `list_review`, `assign_expense`, `assign_expense_split` and `undo` cover approve, change and undo. Skip-to-end needs a write the queue can replay: if the order is only on the device, say so in the PR; if it is stored, add `skip_review` (idempotency key, rate limit, undo) and list it in TOOLS.md.
 - **Acceptance:** stories for the card with a suggestion, no suggestion, a transfer, a photo with a thumbnail, the picker sheet and the done screen, at 320 and 393 with invented suppliers and round amounts; a unit test that אישור is disabled without a project; a test that דלג moves the item to the end; a test that the toast's ביטול restores the item; reduced motion swaps cards without sliding; design review against the boards.

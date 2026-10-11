@@ -8,6 +8,6 @@
 - [ ] Edit sheet: one line on what the figure is, the amount, a date for שווי היום, שמירה and מחיקה (signal). Saving recalculates the equity card (bars ease 300ms) and shows the undo toast.
 - [ ] שיפוץ עד היום sheet: the total, "כל הוצאות הפרויקט, חוץ מחלקי הלוואה", one row per category with a thin share bar, the loan payments that don't count, and "מה נספר בשיפוץ? בהגדרות הקטגוריות" ([0143](../../decisions/0143-project-investment.md)).
 - [ ] הלוואות card: the total balance; each loan with the lender's initial, name, "rate · next payment", balance; a paid-off loan dimmed ("נפרעה ב־…"); "+ הוספת הלוואה" (the new-loan sheet of FLOW-139). A loan opens its page.
-- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md) (pending approval; until it is approved, keep today's parts and invent none).
+- [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md).
 - **MCP:** `set_project_investment` (undo `project_investment`) and `get_project` cover the figures. If the renovation breakdown by category isn't in `get_project` yet, add it there and in TOOLS.md.
 - **Acceptance:** stories of a flip, a rental, a missing ARV, a negative result, the edit sheet and the renovation sheet, at 320 and 393 with invented figures whose renovation categories add up to the total; a unit test of both equity formulas and the missing-ARV case; a test that ביטול on the toast restores the old figure; design review against the boards.
