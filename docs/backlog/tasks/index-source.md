@@ -364,6 +364,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-823
 - FLOW-824
 - FLOW-825
+- FLOW-826
+- FLOW-827
 
 ## Data hygiene (public repo)
 

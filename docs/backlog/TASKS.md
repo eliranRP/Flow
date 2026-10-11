@@ -382,6 +382,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-823"></a>[FLOW-823](tasks/FLOW-823.md) | Shared package: drop exports nothing uses | SMALL CYCLE |
 | <a id="flow-824"></a>[FLOW-824](tasks/FLOW-824.md) | One copy of the code two screens duplicate | SMALL CYCLE |
 | <a id="flow-825"></a>[FLOW-825](tasks/FLOW-825.md) | One render helper for the app's tests | SMALL CYCLE |
+| <a id="flow-826"></a>[FLOW-826](tasks/FLOW-826.md) | A load report and the cleanup check order | SMALL CYCLE |
+| <a id="flow-827"></a>[FLOW-827](tasks/FLOW-827.md) | Keep what Home doesn't need out of its first load | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
