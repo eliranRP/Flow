@@ -16,11 +16,6 @@ form + .ui-role-choice {
   padding-block-end: calc(var(--control-height) + 2 * var(--space-3) + var(--space-4));
 }
 
-.ui-team-error {
-  margin: var(--space-2) 0 0;
-  padding-inline: var(--space-side);
-}
-
 /* Mockups invite-3 and invite-4: the company, "role · מ<name>", then הצטרפות and דחייה. */
 .ui-invite-card {
   display: flex;
