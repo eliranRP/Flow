@@ -375,6 +375,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-816"></a>[FLOW-816](tasks/FLOW-816.md) | The project-open speed check scales to the container in local gates | SMALL CYCLE |
 | <a id="flow-817"></a>[FLOW-817](tasks/FLOW-817.md) | Docs-only merges don't count toward the deploy batch | SMALL CYCLE |
 | <a id="flow-818"></a>[FLOW-818](tasks/FLOW-818.md) | vitest 4 bump (dependabot #566, #567) | SMALL CYCLE |
+| <a id="flow-819"></a>[FLOW-819](tasks/FLOW-819.md) | Remove the stories and components the app no longer uses | SMALL CYCLE |
+| <a id="flow-820"></a>[FLOW-820](tasks/FLOW-820.md) | Rule: a change removes what it leaves unused | SMALL CYCLE |
+| <a id="flow-821"></a>[FLOW-821](tasks/FLOW-821.md) | Faster local CI and main CI: build once, reuse it | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
