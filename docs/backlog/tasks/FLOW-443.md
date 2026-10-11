@@ -7,3 +7,4 @@
 - [ ] Plan and mockup at 320 and 393 (light and dark), then the owner's approval written here before any build.
 - [ ] Build in the UI lane that owns the project screens; the MCP tool behind the screen returns the months grouped the same way if its shape changes.
 - **Acceptance:** stories with invented figures spanning two years at 320 and 393: one head per year, no year in month rows, one row style, no clipping. Design review against the approved mockup.
+- **Redesign (2026-10-11):** the approved project profit page ([FLOW-140](FLOW-140.md)) sets the לפי חודש row: one row per month, newest first ("<month> · עד היום" for the open one), "הכנסות $X · הוצאות $Y", the month's profit. The year heads and the consistency points here are still open; plan them on that row shape.

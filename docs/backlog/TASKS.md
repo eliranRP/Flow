@@ -182,6 +182,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-115"></a>[FLOW-115](tasks/FLOW-115.md) | Loan screens UI follow-ups | BACKLOG NIT |
 | <a id="flow-414"></a>[FLOW-414](tasks/FLOW-414.md) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG |
 | <a id="flow-434"></a>[FLOW-434](tasks/FLOW-434.md) | Loan page: next payment, year total and what was paid | UI |
+| <a id="flow-139"></a>[FLOW-139](tasks/FLOW-139.md) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
+| <a id="flow-140"></a>[FLOW-140](tasks/FLOW-140.md) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
+| <a id="flow-141"></a>[FLOW-141](tasks/FLOW-141.md) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
 
 ## MCP
 
@@ -277,6 +280,15 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-429"></a>[FLOW-429](tasks/FLOW-429.md) | A hint part wider than its line wraps instead of clipping | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
+| <a id="flow-363"></a>[FLOW-363](tasks/FLOW-363.md) | Redesign foundation: type scale, colours, motion and shared parts | UI (design approved) |
+| <a id="flow-371"></a>[FLOW-371](tasks/FLOW-371.md) | Redesign: skeletons, empty states and loaders | PLAN FIRST |
+| <a id="flow-364"></a>[FLOW-364](tasks/FLOW-364.md) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
+| <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
+| <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
+| <a id="flow-367"></a>[FLOW-367](tasks/FLOW-367.md) | Redesign: open invoices, with a bank match and mark as paid | UI (design approved) |
+| <a id="flow-368"></a>[FLOW-368](tasks/FLOW-368.md) | Redesign: search with one סינון button, and opening from Home's icon | UI (design approved) |
+| <a id="flow-369"></a>[FLOW-369](tasks/FLOW-369.md) | Redesign: the add (+) sheet, receipt, cash or cheque, and the add form | UI (design approved) |
+| <a id="flow-370"></a>[FLOW-370](tasks/FLOW-370.md) | Redesign: one split screen for projects and categories | UI (design approved) |
 
 ## Projects and reports
 
@@ -314,6 +326,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-442"></a>[FLOW-442](tasks/FLOW-442.md) | The "not counted in profit" list names the loan part it leaves out | BUG |
 | <a id="flow-443"></a>[FLOW-443](tasks/FLOW-443.md) | The project's "לפי חודש" screen: year heads, and one consistent row style | PLAN FIRST |
 | <a id="flow-444"></a>[FLOW-444](tasks/FLOW-444.md) | A project's month profit page names its project | BUG |
+| <a id="flow-445"></a>[FLOW-445](tasks/FLOW-445.md) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
+| <a id="flow-446"></a>[FLOW-446](tasks/FLOW-446.md) | Redesign: a property's השקעה והלוואות page | UI (design approved) |
+| <a id="flow-447"></a>[FLOW-447](tasks/FLOW-447.md) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
 
 ## Onboarding, Settings and connectors
 
@@ -330,6 +345,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-509"></a>[FLOW-509](tasks/FLOW-509.md) | Mercury connector hardening | BACKLOG NIT |
 | <a id="flow-511"></a>[FLOW-511](tasks/FLOW-511.md) | Easy opt-out from the Home setup card | PLAN FIRST |
 | <a id="flow-510"></a>[FLOW-510](tasks/FLOW-510.md) | SUMIT sync follow-ups | BACKLOG NIT |
+| <a id="flow-512"></a>[FLOW-512](tasks/FLOW-512.md) | Redesign: Settings as a menu, its inner pages, and the guided SUMIT, Mercury and MCP pages | UI (design approved) |
+| <a id="flow-513"></a>[FLOW-513](tasks/FLOW-513.md) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
+| <a id="flow-514"></a>[FLOW-514](tasks/FLOW-514.md) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 
 ## Multi-company and team
 

@@ -6,3 +6,4 @@
 - [ ] Check the other project month pages (cash month, "לא נספר ברווח", the by-month list) for the same gap, and give each the project's name the same way.
 - [ ] Nothing else on the page changes.
 - **Acceptance:** a story of the month profit page with an invented project name at 320 and 393 shows "‹ <name>", including a long name cut with an ellipsis. A unit test that the Back label is the project's name and that it goes back to the project.
+- **Redesign (2026-10-11):** the approved project month page ([FLOW-140](FLOW-140.md)) has Back "רווח <project>". Whichever ships first gives the page its project's name; the other keeps it.

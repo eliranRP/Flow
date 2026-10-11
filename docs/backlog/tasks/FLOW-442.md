@@ -7,3 +7,4 @@
 - [ ] The same wording wherever kept-out loan parts are listed (project and company cash month), from the shared money terms (DESIGN-RULES §3.6: קרן · ריבית · מסים וביטוח).
 - [ ] The MCP tool that lists the kept-out lines returns each loan part's kind and amount.
 - **Acceptance:** a unit test that a split loan payment's kept-out row reads its part (קרן) and amount. A story with invented figures at 320 and 393 with no clipping. A sample test that the rows add up to the page's figure.
+- **Redesign (2026-10-11):** the redesigned profit pages ([FLOW-140](FLOW-140.md)) and transaction page ([FLOW-366](FLOW-366.md)) read the kept-out loan parts with this task's wording.

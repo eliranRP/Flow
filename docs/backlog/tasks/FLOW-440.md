@@ -10,3 +10,4 @@
 - [ ] Same components, order and wording as the cash month page; no new pattern.
 - [ ] The MCP tool behind the profit month returns the kept-out total with the counted figures.
 - **Acceptance:** a story of the profit page with the examples' invented figures (the loan payment and the split repair) at 320 and 393: the "לא נספר ברווח" row reads −$900 and opens the list, the split row reads −$1,000 "מתוך $3,000", and the listed rows add up to הוצאות. A sample test of that sum. Design review against the cash month page.
+- **Redesign (2026-10-11):** the approved company profit page ([FLOW-140](FLOW-140.md)) puts what profit leaves out at its bottom, small; this task's row and list are what it shows there, so FLOW-140 reuses them rather than drawing its own.

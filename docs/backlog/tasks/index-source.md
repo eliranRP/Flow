@@ -178,6 +178,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-115
 - FLOW-414
 - FLOW-434
+- FLOW-139
+- FLOW-140
+- FLOW-141
 
 ## MCP
 
@@ -269,6 +272,15 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-429
 - FLOW-346
 - FLOW-431
+- FLOW-363
+- FLOW-371
+- FLOW-364
+- FLOW-365
+- FLOW-366
+- FLOW-367
+- FLOW-368
+- FLOW-369
+- FLOW-370
 
 ## Projects and reports
 
@@ -304,6 +316,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-442
 - FLOW-443
 - FLOW-444
+- FLOW-445
+- FLOW-446
+- FLOW-447
 
 ## Onboarding, Settings and connectors
 
@@ -318,6 +333,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-509
 - FLOW-511
 - FLOW-510
+- FLOW-512
+- FLOW-513
+- FLOW-514
 
 ## Multi-company and team
 
