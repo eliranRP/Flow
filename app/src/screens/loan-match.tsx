@@ -12,6 +12,7 @@ import { currencyWord } from "../ui/investment-card";
 import { sheetStack, useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
+import { readLoanBalances, readProjectNames } from "./loan-reads";
 import { useHoldWrites } from "../use-is-viewer";
 import { quickNewPath } from "../open-from-query";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
@@ -490,16 +491,8 @@ export function useLoanBalances(companyId: string | null) {
       if (!supabase || companyId == null) return [];
       const loans = await supabase.from("loans").select("id, name, currency, project_id, principal_minor").eq("company_id", companyId);
       assertNoError(loans);
-      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency").eq("company_id", companyId);
-      assertNoError(balances);
-      const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
-      const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
-      const projectNames = new Map<string, string>();
-      if (projectIds.length > 0) {
-        const projects = await supabase.from("projects").select("id, name").in("id", projectIds);
-        assertNoError(projects);
-        for (const project of projects.data ?? []) projectNames.set(project.id, project.name);
-      }
+      const byLoan = await readLoanBalances(supabase, companyId);
+      const projectNames = await readProjectNames(supabase, loans.data ?? []);
       return (loans.data ?? []).map((loan) => {
         const balance = byLoan.get(loan.id);
         return {

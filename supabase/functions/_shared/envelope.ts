@@ -142,3 +142,31 @@ export async function openApiKey(
   const plain = await aesGcmDecrypt(dek, hexToBytes(envelope.keyCiphertext), hexToBytes(envelope.keyNonce), aad);
   return td.decode(plain);
 }
+
+/** A column read back as the `\x` hex text the envelope takes; other values pass as strings. */
+export function bytesPrefix(value: unknown): string {
+  if (typeof value === "string") {
+    if (value.startsWith("\\x")) return value;
+    if (/^[0-9a-fA-F]+$/.test(value)) return `\\x${value}`;
+  }
+  return String(value);
+}
+
+/** A connection row's envelope, as the sync and reseal functions read it from the table. */
+export function envelopeFromRow(row: Record<string, unknown>): Envelope {
+  const envelope: Envelope = {
+    keyCiphertext: String(row.key_ciphertext),
+    keyNonce: String(row.key_nonce),
+    dekCiphertext: String(row.dek_ciphertext),
+    dekNonce: String(row.dek_nonce),
+    kekVersion: String(row.kek_version),
+    ...(row.envelope_version == null ? {} : { envelopeVersion: String(row.envelope_version) }),
+  };
+  if (!envelope.keyCiphertext.startsWith("\\x")) {
+    envelope.keyCiphertext = bytesPrefix(row.key_ciphertext);
+    envelope.keyNonce = bytesPrefix(row.key_nonce);
+    envelope.dekCiphertext = bytesPrefix(row.dek_ciphertext);
+    envelope.dekNonce = bytesPrefix(row.dek_nonce);
+  }
+  return envelope;
+}

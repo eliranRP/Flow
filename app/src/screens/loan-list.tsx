@@ -10,6 +10,7 @@ import { assertNoError } from "../use-write";
 import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import { formatLoanMoney } from "./loan-form";
 import type { LoanBalanceRow } from "./loan-match";
+import { readLoanBalances, readProjectNames } from "./loan-reads";
 
 /**
  * FLOW-106 §3.1. The loans list: open loans, then paid-off and closed loans under a quiet
@@ -173,16 +174,8 @@ export function useLoanList(companyId: string | null) {
         .eq("company_id", companyId)
         .order("name");
       assertNoError(loans);
-      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency").eq("company_id", companyId);
-      assertNoError(balances);
-      const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
-      const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
-      const projectNames = new Map<string, string>();
-      if (projectIds.length > 0) {
-        const projects = await supabase.from("projects").select("id, name").in("id", projectIds);
-        assertNoError(projects);
-        for (const project of projects.data ?? []) projectNames.set(project.id, project.name);
-      }
+      const byLoan = await readLoanBalances(supabase, companyId);
+      const projectNames = await readProjectNames(supabase, loans.data ?? []);
       return sortLoans((loans.data ?? []).map((loan) => {
         const balance = byLoan.get(loan.id);
         return {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type MouseEvent, type ReactNode, type TouchEvent } from "react";
 import { blocksEdgeBack } from "./edge-back";
-import { inEdgeZone, swipeAxis, swipeStep } from "./period-swipe";
+import { inEdgeZone, lockAxis, reducedMotion, swipeStep } from "./period-swipe";
 
 /**
  * FLOW-325 (plan §10): a row swiped toward the start side (right, in RTL) is removed, as on an
@@ -23,10 +23,6 @@ const CLICK_AFTER_DRAG_MS = 400;
 
 /** How far the row gives toward the end side: a quarter of the move, at most 32px. */
 const END_GIVE_PX = 32;
-
-function reducedMotion(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 function rtl(): boolean {
   return document.documentElement.dir !== "ltr";
@@ -125,14 +121,12 @@ export function SwipeRemove({
       return;
     }
     const dx = touch.clientX - start.x;
-    if (start.axis == null) {
-      start.axis = swipeAxis(dx, touch.clientY - start.y);
-      if (start.axis === "y") {
-        track.current = null;
-        return;
-      }
-      if (start.axis == null) return;
+    const axis = lockAxis(start, dx, touch.clientY - start.y);
+    if (axis === "y") {
+      track.current = null;
+      return;
     }
+    if (axis == null) return;
     if (reducedMotion()) return;
     // Toward the end side there is nothing to reveal: the row only gives a little.
     const give = Math.min(Math.abs(dx) / 4, END_GIVE_PX);

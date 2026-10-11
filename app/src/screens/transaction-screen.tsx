@@ -124,6 +124,9 @@ function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
   return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.`;
 }
 
+/** What a change to a line's project or category refreshes. */
+const ASSIGN_KEYS = ["txn", "dashboard", "project", "project-category", "project-waiting", "review"];
+
 export function TransactionScreen({
   sample,
   sampleProjects,
@@ -278,7 +281,7 @@ export function TransactionScreen({
   const undoId = useRef<string | null>(null);
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
+    keys: ASSIGN_KEYS,
     success: "השיוך הקודם חזר",
     onSuccess: () => {
       committed.current = { projectId: "", categoryId: "" };
@@ -291,6 +294,15 @@ export function TransactionScreen({
       assertNoError(await supabase.rpc("undo_reassign", { p_id: undoId.current }));
     },
   });
+  // A saved project or category: the screen takes the write, and ביטול undoes it when the server kept an undo id.
+  const assignSaved = () => {
+    applyRef.current();
+    const id = undoId.current;
+    toast.show({
+      message: "השיוך נשמר",
+      ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+    });
+  };
   const reassign = useWrite({
     failure: changeSaveFailure,
     onSplit: () => {
@@ -300,15 +312,8 @@ export function TransactionScreen({
       }
       void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
     },
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
+    keys: ASSIGN_KEYS,
+    onSuccess: assignSaved,
     run: async () => {
       const current = sample ?? detail.data;
       const next = writeTarget.current;
@@ -329,15 +334,8 @@ export function TransactionScreen({
     onSplit: () => {
       void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
     },
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
+    keys: ASSIGN_KEYS,
+    onSuccess: assignSaved,
     run: async () => {
       const current = sample ?? detail.data;
       const nextCategory = writeTarget.current.categoryId;
