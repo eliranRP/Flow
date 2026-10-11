@@ -129,7 +129,7 @@ export function firstUnpaidRowIndex(
 }
 
 /** A payment already on the loan, for `paidInterestAndPrincipal`. */
-export type AttachedLoanPayment = {
+type AttachedLoanPayment = {
   readonly transactionId: string;
   readonly interestMinor: bigint;
   readonly principalMinor: bigint;
