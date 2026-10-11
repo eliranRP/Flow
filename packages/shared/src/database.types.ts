@@ -1489,6 +1489,9 @@ isOneToOne: false
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
                            },
+"project_recurring_changes":
+{ Args: { "p_project": string,"p_today"?: string }; Returns: Json
+                           },
 "project_waiting":
 { Args: { "p_project": string }; Returns: Json
                            },

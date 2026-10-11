@@ -190,6 +190,28 @@ export function useRecurringChangesQuery(active = true) {
   });
 }
 
+/**
+ * FLOW-441: one project's big changes, each measured on the project's own share of the payer's
+ * lines (split parts counted), opening a line that is the project's. Under Home's key, so a hide
+ * refreshes both. A failed read just hides the rows.
+ */
+export function useProjectRecurringChangesQuery(projectId: string, active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["recurring-changes", preview, "project", projectId],
+    enabled: active && preview === "off" && projectId !== "",
+    queryFn: async (): Promise<RecurringChange[]> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("project_recurring_changes", { p_project: projectId });
+      if (error) throw error;
+      // Null: the project is not this company's.
+      return data == null ? [] : (await loadReadSchemas()).recurringChangesSchema.parse(data);
+    },
+  });
+}
+
 /** FLOW-415: one payment's recurring switch. */
 export function usePaymentRecurringQuery(transactionId: string, active = true) {
   const preview = useHomePreview();
