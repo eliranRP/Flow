@@ -28,6 +28,7 @@ import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, preloadSheet, screenLoaders } from "./screen-loaders";
 import { ScreenSuspense } from "./screen-suspense";
 import { PrefetchProjects } from "./prefetch";
+import { SignInScreen } from "./screens/SignInScreen";
 
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
@@ -68,7 +69,6 @@ const TeamScreen = lazy(() => screenLoaders.team().then((m) => ({ default: m.Tea
 const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default: m.InvitesScreen })));
 const SetupIndex = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupIndex })));
 const SetupStepScreen = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupStepScreen })));
-const SignInScreen = lazy(() => screenLoaders.signIn().then((m) => ({ default: m.SignInScreen })));
 
 /**
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops

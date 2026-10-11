@@ -1,8 +1,8 @@
 /**
  * FLOW-804: every screen but Home loads on demand, so the first paint of Home downloads and runs
  * only Home's code. preloadScreens fetches the rest once Home is up, so a tap rarely waits.
- * FLOW-827: sign-in and the setup routes are screens too; a signed-out visitor fetches sign-in
- * on arrival.
+ * Sign-in stays in the first load: it is a signed-out visitor's first screen. The setup routes
+ * load on demand (FLOW-827).
  */
 export const screenLoaders = {
   review: () => import("./screens/review-screen"),
@@ -36,7 +36,6 @@ export const screenLoaders = {
   install: () => import("./ui/install-screen"),
   setupSteps: () => import("./setup/steps"),
   setupRoutes: () => import("./setup/route-screens"),
-  signIn: () => import("./screens/SignInScreen"),
   team: () => import("./screens/team-screen"),
   invites: () => import("./screens/invites-screen"),
 };
