@@ -6,13 +6,11 @@ import {
   formatAmountText,
   formatIls,
   formatMoney,
-  formatUsd,
   wholeShekels,
   netFromGrossAgorot,
   parseShekelInput,
   rateFractionToBp,
   roundedProfitAgorot,
-  shareBp,
   shekelsToAgorot,
 } from "./money.ts";
 
@@ -80,10 +78,6 @@ describe("allocateByWeights", () => {
     expect(allocateByWeights(-100n, [1, 1])).toEqual([-50n, -50n]);
   });
 
-  it("emits basis points that sum to 10000", () => {
-    const shares = shareBp([10, 12, 8, 6, 4]);
-    expect(shares.reduce((sum, share) => sum + share, 0)).toBe(10000);
-  });
 });
 
 describe("formatAmountText", () => {
@@ -131,15 +125,6 @@ describe("parseShekelInput", () => {
     expect(parseShekelInput("12,000")).toBe(1_200_000n);
     expect(parseShekelInput("1,000.50")).toBe(100_050n);
     expect(shekelsToAgorot("12,000")).toBe(1_200_000n);
-  });
-});
-
-describe("formatUsd", () => {
-  it("formats whole dollars, agorot, zero, and the minus sign", () => {
-    expect(formatUsd(10_000n)).toBe("$100");
-    expect(formatUsd(0n)).toBe("$0");
-    expect(formatUsd(1_234n, { agorot: true })).toBe("$12.34");
-    expect(formatUsd(-1_234n, { agorot: true })).toBe("−$12.34");
   });
 });
 

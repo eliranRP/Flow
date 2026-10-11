@@ -6,7 +6,7 @@
  * upper-cased and Hebrew final forms map to the base letter. Null when the name has no letter,
  * so the caller draws the source icon instead.
  */
-export type Initials = { text: string; dir: "rtl" | "ltr" };
+type Initials = { text: string; dir: "rtl" | "ltr" };
 
 const SUFFIXES = new Set(["בע״מ", 'בע"מ', "בע'מ", "בעמ", "inc", "llc", "ltd", "co", "corp", "gmbh"]);
 
