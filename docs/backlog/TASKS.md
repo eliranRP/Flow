@@ -384,6 +384,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-825"></a>[FLOW-825](tasks/FLOW-825.md) | One render helper for the app's tests | SMALL CYCLE |
 | <a id="flow-826"></a>[FLOW-826](tasks/FLOW-826.md) | A load report and the cleanup check order | SMALL CYCLE |
 | <a id="flow-827"></a>[FLOW-827](tasks/FLOW-827.md) | Keep what Home doesn't need out of its first load | SMALL CYCLE |
+| <a id="flow-828"></a>[FLOW-828](tasks/FLOW-828.md) | useWrite draws a tap's result at once and rolls back on failure | SMALL CYCLE |
+| <a id="flow-829"></a>[FLOW-829](tasks/FLOW-829.md) | The everyday taps take effect at once | SMALL CYCLE |
+| <a id="flow-830"></a>[FLOW-830](tasks/FLOW-830.md) | A gate on how fast a tap answers | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 
