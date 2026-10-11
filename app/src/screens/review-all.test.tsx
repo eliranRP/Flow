@@ -843,9 +843,11 @@ describe("review queue list", () => {
     const before = rpc.calls.filter((call) => call.name === "get_dashboard").length;
     expect(before).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "אישור", hidden: true }));
+    // The card leaves the queue at once, while approve_review_item is still pending (decision 0180).
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "אישור", hidden: true })).toHaveAttribute("aria-busy", "true");
+      expect(screen.queryByRole("button", { name: "אישור", hidden: true })).not.toBeInTheDocument();
     });
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(true);
     await act(async () => {
       refreshLedger(client);
       await client.invalidateQueries({ queryKey: ["dashboard"] });

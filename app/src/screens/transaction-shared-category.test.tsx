@@ -252,20 +252,19 @@ describe("shared transaction category", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    const saving = await screen.findByRole("radio", { name: "הובלה" });
-    expect(saving).toHaveAttribute("aria-busy", "true");
-    expect(saving.querySelector(".ui-spinner")).not.toBeNull();
-    expect(saving.querySelector(".ui-radio")?.textContent).not.toContain("✓");
-    expect(getComputedStyle(saving).cursor).toBe("progress");
-    expect(screen.getByRole("radio", { name: "חומרים" })).toBeDisabled();
-    expect(getComputedStyle(screen.getByRole("radio", { name: "חומרים" })).cursor).toBe("not-allowed");
+    // The pick takes effect at once: the picker closes and the summary shows the tapped category, while
+    // set_transaction_category is still pending (decision 0180). No row shows a save.
+    expect(await screen.findByRole("button", { name: /הובלה/ })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "הובלה" })).not.toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "set_transaction_category")).toBe(true);
     await act(() => {
       release?.();
       return Promise.resolve();
     });
     expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "הובלה" })).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("radio", { name: "חומרים" })).toHaveAttribute("aria-checked", "true");
+    // The failed pick goes back to the category before it.
+    expect(await screen.findByRole("button", { name: /חומרים/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /הובלה/ })).not.toBeInTheDocument();
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר", hidden: true }));
     await waitFor(() => {
@@ -273,7 +272,7 @@ describe("shared transaction category", () => {
       expect(calls).toHaveLength(2);
       expect(calls[1]?.args).toEqual({ p_id: "tx", p_category_id: "c2" });
     });
-    expect(screen.getByRole("radio", { name: "הובלה" })).toHaveAttribute("aria-checked", "true");
+    expect(await screen.findByRole("button", { name: /הובלה/ })).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
 

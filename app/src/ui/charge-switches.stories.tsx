@@ -11,7 +11,7 @@ import { Toggle } from "./toggle";
  * FLOW-415 (layout A): the payment page's list, with נספר ברווח above the two new switches. While
  * חיוב קבוע is on, a tap on its row opens "כל כמה זמן" (step D). Invented data.
  */
-function Demo(props: ChargeSwitchState & { disabled?: boolean; busy?: boolean }) {
+function Demo(props: ChargeSwitchState & { disabled?: boolean }) {
   const [state, setState] = useState<ChargeSwitchState>(props);
   const [open, setOpen] = useState(false);
   return (
@@ -21,7 +21,6 @@ function Demo(props: ChargeSwitchState & { disabled?: boolean; busy?: boolean })
         <ChargeSwitches
           state={state}
           disabled={props.disabled}
-          busy={{ recurring: props.busy }}
           onCash={(inCash) => { setState({ ...state, inCash }); }}
           onRecurring={(recurring) => { setState({ ...state, recurring }); }}
           onPace={() => { setOpen(true); }}
@@ -59,5 +58,4 @@ export const EveryQuarter320: Story = { name: "Recurring every quarter, 320", ar
 export const SetByOwner: Story = { name: "Recurring, set by the owner", args: { ...detected, detected: false } };
 export const NotRecurring: Story = { name: "Not recurring, no usual day", args: { inCash: true, recurring: false, typicalDay: null, detected: false } };
 export const OutOfCash: Story = { name: "Kept out of the cash view", args: { ...detected, inCash: false } };
-export const Busy: Story = { name: "Recurring change running", args: { ...detected, busy: true } };
 export const Viewer: Story = { name: "Viewer: both disabled", args: { ...detected, disabled: true } };

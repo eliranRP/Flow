@@ -461,6 +461,7 @@ describe("rejected writes", () => {
 
   it("focuses אישור before retrying a serialization failure", async () => {
     let attempts = 0;
+    let focusedAtRetry: string | null = null;
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -489,6 +490,7 @@ describe("rejected writes", () => {
             error: { message: "could not serialize access due to concurrent update", code: "40001" },
           });
         }
+        focusedAtRetry = document.activeElement?.textContent ?? null;
         return new Promise(() => undefined);
       }
       return Promise.resolve({ data: null, error: null });
@@ -499,12 +501,15 @@ describe("rejected writes", () => {
     expect(screen.getByText("לא הצלחנו לאשר.")).toBeInTheDocument();
     retry.focus();
     fireEvent.click(retry);
-    const approve = screen.getByRole("button", { name: "אישור" });
     await waitFor(() => {
-      expect(approve).toHaveFocus();
+      expect(attempts).toBe(2);
     });
-    expect(approve).toHaveAttribute("aria-busy", "true");
-    expect(document.body).not.toHaveFocus();
+    // The retry starts from אישור, which had the focus, as before.
+    expect(focusedAtRetry).toBe("אישור");
+    // Decision 0180: the card leaves at once while the retry is still pending, so no approve is busy.
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
+    });
   });
 
   it("refreshes the queue when the item is gone", async () => {

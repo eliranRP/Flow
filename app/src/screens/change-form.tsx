@@ -6,7 +6,7 @@ import { useHoldWrites, useWriteGate } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useReviewQuery } from "../use-books";
+import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useReviewQuery } from "../use-books";
 import { reviewFocusPath } from "../review-paths";
 import { assertNoError, useWrite } from "../use-write";
 import { approveFailure, approveShown } from "../approve-review";
@@ -21,6 +21,14 @@ import { reversalChoices } from "../reversal";
 import { collapseSplit, combinePhase, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { reviewE2e, reviewIsSplit, reviewLineFocus, reviewSplitTitle } from "./review-shared";
 import { projectChoices } from "../project-groups";
+
+/** A pick's check before the tap. A failed instant write puts the check back on it (decision 0075). */
+type InstantPick = { back: { projectId: string; categoryId: string } | null };
+
+/** The name of a chosen project or category, as the screen lists it; null when none is chosen. */
+function choiceName(options: readonly ChangeChoice[], id: string): string | null {
+  return options.find((option) => option.id === id)?.name ?? null;
+}
 
 type ChangeSample = {
   supplier: string;
@@ -155,10 +163,22 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     isReversalId(categoryId) ? "" : categoryId,
     row?.category_name,
   );
-  const save = useWrite({
+  /** The check goes back to the pick's previous id when an instant write fails. */
+  const restorePick = (payload: InstantPick | undefined) => {
+    if (payload?.back == null) return;
+    setProjectId(payload.back.projectId);
+    setCategoryId(payload.back.categoryId);
+  };
+  // A pick that resolves the review closes its card at once (decision 0180).
+  const save = useWrite<InstantPick>({
     failure: changeSaveFailure,
     success: "השיוך נשמר",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting"],
+    optimistic: () => [{
+      key: ["review", preview],
+      update: (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((entry) => entry.id !== item) : old),
+    }],
+    onError: (_error, payload) => { restorePick(payload); },
     onSplit: () => {
       if (!row?.transaction_id) return;
       void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });
@@ -183,9 +203,30 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     },
   });
   const lineField = useRef(false);
-  const setSharedCategory = useWrite({
+  const setSharedCategory = useWrite<InstantPick>({
     failure: changeSaveFailure,
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    optimistic: () => {
+      const transactionId = sharedTx.current;
+      const nextCategory = picked.current.categoryId;
+      if (transactionId == null) return [];
+      const name = choiceName(categoryOptions, nextCategory);
+      return [
+        {
+          key: transactionQueryOptions(preview, transactionId).queryKey,
+          update: (old: unknown) => (old == null ? old : { ...(old), category_id: nextCategory, category_name: name }),
+        },
+        {
+          key: ["review", preview],
+          update: (old: unknown) => (Array.isArray(old)
+            ? (old as ReviewRow[]).map((entry) => (entry.transaction_id === transactionId
+              ? { ...entry, category_id: nextCategory, category_name: name, category_suggested: false }
+              : entry))
+            : old),
+        },
+      ];
+    },
+    onError: (_error, payload) => { restorePick(payload); },
     onSuccess: () => {
       setCategoryId(picked.current.categoryId);
       toast.show({
@@ -206,9 +247,25 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     },
   });
   const fieldSave = useRef<{ kind: "project" | "category"; id: string } | null>(null);
-  const saveField = useWrite({
+  const saveField = useWrite<InstantPick>({
     failure: changeSaveFailure,
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    optimistic: () => {
+      const pickedField = fieldSave.current;
+      if (pickedField == null) return [];
+      return [{
+        key: ["review", preview],
+        update: (old: unknown) => (Array.isArray(old)
+          ? (old as ReviewRow[]).map((entry) => {
+            if (entry.id !== item) return entry;
+            return pickedField.kind === "project"
+              ? { ...entry, project_id: pickedField.id, project_name: choiceName(projectOptions, pickedField.id), project_suggested: false }
+              : { ...entry, category_id: pickedField.id, category_name: choiceName(categoryOptions, pickedField.id), category_suggested: false };
+          })
+          : old),
+      }];
+    },
+    onError: (_error, payload) => { restorePick(payload); },
     onSuccess: () => {
       const pickedField = fieldSave.current;
       if (pickedField?.kind === "project") setProjectId(pickedField.id);
@@ -238,10 +295,26 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       assertNoError(await supabase.rpc("undo_reassign", { p_id: sharedUndoId.current }));
     },
   });
-  const reassignClosed = useWrite({
+  const reassignClosed = useWrite<InstantPick>({
     failure: changeSaveFailure,
     success: "השיוך נשמר",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    optimistic: () => {
+      const transactionId = sharedTx.current;
+      const next = picked.current;
+      if (transactionId == null) return [];
+      return [{
+        key: transactionQueryOptions(preview, transactionId).queryKey,
+        update: (old: unknown) => (old == null ? old : {
+          ...(old),
+          project_id: next.projectId,
+          project_name: choiceName(projectOptions, next.projectId),
+          category_id: next.categoryId,
+          category_name: choiceName(categoryOptions, next.categoryId),
+        }),
+      }];
+    },
+    onError: (_error, payload) => { restorePick(payload); },
     onSuccess: () => {
       setProjectId(picked.current.projectId);
       setCategoryId(picked.current.categoryId);
@@ -387,28 +460,30 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         setHold("");
         setLeaveNote("");
       }}
-      onCommitPick={async (kind, id) => {
+      onCommitPick={(kind, id) => {
         if (sample || holdWrites) return undefined;
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
         // A supplier rule never learns a reversal: the next line from this supplier is the usual kind.
         picked.current = { projectId: nextProject, categoryId: nextCategory, remember: remember && !isReversalId(nextCategory) };
+        // The check before this tap, for the rollback if the write fails.
+        const back = { projectId, categoryId };
         const fromLine = params.get("from") === "line";
         if (splitReview) {
           if (kind === "project") {
             if (!row?.transaction_id || id === "") throw new Error("supabase");
-            await collapseShared.mutateAsync();
-            return undefined;
+            // collapse_split decides on the server (a shared cost, its undo id), so the row stays busy.
+            return collapseShared.mutateAsync().then(() => undefined);
           }
           if (!row?.transaction_id) throw new Error("supabase");
           lineField.current = fromLine;
-          await setSharedCategory.mutateAsync();
+          setSharedCategory.mutate({ back });
           return undefined;
         }
         if (fromLine) {
           fieldSave.current = { kind, id };
-          await saveField.mutateAsync();
+          saveField.mutate({ back });
           return undefined;
         }
         const complete = nextProject !== "" && nextCategory !== "";
@@ -418,10 +493,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         }
         setHold("");
         if (closedReview.current) {
-          await reassignClosed.mutateAsync();
+          reassignClosed.mutate({ back });
           return undefined;
         }
-        await save.mutateAsync();
+        save.mutate({ back });
         return undefined;
       }}
       onCloseCheck={() => {
@@ -443,7 +518,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         if (blocked()) throw new Error("preview");
         setHold("");
         picked.current = { projectId, categoryId, remember: remember && !isReversalId(categoryId) };
-        await save.mutateAsync();
+        await save.mutateAsync({ back: null });
       }}
       onSplit={() => {
         if (row?.transaction_id) {

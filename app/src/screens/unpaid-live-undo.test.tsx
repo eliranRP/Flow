@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { UnpaidRow } from "@flow/shared";
@@ -10,11 +10,13 @@ import { ToastProvider } from "../ui/toast";
 const db = vi.hoisted(() => ({
   rows: [] as UnpaidRow[],
   rpcs: [] as Array<{ name: string; args: unknown }>,
+  /** A set_invoice_paid answer the test holds back, so the mark can be seen before the write answers. */
+  gate: null as Promise<{ data: null; error: { message: string } | null }> | null,
 }));
 
 vi.mock("../use-books", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../use-books")>()),
-  useUnpaidQuery: () => useQuery({ queryKey: ["unpaid"], queryFn: () => Promise.resolve(db.rows) }),
+  useUnpaidQuery: () => useQuery({ queryKey: ["unpaid", "off"], queryFn: () => Promise.resolve(db.rows) }),
   useSumitStatusQuery: () => ({ data: undefined }),
 }));
 
@@ -22,6 +24,7 @@ vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args: { p_id: string; p_paid: boolean }) => {
       db.rpcs.push({ name, args });
+      if (name === "set_invoice_paid" && db.gate != null) return db.gate;
       if (name === "set_invoice_paid") {
         db.rows = db.rows.map((row) => (row.id === args.p_id ? { ...row, marked_paid_at: args.p_paid ? "2026-10-10T06:00:00Z" : null } : row));
       }
@@ -56,5 +59,38 @@ describe("Unpaid mark undo on the live path (FLOW-357)", () => {
     fireEvent.click(undo);
     await waitFor(() => { expect(db.rpcs).toHaveLength(2); });
     expect(db.rpcs[1]).toEqual({ name: "set_invoice_paid", args: { p_id: "a", p_paid: false } });
+  });
+
+  it("shows the mark before set_invoice_paid answers, and a failed mark goes back with ניסיון חוזר", async () => {
+    db.rows = [invoice("a", "לקוח א")];
+    db.rpcs = [];
+    let answer: (result: { data: null; error: { message: string } | null }) => void = () => undefined;
+    db.gate = new Promise((resolve) => { answer = resolve; });
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <ToastProvider>
+            <UnpaidScreen />
+          </ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /לקוח א/ }));
+    const sheet = await screen.findByRole("dialog", { name: "לקוח א" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "סימון כשולם" }));
+    // The row takes its mark at once; the write is still pending.
+    expect(await screen.findByText("סומן כשולם · ממתין לסנכרון")).toBeInTheDocument();
+    expect(db.rpcs).toEqual([{ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } }]);
+    await act(async () => {
+      answer({ data: null, error: { message: "Failed to fetch" } });
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.queryByText("סומן כשולם · ממתין לסנכרון")).not.toBeInTheDocument();
+    db.gate = null;
+    fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
+    await waitFor(() => { expect(db.rpcs).toHaveLength(2); });
+    expect(db.rpcs[1]).toEqual({ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } });
+    expect(await screen.findByText("סומן כשולם · ממתין לסנכרון")).toBeInTheDocument();
   });
 });

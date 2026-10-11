@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,8 +14,10 @@ type ApproveReply = Promise<{ data: unknown; error: { message: string } | null }
 const state = vi.hoisted((): {
   row: Record<string, unknown>;
   approve: null | (() => ApproveReply);
+  /** A resolve_review answer the test holds back (a pick on an open line). */
+  resolve: null | (() => ApproveReply);
   calls: Array<{ name: string; args: unknown }>;
-} => ({ row: {}, approve: null, calls: [] }));
+} => ({ row: {}, approve: null, resolve: null, calls: [] }));
 
 vi.mock("./jev-review-card", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./jev-review-card")>();
@@ -55,6 +57,7 @@ const supabase = {
       return Promise.resolve({ data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false }], error: null });
     }
     if (name === "approve_review_item") return state.approve ? state.approve() : Promise.resolve({ data: { ok: true }, error: null });
+    if (name === "resolve_review" && state.resolve) return state.resolve();
     return Promise.resolve({ data: null, error: null });
   },
 };
@@ -183,5 +186,28 @@ describe("פיצול לפי קטגוריות on the change sheet (FLOW-325 §10)
     expect(screen.getByRole("heading", { name: "תור" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "פיצול לפי קטגוריות", hidden: true })).not.toBeInTheDocument();
     expect(approveCalls()).toHaveLength(0);
+  });
+
+  it("checks a project at once on an open line while resolve_review is pending, and puts it back when the write fails", async () => {
+    state.row = row();
+    state.calls = [];
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    state.resolve = () => new Promise((resolve) => { answer = resolve; });
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    // The picker closes and the summary shows the tapped project, with no busy row (decision 0180).
+    expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /וילה/, hidden: true })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "resolve_review")).toBe(true);
+    });
+    await act(async () => {
+      answer({ data: null, error: { message: "Failed to fetch" } });
+      await Promise.resolve();
+    });
+    // The failed pick goes back to the project before it, and offers ניסיון חוזר.
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /הרצל/, hidden: true })).toBeInTheDocument();
+    state.resolve = null;
   });
 });

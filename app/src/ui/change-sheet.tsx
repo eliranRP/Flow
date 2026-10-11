@@ -41,11 +41,13 @@ type Shared = {
   remember?: boolean;
   onRemember?: (value: boolean) => void;
   /**
-   * A project or category tap. Resolves after the write. Rejects to roll the check back.
-   * "left" means the screen already navigated, so the picker must not pop history.
-   * Omitted in a story, which only updates the local choice.
+   * A project or category tap. A promise is a busy write: the tapped row shows its save, and the
+   * picker closes when it resolves. It rejects to roll the check back. A plain result (not a promise)
+   * is an instant write (decision 0180): the picker closes at once, the check stays on the tap, and
+   * the screen rolls it back itself if the write fails. "left" means the screen already navigated,
+   * so the picker must not pop history. Omitted in a story, which only updates the local choice.
    */
-  onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left" | "hold">;
+  onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left" | "hold"> | undefined | "hold";
   /**
    * Runs on every close. Rejects with "incomplete" or "remember" to stay open.
    * It must not write. A write belongs in onCommitPending, and only when pending.
@@ -362,29 +364,41 @@ export function ChangeAssignment(props: Props) {
     void navigate(-1);
   }
 
-  async function commitChoice(kind: "project" | "category", id: string, previous: string): Promise<"stay" | "left" | "hold"> {
+  function rollBackPick(kind: "project" | "category", previous: string) {
+    if (kind === "project") props.onProjectId(previous);
+    else props.onCategoryId(previous);
+  }
+
+  function commitChoice(kind: "project" | "category", id: string, previous: string): Promise<"stay" | "left" | "hold"> | "stay" | "left" | "hold" {
     if (!props.onCommitPick) return "stay";
+    let started: ReturnType<NonNullable<Props["onCommitPick"]>>;
+    try {
+      started = props.onCommitPick(kind, id);
+    } catch {
+      rollBackPick(kind, previous);
+      return "left";
+    }
+    const pending = started;
+    // An instant write: nothing to wait for, so the picker closes now and no row shows a save.
+    if (!(pending instanceof Promise)) return pending ?? "stay";
     setSavingId(id);
     const work = (async (): Promise<"stay" | "left" | "hold"> => {
       try {
-        const outcome = await props.onCommitPick?.(kind, id);
+        const outcome = await pending;
         setSavingId(null);
         if (outcome === "left" || outcome === "hold") return outcome;
         return "stay";
       } catch {
         setSavingId(null);
-        if (kind === "project") props.onProjectId(previous);
-        else props.onCategoryId(previous);
+        rollBackPick(kind, previous);
         return "left";
       }
     })();
     const gate = work.then((outcome) => outcome !== "left");
     inflight.current = gate;
-    try {
-      return await work;
-    } finally {
+    return work.finally(() => {
       if (inflight.current === gate) inflight.current = null;
-    }
+    });
   }
 
   function finishPick(outcome: "stay" | "left" | "hold") {
