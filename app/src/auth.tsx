@@ -2,12 +2,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "./lib/supabase";
-import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-review";
+import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-connector-scope";
 import { forgetCompanyRole, keepOnlyCompanyRole } from "./company-role-cache";
 import { noteShownCompanyUser } from "./lib/company-header";
 import { keepSplitDraftsFor } from "./split-drafts";
 import { forgetProjectReads, keepProjectReadsFor } from "./project-cache";
-import { forgetThisDevice } from "./push";
 import { pinReviewLine } from "./review-pin";
 
 export type AuthStatus = "loading" | "anon" | "authed" | "unconfigured";
@@ -52,7 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Sign-out, an expired session, another tab, or a user switch. The
         // query keys don't name the user, so nothing cached may outlive them.
         dropJevConnectorForAuthChange();
-        void forgetThisDevice();
+        // Loads on sign-out, not with Home. Nothing waits on it.
+        void import("./push").then(({ forgetThisDevice }) => forgetThisDevice(), () => undefined);
         // The review pin names a line of the previous user's books.
         pinReviewLine(null);
         forgetCompanyRole(previous);
