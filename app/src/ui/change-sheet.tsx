@@ -491,6 +491,8 @@ export function ChangeAssignment(props: Props) {
   const pickerView = view === "project" || view === "category";
   const savedPickId = pickerKind === "project" ? props.projectId : props.categoryId;
   const chosenId = pick?.kind === pickerKind ? pick.id : savedPickId;
+  // A saved value that is still a suggestion (the summary says הצעה) can be confirmed by שמירה (FLOW-831).
+  const savedIsSuggestion = pickerKind === "project" ? projectSuggested : categorySuggested;
   const savingNow = savingId ?? (props.splitCategoryBusy === true ? SPLIT_CATEGORY_SAVING : null);
   const listed = ordered(
     pickerKind === "project" ? props.projects : props.categories,
@@ -732,12 +734,13 @@ export function ChangeAssignment(props: Props) {
     </div>
   );
 
-  // The pinned שמירה: the only write a picker makes. Disabled while the check is the saved value.
+  // The pinned שמירה: the only write a picker makes. Disabled while the check is the saved value,
+  // unless that value is a suggestion the owner has not confirmed yet.
   const footer = pickerView ? (
     <Button
       full
       busy={savingNow != null}
-      disabled={chosenId === savedPickId}
+      disabled={chosenId === savedPickId && !savedIsSuggestion}
       onClick={() => { void choose(pickerKind, chosenId); }}
     >
       שמירה

@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function pickRest(page: Page, project: string) {
   await page.getByRole("button", { name: /^השאר,/ }).click();
   await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: project }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
@@ -211,6 +212,7 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
 async function pickCategory(page: Page, name: string) {
   await page.getByRole("button", { name: /קטגוריה:/ }).click();
   await page.getByRole("radio", { name }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
 }
 
 test("the change sheet can succeed, refuse, or lose the connection", async ({ page }) => {
@@ -325,6 +327,7 @@ test("a shared-cost save offers לפיצול and stays on the sheet", async ({ p
   await page.goto("/reviewer/save?save=shared");
   await page.getByRole("button", { name: /פרויקט:/ }).click();
   await page.getByRole("radio", { name: "מחסן הנמל" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await toast(page, "עלות משותפת מפוצלת במסך הפיצול.");
   await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
   await expect(page.getByRole("radio", { name: "מחסן הנמל" })).toHaveAttribute("aria-checked", "false");
@@ -366,11 +369,12 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByText("01/07/2026")).toBeVisible();
   await expect(page.getByText("₪3,200")).toBeVisible();
   // FLOW-320: the category row opens the category picker, and the pick closes it.
-  await page.getByRole("button", { name: /מלט/ }).click();
-  await expect(page.getByRole("dialog", { name: "בחירת קטגוריה" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
+  await page.getByRole("button", { name: /מלט/ }).click();
+  await expect(page.getByRole("dialog", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "שינוע" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await toast(page, "השיוך נשמר");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /שינוע/ })).toBeVisible();

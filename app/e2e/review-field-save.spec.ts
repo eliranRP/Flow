@@ -140,6 +140,7 @@ test("a card-line category pick stays on the card and shows the new value", asyn
   await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
   await page.getByRole("button", { name: /קטגוריה:/ }).click();
   await page.getByRole("radio", { name: "הובלה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
   await expect(page.getByRole("button", { name: "קטגוריה: הובלה" })).toBeVisible();
   await expect(page.getByRole("button", { name: "פרויקט: הרצל, הצעה" })).toBeVisible();

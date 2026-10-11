@@ -142,6 +142,52 @@ function DirectHarness({
   );
 }
 
+/** A category the owner has not confirmed: the summary says הצעה, and the picker's check is on it. */
+function SuggestedHarness({ onCommitPick }: { onCommitPick: (kind: "project" | "category", id: string) => Promise<undefined> }) {
+  const [open, setOpen] = useState(true);
+  const [projectId, setProjectId] = useState("p1");
+  const [categoryId, setCategoryId] = useState("c1");
+  return (
+    <MemoryRouter initialEntries={["/?pick=category"]}>
+      <ChangeAssignment
+        host="overlay"
+        open={open}
+        onOpenChange={setOpen}
+        supplier="נגרייה לדוגמה"
+        amount="₪100"
+        direction="expense"
+        projects={[{ id: "p1", name: "בית הכרם" }]}
+        categories={fewCategories}
+        projectId={projectId}
+        categoryId={categoryId}
+        suggestionCategoryId="c1"
+        onProjectId={setProjectId}
+        onCategoryId={setCategoryId}
+        onCommitPick={onCommitPick}
+        onSplit={() => undefined}
+        onCreateProject={(name) => Promise.resolve({ id: "new", name })}
+      />
+    </MemoryRouter>
+  );
+}
+
+describe("ChangeAssignment confirms a suggestion (FLOW-831)", () => {
+  it("a suggested value that is checked keeps שמירה enabled, and שמירה confirms it", async () => {
+    const onCommitPick = vi.fn(() => Promise.resolve(undefined));
+    render(<SuggestedHarness onCommitPick={onCommitPick} />);
+    const radio = await screen.findByRole("radio", { name: "קטגוריה 1" });
+    expect(radio).toBeChecked();
+    const save = screen.getByRole("button", { name: "שמירה" });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
+    });
+    expect(onCommitPick).toHaveBeenCalledOnce();
+    expect(onCommitPick).toHaveBeenCalledWith("category", "c1");
+  });
+});
+
 describe("ChangeAssignment opened on a picker", () => {
   it("opens each row on its own picker, with no summary on the way", async () => {
     render(<DirectHarness />);

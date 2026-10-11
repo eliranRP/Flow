@@ -217,6 +217,7 @@ for (const viewport of viewports) {
       await openCategory(page, safe);
       await armSampler(page, safe, 1200);
       await page.getByRole("radio", { name: "שינוע" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
@@ -233,6 +234,7 @@ for (const viewport of viewports) {
       await page.waitForTimeout(400);
       await armSampler(page, safe, 1200);
       await page.getByRole("radio", { name: "שינוע" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
@@ -246,6 +248,7 @@ for (const viewport of viewports) {
       await openCategory(page, safe);
       await page.waitForTimeout(400);
       await page.getByRole("radio", { name: "שינוע" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
       const toast = page.locator(".ui-toast");
       await expect(page.locator(".ui-toast-host")).toHaveAttribute("data-phase", "in");
       const retry = toast.getByRole("button", { name: "ניסיון חוזר", includeHidden: true });
@@ -269,6 +272,7 @@ for (const viewport of viewports) {
       await page.waitForTimeout(400);
       await armSampler(page, safe, 1000);
       await page.getByRole("radio", { name: "שינוע" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
       await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
       const samples = await readFrames(page);
       const settled = await readSettled(page);
@@ -302,6 +306,7 @@ for (const viewport of viewports) {
       await page.waitForTimeout(50);
       await armSampler(page, safe, 800);
       await page.getByRole("radio", { name: "שינוע" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
       const first = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(first);
@@ -341,6 +346,7 @@ for (const viewport of viewports) {
     const safe = Math.round(sheetTop) - 20;
     await armSampler(page, safe, 1200);
     await page.getByRole("radio", { name: "שינוע" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
     const samples = await readFrames(page);
     const settled = await readSettled(page);
     expect(settled.pad).toBeGreaterThan(GAP + 1);

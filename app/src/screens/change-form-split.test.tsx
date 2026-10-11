@@ -222,8 +222,8 @@ describe("the picker keeps the choice until שמירה (FLOW-831)", () => {
     state.resolve = null;
   });
 
-  it("שמירה is disabled while the checked project is the saved one", async () => {
-    state.row = row();
+  it("שמירה is disabled while the checked project is the saved one, once it is owned", async () => {
+    state.row = row({ project_suggested: false });
     renderSheet();
     expect(await screen.findByRole("button", { name: "שמירה", hidden: true })).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: /וילה/, hidden: true }));

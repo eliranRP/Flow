@@ -14,9 +14,11 @@ async function addPart(page: Page, category: string, project: string, reversal =
   // A refund line opens its reversal section expanded (FLOW-333 C3c).
   if (reversal) await expect(categories.getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: category }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects).toBeVisible();
   await projects.getByRole("radio", { name: project }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
@@ -59,6 +61,7 @@ test("a refund's reversal part needs a project before it saves", async ({ page }
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
   await expect(categories.getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: "חומרי בניין" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects.getByText("חלק החזר צריך פרויקט.")).toBeVisible();
   await expect(projects.getByRole("radio", { name: /פרויקט השורה/ })).toHaveCount(0);
@@ -74,6 +77,7 @@ test("a refund's reversal part needs a project before it saves", async ({ page }
   // The part's row opens straight on the project list while it misses one.
   await page.getByRole("button", { name: /^חומרי בניין, החזר/ }).click();
   await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרויקט הרצליה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^השאר,/ })).toContainText("₪750");
   await page.getByRole("button", { name: "סגירה" }).click();

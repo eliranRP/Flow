@@ -202,7 +202,7 @@ export const ChangeProjectChoicePendingDark320: Story = {
 export const ChangeProjectUnchanged320: Story = {
   name: "Project picker, nothing changed 320",
   parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" suggestionId="" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await expect(await body.findByRole("button", { name: "שמירה" })).toBeDisabled();
@@ -213,7 +213,7 @@ export const ChangeProjectUnchangedDark320: Story = {
   name: "Project picker, nothing changed dark 320",
   globals: { theme: "dark" },
   parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" suggestionId="" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await expect(await body.findByRole("button", { name: "שמירה" })).toBeDisabled();

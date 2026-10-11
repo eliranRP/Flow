@@ -72,7 +72,14 @@ for (const width of [390, 320]) {
         () => page.getByRole("button", { name: /קטגוריה:/ }).tap(),
         page.getByRole("heading", { name: "בחירת קטגוריה" }),
       );
-      await step("pick הובלה", () => page.getByRole("radio", { name: "הובלה" }).tap(), page.locator(".ui-toast").getByText("השיוך נשמר"));
+      await step(
+        "pick הובלה",
+        async () => {
+          await page.getByRole("radio", { name: "הובלה" }).tap();
+          await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).tap();
+        },
+        page.locator(".ui-toast").getByText("השיוך נשמר"),
+      );
       await expect(page.getByRole("button", { name: /קטגוריה: הובלה/ })).toBeVisible();
     });
 
@@ -92,7 +99,10 @@ for (const width of [390, 320]) {
       await step("add a part", () => page.getByRole("button", { name: "הוספת חלק" }).tap(), picker);
       await step(
         "pick a project",
-        () => picker.getByRole("radio", { name: "פרגולה בית כהן" }).tap(),
+        async () => {
+          await picker.getByRole("radio", { name: "פרגולה בית כהן" }).tap();
+          await picker.getByRole("button", { name: "שמירה", exact: true }).tap();
+        },
         page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }),
       );
       const share = page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" });
