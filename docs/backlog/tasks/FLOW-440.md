@@ -1,0 +1,8 @@
+<a id="flow-440"></a>
+# FLOW-440 · Show how a month's profit is reached when a loan payment counts only in part
+- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** [FLOW-438](FLOW-438.md) (done) · **Source:** owner request 2026-10-11, with a phone shot of a project's month profit page (רווח <month>, the FLOW-438 layout). The shot holds real data, so it is not in the repo.
+- **What:** The page shows profit, then הכנסות and הוצאות, then the month's transactions. A loan payment counts only in part: principal is not an expense, interest and escrow are (DESIGN-RULES §3.6, loan parts). The row lists the payment's whole amount with "3 חלקים" in its hint, so the transactions don't visibly add up to הוצאות, and the user can't see how the profit was reached. Example with invented figures: rent +$2,000; a loan payment −$1,500 (principal $900, interest $500, escrow $100); electricity −$50. הוצאות reads $650 and profit $1,350, while the list shows −$1,500.
+- [ ] Plan and mockup: how the page makes the counted part plain. Options to weigh: the loan row shows the counted part as its figure, with the whole payment in the hint; a short line under הוצאות says what was left out ("קרן הלוואה לא נספרת · $900"); or the row opens its parts inline. Keep it light and few words, one main figure, no legend; check 320 and 393.
+- [ ] Owner approval written here before any build.
+- [ ] Build in the UI lane that owns the project screens, with an MCP check that the tool reading this page returns the counted and the left-out parts.
+- **Acceptance:** on a month with a split loan payment, a reader can add the listed figures to הוצאות and the profit without leaving the page; a story with invented figures at 320 and 393 shows it, with no clipping.
