@@ -311,6 +311,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-439"></a>[FLOW-439](tasks/FLOW-439.md) | The card or account name on the לאישור card | SMALL UI |
 | <a id="flow-440"></a>[FLOW-440](tasks/FLOW-440.md) | Show how a month's profit is reached when a loan payment counts only in part | PLAN FIRST |
 | <a id="flow-441"></a>[FLOW-441](tasks/FLOW-441.md) | A project's "income changed" row opens a payment shown under another project | BUG |
+| <a id="flow-442"></a>[FLOW-442](tasks/FLOW-442.md) | The "not counted in profit" list names the loan part it leaves out | BUG |
 
 ## Onboarding, Settings and connectors
 
