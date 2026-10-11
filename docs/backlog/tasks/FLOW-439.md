@@ -1,0 +1,5 @@
+<a id="flow-439"></a>
+# FLOW-439 · The card or account name on the לאישור card
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** [FLOW-707](FLOW-707.md) · **Source:** owner request 2026-10-11 (a shot of the לאישור card that shows only "••8408" with a card icon)
+- **What:** The review card's bank line shows the card's last 4 alone. FLOW-707 already reads the card's nickname from the bank (`card_name` in `get_line_meta`) and shows it on the transaction page. Show that name on the לאישור card too, and the account's name for a line paid from an account rather than a card. Keep it light and in a few words, per DESIGN-RULES: the name with the last 4 ("כרטיס חשמל ••8408"), or the last 4 alone when the bank has no name.
+- **Acceptance:** the review card's story shows the name with the last 4 for a named card, the last 4 alone for an unnamed one, and the account's name for an account line, at 320 and 390 with no clipping; a unit test reads the name from the line's meta; design review against DESIGN-RULES by the lane's reviewer.
