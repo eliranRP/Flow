@@ -7,6 +7,7 @@
 
 import { JEV_MODEL, JEV_TIMEOUT_MS, JevError, callJev, type FetchLike, type JevResult, type JevTimer } from "./jev.ts";
 import { readJevApiKey } from "./jev_key.ts";
+import { constantTimeEqual } from "./constant-time.ts";
 import { empty, json } from "./http.ts";
 import {
   buildTagQuestions,
@@ -288,17 +289,6 @@ export async function applyDailyCap(
     kept.push({ ...company, expenses: company.expenses.slice(0, granted) });
   }
   return { work: kept, capSkipped, reserved };
-}
-
-function constantTimeEqual(left: string, right: string): boolean {
-  const a = new TextEncoder().encode(left);
-  const b = new TextEncoder().encode(right);
-  const length = Math.max(a.length, b.length);
-  let diff = a.length ^ b.length;
-  for (let index = 0; index < length; index += 1) {
-    diff |= (a[index] ?? 0) ^ (b[index] ?? 0);
-  }
-  return diff === 0;
 }
 
 export type TagRateState = { lastAt: number };

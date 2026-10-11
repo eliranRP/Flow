@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref, type TouchEvent } from "react";
 import { cx } from "./cx";
-import { blocksEdgeBack, EDGE_PX } from "./edge-back";
-import { swipeAxis, swipeStep } from "./period-swipe";
+import { blocksEdgeBack } from "./edge-back";
+import { inEdgeZone, lockAxis, reducedMotion, swipeStep } from "./period-swipe";
 
 /**
  * FLOW-314: a sideways swipe on the card does what הבאה and הקודמת do. The finger moving right opens the
@@ -21,15 +21,6 @@ import { swipeAxis, swipeStep } from "./period-swipe";
 export type CardStep = "next" | "prev";
 
 type Track = { x: number; y: number; at: number; axis: "x" | "y" | null };
-
-function reducedMotion(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/** Swipe-back starts at 24px or closer to the start edge, so the card leaves that px to it too. */
-export function nearScreenEdge(x: number, viewportWidth: number): boolean {
-  return x <= EDGE_PX || x >= viewportWidth - EDGE_PX;
-}
 
 function zoomedIn(): boolean {
   const scale = window.visualViewport?.scale ?? 1;
@@ -126,7 +117,7 @@ export function CardSwipe({
     track.current = null;
     if (!on || event.touches.length !== 1 || zoomedIn()) return;
     const touch = event.touches[0];
-    if (!touch || nearScreenEdge(touch.clientX, window.innerWidth)) return;
+    if (!touch || inEdgeZone(touch.clientX, window.innerWidth)) return;
     if (blocksEdgeBack(event.target)) return;
     track.current = { x: touch.clientX, y: touch.clientY, at: event.timeStamp, axis: null };
   }
@@ -141,14 +132,12 @@ export function CardSwipe({
       return;
     }
     const dx = touch.clientX - start.x;
-    if (start.axis == null) {
-      start.axis = swipeAxis(dx, touch.clientY - start.y);
-      if (start.axis === "y") {
-        track.current = null;
-        return;
-      }
-      if (start.axis == null) return;
+    const axis = lockAxis(start, dx, touch.clientY - start.y);
+    if (axis === "y") {
+      track.current = null;
+      return;
     }
+    if (axis == null) return;
     if (!box.current || reducedMotion()) return;
     const side = dx > 0 ? "next" : "prev";
     // Toward a side with no card the card only gives a little, and nothing peeks in.

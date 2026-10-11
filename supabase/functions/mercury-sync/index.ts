@@ -22,7 +22,8 @@ import {
   MERCURY_TREASURY_YIELD_TYPES,
   isVoidMercuryStatus,
 } from "../_shared/connectors/mercury/rules.ts";
-import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
+import { constantTimeEqual } from "../_shared/constant-time.ts";
+import { bytesPrefix, decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import type { ConnectorSession } from "../_shared/connectors/types.ts";
 import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
@@ -35,7 +36,6 @@ declare const Deno: {
 
 type Admin = SupabaseClient<Database>;
 
-const te = new TextEncoder();
 const CLAIM_MS = 10 * 60 * 1000;
 const FORCE_GAP_MS = 60 * 1000;
 const QUIET_GAP_MS = 6 * 60 * 60 * 1000;
@@ -123,29 +123,10 @@ Deno.serve(async (req) => {
   }
 });
 
-function constantTimeEqual(left: string, right: string): boolean {
-  const a = te.encode(left);
-  const b = te.encode(right);
-  const length = Math.max(a.length, b.length);
-  let diff = a.length ^ b.length;
-  for (let index = 0; index < length; index += 1) {
-    diff |= (a[index] ?? 0) ^ (b[index] ?? 0);
-  }
-  return diff === 0;
-}
-
 function logFailure(label: string, error: unknown, secret: string): void {
   const message = error instanceof Error ? error.message : "sync failed";
   const scrubbed = secret ? message.replaceAll(secret, "[redacted]") : message;
   console.error(label, String(redactMercury(scrubbed)).slice(0, 400));
-}
-
-function bytesPrefix(value: unknown): string {
-  if (typeof value === "string") {
-    if (value.startsWith("\\x")) return value;
-    if (/^[0-9a-fA-F]+$/.test(value)) return `\\x${value}`;
-  }
-  return String(value);
 }
 
 function stringList(value: unknown): string[] {
