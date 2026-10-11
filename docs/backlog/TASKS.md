@@ -312,6 +312,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-440"></a>[FLOW-440](tasks/FLOW-440.md) | The profit page shows what it leaves out, with the cash month page's "לא נספר ברווח" row | SMALL UI |
 | <a id="flow-441"></a>[FLOW-441](tasks/FLOW-441.md) | A project's "income changed" row opens a payment shown under another project | BUG |
 | <a id="flow-442"></a>[FLOW-442](tasks/FLOW-442.md) | The "not counted in profit" list names the loan part it leaves out | BUG |
+| <a id="flow-443"></a>[FLOW-443](tasks/FLOW-443.md) | The project's "לפי חודש" screen: year heads, and one consistent row style | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
