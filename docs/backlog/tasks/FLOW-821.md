@@ -1,5 +1,7 @@
 <a id="flow-821"></a>
 # FLOW-821 · Faster local CI and main CI: build once, reuse it
-- **Type:** SMALL CYCLE · **Status:** claimed (temporary lane, owner request, 2026-10-11, claude/compassionate-goldberg-ubfcqg) · **Depends on:** — · **Source:** owner, 2026-10-11: the pre-push gate is the slowest part, since every PR push runs it.
-- [ ] Measure the default gate phase by phase on a typical push and cut the biggest phase.
-- [ ] Main's `ci`: build Storybook once and share it with the seven story shards, instead of seven builds.
+- **Type:** SMALL CYCLE · **Status:** in-progress (#586) · **Depends on:** — · **Source:** owner, 2026-10-11: the pre-push gate is the slowest part, since every PR push runs it.
+- [x] (temporary lane, #586) **Measured** (4 cores, cold cache, one changed screen): 344 s. Lint, static checks, typecheck and builds side by side 84 s; app unit tests 92 s (64 related files); Storybook tests 40 s (25 files); e2e 91 s (6 specs); one page-speed spec 29 s. Neither `--pool=threads` (89 s) nor `--no-isolate` (tests leak state and time out) makes the unit tests faster.
+- [x] **Later pushes start from the last green push.** The unit and Storybook vitest runs always took their related tests from the fork with main, so a fix-round push re-ran everything the whole branch reaches. Each run already wrote a `tree-unit-<tree>` and `tree-storybook-<tree>` mark that nothing read. `changed_base` now starts from the branch's last commit with that mark, when it is still above the fork, as the e2e and Storybook smoke phases already did. Measured: a second push that changes one more screen ran 7 unit files in 19 s and 1 story file in 15 s, and the whole gate took 189 s instead of about 344 s.
+- [x] `start_docker` moved to `scripts/local-ci-docker.sh`, so `local-ci.sh` stays under the 800-line limit.
+- **Not done, on purpose: build Storybook once on main.** The seven story shards would wait for that build, so main's wall-clock time would not drop and could grow by about a minute (install plus upload and download). It would only save runner minutes, which are free on a public repo.

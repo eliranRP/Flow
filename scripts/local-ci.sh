@@ -5,7 +5,7 @@
 #     Deno, typecheck, unit and connector tests, both dist builds, and the parts scoped to what the
 #     branch changes against main (git diff origin/main...HEAD), so a merge of main re-runs nothing
 #     for main's own changes:
-#     - the app unit and Storybook vitest tests those files reach;
+#     - the app unit and Storybook vitest tests those files reach (a later push: since its last green one);
 #     - up to FLOW_E2E_MAX (6, 8 for a screen change) e2e specs that reach them, the branch's own
 #       specs first, then those that open the changed screen (Docker), and the page-speed specs
 #       (app/perf) whose page they reach;
@@ -47,6 +47,7 @@ esac
 # Phases and their budgets, and the process group whose leftovers the gate stops when it ends.
 source "$(dirname "$0")/local-ci-guard.sh"
 guard_session "$@"
+source "$(dirname "$0")/local-ci-docker.sh" # start_docker
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
@@ -230,11 +231,21 @@ branch_changes() {
 # manifest, tsconfig or lockfile whose change the tests don't read: the vitest module graph finds the
 # tests and stories those reach. Anything else (setup, config, the design package, scripts, a
 # dependency, a deleted or renamed file) runs all (scripts/storybook-stories.mjs, relatedRun).
+# FLOW-821: a later push starts from this branch's last commit whose $1 tests passed, when it is
+# still above the fork: the tests the earlier files reach passed there, and those inputs are unchanged.
 changed_base() {
+  local commit tree
   (( skips )) || return 1
   [[ -n "$pr_fork" ]] || return 1
   [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
     | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
+  while read -r commit tree; do
+    [[ "$commit" != "$pr_fork" ]] || break
+    if has_mark "tree-$1-$tree" && git merge-base --is-ancestor "$pr_fork" "$commit"; then
+      echo "$commit"
+      return 0
+    fi
+  done < <(ancestors)
   echo "$pr_fork"
 }
 
@@ -318,51 +329,6 @@ if (( base_only )) && ! base_area database; then
   e2e_specs=()
   e2e_left=1
 fi
-
-# Starts Docker when it is down. In cloud containers dockerd alone can fail with "timeout waiting
-# for containerd", so containerd starts first and dockerd is pointed at its socket.
-start_docker() {
-  local sock=/run/containerd/containerd.sock retried=
-  docker info >/dev/null 2>&1 && return 0
-  start_dockerd() {
-    if [[ -S "$sock" ]]; then
-      (detach sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)
-    else
-      (detach sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
-    fi
-  }
-  # The socket file appears before containerd serves it, and dockerd started then exits with
-  # "connection refused": ask containerd itself whether it answers.
-  containerd_serving() {
-    if command -v ctr >/dev/null 2>&1; then
-      sudo -n ctr --address "$sock" version >/dev/null 2>&1
-    else
-      grep -q "containerd successfully booted" /tmp/flow-containerd.log 2>/dev/null
-    fi
-  }
-  if ! pgrep -x dockerd >/dev/null 2>&1; then
-    # A socket left from an earlier containerd doesn't mean one is serving: start it whenever
-    # none runs. Either way, start dockerd only once containerd answers, for at most 30 seconds.
-    if ! pgrep -x containerd >/dev/null 2>&1; then
-      (detach sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)
-    fi
-    for _ in $(seq 1 30); do
-      containerd_serving && break
-      sleep 1
-    done
-    start_dockerd
-  fi
-  for i in $(seq 1 30); do
-    docker info >/dev/null 2>&1 && return 0
-    # dockerd exits at once when containerd wasn't ready yet; start it once more.
-    if [[ -z $retried ]] && (( i >= 5 )) && ! pgrep -x dockerd >/dev/null 2>&1; then
-      retried=1
-      start_dockerd
-    fi
-    sleep 1
-  done
-  return 1
-}
 
 supabase_exit=""
 if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
