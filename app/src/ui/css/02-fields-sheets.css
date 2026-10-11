@@ -93,17 +93,6 @@
   }
 }
 
-/* FLOW-107. A part kept out of the profit: icon and words, muted, never only colour. */
-.ui-loan-out {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.ui-loan-out svg {
-  flex: none;
-}
-
 .ui-loan-spacer {
   display: block;
   inline-size: 24px;
@@ -387,10 +376,6 @@
 .ui-sheet-foot {
   flex: none;
   padding: var(--space-3) var(--space-side) 0;
-}
-
-.ui-sheet-foot-safe {
-  padding-bottom: calc(var(--safe-bottom) + var(--space-4));
 }
 
 .ui-field {

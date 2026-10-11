@@ -16,11 +16,6 @@
   flex: 1;
 }
 
-.ui-result-cap {
-  max-block-size: calc(5 * (var(--touch-min) + var(--space-5)));
-  overflow-y: auto;
-}
-
 .ui-change-summary {
   display: flex;
   flex-direction: column;

@@ -74,16 +74,6 @@
   background: var(--color-tint-pressed);
 }
 
-.ui-banner-quiet {
-  background: transparent;
-  border-radius: 0;
-  padding-inline: 0;
-}
-
-.ui-banner-quiet:active {
-  background: var(--color-tint);
-}
-
 .ui-tab-icon {
   position: relative;
   display: grid;
@@ -217,10 +207,6 @@
 
 .ui-day:disabled {
   color: var(--color-disabled-text);
-}
-
-.ui-day-outside {
-  color: var(--color-text-muted);
 }
 
 .ui-cal {
