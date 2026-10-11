@@ -9,7 +9,6 @@ import {
   type Basis,
   type CategoryRow,
   type Dashboard,
-  type ReviewRow,
   type UnpaidRow,
 } from "@flow/shared";
 import { demoDataSchema, pnlFromDemo } from "@flow/shared/testing";
@@ -193,10 +192,6 @@ export function demoCategories(): CategoryRow[] {
     hidden: false,
     is_default: true,
   }));
-}
-
-export function demoReview(): ReviewRow[] {
-  return [];
 }
 
 export function demoProject(id: string) {
