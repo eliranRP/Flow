@@ -1,7 +1,7 @@
 // Flow MCP tools tests: recurring charges (FLOW-415, decision 0172). Invented ids only.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
-import { rpcOf, TXN } from "./tools_test_support.ts";
+import { PROJECT, rpcOf, TXN } from "./tools_test_support.ts";
 
 Deno.test("get_recurring_changes passes this month's changes through", async () => {
   const changes = [{
@@ -39,6 +39,27 @@ Deno.test("get_recurring_changes passes this month's changes through", async () 
     (await callTool("get_recurring_changes", {}, ["write"], rpc)).isError,
     true,
   );
+});
+
+Deno.test("get_recurring_changes with project_id reads the project's own changes (FLOW-441)", async () => {
+  const changes = [{ project_id: PROJECT, amount_minor: 200000, typical_amount_minor: 100000, change_percent: 100 }];
+  const { calls, rpc } = rpcOf((name) =>
+    name === "project_recurring_changes"
+      ? { status: 200, json: changes }
+      : { status: 500, json: null }
+  );
+  const result = await callTool("get_recurring_changes", { project_id: PROJECT }, ["read"], rpc);
+  assertEquals(result.structuredContent, { ok: true, data: { changes } });
+  assertEquals(calls, [{ name: "project_recurring_changes", body: { p_project: PROJECT } }]);
+  // Another company's project reads as null: refused.
+  const other = await callTool("get_recurring_changes", { project_id: PROJECT }, ["read"], () =>
+    Promise.resolve({ status: 200, json: null }));
+  assertEquals(other.isError, true);
+  // A bad id is refused before any read.
+  const bad = rpcOf(() => ({ status: 200, json: [] }));
+  const invalid = await callTool("get_recurring_changes", { project_id: "nope" }, ["read"], bad.rpc);
+  if (!invalid.structuredContent.ok) assertEquals(invalid.structuredContent.error.code, "validation");
+  assertEquals(bad.calls, []);
 });
 
 Deno.test("get_line_recurring reads one line's switch and refuses a bad id before any read", async () => {

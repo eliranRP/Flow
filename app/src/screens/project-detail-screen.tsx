@@ -185,6 +185,7 @@ export function ProjectDetailScreen({
   // Home's late bills and changed charges; the page shows the project's own. FLOW-912: read once the
   // project's own read has landed, like its groups, so two more reads stay out of the page's paint.
   const recurring = useProjectRecurring(
+    projectId,
     sample == null && section === "overview" && detail.data != null && !detail.isFetching,
     sampleRecurring,
   );
