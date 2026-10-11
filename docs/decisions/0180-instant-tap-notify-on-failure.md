@@ -17,10 +17,10 @@ Every app write goes through `useWrite` (`app/src/use-write.ts`, 78 writes in 39
 4. **Some writes stay busy.** A write whose result only the server can produce keeps the busy state of 0075: it creates something with a server id (a loan, a project, an invite), returns figures the screen shows next (a split save, a schedule), calls another service (connecting SUMIT or Mercury, minting an MCP code), or cannot be undone (deleting a company, a merge). Decision 0108's rename sheet is one of these.
 5. **Leaving with a write still saving.** A write in flight finishes even when its screen closes. Its failure toast still shows.
 
-This amends [0075](0075-save-on-tap-and-on-leave.md) points 1 and 5 for writes under point 1 here. The chosen row no longer shows a spinner and the other rows are not disabled while it saves. The rollback, the toast placement and the retry of 0075 stay.
+This amends [0075](0075-save-on-tap-and-on-leave.md) points 1 and 5 for writes under point 1 here. The chosen row no longer shows a spinner and the other rows are not disabled while it saves. The rollback, the toast placement and the retry of 0075 stay. A pick closes its picker at the tap, so a failed pick does not reopen it: the check and the summary go back to the previous choice and the toast with ניסיון חוזר says what failed.
 
 ## How
 
 - `useWrite` takes an `optimistic` option: the query keys the write changes and how each cached value looks after it. It cancels those queries, updates the cache, and keeps a copy to restore on failure. For such a write it no longer waits for the background refresh before the success step and toast. A busy write still waits, since its next step may read the refreshed data.
 - A failure toast and its retry work after the screen unmounts.
-- `app/perf/tap-response.spec.ts` (FLOW-830) is the gate. With the stub backend answering writes after 1 second, the tapped control must show its result within 200 ms. A write the stub fails must roll back and toast.
+- `app/perf/tap-response.spec.ts` (FLOW-830) is the gate. With the stub backend answering writes after 1 second, the tapped control must show its result within 200 ms, while the write is still pending. A write the stub fails must roll back and toast. It measures with reduced motion, where the tokens set every transition to 0 ms, so it times the app's answer, not a sheet's slide or the card swap, which the design times on purpose (with motion the result is drawn at once and is fully in place after the sheet's 300 to 550 ms close).

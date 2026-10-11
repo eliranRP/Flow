@@ -14,6 +14,11 @@ import { REVIEW_CARDS, stubBackend } from "./stub-backend";
  */
 const LIMIT_MS = 200;
 const WRITE_MS = 1_000;
+/**
+ * Reduced motion: the design tokens drop every transition to 0 ms (the sheet's slide, the card swap), so
+ * the time measured is the app's own answer to the tap, not an animation the design already times.
+ */
+const MOTION = { reducedMotion: "reduce" } as const;
 const TXN_ID = demoProject("herzl")?.transactions[0]?.id ?? "";
 /** A line with a category: the change sheet saves a project pick only when the line has one. */
 const CATEGORIZED_TXN_ID = demoProject("herzl")?.transactions.find((line) => line.category != null)?.id ?? "";
@@ -156,7 +161,7 @@ function escapeRe(text: string): string {
 
 /** One open: a fresh session, the screen arranged, the write held, then the timed tap. */
 async function open(browser: Browser, tap: Tap) {
-  const context = await browser.newContext();
+  const context = await browser.newContext(MOTION);
   const page = await context.newPage();
   const held = gate();
   await stubBackend(page);
@@ -195,7 +200,7 @@ for (const tap of taps) {
 
 test("tap-response: a failed write rolls back within 2 s and toasts ניסיון חוזר, and the retry shows", async ({ browser }) => {
   test.setTimeout(120_000);
-  const context = await browser.newContext();
+  const context = await browser.newContext(MOTION);
   const page = await context.newPage();
   const held = gate();
   await stubBackend(page);
@@ -216,9 +221,9 @@ test("tap-response: a failed write rolls back within 2 s and toasts ניסיון
   expect(await switchBox.isChecked()).toBe(before);
   held.failing = false;
   await retry.tap();
-  // The retry is answered, and the switch shows the tapped state again.
+  // The retry shows the tapped state again at once (decision 0180), then the server answers it.
   await expect.poll(() => switchBox.isChecked(), { intervals: [10], timeout: 10_000 }).toBe(!before);
-  expect(held.answered, "retry answered").toBe(2);
+  await expect.poll(() => held.answered, { message: "retry answered", timeout: WRITE_MS + 3_000 }).toBe(2);
   const line = `tap-response: failed write ${String(toastMs)} ms after the 500 (limit 2000); rolled back and retried`;
   test.info().annotations.push({ type: "tap-response", description: line });
   console.log(line);
