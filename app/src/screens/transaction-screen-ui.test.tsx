@@ -1,11 +1,9 @@
 import { type Session } from "@supabase/supabase-js";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { SplitScreen, TransactionScreen } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -76,18 +74,7 @@ const expense = {
 };
 
 function renderTxn(sample: NonNullable<Parameters<typeof TransactionScreen>[0]>["sample"]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <TransactionScreen sample={sample} />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<TransactionScreen sample={sample} />);
 }
 
 function mockTxnBooks(txn: Record<string, unknown> = {}) {
@@ -151,19 +138,11 @@ function mockTxnBooks(txn: Record<string, unknown> = {}) {
 }
 
 function mountTxn() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={["/transactions/tx"]}>
-            <Routes>
-              <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-            </Routes>
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <Routes>
+      <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+    </Routes>,
+    { route: "/transactions/tx" },
   );
 }
 
@@ -373,34 +352,27 @@ describe("transaction detail pickers (FLOW-320)", () => {
 
 describe("split between projects (FLOW-346)", () => {
   function sample(props: Partial<Parameters<typeof SplitScreen>[0]> = {}) {
-    return render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/split"]}>
-              <Routes>
-                <Route
-                  path="/split"
-                  element={
-                    <SplitScreen
-                      sampleProjects={[
-                        { id: "a", name: "חולון" },
-                        { id: "b", name: "וילה" },
-                      ]}
-                      sampleAmount={2_866_316n}
-                      sampleMeta="מוסך"
-                      sampleRestProject="a"
-                      backTo="/back"
-                      {...props}
-                    />
-                  }
-                />
-                <Route path="/back" element={<h1>חזרה</h1>} />
-              </Routes>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    return renderWithProviders(
+      <Routes>
+        <Route
+          path="/split"
+          element={
+            <SplitScreen
+              sampleProjects={[
+                { id: "a", name: "חולון" },
+                { id: "b", name: "וילה" },
+              ]}
+              sampleAmount={2_866_316n}
+              sampleMeta="מוסך"
+              sampleRestProject="a"
+              backTo="/back"
+              {...props}
+            />
+          }
+        />
+        <Route path="/back" element={<h1>חזרה</h1>} />
+      </Routes>,
+      { route: "/split" },
     );
   }
 
@@ -506,19 +478,11 @@ describe("split between projects (FLOW-346)", () => {
       }
       return Promise.resolve({ data: null, error: null });
     };
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/transactions/tx/split"]}>
-              <Routes>
-                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-              </Routes>
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      </Routes>,
+      { route: "/transactions/tx/split" },
     );
     const field = await screen.findByRole("textbox", { name: "סכום, וילה" });
     expect(field).toHaveValue("30");

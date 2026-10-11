@@ -1,10 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { screen } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { TransactionScreen } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 // FLOW-122 review: the live card passes the line's category loan_part, read from
 // list_categories by id, to the loan split. A renamed principal category still counts.
@@ -68,19 +66,11 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 function showLive() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={["/transactions/tx"]}>
-            <Routes>
-              <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-            </Routes>
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <Routes>
+      <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+    </Routes>,
+    { route: "/transactions/tx" },
   );
 }
 

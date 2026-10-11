@@ -1,12 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { BooksProvider } from "../use-books";
+import { renderWithProviders } from "../test-render";
 import { roleShows } from "../test-waits";
-import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { HomeScreen } from "./HomeScreen";
 
@@ -67,30 +65,22 @@ const emptyDashboard = {
 };
 
 function renderAt(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <BooksProvider>
-              <Routes>
-                <Route path="/" element={<HomeScreen />} />
-                <Route path="/projects" element={<ProjectsScreen />} />
-                <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
-                <Route path="/review" element={<ReviewScreen />} />
-                <Route path="/review/change" element={<ChangeForm />} />
-                <Route path="/unpaid" element={<UnpaidScreen />} />
-                <Route path="/settings" element={<SettingsScreen />} />
-                <Route path="/settings/categories" element={<CategoriesScreen />} />
-                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-              </Routes>
-            </BooksProvider>
-          </AuthProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<HomeScreen />} />
+        <Route path="/projects" element={<ProjectsScreen />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+        <Route path="/review" element={<ReviewScreen />} />
+        <Route path="/review/change" element={<ChangeForm />} />
+        <Route path="/unpaid" element={<UnpaidScreen />} />
+        <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/settings/categories" element={<CategoriesScreen />} />
+        <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      </Routes>
+    </AuthProvider>,
+    { route: path },
   );
   act(() => {
     for (const handler of rpc.handlers) handler("INITIAL_SESSION", session);

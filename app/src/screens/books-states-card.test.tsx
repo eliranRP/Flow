@@ -1,12 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import type { ReviewRow } from "@flow/shared";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
+import { renderWithProviders } from "../test-render";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewQueue, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { HomeScreen } from "./HomeScreen";
 
@@ -46,30 +44,22 @@ const session = {
 } satisfies Session;
 
 function renderAt(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <BooksProvider>
-              <Routes>
-                <Route path="/" element={<HomeScreen />} />
-                <Route path="/projects" element={<ProjectsScreen />} />
-                <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
-                <Route path="/review" element={<ReviewScreen />} />
-                <Route path="/review/change" element={<ChangeForm />} />
-                <Route path="/unpaid" element={<UnpaidScreen />} />
-                <Route path="/settings" element={<SettingsScreen />} />
-                <Route path="/settings/categories" element={<CategoriesScreen />} />
-                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-              </Routes>
-            </BooksProvider>
-          </AuthProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<HomeScreen />} />
+        <Route path="/projects" element={<ProjectsScreen />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+        <Route path="/review" element={<ReviewScreen />} />
+        <Route path="/review/change" element={<ChangeForm />} />
+        <Route path="/unpaid" element={<UnpaidScreen />} />
+        <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/settings/categories" element={<CategoriesScreen />} />
+        <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      </Routes>
+    </AuthProvider>,
+    { route: path },
   );
   act(() => {
     for (const handler of rpc.handlers) handler("INITIAL_SESSION", session);
@@ -100,40 +90,19 @@ describe("rejected writes", () => {
       project_name: null,
       category_name: category,
     });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const { rerender } = render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter>
-            <ReviewQueue rows={[row(null)]} search="" sample />
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    const { rerender } = renderWithProviders(<ReviewQueue rows={[row(null)]} search="" sample />);
     expect(screen.getByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter>
-            <ReviewQueue rows={[row("שינוע")]} search="" sample />
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
+      <ReviewQueue rows={[row("שינוע")]} search="" sample />,
     );
     expect(screen.getByText("שינוע")).toBeInTheDocument();
     expect(screen.getByText("הצעה")).toBeInTheDocument();
     expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter>
-            <ReviewQueue rows={[{ ...row("שינוע"), category_suggested: false }]} search="" sample />
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
+      <ReviewQueue rows={[{ ...row("שינוע"), category_suggested: false }]} search="" sample />,
     );
     expect(screen.getByText("שינוע")).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
@@ -157,17 +126,10 @@ describe("rejected writes", () => {
       category_suggested: false,
       project_suggested: true,
     };
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const queue = (item: typeof row) => (
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter>
-            <ReviewQueue rows={[item]} search="" sample />
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>
+      <ReviewQueue rows={[item]} search="" sample />
     );
-    const { rerender } = render(queue(row));
+    const { rerender } = renderWithProviders(queue(row));
     const project = screen.getByRole("button", { name: "פרויקט: הרצל, הצעה" });
     const category = screen.getByRole("button", { name: "קטגוריה: חומרים" });
     expect(within(project).getByText("הצעה")).toBeInTheDocument();
@@ -178,32 +140,24 @@ describe("rejected writes", () => {
   });
 
   it("clears the category הצעה after the owner picks it", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={["/review/change"]}>
-            <BooksProvider>
-              <ChangeForm
-                sample={{
-                  supplier: "מחסן",
-                  amount: "₪100",
-                  suggestionId: "p1",
-                  suggestionCategoryId: "c1",
-                  projectId: "p1",
-                  categoryId: "c1",
-                  projects: [{ id: "p1", name: "הרצל" }],
-                  categories: [
-                    { id: "c1", name: "חומרים", hidden: false },
-                    { id: "c2", name: "שינוע", hidden: false },
-                  ],
-                  categorySuggested: true,
-                }}
-              />
-            </BooksProvider>
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ChangeForm
+        sample={{
+          supplier: "מחסן",
+          amount: "₪100",
+          suggestionId: "p1",
+          suggestionCategoryId: "c1",
+          projectId: "p1",
+          categoryId: "c1",
+          projects: [{ id: "p1", name: "הרצל" }],
+          categories: [
+            { id: "c1", name: "חומרים", hidden: false },
+            { id: "c2", name: "שינוע", hidden: false },
+          ],
+          categorySuggested: true,
+        }}
+      />,
+      { route: "/review/change" },
     );
     const category = await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" });
     expect(within(category).getByText("הצעה")).toBeInTheDocument();
@@ -216,30 +170,22 @@ describe("rejected writes", () => {
   });
 
   it("does not tag an owner-picked project when project_suggested is false", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={["/review/change"]}>
-            <BooksProvider>
-              <ChangeForm
-                sample={{
-                  supplier: "מחסן",
-                  amount: "₪100",
-                  suggestionId: "p1",
-                  suggestionCategoryId: "c1",
-                  projectId: "p1",
-                  categoryId: "c1",
-                  projects: [{ id: "p1", name: "הרצל" }],
-                  categories: [{ id: "c1", name: "חומרים", hidden: false }],
-                  categorySuggested: false,
-                  project_suggested: false,
-                }}
-              />
-            </BooksProvider>
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ChangeForm
+        sample={{
+          supplier: "מחסן",
+          amount: "₪100",
+          suggestionId: "p1",
+          suggestionCategoryId: "c1",
+          projectId: "p1",
+          categoryId: "c1",
+          projects: [{ id: "p1", name: "הרצל" }],
+          categories: [{ id: "c1", name: "חומרים", hidden: false }],
+          categorySuggested: false,
+          project_suggested: false,
+        }}
+      />,
+      { route: "/review/change" },
     );
     const project = await screen.findByRole("button", { name: "פרויקט: הרצל, שינוי" });
     expect(within(project).queryByText("הצעה")).not.toBeInTheDocument();
@@ -328,24 +274,17 @@ describe("rejected writes", () => {
     });
     const first = row("a", "חומרי בניין לדוגמה");
     const second = row("b", "הובלות לדוגמה");
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     function queue(rows: ReviewRow[], onDone: (id: string) => void) {
       return (
-        <QueryClientProvider client={client}>
-          <ToastProvider>
-            <MemoryRouter>
-              <ReviewQueue
-                rows={rows}
-                search=""
-                sample
-                previewWrite={{ run: () => Promise.resolve(), onDone, onUndo: () => undefined }}
-              />
-            </MemoryRouter>
-          </ToastProvider>
-        </QueryClientProvider>
+        <ReviewQueue
+          rows={rows}
+          search=""
+          sample
+          previewWrite={{ run: () => Promise.resolve(), onDone, onUndo: () => undefined }}
+        />
       );
     }
-    const { rerender } = render(queue([first, second], () => undefined));
+    const { rerender } = renderWithProviders(queue([first, second], () => undefined));
     const meter = screen.getByRole("meter", { name: "התקדמות התור" });
     expect(meter).toHaveAttribute("aria-valuenow", "1");
     expect(meter).toHaveAttribute("aria-valuemax", "2");
@@ -376,37 +315,30 @@ describe("rejected writes", () => {
       category_name: "מלט",
     });
     const rows = [row("a", "ספק א"), row("b", "ספק ב")];
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     let listed = rows;
     function draw() {
       return (
-        <QueryClientProvider client={client}>
-          <ToastProvider>
-            <MemoryRouter>
-              <ReviewQueue
-                rows={listed}
-                search=""
-                sample
-                previewWrite={{
-                  run: () => Promise.resolve(),
-                  onDone: (id) => {
-                    listed = listed.filter((item) => item.id !== id);
-                    rerender(draw());
-                  },
-                  onUndo: (id) => {
-                    const original = rows.find((item) => item.id === id);
-                    if (original == null || listed.some((item) => item.id === id)) return;
-                    listed = [original, ...listed];
-                    rerender(draw());
-                  },
-                }}
-              />
-            </MemoryRouter>
-          </ToastProvider>
-        </QueryClientProvider>
+        <ReviewQueue
+          rows={listed}
+          search=""
+          sample
+          previewWrite={{
+            run: () => Promise.resolve(),
+            onDone: (id) => {
+              listed = listed.filter((item) => item.id !== id);
+              rerender(draw());
+            },
+            onUndo: (id) => {
+              const original = rows.find((item) => item.id === id);
+              if (original == null || listed.some((item) => item.id === id)) return;
+              listed = [original, ...listed];
+              rerender(draw());
+            },
+          }}
+        />
       );
     }
-    const { rerender } = render(draw());
+    const { rerender } = renderWithProviders(draw());
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
@@ -439,19 +371,12 @@ describe("rejected writes", () => {
       category_name: "מלט",
     });
     const rows = [row("a", "ספק א"), row("b", "ספק ב"), row("c", "ספק ג")];
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     function queue(listed: ReviewRow[]) {
       return (
-        <QueryClientProvider client={client}>
-          <ToastProvider>
-            <MemoryRouter>
-              <ReviewQueue rows={listed} search="" sample />
-            </MemoryRouter>
-          </ToastProvider>
-        </QueryClientProvider>
+        <ReviewQueue rows={listed} search="" sample />
       );
     }
-    const { rerender } = render(queue(rows));
+    const { rerender } = renderWithProviders(queue(rows));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
     rerender(queue(rows.slice(1)));

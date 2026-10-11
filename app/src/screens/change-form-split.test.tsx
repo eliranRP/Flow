@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BooksProvider } from "../use-books";
+import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
-import { ToastProvider } from "../ui/toast";
 import { ChangeForm } from "./flow-screens";
 
 // FLOW-325 §10 (option A): פיצול לפי קטגוריות on the change sheet's project list approves the
@@ -85,23 +83,15 @@ function row(extra: Record<string, unknown> = {}) {
 }
 
 function renderSheet(wrap: (node: ReactNode) => ReactNode = (node) => node) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={["/review/change?item=r1&pick=project"]}>
-          <BooksProvider>
-            {wrap(
-              <Routes>
-                <Route path="/review/change" element={<ChangeForm />} />
-                <Route path="/review" element={<h1>תור</h1>} />
-                <Route path="/transactions/:transactionId/split-category" element={<h1>עורך הפיצול</h1>} />
-              </Routes>,
-            )}
-          </BooksProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    wrap(
+      <Routes>
+        <Route path="/review/change" element={<ChangeForm />} />
+        <Route path="/review" element={<h1>תור</h1>} />
+        <Route path="/transactions/:transactionId/split-category" element={<h1>עורך הפיצול</h1>} />
+      </Routes>,
+    ),
+    { route: "/review/change?item=r1&pick=project" },
   );
 }
 

@@ -1,12 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Outlet, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
+import { Outlet, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { refreshLedger } from "../books-focus";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
+import { renderWithProviders } from "../test-render";
 import { ChangeForm, ReviewAllList, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
 
 
@@ -139,24 +138,16 @@ async function approveWhenIdle(nextHeading: string) {
 }
 
 function renderAt(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <BooksProvider>
-              <Routes>
-                <Route path="/review" element={<ReviewScreen />} />
-                <Route path="/review/all" element={<ReviewScreen />} />
-                <Route path="/review/change" element={<ChangeForm />} />
-                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-              </Routes>
-            </BooksProvider>
-          </AuthProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <AuthProvider>
+      <Routes>
+        <Route path="/review" element={<ReviewScreen />} />
+        <Route path="/review/all" element={<ReviewScreen />} />
+        <Route path="/review/change" element={<ChangeForm />} />
+        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      </Routes>
+    </AuthProvider>,
+    { route: path },
   );
 }
 
@@ -568,17 +559,11 @@ describe("review queue list", () => {
       ],
       { initialEntries: ["/review"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /מחסן הנמל/ }));
@@ -612,17 +597,11 @@ describe("review queue list", () => {
       ],
       { initialEntries: ["/review/change?item=r1&from=all"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     expect(await screen.findByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
     await waitFor(() => {
@@ -650,17 +629,11 @@ describe("review queue list", () => {
       ],
       { initialEntries: ["/review?item=r1&from=all"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
     await waitFor(() => {
@@ -708,17 +681,11 @@ describe("review queue list", () => {
       ],
       { initialEntries: ["/review"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     const line = await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" });
     fireEvent.click(line);
@@ -753,17 +720,11 @@ describe("review queue list", () => {
       ],
       { initialEntries: ["/review?item=r1&from=all"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     const line = screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" });
@@ -801,17 +762,11 @@ describe("review queue list", () => {
       ],
       { initialEntries: ["/review?item=r1&from=all"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
@@ -832,17 +787,11 @@ describe("review queue list", () => {
       [{ path: "/review/change", element: <ChangeForm /> }],
       { initialEntries: ["/review/change?item=r1"] },
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false },
     );
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
@@ -878,16 +827,11 @@ describe("review queue list", () => {
       { initialEntries: ["/review"] },
     );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <AuthProvider>
-            <BooksProvider>
-              <RouterProvider router={router} />
-            </BooksProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+      { memoryRouter: false, client },
     );
     expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
     await router.navigate("/review/change?item=r1");
@@ -916,30 +860,24 @@ describe("review queue list", () => {
 
 describe("review amounts keep their currency", () => {
   it("shows a dollar review row as dollars", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-        <MemoryRouter>
-        <ReviewAllList
-          rows={[{
-            id: "r-usd",
-            transaction_id: "t-usd",
-            description: "Pending credit",
-            doc_date: "2026-09-03",
-            amount_net: 10000n,
-            currency: "USD",
-            direction: "income",
-            reason: "pending_income",
-            project_id: null,
-            category_id: null,
-            supplier_name: null,
-          }]}
-          search=""
-          backTo="/review"
-        />
-        </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <ReviewAllList
+        rows={[{
+          id: "r-usd",
+          transaction_id: "t-usd",
+          description: "Pending credit",
+          doc_date: "2026-09-03",
+          amount_net: 10000n,
+          currency: "USD",
+          direction: "income",
+          reason: "pending_income",
+          project_id: null,
+          category_id: null,
+          supplier_name: null,
+        }]}
+        search=""
+        backTo="/review"
+      />,
     );
     expect(screen.getByText("$100")).toHaveClass("ui-income");
     expect(screen.queryByText("+$100")).not.toBeInTheDocument();

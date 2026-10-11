@@ -1,13 +1,10 @@
 import type { Session } from "@supabase/supabase-js";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { israelSyncPhrase } from "../sumit-copy";
+import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { ConnectionsScreen } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
@@ -93,18 +90,7 @@ function mercury(partial: Record<string, unknown>) {
 }
 
 function renderSettings(ui: ReactNode = <ConnectionsScreen />) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={["/settings"]}>
-            {ui}
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(ui, { route: "/settings" });
 }
 
 function hintOf(row: HTMLElement): string {
