@@ -176,6 +176,7 @@ describe("shared transaction category", () => {
     expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.find((call) => call.name === "set_transaction_category")?.args).toEqual({
         p_id: "tx",
@@ -226,10 +227,11 @@ describe("shared transaction category", () => {
       ],
     });
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
     expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "set_transaction_category" && (call.args as { p_category_id?: string }).p_category_id === "c2")).toBe(true);
     });
@@ -252,6 +254,7 @@ describe("shared transaction category", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     // The pick takes effect at once: the picker closes and the summary shows the tapped category, while
     // set_transaction_category is still pending (decision 0180). No row shows a save.
     expect(await screen.findByRole("button", { name: /הובלה/ })).toBeInTheDocument();

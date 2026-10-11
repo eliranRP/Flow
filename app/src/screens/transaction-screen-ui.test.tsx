@@ -252,6 +252,7 @@ describe("transaction reassignment", () => {
     // FLOW-320: each row opens its own picker, and a pick closes the sheet.
     fireEvent.click(screen.getByRole("button", { name: /חולון/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
     });
@@ -260,6 +261,7 @@ describe("transaction reassignment", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       const saved = rpc.calls.filter((call) => call.name === "reassign_transaction");
       expect(saved.at(-1)?.args).toEqual({ p_id: "tx", p_project_id: "p2", p_category_id: "c2" });
@@ -328,6 +330,7 @@ describe("transaction detail pickers (FLOW-320)", () => {
     row.focus();
     fireEvent.click(row);
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.find((call) => call.name === "reassign_transaction")?.args).toEqual({ p_id: "tx", p_project_id: "p1", p_category_id: "c2" });
     });
@@ -344,6 +347,7 @@ describe("transaction detail pickers (FLOW-320)", () => {
     mountTxn();
     fireEvent.click(await screen.findByRole("button", { name: /חולון/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
     expect(screen.getByText("בחרו קטגוריה.")).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);

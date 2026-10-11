@@ -195,6 +195,7 @@ describe("פיצול לפי קטגוריות on the change sheet (FLOW-325 §10)
     state.resolve = () => new Promise((resolve) => { answer = resolve; });
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
     // The picker closes and the summary shows the tapped project, with no busy row (decision 0180).
     expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /וילה/, hidden: true })).not.toBeInTheDocument();
@@ -209,5 +210,57 @@ describe("פיצול לפי קטגוריות on the change sheet (FLOW-325 §10)
     expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /הרצל/, hidden: true })).toBeInTheDocument();
     state.resolve = null;
+  });
+});
+
+function resolveCalls() {
+  return state.calls.filter((call) => call.name === "resolve_review");
+}
+
+describe("the picker keeps the choice until שמירה (FLOW-831)", () => {
+  afterEach(() => {
+    state.resolve = null;
+  });
+
+  it("שמירה is disabled while the checked project is the saved one", async () => {
+    state.row = row();
+    renderSheet();
+    expect(await screen.findByRole("button", { name: "שמירה", hidden: true })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: /וילה/, hidden: true }));
+    expect(screen.getByRole("button", { name: "שמירה", hidden: true })).toBeEnabled();
+  });
+
+  it("a row tap writes nothing; שמירה sends one resolve_review and shows the project while it is pending", async () => {
+    state.row = row();
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    state.resolve = () => new Promise((resolve) => { answer = resolve; });
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    expect(resolveCalls()).toHaveLength(0);
+    expect(screen.getByRole("heading", { name: "בחירת פרויקט", hidden: true })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
+    expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(1);
+    });
+    expect(resolveCalls()[0]?.args).toMatchObject({ p_id: "r1", p_action: "changed", p_project_id: "p2" });
+    await act(async () => {
+      answer({ data: null, error: { message: "Failed to fetch" } });
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /הרצל/, hidden: true })).toBeInTheDocument();
+    expect(resolveCalls()).toHaveLength(1);
+  });
+
+  it("✕ without שמירה sends nothing", async () => {
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה", hidden: true }));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "בחירת פרויקט", hidden: true })).not.toBeInTheDocument();
+    });
+    expect(resolveCalls()).toHaveLength(0);
   });
 });

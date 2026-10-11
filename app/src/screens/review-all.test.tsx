@@ -318,6 +318,7 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("button", { name: "בחירת פרויקט" }, { timeout: 2500 }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -355,6 +356,7 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -390,6 +392,7 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -475,6 +478,7 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "set_transaction_category")).toBe(true);
     });

@@ -64,10 +64,12 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספת חלק" }));
     const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "חשמל" }));
+    fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     // The category pick moves straight on to the project list.
     const projectSheet = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
     expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
     fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
+    fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
     fireEvent.change(screen.getByLabelText("סכום, חשמל"), { target: { value: "500" } });
     await waitFor(() => { expect(restRow()).toHaveTextContent("₪4,300"); });
@@ -123,12 +125,13 @@ describe("split by category editor (FLOW-325)", () => {
     // FLOW-333 C3c: on a refund line the reversal section starts open.
     expect(within(sheet).getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "שמירה" }));
     const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
 
-  it("a reversal part in a kept-out category may keep the line's project (FLOW-325, 0138)", async () => {
+  it("a reversal part in a kept-out category shows its own category checked, and שמירה waits for a change (FLOW-325, 0138, FLOW-831)", async () => {
     showEditor({
       line: SAMPLE_REFUND_LINE,
       categories: [...SAMPLE_SPLIT_CATEGORIES, { id: "c-owner", name: "משיכות בעלים", kind: "expense", hidden: false, excluded_from_pnl: true }],
@@ -136,11 +139,11 @@ describe("split by category editor (FLOW-325)", () => {
     });
     expect(screen.getByRole("button", { name: /^משיכות בעלים, החזר, משרד · פרויקט השורה/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^משיכות בעלים, החזר/ }));
-    // The part's own kept-out category is listed, so picking it again moves on to the project.
-    fireEvent.click(within(await screen.findByRole("dialog", { name: "בחירת קטגוריה" })).getByRole("radio", { name: "משיכות בעלים" }));
-    const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
-    expect(within(projects).getByRole("radio", { name: "משרד · פרויקט השורה" })).toBeInTheDocument();
-    expect(within(projects).queryByText("חלק החזר צריך פרויקט.")).toBeNull();
+    // The part's own kept-out category is the only kept-out reversal listed (0138), and it is the saved value.
+    // Keeping the line's project without a project pick is covered by the reversalNeedsProject tests in src/line-split.test.ts.
+    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    expect(within(categorySheet).getByRole("radio", { name: "משיכות בעלים" })).toBeChecked();
+    expect(within(categorySheet).getByRole("button", { name: "שמירה" })).toBeDisabled();
   });
 
   it("shows the over amount in the footer and on the part edited last, once (FLOW-333 C5)", async () => {
@@ -176,10 +179,12 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספת חלק" }));
     const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "ביטוח" }));
+    fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     const projectSheet = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
     expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
     expect(within(projectSheet).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
-    fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" }));
+    fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
+    fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
     const field = screen.getByLabelText("אחוז, ביטוח");
     await waitFor(() => { expect(field).toHaveFocus(); });

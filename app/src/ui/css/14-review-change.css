@@ -158,6 +158,11 @@
   padding-block-end: var(--safe-bottom);
 }
 
+/* FLOW-831: the picker's pinned שמירה keeps clear of the home bar, as the split footer does. */
+.ui-change-foot {
+  padding-block-end: calc(var(--safe-bottom, 0px) + var(--space-4));
+}
+
 .ui-change-picker {
   display: flex;
   flex-direction: column;

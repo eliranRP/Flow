@@ -41,11 +41,12 @@ type Shared = {
   remember?: boolean;
   onRemember?: (value: boolean) => void;
   /**
-   * A project or category tap. A promise is a busy write: the tapped row shows its save, and the
-   * picker closes when it resolves. It rejects to roll the check back. A plain result (not a promise)
-   * is an instant write (decision 0180): the picker closes at once, the check stays on the tap, and
-   * the screen rolls it back itself if the write fails. "left" means the screen already navigated,
-   * so the picker must not pop history. Omitted in a story, which only updates the local choice.
+   * The pinned שמירה of a project or category picker (FLOW-831, decision 0180 point 6). A row tap only
+   * moves the check; this runs once, on שמירה. A promise is a busy write: the chosen row shows its save,
+   * and the picker closes when it resolves. It rejects to roll the check back. A plain result (not a
+   * promise) is an instant write: the picker closes at once, the check stays on the choice, and the
+   * screen rolls it back itself if the write fails. "left" means the screen already navigated, so the
+   * picker must not pop history. Omitted in a story, which only updates the local choice.
    */
   onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left" | "hold"> | undefined | "hold";
   /**
@@ -162,6 +163,8 @@ export function ChangeAssignment(props: Props) {
   const [nameError, setNameError] = useState("");
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  /** The check in the open picker, before שמירה. Closing the picker drops it: nothing is written. */
+  const [pick, setPick] = useState<{ kind: "project" | "category"; id: string } | null>(null);
   const [ownedCategory, setOwnedCategory] = useState(props.categorySuggested === false);
   const [reversalOpen, setReversalOpen] = useState(props.reversalsOpen === true);
   const settled = useRef(false);
@@ -196,6 +199,7 @@ export function ChangeAssignment(props: Props) {
   }, [view, sheetOpen]);
   if (openSeen !== sheetOpen) {
     setOpenSeen(sheetOpen);
+    setPick(null);
     // Set during render, so the first open frame already shows the start view.
     if (sheetOpen && props.contained) {
       setContainedView(startView);
@@ -243,6 +247,11 @@ export function ChangeAssignment(props: Props) {
       window.removeEventListener("popstate", onPop);
     };
   }, []);
+
+  // A view change ends the picker's unsaved check: reopening shows the saved value.
+  useEffect(() => {
+    setPick(null);
+  }, [view]);
 
   useEffect(() => {
     if (view !== "summary") {
@@ -427,6 +436,7 @@ export function ChangeAssignment(props: Props) {
   }
 
   async function choose(kind: "project" | "category", id: string) {
+    setPick(null);
     const previous = kind === "project" ? props.projectId : props.categoryId;
     if (kind === "project") props.onProjectId(id);
     else props.onCategoryId(id);
@@ -478,6 +488,10 @@ export function ChangeAssignment(props: Props) {
   const categorySuggestionId = ownedCategory ? "" : (props.suggestionCategoryId ?? "");
   const categorySuggested = categorySuggestionId !== "" && props.categoryId === categorySuggestionId;
   const pickerKind = view === "category" ? "category" : "project";
+  const pickerView = view === "project" || view === "category";
+  const savedPickId = pickerKind === "project" ? props.projectId : props.categoryId;
+  const chosenId = pick?.kind === pickerKind ? pick.id : savedPickId;
+  const savingNow = savingId ?? (props.splitCategoryBusy === true ? SPLIT_CATEGORY_SAVING : null);
   const listed = ordered(
     pickerKind === "project" ? props.projects : props.categories,
     pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId,
@@ -659,10 +673,10 @@ export function ChangeAssignment(props: Props) {
           onQuery={setQuery}
           loading={props.loading === true}
           listed={listed}
-          selectedId={pickerKind === "project" ? props.projectId : props.categoryId}
+          selectedId={chosenId}
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId}
           suggestionJev={pickerKind === "project" ? props.suggestionProjectJev === true : props.suggestionCategoryJev === true}
-          savingId={savingId ?? (props.splitCategoryBusy === true ? SPLIT_CATEGORY_SAVING : null)}
+          savingId={savingNow}
           note={pickerKind === "project" ? props.projectNote : undefined}
           noneLabel={pickerKind === "project" ? props.noProjectLabel : undefined}
           reversal={pickerKind === "category" && reversalOptions.length > 0 ? {
@@ -676,7 +690,7 @@ export function ChangeAssignment(props: Props) {
           } : undefined}
           splitLink={pickerKind === "project" && props.hideSplitLink !== true}
           onSelect={(id) => {
-            void choose(pickerKind, id);
+            setPick({ kind: pickerKind, id });
           }}
           onCreate={pickerKind === "project" ? () => {
             setNewName("");
@@ -718,10 +732,24 @@ export function ChangeAssignment(props: Props) {
     </div>
   );
 
+  // The pinned שמירה: the only write a picker makes. Disabled while the check is the saved value.
+  const footer = pickerView ? (
+    <Button
+      full
+      busy={savingNow != null}
+      disabled={chosenId === savedPickId}
+      onClick={() => { void choose(pickerKind, chosenId); }}
+    >
+      שמירה
+    </Button>
+  ) : undefined;
+
   const chrome = {
     title,
     leading,
     titleRef,
+    action: footer,
+    footClassName: "ui-change-foot",
     panelClassName: view === "project" || view === "new" ? "ui-sheet-tall" : "ui-sheet-fit",
     onEscape: view === "summary" ? undefined : back,
     onBeforeClose: allowClose,

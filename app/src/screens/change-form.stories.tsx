@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "@storybook/test";
 import { ChangeForm } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -171,6 +172,76 @@ export const ChangeProjectPickerNoCategory: Story = {
   name: "Project picker, no category",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" categoryId="" suggestionCategoryId="" />,
+};
+
+/** FLOW-831: a row tap only moves the check, so שמירה is enabled once the check differs from the saved project. */
+export const ChangeProjectChoicePending320: Story = {
+  name: "Project picker, choice pending 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("radio", { name: /וילה/ }));
+    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
+  },
+};
+
+export const ChangeProjectChoicePendingDark320: Story = {
+  name: "Project picker, choice pending dark 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("radio", { name: /וילה/ }));
+    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
+  },
+};
+
+/** FLOW-831: nothing changed yet, so שמירה is disabled. */
+export const ChangeProjectUnchanged320: Story = {
+  name: "Project picker, nothing changed 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(await body.findByRole("button", { name: "שמירה" })).toBeDisabled();
+  },
+};
+
+export const ChangeProjectUnchangedDark320: Story = {
+  name: "Project picker, nothing changed dark 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(await body.findByRole("button", { name: "שמירה" })).toBeDisabled();
+  },
+};
+
+/** FLOW-831: a category row tap only moves the check; שמירה saves it. */
+export const ChangeCategoryChoicePending320: Story = {
+  name: "Category picker, choice pending 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("radio", { name: /הובלה/ }));
+    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
+  },
+};
+
+export const ChangeCategoryChoicePendingDark320: Story = {
+  name: "Category picker, choice pending dark 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("radio", { name: /הובלה/ }));
+    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
+  },
 };
 
 export const ChangeProjectSearching: Story = {

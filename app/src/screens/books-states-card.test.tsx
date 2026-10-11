@@ -163,8 +163,10 @@ describe("rejected writes", () => {
     expect(within(category).getByText("הצעה")).toBeInTheDocument();
     expect(within(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).getByText("הצעה")).toBeInTheDocument();
     fireEvent.click(category);
-    fireEvent.click(await screen.findByRole("radio", { name: /חומרים/ }));
-    const cleared = await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" });
+    // The suggestion is the saved value, so a pick of the same row cannot save (FLOW-831): the owner picks another.
+    fireEvent.click(await screen.findByRole("radio", { name: /שינוע/ }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    const cleared = await screen.findByRole("button", { name: "קטגוריה: שינוע, שינוי" });
     expect(within(cleared).queryByText("הצעה")).not.toBeInTheDocument();
     expect(within(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).getByText("הצעה")).toBeInTheDocument();
   });

@@ -55,6 +55,8 @@ type Tap = {
   path: string;
   /** Opens the screen and gets it to the tappable state. Not timed. */
   arrange: (page: Page) => Promise<void>;
+  /** A pick before the timed press, when the press is a save (FLOW-831). Not timed. */
+  choose?: (page: Page) => Promise<void>;
   /** The tap itself. Timed. */
   press: (page: Page) => Promise<void>;
   /** True once the result shows. Polled, and timed up to the first true. */
@@ -147,10 +149,14 @@ const taps: Tap[] = [
       chosenProject = (await picker.getByRole("radio", { checked: false }).first().textContent())?.trim() ?? "";
       expect(chosenProject).not.toBe("");
     },
-    press: async (page) => {
+    // A row tap only moves the check (FLOW-831); the timed tap is the pinned שמירה.
+    choose: async (page) => {
       await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: chosenProject, exact: true }).tap();
     },
-    // The pick closes the sheet; the transaction's project row then names the tapped project.
+    press: async (page) => {
+      await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("button", { name: "שמירה", exact: true }).tap();
+    },
+    // The שמירה closes the sheet; the transaction's project row then names the tapped project.
     shown: async (page) => (await visibleCount(page.getByRole("button", { name: new RegExp(`^פרויקט ${escapeRe(chosenProject)}`) }))) === 1,
   },
 ];
@@ -169,6 +175,7 @@ async function open(browser: Browser, tap: Tap) {
   await page.goto(tap.path);
   await page.waitForLoadState("networkidle");
   await tap.arrange(page);
+  await tap.choose?.(page);
   const start = Date.now();
   await tap.press(page);
   await expect.poll(() => tap.shown(page), { intervals: [10], timeout: 10_000 }).toBe(true);
