@@ -14,12 +14,18 @@ const ViewerNoteContext = createContext<string | null>(null);
 
 export { VIEWER_NOTE };
 
-/** Pins the viewer role for a story or a test. No session and no companies read. */
+/**
+ * Pins the viewer role for a story or a test. No session and no companies read.
+ * @forTests
+ */
 export function ViewerPreview({ children }: { children: ReactNode }) {
   return <PinnedRoleContext.Provider value="viewer">{children}</PinnedRoleContext.Provider>;
 }
 
-/** Pins a role for a story or a test (FLOW-601: an editor writes the books, not the owner's settings). */
+/**
+ * Pins a role for a story or a test (FLOW-601: an editor writes the books, not the owner's settings).
+ * @forTests
+ */
 export function RolePreview({ role, children }: { role: PinnedRole; children: ReactNode }) {
   return <PinnedRoleContext.Provider value={role}>{children}</PinnedRoleContext.Provider>;
 }

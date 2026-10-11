@@ -403,20 +403,3 @@
 .ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) .ui-radio {
   border-color: var(--color-line);
 }
-
-.ui-check {
-  display: grid;
-  inline-size: var(--icon-check);
-  block-size: var(--icon-check);
-  flex: none;
-  place-items: center;
-  border: var(--stroke-strong) solid var(--color-control-border);
-  border-radius: var(--radius-check);
-  background: transparent;
-  color: var(--color-on-accent);
-}
-
-.ui-check[data-on="true"] {
-  border: 0;
-  background: var(--color-accent);
-}

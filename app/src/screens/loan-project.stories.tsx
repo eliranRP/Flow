@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { LoanBalanceList, ProjectLoanList } from "./loan-match";
+import { ProjectLoanList } from "./loan-match";
 import { inSheet } from "../ui/story-support";
 import { LoanProjectPicker, LoanSetupForm, type LoanProjectChoice } from "./loan-setup";
 
@@ -111,16 +111,6 @@ export const FormProjectLongHebrewDark: Story = {
   render: () => <Form project="שיפוץ מקיף של דירת ארבעה חדרים ברחוב הרצל בראשון לציון כולל מרפסת" />,
   ...sheet(dark320, "הלוואה"),
 };
-
-const LOANS = [
-  { id: "a", name: "משכנתא דוגמה", currency: "ILS", balanceMinor: 45_000_000n, flaggedParts: 0, projectId: "p1", projectName: "שיפוץ הרצל 12" },
-  { id: "b", name: "הלוואת גישור", currency: "USD", balanceMinor: 1_250_000n, flaggedParts: 1, projectId: "p2", projectName: "פרגולה בית כהן" },
-  { id: "c", name: "הלוואת בעלים", currency: "ILS", balanceMinor: 0n, flaggedParts: 0, projectId: null, projectName: null },
-];
-
-export const SettingsRowsOwner: Story = { render: () => <LoanBalanceList rows={LOANS} onOpen={() => undefined} />, ...light320 };
-export const SettingsRowsOwnerDark: Story = { render: () => <LoanBalanceList rows={LOANS} onOpen={() => undefined} />, ...dark320 };
-export const SettingsRowsViewer: Story = { render: () => <LoanBalanceList rows={LOANS} />, ...light320 };
 
 const PROJECT_LOANS = [
   { id: "a", name: "משכנתא דוגמה", currency: "ILS", balance_minor: 45_000_000n },

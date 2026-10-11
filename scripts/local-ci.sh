@@ -515,6 +515,7 @@ static_part() {
 typecheck_part() {
   local info dir script
   info="$(cd "$cache" && pwd)/tsbuildinfo"
+  node scripts/check-unused-app-code.mjs # FLOW-819: no app code only stories and tests use; same inputs.
   if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
     != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
     pnpm typecheck

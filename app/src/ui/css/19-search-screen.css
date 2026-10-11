@@ -107,10 +107,6 @@ html[data-kb="open"] .ui-search-dock {
   margin-inline-start: auto;
 }
 
-.ui-band-pbar {
-  padding: var(--space-2) var(--space-side) 0;
-}
-
 .ui-head-actions {
   display: flex;
   align-items: center;

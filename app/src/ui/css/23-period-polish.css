@@ -3,22 +3,6 @@
   polish. Loaded after the other area files, so a rule here overrides the block it names.
 */
 
-/* The ▼ after the window's name says the label opens the period sheet (FLOW-335). */
-.ui-pbar-caret {
-  display: inline-block;
-  margin-inline-start: var(--space-1);
-  color: var(--color-accent-text);
-  vertical-align: middle;
-}
-
-.ui-pbar-caret svg {
-  display: block;
-}
-
-.ui-pbar-band .ui-pbar-caret {
-  color: var(--color-on-band);
-}
-
 /*
   FLOW-335: a ListRow's action under the row sits on the start side, under the name (Unpaid's mark).
   Only ListRow's own stack: the skipped list on לאישור builds its own .ui-row-stack and keeps it.

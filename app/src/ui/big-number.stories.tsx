@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { BigNumber, Money, type AmountPresentation } from "./big-number";
+import { BigNumber, type AmountPresentation } from "./big-number";
 import { largeAgorot, padded } from "./story-support";
 
 /** Agorot travel as decimal strings. The manager JSON.stringifies args, and a bigint blanks it. */
@@ -56,10 +56,6 @@ export const OnBandLossDark: Story = { ...OnBandLoss, globals: { theme: "dark" }
 export const DetailAgorot: Story = { args: { agorot: "-10050", presentation: "detail", size: "display" } };
 export const Loss: Story = { args: { agorot: "-2940000", loss: true, size: "list" } };
 export const LargeAmount: Story = { args: { agorot: String(largeAgorot), size: "hero" } };
-export const Inline: Story = {
-  args: { agorot: "47200000" },
-  render: () => <Money agorot={47_200_000n} />,
-};
 
 export const UsdExpense: Story = {
   args: { agorot: "125000", size: "list" },

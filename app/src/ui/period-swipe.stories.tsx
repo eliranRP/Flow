@@ -3,7 +3,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { allTime, presetPeriod, windowLabel, type PeriodChoice } from "../period";
 import { Hero } from "./hero";
-import { PeriodBar } from "./period-bar";
 import { PeriodSwipe } from "./period-swipe";
 import { TopBand } from "./top-band";
 
@@ -15,9 +14,6 @@ function Demo({ start }: { start: "months3" | "all" }) {
   const [period, setPeriod] = useState<PeriodChoice>(() => (start === "all" ? allTime() : presetPeriod("months3")));
   return (
     <TopBand wordmark={false}>
-      <div className="ui-band-pbar">
-        <PeriodBar period={period} onChange={setPeriod} />
-      </div>
       <PeriodSwipe period={period} onChange={setPeriod}>
         <Hero label={`רווח, ${windowLabel(period)}`} agorot={1_840_000n} explanation="הכנסות פחות הוצאות" />
       </PeriodSwipe>

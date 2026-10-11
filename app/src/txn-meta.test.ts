@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { hasBankRows, maskLongDigits, methodLabel, sameParty, splitAccountLast4 } from "./txn-meta";
+import { maskLongDigits, methodLabel, sameParty, splitAccountLast4 } from "./txn-meta";
 import { parseTxnMeta, parseTxnMetaList } from "./txn-meta-parse";
 
 const empty = {
@@ -17,7 +17,6 @@ const empty = {
 describe("parseTxnMeta", () => {
   it("keeps a line with no meta as all nulls", () => {
     expect(parseTxnMeta(empty)).toEqual(empty);
-    expect(hasBankRows(parseTxnMeta(empty), "Example Office Suite")).toBe(false);
     expect(methodLabel(parseTxnMeta(empty))).toBeNull();
   });
 

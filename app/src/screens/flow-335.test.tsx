@@ -1,11 +1,9 @@
 import type { ProfitMonths, ProjectDetail, UnpaidRow } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { useState } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { allTime, presetPeriod, stepPeriod, type PeriodChoice } from "../period";
-import { PeriodBar } from "../ui/period-bar";
+import { allTime, type PeriodChoice } from "../period";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { ProjectDetailScreen, UnpaidScreen } from "./flow-screens";
@@ -37,37 +35,6 @@ function wrap(children: React.ReactNode, entry = "/") {
     </QueryClientProvider>
   );
 }
-
-function BarHarness({ start, toDateHint }: { start: PeriodChoice; toDateHint?: boolean }) {
-  const [period, setPeriod] = useState(start);
-  return <PeriodBar period={period} onChange={setPeriod} toDateHint={toDateHint} />;
-}
-
-describe("FLOW-335 period bar", () => {
-  it("carries the ▼ after the label, which opens the period sheet", () => {
-    render(wrap(<BarHarness start={presetPeriod("months3")} />));
-    const label = screen.getByRole("button", { name: /בחירת תקופה/ });
-    expect(label).toHaveAttribute("aria-haspopup", "dialog");
-    expect(label.querySelector(".ui-pbar-caret svg")).not.toBeNull();
-    expect(within(label).getByText("עד היום")).toBeInTheDocument();
-  });
-
-  it("says חזרה להיום on a stepped-back window, and the selected preset is named for it", () => {
-    render(wrap(<BarHarness start={stepPeriod(presetPeriod("months3"), -1) ?? presetPeriod("months3")} />));
-    const label = screen.getByRole("button", { name: /בחירת תקופה/ });
-    expect(within(label).getByText("חזרה להיום")).toBeInTheDocument();
-    const preset = screen.getByRole("radio", { name: "3 חודשים, חזרה להיום" });
-    fireEvent.click(preset);
-    // Back on the current window: the preset keeps its plain name and the hint reads עד היום.
-    expect(screen.getByRole("radio", { name: "3 חודשים" })).toHaveAttribute("aria-checked", "true");
-    expect(within(screen.getByRole("button", { name: /בחירת תקופה/ })).getByText("עד היום")).toBeInTheDocument();
-  });
-
-  it("leaves עד היום out where the band asks for it (the project band)", () => {
-    render(wrap(<BarHarness start={presetPeriod("months3")} toDateHint={false} />));
-    expect(screen.queryByText("עד היום")).not.toBeInTheDocument();
-  });
-});
 
 function project(overrides: Partial<NonNullable<ProjectDetail>> = {}): NonNullable<ProjectDetail> {
   return {

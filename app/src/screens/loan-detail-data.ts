@@ -259,12 +259,6 @@ export function rateInForce(loan: Pick<LoanDetail, "annualRatePpm" | "rates">, t
   return { ppm, from };
 }
 
-/** "11.25% · מ־01/09/2026", or "6% · מההתחלה". */
-export function rateValue(loan: Pick<LoanDetail, "annualRatePpm" | "rates">, today: string): string {
-  const { ppm, from } = rateInForce(loan, today);
-  return from == null ? `${formatRatePpm(ppm)} · מההתחלה` : `${formatRatePpm(ppm)} · מ־${formatDisplay(from)}`;
-}
-
 /** The סוג row: the kind and its months. */
 export function kindValue(loan: Pick<LoanDetail, "kind" | "termMonths" | "interestOnlyMonths" | "amortizationMonths">): string {
   const label = LOAN_KIND_LABEL[loan.kind];

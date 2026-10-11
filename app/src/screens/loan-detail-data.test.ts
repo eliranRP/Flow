@@ -14,7 +14,6 @@ import {
   paymentHint,
   rateInput,
   ratePpmOfInput,
-  rateValue,
   readLoanPayments,
   readLoanRow,
   statusPill,
@@ -86,11 +85,6 @@ describe("rates", () => {
     expect(ratePpmOfInput("abc")).toBeNull();
   });
 
-  it("shows the rate in force and where it comes from", () => {
-    expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-10-09")).toBe("11.25% · מ־01/09/2026");
-    expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-07-01")).toBe("10.75% · מ־01/06/2026");
-    expect(rateValue(SAMPLE_INTEREST_ONLY, "2026-04-01")).toBe("10.5% · מההתחלה");
-  });
 });
 
 describe("kinds", () => {

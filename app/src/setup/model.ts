@@ -37,10 +37,6 @@ export function parseStep(value: string | undefined): SetupStepId | null {
   return Number(value) as SetupStepId;
 }
 
-export function isCounted(step: SetupStepId): step is CountedStep {
-  return step >= 1 && step <= 5;
-}
-
 function skipKey(step: CountedStep): "1" | "2" | "3" | "4" | "5" {
   return String(step) as "1" | "2" | "3" | "4" | "5";
 }

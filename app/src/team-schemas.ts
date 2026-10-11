@@ -20,8 +20,6 @@ export const myCompaniesSchema = z.object({
   })),
 });
 export type MyCompanies = z.infer<typeof myCompaniesSchema>;
-export type MyCompany = MyCompanies["companies"][number];
-
 export const teamSchema = z.object({
   company_id: z.string(),
   role: teamRole,

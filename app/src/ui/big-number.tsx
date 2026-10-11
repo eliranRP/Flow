@@ -75,10 +75,6 @@ export function heroStepClass(size: "hero" | "display" | "list" | undefined, ste
   return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
 }
 
-export function heroTypeClass(size: "hero" | "display" | "list" | undefined, stepDown: boolean): string {
-  return heroStepClass(size, stepDown ? 1 : 0);
-}
-
 export function BigNumber({
   agorot,
   presentation = "summary",
@@ -190,9 +186,4 @@ export function BigNumber({
       )}
     </bdi>
   );
-}
-
-/** List and inline amounts. Same rules as BigNumber at the summary size. */
-export function Money({ agorot, currency = "ILS" }: { agorot: bigint; currency?: string }) {
-  return <BigNumber agorot={agorot} currency={currency} />;
 }

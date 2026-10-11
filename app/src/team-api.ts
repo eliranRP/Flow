@@ -20,7 +20,6 @@ export type {
   AcceptResult,
   InviteResult,
   MyCompanies,
-  MyCompany,
   MyInvite,
   Team,
   TeamInvite,

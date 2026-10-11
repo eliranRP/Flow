@@ -14,8 +14,12 @@ import { Button } from "./button";
 import { RefreshIcon } from "./icons";
 import "./demo-player.css";
 
-/** Setup demos play for 3.0–4.6 seconds. The player accepts other lengths for tests. */
+/**
+ * Setup demos play for 3.0–4.6 seconds. The player accepts other lengths for tests.
+ * @forTests
+ */
 export const DEMO_DURATION_MIN_MS = 3000;
+/** @forTests */
 export const DEMO_DURATION_MAX_MS = 4600;
 
 export type DemoPlayback = {

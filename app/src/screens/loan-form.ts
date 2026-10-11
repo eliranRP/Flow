@@ -396,14 +396,6 @@ const RATE_RANGE = "כתבו ריבית עד 100%.";
 const TERM_RANGE = "כתבו בין 1 ל־600 חודשים.";
 const BELOW_INTEREST = "התשלום צריך להיות גבוה מהריבית החודשית.";
 
-export function loanErrorText(code: string): string {
-  if (code === "payment_below_interest") return BELOW_INTEREST;
-  if (code === "rate") return RATE_RANGE;
-  if (code === "term") return TERM_RANGE;
-  if (code === "start_date") return "תאריך לא תקין.";
-  return "לא ניתן לחשב את לוח הסילוקין.";
-}
-
 /** The loan form's default: the stored company currency. A failure stays shekels. */
 export async function readCompanyLoanCurrency(): Promise<LoanCurrency> {
   return companyLoanCurrency(await readCompanyCurrency());

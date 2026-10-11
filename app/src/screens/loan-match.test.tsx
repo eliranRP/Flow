@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LoanBalanceList, LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanAmountChangedHint, loanMatchHint } from "./loan-match";
+import { LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanAmountChangedHint, loanMatchHint } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -239,43 +239,6 @@ describe("LoanMatchOffer", () => {
     render(<OfferHarness savingId="loan-1" />);
     fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
     expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveAttribute("aria-busy", "true");
-  });
-});
-
-describe("LoanBalanceList", () => {
-  it("shows the balance and a waiting hint", () => {
-    render(
-      <LoanBalanceList
-        rows={[{
-          id: "loan-1",
-          name: "הלוואת דוגמה",
-          currency: "ILS",
-          balanceMinor: 11_700_000n,
-          flaggedParts: 3,
-        }]}
-      />,
-    );
-    expect(screen.getByText("הלוואת דוגמה")).toBeInTheDocument();
-    const amount = screen.getByText("₪117,000");
-    // A whole balance shows no ".00" (owner, 2026-10-10).
-    expect(amount).toHaveTextContent(/^₪117,000$/);
-    expect(amount.querySelector(".ui-num-cents")).toBeNull();
-    expect(screen.getByText("ממתין לבדיקה")).toBeInTheDocument();
-  });
-
-  it("joins the waiting hint and the project, and names the project on the owner's button", () => {
-    render(
-      <LoanBalanceList
-        rows={[
-          { id: "loan-1", name: "הלוואת דוגמה", currency: "ILS", balanceMinor: 100n, flaggedParts: 1, projectId: "p-a", projectName: "פרויקט א" },
-          { id: "loan-2", name: "הלוואה שנייה", currency: "ILS", balanceMinor: 100n, flaggedParts: 0, projectId: null, projectName: null },
-        ]}
-        onOpen={() => undefined}
-      />,
-    );
-    expect(screen.getByText("ממתין לבדיקה · פרויקט א")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט א$/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^הלוואה שנייה, .*פרויקט: ללא פרויקט$/ })).toBeInTheDocument();
   });
 });
 

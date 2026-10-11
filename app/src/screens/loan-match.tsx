@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useLocation } from "react-router-dom";
 import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon, PlusIcon } from "../ui/icons";
-import { splitCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { RadioRow } from "../ui/radio-row";
@@ -174,62 +173,6 @@ export function LoanMatchOffer({
         ) : null}
       </Sheet>
     </>
-  );
-}
-
-function loanRowHint(row: LoanBalanceRow): string | undefined {
-  const project = row.projectName ?? null;
-  if (row.flaggedParts > 0) return project == null ? "ממתין לבדיקה" : `ממתין לבדיקה · ${project}`;
-  return project ?? undefined;
-}
-
-/** A balance with its agorot drawn small, none on a whole amount (FLOW-501, decision 0120). */
-function LoanBalance({ minor, currency }: { minor: bigint; currency: string }) {
-  const { whole, cents } = splitCents(showMoney(minor, currency), "detail");
-  return (
-    <bdi className="ui-num ui-loan-amount" dir="ltr">
-      {whole}
-      {cents != null ? <span className="ui-num-cents">{cents}</span> : null}
-    </bdi>
-  );
-}
-
-export function LoanBalanceList({
-  rows,
-  onOpen,
-  rowRef,
-}: {
-  rows: readonly LoanBalanceRow[];
-  /** FLOW-119. The owner opens a loan's project. A viewer gets static rows. */
-  onOpen?: (row: LoanBalanceRow) => void;
-  rowRef?: (id: string, node: HTMLButtonElement | null) => void;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <List className="ui-loan-list">
-      {rows.map((row) => {
-        const common = {
-          title: row.name,
-          icon: <BankIcon />,
-          tone: row.flaggedParts > 0 ? ("warning" as const) : undefined,
-          hint: loanRowHint(row),
-          meta: <LoanBalance minor={row.balanceMinor} currency={row.currency} />,
-        };
-        return onOpen ? (
-          <ListRow
-            key={row.id}
-            variant="button"
-            {...common}
-            label={`${row.name}, ${showMoney(row.balanceMinor, row.currency)}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
-            chevron
-            buttonRef={(node) => { rowRef?.(row.id, node); }}
-            onClick={() => { onOpen(row); }}
-          />
-        ) : (
-          <ListRow key={row.id} variant="static" {...common} />
-        );
-      })}
-    </List>
   );
 }
 

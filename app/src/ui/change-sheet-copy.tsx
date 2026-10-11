@@ -8,11 +8,8 @@ export const CHANGE_SAVE_REFUSAL = "לא נשמר. בדקו את הפרטים ו
 /** The database refuses one project on a shared cost. Say where the split happens. */
 export const SHARED_SPLIT_FAILURE = "עלות משותפת מפוצלת במסך הפיצול.";
 
-/** Decision 0076. The fourth split choice, and the note above the project picker. */
-export const ONE_PROJECT_OPTION = "לפרויקט אחד";
-export const ONE_PROJECT_DETAIL = "הסכום כולו עובר לפרויקט אחד";
+/** Decision 0076. The note above the project picker when the split goes away. */
 export const COLLAPSE_SPLIT_NOTE = "הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.";
-export const COLLAPSE_PICK_HOLD = "בחרו פרויקט.";
 
 export function changeSaveFailure(error: Error): WriteFailure {
   if (error.message.includes("shared costs are split")) {
