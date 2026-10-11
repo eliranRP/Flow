@@ -7,28 +7,6 @@ export function BandHero({ children, className }: { children: ReactNode; classNa
   return <div className={className == null ? "ui-band-hero" : `ui-band-hero ${className}`}>{children}</div>;
 }
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="ui-page-pad ui-stack">
-      <h2 className="t-heading">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-export function BandFigures({ income, expense }: { income: string; expense: string }) {
-  return (
-    <div className="ui-band-figures">
-      <span>
-        הכנסות <bdi dir="ltr">{income}</bdi>
-      </span>
-      <span>
-        הוצאות <bdi dir="ltr">{expense}</bdi>
-      </span>
-    </div>
-  );
-}
-
 export function FormError({ children }: { children: ReactNode }) {
   return (
     <p className="ui-form-error" role="alert" dir="rtl">

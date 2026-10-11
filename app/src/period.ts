@@ -80,6 +80,7 @@ export function presetPeriod(kind: PresetKind, now = new Date(), anchor?: string
   return { kind, from: `${start}-01`, to: lastIso > today ? today : lastIso, anchor: end };
 }
 
+/** @forTests */
 export function thisMonth(now = new Date()): PeriodChoice {
   return presetPeriod("month", now);
 }
@@ -154,13 +155,6 @@ export function presetLabel(kind: PresetKind): string {
   }
 }
 
-/** Under 360px the two long presets shorten (plan §7). */
-export function presetShortLabel(kind: PresetKind): string {
-  if (kind === "months3") return "3 ח׳";
-  if (kind === "months6") return "6 ח׳";
-  return presetLabel(kind);
-}
-
 /** The stepper label: the window's months, the year, or the custom dates. */
 export function windowLabel(period: PeriodChoice, now = new Date(), scope: PeriodScope = "company"): string {
   switch (period.kind) {
@@ -189,12 +183,6 @@ export function windowLabel(period: PeriodChoice, now = new Date(), scope: Perio
       return unreachable;
     }
   }
-}
-
-/** The window reaches today, so the stepper says עד היום under its label. */
-export function windowToDate(period: PeriodChoice, now = new Date()): boolean {
-  if (period.kind === "all") return false;
-  return period.to != null && period.to === israelToday(now);
 }
 
 /** Short words for a pill or a subtitle. החודש is named when the current month is selected. */
@@ -276,14 +264,6 @@ export function pillNamesPeriod(period: PeriodChoice, now = new Date()): boolean
   }
 }
 
-/**
- * One plain line for the hero. FLOW-335: it no longer repeats the dates. The period bar names the
- * window and the label names the period, so the band says the window once, not three times.
- */
-export function heroExplanation(): string {
-  return "הכנסות פחות הוצאות";
-}
-
 /** The hint under a row of the period sheet. */
 export function periodHint(period: PeriodChoice, now = new Date()): string | undefined {
   if (period.kind === "all") return "כל החשבוניות";
@@ -309,18 +289,6 @@ export function comparisonWords(period: PeriodChoice, now = new Date()): string 
       return unreachable;
     }
   }
-}
-
-/** The presets as the period sheet lists them: each window that ends now. */
-export function presetChoices(now = new Date()): PeriodChoice[] {
-  return PRESET_KINDS.map((kind) => presetPeriod(kind, now));
-}
-
-/** True when the window spans more than one calendar month, so "לפי חודש" has something to list. */
-export function spansMonths(period: PeriodChoice): boolean {
-  if (period.kind === "all") return true;
-  if (period.from == null || period.to == null) return false;
-  return period.from.slice(0, 7) !== period.to.slice(0, 7);
 }
 
 /** The period in a URL, so a project and its "לפי חודש" page can be linked and restored. */

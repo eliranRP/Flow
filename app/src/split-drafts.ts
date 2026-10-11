@@ -5,6 +5,7 @@ export const LINE_SPLIT_DRAFT_PREFIX = "flow-split-category:";
 /** The user the tab's drafts belong to. */
 const SPLIT_DRAFT_OWNER_KEY = "flow-split-owner";
 
+/** @forTests */
 export function splitDraftKey(id: string): string {
   return `${SPLIT_DRAFT_PREFIX}${id}`;
 }

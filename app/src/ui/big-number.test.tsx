@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { BigNumber, formatAmount, heroStepClass, heroTypeClass } from "./big-number";
+import { BigNumber, formatAmount, heroStepClass } from "./big-number";
 import { expectRtl } from "./test-support";
 
 describe("BigNumber", () => {
@@ -17,8 +17,8 @@ describe("BigNumber", () => {
   });
 
   it("steps a hero figure down from state, without writing the class onto the node first", () => {
-    expect(heroTypeClass("hero", false)).toBe("t-hero");
-    expect(heroTypeClass("hero", true)).toBe("t-display");
+    expect(heroStepClass("hero", 0)).toBe("t-hero");
+    expect(heroStepClass("hero", 1)).toBe("t-display");
     expect(heroStepClass("display", 0)).toBe("t-display");
     expect(heroStepClass("display", 2)).toBe("t-title-2");
     expect(heroStepClass("display", 9)).toBe("t-title-3");

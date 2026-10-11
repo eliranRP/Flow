@@ -49,6 +49,16 @@ Small files keep builders reading less and stop parallel PRs from colliding. Thi
 - A file already over the limit does not grow: put new code in a new file, and move code out when you change a large part of it. Splits are their own PR, with no behaviour or look change ([FLOW-807](docs/backlog/TASKS.md#flow-807)).
 - Stories live next to their screen or component (`<name>.stories.tsx`). CSS lives in `app/src/ui/css/NN-<area>.css`, imported by `ui.css` in cascade order: put a block in its area's file, or start a new file at the end of the import list; never reorder the imports ([DESIGN-TEAM](docs/design/DESIGN-TEAM.md)).
 
+## Remove what your change leaves unused
+
+Every story, test and CSS block costs time on every push and on every deploy run, so nothing stays after the app stops using it.
+
+- When your change replaces a component, a screen, a helper, a copy string, a CSS block, a script or a fixture, or stops using one, delete it in the same PR. Delete its stories, tests, CSS, sample data and `app/src/ui/index.ts` export with it, and update the docs that name it (DESIGN-RULES, the design log's current pages, runbooks).
+- Don't keep code "for later" or behind an unused export. Git history keeps it.
+- A test that covers only deleted code goes too. A test that also covers something still in use moves to the part that stays.
+- `node scripts/check-unused-app-code.mjs` enforces this for `app/src` in local CI and in `check (core)`. It fails when a module isn't reachable from the app's entry, or an export is used only by stories and tests. A hook a test or story needs (a reset, a sample provider, a duration constant) stays when its doc comment says `@forTests`. Story and test support files are named for it (`*-sample.ts`, `story-support.tsx`, `test-support.ts`).
+- Reviewers check this too: a PR that leaves a replaced part behind gets a Should finding.
+
 ## Review handoff
 
 From r23 on, this is how a change is handed off. Decision [0073](docs/decisions/0073-review-handoff.md). Eliran approved it.

@@ -201,8 +201,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Button | primary, secondary (tint), ghost, destructive. Default, pressed, disabled | One primary per screen. Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
 | + button | 48px circle. Default, pressed | Opens Add. Sits in the tab bar |
 | Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"`; compact bar shown | With Back or a leading control, Back sits alone on the bar and the title and subtitle stack under it on the start side (FLOW-326). With a kicker, the kicker is Back's label ("‹ הגדרות", `label` in `accent-text`, cut at about 16 characters) and there is no kicker line ([0156](../decisions/0156-labelled-back-and-compact-bar.md)). On a stacked page with Back, a 44px compact bar (Back and the title in `title-3`, one line, `line` hairline) pins to the top once the large title scrolls off; month heads pin under it. A compact title (the transaction) and `layout="inline"` stay on the bar and get no compact bar. FLOW-326, FLOW-334 |
-| Period pill | tinted, or white/dark on the band | Opens the period sheet. Home's band carries one pill (FLOW-355); the project band uses the period bar |
-| Period bar (`PeriodBar`) | preset selected; custom range (no preset selected, first preset keeps the tab stop); later arrow `aria-disabled` | Home and the project band ([0141](../decisions/0141-period-bar.md), FLOW-411): five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) on a band-tone segmented control, then a stepper. The later arrow keeps its slot at the current window. The period label opens the period sheet |
+| Period pill | tinted, or white/dark on the band | Opens the period sheet. Home's band carries one pill (FLOW-355), and so does the project band (FLOW-359) |
 | Chips | suggested (tint + ✦), outlined choice, selected (violet + check), disabled, status | Hit area 44px even if drawn 36px |
 | Segmented tabs | track tint, selected `seg-on` | |
 | Switch and checkbox | off / on / disabled | Overhead switch starts off. [0022](../decisions/0022-after-overhead-starts-off.md) |
@@ -259,7 +258,7 @@ Source: [implementation-guide.md](../../design/system/implementation-guide.md). 
 
 Notifications (`13`) is a lock-screen reference, not an app screen. Guide §3.
 
-The band holds only the summary. Home: one period pill, one label and the hero number (FLOW-355); the project band keeps the period bar ([0141](../decisions/0141-period-bar.md)). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
+The band holds only the summary. Home: one period pill, one label and the hero number (FLOW-355); the project band carries the same pill (FLOW-359). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
 
 ### 3.2 Layout grid and viewport
 
@@ -722,7 +721,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 ### 16 Period sheet
 
 - Mockups: [16-period-sheet-light.png](../../design/screens/16-period-sheet-light.png), [16-period-sheet-dark.png](../../design/screens/16-period-sheet-dark.png).
-- Entry: the period pill on Home and elsewhere, or the period bar's label on the project band ([0141](../decisions/0141-period-bar.md)).
+- Entry: the period pill on Home, the project band and elsewhere.
 - Steps: the five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) apply on tap. "טווח מותאם" opens 15c; with a custom range no preset is selected and the label shows the dates. [0019](../decisions/0019-home-periods-and-comparison.md), [0028](../decisions/0028-period-sheet-with-custom-range.md).
 - Cancel: ✕ or scrim keeps the current period.
 

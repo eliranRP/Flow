@@ -172,6 +172,7 @@ export function useLoanSplitView(server: TransactionLoanSplit | null | undefined
 /**
  * A story's loan match: the api answers from sample data, and a save or an unmatch updates the
  * split the card reads. Invented data only.
+ * @forTests
  */
 export function LoanMatchSampleProvider({
   api,

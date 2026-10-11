@@ -65,37 +65,6 @@ function monthTitle(key: string, newestYear: string): string {
   return year === newestYear ? monthWord(key) : `${monthWord(key)} ${year}`;
 }
 
-function countWords(count: number, one: string, many: string): string {
-  return count === 1 ? one : `${String(count)} ${many}`;
-}
-
-/**
- * The "לפי חודש" row on the project: "6 חודשים · 2 ברווח, 3 בהפסד, 1 פתוח". The open month is
- * counted as חודש פתוח, not as a profit or a loss; a month with no lines is not counted.
- */
-export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "ILS"): string | undefined {
-  if (data == null) return undefined;
-  const total = data.months.length;
-  if (total === 0) return EMPTY_TITLE;
-  let profit = 0;
-  let loss = 0;
-  let open = 0;
-  const currencies = rangeCurrencies(data, emptyCurrency);
-  for (const month of data.months) {
-    const main = shownCurrencies(month, data.after_overhead === true, currencies, data.base_currency ?? "ILS")[0];
-    if (month.open) open += 1;
-    else if (main != null && main.profit_minor > 0n) profit += 1;
-    else if (main != null && main.profit_minor < 0n) loss += 1;
-  }
-  const parts = [
-    profit > 0 ? `${String(profit)} ברווח` : null,
-    loss > 0 ? `${String(loss)} בהפסד` : null,
-    open > 0 ? `${String(open)} פתוח` : null,
-  ].filter((part): part is string => part != null);
-  const head = countWords(total, "חודש אחד", "חודשים");
-  return parts.length === 0 ? head : `${head} · ${parts.join(", ")}`;
-}
-
 const EMPTY_TITLE = "אין עדיין חודשים עם תנועות";
 const EMPTY_BODY = "חודשים עם הכנסות או הוצאות של הפרויקט יופיעו כאן.";
 

@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   afterSignInMessage,
   afterSignInPath,
+  peekSignInReturn,
   rememberSignInReturn,
   safeAppPath,
   safeSignInReturn,
   signInPathFor,
-  takeSignInReturn,
 } from "./safe-return";
 
 describe("safeAppPath", () => {
@@ -105,21 +105,16 @@ describe("sign-in return across the redirect", () => {
     window.sessionStorage.clear();
   });
 
-  it("stores a safe path once and clears it on read", () => {
+  it("stores a safe path, and clears it when the next sign-in has none", () => {
     rememberSignInReturn("/review");
-    expect(takeSignInReturn()).toBe("/review");
-    expect(takeSignInReturn()).toBeNull();
-  });
-
-  it("clears an earlier path when the next sign-in has none", () => {
-    rememberSignInReturn("/review");
+    expect(peekSignInReturn()).toBe("/review");
     rememberSignInReturn(null);
-    expect(takeSignInReturn()).toBeNull();
+    expect(peekSignInReturn()).toBeNull();
   });
 
   it("refuses a tampered stored value", () => {
     window.sessionStorage.setItem("flow.sign-in-return", "//evil.example");
-    expect(takeSignInReturn()).toBeNull();
+    expect(peekSignInReturn()).toBeNull();
   });
 
   it("sends a new account to setup and a returning one to the stored screen or Home", () => {

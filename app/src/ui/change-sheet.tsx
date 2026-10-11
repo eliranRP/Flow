@@ -15,7 +15,7 @@ import type { ChangeChoice } from "./change-sheet-copy";
 import { Picker } from "./change-picker";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
-export { CHANGE_SAVE_FAILURE, CHANGE_SAVE_REFUSAL, SHARED_SPLIT_FAILURE, ONE_PROJECT_OPTION, ONE_PROJECT_DETAIL, COLLAPSE_SPLIT_NOTE, COLLAPSE_PICK_HOLD, changeSaveFailure, type ChangeChoice } from "./change-sheet-copy";
+export { CHANGE_SAVE_FAILURE, CHANGE_SAVE_REFUSAL, SHARED_SPLIT_FAILURE, COLLAPSE_SPLIT_NOTE, changeSaveFailure, type ChangeChoice } from "./change-sheet-copy";
 
 type ChangeView = "summary" | "project" | "category" | "new";
 

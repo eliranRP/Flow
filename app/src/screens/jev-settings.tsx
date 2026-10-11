@@ -78,19 +78,6 @@ export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "st
   return "כבוי";
 }
 
-export function formatJevThreshold(value: number): string {
-  return roundJevThreshold(value).toFixed(2);
-}
-
-/** Two decimal places. A comma is a decimal point. Out of 0.50–1.00 is refused. */
-export function parseJevThreshold(value: string): number | null {
-  const parsed = Number(value.trim().replace(",", "."));
-  if (!Number.isFinite(parsed)) return null;
-  const rounded = roundJevThreshold(parsed);
-  if (rounded < 0.5 || rounded > 1) return null;
-  return rounded;
-}
-
 function roundJevThreshold(value: number): number {
   return Math.round(value * 100) / 100;
 }

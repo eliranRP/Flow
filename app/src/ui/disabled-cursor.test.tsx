@@ -1,15 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "./button";
-import { Checkbox } from "./checkbox";
 import { IconButton } from "./icon-button";
+import { Toggle } from "./toggle";
 
 function cursorOf(element: Element): string {
   return getComputedStyle(element).cursor;
 }
 
 describe("disabled cursor", () => {
-  it("uses not-allowed on a disabled Button, IconButton, and toggle row, and progress while busy", () => {
+  it("uses not-allowed on a disabled Button, IconButton, and switch, and progress while busy", () => {
     const onClick = vi.fn();
     render(
       <>
@@ -21,7 +21,7 @@ describe("disabled cursor", () => {
         <Button variant="ghost" disabled>דלג</Button>
         <Button busy onClick={onClick}>שומר</Button>
         <IconButton label="סגירה" disabled>✕</IconButton>
-        <Checkbox label="הצגת פרויקטים שהסתיימו" checked={false} disabled onChange={() => undefined} />
+        <Toggle label="הצגת פרויקטים שהסתיימו" checked={false} disabled onChange={() => undefined} />
       </>,
     );
 
@@ -37,9 +37,7 @@ describe("disabled cursor", () => {
     fireEvent.click(busy);
     expect(onClick).not.toHaveBeenCalled();
 
-    const toggle = screen.getByRole("checkbox", { name: "הצגת פרויקטים שהסתיימו" });
-    expect(toggle.closest("label")).toHaveClass("ui-toggle");
+    const toggle = screen.getByRole("switch", { name: "הצגת פרויקטים שהסתיימו" });
     expect(cursorOf(toggle)).toBe("not-allowed");
-    expect(cursorOf(toggle.closest("label") as Element)).toBe("not-allowed");
   });
 });

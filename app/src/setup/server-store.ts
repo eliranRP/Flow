@@ -42,7 +42,10 @@ export function resetSetupServerForTests(): void {
   uploads.clear();
 }
 
-/** Tests wait for the queued reads and uploads. */
+/**
+ * Tests wait for the queued reads and uploads.
+ * @forTests
+ */
 export async function setupUploadsSettled(): Promise<void> {
   await Promise.all([...reads.values(), ...uploads.values()]);
 }

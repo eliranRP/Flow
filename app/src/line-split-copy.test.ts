@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LINE_HAS_CATEGORY_SPLIT, LINE_SPLIT_PLACE, LINE_SPLIT_REFUSALS, lineSplitCopy, lineSplitRefusal, localIssueCopy, projectSplitFailure } from "./line-split-copy";
+import { LINE_SPLIT_PLACE, LINE_SPLIT_REFUSALS, lineSplitCopy, lineSplitRefusal, localIssueCopy } from "./line-split-copy";
 
 const migrations = import.meta.glob<string>("../../supabase/migrations/*.sql", { query: "?raw", import: "default", eager: true });
 
@@ -48,10 +48,5 @@ describe("line split refusal copy (FLOW-325)", () => {
     expect(lineSplitRefusal(new Error("line has an open review"))).toBe("line has an open review");
     expect(lineSplitRefusal(new Error("validation"))).toBe("validation");
     expect(lineSplitRefusal(new Error("Failed to fetch"))).toBeNull();
-  });
-
-  it("the project split names a line split by category instead of offering a retry", () => {
-    expect(projectSplitFailure(new Error("line has a split by category"))).toEqual({ message: LINE_HAS_CATEGORY_SPLIT, retry: false });
-    expect(projectSplitFailure(new Error("Failed to fetch"))).toBe("הפיצול לא נשמר");
   });
 });

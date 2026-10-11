@@ -104,13 +104,6 @@ export function peekSignInReturn(): string | null {
   }
 }
 
-/** Reads and clears the stored return path. */
-export function takeSignInReturn(): string | null {
-  const value = peekSignInReturn();
-  rememberSignInReturn(null);
-  return value;
-}
-
 /** Where the auth callback goes: setup first for a new user, else the stored return or Home. */
 export function afterSignInPath(hasCompany: boolean, stored: string | null): string {
   if (!hasCompany) return "/setup/0";

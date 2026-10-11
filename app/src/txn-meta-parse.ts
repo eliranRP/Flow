@@ -42,6 +42,7 @@ export function parseTxnMetaList(data: unknown): TxnMeta[] {
   return rows;
 }
 
+/** @forTests */
 export function parseTxnMeta(data: unknown): TxnMeta | null {
   const parsed = txnMetaSchema.safeParse(data);
   return parsed.success ? parsed.data : null;

@@ -614,6 +614,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     "node scripts/backlog-index.mjs --check",
     "deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp",
     "pnpm typecheck",
+    "node scripts/check-unused-app-code.mjs",
     "pnpm test:unit",
     "pnpm test:connectors",
     "pnpm check:bundle",
@@ -725,8 +726,18 @@ test("the gate treats design images as docs and asks storybook-stories.mjs wheth
   assert.ok(local.includes('${base:+--base "$base"} <<<"$changed" >"$scope"'));
 });
 
-test("the gate starts containerd then dockerd and fails, never skips, when a change needs Docker and it won't start", () => {
+test("a later push runs the vitest tests reached since the branch's last green push, never below the fork", () => {
   const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const fn = local.slice(local.indexOf("changed_base() {"), local.indexOf("\n}\n", local.indexOf("changed_base() {")));
+  assert.match(fn, /\[\[ "\$commit" != "\$pr_fork" \]\] \|\| break/);
+  assert.ok(fn.includes('has_mark "tree-$1-$tree" && git merge-base --is-ancestor "$pr_fork" "$commit"'));
+  assert.ok(local.includes('base="$(changed_base "$project")"'));
+  assert.ok(local.includes('mark_green "tree-$project-$head_tree"'));
+});
+
+test("the gate starts containerd then dockerd and fails, never skips, when a change needs Docker and it won't start", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8")
+    + readFileSync(new URL("./local-ci-docker.sh", import.meta.url), "utf8");
   assert.ok(local.includes('(detach sudo -n containerd >/tmp/flow-containerd.log 2>&1 &)'));
   assert.ok(local.includes('(detach sudo -n dockerd --containerd="$sock" >/tmp/flow-dockerd.log 2>&1 &)'));
   // A stale socket from an earlier containerd doesn't count as one serving, and a dockerd that
@@ -839,8 +850,10 @@ test("local-ci.sh sources the guard first, and Docker's daemons start outside th
   const guard = readFileSync(new URL("./local-ci-guard.sh", import.meta.url), "utf8");
   assert.ok(local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"\nguard_session "$@"\n') < local.indexOf('cd "$root"'));
   assert.ok(local.includes('rc="$(guard_exit_rc "$rc")"'));
-  assert.equal([...local.matchAll(/\(sudo -n (dockerd|containerd)/g)].length, 0);
-  assert.equal([...local.matchAll(/\(detach sudo -n (dockerd|containerd)/g)].length, 3);
+  const docker = readFileSync(new URL("./local-ci-docker.sh", import.meta.url), "utf8");
+  assert.ok(local.indexOf('source "$(dirname "$0")/local-ci-docker.sh"') > local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"'));
+  assert.equal([...(local + docker).matchAll(/\(sudo -n (dockerd|containerd)/g)].length, 0);
+  assert.equal([...docker.matchAll(/\(detach sudo -n (dockerd|containerd)/g)].length, 3);
   assert.match(guard, /declare -A budgets=\(\[storybook\]=\d+ \[storybook-smoke\]=\d+ \[e2e\]=/);
   assert.match(guard, /setsid bash "\$0" "\$@" <&0 &/);
 });

@@ -115,8 +115,3 @@ export function retryClockParts(
   return { clock, tomorrow: day.format(new Date(at)) !== day.format(new Date(now)) };
 }
 
-export function retryClock(iso: string | null | undefined, now = Date.now()): string | null {
-  const parts = retryClockParts(iso, now);
-  if (!parts) return null;
-  return parts.tomorrow ? `אפשר לנסות שוב מחר ב-${parts.clock}` : `אפשר לנסות שוב ב-${parts.clock}`;
-}

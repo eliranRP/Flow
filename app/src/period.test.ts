@@ -5,7 +5,6 @@ import {
   comparisonWords,
   customRange,
   defaultPeriod,
-  heroExplanation,
   heroProfitLabel,
   isCurrentPeriod,
   monthPeriod,
@@ -15,13 +14,10 @@ import {
   periodPhrase,
   periodSearch,
   presetPeriod,
-  presetShortLabel,
   samePeriod,
-  spansMonths,
   stepPeriod,
   thisMonth,
   windowLabel,
-  windowToDate,
 } from "./period";
 
 const now = new Date("2026-10-08T12:00:00Z");
@@ -65,13 +61,6 @@ describe("period windows", () => {
     expect(samePeriod(thisMonth(now), customRange("2026-10-01", "2026-10-08"), now)).toBe(false);
     expect(samePeriod({ kind: "month", from: "2026-09-01", to: "2026-09-30" }, monthPeriod("2026-09", now), now)).toBe(true);
   });
-
-  it("spans months only for a range longer than one month", () => {
-    expect(spansMonths(thisMonth(now))).toBe(false);
-    expect(spansMonths(presetPeriod("months3", now))).toBe(true);
-    expect(spansMonths(allTime())).toBe(true);
-    expect(spansMonths(customRange("2026-09-02", "2026-09-20"))).toBe(false);
-  });
 });
 
 describe("period labels", () => {
@@ -83,9 +72,6 @@ describe("period labels", () => {
     expect(windowLabel(allTime(), now)).toBe("כל התקופה");
     expect(windowLabel(allTime(), now, "project")).toBe("מתחילת הפרויקט");
     expect(windowLabel(customRange("2026-09-02", "2026-09-20"), now)).toBe("02/09/2026 – 20/09/2026");
-    expect(windowToDate(presetPeriod("months3", now), now)).toBe(true);
-    expect(windowToDate(monthPeriod("2026-09", now), now)).toBe(false);
-    expect(presetShortLabel("months3")).toBe("3 ח׳");
   });
 
   it("says החודש for the current month and a loss in the label", () => {
@@ -113,9 +99,7 @@ describe("period labels", () => {
     expect(periodPillLabel(customRange("2026-01-01", "2026-02-01"), now)).toBe("טווח מותאם");
   });
 
-  it("explains income less expenses without the dates, and compares with the window before", () => {
-    // FLOW-335: the dates live in the period bar and the label, not a third time here.
-    expect(heroExplanation()).toBe("הכנסות פחות הוצאות");
+  it("compares with the window before", () => {
     expect(comparisonWords(thisMonth(now), now)).toBe("מחודש שעבר");
     expect(comparisonWords(monthPeriod("2026-09", now), now)).toBe("מהחודש שלפניו");
     expect(comparisonWords(presetPeriod("months3", now), now)).toBe("מ־3 החודשים שלפניהם");
