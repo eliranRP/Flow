@@ -21,6 +21,6 @@ This amends [0075](0075-save-on-tap-and-on-leave.md) points 1 and 5 for writes u
 
 ## How
 
-- `useWrite` takes an `optimistic` option: the query keys the write changes and how each cached value looks after it. It cancels those queries, updates the cache, and keeps a copy to restore on failure. It no longer waits for the background refresh before the success step and toast.
+- `useWrite` takes an `optimistic` option: the query keys the write changes and how each cached value looks after it. It cancels those queries, updates the cache, and keeps a copy to restore on failure. For such a write it no longer waits for the background refresh before the success step and toast. A busy write still waits, since its next step may read the refreshed data.
 - A failure toast and its retry work after the screen unmounts.
 - `app/perf/tap-response.spec.ts` (FLOW-830) is the gate. With the stub backend answering writes after 1 second, the tapped control must show its result within 200 ms. A write the stub fails must roll back and toast.
