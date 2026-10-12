@@ -5,10 +5,11 @@
 .m-press {
   transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
-.m-press:active {
+/* A disabled, aria-disabled or busy control (Button sets aria-disabled when busy) does not answer a tap. */
+.m-press:active:not(:disabled, [aria-disabled="true"]) {
   opacity: 0.72;
 }
-.m-press.m-press-scale:active {
+.m-press.m-press-scale:active:not(:disabled, [aria-disabled="true"]) {
   transform: scale(0.985);
 }
 

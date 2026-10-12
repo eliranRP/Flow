@@ -134,8 +134,9 @@ describe("00-motion.css", () => {
   }
 
   it("presses at opacity .72, and buttons also scale to .985", () => {
-    expect(rule(".m-press:active")).toMatch(/opacity:\s*0\.72;/);
-    expect(rule(".m-press.m-press-scale:active")).toMatch(/transform:\s*scale\(0\.985\);/);
+    const live = ':not(:disabled, [aria-disabled="true"])';
+    expect(rule(`.m-press:active${live}`)).toMatch(/opacity:\s*0\.72;/);
+    expect(rule(`.m-press.m-press-scale:active${live}`)).toMatch(/transform:\s*scale\(0\.985\);/);
     expect(rule(".m-press")).toMatch(/var\(--motion-press\)/);
   });
 
