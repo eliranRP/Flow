@@ -14,3 +14,4 @@
 - [x] (Backlog bug fixes, 2026-10-09: removed, with their 320 overrides) Dead CSS (`.ui-setup-stage`, `.ui-setup-phone`).
 - [x] (Backlog bug fixes, 2026-10-10: the bad tone keeps er-04's red info icon; a note under a demo lines up with the demo frame) The banner's tone-bad icon; note inset vs frame.
 - [ ] Release check on a real iOS device for the Hebrew Safari labels.
+- **Redesign (2026-10-11):** [FLOW-514](FLOW-514.md) replaces the setup flow with 7 steps; the open iOS label check carries over to the new flow.
