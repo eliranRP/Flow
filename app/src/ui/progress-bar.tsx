@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatAmount } from "./big-number";
+import { formatAmount } from "./amount";
 
 type ValueBarProps = {
   /** bar: a labelled bar over its label. thin: a 6px bar beside its caption. */

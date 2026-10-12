@@ -1,6 +1,6 @@
 import { formatAmountText, type CashCurrencyRow } from "@flow/shared";
 import { type CashListSide, notInProfitMinor, notInProfitRest } from "../cash";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
@@ -34,7 +34,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
       {figure != null ? (
         <p className="ui-breakdown-total ui-page-pad">
           <span className="ui-breakdown-total-line">
-            <BigNumber agorot={figure} currency={currency} size="display" income={side === "in"} />
+            <Amount agorot={figure} currency={currency} size="display" income={side === "in"} />
           </span>
         </p>
       ) : null}

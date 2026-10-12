@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { ChevronDownIcon } from "./icons";
 
 /** The hidden word of each up mark: one icon, two meanings. */
@@ -64,7 +64,7 @@ export function CategoryGroupRow({
             <span className="sr-only">{missing}</span>
           </span>
         ) : (
-          <BigNumber agorot={agorot} currency={currency} size="list" loss={false} />
+          <Amount agorot={agorot} currency={currency} size="list" loss={false} />
         )}
         <span className="ui-group-caret" aria-hidden="true">
           <ChevronDownIcon size={20} />

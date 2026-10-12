@@ -7,7 +7,7 @@ Tokens live in `implementation-tokens.css`, which is edited by hand (no generato
 - Calm and airy: white page, lots of space, few numbers per screen, detail on inner screens.
 - One accent, violet. It's used on the + button, the primary button, links and the active tab. Filled violet appears at most about twice per screen area.
 - The coloured band is used only at the top of Home and the Project header. All other screens are white with violet accents.
-- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with no plus. Never colour on the band (decision 0120).
+- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with a `+` (decisions 0120 and 0181). Never colour on the band.
 - No gradients, no emoji, no heavy shadows. Depth comes from the violet tint and hairlines.
 
 ## Colour (light / dark)

@@ -16,10 +16,11 @@ export function formatAmount(
   return formatAmountText(agorot, currency, {
     detail: presentation === "detail",
     direction,
+    plus: direction === "income",
   });
 }
 
-type BigNumberProps = {
+type AmountProps = {
   agorot: bigint;
   presentation?: AmountPresentation;
   currency?: string;
@@ -28,8 +29,8 @@ type BigNumberProps = {
   loss?: boolean;
   direction?: "income" | "expense";
   /**
-   * Money in: draws the figure in the income colour (decision 0120). Only a figure that shows no
-   * minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
+   * Money in: draws the figure in the income colour with a "+" (decisions 0120, 0181). Only a figure that
+   * shows no minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
    */
   income?: boolean;
   /**
@@ -75,7 +76,7 @@ export function heroStepClass(size: "hero" | "display" | "list" | undefined, ste
   return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
 }
 
-export function BigNumber({
+export function Amount({
   agorot,
   presentation = "summary",
   currency = "ILS",
@@ -84,11 +85,12 @@ export function BigNumber({
   direction,
   income = false,
   cents,
-}: BigNumberProps) {
+}: AmountProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const shown = cents === "always" ? "detail" : presentation;
-  const text = formatAmount(agorot, shown, currency, direction);
+  // Money in gets a plus (decision 0181). Only a non-zero figure with no loss: zero has no sign.
+  const text = formatAmount(agorot, shown, currency, direction ?? (income && !loss && agorot > 0n ? "income" : undefined));
   useLayoutEffect(() => {
     const first = firstStep(size);
     if (first == null) return;

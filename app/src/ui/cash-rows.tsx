@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { Link } from "react-router-dom";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { ChevronIcon } from "./icons";
 
 /**
@@ -53,7 +53,7 @@ export function CashRows({ rows, onOpen, months = false }: { rows: CashRow[]; on
             )}
             <span className="ui-flow-amounts">
               {row.amounts.map((amount) => (
-                <BigNumber
+                <Amount
                   key={amount.currency}
                   agorot={amount.minor}
                   currency={amount.currency}

@@ -89,7 +89,7 @@ describe("Home hero", () => {
     }));
     expect(screen.getByRole("heading", { name: "$3,000" })).toBeInTheDocument();
     expect(screen.getByText("$2,000")).toBeInTheDocument();
-    expect(screen.getByText("$5,000")).toBeInTheDocument();
+    expect(screen.getByText("+$5,000")).toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
     expect(screen.queryByText("מחודש שעבר")).not.toBeInTheDocument();
   });

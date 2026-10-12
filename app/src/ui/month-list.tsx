@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { Fragment, useId, type ReactNode } from "react";
-import { splitCents } from "./big-number";
+import { splitCents } from "./amount";
 import { List } from "./list-row";
 import { groupByDay, groupByMonth, type MonthAmount, type MonthGroup, type MonthTotal } from "./month-groups";
 

@@ -885,8 +885,7 @@ describe("review amounts keep their currency", () => {
         backTo="/review"
       />,
     );
-    expect(screen.getByText("$100")).toHaveClass("ui-income");
-    expect(screen.queryByText("+$100")).not.toBeInTheDocument();
+    expect(screen.getByText("+$100")).toHaveClass("ui-income");
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });

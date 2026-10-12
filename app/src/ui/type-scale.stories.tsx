@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { padded } from "./story-support";
 
 /** The type roles from the canvas Design guide (FLOW-363). Sample words only, no real data. */
@@ -35,9 +35,9 @@ function TypeScale() {
       <div className="flex flex-col gap-1">
         <span className="t-hint" dir="ltr">list amount · body 17/400, cents 11</span>
         <p className="t-body flex gap-4">
-          <BigNumber agorot={350_000n} direction="income" income cents="always" />
-          <BigNumber agorot={123_456n} direction="expense" cents="always" />
-          <BigNumber agorot={98_700n} />
+          <Amount agorot={350_000n} direction="income" income cents="always" />
+          <Amount agorot={123_456n} direction="expense" cents="always" />
+          <Amount agorot={98_700n} />
         </p>
       </div>
     </div>

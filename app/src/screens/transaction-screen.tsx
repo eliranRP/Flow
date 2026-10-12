@@ -12,7 +12,7 @@ import { screenPhase } from "../query-phase";
 import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -548,7 +548,7 @@ export function TransactionScreen({
         <div className="ui-page-pad">
           <p className="t-title-3 ui-party">{party}</p>
           <p className="t-display">
-            <BigNumber
+            <Amount
               agorot={absAgorot(txn.amount_net)}
               presentation="detail"
               currency={txn.currency}

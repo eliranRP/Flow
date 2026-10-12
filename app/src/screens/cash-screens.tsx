@@ -19,7 +19,7 @@ import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../peri
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCashLinesQuery, useCashMonthData, useCashYearsQuery, useOpenCashRow } from "../use-cash";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { CashRows } from "../ui/cash-rows";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { rowSource } from "../ui/line-marks";
@@ -99,7 +99,7 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
         <p className="ui-breakdown-total ui-page-pad">
           {rows.map((row) => (
             <span key={row.currency} className="ui-breakdown-total-line">
-              <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
+              <Amount agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
             </span>
           ))}
         </p>

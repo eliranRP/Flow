@@ -1,7 +1,7 @@
 import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { StatusDot } from "./status-dot";
 import { cx } from "./cx";
 import { MatchText } from "./match-text";
@@ -426,7 +426,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
   return (
     <span className="t-amount">
       {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
-      <BigNumber
+      <Amount
         agorot={abs}
         currency={props.currency}
         direction={income ? "income" : cost ? undefined : "expense"}
@@ -517,7 +517,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
     return (
       <span className="ui-row-amounts t-amount">
         {props.amounts.map((amount) => (
-          <BigNumber
+          <Amount
             key={amount.currency}
             agorot={amount.minor}
             currency={amount.currency}
@@ -529,7 +529,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
     );
   }
   return (
-    <BigNumber
+    <Amount
       agorot={props.agorot}
       currency={props.currency}
       size="list"

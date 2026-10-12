@@ -190,6 +190,6 @@ describe("Cash lines profit leaves out (FLOW-418)", () => {
     expect(screen.getByText("−₪750")).toBeInTheDocument();
     expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
     expect(screen.getByText("−₪1,200")).toBeInTheDocument();
-    expect(screen.getByText("₪450")).toHaveClass("ui-income");
+    expect(screen.getByText("+₪450")).toHaveClass("ui-income");
   });
 });

@@ -18,7 +18,7 @@ import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { useProjectCashMonthsQuery } from "../project-cash";
 import { assertNoError, useWrite } from "../use-write";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
@@ -451,7 +451,7 @@ export function ProjectDetailScreen({
         <p className="ui-breakdown-total ui-page-pad">
           {profitRows.map(({ row, profit: rowProfit }) => (
             <span key={row.currency} className="ui-breakdown-total-line">
-              <BigNumber agorot={rowProfit} currency={row.currency} size="display" loss={rowProfit < 0n} />
+              <Amount agorot={rowProfit} currency={row.currency} size="display" loss={rowProfit < 0n} />
             </span>
           ))}
         </p>
@@ -550,7 +550,7 @@ function LegacyEmptyProject() {
         <BandHero>
           <FocusTitle className="t-band-title">פרויקט</FocusTitle>
           <p className="ui-band-label t-label">רווח</p>
-          <p className="t-display"><BigNumber agorot={0n} /></p>
+          <p className="t-display"><Amount agorot={0n} /></p>
         </BandHero>
       </TopBand>
       <EmptyState

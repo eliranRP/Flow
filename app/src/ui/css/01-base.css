@@ -348,6 +348,12 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   vertical-align: 0.62em;
 }
 
+/* List amount: cents at 11px, raised 5px (Design guide, FLOW-363). */
+.t-amount .ui-num-cents {
+  font-size: var(--type-cents-size);
+  vertical-align: var(--cents-raise);
+}
+
 .ui-row {
   display: flex;
   align-items: center;
