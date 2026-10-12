@@ -34,7 +34,7 @@ The order is in the [priority queue](../backlog/TASKS.md#priority-queue) as rows
 
 1. **R1 · FLOW-363 foundation.** It ships alone, as four PRs in a row from one UI lane (363.1 to 363.4 below; each title starts `FLOW-363 (n/4):`). No screen PR starts until 363.4 has merged.
 2. **R2 · FLOW-371** (skeletons, empty states, loaders) and **R3 · FLOW-372** (light theme, מראה). One per UI lane, in parallel. They change disjoint files: FLOW-371 owns `skeleton`, `empty-state`, `screen-state`, the sync strip and the spinner; FLOW-372 owns the light token values, the theme store and `ThemeColor`.
-3. **The screens, by area.** Each lane takes one area batch at a time, in queue order:
+3. **The screens, by area.** Once R2 and R3 have merged, each lane takes one area batch at a time, in queue order (a screen's definition of done needs FLOW-371's skeletons and FLOW-372's light stories):
 
    | Row | Batch | Lane |
    | --- | --- | --- |
@@ -61,10 +61,12 @@ Approach: **evolve the existing components in place and merge near-duplicates.**
 | `--ease-exit` | `cubic-bezier(0.4,0,1,1)` | Everything that leaves |
 | `--ease-standard` | `cubic-bezier(0.4,0,0.2,1)` | In-place changes (bar widths, row collapse). It replaces today's `cubic-bezier(0.2,0,0,1)` |
 | `--motion-press` | 120ms | Press: opacity .72, plus scale .985 on buttons |
-| `--motion-tab` | 150ms | Bottom-bar tab crossfade |
+| `--motion-fast` | 150ms | Tab crossfade, chip colour, segment, toggle knob, focus ring |
 | `--motion-toast-out` | 160ms | Toast out |
 | `--motion-fade` | 200ms | Toast in, skeleton → content crossfade, the sync pill's delay |
 | `--motion-sheet-out` | 220ms | Sheet out, back from a detail page, a row leaving |
+| `--motion-width` | 300ms | Bar widths (ease-standard) |
+| `--skeleton-delay` | 300ms | Nothing shows before this (FLOW-371) |
 | `--motion-bar` | 240ms | Compact bar and sticky panel in and out, month change |
 | `--motion-scrim` | 260ms | Sheet scrim |
 | `--motion-page` | 280ms | Page enter, push to detail |
@@ -75,7 +77,7 @@ Approach: **evolve the existing components in place and merge near-duplicates.**
 | `--motion-spin` | 800ms | Inline spinner, one turn (FLOW-371) |
 | `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise, push offset |
 
-- **One utility each**, in a new `app/src/ui/css/00-motion.css`:
+- **One utility each**, in a new `app/src/ui/css/00-motion.css`, imported first from `app/src/ui/ui.css`:
   - `.m-press`
   - `.m-page-enter`, with `--i` for the stagger index
   - `.m-push-in` and `.m-push-back`
@@ -84,7 +86,7 @@ Approach: **evolve the existing components in place and merge near-duplicates.**
   - `.m-row-leave`, which uses `grid-template-rows: 1fr → 0fr` and never a measured height
   - `.m-bar-grow`
 - **A hook:** `usePageEnter()` sets `--i` on the first five blocks.
-- **Reduced motion:** under `prefers-reduced-motion: reduce`, every `--motion-*` token becomes `0ms` and every rise becomes `0`, so the end state shows at once. `reduced-motion.tsx` keeps its Storybook frame and decorator.
+- **Reduced motion:** under `prefers-reduced-motion: reduce`, every `--motion-*` token becomes `0ms` and every rise becomes `0`, so the end state shows at once, except `--motion-sheet-in` and `--motion-sheet-out`, which stay `1ms` for Vaul (it has no animationend fallback; see `app/src/ui/css/10-settings-onboarding.css`). 363.1 moves that override to the new names. `reduced-motion.tsx` keeps its Storybook frame and decorator.
   - The Motion board turns slides into a 120ms fade. REDESIGN-BUILD and the owner's brief say "everything off", and that rule wins.
   - The scroll-linked band fade is not a timed animation, so it still follows the finger.
 - **Push-to-detail timing:** the Motion board's 300ms in and 260ms back are replaced by the Design guide's numbers, 280ms from 24px and 220ms back. The Design guide and the brief agree on those.
@@ -95,7 +97,7 @@ Every row below is one component, with one story file and one test file. "Replac
 
 | # | Component (file) | Replaces | States | Motion |
 | --- | --- | --- | --- | --- |
-| 1 | **Button** (`button.tsx`): `primary`, a 52px pill at 17/500 on the accent; `secondary`, an outline pill at 16/500; `link`, a text link at 16/500 in the accent with an optional left-chevron icon; `danger-link`, signal-colour text | `text-link.tsx` folds into `variant="link"`. The `pill`, `ghost`, `danger` and `danger-tint` variants go: each screen PR switches its call sites, and the last one deletes the variant. TextLink's 24 screen uses move in their screen PRs, and R11 deletes `text-link.tsx` | default, pressed, disabled, busy (inline spinner and the action's verb, same width, `aria-busy`, other actions on the screen disabled), focus ring | Press 120ms (opacity .72, scale .985) |
+| 1 | **Button** (`button.tsx`): `primary`, a 52px pill at 17/500 on the accent; `secondary`, an outline pill at 16/500; `link`, a text link at 16/500 in the accent with an optional left-chevron icon; `danger-link`, signal-colour text | `text-link.tsx` folds into `variant="link"`. The `pill`, `ghost`, `danger` and `danger-tint` variants go: each screen PR switches its call sites, and the last one deletes the variant. TextLink's 61 screen uses (39 files) move in their screen PRs, and R11 deletes `text-link.tsx` | default, pressed, disabled, busy (inline spinner and the action's verb, same width, `aria-busy`, other actions on the screen disabled), focus ring | Press 120ms (opacity .72, scale .985) |
 | 2 | **IconButton** (`icon-button.tsx`) | — | default, pressed, disabled, on-band | Press 120ms (opacity only) |
 | 3 | **ListRow** (`list-row.tsx`): `flat` (on the background, 20px margins, about 64px tall, 36px initial circle, name 17/400, one line 15/400, amount at the end, no dividers or chevrons) and `inset` (a row inside a Card, 14px padding, `--color-line` dividers). `control` is `none`, `chevron` (inset only), `radio`, `check`, `switch` or `value` | `check-row.tsx`, `radio-row.tsx` (`control="radio"` and `"check"`), `person-row.tsx`, `connector-row.tsx`, `cash-line-rows.tsx` and the rows of `expected-month-sheet` become ListRow presets. 363.2 migrates the call sites mechanically (same look, new props) and deletes the old files. ListRow's nine variants shrink to the two layouts plus `control` | default, pressed, selected, disabled (with a reason line), busy (spinner at the end), pending (soft text), skeleton (FLOW-371) | Press 120ms (opacity .72); leaving 220ms fade and collapse |
 | 4 | **Card** (`card.tsx`, new): radius 20 (the token sits in the 16 to 24 range), 14 to 18px padding, `--color-surface`; `tone="tint"` for the problem box and דורש טיפול | The generic `.ui-project-list` surface. The feature cards (`.ui-invest-card`, `.ui-split-card`, `.ui-prompt-card`, `.ui-invite-card`) move onto Card in their screen PRs, which delete their CSS | default, pressed (when the whole card is a link), tint | Press 120ms |
@@ -107,11 +109,11 @@ Every row below is one component, with one story file and one test file. "Replac
 | 10 | **IconRow** (`icon-row.tsx`, new): 24px outline icon, label 13, value 16/500, a chevron or a link action; a switch row has no chevron. **CountedInRow** with **CountedInSheet**: "נספר ב" with רווח ותזרים / רק תזרים / לא נספר, one line on each ([0170](../decisions/0170-pnl-follows-company-basis.md)) | `charge-switches.tsx` (moves in FLOW-366, which deletes `37-charge-switches.css`) | default, pressed, disabled, busy, value changed (the undo toast) | Press 120ms; the sheet as #11 |
 | 11 | **Sheet** (`sheet.tsx`), **ChoiceSheet** (`choice-sheet.tsx`, from `radio-sheet.tsx`) and **ConfirmSheet** | `radio-sheet.tsx` is renamed to ChoiceSheet. `currency-sheet.tsx`, `basis-sheet.tsx` and `pace-sheet.tsx` become ChoiceSheet calls in 363.3 and are deleted. The Sheet + RadioRow lists built by hand in eight screens move in their screen PRs | open, closing, busy (save in progress), refusing (an incomplete change, ביטול השינוי) | In 280ms ease-enter; out 220ms ease-exit; scrim 260ms; drag down to close |
 | 12 | **Toast** (`toast.tsx`, `toast-layout.tsx`) | The undo toast lasts 3s with ביטול. The [0180](../decisions/0180-instant-tap-notify-on-failure.md) failure toast stays. `--toast-duration` moves to 3000ms | ok (with or without ביטול), failure, info | In 200ms rising from above the bottom bar; out 160ms |
-| 13 | **Field** family: `text-field.tsx`, `money-field.tsx`, `select-field.tsx`, `code-field.tsx` (monospace LTR with העתקה), `search-field.tsx` | `percent-field.stories.tsx` merges into the money-field stories (there is no `percent-field.tsx`) | default, focused, filled, error (message line reserved), disabled, read-only while busy, busy (spinner at the end, FLOW-371) | Focus ring 150ms |
+| 13 | **Field** family: `text-field.tsx`, `money-field.tsx`, `select-field.tsx`, `code-field.tsx` (monospace LTR with העתקה), `search-field.tsx` | `percent-field.stories.tsx` merges into the money-field stories and `percent-field.test.tsx` into `money-field.test.tsx` (there is no `percent-field.tsx`) | default, focused, filled, error (message line reserved), disabled, read-only while busy, busy (spinner at the end, FLOW-371) | Focus ring 150ms |
 | 14 | **ConnectionPage** (`connection-page.tsx`, new): what the connection gives, numbered steps, a tinted problem box, one field or one copy button, then מתחבר… and מחובר ✓ with the last sync | `connect-sheet.tsx`, `mercury-connect-sheet.tsx`, `sumit-connect-sheet.tsx` and `connector-status-sheet.tsx`, deleted by FLOW-512 when SUMIT, Mercury and MCP move onto the page | new, connecting (busy), connected, problem (the key stopped working), error (one line with נסו שוב) | Page enter |
 | 15 | **SwipeRow** (`swipe-remove.tsx` renamed `swipe-row.tsx`) | — | rest, revealed (התעלמות in signal-colour text, no fill), leaving | Leaves with a 220ms fade and collapse; undo toast |
 | 16 | **ChangePill** and **StatusDot** (`change-pill.tsx`) | `StatusPill` from `chip.tsx`. Status is coloured text or a 6px dot, never a filled chip | helps (grey #4A4458 on the band, neutral off it), hurts (#C3302B on the band, signal off it); dot tones neutral, accent, signal | None |
-| 17 | **ProgressBar** (`progress-bar.tsx`): thin 6 to 8px bars, two-part split bars, and the 8px job bar of FLOW-371 | `BudgetBar` becomes `variant="split"` | value, split, indeterminate (sync strip) | Grows from the right, 480ms on enter; widths ease 300ms ease-standard |
+| 17 | **ProgressBar** (`progress-bar.tsx`): thin 6 to 8px bars, two-part split bars, and the 8px job bar of FLOW-371 | `BudgetBar` becomes `variant="split"` | value, split, indeterminate (sync strip) | Grows from the right, 480ms on enter; widths ease `--motion-width` with ease-standard |
 | 18 | **TabBar** (`tab-bar.tsx`): בית · פרויקטים · הלוואות · קבועים | The FLOW-364 brief settles the + button's place against the canvas | active, pressed, badge | Tab colour 120ms; content crossfade 150ms; no slide |
 | 19 | **Page transitions**: `usePageEnter`, `PushPage` | The screen-push 250ms in DESIGN-RULES | entering, entered, going back | Page enter 280ms with a 40ms stagger; push 280ms from the left, back 220ms |
 
@@ -128,8 +130,9 @@ FLOW-363 leaves their slots and tokens in place and adds no loader of its own.
 
 ### 2.3 Tokens (363.1)
 
-- **Source of truth.** `design/system/implementation-tokens.css` is generated from `design-tokens.json` by `design/src/gen_implementation_tokens.py`. Change the JSON, then regenerate. Never edit the CSS by hand.
+- **Source of truth.** `design/system/implementation-tokens.css` becomes the one hand-edited token file. Its header says "generated from design-tokens.json", but the generator has drifted: running `design/src/gen_implementation_tokens.py` today drops `--surface-hover`, `--tabbar-min-inset`, `--toast-duration-error` and the `.t-hint` colour, and no code reads `design-tokens.json`. So 363.1 deletes `design-tokens.json` and `gen_implementation_tokens.py`, rewrites the header, and updates every doc that names them (`design/README.md`, `design/system/design-system.md`, implementation-guide §2.1, DESIGN-RULES, `design/MANIFEST.txt`). `design/src/tokens.py` stays only while the old mockup generators in `design/src` use it; R11 deletes `design/src` with the last old board.
 - **Type.** One token per role in REDESIGN-BUILD's table: `--type-band`, `--type-detail`, `--type-total`, `--type-title`, `--type-card`, `--type-name`, `--type-sheet`, `--type-section`, `--type-body`, `--type-btn`, `--type-btn-2`, `--type-line2`, `--type-meta`, `--type-chip`, `--type-caption`, `--type-cents`.
+  - Each role keeps today's pattern: `--type-<role>-size`, `-line` and `-weight`, a `.t-<role>` class, and the `--text-<role>` aliases in `app/src/styles/app.css`. `--type-wordmark` is kept as it is.
   - The old `--type-hero`, `display`, `title-1`, `band-title`, `title-2`, `heading`, `title-3`, `amount`, `body`, `label`, `meta`, `hint` and `micro` go once nothing reads them. 363.1 aliases each old name to its new role, so screens keep working; each screen PR switches to the new names; R11 deletes the aliases.
   - Body moves from 16/500 to 17/400. The 17px titles move from 600 to 500. Text stays light.
 - **Colour.** The dark values from FLOW-363 (#15111E background and the rest), keeping today's `--color-*` names where they exist, plus `--color-band-past`, `--color-signal-soft`, `--color-pill-helps` and `--color-pill-hurts`. Light values are FLOW-372's.
@@ -141,14 +144,14 @@ FLOW-363 leaves their slots and tokens in place and adds no loader of its own.
 
 | PR | Contents | Deletes |
 | --- | --- | --- |
-| 363.1 Tokens and motion | `design-tokens.json`, the regenerated `implementation-tokens.css`, `app.css` aliases, `00-motion.css`, `usePageEnter`, `reduced-motion.tsx`, the raw-value check (§4.3), the Storybook theme and width matrix (§3), decision 0181, DESIGN-RULES §2.2 to 2.7 and implementation-guide §2, §5 and §10 | Old motion tokens (`--dur-*`), once 363.1 moves their readers to `--motion-*` |
-| 363.2 Buttons, rows, cards, amounts | Button (with link), ListRow (`flat`, `inset`, `control`), Card, Amount, ChangePill and StatusDot, ProgressBar (split), IconButton | check-row, radio-row, person-row, connector-row and cash-line-rows (mechanical call-site moves, same look); `StatusPill`; `BudgetBar`; their stories and CSS |
+| 363.1 Tokens and motion | `implementation-tokens.css` (now the source), `app/src/styles/app.css` aliases, `00-motion.css`, `reduced-motion.tsx`, the raw-value check (§4.3), dark as the Storybook default and `story-shots.mjs` (§3), decision 0181, DESIGN-RULES §2.2 to 2.7 and implementation-guide §2, §5 and §10 | Old motion tokens (`--dur-*`), once 363.1 moves their readers to `--motion-*`; `design-tokens.json` and `gen_implementation_tokens.py` |
+| 363.2 Buttons, rows, cards, amounts | `usePageEnter` with its first users, Button (with link), ListRow (`flat`, `inset`, `control`), Card, Amount, ChangePill and StatusDot, ProgressBar (split), IconButton | check-row, radio-row, person-row, connector-row and cash-line-rows (mechanical call-site moves, same look); `StatusPill`; `BudgetBar`; their stories and CSS |
 | 363.3 Header, sheets, toast, chips | CompactBar, Band and ScreenHeader on the new tokens, Sheet and ChoiceSheet, Toast (undo 3s), OrganizeChips and StickyPanel, Segment, Toggle, SwipeRow, TabBar motion | currency-sheet, basis-sheet and pace-sheet (moved to ChoiceSheet), `chip-scroller.tsx` (renamed), their stories |
-| 363.4 Icon rows, connection frame, fields | IconRow, CountedInRow and CountedInSheet, ConnectionPage, Field states; DESIGN-RULES §2.8 and implementation-guide §7, rewritten as the new component inventory | `percent-field.stories.tsx` (merged into the money-field stories); the ds-4/5/6/8 board PNGs, once the rewritten §2.8 and §7 stop linking them (§5) |
+| 363.4 Icon rows, connection frame, fields | IconRow, CountedInRow and CountedInSheet, ConnectionPage, Field states; DESIGN-RULES §2.8 and implementation-guide §7, rewritten as the new component inventory | `percent-field.stories.tsx` and `percent-field.test.tsx` (merged into money-field's); the ds-4/5/6/8 board PNGs, once the rewritten §2.8 and §7 stop linking them (§5) |
 
 ## 3. Storybook: fewer stories, one file per component
 
-Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copies and 435 are width copies (320, SE, 375, 393, Short). No story uses `argTypes`. `clip-check` already renders every story at 320, 360 and 390 in light and dark, so most of those copies test nothing new. The rules, following the Storybook docs on [writing stories](https://storybook.js.org/docs/writing-stories), [args](https://storybook.js.org/docs/writing-stories/args), [controls](https://storybook.js.org/docs/essentials/controls) and [autodocs](https://storybook.js.org/docs/writing-docs/autodocs) (Storybook 8.6 here):
+Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copies and 434 are width copies (320, SE, 375, 393, Short). No story uses `argTypes`. `clip-check` already renders every story at 320, 360 and 390 in light and dark, so most of those copies test nothing new. The rules, following the Storybook docs on [writing stories](https://storybook.js.org/docs/writing-stories), [args](https://storybook.js.org/docs/writing-stories/args), [controls](https://storybook.js.org/docs/essentials/controls) and [autodocs](https://storybook.js.org/docs/writing-docs/autodocs) (Storybook 8.6 here):
 
 1. **One story file per component.** It sits next to the component, `<name>.stories.tsx`, with `title: "UI/<Name>"` or `"Screens/<Name>"`. A merged component takes its old files' stories as args and the old files are deleted.
 2. **CSF3 with `args` and `argTypes`.**
@@ -159,7 +162,7 @@ Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copie
 3. **Theme and width are globals, never story copies.**
    - `preview.tsx` already has the `theme` toolbar global and the `flow320` and `flow393` viewports.
    - 363.1 makes dark the default theme, because dark is the drawn theme.
-   - 363.1 adds a `matrix` global that renders the story four times, side by side: dark and light, at 320 and 393. It is for design review screenshots.
+   - 363.1 adds `scripts/story-shots.mjs`: given story ids and a built Storybook, it screenshots each story in dark and light at 320 and 393 (through the `globals=theme:…;viewport:…` URL), for the design review. CSS tokens hang on `:root[data-theme]`, so one page can't show both themes side by side; four shots can.
    - The vitest Storybook project and `clip-check` run each story in both themes and at both widths, so no `*Dark` or `*320` story is written by hand.
    - A story whose layout only breaks at a size (for example a sticky bar at 375x667) keeps a story-level `parameters.viewport` and a name that says why.
 4. **Docs pages.** `tags: ["autodocs"]` on every component meta. The component's JSDoc becomes its docs page, with the controls table and every state story.
@@ -175,7 +178,7 @@ Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copie
 
    The target is under 600 stories once R11 merges.
 
-**Acceptance per component:** a story for each of its states, in dark and light, at 320 and 393 (through the matrix global), with invented data, plus a docs page.
+**Acceptance per component:** a story for each of its states, in dark and light, at 320 and 393 (through the theme and viewport globals, shot by `story-shots.mjs`), with invented data, plus a docs page.
 
 ## 4. Tests
 
@@ -186,7 +189,7 @@ Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copie
   - Disabled controls don't fire `onClick`.
   - A busy Button keeps its width (from the measured box in jsdom, or a `data-width-lock` contract), sets `aria-busy`, shows the verb, and ignores taps.
   - A busy Sheet waits for its save before it closes.
-- **Motion:** for each `.m-*` utility, the computed `transition-duration` and `animation-duration` are `0s` under `forceReducedMotion`, and equal to the token otherwise. FLOW-363's acceptance asks for this test.
+- **Motion:** for each `.m-*` utility, the computed `transition-duration` and `animation-duration` are `0s` (sheets: at most `0.001s`) under `forceReducedMotion`, and equal to the token otherwise. FLOW-363's acceptance asks for this test.
 - **Money:**
   - The formatter puts "+" on income and U+2212 on a loss, inside `<bdi dir="ltr">`.
   - Cents are wrapped for the 11px raised style.
@@ -201,16 +204,16 @@ Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copie
 
 A new `scripts/check-css-tokens.mjs` (with `.test.mjs`), run in `scripts/local-ci.sh` and `ci.yml` next to `check-unused-css.mjs`.
 
-- **It reads** every `app/src/**/*.css` file except the token files (`implementation-tokens.css`, the `:root` blocks of `app.css`).
+- **It reads** every `app/src/**/*.css` file except the token files (`implementation-tokens.css`, the `:root` and `@theme` blocks of `app/src/styles/app.css`).
 - **It fails on:**
-  - a hex colour, `rgb()`, `rgba()`, `hsl()` or a named colour;
+  - a hex colour, `rgb()`, `rgba()`, `hsl()` or a named colour (`transparent`, `currentColor` and `inherit` are allowed);
   - a `font-size` or `line-height` that is not `var(--type-*)`;
   - a numeric `font-weight`;
   - a duration in ms or s in `transition`, `animation` or `*-duration`;
   - a `cubic-bezier()`;
   - a `border-radius` that is not `var(--radius-*)`, `0` or `50%`.
 - **Spacing:** raw `px` in `margin`, `padding`, `gap`, `inset` or `top/right/bottom/left` also fails, except `1px` hairlines and `0`.
-- **Existing values:** they go in `scripts/css-tokens-baseline.json`, a count per file and rule. The check fails when a count goes up, and also when it goes down and the baseline was not lowered in the same commit, so the baseline only shrinks. Each screen PR takes its own files to zero. R11 deletes the baseline file.
+- **Existing values:** they go in `scripts/css-tokens-baseline.json`, a count per file and rule. The check fails when any count differs from the baseline, up or down, so a PR that removes raw values must lower the baseline in the same PR. Each screen PR takes its own files to zero. R11 deletes the baseline file.
 - **Its test** proves a raw hex, a raw 14px font size and a raw 200ms transition each fail, and a `var()` passes.
 
 ## 5. Global CSS, the design guide, clean-up
@@ -218,9 +221,9 @@ A new `scripts/check-css-tokens.mjs` (with `.test.mjs`), run in `scripts/local-c
 ### 5.1 Global CSS and fonts
 
 - **363.1:** tokens, `01-base.css` type and colour, and the Rubik weights.
-- **Fonts:** keep 400, 500 and 600 and drop 700 from the `@fontsource` imports. The wordmark is the only 700 user, and it uses the SVG logo.
+- **Fonts:** keep Rubik 400, 500, 600 and 700. The text wordmark (`wordmark.tsx`, `--type-wordmark-weight`) and the sign-in title (`--text-signin` in `app/src/styles/app.css`) use 700; all other text uses 400 to 600.
 - **FLOW-372:** the light values and the theme store.
-- **Screen CSS files** (`ui/css/NN-*.css`) shrink in their screen PRs. A file whose last class goes is deleted and its `@import` is removed from `ui.css`.
+- **Screen CSS files** (`ui/css/NN-*.css`) shrink in their screen PRs. A file whose last class goes is deleted and its `@import` is removed from `app/src/ui/ui.css`.
 
 ### 5.2 DESIGN-RULES and the implementation guide
 
@@ -239,12 +242,14 @@ Each file is deleted in the PR that removes its last reference. Before deleting,
 
 | Files | Delete in |
 | --- | --- |
-| Unreferenced now: `design/screens/09b- to 09e-onboarding-dark.png`; 20 `design/states` PNGs listed only in MANIFEST (`er-01..05`, `es-02/04/06/07`, `ld-02/03/05/06/07`, `ld-04`, `ld-08`, `ld-09`); `docs/module-1-project-pnl/design/style-{a-calm,b-dark,c-warm}.png`; the `design/src` HTML pages listed only in MANIFEST (`09-onboarding-*`, `ds-*.html`, `overview*.html`) | 363.1 (nothing references them; MANIFEST updated) |
+| Unreferenced now: `design/screens/09b-` to `09e-onboarding-dark.png` | 363.1 (MANIFEST updated) |
+| `docs/module-1-project-pnl/design/style-{a-calm,b-dark,c-warm}.png` | Kept: the module-1 design README links them as superseded options |
 | `design/system/ds-1..3*.png` (colour, type, spacing) | 363.1, once DESIGN-RULES §2.2 to 2.4 and decision 0024 point to the canvas (0024 gains a "superseded by 0181" line; a decision's text is otherwise kept) |
 | `design/system/ds-4..6*.png`, `ds-8*.png` | 363.4, with the rewritten §2.8 and guide §7 |
-| `design/system/ds-7*.png`, the remaining `design/states/*.png` | FLOW-371, with the rewritten empty and loading section |
+| `design/system/ds-7*.png`, all `design/states/*.png` | FLOW-371, with the rewritten empty and loading section and the `design-system.md` and implementation-guide §7.20 and §8 references |
 | `design/screens/NN-*.png` | The screen PR that rewrites that screen's DESIGN-RULES §4 entry (e.g. `01-home-*` in FLOW-364, `14-settings-*` in FLOW-512, which also updates `scripts/ci-cd.test.mjs`) |
-| `docs/module-1-project-pnl/wireframes` and `design/src/*.py` generators | Kept. The wireframes document the product spec, and `gen_implementation_tokens.py` still builds the tokens |
+| `design/src` (the old mockup generators and the HTML they render, including `ds-*.html`, `overview*.html` and `09-onboarding-*.html`) | R11, with the last old board. `design/src/tokens.py` stays until then |
+| `docs/module-1-project-pnl/wireframes` | Kept: the wireframes document the product spec |
 
 ## 6. Design review team
 
@@ -254,7 +259,7 @@ Two Opus 5.5 reviewers per UI PR, in parallel, each with a narrow brief. Both mu
 - Compares each component or screen with its canvas board at 320 and 393px wide, in dark and light (the board's light twin is on the Light theme page).
 - Measures sizes, type role (size and weight), colour token, spacing, radius, bar thickness and touch targets.
 - Checks RTL: amounts in `<bdi dir="ltr">`, U+2212, chevron icons, and time running right to left.
-- Works from screenshots of the PR's stories through the matrix global, plus `pnpm clip-check`.
+- Works from screenshots of the PR's stories made with `scripts/story-shots.mjs`, plus `pnpm clip-check`.
 
 **Motion reviewer:**
 - Checks each transition against §2.1: duration, easing, stagger, rise distance and direction (in from the left, past on the right).

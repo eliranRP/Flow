@@ -30,7 +30,7 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. The approved redesign (R rows, [plan](../../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id |
 | --- | --- |
