@@ -218,7 +218,7 @@
   pointer-events: none;
   /* Hidden at rest; after a release it stays shown until it has slid back out. */
   visibility: hidden;
-  transition: transform var(--dur-fast) var(--ease-standard), visibility 0s linear var(--dur-fast);
+  transition: transform var(--motion-fast) var(--ease-standard), visibility 0s linear var(--motion-fast);
 }
 
 .ui-cswipe-peek.ui-cswipe-drag {
@@ -244,7 +244,7 @@
 }
 
 .ui-cswipe-card {
-  transition: transform var(--dur-fast) var(--ease-standard);
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .ui-cswipe-on {
@@ -256,11 +256,11 @@
 }
 
 .ui-cswipe-card[data-enter="next"] {
-  animation: ui-cswipe-from-left var(--dur-base) var(--ease-standard);
+  animation: ui-cswipe-from-left var(--motion-fade) var(--ease-standard);
 }
 
 .ui-cswipe-card[data-enter="prev"] {
-  animation: ui-cswipe-from-right var(--dur-base) var(--ease-standard);
+  animation: ui-cswipe-from-right var(--motion-fade) var(--ease-standard);
 }
 
 @keyframes ui-cswipe-from-left {

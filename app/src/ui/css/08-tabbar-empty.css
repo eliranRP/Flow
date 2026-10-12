@@ -55,7 +55,7 @@ button.ui-tab-slot {
   font-weight: var(--type-micro-weight);
   text-decoration: none;
   border-radius: var(--radius-chip);
-  transition: background-color var(--dur-press), color var(--dur-press);
+  transition: background-color var(--motion-press), color var(--motion-press);
 }
 
 .ui-tab-slot[aria-current="page"] {
@@ -83,7 +83,7 @@ button.ui-tab-slot {
   background: var(--color-accent);
   color: var(--color-on-accent);
   transform: none;
-  transition: background-color var(--dur-press);
+  transition: background-color var(--motion-press);
 }
 
 .ui-tab-slot-fab:active .ui-fab,
@@ -204,32 +204,36 @@ button.ui-tab-slot {
   outrank it with !important and :has(). Drag release writes an inline transition.
   While .vaul-dragging is set the finger owns the transform, so the override stays off.
 */
-[data-vaul-drawer][data-state="open"],
+[data-vaul-drawer][data-state="open"] {
+  animation-duration: var(--motion-sheet-in);
+  animation-timing-function: var(--ease-enter);
+}
+
 [data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
-  animation-duration: var(--dur-sheet-in);
-  animation-timing-function: var(--ease-standard);
+  animation-duration: var(--motion-scrim);
+  animation-timing-function: var(--ease-linear);
 }
 
 [data-vaul-drawer][data-state="closed"],
 [data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
-  animation-duration: var(--dur-sheet-out);
+  animation-duration: var(--motion-sheet-out);
   animation-timing-function: var(--ease-exit);
 }
 
 [data-vaul-drawer][data-state="open"]:not(.vaul-dragging) {
-  transition-duration: var(--dur-sheet-in) !important;
-  transition-timing-function: var(--ease-standard) !important;
+  transition-duration: var(--motion-sheet-in) !important;
+  transition-timing-function: var(--ease-enter) !important;
 }
 
 [data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
 body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
-  transition-duration: var(--dur-sheet-out) !important;
+  transition-duration: var(--motion-sheet-out) !important;
   transition-timing-function: var(--ease-exit) !important;
 }
 
 body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
-  transition-duration: var(--dur-sheet-in) !important;
-  transition-timing-function: var(--ease-standard) !important;
+  transition-duration: var(--motion-scrim) !important;
+  transition-timing-function: var(--ease-linear) !important;
 }
 
 .ui-sheet-grab {

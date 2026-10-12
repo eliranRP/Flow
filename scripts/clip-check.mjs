@@ -243,7 +243,7 @@ async function run(options = {}) {
         for (const story of stories) {
           // A clip-no-text story is measured too: only the "measured nothing" rule is waived.
           const noText = storyAllowsNoText(story);
-          const globals = theme === "dark" ? "&globals=theme:dark" : "";
+          const globals = `&globals=theme:${theme}`;
           let rendered = false;
           for (let attempt = 1; attempt <= STORY_TRIES && !rendered; attempt += 1) {
             if (attempt > 1) log(`${theme} ${String(width)} ${story.id}: did not render, trying again`);

@@ -32,7 +32,7 @@
 .ui-loan-skel .ui-row {
   min-height: calc(
     2 * var(--row-pad)
-    + 2 * var(--type-meta-size) * var(--type-meta-line)
+    + 2 * var(--type-line2-size) * var(--type-line2-line)
     + var(--type-title-3-size) * var(--type-title-3-line)
   );
 }
@@ -42,7 +42,7 @@
 .ui-loan-skel-rows .ui-row {
   min-height: calc(
     2 * var(--row-pad)
-    + var(--type-meta-size) * var(--type-meta-line)
+    + var(--type-line2-size) * var(--type-line2-line)
     + var(--type-title-3-size) * var(--type-title-3-line)
   );
 }
@@ -144,9 +144,9 @@
   display: block;
   overflow-wrap: anywhere;
   color: var(--color-text-muted);
-  font-size: var(--type-meta-size);
-  font-weight: var(--type-meta-weight);
-  line-height: var(--type-meta-line);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: var(--type-line2-line);
   white-space: normal;
   text-wrap: pretty;
 }
@@ -200,7 +200,7 @@
 .ui-hint-parts {
   display: flex;
   flex-wrap: wrap;
-  max-block-size: calc(var(--type-meta-size) * var(--type-meta-line));
+  max-block-size: calc(var(--type-line2-size) * var(--type-line2-line));
   min-inline-size: 0;
   overflow: hidden;
 }
@@ -317,7 +317,7 @@
   padding-top: calc(var(--space-2) + var(--toast-pad, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
-  transition: padding-top var(--dur-base) var(--ease-standard);
+  transition: padding-top var(--motion-fade) var(--ease-standard);
 }
 
 .ui-sheet-body {

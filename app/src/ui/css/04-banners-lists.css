@@ -264,7 +264,7 @@
 .ui-chevron-turn {
   display: inline-flex;
   flex: none;
-  transition: transform var(--dur-base) var(--ease-standard);
+  transition: transform var(--motion-fade) var(--ease-standard);
 }
 
 .ui-chevron-turn[data-open="true"] {

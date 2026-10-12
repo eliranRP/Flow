@@ -1,6 +1,8 @@
 # Flow design rules
 
-Authoritative reference for code review and design review. Rules below are compiled from records already in the repo. Each rule cites its source. If this file and a cited source disagree, the source wins. If the implementation guide and a board or `design-tokens.json` disagree, the boards and the JSON win ([implementation guide](../../design/system/implementation-guide.md), opening).
+Authoritative reference for code review and design review. Rules below are compiled from records already in the repo. Each rule cites its source. If this file and a cited source disagree, the source wins.
+
+**Source of truth:** the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) (Design guide and Flow & motion pages) and [REDESIGN-BUILD](REDESIGN-BUILD.md). [implementation-tokens.css](../../design/system/implementation-tokens.css) is the one hand-edited token file ([0181](../decisions/0181-redesign-foundation.md)). Where this file, the implementation guide and the canvas disagree, the canvas wins, and this file is updated.
 
 The approved look is **V1 Violet with a coloured top band**. Hebrew, right to left, phone-only PWA. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), [design/README.md](../../design/README.md).
 
@@ -49,124 +51,106 @@ Records that are not visual rules but change what a screen may show: [0004](../d
 
 ## 2. Design system
 
-Sources: [design-system.md](../../design/system/design-system.md), [implementation-tokens.css](../../design/system/implementation-tokens.css), [design-tokens.json](../../design/system/design-tokens.json). `tokens.py` is the generator. Do not edit the CSS by hand. [implementation guide §2.1](../../design/system/implementation-guide.md).
+Sources: the Design canvas, [implementation-tokens.css](../../design/system/implementation-tokens.css) (edited by hand, the only token file) and [implementation guide §2.1](../../design/system/implementation-guide.md). Raw values are checked by `scripts/check-css-tokens.mjs`.
 
 ### 2.1 Principles
 
-From [design-system.md](../../design/system/design-system.md) and guide §1:
+From the Design guide page of the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD), with [REDESIGN-BUILD](REDESIGN-BUILD.md). These five rules come before the others.
 
-- Calm and airy. White page, lots of space, few numbers, detail on the next screen.
-- **Light and clean, few words (owner, 2026-10-08).** He turned down every option for the FLOW-401 project page as too busy, with too much data, and noisy. A screen is light, with few words and little data. Before adding a figure, a word or a mark, ask whether it changes what the user does next on this screen. If not, leave it out or put it on the next screen. Checked in every design review and sign-off:
-  - A row stays short: a title, its value, and at most one meta line. Add a mark only when it changes what the user does with that row.
-  - A screen leads with one main figure. Every other figure needs a reason to be there, and Home keeps to its figure budget (§3.5).
-  - Labels are one or two words. Add a help sentence only where an existing rule calls for one (empty state, error, confirmation consequence).
-  - No new legends, keys or "X = Y" explanations on a screen. If a new screen needs one, it shows too much.
-  - When in doubt, draw the lighter option and recommend it.
-- One accent, violet. Filled violet at most about twice per screen area (normally the + button and one primary button).
-- The coloured band is only the top of Home and the Project header.
-- Figures use the main text colour. A loss is `bad` with a minus or ▼, a gain in a change pill is `good` with ▲, and money in is `income` green with no plus. Never colour on the band. [0120](../decisions/0120-income-green-type-scale.md)
-- No gradients, no emoji, no heavy shadows. Depth is the violet tint and 1px hairlines. The loading shimmer is the only gradient.
+| Principle | Rule |
+|---|---|
+| **Light** | White space is part of the look. A screen leads with one main figure and few words. Before adding a figure, a word or a mark, ask whether it changes what the user does next on this screen. If not, leave it out or put it on the next screen. A row is a title, its value and at most one meta line. Labels are one or two words. (Owner, 2026-10-08, FLOW-401.) |
+| **Quiet colour** | Green means money in and nothing else, always with "+". At most one signal colour per screen, and only for what needs attention. Good states stay neutral. Status and tags are coloured text or a 6px dot. |
+| **Cards for focus** | Flat lists sit on the background with no dividers. A card (radius 20px) is for a focused item or a summary. |
+| **Same patterns** | Each shared part is one component with a story. A screen builds from those parts and adds nothing of its own. |
+| **RTL first** | Hebrew, right to left. Amounts sit in `<bdi dir="ltr">`, the minus is U+2212 and sits left of the number. Chevrons are icons, never ‹ ›. Path separators read "←". |
+
+- One accent, violet (`--color-accent`). Filled violet at most about twice per screen area.
+- The solid band is only the top of Home and the project header. [0023](../decisions/0023-violet-coloured-top-band.md)
+- No gradients (the loading shimmer is the one exception), no emoji, no heavy shadows.
 
 ### 2.2 Colour tokens
 
-Light and dark. The band is the same violet in both modes. Dark is a violet-tinted near-black, never `#000000`. [0024](../decisions/0024-design-system-approved.md), [design-system.md](../../design/system/design-system.md), guide §2.2–2.3.
+Dark values are drawn; the table gives the dark value of each token. Light values are [FLOW-372](../backlog/tasks/FLOW-372.md)'s. Until it merges, the light values in [implementation-tokens.css](../../design/system/implementation-tokens.css) stand. Every colour is `--color-<name>`. Dark is a violet-tinted near-black, never `#000000`. [0181](../decisions/0181-redesign-foundation.md), [0024](../decisions/0024-design-system-approved.md), guide §2.2.
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `bg` | `#FFFFFF` | `#15111E` | Page |
-| `surface` | `#FFFFFF` | `#1E1929` | Cards, tab bar, sheets, inputs |
-| `raised` | `#FFFFFF` | `#251F33` | Raised above a surface |
-| `tint` | `#F3ECFE` | `#2A2045` | Pending card, pills, secondary button |
-| `tint-strong` / `tint-pressed` | `#E7DAFD` | `#382A5E` | Pressed tint |
-| `line` | `#EEE8FA` | `#2E2740` | Hairlines |
-| `control-off` | `#8F86A3` | `#736A8C` | Switch off, unchecked checkbox, grab handle |
-| `control-border` | `#8F86A3` | `#736A8C` | Input, search, outlined chip, radio |
-| `text` | `#1D1728` | `#F1EDF8` | Main text and all figures |
-| `text-secondary` | `#564E66` | `#B1A8C4` | Labels, secondary lines |
-| `text-muted` | `#6A627A` | `#978EAB` | Hints, dates, placeholders |
-| `accent` | `#7B3FE4` | `#B894FF` | +, primary fill, switch on, selected chip |
-| `accent-pressed` | `#6631C9` | `#A47FF0` | Pressed accent |
-| `accent-text` | `#6C2ED6` | `#C3A5FF` | Links, active tab, accent icons |
-| `logo` | `#7B3FE4` | `#B894FF` | Wordmark off the band. Not `accent-text` |
-| `on-accent` | `#FFFFFF` | `#1E0B45` | Text on an accent fill. Dark text in dark mode |
-| `band` | `#7B3FE4` | `#7B3FE4` | Top band. Same in both modes |
-| `on-band` | `#FFFFFF` | `#FFFFFF` | Text on the band |
-| `on-band-secondary` | `#F0E8FF` | `#F0E8FF` | Labels on the band |
-| `band-chip` / `band-pill` | `#FFFFFF` | `#1E1929` | Pills sitting on the band |
-| `good` | `#15733F` | `#62CB8D` | Positive change, only with ▲ |
-| `income` | `#13703D` | `#62CB8D` | Money in: income rows and totals, Home נכנס, an income detail. No plus, never with a minus, never on the band. [0120](../decisions/0120-income-green-type-scale.md) |
-| `bad` | `#C3302B` | `#FF8A80` | Loss or negative change, only with ▼ or minus |
-| `warning` | `#8A5700` | `#EDB866` | Warning, for example over budget |
-| `error` | `#C3302B` | `#FF8A80` | Input error border and message |
-| `disabled-bg` / `disabled-text` | `#F1EEF6` / `#8F889C` | `#2A2438` / `#7A7290` | Disabled controls |
-| `scrim` | `rgba(29,23,40,.45)` | `rgba(5,3,10,.62)` | Sheet backdrop |
-| `toast-bg` / `toast-text` | `#1D1728` / `#FFFFFF` | `#F1EDF8` / `#15111E` | Toast inverts per mode |
-| `seg-on` | `#FFFFFF` | `#3B2F5E` | Selected segment |
-| `knob` | `#FFFFFF` | `#FFFFFF` | Switch knob off |
-| `knob-on` | `#FFFFFF` | `#1E0B45` | Switch knob on |
-| `bad-tint` | `#FCEDEC` | `#3A1E24` | Destructive confirm fill |
-| `toast-bad` | `#FF8A80` | `#C3302B` | Error icon inside the inverted toast |
-| `badge-bg` / `badge-text` | `#1D1728` / `#FFFFFF` | `#F1EDF8` / `#1E1929` | Tab count. Neutral, not red |
-| `focus` / `focus-on-band` | `#6C2ED6` / `#FFFFFF` | `#C3A5FF` / `#FFFFFF` | Focus rings |
-| `skeleton` / `skeleton-shine` | `#F3ECFE` / `#FAF6FF` | `#2A2045` / `#33285A` | Skeleton |
-| `skeleton-band` / `skeleton-band-shine` | `#9565E9` / `#A57CED` | `#9565E9` / `#A57CED` | Skeleton on the band |
-| `gsi-bg` / `gsi-border` / `gsi-text` | `#FFFFFF` / `#747775` / `#1F1F1F` | same | Google button only. Same in both modes |
+| Token | Dark | Use |
+|---|---|---|
+| `bg` | `#15111E` | Page |
+| `surface` | `#1E1929` | Cards, sheets, the compact bar |
+| `raised` | `#251F33` | Inner box and input |
+| `tint` | `#2A2045` | Tint fill, pending card, pills |
+| `accent` | `#B894FF` | Accent: + button, primary fill, switch on, selected chip |
+| `accent-pressed` | `#C3A5FF` | Pressed accent, and accent on a tint |
+| `band` | `#7B3FE4` | Top band, the same in both modes |
+| `band-past` | `#5A2DB0` | Band of a past month (new) |
+| `income` | `#62CB8D` | Money in only. Always with "+". Never with a minus, never on the band |
+| `signal` | `#FF8A80` | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days (new) |
+| `signal-soft` | `#E8A598` | Soft signal fill or text beside `signal` (new) |
+| `text` | `#F1EDF8` | Main text and all figures |
+| `text-secondary` | `#B1A8C4` | Labels and secondary lines |
+| `text-muted` | `#978EAB` | Hints, dates, placeholders |
+| `line` | `#2E2740` | Hairlines |
+| `pill-helps` | `#4A4458` | Band change pill when the change helps (new) |
+| `pill-hurts` | `#C3302B` | Band change pill when the change hurts (new) |
 
-Text pairs are WCAG AA 4.5:1. Non-text UI (tracks, borders, knobs, Google stroke) is at least 3:1. [design-system.md](../../design/system/design-system.md), guide §9.
+Text pairs are WCAG AA 4.5:1, non-text UI at least 3:1. The other tokens (`raised`, `on-accent`, `control-*`, `bad`, `warning`, `toast-*`, `seg-on`, and the rest in the token file) keep their names and their role in the table of the implementation guide §2.2.
 
-Theme switching: follow the OS (`prefers-color-scheme`). `data-theme="light"` or `data-theme="dark"` on `<html>` forces a mode, and only there. `theme-color` is `#7B3FE4` on Home and Project, and the page background elsewhere. Guide §2.3.
+Theme switching: follow the OS (`prefers-color-scheme`). `data-theme` on `<html>` forces a mode. Guide §2.3.
 
 ### 2.3 Type scale
 
-Rubik. Weights mean something: 400 hints, row titles, row secondary lines and list amounts, 500 body, inputs and labels, 600 titles, heads, hero and display amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), [0120](../decisions/0120-income-green-type-scale.md), guide §5.
+Rubik 400, 500 and 600. Text is light: weight 400 is for text, 500 for body-size buttons and section heads, 600 for titles. Weight 700 is the wordmark only. Do not use 300, 800 or 900. Each role has one size, line and weight, and no other sizes are used. [0181](../decisions/0181-redesign-foundation.md) amends [0120](../decisions/0120-income-green-type-scale.md) (body 16/500 becomes 17/400, and the 17px row and card titles 600 become 500). Guide §5.
 
-| Style | Size | Line | Weight | Use |
-|---|---|---|---|---|
-| hero | 52px | 1.15 | 600 | Home profit only. Letter-spacing −0.02em |
-| display | 36px | 1.2 | 600 | Main amount on inner screens |
-| title-1 | 34px | 1.15 | 600 | Tab-root page titles. Letter-spacing −0.01em. A stacked title under Back is 28px, same line and weight (FLOW-347, #355) |
-| title-2 | 22px | 1.35 | 600 | Sheet titles |
-| band-title | 32px | 1.25 | 600 | Project name on the band |
-| heading | 20px | 1.3 | 600 | Section heads, month heads in lists |
-| title-3 | 17px | 1.45 | 600 | Compact transaction title. Row titles use its size and line at 400 |
-| amount | 17px | 1.45 | 400 | Amounts in lists, Home נכנס / יצא. Transaction rows add small raised cents |
-| body | 16px | 1.5 | 500 | Rows, input values. Inputs stay at least 16px so iOS does not zoom |
-| label | 15px | 1.5 | 500 | Labels, subtitles, links |
-| meta | 15px | 1.4 | 400 | Row secondary line, in `text-muted` |
-| hint | 13px | 1.45 | 400 | Dates, helper text, field labels |
-| micro | 11px | 1.3 | 500 | Tab labels and badges only |
-| wordmark | 22px | 1.2 | 700 | "Flow" only. Letter-spacing −0.01em. LTR |
+| Role | Size / weight | Use |
+|---|---|---|
+| band | 52 / 500 | Home band figure |
+| detail | 40 / 400 | Detail amount |
+| total | 34 / 400 | List and summary total |
+| title | 32 / 600 | Screen title; first-run hero titles |
+| card | 28 / 400 | Card figure |
+| name | 24 / 600 | Detail name, step titles, empty-state title |
+| sheet | 20 / 600 | Sheet title |
+| section | 20 / 500 | Section and date header. White, plain text, no caps, no grey label |
+| body | 17 / 400 | Row name and body text |
+| btn | 17 / 500 | Primary button |
+| btn-2 | 16 / 500 | Secondary button, icon-row value |
+| line2 | 15 / 400 | Row second line |
+| meta | 14 / 400 | Detail meta line |
+| chip | 14 / 500 | Chips, segments, avatar initials |
+| caption | 13 / 400 | Caption |
+| cents | 11 / 400 | Cents on an amount, raised 5px |
 
-CSS names are `--type-<style>-size`, `--type-<style>-line`, `--type-<style>-weight`, `--type-title-1-tracking`, and `--font-family`. Numbers use `tabular-nums` and `lining-nums`. [implementation-tokens.css](../../design/system/implementation-tokens.css), guide §5.
+Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. The old names alias the new roles until the screens move to them (R11 deletes the aliases): hero → band, display → detail, title-1 → total, band-title → title, title-2 → name, heading → sheet, title-3 → btn, amount → body, label → line2, hint → caption, micro → cents. Numbers use `tabular-nums` and `lining-nums`. Input text is at least 16px so iOS does not zoom.
 
 ### 2.4 Spacing
 
-4-point scale, plus the named layout values. [design-system.md](../../design/system/design-system.md), guide §4.
-
-| Token | Value |
+| Rule | Value |
 |---|---|
-| `--space-1` | 4px |
-| `--space-2` | 8px |
-| `--space-3` | 12px |
-| `--space-4` | 16px |
-| `--space-5` | 20px |
-| `--space-6` | 24px |
-| `--space-8` | 32px |
-| `--space-10` | 40px |
-| `--space-side` | 24px page sides |
-| `--space-card-inset` | 16px card inset from the screen edge |
-| `--space-section` | 36px between sections (up to 40px) |
+| Side margin | 20px (`--space-side`) |
+| Between sections | 14 to 24px (`--space-4` to `--space-6`) |
+| List row height | about 64px (`--row-height`); no dividers, no chevrons on flat lists |
+| Avatar (initial circle) | 36px (`--avatar`) |
+| Card padding | 14 to 18px |
+| Touch target | at least 44px |
+| Primary button | 52px pill |
+| Bars | 6 to 8px (`--bar-thin` 6px, `--bar-job` 8px) |
+| Status dot | 6px (`--dot`) |
+| Empty-state icon | 64px (`--empty-icon`) |
+
+The 4-point scale (`--space-1` to `--space-10`) is still there for the values that are not listed. Guide §4.
 
 ### 2.5 Radii
 
 | Token | Value | Use |
 |---|---|---|
+| `--radius-card` | 20px (the range is 16 to 24) | Cards |
+| `--radius-button` | 9999px | Buttons: primary buttons are pills |
 | `--radius-chip`, `--radius-fab` | 9999px | Chips, pills, badges, switch, + button |
 | `--radius-input` | 12px | Inputs, search, segmented track |
-| `--radius-button` | 14px | Buttons, toast |
-| `--radius-card` | 16px | Cards |
 | `--radius-sheet` | 24px | Sheet, top corners only |
 | `--radius-band` | 28px | Band, bottom corners only |
+
+Do not mix radii inside a component.
 
 ### 2.6 Shadows
 
@@ -174,19 +158,33 @@ There is no shadow scale in the tokens. Do not add drop shadows. The only allowe
 
 ### 2.7 Motion
 
-Short, calm, functional. No bounce, no overshoot, no attention loops. Animate only `transform` and `opacity`. Honour `prefers-reduced-motion` (durations go to 0). Guide §10, [implementation-tokens.css](../../design/system/implementation-tokens.css).
+Short, calm and functional. Nothing bounces, overshoots or loops for attention. Animate only `transform` and `opacity`. [0181](../decisions/0181-redesign-foundation.md), guide §10, [REDESIGN-PLAN §2.1](REDESIGN-PLAN.md#21-motion-tokens-and-utilities-every-component-uses-these).
 
 | Token | Value | Use |
 |---|---|---|
-| `--dur-press` | 100ms | Pressed background |
-| `--dur-fast` | 150ms | Switch, chip, segment, focus |
-| `--dur-base` | 200ms | Fades. No count-up of numbers |
-| `--dur-sheet-in` | 280ms | Sheet up. Easing `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)` |
-| `--dur-sheet-out` | 220ms | Sheet down. Easing `--ease-exit` `cubic-bezier(0.4, 0, 1, 1)` |
-| `--dur-shimmer` | 1400ms linear | Skeleton sweep, right to left |
-| `--toast-duration` | 4000ms | A plain confirmation. A toast with an action (ניסיון חוזר, ביטול, לפיצול) stays 5000ms. An error stays 4000ms. A preview notice uses the info tone, not the error tone, and also stays 4000ms when it has no action. Hover, focus, and a press pause it. The two-line minimum applies only when the text shrinks or wraps, not to the container. Toast text uses `text-wrap: balance`. A tap on the toast does not close a sheet underneath. Over an open sheet the toast sits just above the sheet. When that gap is too small it keeps its full height `--space-2` below the safe area. The same `--space-2` is the gap at every size and safe area, so the toast does not sit at y=1.5. It may cover the grabber and the empty top of the sheet. It never covers a header control. The height is measured once before the toast is visible, from the sheet's resting top, not from a rect taken while the sheet is opening. The sheet pads nothing unless a control would be covered. At safe area 0 the sheet keeps its own padding. A 320 two-line refusal pads to 20 at safe area 20 and to 47 at safe area 47, and ✕ finishes at the toast bottom plus `--space-2`. The content moves once, for `--dur-base` with `--ease-standard`, and the toast fades in after that move. No frame shows the toast except at the position it settles at. Above a short sheet the gap is `--space-2`, measured after the pad is gone. A change of the sheet's own layout places the toast and the pad before the next paint. A later toast keeps that pad instead of easing it through 0. Resize, rotation, and the keyboard place a visible toast again, and they wait while the pad or the fade is running. The timer starts when the toast is visible. The pad returns in one `--dur-base` move after the toast leaves. The text is never clipped. [0069](../decisions/0069-back-and-one-tap-review.md), [0072](../decisions/0072-design-review-rulings.md), [0074](../decisions/0074-toast-and-remembered-supplier.md), [0075](../decisions/0075-save-on-tap-and-on-leave.md) |
+| `--ease-enter` | `cubic-bezier(0.2,0.8,0.2,1)` | Everything that arrives |
+| `--ease-exit` | `cubic-bezier(0.4,0,1,1)` | Everything that leaves |
+| `--ease-standard` | `cubic-bezier(0.4,0,0.2,1)` | In-place changes: bar widths, row collapse |
+| `--motion-press` | 120ms | Press: opacity .72, and scale .985 on buttons |
+| `--motion-fast` | 150ms | Tab crossfade, chip colour, segment, toggle knob, focus ring |
+| `--motion-fade` | 200ms | Toast in, skeleton to content crossfade |
+| `--motion-toast-out` | 160ms | Toast out |
+| `--motion-sheet-out` | 220ms | Sheet out, back from a detail page, a row leaving |
+| `--motion-sheet-in` | 280ms | Sheet in |
+| `--motion-scrim` | 260ms | Sheet scrim |
+| `--motion-bar` | 240ms | Compact bar and sticky panel, in and out; month change |
+| `--motion-page` | 280ms | Page enter; push to a detail page |
+| `--motion-width` | 300ms | Bar widths (`--ease-standard`) |
+| `--motion-bar-grow` | 480ms | Thin bars grow from the right on enter |
+| `--motion-stagger` | 40ms | Page-enter stagger, first five blocks |
+| `--motion-pulse` | 1.2s | Skeleton pulse |
+| `--motion-spin` | 800ms | Inline spinner, one turn |
+| `--skeleton-delay` | 300ms | Nothing shows before this |
+| `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise; push offset (in RTL the push comes from the left, the end side, and back leaves the same way) |
 
-Screen push is 250ms from the start side. Toast in 200ms / out 150ms.
+Utilities in `app/src/ui/css/00-motion.css`: `.m-press`, `.m-page-enter` (with `--i` for the stagger index), `.m-push-in`, `.m-push-back`, `.m-sheet-in`, `.m-sheet-out`, `.m-bar-in`, `.m-bar-out`, `.m-row-leave`, `.m-bar-grow`.
+
+**Reduced motion.** Under `prefers-reduced-motion: reduce`, every `--motion-*` token is `0ms` and every rise is `0`, so the end state shows at once. Two sheet tokens stay `1ms` (`--motion-sheet-in` and `--motion-sheet-out`), because Vaul needs a transition end. The scroll-linked band fade is not timed, so it still follows the finger.
 
 ### 2.8 Component inventory and states
 
@@ -627,10 +625,10 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
   - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry. No help link.
   - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
   - Success: a new account goes to step 0. A returning account goes to the screen it asked for when that screen is on the sign-in return list (FLOW-308), otherwise Home. The callback line names it ("נכנסתם. עוברים לאישור.").
-- 09b company, merged into step 0 and retired: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). The live step has no counter and no דלג.
-- 09c bank report, superseded: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
-- 09d projects, merged into step 3 and retired: [09d-onboarding-light.png](../../design/screens/09d-onboarding-light.png).
-- 09e install and notifications, superseded: [09e-onboarding-light.png](../../design/screens/09e-onboarding-light.png). [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md). Install is step 5. Notifications are not a step.
+- 09b company, merged into step 0 and retired: 09b-onboarding-light.png. The live step has no counter and no דלג.
+- 09c bank report, superseded: 09c-onboarding-light.png. Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
+- 09d projects, merged into step 3 and retired: 09d-onboarding-light.png.
+- 09e install and notifications, superseded: 09e-onboarding-light.png. [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md). Install is step 5. Notifications are not a step.
 - Each of 09b–09e has a `-dark.png`. One primary per step. Guide §3.4.
 
 ### 10 Transaction detail
@@ -779,9 +777,6 @@ Every file has `-light.png` and `-dark.png`. [0026](../decisions/0026-empty-load
 
 | Board | Light | Dark |
 |---|---|---|
-| Colours | [ds-1-colours-light.png](../../design/system/ds-1-colours-light.png) | [ds-1-colours-dark.png](../../design/system/ds-1-colours-dark.png) |
-| Type | [ds-2-type-light.png](../../design/system/ds-2-type-light.png) | [ds-2-type-dark.png](../../design/system/ds-2-type-dark.png) |
-| Spacing | [ds-3-spacing-light.png](../../design/system/ds-3-spacing-light.png) | [ds-3-spacing-dark.png](../../design/system/ds-3-spacing-dark.png) |
 | Controls | [ds-4-controls-light.png](../../design/system/ds-4-controls-light.png) | [ds-4-controls-dark.png](../../design/system/ds-4-controls-dark.png) |
 | Content | [ds-5-content-light.png](../../design/system/ds-5-content-light.png) | [ds-5-content-dark.png](../../design/system/ds-5-content-dark.png) |
 | Band | [ds-6-band-light.png](../../design/system/ds-6-band-light.png) | [ds-6-band-dark.png](../../design/system/ds-6-band-dark.png) |

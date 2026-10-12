@@ -134,7 +134,6 @@
   --text-title-1: var(--type-title-1-size);
   --text-title-1--line-height: var(--type-title-1-line);
   --text-title-1--font-weight: var(--type-title-1-weight);
-  --text-title-1--letter-spacing: var(--type-title-1-tracking);
   --text-title-2: var(--type-title-2-size);
   --text-title-2--line-height: var(--type-title-2-line);
   --text-title-2--font-weight: var(--type-title-2-weight);
@@ -194,7 +193,7 @@
   --band-label-gap: 2px;
   --tab-slot: 64px;
   --tab-icon-gap: 3px;
-  --empty-icon: 80px;
+  --empty-icon: 64px;
   --empty-line: 300px;
   --label-gap: 6px;
   --grab-width: 40px;

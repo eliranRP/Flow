@@ -95,7 +95,7 @@ export function SheetSurface({
 }
 
 function sheetOutMs(): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue("--dur-sheet-out").trim();
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--motion-sheet-out").trim();
   if (raw.endsWith("ms")) return Number.parseFloat(raw);
   if (raw.endsWith("s")) return Number.parseFloat(raw) * 1000;
   return 220;

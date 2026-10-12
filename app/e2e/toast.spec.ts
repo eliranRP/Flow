@@ -180,7 +180,7 @@ function assertVisiblePosition(samples: ToastFrame[]): void {
 
 /**
  * FLOW-309 (the ramp check dropped in 263b1d25): after a pad move the toast fades in over
- * `--dur-base`; with no pad move it appears at its settled position in one frame (0075).
+ * `--motion-fade`; with no pad move it appears at its settled position in one frame (0075).
  * No real flow pads the sheet today; "a pad move ramps the fade" forces one with a test-only safe area.
  */
 function assertFade(samples: ToastFrame[]): void {

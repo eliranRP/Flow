@@ -481,7 +481,7 @@ static_part() {
 typecheck_part() {
   local info dir script
   info="$(cd "$cache" && pwd)/tsbuildinfo"
-  node scripts/check-unused-app-code.mjs && node scripts/check-unused-css.mjs # FLOW-819, 822: no dead code or CSS.
+  node scripts/check-unused-app-code.mjs && node scripts/check-unused-css.mjs && node scripts/check-css-tokens.mjs # FLOW-819, 822, 363: no dead code, CSS or raw CSS values.
   if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
     != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
     pnpm typecheck

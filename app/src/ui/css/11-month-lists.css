@@ -284,7 +284,7 @@
 
 .ui-toast-host[data-phase="fade"] .ui-toast {
   opacity: 1;
-  transition: opacity var(--dur-base) var(--ease-standard);
+  transition: opacity var(--motion-fade) var(--ease-standard);
 }
 
 .ui-toast-host[data-phase="in"] .ui-toast {

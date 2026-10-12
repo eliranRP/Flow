@@ -408,9 +408,13 @@ describe("settings account", () => {
 
   function cssPx(value: string): number {
     const root = getComputedStyle(document.documentElement);
-    const named = /^var\((--[^),\s]+)\)$/.exec(value.trim());
-    const token = named?.[1];
-    const resolved = token != null ? root.getPropertyValue(token).trim() : value.trim();
+    // A token may alias another (FLOW-363: the old type names point at the new roles), so follow the chain.
+    let resolved = value.trim();
+    for (let depth = 0; depth < 5; depth += 1) {
+      const named = /^var\((--[^),\s]+)\)$/.exec(resolved);
+      if (named?.[1] == null) break;
+      resolved = root.getPropertyValue(named[1]).trim();
+    }
     if (resolved.endsWith("rem")) return Number.parseFloat(resolved) * 16;
     if (resolved.endsWith("px")) return Number.parseFloat(resolved);
     return Number.parseFloat(resolved);
@@ -469,7 +473,7 @@ describe("settings account", () => {
     expect(single).not.toBeNull();
     expect(single?.querySelector(".ui-row-hint")).toBeNull();
     expect(getComputedStyle(single as Element).boxSizing).toBe("border-box");
-    expect(rowHeight(false)).toBe(53);
+    expect(rowHeight(false)).toBe(50);
     unmount();
 
     renderWithProviders(
@@ -486,7 +490,7 @@ describe("settings account", () => {
     const paired = screen.getByText("owner@example.com").closest(".ui-row");
     expect(paired?.querySelector(".ui-row-hint")).toBeNull();
     expect(screen.getByText("אלפא").closest(".ui-row")?.querySelector(".ui-row-hint")).toBeNull();
-    expect(rowHeight(false)).toBe(53);
+    expect(rowHeight(false)).toBe(50);
     document.documentElement.style.removeProperty("--row-pad");
   });
 

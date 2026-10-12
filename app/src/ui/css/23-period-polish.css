@@ -44,7 +44,7 @@
 */
 .ui-pswipe {
   min-inline-size: 0;
-  transition: transform var(--dur-fast) var(--ease-standard);
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 /* pinch-zoom stays with the browser too, so the figure never blocks zooming the page. */

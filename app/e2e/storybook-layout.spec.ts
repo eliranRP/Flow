@@ -151,7 +151,7 @@ test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW
     for (const width of widths) {
       await page.setViewportSize({ width, height: 844 });
       for (const [id, names, rowCount] of cases) {
-        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
         for (const name of names) await expect(page.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
@@ -181,7 +181,7 @@ test("the split-by-category stories stay inside 320 and 390, light and dark (FLO
     for (const width of widths) {
       await page.setViewportSize({ width, height: 844 });
       for (const story of stories) {
-        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${story.id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
         await page.waitForTimeout(400);
@@ -198,7 +198,7 @@ test("the split-by-category stories stay inside 320 and 390, light and dark (FLO
 
 test("the closed period picker is only the band and the on-band pill", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=components-periodpicker--closed&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.goto("/iframe.html?id=components-periodpicker--closed&globals=theme:light&viewMode=story", { waitUntil: "domcontentloaded" });
   await page.locator(".ui-band-period").waitFor();
   await expect(page.locator("[role=dialog]")).toHaveCount(0);
   await expect(page.locator("[data-vaul-overlay]")).toHaveCount(0);
@@ -240,7 +240,7 @@ test("the project search stories stay inside 320 and 390, light and dark", async
     for (const width of widths) {
       await page.setViewportSize({ width, height: 844 });
       for (const id of ["screens-routes--projects-search", "screens-routes--projects-many-active"]) {
-        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
         if (id.endsWith("search")) {
@@ -280,7 +280,7 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
     for (const width of [320, 360, 390]) {
       await page.setViewportSize({ width, height: 844 });
       for (const id of stories) {
-        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
         if (id.endsWith("scope") || id.endsWith("secret") || id.endsWith("help") || id.endsWith("used") || id.endsWith("unused")) {
