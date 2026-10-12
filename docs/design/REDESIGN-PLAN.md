@@ -130,7 +130,7 @@ FLOW-363 leaves their slots and tokens in place and adds no loader of its own.
 
 ### 2.3 Tokens (363.1)
 
-- **Source of truth.** `design/system/implementation-tokens.css` becomes the one hand-edited token file. Its header says "generated from design-tokens.json", but the generator has drifted: running `design/src/gen_implementation_tokens.py` today drops `--surface-hover`, `--tabbar-min-inset`, `--toast-duration-error` and the `.t-hint` colour, and no code reads `design-tokens.json`. So 363.1 deletes `design-tokens.json` and `gen_implementation_tokens.py`, rewrites the header, and updates every doc that names them (`design/README.md`, `design/system/design-system.md`, implementation-guide §2.1, DESIGN-RULES, `design/MANIFEST.txt`). `design/src/tokens.py` stays only while the old mockup generators in `design/src` use it; R11 deletes `design/src` with the last old board.
+- **Source of truth.** `design/system/implementation-tokens.css` becomes the one hand-edited token file. Its header says "generated from design-tokens.json", but the generator has drifted: running `design/src/gen_implementation_tokens.py` today drops `--surface-hover`, `--tabbar-min-inset`, `--toast-duration-error` and the `.t-hint` colour, and no code reads `design-tokens.json`. So 363.1 deletes `design-tokens.json` and `gen_implementation_tokens.py`, rewrites the header, and updates every doc that names them (`design/README.md`, `design/system/design-system.md`, implementation-guide §2.1, DESIGN-RULES, `docs/tech/tech-plan.md`, `design/MANIFEST.txt`). `design/src/tokens.py` stays only while the old mockup generators in `design/src` use it (363.1 also removes the `design-tokens.json` write in `design/src/flow.py`); R11 deletes `design/src` with the last old board.
 - **Type.** One token per role in REDESIGN-BUILD's table: `--type-band`, `--type-detail`, `--type-total`, `--type-title`, `--type-card`, `--type-name`, `--type-sheet`, `--type-section`, `--type-body`, `--type-btn`, `--type-btn-2`, `--type-line2`, `--type-meta`, `--type-chip`, `--type-caption`, `--type-cents`.
   - Each role keeps today's pattern: `--type-<role>-size`, `-line` and `-weight`, a `.t-<role>` class, and the `--text-<role>` aliases in `app/src/styles/app.css`. `--type-wordmark` is kept as it is.
   - The old `--type-hero`, `display`, `title-1`, `band-title`, `title-2`, `heading`, `title-3`, `amount`, `body`, `label`, `meta`, `hint` and `micro` go once nothing reads them. 363.1 aliases each old name to its new role, so screens keep working; each screen PR switches to the new names; R11 deletes the aliases.
@@ -138,7 +138,7 @@ FLOW-363 leaves their slots and tokens in place and adds no loader of its own.
 - **Colour.** The dark values from FLOW-363 (#15111E background and the rest), keeping today's `--color-*` names where they exist, plus `--color-band-past`, `--color-signal-soft`, `--color-pill-helps` and `--color-pill-hurts`. Light values are FLOW-372's.
 - **Spacing.** `--space-side` 24 → 20px. Section gaps use `--space-4` to `--space-6` (14 to 24px). Add `--row-height` 64px, `--avatar` 36px, `--empty-icon` 64px (was 80), `--bar-thin` 6px, `--bar-job` 8px and `--dot` 6px.
 - **Radius.** `--radius-card` 20px (inside the 16 to 24 range). Buttons become pills: `--radius-button` is 9999px.
-- **New decision** (next free number, 0181 at the time of writing): it records the new scale, colours and motion, and amends [0120](../decisions/0120-income-green-type-scale.md) and today's `--type-*` weights.
+- **New decision** (next free number, 0181 at the time of writing): it records the new scale, colours and motion, and amends [0120](../decisions/0120-income-green-type-scale.md), today's `--type-*` weights, and [0025](../decisions/0025-implementation-guide-is-mandatory.md) (`implementation-tokens.css` replaces `design-tokens.json` as the token source).
 
 ### 2.4 The four FLOW-363 PRs
 
@@ -162,7 +162,7 @@ Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copie
 3. **Theme and width are globals, never story copies.**
    - `preview.tsx` already has the `theme` toolbar global and the `flow320` and `flow393` viewports.
    - 363.1 makes dark the default theme, because dark is the drawn theme.
-   - 363.1 adds `scripts/story-shots.mjs`: given story ids and a built Storybook, it screenshots each story in dark and light at 320 and 393 (through the `globals=theme:…;viewport:…` URL), for the design review. CSS tokens hang on `:root[data-theme]`, so one page can't show both themes side by side; four shots can.
+   - 363.1 adds `scripts/story-shots.mjs`: given story ids and a built Storybook, it screenshots each story in dark and light at 320 and 393 (theme through `&globals=theme:…`, width through `page.setViewportSize`, as `clip-check.mjs` does), for the design review. CSS tokens hang on `:root[data-theme]`, so one page can't show both themes side by side; four shots can.
    - The vitest Storybook project and `clip-check` run each story in both themes and at both widths, so no `*Dark` or `*320` story is written by hand.
    - A story whose layout only breaks at a size (for example a sticky bar at 375x667) keeps a story-level `parameters.viewport` and a name that says why.
 4. **Docs pages.** `tags: ["autodocs"]` on every component meta. The component's JSDoc becomes its docs page, with the controls table and every state story.
