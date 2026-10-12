@@ -128,7 +128,7 @@ Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. The
 |---|---|
 | Side margin | 20px (`--space-side`) |
 | Between sections | 14 to 24px (`--space-4` to `--space-6`) |
-| List row height | about 64px (`--row-height`); no dividers, no chevrons on flat lists |
+| List row height | about 64px (`--row-height`); no dividers, no chevrons on flat lists. An inset list (rows in a card) keeps 14px inside and a `--color-line` hairline between rows (FLOW-363 2d) |
 | Avatar (initial circle) | 36px (`--avatar`) |
 | Card padding | 14 to 18px |
 | Touch target | at least 44px |
@@ -207,6 +207,8 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Text input | default, focused, filled, error, disabled | Label above. Error is red border plus a message. A connect or setup form checks required fields on submit, before any request: the message sits on the field's reserved message line (`reserveMessage`, so the button does not move) saying what to type ("כתבו X.", §3.7 FLOW-115), focus goes to the first empty field, and fields are read-only while the submit is busy (FLOW-508) |
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed; one row, or two rows (review, unpaid) each pressed on its own | The one tinted block on Home. Two rows share it, separated by padding, no hairline (FLOW-321) |
+| List row, flat (`ListRow layout="flat"`, `List layout="flat"`) | default, pressed, focus, busy, disabled | Long lists (month lines, invoices, anything that can grow): rows on the background, 20px page sides, no dividers, no chevrons. About 64px tall. A 36px initial circle, the name at body 17/400, one grey line at line2 15/400, the amount at the end (FLOW-363 2d) |
+| List row, inset (`ListRow layout="inset"`, `List layout="inset"`) | default, pressed, focus, busy, disabled | Rows inside a card (detail sections, settings groups): the list is one Card surface (`--color-surface`, `--radius-card`, no border), rows have 14px side padding (`--space-inset-row`) and a 1px `--color-line` divider between rows, not after the last (FLOW-363 2d) |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
 | Transaction row | expense in `text` with −; income in `income` green with a `+` ([0181](../decisions/0181-redesign-foundation.md)), with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. A row that opens the transaction carries the trailing chevron (FLOW-328). A line kept out of the P&L reads "מחוץ לרווח" first in its hint (FLOW-411). [0120](../decisions/0120-income-green-type-scale.md) |
 | Statement row (`ListRow variant="statement"`) | default, pressed, focus; pending; with suggestion; income; name with no letter | FLOW-305 option A, the review list. 40px initials circle in `tint` with `accent-text` letters (one colour for every row; a name with no letter shows the source icon). Counterparty 17/400 `text`, one line; a Latin name is LTR and cuts at its end. Line 2 in `meta`: the `בהמתנה` status chip, then `✦` in `accent-text` and "project · category" (ellipsis). End column: the amount as in a transaction row, the method under it (16px icon + `meta` label, never cut). The link name reads counterparty, method, "הצעה: …", direction word + amount, "בהמתנה". Day heads (`היום`, `אתמול`, `יום ב׳ · 05/10`) are h3, 15/500 `text-secondary`, under the sticky month head, not sticky; month totals show cents when the rows do. |

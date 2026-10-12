@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ListRow, type StatementRowProps } from "./list-row";
+import { List, ListRow, type StatementRowProps } from "./list-row";
 import { SuggestTag } from "./suggest-tag";
 import { expectRtl, expectTarget } from "./test-support";
 
@@ -476,5 +476,88 @@ describe("ListRow markup (FLOW-310)", () => {
       expect(control.querySelector("div, p, h1, h2, h3, h4, h5, h6, ul, section")).toBeNull();
     }
     expect(screen.getAllByRole("heading").map((node) => node.textContent)).toEqual(["כותרת"]);
+  });
+});
+
+describe("ListRow and List layouts (FLOW-363 2d)", () => {
+  it("draws neither layout class when no layout is passed", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <List>
+          <ListRow variant="item" title="ברירת מחדל" hint="רמז" />
+          <ListRow variant="static" title="סטטי" />
+          <ListRow variant="button" title="כפתור" onClick={() => undefined} />
+        </List>
+      </MemoryRouter>,
+    );
+    expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-flat", "ui-list-inset");
+    for (const row of container.querySelectorAll(".ui-row")) {
+      expect(row).not.toHaveClass("ui-row-flat", "ui-row-inset");
+    }
+  });
+
+  it("gives a flat row and a flat List the flat classes on every variant", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <List layout="flat">
+          <ListRow layout="flat" variant="item" title="פריט" hint="רמז" href="/a" />
+          <ListRow layout="flat" variant="item" title="פריט בלי קישור" hint="רמז" />
+          <ListRow layout="flat" variant="static" title="סטטי" />
+          <ListRow layout="flat" variant="button" title="כפתור" onClick={() => undefined} />
+          <ListRow layout="flat" variant="danger" title="מחיקה" onClick={() => undefined} />
+          <ListRow layout="flat" variant="selectable" title="בחירה" selected={false} onSelect={() => undefined} />
+          <ListRow layout="flat" variant="project" title="פרויקט" agorot={100_000n} href="/p" />
+          <ListRow layout="flat" variant="transaction" title="תנועה" agorot={-100_000n} sign="out" source="bank" />
+          <ListRow layout="flat" variant="skeleton" />
+        </List>
+      </MemoryRouter>,
+    );
+    expect(container.querySelector(".ui-project-list")).toHaveClass("ui-list-flat");
+    expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-inset");
+    const rows = container.querySelectorAll(".ui-row");
+    expect(rows).toHaveLength(9);
+    for (const row of rows) {
+      expect(row).toHaveClass("ui-row-flat");
+      expect(row).not.toHaveClass("ui-row-inset");
+    }
+  });
+
+  it("gives an inset row and an inset List the inset classes on every variant", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <List layout="inset">
+          <ListRow layout="inset" variant="item" title="פריט" hint="רמז" href="/a" />
+          <ListRow layout="inset" variant="static" title="סטטי" />
+          <ListRow layout="inset" variant="button" title="כפתור" onClick={() => undefined} />
+          <ListRow layout="inset" variant="danger" title="מחיקה" onClick={() => undefined} />
+          <ListRow layout="inset" variant="selectable" title="בחירה" selected onSelect={() => undefined} />
+          <ListRow layout="inset" variant="project" title="פרויקט" agorot={100_000n} onClick={() => undefined} />
+          <ListRow layout="inset" variant="transaction" title="תנועה" agorot={-100_000n} sign="out" source="bank" />
+          <ListRow layout="inset" variant="skeleton" />
+        </List>
+      </MemoryRouter>,
+    );
+    expect(container.querySelector(".ui-project-list")).toHaveClass("ui-list-inset");
+    expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-flat");
+    const rows = container.querySelectorAll(".ui-row");
+    expect(rows).toHaveLength(8);
+    for (const row of rows) {
+      expect(row).toHaveClass("ui-row-inset");
+      expect(row).not.toHaveClass("ui-row-flat");
+    }
+  });
+
+  it("keeps a busy button row with a layout at aria-busy and ignores its taps", () => {
+    const onClick = vi.fn();
+    render(
+      <MemoryRouter>
+        <ListRow layout="flat" variant="button" title="מרענן…" busy onClick={onClick} />
+      </MemoryRouter>,
+    );
+    const button = screen.getByRole("button", { name: "מרענן…" });
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveClass("ui-row-flat");
+    fireEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

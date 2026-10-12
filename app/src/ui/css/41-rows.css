@@ -1,0 +1,37 @@
+/* FLOW-363 (2d): list layouts. Flat is a long list's row on the background (no divider). Inset is a
+   row inside a card (the list is the card; the rows sit between hairlines). No layout prop keeps the
+   default row. Values come from the tokens. */
+
+/* Flat: the row is 64px tall, and its initial circle is 36px. */
+.ui-row-flat {
+  min-height: var(--row-height);
+}
+
+.ui-row-flat .ui-avatar {
+  inline-size: var(--avatar);
+  block-size: var(--avatar);
+}
+
+/* Inset: one Card surface holds the rows. The rows are inset 14px, and a hairline sits between them. */
+.ui-list-inset {
+  padding-inline: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.ui-list-inset > .ui-row,
+.ui-list-inset > .ui-row-side > .ui-row {
+  padding-inline: var(--space-inset-row);
+}
+
+.ui-list-inset > .ui-row:not(:last-child),
+.ui-list-inset > .ui-row-side:not(:last-child) {
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* The pressed and focus tint fills the card's width and keeps its square corners inside the card. */
+.ui-list-inset .ui-row::before {
+  inset-inline: 0;
+  border-radius: 0;
+}

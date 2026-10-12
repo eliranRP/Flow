@@ -9,7 +9,15 @@ import { statementRowLabel, textDir, type StatementDetail, type StatementMethod 
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
 
+/**
+ * FLOW-363 (2d): `flat` is a long list's row (no divider, a 64px line, the 36px initial); `inset` is a
+ * row inside a card (14px side padding, a hairline between rows). No prop keeps today's row.
+ */
+export type ListLayout = "flat" | "inset";
+
 type Common = {
+  /** FLOW-363 (2d): the row's list layout. The List passes nothing; the screen sets both. */
+  layout?: ListLayout;
   title: ReactNode;
   /** Muted line above the title. Project and category rows use it. */
   eyebrow?: string;
@@ -86,6 +94,7 @@ export type ListRowProps =
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | {
     variant: "skeleton";
+    layout?: ListLayout;
     /** Holds the icon slot the loaded row has. */
     icon?: boolean;
     /** A short eyebrow over a long value, as an eyebrow row draws (FLOW-358). Default: long title over short hint. */
@@ -134,9 +143,10 @@ export type StatementRowProps = {
 export function ListRow(props: ListRowProps) {
   const hintId = useId();
   if (props.variant === "statement") return <StatementRow {...props} />;
+  const layoutClass = props.layout === "flat" ? "ui-row-flat" : props.layout === "inset" ? "ui-row-inset" : false;
   if (props.variant === "skeleton") {
     return (
-      <div className="ui-row" aria-hidden="true">
+      <div className={cx("ui-row", layoutClass)} aria-hidden="true">
         {props.icon === true ? (
           <span className="ui-row-icon">
             <Skeleton className="ui-skel-icon" />
@@ -246,7 +256,7 @@ export function ListRow(props: ListRowProps) {
   if (props.variant === "static") {
     return (
       <div
-        className={cx("ui-row", toneClass, props.className)}
+        className={cx("ui-row", layoutClass, toneClass, props.className)}
         role={described ? "group" : undefined}
         aria-label={described ? rowName(props) : undefined}
         aria-describedby={described}
@@ -261,7 +271,7 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className={cx("ui-row", "ui-hit", toneClass, props.clearHint === true && rowDisabled && "ui-row-clear-hint", props.className)}
+        className={cx("ui-row", "ui-hit", layoutClass, toneClass, props.clearHint === true && rowDisabled && "ui-row-clear-hint", props.className)}
         disabled={props.disabled === true}
         aria-disabled={softDisabled || undefined}
         aria-busy={props.busy === true}
@@ -283,7 +293,7 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className={cx("ui-row ui-hit ui-row-danger", props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
+        className={cx("ui-row ui-hit ui-row-danger", layoutClass, props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
         disabled={props.disabled === true || props.busy === true}
         aria-busy={props.busy === true}
         aria-label={described ? rowName(props) : undefined}
@@ -296,7 +306,7 @@ export function ListRow(props: ListRowProps) {
   }
   if (props.variant === "selectable") {
     return (
-      <button type="button" className="ui-row ui-hit" aria-pressed={props.selected} onClick={props.onSelect}>
+      <button type="button" className={cx("ui-row ui-hit", layoutClass)} aria-pressed={props.selected} onClick={props.onSelect}>
         {body}
       </button>
     );
@@ -308,6 +318,7 @@ export function ListRow(props: ListRowProps) {
       : props.variant === "item" && props.plain === true
         ? "ui-row"
         : "ui-row ui-hit",
+    layoutClass,
     toneClass,
     props.setAside === true && "ui-row-set-aside",
     // A set-aside row whose mark is the tag (no kept-out words in its hint) lets the title use the row's width.
@@ -539,6 +550,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   );
 }
 
-export function List({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("ui-project-list", className)}>{children}</div>;
+export function List({ children, className, layout }: { children: ReactNode; className?: string; layout?: ListLayout }) {
+  const layoutClass = layout === "flat" ? "ui-list-flat" : layout === "inset" ? "ui-list-inset" : false;
+  return <div className={cx("ui-project-list", layoutClass, className)}>{children}</div>;
 }
