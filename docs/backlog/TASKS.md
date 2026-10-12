@@ -282,6 +282,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
 | <a id="flow-363"></a>[FLOW-363](tasks/FLOW-363.md) | Redesign foundation: type scale, colours, motion and shared parts | UI (design approved) |
 | <a id="flow-371"></a>[FLOW-371](tasks/FLOW-371.md) | Redesign: skeletons, empty states and loaders | UI (design approved) |
+| <a id="flow-372"></a>[FLOW-372](tasks/FLOW-372.md) | Redesign: light theme and the מראה setting | UI (design approved) |
 | <a id="flow-364"></a>[FLOW-364](tasks/FLOW-364.md) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
