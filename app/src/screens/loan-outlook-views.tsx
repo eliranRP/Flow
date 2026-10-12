@@ -1,6 +1,6 @@
 import type { LoanSplitPart } from "@flow/shared";
 import { useId, useState } from "react";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { CalendarIcon } from "../ui/icons";
@@ -86,7 +86,7 @@ function Figure({ loan, label, minor, meta }: { loan: LoanDetail; label: string;
   return (
     <div className="ui-page-pad ui-loan-next">
       <p className="t-label">{label}</p>
-      <p className="t-display"><BigNumber agorot={minor} currency={loan.currency} size="display" /></p>
+      <p className="t-display"><Amount agorot={minor} currency={loan.currency} size="display" /></p>
       {meta == null ? null : <p className="t-meta">{meta}</p>}
     </div>
   );

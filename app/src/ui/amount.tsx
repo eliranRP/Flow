@@ -2,6 +2,8 @@ import { formatAmountText } from "@flow/shared";
 import { useLayoutEffect, useRef, useState } from "react";
 
 export type AmountPresentation = "summary" | "detail";
+/** Roles from the Design guide: band 52/500, detail 40/400, total 34/400, card 28/400, list 17/400. */
+export type AmountSize = "hero" | "display" | "total" | "card" | "list";
 
 /**
  * Summaries are whole shekels. Detail shows agorot only when they are not zero.
@@ -16,20 +18,21 @@ export function formatAmount(
   return formatAmountText(agorot, currency, {
     detail: presentation === "detail",
     direction,
+    plus: direction === "income",
   });
 }
 
-type BigNumberProps = {
+type AmountProps = {
   agorot: bigint;
   presentation?: AmountPresentation;
   currency?: string;
-  size?: "hero" | "display" | "list";
+  size?: AmountSize;
   /** Loss colour is only used together with the minus that formatAmount already draws. */
   loss?: boolean;
   direction?: "income" | "expense";
   /**
-   * Money in: draws the figure in the income colour (decision 0120). Only a figure that shows no
-   * minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
+   * Money in: draws the figure in the income colour with a "+" (decisions 0120, 0181). Only a figure that
+   * shows no minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
    */
   income?: boolean;
   /**
@@ -57,25 +60,27 @@ export function splitCents(text: string, presentation: AmountPresentation): { wh
 const sizeClass = {
   hero: "t-hero",
   display: "t-display",
+  total: "t-total",
+  card: "t-card",
   list: "t-amount",
 } as const;
 
 const heroSteps = ["t-hero", "t-display", "t-title-1", "t-title-2", "t-title-3"] as const;
 
 /** Where a fitted size starts on the step list. Hero and display step down until the figure fits; list never does. */
-function firstStep(size: "hero" | "display" | "list" | undefined): number | null {
+function firstStep(size: AmountSize | undefined): number | null {
   if (size === "hero") return 0;
   if (size === "display") return 1;
   return null;
 }
 
-export function heroStepClass(size: "hero" | "display" | "list" | undefined, step: number): string {
+export function heroStepClass(size: AmountSize | undefined, step: number): string {
   const first = firstStep(size);
   if (first == null) return size ? sizeClass[size] : "";
   return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
 }
 
-export function BigNumber({
+export function Amount({
   agorot,
   presentation = "summary",
   currency = "ILS",
@@ -84,11 +89,12 @@ export function BigNumber({
   direction,
   income = false,
   cents,
-}: BigNumberProps) {
+}: AmountProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const shown = cents === "always" ? "detail" : presentation;
-  const text = formatAmount(agorot, shown, currency, direction);
+  // Money in gets a plus (decision 0181). Only a non-zero figure with no loss: zero has no sign.
+  const text = formatAmount(agorot, shown, currency, direction ?? (income && !loss && agorot > 0n ? "income" : undefined));
   useLayoutEffect(() => {
     const first = firstStep(size);
     if (first == null) return;
@@ -170,7 +176,8 @@ export function BigNumber({
     };
   }, [size, text]);
   // Zero is not money in, and a figure with a minus is never green.
-  const green = income && !loss && agorot !== 0n && !showsMinus(text);
+  // A figure that rounds to "₪0" (40 agorot in a summary) is zero too.
+  const green = income && !loss && agorot !== 0n && !/^\D*0$/.test(text) && !showsMinus(text);
   const { whole, cents: tail } = splitCents(text, shown);
   return (
     <bdi

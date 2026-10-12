@@ -265,9 +265,8 @@ describe("Breakdown lines screen", () => {
     };
     wrap("/flow/expense/category/ILS/c1");
     const row = await screen.findByRole("link", { name: /זיכוי 12/ });
-    expect(row).toHaveTextContent("זיכוי ₪194");
-    expect(row).not.toHaveTextContent("+");
-    expect(row.querySelector(".ui-income")).toHaveTextContent("₪194");
+    expect(row).toHaveTextContent("זיכוי +₪194");
+    expect(row.querySelector(".ui-income")).toHaveTextContent("+₪194");
     expect(screen.queryByRole("button", { name: "עוד תנועות" })).not.toBeInTheDocument();
   });
 

@@ -232,7 +232,24 @@ describe("transaction status chips", () => {
       supplier_name: null,
     });
     // The cents sit in their own span, drawn smaller; the figure still reads as one text.
-    expect(screen.getByText((_, node) => node?.tagName === "BDI" && node.textContent === "$12.34")).toBeInTheDocument();
+    expect(screen.getByText((_, node) => node?.tagName === "BDI" && node.textContent === "+$12.34")).toBeInTheDocument();
+  });
+
+  it("draws an income credit with its minus, not a plus, as its row does (decision 0181)", () => {
+    renderTxn({
+      ...expense,
+      direction: "income",
+      amount_gross: -50000n,
+      amount_net: -50000n,
+      vat_amount: 0n,
+      review_status: null,
+      paid: null,
+      open_gross_agorot: null,
+      customer_name: "לקוח",
+      supplier_name: null,
+    });
+    const figure = screen.getByText((_, node) => node?.tagName === "BDI" && node.textContent === "−₪500");
+    expect(figure).not.toHaveClass("ui-income");
   });
 
   it("draws no status chip when the review and payment are unknown", () => {

@@ -127,6 +127,7 @@
   --bar-thin: 6px;
   --bar-job: 8px;
   --dot: 6px;
+  --cents-raise: 5px;            /* list amount: agorot raised above the baseline (Design guide, FLOW-363) */
   --status-gap: 6px;
   --pill-pad-block: 3px;
   --pill-pad-inline: 10px;

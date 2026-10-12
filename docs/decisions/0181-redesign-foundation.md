@@ -55,6 +55,8 @@ The old scale had nine weights and sizes that did not match the screens: 600 on 
 - Supersedes [0024](0024-design-system-approved.md) for colour, type, spacing and motion. The ds boards it links are retired, and the Design canvas is the design reference. Its Rubik weights and WCAG AA rule stand.
 - The `meta` token changes size. `--type-meta` used to be 15px; it is now the 14px detail meta line. Row second lines (`.ui-row-hint` and the hint clip boxes) moved to `line2` (15px) in this change. The remaining old `meta` readers shrink 1px until their screen PR assigns each one `line2` or `meta`: month lists, the transaction page, team, split, and Tailwind `text-meta`.
 
+- Owner's answers, 2026-10-12, where the board's sample text and earlier rules differed: whole amounts keep no ".00" (the 2026-10-10 rule; the board's "+$1,850.00" is sample text), and expenses keep their U+2212 minus in every list (the board's "$86.40" is sample text). Income gets "+" and green; a loss keeps its minus in the signal colour.
+
 ## Alternatives rejected
 
 - Keep the old scale and add the new sizes beside it. Two scales would drift again, and the screens could not share one rule.

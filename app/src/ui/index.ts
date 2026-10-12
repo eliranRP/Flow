@@ -1,8 +1,8 @@
 export { BackButton, ScrollMemory, historyIndex, transactionParent, useGoBack, useSheetHistory } from "./back";
 export { Banner, BannerRows, Notice } from "./banner";
 export type { BannerRow } from "./banner";
-export { BigNumber, formatAmount } from "./big-number";
-export type { AmountPresentation } from "./big-number";
+export { Amount, formatAmount } from "./amount";
+export type { AmountPresentation } from "./amount";
 export { Button } from "./button";
 export type { ButtonProps, ButtonVariant } from "./button";
 export { ChangePill } from "./change-pill";

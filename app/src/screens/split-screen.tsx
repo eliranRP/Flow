@@ -19,7 +19,7 @@ import { useDashboardQuery, useInvalidateBooks, useTransactionQuery } from "../u
 import { useWriteGate } from "../use-is-viewer";
 import { assertNoError } from "../use-write";
 import { useGoBack } from "../ui/back";
-import { BigNumber } from "../ui/big-number";
+import { Amount as AmountFigure } from "../ui/amount";
 import { ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
 import { formatDisplay } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
@@ -409,7 +409,7 @@ function ProjectSplitEditor({
         <div className="ui-lsplit-head">
           <p className="t-display">
             {income ? <span className="sr-only">הכנסה </span> : null}
-            <BigNumber agorot={lineMinor} presentation="detail" currency={currency} income={income} size="display" />
+            <AmountFigure agorot={lineMinor} presentation="detail" currency={currency} income={income} size="display" />
           </p>
           {meta ? <p className="t-label ui-lsplit-meta"><bdi>{meta}</bdi></p> : null}
         </div>

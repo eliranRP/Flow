@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from "react";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { cx } from "./cx";
 import { formatDayMonth } from "./date-math";
 import { AlertIcon } from "./icons";
@@ -102,7 +102,7 @@ function OtherCurrencies({ list }: { list: readonly MinorInCurrency[] }) {
         <span key={item.currency}>
           {index > 0 ? " · " : null}
           {"ועוד "}
-          <BigNumber agorot={item.minor} currency={item.currency} />
+          <Amount agorot={item.minor} currency={item.currency} />
           {` ${currencyWord(item.currency)}`}
         </span>
       ))}
@@ -110,10 +110,10 @@ function OtherCurrencies({ list }: { list: readonly MinorInCurrency[] }) {
   );
 }
 
-function Amount({ minor, currency, loss = false }: { minor: bigint; currency: string; loss?: boolean }) {
+function CardAmount({ minor, currency, loss = false }: { minor: bigint; currency: string; loss?: boolean }) {
   return (
     <span className="ui-invest-value t-amount">
-      <BigNumber agorot={minor} currency={currency} loss={loss} />
+      <Amount agorot={minor} currency={currency} loss={loss} />
     </span>
   );
 }
@@ -151,7 +151,7 @@ function FigureRow({
 }
 
 function FigureValue({ minor, currency, readOnly }: { minor: bigint | null; currency: string; readOnly: boolean }) {
-  if (minor != null) return <Amount minor={minor} currency={currency} />;
+  if (minor != null) return <CardAmount minor={minor} currency={currency} />;
   // A viewer sees no הוספה: nothing on the card opens (FLOW-404).
   if (readOnly) return <span className="ui-invest-empty t-label">לא הוזן</span>;
   return <span className="ui-invest-add t-label">הוספה</span>;
@@ -177,7 +177,7 @@ function Equity({
       <span className="ui-invest-equity-label t-hint">{label}</span>
       {minor != null ? (
         <span className="ui-invest-equity-figure">
-          <BigNumber agorot={minor} currency={currency} loss={minor < 0n} />
+          <Amount agorot={minor} currency={currency} loss={minor < 0n} />
         </span>
       ) : (
         <span
@@ -347,7 +347,7 @@ export function InvestmentCard({
           <FigureRow
             title={REHAB_LABEL}
             hint={figures.rehabOther.length > 0 ? <OtherCurrencies list={figures.rehabOther} /> : undefined}
-            value={<Amount minor={figures.rehabMinor} currency={currency} />}
+            value={<CardAmount minor={figures.rehabMinor} currency={currency} />}
             readOnly={readOnly}
             onOpen={onRehab}
             buttonRef={rowRefs?.rehab}
@@ -355,7 +355,7 @@ export function InvestmentCard({
           <FigureRow
             title={LOANS_LABEL}
             hint={figures.loanOther.length > 0 ? <OtherCurrencies list={figures.loanOther} /> : undefined}
-            value={<Amount minor={figures.loanMinor} currency={currency} />}
+            value={<CardAmount minor={figures.loanMinor} currency={currency} />}
             readOnly={readOnly}
             onOpen={onLoans}
             buttonRef={rowRefs?.loans}

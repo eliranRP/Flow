@@ -341,6 +341,7 @@ Every number **MUST** be wrapped in an isolated LTR span. This covers amounts wi
 ```html
 <span class="num">₪1,310,000</span>                         <!-- .num = dir ltr + unicode-bidi:isolate + tabular -->
 <bdi dir="ltr" class="num">−₪10,000</bdi>                   <!-- equivalent -->
+<bdi dir="ltr" class="num ui-income">+₪150,000</bdi>        <!-- money in: income green, with its plus (0181) -->
 <p>רווחיות <span class="num">27%</span> · לפני <span class="num">3</span> ימים</p>
 <p><bdi>פועלים_ספטמבר.xlsx</bdi></p>                          <!-- user text of unknown direction: <bdi> -->
 ```
@@ -357,7 +358,7 @@ Every number **MUST** be wrapped in an isolated LTR span. This covers amounts wi
 | Money | ₪ **before** the number, with no space, comma thousands separators, and whole shekels in summaries and lists | `₪200,000` · `₪8,500` |
 | Money with agorot | Only on the transaction detail, review card and edit fields, and only when non-zero | `₪8,500.50` |
 | Negative | True minus **U+2212 `−`** before the ₪, the whole thing in `bad` when it is a loss | `−₪10,000` |
-| Explicit sign | `+` or `−` in transaction rows (the amount stays `text`-coloured) | `+₪150,000` · `−₪12,000` |
+| Explicit sign | `+` on money in (`income` green, decision 0181) and `−` on money out (`text`), in transaction rows | `+₪150,000` · `−₪12,000` |
 | Percent | Whole number, `%` after, no space, inside `.num` | `27%` · `−17%` |
 | Change | Arrow, then a space, then the absolute % in a change pill | `▼ 10%` · `▲ 8%` |
 | Date, short (current year) | `DD/MM` | `22/09` |
@@ -486,8 +487,8 @@ Chips are 36px high (with a 44px hit area), 14px side padding and 8px gaps, and 
 ### 7.8 Transaction row
 - A **grey source icon** (`text-secondary`) on the start side: `doc` for an invoice, `bank` for a bank line.
 - The title is the vendor or payer (`body`). The hint below shows category and date ("חומרים · 22/09").
-- The **amount** is on the end side in `amount` (17, weight 400), **with cents** drawn small and raised, ".00" included (`₪150,000.00`); this replaces §11.3's whole units for transaction rows only. An expense is `text` **with its minus** (`−₪12,000.00`). Money in is `income` green **with no plus**, preceded by a visually hidden "הכנסה ", so direction is never colour alone. A figure with a minus is never green. [0120](../../docs/decisions/0120-income-green-type-scale.md)
-- Rows have **no hairline** (any list, decision 0120), and month groups are 32px apart. The title is 17/400. The month head is `heading` with no rule; its income total is `income` green, no plus.
+- The **amount** is on the end side in `amount` (17, weight 400), **with cents** drawn small and raised, ".00" included (`₪150,000.00`); this replaces §11.3's whole units for transaction rows only. An expense is `text` **with its minus** (`−₪12,000.00`). Money in is `income` green **with a `+`** (decision 0181), preceded by a visually hidden "הכנסה ", so direction is never colour alone. A figure with a minus is never green. [0120](../../docs/decisions/0120-income-green-type-scale.md)
+- Rows have **no hairline** (any list, decision 0120), and month groups are 32px apart. The title is 17/400. The month head is `heading` with no rule; its income total is `income` green with a `+`.
 - Tapping a row opens **10 Transaction detail**.
 
 ### 7.9 Change pill

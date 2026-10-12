@@ -32,7 +32,7 @@ import { useInvalidateBooks } from "../use-books";
 import { assertNoError } from "../use-write";
 import { useGoBack } from "../ui/back";
 import { Banner } from "../ui/banner";
-import { BigNumber } from "../ui/big-number";
+import { Amount as AmountFigure } from "../ui/amount";
 import { ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { formatDisplay } from "../ui/date-math";
@@ -382,7 +382,7 @@ export function LineSplitEditor({
         <div className="ui-lsplit-head">
           <p className="t-display">
             {line.direction === "income" ? <span className="sr-only">הכנסה </span> : null}
-            <BigNumber agorot={lineMinor} presentation="detail" currency={currency} income={line.direction === "income"} size="display" />
+            <AmountFigure agorot={lineMinor} presentation="detail" currency={currency} income={line.direction === "income"} size="display" />
           </p>
           {meta.length > 0 ? (
             <p className="t-label ui-lsplit-meta">

@@ -342,10 +342,13 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   color: var(--color-income);
 }
 
-/* Detail amounts draw agorot smaller and raised; the dot and digits stay real text. */
-.ui-num-cents {
-  font-size: 0.6em;
-  vertical-align: 0.62em;
+/* List amount and the month totals over list rows: cents at 11px, raised 5px (Design guide, FLOW-363, FLOW-334). A detail figure keeps its
+   cents at the figure's size ("$1,284.50" at 40/400 on the Design guide). */
+.t-amount .ui-num-cents,
+.ui-loan-amount .ui-num-cents,
+.ui-month-totals .ui-num-cents {
+  font-size: var(--type-cents-size);
+  vertical-align: var(--cents-raise);
 }
 
 .ui-row {

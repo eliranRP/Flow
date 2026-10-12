@@ -1,16 +1,16 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { BigNumber, formatAmount, heroStepClass } from "./big-number";
+import { Amount, formatAmount, heroStepClass } from "./amount";
 import { expectRtl } from "./test-support";
 
-describe("BigNumber", () => {
+describe("Amount", () => {
   it("shows whole shekels before VAT, and agorot only on detail", () => {
     expectRtl();
     expect(formatAmount(-7630000n)).toBe("−₪76,300");
     expect(formatAmount(10050n)).toBe("₪100");
     expect(formatAmount(10051n)).toBe("₪101");
     expect(formatAmount(10050n, "detail")).toBe("₪100.50");
-    render(<BigNumber agorot={-1000000n} loss />);
+    render(<Amount agorot={-1000000n} loss />);
     const amount = screen.getByText("−₪10,000");
     expect(amount).toHaveAttribute("dir", "ltr");
     expect(amount).toHaveClass("ui-loss");
@@ -38,7 +38,7 @@ describe("BigNumber", () => {
     try {
       render(
         <div className="ui-band-hero">
-          <BigNumber agorot={1_234_567_800n} size="hero" />
+          <Amount agorot={1_234_567_800n} size="hero" />
         </div>,
       );
       const shown = screen.getByText("₪12,345,678", { selector: "bdi[dir=ltr]" });
@@ -77,7 +77,7 @@ describe("BigNumber", () => {
       render(
         <div className="ui-page-pad">
           <span className="ui-line">
-            <BigNumber agorot={-9_999_999_999n} presentation="detail" direction="expense" size="display" />
+            <Amount agorot={-9_999_999_999n} presentation="detail" direction="expense" size="display" />
           </span>
         </div>,
       );
@@ -118,7 +118,7 @@ describe("BigNumber", () => {
       render(
         <div>
           <div className="ui-band-hero">
-            <BigNumber agorot={1_234_567_800n} size="hero" />
+            <Amount agorot={1_234_567_800n} size="hero" />
           </div>
         </div>,
       );
@@ -137,24 +137,61 @@ describe("BigNumber", () => {
   it("draws income green only when the figure shows no minus (decision 0120)", () => {
     render(
       <>
-        <BigNumber agorot={250000n} direction="income" income />
-        <BigNumber agorot={-40000n} income />
-        <BigNumber agorot={90000n} />
+        <Amount agorot={250000n} direction="income" income />
+        <Amount agorot={-40000n} income />
+        <Amount agorot={90000n} />
       </>,
     );
-    expect(screen.getByText("₪2,500")).toHaveClass("ui-income");
-    expect(screen.getByText("₪2,500").textContent).not.toContain("+");
+    expect(screen.getByText("+₪2,500")).toHaveClass("ui-income");
     const negative = screen.getByText("−₪400");
     expect(negative).not.toHaveClass("ui-income");
     expect(screen.getByText("₪900")).not.toHaveClass("ui-income");
   });
 
+  it("draws a plus inside the ltr bdi on every income figure (decision 0181)", () => {
+    render(
+      <>
+        <Amount agorot={250000n} direction="income" income />
+        <Amount agorot={250000n} income />
+        <Amount agorot={250000n} income presentation="detail" size="list" />
+      </>,
+    );
+    const figures = screen.getAllByText((_, el) => el?.matches("bdi[dir=ltr]") === true && el.textContent.startsWith("+"));
+    expect(figures).toHaveLength(3);
+    expect(figures[0]?.textContent).toBe("+₪2,500");
+    expect(figures[1]?.textContent).toBe("+₪2,500");
+    expect(figures[2]?.textContent).toBe("+₪2,500");
+  });
+
+  it("does not paint a summary income that rounds to ₪0 green", () => {
+    render(<Amount agorot={40n} income direction="income" />);
+    const zero = screen.getByText("₪0");
+    expect(zero).not.toHaveClass("ui-income");
+  });
+
+  it("starts an expense and a loss with the Unicode minus, and never draws a sign on zero", () => {
+    const { container } = render(
+      <>
+        <Amount agorot={100000n} direction="expense" />
+        <Amount agorot={-100000n} loss />
+        <Amount agorot={0n} income />
+        <Amount agorot={0n} direction="income" income />
+      </>,
+    );
+    const [expense, loss, zeroIncome, zeroDirected] = Array.from(container.querySelectorAll("bdi"));
+    expect(expense?.textContent.startsWith("−")).toBe(true);
+    expect(loss?.textContent.startsWith("−")).toBe(true);
+    expect(zeroIncome?.textContent).toBe("₪0");
+    expect(zeroIncome).not.toHaveClass("ui-income");
+    expect(zeroDirected?.textContent).toBe("₪0");
+  });
+
   it("draws detail agorot in a smaller span and keeps the same text", () => {
     const { container } = render(
       <>
-        <BigNumber agorot={1200050n} presentation="detail" />
-        <BigNumber agorot={1200050n} />
-        <BigNumber agorot={1200000n} presentation="detail" />
+        <Amount agorot={1200050n} presentation="detail" />
+        <Amount agorot={1200050n} />
+        <Amount agorot={1200000n} presentation="detail" />
       </>,
     );
     const [detail, summary, whole] = Array.from(container.querySelectorAll("bdi"));
@@ -167,7 +204,14 @@ describe("BigNumber", () => {
   });
 
   it("uses the amount style for list figures", () => {
-    render(<BigNumber agorot={150000n} size="list" />);
+    render(<Amount agorot={150000n} size="list" />);
     expect(screen.getByText("₪1,500")).toHaveClass("t-amount");
+  });
+
+  it("draws a list figure's cents as a small raised span", () => {
+    const { container } = render(<Amount agorot={1234_50n} size="list" cents="always" />);
+    const cents = container.querySelector("bdi .ui-num-cents");
+    expect(cents?.textContent).toBe(".50");
+    expect(container.querySelector("bdi")).toHaveClass("t-amount");
   });
 });

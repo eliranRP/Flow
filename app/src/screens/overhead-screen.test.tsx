@@ -178,7 +178,7 @@ describe("project overhead hero", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText("₪200,000")).toBeInTheDocument();
+    expect(screen.getByText("+₪200,000")).toBeInTheDocument();
     // The band labels the figure הוצאות, so it carries no minus (FLOW-328).
     expect(screen.getByText("₪100,000", { selector: "bdi" })).toBeInTheDocument();
     expect(screen.queryByText("−₪100,000")).not.toBeInTheDocument();

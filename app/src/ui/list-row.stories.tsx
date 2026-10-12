@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import type { ReactElement } from "react";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { BankIcon } from "./icons";
 import { KeptOutTag } from "./line-marks";
 import { List, ListRow } from "./list-row";
@@ -180,7 +180,7 @@ export const ProjectRowsLineUp: Story = {
   ),
 };
 
-/** Option C (decision 0120): income green with no plus and small agorot (none on a whole amount), expense with − and agorot,
+/** Option C (decision 0120): income green with a "+" and small agorot (none on a whole amount), expense with − and agorot,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {
   return (
@@ -193,7 +193,7 @@ function MercuryRows() {
       <ListRow
         variant="static"
         title="הכנסה שלילית בסיכום"
-        meta={<BigNumber agorot={-40_000n} income />}
+        meta={<Amount agorot={-40_000n} income />}
       />
     </List>
   );

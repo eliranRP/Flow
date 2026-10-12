@@ -27,7 +27,7 @@ import {
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
 import { BackButton } from "../ui/back";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
 import { CashRows } from "../ui/cash-rows";
 import { israelToday } from "../ui/date-math";
@@ -119,7 +119,7 @@ export function ProjectCashOverview({
             <div className="t-display ui-project-profits">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <BigNumber agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
                 </p>
               ))}
             </div>
@@ -243,7 +243,7 @@ function ProjectCashMonthBody({
         <p className="ui-breakdown-total ui-page-pad">
           {rows.map((row) => (
             <span key={row.currency} className="ui-breakdown-total-line">
-              <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
+              <Amount agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
             </span>
           ))}
         </p>

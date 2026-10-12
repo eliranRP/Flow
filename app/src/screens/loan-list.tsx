@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LoanKind, LoanStatus } from "@flow/shared";
-import { splitCents } from "../ui/big-number";
+import { splitCents } from "../ui/amount";
 import { formatDisplay } from "../ui/date-math";
 import { DisclosureGroup } from "../ui/disclosure-group";
 import { BankIcon } from "../ui/icons";

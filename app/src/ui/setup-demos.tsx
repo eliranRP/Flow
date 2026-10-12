@@ -1,6 +1,6 @@
 import { divHalfEven, STANDARD_VAT_RATE_BP } from "@flow/shared";
 import { type CSSProperties, type ReactNode } from "react";
-import { formatAmount } from "./big-number";
+import { formatAmount } from "./amount";
 import { Button } from "./button";
 import { CheckRow } from "./check-row";
 import { Chip } from "./chip";
