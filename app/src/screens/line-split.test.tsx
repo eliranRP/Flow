@@ -70,7 +70,9 @@ describe("split by category editor (FLOW-325)", () => {
     expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
     fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
     fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
-    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
+    // Two sheets close one after the other (each waits out --motion-sheet-out); under a loaded
+    // full run that took longer than waitFor's 1s default (FLOW-363 2b gate), so allow 3s.
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
     fireEvent.change(screen.getByLabelText("סכום, חשמל"), { target: { value: "500" } });
     await waitFor(() => { expect(restRow()).toHaveTextContent("₪4,300"); });
     expect(screen.getByText("10.42%")).toBeInTheDocument();
@@ -185,7 +187,9 @@ describe("split by category editor (FLOW-325)", () => {
     expect(within(projectSheet).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
     fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
     fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
-    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
+    // Two sheets close one after the other (each waits out --motion-sheet-out); under a loaded
+    // full run that took longer than waitFor's 1s default (FLOW-363 2b gate), so allow 3s.
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
     const field = screen.getByLabelText("אחוז, ביטוח");
     await waitFor(() => { expect(field).toHaveFocus(); });
   });
