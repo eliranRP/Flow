@@ -242,9 +242,9 @@ Each file is deleted in the PR that removes its last reference. Before deleting,
 
 | Files | Delete in |
 | --- | --- |
-| Unreferenced now: `design/screens/09b-` to `09e-onboarding-dark.png` | 363.1 (MANIFEST updated) |
+| `design/screens/09b-` to `09e-onboarding-dark.png` (named only by `design/src/09-onboarding-dark.html`) | R11, with `design/src` |
 | `docs/module-1-project-pnl/design/style-{a-calm,b-dark,c-warm}.png` | Kept: the module-1 design README links them as superseded options |
-| `design/system/ds-1..3*.png` (colour, type, spacing) | 363.1, once DESIGN-RULES §2.2 to 2.4 and decision 0024 point to the canvas (0024 gains a "superseded by 0181" line; a decision's text is otherwise kept) |
+| `design/system/ds-1..3*.png` (colour, type, spacing) | R11. 363.1 removed their links from DESIGN-RULES, the guide and 0024 (which now says "superseded by 0181"), but a past `docs/changelog.md` entry still links ds-1, and the changelog is not edited by task PRs |
 | `design/system/ds-4..6*.png`, `ds-8*.png` | 363.4, with the rewritten §2.8 and guide §7 |
 | `design/system/ds-7*.png`, all `design/states/*.png` | FLOW-371, with the rewritten empty and loading section and the `design-system.md` and implementation-guide §7.20 and §8 references |
 | `design/screens/NN-*.png` | The screen PR that rewrites that screen's DESIGN-RULES §4 entry (e.g. `01-home-*` in FLOW-364, `14-settings-*` in FLOW-512, which also updates `scripts/ci-cd.test.mjs`) |

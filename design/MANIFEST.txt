@@ -249,7 +249,6 @@ b3e63eee09ffc7694480b3828920e8112c424105f6cade3c85e1b57f892de982  19772  flow-de
 74289ba767b4db30217a30b2200d6116c33a25c2d55c8a237d22b05639a3b89c  19633  flow-design-part2.zip  design/src/es-08-notifications-off-dark.html
 c2e1e871633ba8273414f73b842e5a9f78f401785ddfb84fdfd4a1621cd91f69  19636  flow-design-part2.zip  design/src/es-08-notifications-off-light.html
 7dbcfc9128b273388f44a9faea79e5b3f3fc150af3b5cd3a74ea43ecba5fadf4  66503  flow-design-update-google.zip  design/src/flow.py
-f7ac8e0601fc993d2641db1446130916ee8df52d8fb9ff1b41a1c00370e4ef4e  5966  flow-design-part2.zip  design/src/gen_implementation_tokens.py
 428e5d9a6fd647464d2c6035e31d96fb81ef16ace5381df8519478a5feb811ca  20606  flow-design-part2.zip  design/src/ld-01-home-skeleton-dark.html
 420b05cf79faadd69d85691b2fd3b75563d9052ed070799448f334d022cf9516  20609  flow-design-part2.zip  design/src/ld-01-home-skeleton-light.html
 7bafb658537c5e6602a9564c1db2be54295943090383de0caf39a0a87f7121ff  20793  flow-design-part2.zip  design/src/ld-02-project-skeleton-dark.html
@@ -325,7 +324,6 @@ b393d5e9f469da617516b1ff9b98d62d287721e77a436f856316d3b214ebad8f  49062  flow-de
 c6e44366632f0ab797c8eed5a085e1fce844b7ab730f3dfdec1d4ff04668e13e  564380  flow-design-part1.zip  design/states/overview-states-dark.png
 6d6adc1a96af6adf6db18e915fed669ce75124ce56e3fadb8494afea7dc5b1d9  554539  flow-design-part1.zip  design/states/overview-states-light.png
 5ece3ea3343473620435c7949a783a0d46af39a6dceeb7888867d03b9703de68  13536  flow-design-update-google.zip  design/system/design-system.md
-dc3e245b38b7debfcaa13565ef1ce287374796545aaf00b8fb39f649dbdf944a  7277  flow-design-update-google.zip  design/system/design-tokens.json
 999eef5f25b430257b987f83de5c186ae57d59f8983253dcea548b1cf2d87c31  659002  flow-design-part2.zip  design/system/ds-1-colours-dark.png
 bc0a28e05b71b52e66ee2821a903f410cba1fade5b0c6dd8949a08a50de4e4d3  624271  flow-design-part2.zip  design/system/ds-1-colours-light.png
 d06bf45d20a83f01796c0035d90249c3ec5e9d008b2d689933752e70a474c70b  394905  flow-design-part2.zip  design/system/ds-2-type-dark.png
