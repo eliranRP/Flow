@@ -62,6 +62,7 @@ describe("motion tokens in implementation-tokens.css", () => {
       "--ease-enter": "cubic-bezier(0.2, 0.8, 0.2, 1)",
       "--ease-exit": "cubic-bezier(0.4, 0, 1, 1)",
       "--ease-standard": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "--ease-linear": "linear",
       "--motion-press": "120ms",
       "--motion-fast": "150ms",
       "--motion-width": "300ms",
@@ -116,7 +117,7 @@ describe("00-motion.css", () => {
     // and Vaul-style waits on animationend would hang; the tokens already make each run 0ms (sheets 1ms).
     expect(css).not.toMatch(/prefers-reduced-motion/);
     expect(css).not.toMatch(/animation\s*:\s*none/);
-    for (const name of [".m-push-back", ".m-sheet-out", ".m-bar-out"]) {
+    for (const name of [".m-push-back", ".m-sheet-out", ".m-bar-out", ".m-row-leave"]) {
       expect(css, name).toMatch(new RegExp(`\\${name}\\s*\\{[^}]*animation:[^;]*forwards`));
     }
   });

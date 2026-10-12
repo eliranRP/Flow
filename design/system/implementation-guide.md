@@ -758,6 +758,7 @@ Motion is short, calm and functional. Nothing bounces, overshoots or loops for a
 |---|---|---|
 | `--ease-enter` | `cubic-bezier(0.2,0.8,0.2,1)` | Everything that arrives |
 | `--ease-exit` | `cubic-bezier(0.4,0,1,1)` | Everything that leaves |
+| `--ease-linear` | `linear` | The sheet scrim fades linear (Motion board, month drawer) |
 | `--ease-standard` | `cubic-bezier(0.4,0,0.2,1)` | In-place changes: bar widths, row collapse |
 | `--motion-press` | 120ms | Press: opacity .72, and scale .985 on buttons |
 | `--motion-fast` | 150ms | Tab crossfade, chip colour, segment, toggle knob, focus ring |

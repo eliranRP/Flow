@@ -4,11 +4,11 @@ import { padded } from "./story-support";
 
 /** The type roles from the canvas Design guide (FLOW-363). Sample words only, no real data. */
 const STYLES = [
-  { name: "band · 52/500", className: "t-band", text: "−₪17,191" },
-  { name: "detail · 40/400", className: "t-detail", text: "₪1,240" },
-  { name: "total · 34/400", className: "t-total", text: "₪42,069" },
+  { name: "band · 52/500", className: "t-band", text: "−₪17,191", amount: true },
+  { name: "detail · 40/400", className: "t-detail", text: "₪1,240", amount: true },
+  { name: "total · 34/400", className: "t-total", text: "₪42,069", amount: true },
   { name: "title · 32/600", className: "t-title", text: "חשבוניות פתוחות" },
-  { name: "card · 28/400", className: "t-card", text: "₪48,600" },
+  { name: "card · 28/400", className: "t-card", text: "₪48,600", amount: true },
   { name: "name · 24/600", className: "t-name", text: "ספק לדוגמה" },
   { name: "sheet · 20/600", className: "t-sheet", text: "כל כמה זמן" },
   { name: "section · 20/500", className: "t-section", text: "היום · 11/10" },
@@ -27,7 +27,9 @@ function TypeScale() {
       {STYLES.map((style) => (
         <div key={style.name} className="flex flex-col gap-1">
           <span className="t-hint" dir="ltr">{style.name}</span>
-          <p className={style.className}>{style.text}</p>
+          <p className={style.className}>
+            {"amount" in style ? <bdi dir="ltr" className="num">{style.text}</bdi> : style.text}
+          </p>
         </div>
       ))}
       <div className="flex flex-col gap-1">

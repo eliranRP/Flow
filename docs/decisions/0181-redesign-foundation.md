@@ -53,7 +53,6 @@ The old scale had nine weights and sizes that did not match the screens: 600 on 
 - Amends [0120](0120-income-green-type-scale.md) on type weights: body text moves from 16/500 to 17/400, and the 17px row and card titles move from 600 to 500. Its colour and option C layout stay.
 - Amends [0025](0025-implementation-guide-is-mandatory.md): `implementation-tokens.css` replaces `design-tokens.json` as the token source.
 - Supersedes [0024](0024-design-system-approved.md) for colour, type, spacing and motion. The ds boards it links are retired, and the Design canvas is the design reference. Its Rubik weights and WCAG AA rule stand.
-
 - The `meta` token changes size. `--type-meta` used to be 15px; it is now the 14px detail meta line. Row second lines (`.ui-row-hint` and the hint clip boxes) moved to `line2` (15px) in this change. The remaining old `meta` readers shrink 1px until their screen PR assigns each one `line2` or `meta`: month lists, the transaction page, team, split, and Tailwind `text-meta`.
 
 ## Alternatives rejected

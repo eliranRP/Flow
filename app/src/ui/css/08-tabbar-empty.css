@@ -211,7 +211,7 @@ button.ui-tab-slot {
 
 [data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
   animation-duration: var(--motion-scrim);
-  animation-timing-function: linear;
+  animation-timing-function: var(--ease-linear);
 }
 
 [data-vaul-drawer][data-state="closed"],
@@ -233,7 +233,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
 
 body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   transition-duration: var(--motion-scrim) !important;
-  transition-timing-function: linear !important;
+  transition-timing-function: var(--ease-linear) !important;
 }
 
 .ui-sheet-grab {

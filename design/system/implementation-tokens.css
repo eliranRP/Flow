@@ -157,6 +157,7 @@
   --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear; /* the sheet scrim's fade (Motion board, month drawer) */
   --motion-press: 120ms;
   --motion-fast: 150ms;
   --motion-width: 300ms;
