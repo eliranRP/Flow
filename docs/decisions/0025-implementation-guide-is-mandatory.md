@@ -1,5 +1,7 @@
 # The implementation guide is mandatory
 
+Amended by [0181](0181-redesign-foundation.md): implementation-tokens.css replaces design-tokens.json as the token source (2026-10-12).
+
 **Date:** 2026-09-26
 **Status:** Accepted
 

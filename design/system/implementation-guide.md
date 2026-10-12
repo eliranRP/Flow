@@ -2,8 +2,8 @@
 
 **Who this is for:** developers and AI coding agents building Flow screens.
 **What Flow is:** a Hebrew-only, right-to-left, phone-only installable web app (PWA). It shows a simple project P&L (income, expenses, profit) for Israeli contractors. There is no desktop layout.
-**Source of truth:** the approved design system in this folder: `design-system.md`, `design-tokens.json` (generated from `tokens.py`), the shared component CSS and icons in `flow.py`, and the boards `ds-1` to `ds-6` (light and dark), plus `ds-7` (empty and loading states) once it has been rendered.
-**Tokens for code:** `implementation-tokens.css` (generated from `design-tokens.json`).
+**Source of truth:** the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) (Design guide and Flow & motion pages), with [REDESIGN-BUILD](../../docs/design/REDESIGN-BUILD.md) and [DESIGN-RULES](../../docs/design/DESIGN-RULES.md). The boards in this folder still apply to the screens that have not been rebuilt yet (`ds-4` to `ds-8`).
+**Tokens for code:** `implementation-tokens.css`, the one hand-edited token file ([0181](../../docs/decisions/0181-redesign-foundation.md)).
 
 How to read the rules:
 
@@ -11,7 +11,7 @@ How to read the rules:
 - **SHOULD** means do it unless you have a written reason not to (put the reason in the PR).
 - **MAY** means optional.
 
-If this guide and the boards disagree, the boards and `design-tokens.json` win. Raise the conflict in the PR, and don't guess.
+If this guide and the canvas disagree, the canvas wins. Raise the conflict in the PR, and don't guess.
 
 ---
 
@@ -58,7 +58,7 @@ These rules come before everything else. When in doubt, choose the calmer option
 - You **MUST NOT** invent new colours or tints: no opacity tricks on the accent, no `color-mix()` and no new greys. If you need a colour that doesn't exist, raise it in the PR.
 - You **MUST** import `implementation-tokens.css` once at the app root. Components read `var(--color-*)`, `var(--type-*)`, `var(--space-*)` and `var(--radius-*)`.
 - **App consumption:** styling is Tailwind CSS v4. Map these tokens into `@theme` (colours, including light and dark, spacing, radii, the type scale, and shadows) and use only those utilities. An arbitrary value needs a justification. RTL uses logical utilities (`ms-`, `me-`, `ps-`, `pe-`, `start`, `end`) with `dir="rtl"` on the root. Dark mode uses this same token set. Vaul stays for sheets. No component kit with its own look. Decision [0040](../../docs/decisions/0040-tailwind-v4.md).
-- Tokens change in one place only: `tokens.py` → `design-tokens.json` → `python3 ../gen_implementation_tokens.py`. You **MUST NOT** edit `implementation-tokens.css` by hand.
+- Tokens change in one place only: `implementation-tokens.css`, edited by hand. There is no generator and no JSON copy. `scripts/check-css-tokens.mjs` fails on a raw colour, font size, weight, duration, easing or radius in app CSS, so a screen that needs a new value adds a token here first.
 
 ### 2.2 Colour token names
 In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
@@ -95,8 +95,14 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `scrim` | rgba(29,23,40,.45) | rgba(5,3,10,.62) | Backdrop behind sheets |
 | `toast-bg` / `toast-text` | #1D1728 / #FFFFFF | #F1EDF8 / #15111E | Toast (it inverts per mode) |
 | `seg-on` | #FFFFFF | #3B2F5E | Selected segment |
+| `band-past` | FLOW-372 | #5A2DB0 | Band of a past month. New in [0181](../../docs/decisions/0181-redesign-foundation.md) |
+| `income` | #13703D | #62CB8D | Money in only, always with "+". Never with a minus, never on the band (0181) |
+| `signal` | FLOW-372 | #FF8A80 | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days. At most one per screen. New in 0181 |
+| `signal-soft` | FLOW-372 | #E8A598 | Soft signal fill or text beside `signal`. New in 0181 |
+| `pill-helps` | FLOW-372 | #4A4458 | Band change pill when the change helps. New in 0181 |
+| `pill-hurts` | FLOW-372 | #C3302B | Band change pill when the change hurts. New in 0181 |
 
-These component colours are now in `tokens.py` / `design-tokens.json` too (so the generator writes them from the JSON):
+These component colours are also in `implementation-tokens.css`:
 
 | Token | Value | Use |
 |---|---|---|
@@ -113,7 +119,7 @@ The other token groups are:
 - **Type:** `--type-<style>-size | -line | -weight` (see §5).
 - **Spacing:** `--space-1 … --space-10`, plus `--space-side` (24), `--space-card-inset` (16) and `--space-section` (36).
 - **Radius:** `--radius-chip | input | button | card | sheet | band | fab`.
-- **Layout and motion (guide-defined):** `--touch-min`, `--control-height`, `--tabbar-height`, `--safe-top`, `--safe-bottom`, `--dur-*`, `--ease-*`.
+- **Layout and motion:** `--touch-min`, `--control-height`, `--tabbar-height`, `--safe-top`, `--safe-bottom`, `--motion-*`, `--ease-*` (§10).
 
 ### 2.3 Light and dark switching
 - The app follows the operating system by default (`prefers-color-scheme`). Setting `data-theme="light"` or `data-theme="dark"` on `<html>` forces a mode. You **MUST** put `data-theme` on `<html>` and nowhere else.
@@ -258,41 +264,45 @@ From top to bottom:
 ## 5. Typography
 
 - The font is **Rubik** (Google Fonts, OFL), loaded with `display=swap`, with `system-ui, sans-serif` as the fallback. Rubik has the ₪ glyph.
-- **Weights** carry meaning:
+- **Weights** carry meaning. Text stays light, and weight is for titles, headers and buttons only:
 
   | Weight | Used for |
   |---|---|
-  | 400 | Hints, row titles, row secondary lines (`meta`), amounts in lists, the Home נכנס / יצא labels |
-  | 500 | Body text, inputs and labels (heavier than usual, on purpose) |
-  | 600 | Titles, section and month heads, the hero and display amounts |
+  | 400 | Text: row names, row second lines, amounts in lists, details, captions, the card figure and the total |
+  | 500 | Section and date headers, the band figure, primary and secondary buttons, chips |
+  | 600 | Screen titles, detail names, sheet titles, empty-state titles |
   | 700 | The "Flow" wordmark only |
 
   You **MUST NOT** use 300, 800 or 900, and you **MUST NOT** fake bold.
-- You **MUST** use only the styles below. There are no other sizes. If something doesn't fit, pick the nearest style and raise it in the PR.
+- You **MUST** use only the roles below. There are no other sizes. If something doesn't fit, pick the nearest role and raise it in the PR. Each role is `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. Line heights are set by the token file. [0181](../../docs/decisions/0181-redesign-foundation.md), the canvas Design guide.
 
-| Style | Size / line height / weight | Use | Colour |
+| Role | Size / weight | Use | Colour |
 |---|---|---|---|
-| `hero` | 52 / 1.15 / 600 | The main profit on **Home only** (letter-spacing −0.02em) | `text` (or `on-band`) |
-| `display` | 36 / 1.2 / 600 | The main amount on detail and inner screens (Project, Transaction, Unpaid, Upload results) | `text` |
-| `title-1` | 34 / 1.15 / 600 | Page titles (letter-spacing −0.01em, `--type-title-1-tracking`) | `text` |
-| `title-2` | 22 / 1.35 / 600 | Sheet titles | `text` |
-| `band-title` | 32 / 1.25 / 600 | Project name on the band (two-line clamp) | `on-band` |
-| `heading` | 20 / 1.3 / 600 | Section heads (`SectionHead`, `Section`), month heads in lists | `text` |
-| `title-3` | 17 / 1.45 / 600 | Compact transaction title. Row titles (`.ui-row-title`) use its size and line at weight 400 | `text` |
-| `amount` | 17 / 1.45 / 400 | Amounts in lists, Home נכנס / יצא. Transaction rows add cents (`.ui-num-cents`) | `text`; money in `income` |
-| `body` | 16 / 1.5 / 500 | Rows, main text, input values | `text` |
-| `label` | 15 / 1.5 / 500 | Labels, subtitles, links | `text-secondary` or `accent-text` |
-| `meta` | 15 / 1.4 / 400 | Row secondary line | `text-muted` |
-| `hint` | 13 / 1.45 / 400 | Dates, percentages, helper text, field labels | `text-muted` (`text-secondary` for field labels) |
-| `micro` | 11 / 1.3 / 500 | Tab bar labels and badges **only** | per component |
-| `wordmark` | 22 / 1.2 / 700 | The "Flow" logo only (LTR) | `on-band` on the band, otherwise `logo` |
+| `band` | 52 / 500 | Home band figure only | `on-band` on the band, otherwise `text` |
+| `detail` | 40 / 400 | Detail amount | `text` |
+| `total` | 34 / 400 | List and summary total | `text` |
+| `title` | 32 / 600 | Screen title; first-run hero titles | `text` |
+| `card` | 28 / 400 | Card figure | `text` |
+| `name` | 24 / 600 | Detail name, step titles, empty-state title | `text` |
+| `sheet` | 20 / 600 | Sheet title | `text` |
+| `section` | 20 / 500 | Section and date header: white, plain text, no caps, no grey label | `text` |
+| `body` | 17 / 400 | Row name and body text | `text`; money in `income` |
+| `btn` | 17 / 500 | Primary button | per component |
+| `btn-2` | 16 / 500 | Secondary button, icon-row value | per component |
+| `line2` | 15 / 400 | Row second line | `text-muted` |
+| `meta` | 14 / 400 | Detail meta line | `text-muted` |
+| `chip` | 14 / 500 | Chips, segments, avatar initials | per component |
+| `caption` | 13 / 400 | Caption, dates, helper text, field labels | `text-muted` (`text-secondary` for field labels) |
+| `cents` | 11 / 400 | Cents on a list amount, raised 5px | `text` |
+| `wordmark` | 22 / 700 | The "Flow" logo only (LTR) | `on-band` on the band, otherwise `logo` |
 
+- **Old names.** The old role names are aliases until their screens move to the new ones (R11 deletes them): `hero` → `band`, `display` → `detail`, `title-1` → `total`, `band-title` → `title`, `title-2` → `name`, `heading` → `sheet`, `title-3` → `btn`, `amount` → `body`, `label` → `line2`, `hint` → `caption`, `micro` → `cents`. New code uses the new names only.
 - **Tabular digits:** every figure **MUST** use `font-variant-numeric: tabular-nums lining-nums` (the `.num` class does this), so columns and changing numbers don't jitter.
-- **Line heights** come from the table. Don't set `line-height: 1` on text. Allow multi-line text to wrap. Truncate with an ellipsis only on single-line row titles, and never truncate amounts.
+- **Line heights** come from the token file. Don't set `line-height: 1` on text. Allow multi-line text to wrap. Truncate with an ellipsis only on single-line row titles, and never truncate amounts.
 - Input text **MUST** be at least 16px (`body`) so iOS doesn't zoom on focus.
 
 ```css
-.hero-amount { font: var(--type-hero-weight) var(--type-hero-size)/var(--type-hero-line) var(--font-family); letter-spacing: -0.02em; }
+.hero-amount { font: var(--type-band-weight) var(--type-band-size)/var(--type-band-line) var(--font-family); }
 ```
 
 ---
@@ -707,7 +717,7 @@ Remove the grey tap highlight with `-webkit-tap-highlight-color: transparent` **
 
 ## 9. Accessibility
 
-- **Contrast:** all text **MUST** meet **WCAG AA 4.5:1**. Every token pair is pre-checked in `design-tokens.json` → `contrast`, so if you use tokens as defined, you pass. Check any new pairing with `tokens.py`, and don't put `text-muted` on `tint-pressed` or on the band.
+- **Contrast:** all text **MUST** meet **WCAG AA 4.5:1**. Check any new pairing against WCAG AA before you use it, and don't put `text-muted` on `tint-pressed` or on the band.
 - **Focus rings:** use `:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }`, which is 7:1 or better on the page. **Inside the band** use `--color-focus-on-band` (white). Rounded elements keep their radius. Never write `outline: none` without a replacement.
 - **Language and labels:** set `lang="he"` on `<html>`. Every input has a visible Hebrew `<label>`. Accessible names are in Hebrew. Put `lang="en"` on English fragments (e.g. "Example data").
 - **Icon buttons** **MUST** have Hebrew `aria-label`s:
@@ -736,41 +746,55 @@ Remove the grey tap highlight with `-webkit-tap-highlight-color: transparent` **
   - Don't disable pinch-zoom.
 - **Reduced motion:** honour `prefers-reduced-motion` (§10).
 - **Timing:** the 4-second toast pauses while it has focus. Undo stays reachable by keyboard and screen reader.
-- **Non-text contrast (WCAG 1.4.11), resolved:** switch tracks, knobs, checkbox and radio borders, input and search borders, outlined chips and the Google button stroke are all ≥ 3:1 (`control-off`, `control-border`, `knob`, `knob-on`). `tokens.py` checks them against 3:1. Checkboxes and switches still keep a visible text label that states their state.
+- **Non-text contrast (WCAG 1.4.11), resolved:** switch tracks, knobs, checkbox and radio borders, input and search borders, outlined chips and the Google button stroke are all ≥ 3:1 (`control-off`, `control-border`, `knob`, `knob-on`). Check them against 3:1 by hand. Checkboxes and switches still keep a visible text label that states their state.
 
 ---
 
 ## 10. Motion
 
-Motion is short, calm and functional. Nothing bounces, overshoots or loops for attention.
+Motion is short, calm and functional. Nothing bounces, overshoots or loops for attention. The values are the tokens in `implementation-tokens.css` ([0181](../../docs/decisions/0181-redesign-foundation.md), the canvas Flow & motion page). Use the token, never a number.
 
-| What | Duration | Easing | Notes |
-|---|---|---|---|
-| Press feedback (background change) | 100ms (`--dur-press`) | standard | Starts instantly on touch |
-| Small state changes (switch knob, chip select, segment, focus) | 150ms (`--dur-fast`) | standard | |
-| Fades, content swap after loading | 200ms (`--dur-base`) | standard | Crossfade from skeleton to content. No count-up animation of numbers. |
-| Sheet in | 280ms (`--dur-sheet-in`) | `--ease-standard` `cubic-bezier(0.2,0,0,1)` | Slides up from `translateY(100%)`. The scrim fades in over 200ms. |
-| Sheet out | 220ms (`--dur-sheet-out`) | `--ease-exit` `cubic-bezier(0.4,0,1,1)` | Slides down. Follows the finger when dragged, and closes past about 30% or on a fast flick. |
-| Toast in / out | 200ms / 150ms | standard / exit | Fades and rises 8px |
-| Screen push (inner screens) | 250ms | standard | A subtle slide from the **start side** (from the left in RTL when going deeper). Back reverses it. |
-| Skeleton shimmer | 1400ms (`--dur-shimmer`) loop | linear | A low-contrast sweep moving from **right to left** (the reading direction) |
+| Token | Value | Use |
+|---|---|---|
+| `--ease-enter` | `cubic-bezier(0.2,0.8,0.2,1)` | Everything that arrives |
+| `--ease-exit` | `cubic-bezier(0.4,0,1,1)` | Everything that leaves |
+| `--ease-standard` | `cubic-bezier(0.4,0,0.2,1)` | In-place changes: bar widths, row collapse |
+| `--motion-press` | 120ms | Press: opacity .72, and scale .985 on buttons |
+| `--motion-fast` | 150ms | Tab crossfade, chip colour, segment, toggle knob, focus ring |
+| `--motion-fade` | 200ms | Toast in; skeleton to content crossfade |
+| `--motion-toast-out` | 160ms | Toast out |
+| `--motion-sheet-out` | 220ms | Sheet out, back from a detail page, a row leaving |
+| `--motion-sheet-in` | 280ms | Sheet in |
+| `--motion-scrim` | 260ms | Sheet scrim |
+| `--motion-bar` | 240ms | Compact bar and sticky panel, in and out; month change |
+| `--motion-page` | 280ms | Page enter; push to a detail page (from 24px, from the start side) |
+| `--motion-width` | 300ms | Bar widths |
+| `--motion-bar-grow` | 480ms | Thin bars grow from the right on enter |
+| `--motion-stagger` | 40ms | Page-enter stagger, first five blocks |
+| `--motion-pulse` | 1.2s | Skeleton pulse |
+| `--motion-spin` | 800ms | Inline spinner, one turn |
+| `--skeleton-delay` | 300ms | Nothing shows before this |
+| `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise; push offset |
+
+The utilities in `app/src/ui/css/00-motion.css` use these tokens. Use them, and don't write transitions by hand:
+
+| Utility | Does |
+|---|---|
+| `.m-press` | Press feedback on a control |
+| `.m-page-enter` | Page enter; set `--i` for the stagger index (`usePageEnter()` sets it on the first five blocks) |
+| `.m-push-in` / `.m-push-back` | Push to a detail page and back |
+| `.m-sheet-in` / `.m-sheet-out` | Sheet in and out |
+| `.m-bar-in` / `.m-bar-out` | Compact bar and sticky panel |
+| `.m-row-leave` | A row leaving; animates `grid-template-rows` from `1fr` to `0fr`, never a measured height |
+| `.m-bar-grow` | A thin bar growing from the right on enter |
 
 ```css
-.sheet { transform: translateY(100%); transition: transform var(--dur-sheet-out) var(--ease-exit); }
-.sheet[data-open] { transform: none; transition: transform var(--dur-sheet-in) var(--ease-standard); }
-
-.skeleton { background: var(--color-skeleton); border-radius: var(--radius-chip); position: relative; overflow: hidden; }
-.skeleton::after { content: ""; position: absolute; inset: 0;
-  background: linear-gradient(270deg, transparent, var(--color-skeleton-shine), transparent); /* the only gradient in the app: loading shimmer */
-  transform: translateX(100%); animation: shimmer var(--dur-shimmer) linear infinite; }
-@keyframes shimmer { to { transform: translateX(-100%); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton::after { animation: none; display: none; }   /* static skeleton */
-  .sheet, .sheet[data-open] { transition: opacity var(--dur-fast) linear; }  /* fade, no slide (dur is 0 via tokens) */
-}
+.sheet { transform: translateY(100%); transition: transform var(--motion-sheet-out) var(--ease-exit); }
+.sheet[data-open] { transform: none; transition: transform var(--motion-sheet-in) var(--ease-enter); }
 ```
-- You **MUST** respect `prefers-reduced-motion: reduce`. With it on, there are no slides, shimmer or parallax, and state changes are instant or a quick fade. The tokens already set the durations to 0.
+
+- **Reduced motion.** Under `prefers-reduced-motion: reduce`, every `--motion-*` token is `0ms` and every rise is `0`, so the end state shows at once. Nothing slides, pulses or fades in. The two sheet tokens stay `1ms`, because Vaul needs a transition end (see `app/src/ui/css/10-settings-onboarding.css`). `reduced-motion.tsx` keeps its Storybook frame and decorator. The scroll-linked band fade is not timed, so it still follows the finger.
+- You **MUST** respect `prefers-reduced-motion: reduce` through the tokens. Don't add a media query that sets a duration of its own.
 - Animate only `transform` and `opacity`. Don't animate layout, and don't use auto-playing motion.
 
 ---
@@ -885,9 +909,7 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 | File | What it is |
 |---|---|
 | `design-system.md` | Short spec of the approved system (V1 Violet with the coloured band) |
-| `tokens.py` | Source of truth for tokens. Running it prints the contrast checks. |
-| `design-tokens.json` | Tokens generated from `tokens.py`, including the contrast table |
-| `implementation-tokens.css` | **CSS custom properties for code**: light and dark, `prefers-color-scheme` + `data-theme`, and the guide-defined layout and motion values. Generated by `../gen_implementation_tokens.py`. |
+| `implementation-tokens.css` | **CSS custom properties for code**: light and dark, `prefers-color-scheme` + `data-theme`, and the layout and motion values. Hand-edited; the one token file ([0181](../../docs/decisions/0181-redesign-foundation.md)). |
 | `implementation-guide.md` | This guide |
 | `flow.py` | Reference component CSS (`BASE`), the icon set (`I`), the `num()` formatter and the draft screen generators |
 | `ds.py`, `render-ds.sh`, `crop.py` | Generate and render the design-system boards (1–8) |
@@ -901,9 +923,6 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 
 | Board | Content | Use it for |
 |---|---|---|
-| `ds-1-colours-*` | Colour roles and contrast values | §2 |
-| `ds-2-type-*` | Type scale and weights | §5 |
-| `ds-3-spacing-*` | Spacing scale, corners, layout rules | §4 |
 | `ds-4-controls-*` | Buttons, FAB, period pill, chips, segmented tabs, switch and checkbox, inputs, search, all with their states | §7 |
 | `ds-5-content-*` | Pending card, project row, transaction row, change pill, tab bar, toast, bottom sheet, empty state | §7, §8 |
 | `ds-6-band-*` | The top band in light and dark, with notes | §3.2 |
@@ -1004,5 +1023,5 @@ Note: `flow.py` itself says its screens are an early pass. The **boards and toke
 1. **Field label style:** use `hint` in `text-secondary` at weight 400, or make an exception for 500?
    - *Interim:* `hint` at 400.
 2. ~~Non-text contrast~~ **Resolved:** `control-off` / `control-border` are #8F86A3 / #736A8C (≥ 3:1), and `knob-on` fixes the dark ON switch.
-3. ~~Derived colours~~ **Resolved:** they are in `tokens.py`. Motion values stay guide-defined in the CSS.
+3. ~~Derived colours~~ **Resolved:** they are in `implementation-tokens.css`. Motion values stay guide-defined in the CSS.
 4. ~~Period sheet and custom range~~ **Resolved:** `16-period-sheet`, `15b-date-single`, `15c-date-range` (§7.17–7.18).
