@@ -292,8 +292,8 @@
     which the design tokens set to 0ms.
   */
   :root {
-    --dur-sheet-in: 1ms;
-    --dur-sheet-out: 1ms;
+    --motion-sheet-in: 1ms;
+    --motion-sheet-out: 1ms;
   }
 
   [data-vaul-drawer][data-state="open"]:not(.vaul-dragging),

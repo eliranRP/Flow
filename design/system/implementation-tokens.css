@@ -1,7 +1,7 @@
 /* ==========================================================================
    Flow · implementation tokens (CSS custom properties)
-   GENERATED from design-tokens.json by ../gen_implementation_tokens.py. Do not edit by hand:
-   change tokens.py -> design-tokens.json -> re-run the generator.
+   The one source for Flow's design tokens (FLOW-363). Edit this file directly; values follow the
+   approved Design canvas, page Design guide.
    Sections marked "guide-defined" are not in design-tokens.json; they are
    defined in implementation-guide.md (motion, layout, derived colours).
 
@@ -24,50 +24,93 @@
   --font-family: "Rubik", system-ui, sans-serif;
   --font-numerals: tabular-nums lining-nums;
 
-  /* ---- type scale (use ONLY these) ---- */
-  --type-hero-size: 3.25rem; /* 52px */
-  --type-hero-line: 1.15;
-  --type-hero-weight: 600;
-  --type-display-size: 2.25rem; /* 36px */
-  --type-display-line: 1.2;
-  --type-display-weight: 600;
-  --type-title-1-size: 2.125rem; /* 34px */
-  --type-title-1-line: 1.15;
-  --type-title-1-weight: 600;
-  --type-title-1-tracking: -0.01em;
-  --type-title-2-size: 1.375rem; /* 22px */
-  --type-title-2-line: 1.35;
-  --type-title-2-weight: 600;
-  --type-band-title-size: 2rem; /* 32px */
-  --type-band-title-line: 1.25;
-  --type-band-title-weight: 600;
-  --type-heading-size: 1.25rem; /* 20px */
-  --type-heading-line: 1.3;
-  --type-heading-weight: 600;
-  --type-title-3-size: 1.0625rem; /* 17px */
-  --type-title-3-line: 1.45;
-  --type-title-3-weight: 600;
-  --type-amount-size: 1.0625rem; /* 17px */
-  --type-amount-line: 1.45;
-  --type-amount-weight: 400;
-  --type-body-size: 1rem; /* 16px */
-  --type-body-line: 1.5;
-  --type-body-weight: 500;
-  --type-label-size: 0.9375rem; /* 15px */
-  --type-label-line: 1.5;
-  --type-label-weight: 500;
-  --type-meta-size: 0.9375rem; /* 15px */
+  /* ---- type scale (use ONLY these): roles ---- */
+  --type-band-size: 52px;
+  --type-band-line: 1.1;
+  --type-band-weight: 500;
+  --type-detail-size: 40px;
+  --type-detail-line: 1.15;
+  --type-detail-weight: 400;
+  --type-total-size: 34px;
+  --type-total-line: 1.15;
+  --type-total-weight: 400;
+  --type-title-size: 32px;
+  --type-title-line: 1.2;
+  --type-title-weight: 600;
+  --type-card-size: 28px;
+  --type-card-line: 1.2;
+  --type-card-weight: 400;
+  --type-name-size: 24px;
+  --type-name-line: 1.25;
+  --type-name-weight: 600;
+  --type-sheet-size: 20px;
+  --type-sheet-line: 1.3;
+  --type-sheet-weight: 600;
+  --type-section-size: 20px;
+  --type-section-line: 1.3;
+  --type-section-weight: 500;
+  --type-body-size: 17px;
+  --type-body-line: 1.45;
+  --type-body-weight: 400;
+  --type-btn-size: 17px;
+  --type-btn-line: 1.3;
+  --type-btn-weight: 500;
+  --type-btn-2-size: 16px;
+  --type-btn-2-line: 1.3;
+  --type-btn-2-weight: 500;
+  --type-line2-size: 15px;
+  --type-line2-line: 1.4;
+  --type-line2-weight: 400;
+  --type-meta-size: 14px;
   --type-meta-line: 1.4;
   --type-meta-weight: 400;
-  --type-hint-size: 0.8125rem; /* 13px */
-  --type-hint-line: 1.45;
-  --type-hint-weight: 400;
-  --type-micro-size: 0.6875rem; /* 11px */
-  --type-micro-line: 1.3;
-  --type-micro-weight: 500;
+  --type-chip-size: 14px;
+  --type-chip-line: 1.3;
+  --type-chip-weight: 500;
+  --type-caption-size: 13px;
+  --type-caption-line: 1.4;
+  --type-caption-weight: 400;
+  --type-cents-size: 11px;
+  --type-cents-line: 1.2;
+  --type-cents-weight: 400;
+  /* old names, kept as aliases of the roles above (screens still use them) */
+  --type-hero-size: var(--type-band-size);
+  --type-hero-line: var(--type-band-line);
+  --type-hero-weight: var(--type-band-weight);
+  --type-display-size: var(--type-detail-size);
+  --type-display-line: var(--type-detail-line);
+  --type-display-weight: var(--type-detail-weight);
+  --type-title-1-size: var(--type-total-size);
+  --type-title-1-line: var(--type-total-line);
+  --type-title-1-weight: var(--type-total-weight);
+  --type-title-2-size: var(--type-name-size);
+  --type-title-2-line: var(--type-name-line);
+  --type-title-2-weight: var(--type-name-weight);
+  --type-band-title-size: var(--type-title-size);
+  --type-band-title-line: var(--type-title-line);
+  --type-band-title-weight: var(--type-title-weight);
+  --type-heading-size: var(--type-sheet-size);
+  --type-heading-line: var(--type-sheet-line);
+  --type-heading-weight: var(--type-sheet-weight);
+  --type-title-3-size: var(--type-btn-size);
+  --type-title-3-line: var(--type-btn-line);
+  --type-title-3-weight: var(--type-btn-weight);
+  --type-amount-size: var(--type-body-size);
+  --type-amount-line: var(--type-body-line);
+  --type-amount-weight: var(--type-body-weight);
+  --type-label-size: var(--type-line2-size);
+  --type-label-line: var(--type-line2-line);
+  --type-label-weight: var(--type-line2-weight);
+  --type-hint-size: var(--type-caption-size);
+  --type-hint-line: var(--type-caption-line);
+  --type-hint-weight: var(--type-caption-weight);
+  --type-micro-size: var(--type-cents-size);
+  --type-micro-line: var(--type-cents-line);
+  --type-micro-weight: var(--type-cents-weight);
   --type-wordmark-size: 1.375rem; /* 22px */
   --type-wordmark-line: 1.2;
   --type-wordmark-weight: 700;
+
 
   /* ---- spacing (4-point scale + named layout values) ---- */
   --space-1: 4px;
@@ -78,15 +121,20 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
-  --space-side: 24px;
+  --space-side: 20px;
+  --row-height: 64px;
+  --avatar: 36px;
+  --bar-thin: 6px;
+  --bar-job: 8px;
+  --dot: 6px;
   --space-card-inset: 16px;
   --space-section: 36px;
 
   /* ---- corner radii ---- */
   --radius-chip: 9999px;
   --radius-input: 12px;
-  --radius-button: 14px;
-  --radius-card: 16px;
+  --radius-button: 9999px;
+  --radius-card: 20px;
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
@@ -105,16 +153,29 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --content-max: 480px;          /* phone-only app: wider viewports centre a phone column */
 
-  /* ---- motion (guide-defined) ---- */
-  --dur-press: 100ms;
-  --dur-fast: 150ms;
-  --dur-base: 200ms;
-  --dur-sheet-in: 280ms;
-  --dur-sheet-out: 220ms;
-  --dur-shimmer: 1400ms;
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* ---- motion (guide-defined; FLOW-363). Animate only transform and opacity. ---- */
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --toast-duration: 2500ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-press: 120ms;
+  --motion-fast: 150ms;
+  --motion-width: 300ms;
+  --skeleton-delay: 300ms;
+  --motion-toast-out: 160ms;
+  --motion-fade: 200ms;
+  --motion-sheet-out: 220ms;
+  --motion-bar: 240ms;
+  --motion-scrim: 260ms;
+  --motion-page: 280ms;
+  --motion-sheet-in: 280ms;
+  --motion-stagger: 40ms;
+  --motion-bar-grow: 480ms;
+  --motion-pulse: 1.2s;
+  --motion-spin: 800ms;
+  --rise-page: 8px;
+  --rise-push: 24px;
+  --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */
+  --toast-duration: 2500ms; /* unchanged here; FLOW-363 (3/4) moves the toast */
   --toast-duration-error: 4000ms;
 
   /* ---- colour: light (default) ---- */
@@ -167,6 +228,11 @@
   --color-gsi-bg: #FFFFFF;
   --color-gsi-border: #747775;
   --color-gsi-text: #1F1F1F;
+  --color-signal: #C3302B;
+  --color-signal-soft: #B9503F;
+  --color-band-past: #5A2DB0;
+  --color-pill-helps: #4A4458;
+  --color-pill-hurts: #C3302B;
   /* derived colours (guide-defined) */
   /* none: all colours now come from design-tokens.json */
 }
@@ -223,6 +289,11 @@
     --color-gsi-bg: #FFFFFF;
     --color-gsi-border: #747775;
     --color-gsi-text: #1F1F1F;
+    --color-signal: #FF8A80;
+    --color-signal-soft: #E8A598;
+    --color-band-past: #5A2DB0;
+    --color-pill-helps: #4A4458;
+    --color-pill-hurts: #C3302B;
     /* derived colours (guide-defined) */
     /* none: all colours now come from design-tokens.json */
   }
@@ -279,6 +350,11 @@
   --color-gsi-bg: #FFFFFF;
   --color-gsi-border: #747775;
   --color-gsi-text: #1F1F1F;
+  --color-signal: #FF8A80;
+  --color-signal-soft: #E8A598;
+  --color-band-past: #5A2DB0;
+  --color-pill-helps: #4A4458;
+  --color-pill-hurts: #C3302B;
   /* derived colours (guide-defined) */
   /* none: all colours now come from design-tokens.json */
 }
@@ -288,11 +364,24 @@
 /* ---- motion off for users who ask for it ---- */
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --dur-press: 0ms;
-    --dur-fast: 0ms;
-    --dur-base: 0ms;
-    --dur-sheet-in: 0ms;
-    --dur-sheet-out: 0ms;
+    --motion-press: 0ms;
+    --motion-fast: 0ms;
+    --motion-width: 0ms;
+    --skeleton-delay: 0ms;
+    --motion-toast-out: 0ms;
+    --motion-fade: 0ms;
+    --motion-sheet-out: 1ms; /* Vaul has no animationend fallback: sheets keep 1ms */
+    --motion-bar: 0ms;
+    --motion-scrim: 0ms;
+    --motion-page: 0ms;
+    --motion-sheet-in: 1ms;
+    --motion-stagger: 0ms;
+    --motion-bar-grow: 0ms;
+    --motion-pulse: 0ms;
+    --motion-spin: 0ms;
+    --rise-page: 0px;
+    --rise-push: 0px;
+    --dur-shimmer: 0ms;
   }
 }
 
@@ -314,6 +403,20 @@
 .t-hint { font-size: var(--type-hint-size); line-height: var(--type-hint-line); font-weight: var(--type-hint-weight); color: var(--color-text-muted); }
 .t-micro { font-size: var(--type-micro-size); line-height: var(--type-micro-line); font-weight: var(--type-micro-weight); }
 .t-wordmark { font-size: var(--type-wordmark-size); line-height: var(--type-wordmark-line); font-weight: var(--type-wordmark-weight); }
+.t-band { font-size: var(--type-band-size); line-height: var(--type-band-line); font-weight: var(--type-band-weight); }
+.t-detail { font-size: var(--type-detail-size); line-height: var(--type-detail-line); font-weight: var(--type-detail-weight); }
+.t-total { font-size: var(--type-total-size); line-height: var(--type-total-line); font-weight: var(--type-total-weight); }
+.t-title { font-size: var(--type-title-size); line-height: var(--type-title-line); font-weight: var(--type-title-weight); }
+.t-card { font-size: var(--type-card-size); line-height: var(--type-card-line); font-weight: var(--type-card-weight); }
+.t-name { font-size: var(--type-name-size); line-height: var(--type-name-line); font-weight: var(--type-name-weight); }
+.t-sheet { font-size: var(--type-sheet-size); line-height: var(--type-sheet-line); font-weight: var(--type-sheet-weight); }
+.t-section { font-size: var(--type-section-size); line-height: var(--type-section-line); font-weight: var(--type-section-weight); }
+.t-btn { font-size: var(--type-btn-size); line-height: var(--type-btn-line); font-weight: var(--type-btn-weight); }
+.t-btn-2 { font-size: var(--type-btn-2-size); line-height: var(--type-btn-2-line); font-weight: var(--type-btn-2-weight); }
+.t-line2 { font-size: var(--type-line2-size); line-height: var(--type-line2-line); font-weight: var(--type-line2-weight); }
+.t-chip { font-size: var(--type-chip-size); line-height: var(--type-chip-line); font-weight: var(--type-chip-weight); }
+.t-caption { font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); }
+.t-cents { font-size: var(--type-cents-size); line-height: var(--type-cents-line); font-weight: var(--type-cents-weight); }
 
 /* Every figure (amounts, %, dates, counts, phone numbers) goes in .num */
 .num {

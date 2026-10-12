@@ -108,8 +108,8 @@
   flex: none;
   inline-size: var(--review-label-w);
   color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
-  font-weight: var(--type-meta-weight);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-review-ai .ui-row-title {
@@ -150,11 +150,11 @@
 }
 
 .ui-review-motion[data-motion="in"] {
-  animation: ui-review-in var(--dur-base) var(--ease-standard);
+  animation: ui-review-in var(--motion-fade) var(--ease-standard);
 }
 
 .ui-review-motion[data-motion="out"] {
-  animation: ui-review-out var(--dur-base) var(--ease-exit) forwards;
+  animation: ui-review-out var(--motion-fade) var(--ease-exit) forwards;
 }
 
 @keyframes ui-review-in {

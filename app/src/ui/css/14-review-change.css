@@ -179,7 +179,7 @@
 }
 
 .ui-change-swap {
-  animation: ui-change-swap var(--dur-base) var(--ease-standard);
+  animation: ui-change-swap var(--motion-fade) var(--ease-standard);
 }
 
 @keyframes ui-change-swap {

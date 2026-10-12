@@ -67,7 +67,7 @@
   border: 0;
   font-weight: 600;
   text-decoration: none;
-  transition: background-color var(--dur-press);
+  transition: background-color var(--motion-press);
 }
 
 .ui-btn-label {
