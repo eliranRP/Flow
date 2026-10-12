@@ -33,13 +33,3 @@ export function Chip({ kind = "choice", pressed = false, children, onClick, clas
     </button>
   );
 }
-
-/** A done, read-only status. No checkmark: the word is the status. */
-export function StatusPill({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
-  return (
-    <span className="ui-status">
-      {icon == null ? null : <span className="ui-status-icon">{icon}</span>}
-      <span className="ui-chip-label" data-clip-ok="">{children}</span>
-    </span>
-  );
-}

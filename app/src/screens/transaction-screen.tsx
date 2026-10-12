@@ -16,7 +16,7 @@ import { BigNumber } from "../ui/big-number";
 import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { StatusPill } from "../ui/chip";
+import { StatusDot } from "../ui/status-dot";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { ChartIcon, CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
@@ -485,10 +485,10 @@ export function TransactionScreen({
   const loanLine = txn.pnl_fixed === true || loanSplitFlag || loanSplitView != null;
   const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged || loanLine ? null : txn.pnl_state, splitByCategory);
   const pnlPill = pnl.out ? (
-    <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
+    <StatusDot icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusDot>
   ) : pnl.mixed ? (
-    <StatusPill icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusPill>
-  ) : pnl.forcedIn ? <StatusPill>נספר ברווח</StatusPill> : null;
+    <StatusDot icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusDot>
+  ) : pnl.forcedIn ? <StatusDot>נספר ברווח</StatusDot> : null;
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
   // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
   const lineSplitHint = lineSplitRowHint(lineSplit);
@@ -579,8 +579,8 @@ export function TransactionScreen({
           </p>
           {reviewLabel || paymentLabel || pnlPill ? (
             <div className="ui-status-row">
-              {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
-              {paymentLabel ? <StatusPill icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusPill> : null}
+              {reviewLabel ? <StatusDot>{reviewLabel}</StatusDot> : null}
+              {paymentLabel ? <StatusDot icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusDot> : null}
               {pnlPill}
             </div>
           ) : null}

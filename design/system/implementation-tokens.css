@@ -127,6 +127,9 @@
   --bar-thin: 6px;
   --bar-job: 8px;
   --dot: 6px;
+  --status-gap: 6px;
+  --pill-pad-block: 3px;
+  --pill-pad-inline: 10px;
   --space-card-inset: 16px;
   --space-section: 36px;
 

@@ -1,0 +1,10 @@
+/* FLOW-363 (2b): the card. Radius and padding come from the tokens; no border. */
+.ui-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-card-tint {
+  background: var(--color-tint);
+}

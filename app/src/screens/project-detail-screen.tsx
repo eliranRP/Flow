@@ -28,7 +28,7 @@ import { BandHero, SectionHead } from "../ui/layout";
 import { TextLink } from "../ui/text-link";
 import { List, ListRow } from "../ui/list-row";
 import { FocusTitle } from "../ui/focus-title";
-import { BudgetBar } from "../ui/progress-bar";
+import { ProgressBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
@@ -255,7 +255,7 @@ export function ProjectDetailScreen({
         <ScreenHeader title="הוצאות" kicker={project.name} subtitle={periodWords} backTo={sectionHref("overview")} />
         {project.budget_agorot != null && period.kind === "all" ? (
           <div className="ui-page-pad ui-project-budget">
-            <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
+            <ProgressBar variant="split" label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
           </div>
         ) : null}
         <ProjectCategories
