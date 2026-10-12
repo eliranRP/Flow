@@ -16,6 +16,7 @@ test("refuses a missing value, a missing folder, an unknown option and no story"
   assert.throws(() => parseArgs(["--dir", "d", "a"]), /--out is required/);
   assert.throws(() => parseArgs(["--dir", "d", "--out", "o"]), /give at least one story id/);
   assert.throws(() => parseArgs(["--dir", "d", "--out", "o", "--width", "320", "a"]), /unknown option --width/);
+  assert.throws(() => parseArgs(["--dir", "d", "--out", "o", "../../x"]), /not a story id/);
 });
 
 test("names each shot by story, theme and width", () => {

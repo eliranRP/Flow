@@ -180,7 +180,7 @@ Short, calm and functional. Nothing bounces, overshoots or loops for attention. 
 | `--motion-pulse` | 1.2s | Skeleton pulse |
 | `--motion-spin` | 800ms | Inline spinner, one turn |
 | `--skeleton-delay` | 300ms | Nothing shows before this |
-| `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise; push offset (the push comes from the start side) |
+| `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise; push offset (in RTL the push comes from the left, the end side, and back leaves the same way) |
 
 Utilities in `app/src/ui/css/00-motion.css`: `.m-press`, `.m-page-enter` (with `--i` for the stagger index), `.m-push-in`, `.m-push-back`, `.m-sheet-in`, `.m-sheet-out`, `.m-bar-in`, `.m-bar-out`, `.m-row-leave`, `.m-bar-grow`.
 

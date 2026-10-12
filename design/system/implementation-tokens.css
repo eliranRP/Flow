@@ -2,8 +2,8 @@
    Flow · implementation tokens (CSS custom properties)
    The one source for Flow's design tokens (FLOW-363). Edit this file directly; values follow the
    approved Design canvas, page Design guide.
-   Sections marked "guide-defined" are not in design-tokens.json; they are
-   defined in implementation-guide.md (motion, layout, derived colours).
+   Sections marked "guide-defined" are described in implementation-guide.md (motion, layout,
+   derived colours).
 
    Theme switching:
      - No attribute on <html>      -> follows the OS (prefers-color-scheme)
@@ -233,8 +233,6 @@
   --color-band-past: #5A2DB0;
   --color-pill-helps: #4A4458;
   --color-pill-hurts: #C3302B;
-  /* derived colours (guide-defined) */
-  /* none: all colours now come from design-tokens.json */
 }
 
 /* ---- colour: dark, following the OS unless light is forced ---- */
@@ -294,8 +292,6 @@
     --color-band-past: #5A2DB0;
     --color-pill-helps: #4A4458;
     --color-pill-hurts: #C3302B;
-    /* derived colours (guide-defined) */
-    /* none: all colours now come from design-tokens.json */
   }
 }
 
@@ -355,8 +351,6 @@
   --color-band-past: #5A2DB0;
   --color-pill-helps: #4A4458;
   --color-pill-hurts: #C3302B;
-  /* derived colours (guide-defined) */
-  /* none: all colours now come from design-tokens.json */
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"]  { color-scheme: dark; }
@@ -367,7 +361,6 @@
     --motion-press: 0ms;
     --motion-fast: 0ms;
     --motion-width: 0ms;
-    --skeleton-delay: 0ms;
     --motion-toast-out: 0ms;
     --motion-fade: 0ms;
     --motion-sheet-out: 1ms; /* Vaul has no animationend fallback: sheets keep 1ms */

@@ -108,5 +108,5 @@
 .ui-hint-rest::before {
   content: "";
   inline-size: 0;
-  block-size: calc(var(--type-meta-size) * var(--type-meta-line));
+  block-size: calc(var(--type-line2-size) * var(--type-line2-line));
 }

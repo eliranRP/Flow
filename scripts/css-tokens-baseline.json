@@ -2,12 +2,15 @@
   "app/src/setup/setup.css": {
     "spacing": 1
   },
+  "app/src/styles/app.css": {
+    "font-weight": 1
+  },
   "app/src/ui/css/01-base.css": {
     "font-weight": 1,
     "font-size": 1
   },
   "app/src/ui/css/02-fields-sheets.css": {
-    "spacing": 3,
+    "spacing": 1,
     "font-weight": 2
   },
   "app/src/ui/css/03-controls.css": {
@@ -26,15 +29,14 @@
     "radius": 1
   },
   "app/src/ui/css/07-band-home.css": {
-    "spacing": 3
+    "spacing": 1
   },
   "app/src/ui/css/08-tabbar-empty.css": {
     "font-weight": 2,
-    "spacing": 3,
-    "radius": 1
+    "radius": 1,
+    "spacing": 2
   },
   "app/src/ui/css/09-sign-in-project.css": {
-    "spacing": 2,
     "color": 3
   },
   "app/src/ui/css/10-settings-onboarding.css": {
@@ -47,7 +49,7 @@
     "font-weight": 1
   },
   "app/src/ui/css/14-review-change.css": {
-    "spacing": 2
+    "spacing": 1
   },
   "app/src/ui/css/15-install-reference.css": {
     "spacing": 1,
@@ -55,14 +57,8 @@
     "font-weight": 1,
     "line-height": 1
   },
-  "app/src/ui/css/16-transaction.css": {
-    "duration": 1
-  },
   "app/src/ui/css/18-period-bar.css": {
     "radius": 1
-  },
-  "app/src/ui/css/19-search-screen.css": {
-    "spacing": 2
   },
   "app/src/ui/css/22-edge-back.css": {
     "spacing": 3,
@@ -88,11 +84,10 @@
     "spacing": 1
   },
   "app/src/ui/css/34-swipe-remove.css": {
-    "duration": 2
+    "duration": 1
   },
   "app/src/ui/css/35-team.css": {
-    "font-weight": 1,
-    "spacing": 1
+    "font-weight": 1
   },
   "app/src/ui/css/37-charge-switches.css": {
     "spacing": 1

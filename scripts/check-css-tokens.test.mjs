@@ -1,12 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compareCounts, countRules, findViolations } from "./check-css-tokens.mjs";
+import { compareCounts, countRules, findViolations, stripTokenBlocks } from "./check-css-tokens.mjs";
 
 const rulesOf = (css) => findViolations(css).map((violation) => violation.rule);
 
 test("a raw hex colour in a declaration fails the colour rule", () => {
   assert.deepEqual(rulesOf(".a { color: #1D1728; }"), ["color"]);
   assert.deepEqual(rulesOf(".a { background: rgba(0, 0, 0, 0.5); }"), ["color"]);
+  assert.deepEqual(rulesOf(".a { border-color: hsl(270 50% 40%); }"), ["color"]);
+});
+
+test("a named colour fails; transparent, currentColor and a token name do not", () => {
+  assert.deepEqual(rulesOf(".a { color: white; }"), ["color"]);
+  assert.deepEqual(rulesOf(".a { border: 1px solid Red; }"), ["color"]);
+  assert.deepEqual(rulesOf(".a { color: currentColor; background: transparent; outline-color: inherit; }"), []);
+  assert.deepEqual(rulesOf(".a { color: var(--color-on-band); fill: var(--white); animation-name: red; }"), []);
+});
+
+test("a raw line-height and a raw *-duration fail", () => {
+  assert.deepEqual(rulesOf(".a { line-height: 1.4; }"), ["line-height"]);
+  assert.deepEqual(rulesOf(".a { animation-duration: 300ms; }"), ["duration"]);
 });
 
 test("a raw font-size in px fails the font-size rule", () => {
@@ -46,6 +59,13 @@ test("a raw radius or spacing value fails its rule, and 0 and 50% pass", () => {
   assert.deepEqual(rulesOf(".a { inset-inline: -1px 0; }"), []);
 });
 
+test("zero lengths and zero durations are not raw values; .5s and 1.5px are", () => {
+  assert.deepEqual(rulesOf(".a { padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); }"), []);
+  assert.deepEqual(rulesOf(".a { transition: visibility 0s linear var(--motion-fast); }"), []);
+  assert.deepEqual(rulesOf(".a { transition: opacity .5s; }"), ["duration"]);
+  assert.deepEqual(rulesOf(".a { margin-top: 1.5px; }"), ["spacing"]);
+});
+
 test("comments are ignored", () => {
   assert.deepEqual(findViolations("/* color: #fff; font-size: 14px; */ .a { color: var(--color-text); }"), []);
   assert.deepEqual(rulesOf(".a { /* was 14px */ color: var(--color-text); }"), []);
@@ -53,6 +73,12 @@ test("comments are ignored", () => {
 
 test("a custom property definition is a token, not a raw value", () => {
   assert.deepEqual(findViolations(":root { --my-token: #1D1728; --my-size: 14px; }"), []);
+});
+
+test("in app.css only the :root and @theme blocks are skipped", () => {
+  const css = ":root {\n  --a: 1px;\n}\n@theme inline {\n  --text-x: 14px;\n}\nbody {\n  font-weight: 500;\n}\n";
+  const violations = findViolations(stripTokenBlocks(css));
+  assert.deepEqual(violations.map((violation) => [violation.rule, violation.line]), [["font-weight", 8]]);
 });
 
 test("violations carry the line they are on", () => {

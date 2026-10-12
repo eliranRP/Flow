@@ -34,14 +34,6 @@ function declarations(body: string): Map<string, string> {
   return map;
 }
 
-/** Rules in a flat block (no nested braces): selectors and declaration text. */
-function flatRules(body: string): Array<{ selectors: string[]; declarations: string }> {
-  return [...stripComments(body).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectorText = "", declarationText = ""]) => ({
-    selectors: selectorText.split(",").map((selector) => selector.trim()),
-    declarations: declarationText,
-  }));
-}
-
 const rootTokens = declarations(blockBody(tokensCss, ":root {"));
 const reducedTokens = declarations(blockBody(tokensCss, "@media (prefers-reduced-motion: reduce) {"));
 const motionTokenNames = [...rootTokens.keys()].filter((name) => name.startsWith("--motion-"));
@@ -119,23 +111,69 @@ describe("00-motion.css", () => {
     }
   });
 
-  it("turns off the animation of every animated .m-* class under reduced motion", () => {
-    const withoutKeyframes = css.replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, "");
-    const reducedBody = blockBody(css, "@media (prefers-reduced-motion: reduce) {");
-    const mainRules = withoutKeyframes.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, "");
-    const animatedClasses = flatRules(mainRules)
-      .filter((rule) => /(^|;|\s)animation\s*:/.test(rule.declarations))
-      .flatMap((rule) => rule.selectors)
-      .map((selector) => selector.match(/\.m-[\w-]+/)?.[0])
-      .filter((name): name is string => name !== undefined);
-    expect(animatedClasses.length).toBeGreaterThan(0);
-    const reduced = flatRules(reducedBody);
-    for (const name of new Set(animatedClasses)) {
-      const rule = reduced.find(
-        (candidate) => candidate.selectors.includes(name) && /animation\s*:\s*none/.test(candidate.declarations),
-      );
-      expect(rule, `${name} needs animation: none under reduced motion`).toBeDefined();
+  it("leaves reduced motion to the tokens, so an exit still ends hidden and fires animationend", () => {
+    // `animation: none` would drop the `forwards` end state (a leaving page or bar would show again)
+    // and Vaul-style waits on animationend would hang; the tokens already make each run 0ms (sheets 1ms).
+    expect(css).not.toMatch(/prefers-reduced-motion/);
+    expect(css).not.toMatch(/animation\s*:\s*none/);
+    for (const name of [".m-push-back", ".m-sheet-out", ".m-bar-out"]) {
+      expect(css, name).toMatch(new RegExp(`\\${name}\\s*\\{[^}]*animation:[^;]*forwards`));
     }
+  });
+
+  /** The declarations inside `selector { … }` (first match). */
+  function rule(selector: string): string {
+    const match = new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`).exec(css);
+    if (!match) throw new Error(`no rule ${selector}`);
+    return match[1] ?? "";
+  }
+  /** The `to` (or `from`) frame of a keyframes block. */
+  function frame(name: string, which: "from" | "to"): string {
+    return blockBody(css, `@keyframes ${name} {`).split(new RegExp(`\\b${which}\\s*\\{`))[1]?.split("}")[0] ?? "";
+  }
+
+  it("presses at opacity .72, and buttons also scale to .985", () => {
+    expect(rule(".m-press:active")).toMatch(/opacity:\s*0\.72;/);
+    expect(rule(".m-press.m-press-scale:active")).toMatch(/transform:\s*scale\(0\.985\);/);
+    expect(rule(".m-press")).toMatch(/var\(--motion-press\)/);
+  });
+
+  it("staggers only the first five blocks, 40ms apart", () => {
+    expect(rule(".m-page-enter")).toMatch(/animation-delay:\s*calc\(min\(var\(--i, 0\), 4\) \* var\(--motion-stagger\)\)/);
+    expect(frame("m-page-enter", "from")).toMatch(/translateY\(var\(--rise-page\)\)/);
+  });
+
+  it("pushes a detail page in from the left and takes it back to the left (RTL)", () => {
+    expect(frame("m-push-in", "from")).toMatch(/translateX\(calc\(-1 \* var\(--rise-push\)\)\)/);
+    expect(frame("m-push-back", "to")).toMatch(/translateX\(calc\(-1 \* var\(--rise-push\)\)\)/);
+  });
+
+  it("grows thin bars from the right", () => {
+    expect(rule(".m-bar-grow")).toMatch(/transform-origin:\s*right;/);
+    expect(frame("m-bar-grow", "from")).toMatch(/scaleX\(0\)/);
+  });
+
+  it("uses ease-enter for what arrives and ease-exit for what leaves, each on its token", () => {
+    const expected: [string, string, string][] = [
+      [".m-page-enter", "--motion-page", "--ease-enter"],
+      [".m-push-in", "--motion-page", "--ease-enter"],
+      [".m-sheet-in", "--motion-sheet-in", "--ease-enter"],
+      [".m-bar-in", "--motion-bar", "--ease-enter"],
+      [".m-bar-grow", "--motion-bar-grow", "--ease-enter"],
+      [".m-push-back", "--motion-sheet-out", "--ease-exit"],
+      [".m-sheet-out", "--motion-sheet-out", "--ease-exit"],
+      [".m-bar-out", "--motion-bar", "--ease-exit"],
+      [".m-row-leave", "--motion-sheet-out", "--ease-exit"],
+    ];
+    for (const [selector, duration, easing] of expected) {
+      expect(rule(selector), selector).toMatch(new RegExp(`animation:[^;]*var\\(${duration}\\) var\\(${easing}\\)`));
+    }
+  });
+
+  it("collapses a leaving row from 1fr to 0fr, never a measured height", () => {
+    expect(frame("m-row-leave", "from")).toMatch(/grid-template-rows:\s*1fr/);
+    expect(frame("m-row-leave", "to")).toMatch(/grid-template-rows:\s*0fr/);
+    expect(css).not.toMatch(/(?<![-\w])height\s*:/);
   });
 
   it("names the motion classes the app uses", () => {

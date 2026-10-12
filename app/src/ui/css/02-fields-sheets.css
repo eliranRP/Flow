@@ -200,7 +200,7 @@
 .ui-hint-parts {
   display: flex;
   flex-wrap: wrap;
-  max-block-size: calc(var(--type-meta-size) * var(--type-meta-line));
+  max-block-size: calc(var(--type-line2-size) * var(--type-line2-line));
   min-inline-size: 0;
   overflow: hidden;
 }

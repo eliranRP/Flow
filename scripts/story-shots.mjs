@@ -38,6 +38,8 @@ export function parseArgs(argv) {
     } else if (arg.startsWith("--")) {
       throw new Error(`unknown option ${arg}`);
     } else {
+      // A story id becomes a file name under --out, so it may not carry a path (Storybook ids are kebab case).
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(arg)) throw new Error(`not a story id: ${arg}`);
       options.ids.push(arg);
     }
   }

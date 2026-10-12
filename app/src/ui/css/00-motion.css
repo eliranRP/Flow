@@ -48,9 +48,10 @@
   }
   to {
     opacity: 0;
-    transform: translateX(var(--rise-push));
+    transform: translateX(calc(-1 * var(--rise-push)));
   }
 }
+/* Back reverses the push: the detail page came in from the left (RTL), so it leaves to the left. */
 .m-push-back {
   animation: m-push-back var(--motion-sheet-out) var(--ease-exit) forwards;
 }
@@ -103,12 +104,22 @@
   animation: m-bar-out var(--motion-bar) var(--ease-exit) forwards;
 }
 
-/* A row that leaves collapses its height (grid rows) and fades. Its child must be allowed to shrink. */
+/* A row that leaves collapses its height (grid rows 1fr -> 0fr, never a measured height) and fades.
+   A keyframe, not a transition: adding the class also switches display to grid, so a transition
+   would start from `grid-template-rows: none`, which does not interpolate, and the row would snap shut. */
+@keyframes m-row-leave {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
 .m-row-leave {
   display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition: grid-template-rows var(--motion-sheet-out) var(--ease-exit), opacity var(--motion-sheet-out) var(--ease-exit);
+  animation: m-row-leave var(--motion-sheet-out) var(--ease-exit) forwards;
 }
 .m-row-leave > * {
   min-height: 0;
@@ -128,18 +139,6 @@
   animation: m-bar-grow var(--motion-bar-grow) var(--ease-enter) both;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .m-page-enter,
-  .m-push-in,
-  .m-push-back,
-  .m-sheet-in,
-  .m-sheet-out,
-  .m-bar-in,
-  .m-bar-out,
-  .m-bar-grow {
-    animation: none;
-  }
-  .m-press:active {
-    transform: none;
-  }
-}
+/* No reduced-motion block here: the tokens go to 0ms (sheets 1ms) and the rises to 0, so each
+   animation still runs, ends at once on its end state (an exit stays hidden, `forwards`), and fires
+   animationend for whatever waits on it. `animation: none` would show the start state instead. */

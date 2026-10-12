@@ -338,10 +338,6 @@
   color: var(--color-accent-text);
 }
 
-.ui-page .t-title-1 {
-  letter-spacing: var(--type-title-1-tracking);
-}
-
 .ui-page .t-title-1,
 .ui-page .t-label {
   display: -webkit-box;
