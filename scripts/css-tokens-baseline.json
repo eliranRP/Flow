@@ -5,9 +5,6 @@
   "app/src/styles/app.css": {
     "font-weight": 1
   },
-  "app/src/ui/css/01-base.css": {
-    "font-size": 1
-  },
   "app/src/ui/css/02-fields-sheets.css": {
     "spacing": 1,
     "font-weight": 2

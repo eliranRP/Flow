@@ -110,14 +110,18 @@ async function main() {
       }
       await page.evaluate(() => document.fonts.ready);
       // Shoot the settled state: wait for every finite animation (a bar's 480ms grow, a page enter).
-      // Loops (spinners, the skeleton pulse) never finish, so they are left out.
+      // Loops (spinners, the skeleton pulse) and paused animations never finish, so they are left out.
+      // Capped at 5s so a stuck story is shot as-is instead of hanging the run.
       await page.evaluate(() =>
-        Promise.all(
-          document
-            .getAnimations()
-            .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
-            .map((animation) => animation.finished.catch(() => undefined)),
-        ),
+        Promise.race([
+          Promise.all(
+            document
+              .getAnimations()
+              .filter((animation) => animation.playState !== "paused" && animation.effect?.getTiming().iterations !== Infinity)
+              .map((animation) => animation.finished.catch(() => undefined)),
+          ),
+          new Promise((resolve) => setTimeout(resolve, 5_000)),
+        ]),
       );
       const file = path.join(outDir, shot.file);
       await page.screenshot({ path: file, fullPage: true });

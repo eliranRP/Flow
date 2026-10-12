@@ -1,12 +1,12 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
-import { Amount, type AmountPresentation } from "./amount";
+import { Amount, type AmountPresentation, type AmountSize } from "./amount";
 import { padded } from "./story-support";
 
 /** Agorot travel as decimal strings: story args cannot hold a bigint (story-args.test). */
 type AmountArgs = {
   agorot: string;
   presentation?: AmountPresentation;
-  size: "hero" | "display" | "list";
+  size: AmountSize;
   direction?: "income" | "expense";
   income?: boolean;
   loss?: boolean;
@@ -24,7 +24,7 @@ const meta = {
   decorators: [padded],
   args: { agorot: "128450", presentation: "detail", size: "list", cents: "always" },
   argTypes: {
-    size: { control: "select", options: ["hero", "display", "list"] },
+    size: { control: "select", options: ["hero", "display", "total", "card", "list"] },
     presentation: { control: "select", options: ["summary", "detail"] },
     direction: { control: "select", options: [undefined, "income", "expense"] },
     income: { control: "boolean" },
@@ -41,6 +41,8 @@ export const List: Story = {};
 export const ListIncome: Story = { args: { income: true } };
 export const ListExpense: Story = { args: { direction: "expense" } };
 export const Detail: Story = { args: { size: "display", presentation: "detail" } };
+export const Total: Story = { args: { agorot: "4206900", size: "total", cents: undefined, presentation: "summary" } };
+export const Card: Story = { args: { agorot: "4860000", size: "card", cents: undefined, presentation: "summary" } };
 
 const onBand: Decorator = (Story) => (
   <header className="ui-band">

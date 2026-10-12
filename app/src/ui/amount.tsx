@@ -2,6 +2,8 @@ import { formatAmountText } from "@flow/shared";
 import { useLayoutEffect, useRef, useState } from "react";
 
 export type AmountPresentation = "summary" | "detail";
+/** Roles from the Design guide: band 52/500, detail 40/400, total 34/400, card 28/400, list 17/400. */
+export type AmountSize = "hero" | "display" | "total" | "card" | "list";
 
 /**
  * Summaries are whole shekels. Detail shows agorot only when they are not zero.
@@ -24,7 +26,7 @@ type AmountProps = {
   agorot: bigint;
   presentation?: AmountPresentation;
   currency?: string;
-  size?: "hero" | "display" | "list";
+  size?: AmountSize;
   /** Loss colour is only used together with the minus that formatAmount already draws. */
   loss?: boolean;
   direction?: "income" | "expense";
@@ -58,19 +60,21 @@ export function splitCents(text: string, presentation: AmountPresentation): { wh
 const sizeClass = {
   hero: "t-hero",
   display: "t-display",
+  total: "t-total",
+  card: "t-card",
   list: "t-amount",
 } as const;
 
 const heroSteps = ["t-hero", "t-display", "t-title-1", "t-title-2", "t-title-3"] as const;
 
 /** Where a fitted size starts on the step list. Hero and display step down until the figure fits; list never does. */
-function firstStep(size: "hero" | "display" | "list" | undefined): number | null {
+function firstStep(size: AmountSize | undefined): number | null {
   if (size === "hero") return 0;
   if (size === "display") return 1;
   return null;
 }
 
-export function heroStepClass(size: "hero" | "display" | "list" | undefined, step: number): string {
+export function heroStepClass(size: AmountSize | undefined, step: number): string {
   const first = firstStep(size);
   if (first == null) return size ? sizeClass[size] : "";
   return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
