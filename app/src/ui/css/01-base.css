@@ -65,7 +65,6 @@
   gap: var(--space-2);
   padding-inline: var(--space-6);
   border: 0;
-  font-weight: 600;
   text-decoration: none;
   transition: background-color var(--motion-press);
 }
@@ -87,28 +86,54 @@
   white-space: nowrap;
 }
 
+/*
+  FLOW-363: primary, secondary, link and danger-link take their size, line and weight from the
+  button roles, and press with the motion utilities (opacity, and scale on the two pills). Their
+  transition is set here, because .ui-btn's background transition would win over .m-press.
+*/
 .ui-btn.ui-btn-primary {
   min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-accent);
   color: var(--color-on-accent);
-  font-size: var(--type-label-size);
-}
-
-.ui-btn.ui-btn-primary:active:not(:disabled) {
-  background: var(--color-accent-pressed);
+  font-size: var(--type-btn-size);
+  line-height: var(--type-btn-line);
+  font-weight: var(--type-btn-weight);
+  transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
 
 .ui-btn.ui-btn-secondary {
   min-height: var(--control-height);
+  border: var(--stroke-strong) solid var(--color-tint-strong);
   border-radius: var(--radius-button);
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-  font-size: var(--type-label-size);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+  font-weight: var(--type-btn-2-weight);
+  transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
 
-.ui-btn.ui-btn-secondary:active:not(:disabled) {
-  background: var(--color-tint-pressed);
+/* Text only: no fill, no padding, the 44px hit area. The chevron (if any) sits after the label. */
+.ui-btn.ui-btn-link,
+.ui-btn.ui-btn-danger-link {
+  min-height: var(--touch-min);
+  padding-inline: 0;
+  border-radius: var(--radius-button);
+  background: transparent;
+  gap: var(--space-1);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
+  transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
+}
+
+.ui-btn.ui-btn-link {
+  color: var(--color-accent-text);
+}
+
+.ui-btn.ui-btn-danger-link {
+  color: var(--color-signal);
 }
 
 .ui-band {
@@ -159,10 +184,12 @@ a.ui-row,
   cursor: progress;
 }
 
+/* A disabled route link (`<Button to disabled>`) is an <a aria-disabled>; busy keeps its own look below. */
 .ui-btn-primary:disabled,
 .ui-btn-secondary:disabled,
 .ui-btn-pill:disabled,
 .ui-btn-danger-tint:disabled,
+a:is(.ui-btn-primary, .ui-btn-secondary, .ui-btn-pill, .ui-btn-danger-tint)[aria-disabled="true"]:not([aria-busy="true"]),
 .ui-field-control:disabled,
 .ui-field-control:has(input:disabled),
 .ui-money-field:has(input:disabled) {
@@ -177,6 +204,9 @@ a.ui-row,
 
 .ui-btn-ghost:disabled,
 .ui-btn-danger:disabled,
+.ui-btn-link:disabled,
+.ui-btn-danger-link:disabled,
+a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="true"]),
 .ui-icon-btn:disabled {
   background: transparent;
   color: var(--color-disabled-text);
@@ -205,6 +235,7 @@ a.ui-row,
   background: var(--color-tint);
   color: var(--color-accent-text);
   font-size: var(--type-label-size);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-btn-pill,
@@ -234,6 +265,7 @@ a.ui-row,
   border-radius: var(--radius-button);
   color: var(--color-bad);
   font-size: var(--type-label-size);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-btn-danger {
@@ -261,6 +293,7 @@ a.ui-row,
   background: transparent;
   color: var(--color-accent-text);
   font-size: var(--type-label-size);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-btn-ghost.ui-btn-quiet {
@@ -284,16 +317,7 @@ a.ui-row,
   color: var(--color-text);
 }
 
-.ui-icon-btn:active {
-  background: var(--color-tint-pressed);
-}
-
 .ui-icon-btn-on-band {
-  color: var(--color-on-band);
-}
-
-.ui-icon-btn-on-band:active {
-  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
   color: var(--color-on-band);
 }
 
