@@ -10,7 +10,7 @@ import * as sheetDrawer from "../src/ui/sheet-drawer";
 primeSheetDrawer(sheetDrawer);
 
 const withFlow: Decorator = (Story, context) => {
-  const theme = context.globals.theme === "light" ? "light" : "dark";
+  const theme = context.globals.theme === "dark" ? "dark" : "light";
   document.documentElement.lang = "he";
   document.documentElement.dir = "rtl";
   document.documentElement.dataset.theme = theme;
@@ -27,7 +27,7 @@ const withFlow: Decorator = (Story, context) => {
 const preview: Preview = {
   decorators: [withFlow],
   initialGlobals: {
-    theme: "dark",
+    theme: "light",
     viewport: { value: "flow390", isRotated: false },
   },
   globalTypes: {

@@ -144,7 +144,7 @@ FLOW-363 leaves their slots and tokens in place and adds no loader of its own.
 
 | PR | Contents | Deletes |
 | --- | --- | --- |
-| 363.1 Tokens and motion | `implementation-tokens.css` (now the source), `app/src/styles/app.css` aliases, `00-motion.css`, `reduced-motion.tsx`, the raw-value check (§4.3), dark as the Storybook default and `story-shots.mjs` (§3), decision 0181, DESIGN-RULES §2.2 to 2.7 and implementation-guide §2, §5 and §10 | Old motion tokens (`--dur-*`), once 363.1 moves their readers to `--motion-*`; `design-tokens.json` and `gen_implementation_tokens.py` |
+| 363.1 Tokens and motion | `implementation-tokens.css` (now the source), `app/src/styles/app.css` aliases, `00-motion.css`, `reduced-motion.tsx`, the raw-value check (§4.3), explicit themes in `clip-check.mjs` and the layout spec, and `story-shots.mjs` (§3), decision 0181, DESIGN-RULES §2.2 to 2.7 and implementation-guide §2, §5 and §10 | Old motion tokens (`--dur-*`), once 363.1 moves their readers to `--motion-*`; `design-tokens.json` and `gen_implementation_tokens.py` |
 | 363.2 Buttons, rows, cards, amounts | `usePageEnter` with its first users, Button (with link), ListRow (`flat`, `inset`, `control`), Card, Amount, ChangePill and StatusDot, ProgressBar (split), IconButton | check-row, radio-row, person-row, connector-row and cash-line-rows (mechanical call-site moves, same look); `StatusPill`; `BudgetBar`; their stories and CSS |
 | 363.3 Header, sheets, toast, chips | CompactBar, Band and ScreenHeader on the new tokens, Sheet and ChoiceSheet, Toast (undo 3s), OrganizeChips and StickyPanel, Segment, Toggle, SwipeRow, TabBar motion | currency-sheet, basis-sheet and pace-sheet (moved to ChoiceSheet), `chip-scroller.tsx` (renamed), their stories |
 | 363.4 Icon rows, connection frame, fields | IconRow, CountedInRow and CountedInSheet, ConnectionPage, Field states; DESIGN-RULES §2.8 and implementation-guide §7, rewritten as the new component inventory | `percent-field.stories.tsx` and `percent-field.test.tsx` (merged into money-field's); the ds-4/5/6/8 board PNGs, once the rewritten §2.8 and §7 stop linking them (§5) |
@@ -161,7 +161,7 @@ Today there are 133 story files and 1,638 stories. 405 of them are `*Dark` copie
    - No story repeats a render function only to change a prop.
 3. **Theme and width are globals, never story copies.**
    - `preview.tsx` already has the `theme` toolbar global and the `flow320` and `flow393` viewports.
-   - 363.1 makes dark the default theme, because dark is the drawn theme.
+   - The default theme stays light: about 1,200 stories set no theme, and the Storybook tests render each story once, so a dark default would leave light untested until the stories migrate. Each spec and script that opens a story passes `&globals=theme:<t>` explicitly (363.1 fixes `clip-check.mjs` and `storybook-layout.spec.ts`, whose light pass sent no theme).
    - 363.1 adds `scripts/story-shots.mjs`: given story ids and a built Storybook, it screenshots each story in dark and light at 320 and 393 (theme through `&globals=theme:…`, width through `page.setViewportSize`, as `clip-check.mjs` does), for the design review. CSS tokens hang on `:root[data-theme]`, so one page can't show both themes side by side; four shots can.
    - The vitest Storybook project and `clip-check` run each story in both themes and at both widths, so no `*Dark` or `*320` story is written by hand.
    - A story whose layout only breaks at a size (for example a sticky bar at 375x667) keeps a story-level `parameters.viewport` and a name that says why.
