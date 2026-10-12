@@ -7,7 +7,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCompanyCurrency } from "../company-currency";
 import { useBooks, useProfitMonthsQuery, useProjectQuery } from "../use-books";
-import { StatusPill } from "../ui/chip";
+import { StatusDot } from "../ui/status-dot";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { ChartIcon } from "../ui/icons";
@@ -167,7 +167,7 @@ function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCur
     <ListRow
       variant="project"
       title={title}
-      tag={month.open ? <StatusPill>חודש פתוח</StatusPill> : undefined}
+      tag={month.open ? <StatusDot>חודש פתוח</StatusDot> : undefined}
       hintParts={hint.length > 0 ? hint : undefined}
       label={label}
       agorot={profit}

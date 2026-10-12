@@ -1,5 +1,6 @@
 import { useId, type ReactNode, type Ref } from "react";
 import { Button } from "./button";
+import { Card } from "./card";
 
 /**
  * A quiet bordered card that asks one yes/no question (FLOW-502, option A): the question,
@@ -34,7 +35,7 @@ export function PromptCard({
   const questionId = useId();
   const noteId = useId();
   return (
-    <section className="ui-prompt-card" aria-labelledby={questionId}>
+    <Card as="section" className="ui-prompt-card" aria-labelledby={questionId}>
       <p className="ui-prompt-question" id={questionId} dir="rtl">{question}</p>
       {note != null ? (
         <>
@@ -49,6 +50,6 @@ export function PromptCard({
           <Button variant="ghost" disabled={busy} onClick={onNo}>{noLabel}</Button>
         </div>
       )}
-    </section>
+    </Card>
   );
 }

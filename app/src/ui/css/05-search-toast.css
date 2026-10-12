@@ -129,8 +129,3 @@
 .ui-toast-bad {
   color: var(--color-toast-bad);
 }
-
-.ui-bar-thin {
-  height: var(--figure-gap);
-  flex: 1;
-}

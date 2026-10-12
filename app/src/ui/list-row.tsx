@@ -2,7 +2,7 @@ import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { BigNumber } from "./big-number";
-import { StatusPill } from "./chip";
+import { StatusDot } from "./status-dot";
 import { cx } from "./cx";
 import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
@@ -452,7 +452,7 @@ function StatementRow(props: StatementRowProps) {
           </span>
           {line2 ? (
             <span className="ui-row-hint ui-statement-line">
-              {props.pending === true ? <StatusPill>בהמתנה</StatusPill> : null}
+              {props.pending === true ? <StatusDot>בהמתנה</StatusDot> : null}
               {props.suggestion ? (
                 // FLOW-704: whole parts, as in the details below. "✦" always shows; on a Jev fill
                 // "Jev" follows when it fits, then the values, which end in "…".

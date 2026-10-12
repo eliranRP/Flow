@@ -112,29 +112,40 @@
   color: var(--color-disabled-text);
 }
 
+/* FLOW-363 (2b): a status is coloured text or a 6px dot, never a filled chip. */
 .ui-status {
   display: inline-flex;
-  max-width: 100%;
-  min-width: 0;
-  min-height: var(--switch-track-h);
+  max-inline-size: 100%;
+  min-inline-size: 0;
   align-items: center;
   gap: var(--space-1);
-  padding-inline: var(--space-2);
-  border-radius: var(--radius-chip);
-  background: var(--color-tint);
-  color: var(--color-text);
-  font-size: var(--type-micro-size);
-  font-weight: var(--type-micro-weight);
+  color: var(--color-text-secondary);
+}
+
+.ui-status-accent {
+  color: var(--color-accent-text);
+}
+
+.ui-status-signal {
+  color: var(--color-signal);
+}
+
+.ui-status-dot {
+  flex: none;
+  inline-size: var(--dot);
+  block-size: var(--dot);
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .ui-status-icon {
   display: inline-flex;
   flex: none;
-  color: var(--color-text-muted);
 }
 
+/* FLOW-363 (2b): a thin bar is 6px, rounded; the thin and default variants are one bar. */
 .ui-bar {
-  height: var(--bar-h);
+  height: var(--bar-thin);
   overflow: hidden;
   border-radius: var(--radius-chip);
   background: var(--color-tint);

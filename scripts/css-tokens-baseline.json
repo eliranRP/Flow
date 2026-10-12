@@ -17,8 +17,7 @@
   },
   "app/src/ui/css/04-banners-lists.css": {
     "radius": 1,
-    "spacing": 3,
-    "font-weight": 1,
+    "spacing": 2,
     "duration": 1
   },
   "app/src/ui/css/05-search-toast.css": {

@@ -11,11 +11,6 @@
   color: var(--color-on-band);
 }
 
-.ui-bar-slim {
-  height: var(--space-1);
-  flex: 1;
-}
-
 .ui-change-summary {
   display: flex;
   flex-direction: column;

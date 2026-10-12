@@ -1,31 +1,48 @@
 import type { ReactNode } from "react";
 import { formatAmount } from "./big-number";
 
-type ProgressBarProps = {
+type ValueBarProps = {
+  /** bar: a labelled bar over its label. thin: a 6px bar beside its caption. */
+  variant?: "bar" | "thin";
   value: number;
   max?: number;
   label: string;
-  variant?: "bar" | "thin" | "slim";
   caption?: ReactNode;
 };
 
-export function ProgressBar({ value, max = 100, label, variant = "bar", caption }: ProgressBarProps) {
+type SplitBarProps = {
+  /** Spent against a budget, with the used percent and any overrun in words. */
+  variant: "split";
+  spentAgorot: bigint;
+  budgetAgorot: bigint;
+  label: string;
+};
+
+export type ProgressBarProps = ValueBarProps | SplitBarProps;
+
+/** Thin bars grow from the right on first render (FLOW-363, m-bar-grow). */
+export function ProgressBar(props: ProgressBarProps) {
+  if (props.variant === "split") return <SplitBar {...props} />;
+  return <ValueBar {...props} />;
+}
+
+function ValueBar({ variant = "bar", value, max = 100, label, caption }: ValueBarProps) {
   const safeMax = max <= 0 ? 1 : max;
   const ratio = Math.min(1, Math.max(0, value / safeMax));
   const percent = Math.round(ratio * 100);
   const bar = (
     <div
-      className={variant === "thin" ? "ui-bar ui-bar-thin" : variant === "slim" ? "ui-bar ui-bar-slim" : "ui-bar"}
+      className="ui-bar"
       role="meter"
       aria-label={label}
       aria-valuenow={variant === "bar" ? percent : value}
       aria-valuemin={0}
       aria-valuemax={variant === "bar" ? 100 : safeMax}
     >
-      <div className="ui-bar-fill" style={{ width: `${String(percent)}%` }} />
+      <div className="ui-bar-fill m-bar-grow" style={{ width: `${String(percent)}%` }} />
     </div>
   );
-  if (variant === "thin" || variant === "slim") {
+  if (variant === "thin") {
     return (
       <div className="ui-meter-row">
         {bar}
@@ -42,12 +59,6 @@ export function ProgressBar({ value, max = 100, label, variant = "bar", caption 
   );
 }
 
-type BudgetBarProps = {
-  spentAgorot: bigint;
-  budgetAgorot: bigint;
-  label?: string;
-};
-
 /**
  * Floors the used percent. 99.9% stays 99, and 100 appears only when the budget
  * is actually fully used. Over budget keeps the real percent (120 stays 120).
@@ -60,7 +71,7 @@ export function budgetUsedPercent(spentAgorot: bigint, budgetAgorot: bigint): nu
 }
 
 /** Decision 0060: the bar stops at 100% in the danger colour. The overage is a line of text. */
-export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: BudgetBarProps) {
+function SplitBar({ spentAgorot, budgetAgorot, label }: SplitBarProps) {
   const over = budgetAgorot > 0n && spentAgorot > budgetAgorot;
   const used = budgetUsedPercent(spentAgorot, budgetAgorot);
   const width = Math.min(100, used);
@@ -83,7 +94,11 @@ export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: B
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        <div className="ui-bar-fill" data-over={over ? "true" : "false"} style={{ width: `${String(width)}%` }} />
+        <div
+          className="ui-bar-fill m-bar-grow"
+          data-over={over ? "true" : "false"}
+          style={{ width: `${String(width)}%` }}
+        />
       </div>
       <p className="ui-row-hint">
         נוצלו <bdi dir="ltr">{String(used)}%</bdi> מהתקציב
