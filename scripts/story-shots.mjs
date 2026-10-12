@@ -109,6 +109,16 @@ async function main() {
         throw new Error(`${shot.id}: Storybook could not render the story`);
       }
       await page.evaluate(() => document.fonts.ready);
+      // Shoot the settled state: wait for every finite animation (a bar's 480ms grow, a page enter).
+      // Loops (spinners, the skeleton pulse) never finish, so they are left out.
+      await page.evaluate(() =>
+        Promise.all(
+          document
+            .getAnimations()
+            .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+            .map((animation) => animation.finished.catch(() => undefined)),
+        ),
+      );
       const file = path.join(outDir, shot.file);
       await page.screenshot({ path: file, fullPage: true });
       written.push(file);
