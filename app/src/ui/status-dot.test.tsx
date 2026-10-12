@@ -35,6 +35,8 @@ describe("StatusDot", () => {
     );
     const dot = container.querySelector(".ui-status-dot");
     expect(dot).toHaveAttribute("aria-hidden", "true");
+    expect(dot).toHaveClass("ui-status-dot-signal");
+    expect(dot?.closest(".ui-status")).toHaveClass("ui-status-neutral");
     expect(screen.getByText("בהמתנה")).toBeInTheDocument();
   });
 

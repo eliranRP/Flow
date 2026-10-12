@@ -113,7 +113,7 @@ export function ChargeMonthBars({ months, tone }: { months: PartyCharges["months
         return (
           <div key={m.month} className="ui-charge-bar-col">
             <div className="ui-charge-bar-track">
-              <div className={cx("ui-charge-bar", current && "ui-charge-bar-now", current && `ui-charge-bar-${tone}`)} style={{ blockSize: `${String(height)}%` }} />
+              <div className={cx("ui-charge-bar", current && "ui-charge-bar-now", current && tone === "bad" && "ui-charge-bar-bad")} style={{ blockSize: `${String(height)}%` }} />
             </div>
             <span className="ui-charge-bar-label t-label">{shortMonth(m.month)}</span>
           </div>

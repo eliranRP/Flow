@@ -3,7 +3,7 @@ import { Button } from "./button";
 import { Card } from "./card";
 
 /**
- * A quiet bordered card that asks one yes/no question (FLOW-502, option A): the question,
+ * A quiet card (`Card`, no border) that asks one yes/no question (FLOW-502, option A): the question,
  * a pill כן and a text לא עכשיו. `note` replaces the buttons with one line and a single
  * dismiss, for an answer this device cannot act on yet (an iPhone tab before Home Screen).
  */

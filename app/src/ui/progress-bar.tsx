@@ -39,7 +39,9 @@ function ValueBar({ variant = "bar", value, max = 100, label, caption }: ValueBa
       aria-valuemin={0}
       aria-valuemax={variant === "bar" ? 100 : safeMax}
     >
-      <div className="ui-bar-fill m-bar-grow" style={{ width: `${String(percent)}%` }} />
+      <div className="ui-bar-grow m-bar-grow">
+        <div className="ui-bar-fill" style={{ transform: `scaleX(${String(ratio)})` }} />
+      </div>
     </div>
   );
   if (variant === "thin") {
@@ -94,11 +96,13 @@ function SplitBar({ spentAgorot, budgetAgorot, label }: SplitBarProps) {
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        <div
-          className="ui-bar-fill m-bar-grow"
-          data-over={over ? "true" : "false"}
-          style={{ width: `${String(width)}%` }}
-        />
+        <div className="ui-bar-grow m-bar-grow">
+          <div
+            className="ui-bar-fill"
+            data-over={over ? "true" : "false"}
+            style={{ transform: `scaleX(${String(width / 100)})` }}
+          />
+        </div>
       </div>
       <p className="ui-row-hint">
         נוצלו <bdi dir="ltr">{String(used)}%</bdi> מהתקציב

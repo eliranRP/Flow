@@ -9,7 +9,8 @@ const meta = {
   decorators: [padded],
   args: { variant: "bar", value: 42, max: 100, label: "התקדמות" },
   argTypes: {
-    variant: { control: "select", options: ["bar", "thin", "split"] },
+    // split needs bigint amounts, which a control cannot set, so its stories render them.
+    variant: { control: "select", options: ["bar", "thin"] },
     value: { control: "number", if: { arg: "variant", neq: "split" } },
     max: { control: "number", if: { arg: "variant", neq: "split" } },
   },
@@ -27,11 +28,9 @@ export const Thin: Story = {
 type SplitArgs = { variant: "split"; label: string };
 export const Split: StoryObj<SplitArgs> = {
   args: { variant: "split", label: "טק-ליין" },
-  render: () => <ProgressBar variant="split" label="טק-ליין" spentAgorot={4_000_000n} budgetAgorot={10_000_000n} />,
+  render: (args) => <ProgressBar {...args} spentAgorot={4_000_000n} budgetAgorot={10_000_000n} />,
 };
 export const SplitOver: StoryObj<SplitArgs> = {
   args: { variant: "split", label: longHebrew },
-  render: () => (
-    <ProgressBar variant="split" label={longHebrew} spentAgorot={largeAgorot} budgetAgorot={largeAgorot - 1_000_000n} />
-  ),
+  render: (args) => <ProgressBar {...args} spentAgorot={largeAgorot} budgetAgorot={largeAgorot - 1_000_000n} />,
 };

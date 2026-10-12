@@ -118,7 +118,7 @@
   max-inline-size: 100%;
   min-inline-size: 0;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--status-gap);
   color: var(--color-text-secondary);
 }
 
@@ -135,7 +135,16 @@
   inline-size: var(--dot);
   block-size: var(--dot);
   border-radius: 50%;
-  background: currentColor;
+  background: var(--color-text-secondary);
+}
+
+/* With a dot the words stay secondary; the dot carries the tone (the board: #E8A598 on the signal). */
+.ui-status-dot-accent {
+  background: var(--color-accent-text);
+}
+
+.ui-status-dot-signal {
+  background: var(--color-signal-soft);
 }
 
 .ui-status-icon {
@@ -151,9 +160,16 @@
   background: var(--color-tint);
 }
 
+/* The grow wrapper runs m-bar-grow once on mount; the fill eases to a new value with scaleX. */
+.ui-bar-grow {
+  height: 100%;
+}
+
 .ui-bar-fill {
   height: 100%;
   background: var(--color-accent);
+  transform-origin: right;
+  transition: transform var(--motion-width) var(--ease-standard);
 }
 
 .ui-bar-fill[data-over="true"] {

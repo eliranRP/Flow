@@ -9,14 +9,14 @@ describe("ProgressBar", () => {
     render(<ProgressBar value={40} label="התקדמות" />);
     expect(screen.getByRole("meter", { name: "התקדמות" })).toHaveAttribute("aria-valuenow", "40");
     const fill = document.querySelector(".ui-bar-fill");
-    expect(fill).toHaveClass("m-bar-grow");
+    expect(document.querySelector(".ui-bar-grow")).toHaveClass("m-bar-grow");
     if (fill instanceof HTMLElement) expectThemePaint(fill, "backgroundColor");
   });
 
   it("gives the thin variant the same grown fill, with its caption beside it", () => {
     render(<ProgressBar variant="thin" value={1} max={7} label="התקדמות התור" caption="1 מתוך 7" />);
     expect(document.querySelector(".ui-meter-row .ui-bar")).not.toBeNull();
-    expect(document.querySelector(".ui-bar-fill")).toHaveClass("m-bar-grow");
+    expect(document.querySelector(".ui-bar-grow")).toHaveClass("m-bar-grow");
     expect(screen.getByText("1 מתוך 7")).toBeInTheDocument();
   });
 
@@ -27,8 +27,8 @@ describe("ProgressBar", () => {
     expect(screen.getByText(/מעל התקציב/)).toBeInTheDocument();
     const over = document.querySelector('.ui-bar-fill[data-over="true"]');
     expect(over).toBeInstanceOf(HTMLElement);
-    if (over instanceof HTMLElement) expect(over.style.width).toBe("100%");
-    expect(over).toHaveClass("m-bar-grow");
+    if (over instanceof HTMLElement) expect(over.style.transform).toBe("scaleX(1)");
+    expect(over?.parentElement).toHaveClass("m-bar-grow");
   });
 
   it("floors a partial budget and keeps an overrun as the real percent", () => {
@@ -40,7 +40,7 @@ describe("ProgressBar", () => {
     expect(text).toMatch(/נוצלו 99%/);
     expect(text).not.toMatch(/נוצלו 100%/);
     const fill = document.querySelector(".ui-bar-fill");
-    if (fill instanceof HTMLElement) expect(fill.style.width).toBe("99%");
+    if (fill instanceof HTMLElement) expect(fill.style.transform).toBe("scaleX(0.99)");
     expect(document.querySelector(".ui-overage")).toBeNull();
   });
 });
