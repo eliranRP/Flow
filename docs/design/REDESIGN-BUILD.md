@@ -4,6 +4,8 @@ The approved redesign is on the [Design canvas](https://claude.ai/artifact/9grt9
 
 ## Order: foundation first, screens last
 
+The full plan (component inventory with states and motion, the four FLOW-363 PRs, the Storybook and test rules, the raw-value check, clean-up, and the design review team) is in [REDESIGN-PLAN](REDESIGN-PLAN.md).
+
 1. **[FLOW-363](../backlog/tasks/FLOW-363.md), the foundation.** Tokens for type, colour, spacing and motion, then the shared parts: the flat list row, the card, the header that shrinks into the compact bar, sheets, the undo toast, organize chips with the sticky panel, the icon rows with "נספר ב" and its sheet, and the guided connection page. No screen work starts until this has merged.
 2. **[FLOW-371](../backlog/tasks/FLOW-371.md) and [FLOW-372](../backlog/tasks/FLOW-372.md).** These cover skeletons, empty states and the four loaders, and the light values with the מראה setting. They are built on top of the foundation, so every screen gets them without extra work.
 3. **Screens.** Build each one only from the parts above. A screen that needs something new adds it to the shared parts (and to the Design guide) first, then uses it.

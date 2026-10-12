@@ -30,10 +30,29 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id |
 | --- | --- |
+| R1 | FLOW-363 |
+| R2 | FLOW-371 |
+| R3 | FLOW-372 |
+| R4a | FLOW-364 |
+| R4b | FLOW-366 |
+| R5a | FLOW-365 |
+| R5b | FLOW-367 |
+| R6a | FLOW-445 |
+| R6b | FLOW-446 |
+| R6c | FLOW-139 |
+| R7a | FLOW-140 |
+| R7b | FLOW-141 |
+| R8 | FLOW-447 |
+| R9a | FLOW-368 |
+| R9b | FLOW-369 |
+| R9c | FLOW-370 |
+| R10a | FLOW-512 |
+| R10b | FLOW-513 |
+| R11 | FLOW-514 |
 | 1 | FLOW-102 |
 | 2 | FLOW-109 |
 | 3 | FLOW-111 |

@@ -32,10 +32,29 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id | Title | Type |
 | --- | --- | --- | --- |
+| R1 | [FLOW-363](#flow-363) | Redesign foundation: type scale, colours, motion and shared parts | UI (design approved) |
+| R2 | [FLOW-371](#flow-371) | Redesign: skeletons, empty states and loaders | UI (design approved) |
+| R3 | [FLOW-372](#flow-372) | Redesign: light theme and the מראה setting | UI (design approved) |
+| R4a | [FLOW-364](#flow-364) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
+| R4b | [FLOW-366](#flow-366) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
+| R5a | [FLOW-365](#flow-365) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
+| R5b | [FLOW-367](#flow-367) | Redesign: open invoices, with a bank match and mark as paid | UI (design approved) |
+| R6a | [FLOW-445](#flow-445) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
+| R6b | [FLOW-446](#flow-446) | Redesign: a property's השקעה והלוואות page | UI (design approved) |
+| R6c | [FLOW-139](#flow-139) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
+| R7a | [FLOW-140](#flow-140) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
+| R7b | [FLOW-141](#flow-141) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
+| R8 | [FLOW-447](#flow-447) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
+| R9a | [FLOW-368](#flow-368) | Redesign: search with one סינון button, and opening from Home's icon | UI (design approved) |
+| R9b | [FLOW-369](#flow-369) | Redesign: the add (+) sheet, receipt, cash or cheque, and the add form | UI (design approved) |
+| R9c | [FLOW-370](#flow-370) | Redesign: one split screen for projects and categories | UI (design approved) |
+| R10a | [FLOW-512](#flow-512) | Redesign: Settings as a menu, its inner pages, and the guided SUMIT, Mercury and MCP pages | UI (design approved) |
+| R10b | [FLOW-513](#flow-513) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
+| R11 | [FLOW-514](#flow-514) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 | 1 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE |
 | 2 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG |
 | 3 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG |
