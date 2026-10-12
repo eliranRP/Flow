@@ -180,7 +180,7 @@ export const ProjectRowsLineUp: Story = {
   ),
 };
 
-/** Option C (decision 0120): income green with no plus and small agorot (none on a whole amount), expense with − and agorot,
+/** Option C (decision 0120): income green with a "+" and small agorot (none on a whole amount), expense with − and agorot,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {
   return (

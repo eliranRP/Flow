@@ -259,7 +259,12 @@ function MonthNet({ totals }: { totals: readonly MonthTotal[] }) {
 function MonthTotalLine({ total, cents, cost, first }: { total: MonthTotal; cents: boolean; cost: boolean; first: boolean }) {
   const text = (minor: bigint, direction: "income" | "expense") => {
     // In a cost list the expense figure is the list's own subject, so it needs no minus.
-    return formatAmountText(minor, total.currency, { direction: cost && direction === "expense" ? undefined : direction, detail: cents });
+    // Money in carries its "+", as on the rows (decision 0181).
+    return formatAmountText(minor, total.currency, {
+      direction: cost && direction === "expense" ? undefined : direction,
+      detail: cents,
+      plus: direction === "income",
+    });
   };
   const income = total.incomeMinor > 0n ? text(total.incomeMinor, "income") : null;
   const expense = total.expenseMinor > 0n ? text(total.expenseMinor, "expense") : null;

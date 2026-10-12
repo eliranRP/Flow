@@ -163,6 +163,12 @@ describe("Amount", () => {
     expect(figures[2]?.textContent).toBe("+₪2,500");
   });
 
+  it("does not paint a summary income that rounds to ₪0 green", () => {
+    render(<Amount agorot={40n} income direction="income" />);
+    const zero = screen.getByText("₪0");
+    expect(zero).not.toHaveClass("ui-income");
+  });
+
   it("starts an expense and a loss with the Unicode minus, and never draws a sign on zero", () => {
     const { container } = render(
       <>

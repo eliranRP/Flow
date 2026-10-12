@@ -76,7 +76,7 @@ describe("FiledTodayScreen by project", () => {
     const projectA = screen.getByRole("group", { name: "Project A" });
     expect(projectA).toHaveTextContent("3 תנועות");
     const figuresA = [...(projectA.querySelectorAll(".ui-month-totals bdi"))];
-    expect(figuresA.map((node) => node.textContent)).toEqual(["₪10,000", "−₪4,340.50"]);
+    expect(figuresA.map((node) => node.textContent)).toEqual(["+₪10,000", "−₪4,340.50"]);
     expect(figuresA[0]).toHaveClass("ui-income");
     // Agorot are drawn small, as on the rows (FLOW-334); a whole figure has no ".00" (owner, 2026-10-10).
     expect(figuresA.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([null, ".50"]);

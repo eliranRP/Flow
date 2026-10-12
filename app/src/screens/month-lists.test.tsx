@@ -163,7 +163,7 @@ describe("review list months", () => {
       backTo="/review"
     />);
     // FLOW-305: the statement rows show cents, so the month total shows exact cents too.
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250, הכנסות $100");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250, הכנסות +$100");
   });
 
   it("adds exact cents, so the month matches its statement rows", () => {

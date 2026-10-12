@@ -422,7 +422,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
   // minus in the main text colour and is never green (decision 0120).
   const income = props.sign === "in" && props.agorot >= 0n;
-  // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
+  // Income is green with a "+" (decision 0181); the hidden word keeps direction out of colour alone (WCAG 1.4.1).
   return (
     <span className="t-amount">
       {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}

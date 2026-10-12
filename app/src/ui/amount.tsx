@@ -176,7 +176,8 @@ export function Amount({
     };
   }, [size, text]);
   // Zero is not money in, and a figure with a minus is never green.
-  const green = income && !loss && agorot !== 0n && !showsMinus(text);
+  // A figure that rounds to "₪0" (40 agorot in a summary) is zero too.
+  const green = income && !loss && agorot !== 0n && !/^\D*0$/.test(text) && !showsMinus(text);
   const { whole, cents: tail } = splitCents(text, shown);
   return (
     <bdi
