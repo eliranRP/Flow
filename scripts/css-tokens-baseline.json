@@ -6,7 +6,6 @@
     "font-weight": 1
   },
   "app/src/ui/css/01-base.css": {
-    "font-weight": 1,
     "font-size": 1
   },
   "app/src/ui/css/02-fields-sheets.css": {

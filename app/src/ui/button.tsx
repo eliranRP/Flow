@@ -1,8 +1,17 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { Link } from "react-router-dom";
+import { ChevronIcon } from "./icons";
 import { cx } from "./cx";
 
-export type ButtonVariant = "primary" | "secondary" | "pill" | "danger" | "danger-tint" | "ghost";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "link"
+  | "danger-link"
+  | "pill"
+  | "danger"
+  | "danger-tint"
+  | "ghost";
 
 type Common = {
   variant?: ButtonVariant;
@@ -12,6 +21,8 @@ type Common = {
   icon?: ReactNode;
   /** Sits at the inline end, after the label. */
   iconEnd?: ReactNode;
+  /** A left-pointing chevron after the label (it points left in RTL too). */
+  chevron?: boolean;
   children: ReactNode;
   className?: string;
   title?: string;
@@ -22,7 +33,13 @@ type Common = {
 type AsButton = Common &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { to?: undefined };
 
-type AsLink = Common & { to: string; state?: unknown; /** Replaces the current history entry, as a sheet's own entry does. */ replace?: boolean };
+type AsLink = Common & {
+  to: string;
+  state?: unknown;
+  /** Replaces the current history entry, as a sheet's own entry does. */
+  replace?: boolean;
+  disabled?: boolean;
+};
 
 export type ButtonProps = AsButton | AsLink;
 
@@ -37,10 +54,20 @@ function labelText(children: ReactNode): string | undefined {
 const variantClass: Record<ButtonVariant, string> = {
   primary: "ui-btn-primary",
   secondary: "ui-btn-secondary",
+  link: "ui-btn-link",
+  "danger-link": "ui-btn-danger-link",
   pill: "ui-btn-pill",
   danger: "ui-btn-danger",
   "danger-tint": "ui-btn-danger-tint",
   ghost: "ui-btn-ghost",
+};
+
+/** Press motion (FLOW-363): the new variants fade, and the two filled or outlined ones also scale. */
+const pressClass: Partial<Record<ButtonVariant, string>> = {
+  primary: "m-press m-press-scale",
+  secondary: "m-press m-press-scale",
+  link: "m-press",
+  "danger-link": "m-press",
 };
 
 export function Button(props: ButtonProps) {
@@ -48,6 +75,7 @@ export function Button(props: ButtonProps) {
   const classes = cx(
     "ui-btn",
     variantClass[variant],
+    pressClass[variant],
     props.quiet && "ui-btn-quiet",
     props.full && "ui-btn-full",
     props.className,
@@ -64,12 +92,14 @@ export function Button(props: ButtonProps) {
         {props.children}
       </span>
       {props.iconEnd}
+      {props.chevron ? <ChevronIcon size={16} /> : null}
     </>
   );
   const named = {
     "aria-label": props["aria-label"] ?? label,
   };
   if (isLink(props)) {
+    const inert = props.busy || props.disabled;
     return (
       <Link
         to={props.to}
@@ -77,17 +107,17 @@ export function Button(props: ButtonProps) {
         replace={props.replace}
         className={classes}
         aria-label={named["aria-label"]}
-        aria-disabled={props.busy || undefined}
+        aria-disabled={inert || undefined}
         aria-busy={props.busy || undefined}
         onClick={(event) => {
-          if (props.busy) event.preventDefault();
+          if (inert) event.preventDefault();
         }}
       >
         {body}
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, to: _to, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, chevron: _chevron, to: _to, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
   return (
     <button
       ref={buttonRef}

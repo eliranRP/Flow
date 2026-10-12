@@ -27,7 +27,7 @@ function assignRef(ref: Ref<HTMLButtonElement | HTMLAnchorElement> | null, node:
 }
 
 export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, IconButtonProps>(function IconButton(props, ref) {
-  const className = cx("ui-icon-btn", props.onBand && "ui-icon-btn-on-band", props.className);
+  const className = cx("ui-icon-btn", "m-press", props.onBand && "ui-icon-btn-on-band", props.className);
   if (isLink(props)) {
     return (
       <Link
