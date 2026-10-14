@@ -350,6 +350,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-445"></a>[FLOW-445](tasks/FLOW-445.md) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
 | <a id="flow-446"></a>[FLOW-446](tasks/FLOW-446.md) | Redesign: a property's השקעה והלוואות page | UI (design approved) |
 | <a id="flow-447"></a>[FLOW-447](tasks/FLOW-447.md) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
+| <a id="flow-448"></a>[FLOW-448](tasks/FLOW-448.md) | Mark a payment as recurring from the לאישור card | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
