@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { expenseFigure, flowLinkName } from "../breakdown";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { ChevronIcon } from "./icons";
 import { BandHero } from "./layout";
 
@@ -44,7 +44,7 @@ export function Hero({ label, agorot, currency = "ILS", figures, explanation, pi
             <h1 className="ui-hero-figure">
               {rows.map((row) => (
                 <span key={row.currency} className={multi ? "ui-hero-figure-line" : undefined}>
-                  <BigNumber
+                  <Amount
                     agorot={row.agorot}
                     currency={row.currency}
                     size={multi ? "display" : "hero"}
@@ -133,7 +133,7 @@ function FlowLine({
           // A month where refunds beat costs reads as a positive amount, like its breakdown.
           const figure = expense ? expenseFigure(row.agorot) : { agorot: row.agorot, direction: undefined };
           return (
-            <BigNumber
+            <Amount
               key={row.currency}
               agorot={figure.agorot}
               currency={row.currency}

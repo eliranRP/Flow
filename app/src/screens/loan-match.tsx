@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useLocation } from "react-router-dom";
 import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon, PlusIcon } from "../ui/icons";
-import { splitCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { RadioRow } from "../ui/radio-row";
@@ -13,6 +12,7 @@ import { currencyWord } from "../ui/investment-card";
 import { sheetStack, useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
+import { readLoanBalances, readProjectNames } from "./loan-reads";
 import { useHoldWrites } from "../use-is-viewer";
 import { quickNewPath } from "../open-from-query";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
@@ -174,62 +174,6 @@ export function LoanMatchOffer({
         ) : null}
       </Sheet>
     </>
-  );
-}
-
-function loanRowHint(row: LoanBalanceRow): string | undefined {
-  const project = row.projectName ?? null;
-  if (row.flaggedParts > 0) return project == null ? "ממתין לבדיקה" : `ממתין לבדיקה · ${project}`;
-  return project ?? undefined;
-}
-
-/** A balance with its agorot drawn small, none on a whole amount (FLOW-501, decision 0120). */
-function LoanBalance({ minor, currency }: { minor: bigint; currency: string }) {
-  const { whole, cents } = splitCents(showMoney(minor, currency), "detail");
-  return (
-    <bdi className="ui-num ui-loan-amount" dir="ltr">
-      {whole}
-      {cents != null ? <span className="ui-num-cents">{cents}</span> : null}
-    </bdi>
-  );
-}
-
-export function LoanBalanceList({
-  rows,
-  onOpen,
-  rowRef,
-}: {
-  rows: readonly LoanBalanceRow[];
-  /** FLOW-119. The owner opens a loan's project. A viewer gets static rows. */
-  onOpen?: (row: LoanBalanceRow) => void;
-  rowRef?: (id: string, node: HTMLButtonElement | null) => void;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <List className="ui-loan-list">
-      {rows.map((row) => {
-        const common = {
-          title: row.name,
-          icon: <BankIcon />,
-          tone: row.flaggedParts > 0 ? ("warning" as const) : undefined,
-          hint: loanRowHint(row),
-          meta: <LoanBalance minor={row.balanceMinor} currency={row.currency} />,
-        };
-        return onOpen ? (
-          <ListRow
-            key={row.id}
-            variant="button"
-            {...common}
-            label={`${row.name}, ${showMoney(row.balanceMinor, row.currency)}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
-            chevron
-            buttonRef={(node) => { rowRef?.(row.id, node); }}
-            onClick={() => { onOpen(row); }}
-          />
-        ) : (
-          <ListRow key={row.id} variant="static" {...common} />
-        );
-      })}
-    </List>
   );
 }
 
@@ -547,16 +491,8 @@ export function useLoanBalances(companyId: string | null) {
       if (!supabase || companyId == null) return [];
       const loans = await supabase.from("loans").select("id, name, currency, project_id, principal_minor").eq("company_id", companyId);
       assertNoError(loans);
-      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency").eq("company_id", companyId);
-      assertNoError(balances);
-      const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
-      const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
-      const projectNames = new Map<string, string>();
-      if (projectIds.length > 0) {
-        const projects = await supabase.from("projects").select("id, name").in("id", projectIds);
-        assertNoError(projects);
-        for (const project of projects.data ?? []) projectNames.set(project.id, project.name);
-      }
+      const byLoan = await readLoanBalances(supabase, companyId);
+      const projectNames = await readProjectNames(supabase, loans.data ?? []);
       return (loans.data ?? []).map((loan) => {
         const balance = byLoan.get(loan.id);
         return {

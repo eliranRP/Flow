@@ -1,13 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { decodeKek, openApiKey, sealApiKey, type Envelope } from "../_shared/envelope.ts";
+import { constantTimeEqual } from "../_shared/constant-time.ts";
+import { decodeKek, envelopeFromRow, openApiKey, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
   serve(handler: (req: Request) => Promise<Response> | Response): void;
 };
-
-const te = new TextEncoder();
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return empty();
@@ -35,7 +34,7 @@ Deno.serve(async (req) => {
   let resealed = 0;
   for (const row of listed.data ?? []) {
     if (resolvedFormat(row.envelope_version, row.kek_version) !== "1") continue;
-    const envelope = envelopeFrom(row);
+    const envelope = envelopeFromRow(row);
     let plain = "";
     try {
       plain = await openApiKey(envelope, kek);
@@ -72,48 +71,4 @@ Deno.serve(async (req) => {
 function resolvedFormat(envelopeVersion: unknown, kekVersion: unknown): string {
   if (envelopeVersion != null) return String(envelopeVersion);
   return String(kekVersion) === "2" ? "2" : "1";
-}
-
-function envelopeFrom(row: {
-  key_ciphertext: unknown;
-  key_nonce: unknown;
-  dek_ciphertext: unknown;
-  dek_nonce: unknown;
-  kek_version: unknown;
-  envelope_version: unknown;
-}): Envelope {
-  const envelope: Envelope = {
-    keyCiphertext: String(row.key_ciphertext),
-    keyNonce: String(row.key_nonce),
-    dekCiphertext: String(row.dek_ciphertext),
-    dekNonce: String(row.dek_nonce),
-    kekVersion: String(row.kek_version),
-    ...(row.envelope_version == null ? {} : { envelopeVersion: String(row.envelope_version) }),
-  };
-  if (!envelope.keyCiphertext.startsWith("\\x")) {
-    envelope.keyCiphertext = bytesPrefix(row.key_ciphertext);
-    envelope.keyNonce = bytesPrefix(row.key_nonce);
-    envelope.dekCiphertext = bytesPrefix(row.dek_ciphertext);
-    envelope.dekNonce = bytesPrefix(row.dek_nonce);
-  }
-  return envelope;
-}
-
-function bytesPrefix(value: unknown): string {
-  if (typeof value === "string") {
-    if (value.startsWith("\\x")) return value;
-    if (/^[0-9a-fA-F]+$/.test(value)) return `\\x${value}`;
-  }
-  return String(value);
-}
-
-function constantTimeEqual(left: string, right: string): boolean {
-  const a = te.encode(left);
-  const b = te.encode(right);
-  const length = Math.max(a.length, b.length);
-  let diff = a.length ^ b.length;
-  for (let index = 0; index < length; index += 1) {
-    diff |= (a[index] ?? 0) ^ (b[index] ?? 0);
-  }
-  return diff === 0;
 }

@@ -50,10 +50,6 @@
   background: var(--color-bad);
 }
 
-.ui-charge-bar-good {
-  background: var(--color-good);
-}
-
 .ui-charge-bar-label {
   overflow: hidden;
   color: var(--color-text-secondary);

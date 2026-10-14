@@ -1,20 +1,20 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
+  /** A set_category_hidden answer the test holds back, so the row can be seen before the write answers. */
+  hidden: null as Promise<{ data: unknown; error: { message: string } | null }> | null,
 }));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
       rpc.calls.push({ name, args });
+      if (name === "set_category_hidden" && rpc.hidden != null) return rpc.hidden;
       if (name === "list_categories") {
         return Promise.resolve({
           data: [
@@ -37,16 +37,7 @@ const sample = [
 ];
 
 function renderScreen(node: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter>{node}</MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(node);
 }
 
 describe("categories hidden footer", () => {
@@ -96,6 +87,31 @@ describe("categories hidden footer", () => {
         args: { p_id: "c4", p_hidden: false },
       });
     });
+  });
+});
+
+describe("categories hide at once (decision 0180)", () => {
+  it("moves the row before set_category_hidden answers, and puts it back when the write fails", async () => {
+    rpc.calls.length = 0;
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    rpc.hidden = new Promise((resolve) => { answer = resolve; });
+    renderScreen(<CategoriesScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: /מוסתרות/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "עוד, עבודה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "החזרה לרשימה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "החזרה לרשימה" }));
+    // The row is back in the list at once: no hidden categories are left, so the hidden footer is gone.
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /מוסתרות/ })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("עבודה")).toBeInTheDocument();
+    expect(rpc.calls).toContainEqual({ name: "set_category_hidden", args: { p_id: "c4", p_hidden: false } });
+    answer({ data: null, error: { message: "Failed to fetch" } });
+    // The failure puts the row back among the hidden ones, with the failure toast and ניסיון חוזר.
+    expect(await screen.findByRole("button", { name: /מוסתרות/ })).toBeInTheDocument();
+    expect(await screen.findByText("לא הצלחנו לעדכן את הקטגוריה.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    rpc.hidden = null;
   });
 });
 

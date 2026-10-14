@@ -1,12 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { BooksProvider } from "../use-books";
+import { renderWithProviders } from "../test-render";
 import { roleShows } from "../test-waits";
-import { ToastProvider } from "../ui/toast";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { HomeScreen } from "./HomeScreen";
 
@@ -67,30 +65,22 @@ const emptyDashboard = {
 };
 
 function renderAt(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <BooksProvider>
-              <Routes>
-                <Route path="/" element={<HomeScreen />} />
-                <Route path="/projects" element={<ProjectsScreen />} />
-                <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
-                <Route path="/review" element={<ReviewScreen />} />
-                <Route path="/review/change" element={<ChangeForm />} />
-                <Route path="/unpaid" element={<UnpaidScreen />} />
-                <Route path="/settings" element={<SettingsScreen />} />
-                <Route path="/settings/categories" element={<CategoriesScreen />} />
-                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
-              </Routes>
-            </BooksProvider>
-          </AuthProvider>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<HomeScreen />} />
+        <Route path="/projects" element={<ProjectsScreen />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+        <Route path="/review" element={<ReviewScreen />} />
+        <Route path="/review/change" element={<ChangeForm />} />
+        <Route path="/unpaid" element={<UnpaidScreen />} />
+        <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/settings/categories" element={<CategoriesScreen />} />
+        <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      </Routes>
+    </AuthProvider>,
+    { route: path },
   );
   act(() => {
     for (const handler of rpc.handlers) handler("INITIAL_SESSION", session);
@@ -282,9 +272,10 @@ describe("rejected writes", () => {
               amount_net: -100,
               direction: "expense",
               reason: "unallocated_shared",
-              project_id: "p1",
+              // A shared cost has no project yet, so the pick of הרצל is a change the pinned שמירה can save (FLOW-831).
+              project_id: null,
               category_id: "c1",
-              project_name: "הרצל",
+              project_name: null,
               category_name: "חומרים",
               supplier_name: "מחסן",
             },
@@ -304,6 +295,7 @@ describe("rejected writes", () => {
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
     expect(await screen.findByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("collapse_split");
     });
@@ -375,6 +367,7 @@ describe("rejected writes", () => {
     renderAt("/review/change?item=r1");
     fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("resolve_review");
     });
@@ -382,6 +375,7 @@ describe("rejected writes", () => {
     expect(screen.queryByText("אין פריט לשינוי")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("reassign_transaction");
     });
@@ -439,6 +433,7 @@ describe("rejected writes", () => {
     expect(screen.queryByRole("switch", { name: "לזכור לספק הזה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("set_transaction_category");
     });
@@ -447,6 +442,7 @@ describe("rejected writes", () => {
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
     expect(await screen.findByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("collapse_split");
     });
@@ -528,16 +524,19 @@ describe("rejected writes", () => {
     await roleShows("dialog", "שינוי שיוך");
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }, { timeout: 2500 }));
     fireEvent.click(await screen.findByRole("radio", { name: "אתר א" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /פרויקט: אתר א/ })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסה מלקוחות" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /קטגוריה: הכנסה מלקוחות/ })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסה אחרת" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(projectArg).toBe("p1");
     });

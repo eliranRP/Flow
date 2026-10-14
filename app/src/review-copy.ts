@@ -7,7 +7,10 @@ import { formatDayMonth } from "./ui/date-math";
  */
 export type CopyPart = string | { num: string };
 
-/** The parts as one plain string, for tests and accessible names. */
+/**
+ * The parts as one plain string, for tests and accessible names.
+ * @forTests
+ */
 export function copyText(parts: readonly CopyPart[]): string {
   return parts.map((part) => (typeof part === "string" ? part : part.num)).join("");
 }

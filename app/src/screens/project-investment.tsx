@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type RefObject } from 
 import { getSupabase } from "../lib/supabase";
 import { useLocation } from "react-router-dom";
 import { usePreviewSearch, useHomePreview } from "../preview";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { sheetStack, useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { DateSheet } from "../ui/date-sheet";
@@ -66,7 +66,7 @@ function OtherLines({ list, note }: { list: readonly MinorInCurrency[]; note: st
       {list.map((item) => (
         <p key={item.currency} className="ui-invest-other t-hint">
           {"ועוד "}
-          <BigNumber agorot={item.minor} currency={item.currency} />
+          <Amount agorot={item.minor} currency={item.currency} />
           {` ${currencyWord(item.currency)}, ${note}`}
         </p>
       ))}
@@ -121,7 +121,7 @@ export function RehabSheet({
     <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef}>
       <div className="ui-invest-total">
         <span className="t-title-2">
-          <BigNumber agorot={figures.rehabMinor} currency={figures.currency} />
+          <Amount agorot={figures.rehabMinor} currency={figures.currency} />
         </span>
         <p className="t-hint">כל העלויות מתחילת הפרויקט, בלי חלקי הלוואה</p>
         <OtherLines list={figures.rehabOther} note="לא נכנס להשבחה הצפויה" />
@@ -218,7 +218,7 @@ export function LoansSheet({
     <Sheet open={open} onOpenChange={onOpenChange} title={LOANS_LABEL} returnFocusRef={returnFocusRef}>
       <div className="ui-invest-total">
         <span className="t-title-2">
-          <BigNumber agorot={figures.loanMinor} currency={figures.currency} />
+          <Amount agorot={figures.loanMinor} currency={figures.currency} />
         </span>
         <p className="t-hint">ההלוואות הפתוחות בפרויקט</p>
       </div>

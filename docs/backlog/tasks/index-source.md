@@ -30,10 +30,29 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id |
 | --- | --- |
+| R1 | FLOW-363 |
+| R2 | FLOW-371 |
+| R3 | FLOW-372 |
+| R4a | FLOW-364 |
+| R4b | FLOW-366 |
+| R5a | FLOW-365 |
+| R5b | FLOW-367 |
+| R6a | FLOW-445 |
+| R6b | FLOW-446 |
+| R6c | FLOW-139 |
+| R7a | FLOW-140 |
+| R7b | FLOW-141 |
+| R8 | FLOW-447 |
+| R9a | FLOW-368 |
+| R9b | FLOW-369 |
+| R9c | FLOW-370 |
+| R10a | FLOW-512 |
+| R10b | FLOW-513 |
+| R11 | FLOW-514 |
 | 1 | FLOW-102 |
 | 2 | FLOW-109 |
 | 3 | FLOW-111 |
@@ -178,6 +197,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-115
 - FLOW-414
 - FLOW-434
+- FLOW-139
+- FLOW-140
+- FLOW-141
 
 ## MCP
 
@@ -269,6 +291,17 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-429
 - FLOW-346
 - FLOW-431
+- FLOW-363
+- FLOW-371
+- FLOW-372
+- FLOW-373
+- FLOW-364
+- FLOW-365
+- FLOW-366
+- FLOW-367
+- FLOW-368
+- FLOW-369
+- FLOW-370
 
 ## Projects and reports
 
@@ -299,6 +332,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-437
 - FLOW-438
 - FLOW-439
+- FLOW-440
+- FLOW-441
+- FLOW-442
+- FLOW-443
+- FLOW-444
+- FLOW-445
+- FLOW-446
+- FLOW-447
 
 ## Onboarding, Settings and connectors
 
@@ -313,6 +354,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-509
 - FLOW-511
 - FLOW-510
+- FLOW-512
+- FLOW-513
+- FLOW-514
 
 ## Multi-company and team
 
@@ -352,6 +396,19 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-816
 - FLOW-817
 - FLOW-818
+- FLOW-819
+- FLOW-820
+- FLOW-821
+- FLOW-822
+- FLOW-823
+- FLOW-824
+- FLOW-825
+- FLOW-826
+- FLOW-827
+- FLOW-828
+- FLOW-829
+- FLOW-830
+- FLOW-831
 
 ## Data hygiene (public repo)
 

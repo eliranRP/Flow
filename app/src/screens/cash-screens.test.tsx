@@ -1,10 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
+import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { BooksProvider } from "../use-books";
 import { CashLinesScreen, CashMonthScreen } from "./cash-screens";
 
 const rpc = vi.hoisted(() => ({
@@ -71,20 +70,14 @@ const lines = {
 };
 
 function wrap(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <BooksProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route path="/cash/:month" element={<CashMonthScreen />} />
-            <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
-            <Route path="/cash/year/:year" element={<p>שנה</p>} />
-            <Route path="/" element={<p>בית</p>} />
-          </Routes>
-        </MemoryRouter>
-      </BooksProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/cash/:month" element={<CashMonthScreen />} />
+      <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
+      <Route path="/cash/year/:year" element={<p>שנה</p>} />
+      <Route path="/" element={<p>בית</p>} />
+    </Routes>,
+    { route: path },
   );
 }
 
@@ -197,6 +190,6 @@ describe("Cash lines profit leaves out (FLOW-418)", () => {
     expect(screen.getByText("−₪750")).toBeInTheDocument();
     expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
     expect(screen.getByText("−₪1,200")).toBeInTheDocument();
-    expect(screen.getByText("₪450")).toHaveClass("ui-income");
+    expect(screen.getByText("+₪450")).toHaveClass("ui-income");
   });
 });

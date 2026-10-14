@@ -109,5 +109,3 @@ export function Notice({ title, body, tone = "neutral", extra }: NoticeProps) {
     </div>
   );
 }
-
-export const Note = Notice;

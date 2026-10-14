@@ -79,14 +79,3 @@ export function sameParty(a: string | null | undefined, b: string | null | undef
   return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
 }
 
-/** True when the detail has at least one bank row to show. */
-export function hasBankRows(meta: TxnMeta | null | undefined, party: string | null | undefined): boolean {
-  if (meta == null) return false;
-  return (
-    methodLabel(meta) != null ||
-    meta.account != null ||
-    (meta.counterparty != null && !sameParty(meta.counterparty, party)) ||
-    meta.memo != null ||
-    meta.bank_description != null
-  );
-}

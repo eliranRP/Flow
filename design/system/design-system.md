@@ -1,13 +1,13 @@
 # Flow design system (v1 · for review)
 
 Approved direction: **V1 Violet with the coloured top band** (ui5-v1-color). Hebrew, right-to-left, mobile-first PWA.
-Tokens live in `design-tokens.json`. The boards are `ds-1…ds-6` (light and dark). Every text colour passes WCAG AA (4.5:1). The contrast values are listed in the JSON.
+Tokens live in `implementation-tokens.css`, which is edited by hand (no generator; [0181](../../docs/decisions/0181-redesign-foundation.md)). The Design canvas is the design reference, and the boards `ds-4` to `ds-8` (light and dark) still apply until their screens are rebuilt. Every text colour passes WCAG AA (4.5:1). Check any new pairing against it.
 
 ## Principles
 - Calm and airy: white page, lots of space, few numbers per screen, detail on inner screens.
 - One accent, violet. It's used on the + button, the primary button, links and the active tab. Filled violet appears at most about twice per screen area.
 - The coloured band is used only at the top of Home and the Project header. All other screens are white with violet accents.
-- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with no plus. Never colour on the band (decision 0120).
+- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with a `+` (decisions 0120 and 0181). Never colour on the band.
 - No gradients, no emoji, no heavy shadows. Depth comes from the violet tint and hairlines.
 
 ## Colour (light / dark)
@@ -124,12 +124,10 @@ Weights: 400 hints, row titles, secondary lines and list amounts · 500 body, in
 - **Logo files:** `design/logo/` in the repo (`flow-logo/final/` on the design box). It holds the wordmark SVG/PNG, icon PNGs at 1024–16, maskable and monochrome icons, the favicon, the manifest block, the usage board and `LOGO.md`. Decision 0031.
 
 ## Files
-- `tokens.py`: the source of truth for tokens (also runs the contrast checks).
-- `design-tokens.json`: generated from `tokens.py`.
 - `ds.py` + `render-ds.sh`: regenerate the boards. Cropping the tall pages needs Pillow (`/workspace/.venv/bin/python`).
 - `flow.py` + `render.sh`: shared component CSS (logical properties only), icons, and the 14 screens.
 - `states.py` + `render-states.sh`: empty states (`es-NN`), loaders (`ld-NN`) and the `overview-states` grid. PNGs are frozen frames; open an HTML file with `#live` to see the shimmer and spinners move.
 - `render-logo.sh`: re-renders only the screens touched by the logo decision (09a, 09e, 13, 17a/b, the overviews and boards 1–8).
 - `more.py` + `render-more.sh`: screens 15–23, er-01…05 and `overview-more`. Board 8 (`ds-8-pickers-sheets`) shows the date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown and the fixed switch.
 - Board 7 (`ds-7-empty-loading`) shows skeleton tokens, skeletons, busy button, spinner, file processing, empty states and error/offline.
-- `implementation-tokens.css`: generated from `design-tokens.json` by `../gen_implementation_tokens.py`.
+- `implementation-tokens.css`: the one hand-edited token file. There is no generator and no JSON copy.

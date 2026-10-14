@@ -1,8 +1,8 @@
 import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
-import { BigNumber } from "./big-number";
-import { StatusPill } from "./chip";
+import { Amount } from "./amount";
+import { StatusDot } from "./status-dot";
 import { cx } from "./cx";
 import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
@@ -422,11 +422,11 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
   // minus in the main text colour and is never green (decision 0120).
   const income = props.sign === "in" && props.agorot >= 0n;
-  // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
+  // Income is green with a "+" (decision 0181); the hidden word keeps direction out of colour alone (WCAG 1.4.1).
   return (
     <span className="t-amount">
       {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
-      <BigNumber
+      <Amount
         agorot={abs}
         currency={props.currency}
         direction={income ? "income" : cost ? undefined : "expense"}
@@ -452,7 +452,7 @@ function StatementRow(props: StatementRowProps) {
           </span>
           {line2 ? (
             <span className="ui-row-hint ui-statement-line">
-              {props.pending === true ? <StatusPill>בהמתנה</StatusPill> : null}
+              {props.pending === true ? <StatusDot>בהמתנה</StatusDot> : null}
               {props.suggestion ? (
                 // FLOW-704: whole parts, as in the details below. "✦" always shows; on a Jev fill
                 // "Jev" follows when it fits, then the values, which end in "…".
@@ -517,7 +517,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
     return (
       <span className="ui-row-amounts t-amount">
         {props.amounts.map((amount) => (
-          <BigNumber
+          <Amount
             key={amount.currency}
             agorot={amount.minor}
             currency={amount.currency}
@@ -529,7 +529,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
     );
   }
   return (
-    <BigNumber
+    <Amount
       agorot={props.agorot}
       currency={props.currency}
       size="list"

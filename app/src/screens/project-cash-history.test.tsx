@@ -1,11 +1,10 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { screen } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_RECURRING_CHANGES } from "../forecast-sample";
+import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { BooksProvider } from "../use-books";
 import { projectAttentionRows } from "./project-attention";
 import { ProjectCashMonthScreen } from "./project-cash-screens";
 import { ProjectCashHistoryScreen, ProjectCashYearScreen } from "./project-cash-history";
@@ -59,20 +58,14 @@ const yearMonths = {
 const recent = { basis: "paid", base_currency: "ILS", months: [monthRow(`${israelToday().slice(0, 7)}-01`, 0, 0)] };
 
 function wrap(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <BooksProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route path="/projects/:projectId/cash/history" element={<ProjectCashHistoryScreen />} />
-            <Route path="/projects/:projectId/cash/year/:year" element={<ProjectCashYearScreen />} />
-            <Route path="/projects/:projectId/cash/:month" element={<ProjectCashMonthScreen />} />
-            <Route path="/projects/:projectId" element={<p>פרויקט</p>} />
-          </Routes>
-        </MemoryRouter>
-      </BooksProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/projects/:projectId/cash/history" element={<ProjectCashHistoryScreen />} />
+      <Route path="/projects/:projectId/cash/year/:year" element={<ProjectCashYearScreen />} />
+      <Route path="/projects/:projectId/cash/:month" element={<ProjectCashMonthScreen />} />
+      <Route path="/projects/:projectId" element={<p>פרויקט</p>} />
+    </Routes>,
+    { route: path },
   );
 }
 

@@ -23,7 +23,7 @@ import { periodPillLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useBooks, useBreakdownLinesQuery, useBreakdownQuery } from "../use-books";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
@@ -47,7 +47,7 @@ function Totals({ direction, totals }: { direction: BreakdownDirection; totals: 
     <p className="ui-breakdown-total ui-page-pad">
       {totals.map((total) => (
         <span key={total.currency} className="ui-breakdown-total-line">
-          <BigNumber agorot={total.amount_minor} currency={total.currency} size="display" income={direction === "income"} />
+          <Amount agorot={total.amount_minor} currency={total.currency} size="display" income={direction === "income"} />
         </span>
       ))}
     </p>

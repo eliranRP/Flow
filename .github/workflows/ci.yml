@@ -103,6 +103,8 @@ jobs:
       - name: Type-check every edge function with its own config
         run: bash scripts/check-edge-functions.sh
       - run: pnpm typecheck
+      - name: No app code that only stories and tests use, and no unused CSS
+        run: node scripts/check-unused-app-code.mjs && node scripts/check-unused-css.mjs && node scripts/check-css-tokens.mjs
       # `pnpm test:unit` but the @flow/app suite, which check (app) runs in two halves. '!flow' keeps
       # the root package's own `test` script (test:unit and test:connectors) from running again here.
       # scripts/ci-cd.test.mjs pins the test:unit script, so a new part there must be added here too.

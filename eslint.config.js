@@ -6,6 +6,8 @@ import tseslint from "typescript-eslint";
 export default defineConfig(
   {
     ignores: [
+      // Agent worktrees: other checkouts of this repo, linted in their own runs.
+      ".claude/**",
       "**/dist/**",
       "scripts/**/*.mjs",
       "**/storybook-static/**",

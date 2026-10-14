@@ -84,7 +84,7 @@ export const demoDataSchema = z.object({
 export type DemoSumitDoc = z.infer<typeof demoSumitDocSchema>;
 export type DemoData = z.infer<typeof demoDataSchema>;
 
-export interface NormalizedLine {
+interface NormalizedLine {
   key: string;
   sumitId: number;
   kind: DemoDocKind;
@@ -102,7 +102,7 @@ export interface NormalizedLine {
 }
 
 /** Rule A totals in agorot. Round with wholeShekels / formatIls for display. */
-export interface ProjectPnl {
+interface ProjectPnl {
   key: string;
   name: string;
   invoicedIncome: bigint;
@@ -116,7 +116,7 @@ export interface ProjectPnl {
   openReceivableGross: bigint;
 }
 
-export interface CompanyPnl {
+interface CompanyPnl {
   invoicedIncome: bigint;
   cashIncome: bigint;
   direct: bigint;

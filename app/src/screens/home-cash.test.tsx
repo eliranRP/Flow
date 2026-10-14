@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
+import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { ToastProvider } from "../ui/toast";
-import { BooksProvider } from "../use-books";
 import { HomeScreen, ProfitScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
@@ -87,20 +85,12 @@ function wrap(reviewCount = 0, path = "/") {
     if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
     return Promise.resolve({ data: null, error: null });
   };
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={[path]}>
-            <Routes>
-              <Route path="/" element={<HomeScreen />} />
-              <Route path="/profit" element={<ProfitScreen />} />
-            </Routes>
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/" element={<HomeScreen />} />
+      <Route path="/profit" element={<ProfitScreen />} />
+    </Routes>,
+    { route: path },
   );
 }
 
@@ -117,7 +107,7 @@ describe("Home's cash (FLOW-413, frame b)", () => {
     expect(rpc.calls.find((c) => c.name === "cash_months")?.args).toEqual({ p_months: 4 });
     const incoming = screen.getByRole("link", { name: /^נכנס ב/ });
     expect(incoming).toHaveAttribute("href", `/cash/${current}/in/ILS`);
-    expect(within(incoming).getByText("₪18,000")).toHaveClass("ui-income");
+    expect(within(incoming).getByText("+₪18,000")).toHaveClass("ui-income");
     expect(screen.getByRole("link", { name: /^יצא ב/ })).toHaveAttribute("href", `/cash/${current}/out/ILS`);
     expect(screen.getByRole("link", { name: /^רווח ב/ })).toHaveClass("ui-cash-quiet");
     // FLOW-418: the rest of the month's figure, profit leaves out, under it with what it holds.

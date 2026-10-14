@@ -17,7 +17,6 @@ import {
   AUTO_HINT,
   JevSettings,
   JEV_NO_KEY,
-  parseJevThreshold,
   readJevIntegration,
   type JevCardState,
 } from "./jev-settings";
@@ -109,15 +108,6 @@ describe("Jev settings card", () => {
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
-  });
-
-  it("rounds a threshold to two decimals and accepts a comma", () => {
-    expect(parseJevThreshold("0.49")).toBeNull();
-    expect(parseJevThreshold("0.50")).toBe(0.5);
-    expect(parseJevThreshold("0,95")).toBe(0.95);
-    expect(parseJevThreshold("0.955")).toBe(0.96);
-    expect(parseJevThreshold("1")).toBe(1);
-    expect(parseJevThreshold("1.01")).toBeNull();
   });
 
   it("locks the switch off with one line when the server holds no key, on or off (FLOW-348 A)", async () => {

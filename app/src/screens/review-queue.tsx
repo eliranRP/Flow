@@ -148,8 +148,8 @@ export function ReviewQueue({
     !sample && preview === "off" && previewWrite == null,
   );
   const visit = useRef(emptyVisit());
-  const approvedId = useRef<string | null>(null);
-  const approvedLine = useRef<string | null>(null);
+  /** The card whose אישור is in flight. Only a second tap on that same card waits for it (decision 0180). */
+  const approving = useRef<string | null>(null);
   const skippedId = useRef<string | null>(null);
   const skippedLine = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
@@ -174,7 +174,6 @@ export function ReviewQueue({
       if (barFocus.current && lost && window.location.pathname === path) handReviewFocus();
     };
   }, []);
-  const approveGuard = useRef(false);
   const setupHandoffShown = useRef(false);
   const [, bumpVisit] = useState(0);
   const openIds = rows.map((item) => item.id);
@@ -185,23 +184,27 @@ export function ReviewQueue({
     bumpVisit((value) => value + 1);
   }
   const leaving = motion === "out";
-  const approve = useWrite({
+  // The card leaves the queue at once; a failure puts it back (decision 0180).
+  const approve = useWrite<ReviewRow>({
     failure: (error) => (previewWrite ? changeSaveFailure(error) : approveFailure(error)),
     place: "bar",
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
+    optimistic: (target) => (previewWrite ? [] : [{
+      key: ["review", preview],
+      update: (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((row) => row.id !== target.id) : old),
+    }]),
     retryFocus: () => {
       approveSlot.current?.querySelector("button")?.focus();
     },
-    run: async () => {
-      const target = shown;
-      approvedId.current = target?.id ?? null;
-      approvedLine.current = target?.transaction_id ?? null;
+    onError: (_error, target) => {
+      if (approving.current === target.id) approving.current = null;
+    },
+    run: async (target) => {
       if (previewWrite) {
         await previewWrite.run();
-        if (target) markHandled(target.id);
+        markHandled(target.id);
         return;
       }
-      if (!target) throw new Error("missing");
       const filled = withJev(target, jev);
       if (!filled.category_id) throw new Error("missing");
       const supabase = getSupabase();
@@ -223,11 +226,11 @@ export function ReviewQueue({
       }, () => invalidate([...LEDGER_FOCUS_KEYS]));
       markHandled(target.id);
     },
-    onSuccess: () => {
-      const id = approvedId.current;
-      if (!id) return;
+    onSuccess: (target) => {
+      if (approving.current === target.id) approving.current = null;
+      const id = target.id;
       // ביטול brings the undone card back to the front.
-      const line = approvedLine.current;
+      const line = target.transaction_id;
       if (previewWrite) {
         previewWrite.onDone(id);
         toast.show({
@@ -407,7 +410,7 @@ export function ReviewQueue({
     }),
   } : null;
   function runApprove() {
-    if (approveGuard.current || !settled) return;
+    if (approving.current === current.id || !settled) return;
     if (nextPick === "project") {
       openProject();
       return;
@@ -427,18 +430,14 @@ export function ReviewQueue({
       void navigate(`/transactions/${current.transaction_id}/split${search}`);
       return;
     }
-    approveGuard.current = true;
-    approve.mutate(undefined, {
-      onSettled: () => {
-        approveGuard.current = false;
-      },
-    });
+    approving.current = current.id;
+    approve.mutate(current);
   }
   const skipButton = (
     <Button
       variant="ghost"
       busy={skip.isPending}
-      disabled={leaving || approve.isPending}
+      disabled={leaving}
       onClick={() => {
         if (leaving) return;
         if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
@@ -545,9 +544,9 @@ export function ReviewQueue({
           <>
             <Button
               full
-              disabled={approve.isPending || !card.transaction_id}
+              disabled={!card.transaction_id}
               onClick={() => {
-                if (!card.transaction_id || approve.isPending) return;
+                if (!card.transaction_id) return;
                 void navigate(`/transactions/${card.transaction_id}/split-category${search}`);
               }}
             >
@@ -557,7 +556,6 @@ export function ReviewQueue({
               <div className="ui-review-approve" ref={approveSlot}>
                 <Button
                   variant="secondary"
-                  busy={approve.isPending}
                   disabled={!settled}
                   aria-describedby={REVIEW_MISMATCH_ID}
                   onClick={runApprove}
@@ -573,7 +571,6 @@ export function ReviewQueue({
             <div className="ui-review-approve" ref={approveSlot}>
               <Button
                 full
-                busy={approve.isPending}
                 disabled={!settled}
                 icon={approveLabel === "אישור" ? <CheckIcon /> : undefined}
                 aria-describedby={missingBoth ? REVIEW_MISSING_ID : undefined}

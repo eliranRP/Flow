@@ -11,16 +11,6 @@
   color: var(--color-on-band);
 }
 
-.ui-bar-slim {
-  height: var(--space-1);
-  flex: 1;
-}
-
-.ui-result-cap {
-  max-block-size: calc(5 * (var(--touch-min) + var(--space-5)));
-  overflow-y: auto;
-}
-
 .ui-change-summary {
   display: flex;
   flex-direction: column;
@@ -163,6 +153,11 @@
   padding-block-end: var(--safe-bottom);
 }
 
+/* FLOW-831: the picker's pinned שמירה keeps clear of the home bar, as the split footer does. */
+.ui-change-foot {
+  padding-block-end: calc(var(--safe-bottom, 0px) + var(--space-4));
+}
+
 .ui-change-picker {
   display: flex;
   flex-direction: column;
@@ -179,7 +174,7 @@
 }
 
 .ui-change-swap {
-  animation: ui-change-swap var(--dur-base) var(--ease-standard);
+  animation: ui-change-swap var(--motion-fade) var(--ease-standard);
 }
 
 @keyframes ui-change-swap {

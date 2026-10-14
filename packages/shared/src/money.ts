@@ -75,10 +75,6 @@ export function rateFractionToBp(rate: number): number {
   return Number(bp);
 }
 
-export function agorotToShekels(agorot: bigint): number {
-  return Number(agorot) / 100;
-}
-
 /** Nearest whole shekel, half-to-even. Display rounding lives here, not in the totals. */
 export function wholeShekels(agorot: bigint): number {
   const negative = agorot < 0n;
@@ -120,7 +116,7 @@ function shownAsZero(abs: bigint, detail: boolean): boolean {
   return wholeShekels(abs) === 0;
 }
 
-export type FormatAmountOptions = {
+type FormatAmountOptions = {
   direction?: "income" | "expense";
   detail?: boolean;
   plus?: boolean;
@@ -154,10 +150,6 @@ export function formatAmountText(minor: bigint, currency = "ILS", options?: Form
  */
 export function formatMoney(minor: bigint, currency = "ILS", options?: { agorot?: boolean }): string {
   return formatAmountText(minor, currency, { detail: options?.agorot === true });
-}
-
-export function formatUsd(minor: bigint, options?: { agorot?: boolean }): string {
-  return formatMoney(minor, "USD", options);
 }
 
 export function formatIls(agorot: bigint, options?: { agorot?: boolean }): string {
@@ -224,10 +216,4 @@ export function allocateByWeights(total: bigint, weights: readonly number[]): bi
     throw new Error("allocation did not consume the total");
   }
   return negative ? base.map((part) => -part) : base;
-}
-
-/** Basis points (0–10000) for the same weights. Parts sum to 10000. */
-export function shareBp(weights: readonly number[]): number[] {
-  const parts = allocateByWeights(10000n, weights);
-  return parts.map((part) => Number(part));
 }

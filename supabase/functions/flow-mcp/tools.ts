@@ -254,7 +254,12 @@ export async function callTool(
   // FLOW-415 (decision 0172).
   if (name === "get_recurring_changes" || name === "get_recurring_this_month") {
     const changes = name === "get_recurring_changes";
-    const result = await rpc(changes ? "recurring_changes" : "recurring_this_month", {});
+    // FLOW-441: with project_id, the project's own share of each party's lines.
+    const projectId = changes ? (args.project_id ?? null) : null;
+    if (projectId != null && (typeof projectId !== "string" || !UUID.test(projectId))) return fail("validation", "validation");
+    const result = projectId != null
+      ? await rpc("project_recurring_changes", { p_project: projectId })
+      : await rpc(changes ? "recurring_changes" : "recurring_this_month", {});
     const data = result.json;
     if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
     return ok(changes ? { changes: data } : { arrived: data });

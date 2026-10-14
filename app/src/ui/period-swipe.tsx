@@ -42,6 +42,12 @@ export function inEdgeZone(x: number, viewportWidth: number): boolean {
   return x <= EDGE_PX || x >= viewportWidth - EDGE_PX;
 }
 
+/** Sets the touch's axis once it has moved far enough, and returns it: null until then. */
+export function lockAxis(start: { axis: SwipeAxis }, dx: number, dy: number): SwipeAxis {
+  start.axis ??= swipeAxis(dx, dy);
+  return start.axis;
+}
+
 /**
  * The step a finished horizontal move asks for: -1 earlier (finger moved right, toward the start
  * arrow), +1 later (finger moved left), or 0 when it was too short and too slow.
@@ -54,7 +60,8 @@ export function swipeStep(dx: number, elapsedMs: number, width: number): -1 | 0 
   return dx > 0 ? -1 : 1;
 }
 
-function reducedMotion(): boolean {
+/** The OS asks for less motion. */
+export function reducedMotion(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
@@ -116,15 +123,13 @@ export function PeriodSwipe({
     }
     const dx = touch.clientX - start.x;
     const dy = touch.clientY - start.y;
-    if (start.axis == null) {
-      start.axis = swipeAxis(dx, dy);
-      if (start.axis === "y") {
-        // Mostly vertical: the page scrolls, and this touch is done here.
-        track.current = null;
-        return;
-      }
-      if (start.axis == null) return;
+    const axis = lockAxis(start, dx, dy);
+    if (axis === "y") {
+      // Mostly vertical: the page scrolls, and this touch is done here.
+      track.current = null;
+      return;
     }
+    if (axis == null) return;
     if (reducedMotion()) return;
     const node = box.current;
     if (!node) return;

@@ -1,24 +1,16 @@
 import type { ProjectDetail, ReviewRow } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { ToastProvider } from "../ui/toast";
 import { ProjectCategoryScreen, ProjectDetailScreen, ReviewAllList } from "./flow-screens";
+import { renderWithProviders } from "../test-render";
 
 /** FLOW-302 wiring: each list hands MonthList the amount, currency, and completeness its rows show. */
 
 type Txn = NonNullable<ProjectDetail>["transactions"][number];
 
 function wrap(node: ReactNode) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ToastProvider>
-        <MemoryRouter>{node}</MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(node);
 }
 
 function project(transactions: Txn[]): NonNullable<ProjectDetail> {
@@ -171,7 +163,7 @@ describe("review list months", () => {
       backTo="/review"
     />);
     // FLOW-305: the statement rows show cents, so the month total shows exact cents too.
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250, הכנסות $100");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250, הכנסות +$100");
   });
 
   it("adds exact cents, so the month matches its statement rows", () => {
@@ -221,7 +213,7 @@ describe("review list statement rows (FLOW-305)", () => {
     expect(screen.getByRole("heading", { level: 3 }).textContent).toMatch(/29\/09/);
   });
 
-  it("labels a SUMIT invoice row with its document kind and green income with no plus", () => {
+  it("labels a SUMIT invoice row with its document kind and green income with a plus", () => {
     wrap(<ReviewAllList
       rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", line_status: "posted", source: "sumit", doc_kind: "invoice", project_name: null, category_name: null }]}
       search=""
@@ -231,8 +223,8 @@ describe("review list statement rows (FLOW-305)", () => {
     expect(link.querySelector(".ui-statement-method")?.textContent).toBe("חשבונית");
     expect(link.querySelector(".ui-status")).toBeNull();
     expect(link.querySelector(".ui-statement-line")).toBeNull();
-    expect(link.querySelector(".ui-income")?.textContent).toBe("₪5,000");
-    expect(link.textContent).not.toContain("+");
+    expect(link.querySelector(".ui-income")?.textContent).toBe("+₪5,000");
+    expect(link.textContent).toContain("+₪5,000");
     expect(link.getAttribute("aria-label")).toBe("לקוח לדוגמה, חשבונית, הכנסה ₪5,000");
   });
 });

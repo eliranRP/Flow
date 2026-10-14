@@ -68,13 +68,13 @@ function renderList(rows: Row[], complete?: boolean) {
 }
 
 describe("MonthList", () => {
-  it("names each month with a heading and shows income with no plus and − expenses per currency", () => {
+  it("names each month with a heading and shows income with a + and − expenses per currency", () => {
     expectRtl();
     renderList(NEWEST_FIRST);
     expect(screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent)).toEqual(["ספטמבר 2026", "אוגוסט 2026"]);
     const august = screen.getByRole("group", { name: "אוגוסט 2026" });
     const totals = august.querySelector(".ui-month-totals");
-    expect(totals?.textContent).toBe("הכנסות ₪8,000, הוצאות −₪2,200, הכנסות $1,500, הוצאות −$400");
+    expect(totals?.textContent).toBe("הכנסות +₪8,000, הוצאות −₪2,200, הכנסות +$1,500, הוצאות −$400");
     expect(within(august).getAllByTestId("row").map((node) => node.textContent)).toEqual(["c", "d", "e", "f"]);
     for (const figure of august.querySelectorAll("bdi")) expect(figure.getAttribute("dir")).toBe("ltr");
   });
@@ -88,7 +88,7 @@ describe("MonthList", () => {
 
   it("leaves out a zero expense side too", () => {
     renderList([row("a", "2026-09-01", 50_000n, "income"), row("b", "2026-08-01", 70_000n, "expense")]);
-    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪500");
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות +₪500");
   });
 
   it("totals stored-negative expenses by their size, with one minus", () => {
@@ -105,7 +105,7 @@ describe("MonthList", () => {
   it("starts with no pause when the first currency rounds to zero", () => {
     renderList([row("a", "2026-09-01", 40n, "expense"), row("b", "2026-09-02", 50_000n, "income", "USD"), row("c", "2026-08-01", 70_000n, "income")]);
     const september = screen.getByRole("group", { name: "ספטמבר 2026" });
-    expect(september.querySelector(".ui-month-totals")?.textContent).toBe("הכנסות $500");
+    expect(september.querySelector(".ui-month-totals")?.textContent).toBe("הכנסות +$500");
   });
 
   it("shows only the name of the last month while more rows may load", () => {
@@ -150,7 +150,7 @@ describe("MonthList", () => {
     for (const head of screen.getAllByRole("heading", { level: 2 })) expect(head).toHaveClass("t-heading");
     const august = screen.getByRole("group", { name: "אוגוסט 2026" });
     const figures = Array.from(august.querySelectorAll(".ui-month-totals bdi"));
-    expect(figures.filter((node) => node.classList.contains("ui-income")).map((node) => node.textContent)).toEqual(["₪8,000", "$1,500"]);
+    expect(figures.filter((node) => node.classList.contains("ui-income")).map((node) => node.textContent)).toEqual(["+₪8,000", "+$1,500"]);
     expect(figures.filter((node) => node.textContent.startsWith("−")).every((node) => !node.classList.contains("ui-income"))).toBe(true);
   });
 });
@@ -211,7 +211,7 @@ describe("day heads (FLOW-305)", () => {
       />,
     );
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪201");
-    expect(screen.getByRole("group", { name: "אוגוסט 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪1");
+    expect(screen.getByRole("group", { name: "אוגוסט 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות +₪1");
     // A whole total shows no ".00" and no cents tail, as on the rows (owner, 2026-10-10).
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals .ui-num-cents")).toBeNull();
   });
@@ -234,11 +234,11 @@ describe("MonthList in a cost list (FLOW-339)", () => {
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות ₪350");
   });
 
-  it("keeps a refund as money in, green with no sign", () => {
+  it("keeps a refund as money in, green with its +", () => {
     renderCost([row("a", "2026-09-02", 35_000n, "expense"), row("b", "2026-09-01", 5_000n, "income"), row("c", "2026-08-01", 70_000n, "expense")], true);
     const totals = screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals");
-    expect(totals?.textContent).toBe("הכנסות ₪50, הוצאות ₪350");
-    expect(totals?.querySelector(".ui-income")?.textContent).toBe("₪50");
+    expect(totals?.textContent).toBe("הכנסות +₪50, הוצאות ₪350");
+    expect(totals?.querySelector(".ui-income")?.textContent).toBe("+₪50");
   });
 
   it("keeps the minus outside a cost list", () => {

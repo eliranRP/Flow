@@ -1,6 +1,7 @@
 /* Shared components. Colours, type, space, and radii come from the token file. */
 /* Split by area, in cascade order (FLOW-807). The order of these imports is the order of the old
    single file: keep it. Add a new block to the file for its area, or a new file at the end. */
+@import "./css/00-motion.css";
 @import "./css/01-base.css";
 @import "./css/02-fields-sheets.css";
 @import "./css/03-controls.css";
@@ -38,3 +39,4 @@
 @import "./css/35-team.css";
 @import "./css/36-cash.css";
 @import "./css/37-charge-switches.css";
+@import "./css/40-card.css";

@@ -31,17 +31,14 @@ import {
   companyIdFromReviewPayload,
   completeJevScopeLookup,
   dropLegacyJevConnectorKey,
-  fetchJevConnector,
-  JEV_QUEUE_STALLED,
   jevConnectorQueryKey,
-  seedJevConnectorFromLive,
-  jevScopeFollowsLive,
   jevQueueKey,
   jevQueueQueryKey,
-  loadJevSuggestions,
-  withJevDeadline,
+  seedJevConnectorFromLive,
+  jevScopeFollowsLive,
   type JevScopeLookup,
-} from "./screens/jev-review";
+} from "./screens/jev-connector-scope";
+import { withJevDeadline } from "./screens/jev-deadline";
 
 interface BooksContextValue {
   period: PeriodChoice;
@@ -213,17 +210,18 @@ async function settleReviewJevScope(
       queryKey: jevConnectorQueryKey(scope),
       retry: false,
       staleTime: JEV_CONNECTOR_STALE_MS,
-      queryFn: ({ signal }) => fetchJevConnector(signal),
+      // The Jev queue code loads with the review screens, not with Home.
+      queryFn: ({ signal }) => import("./screens/jev-review").then((jev) => jev.fetchJevConnector(signal)),
     }).then((on) => {
       if (!on) return undefined;
       return client.query({
         queryKey: jevQueueQueryKey(ids),
         retry: false,
-        queryFn: ({ signal }) => withJevDeadline(
+        queryFn: ({ signal }) => import("./screens/jev-review").then((jev) => withJevDeadline(
           signal,
-          (linked) => loadJevSuggestions(ids, linked),
-          JEV_QUEUE_STALLED,
-        ),
+          (linked) => jev.loadJevSuggestions(ids, linked),
+          jev.JEV_QUEUE_STALLED,
+        )),
       });
     }).catch(() => undefined);
   };

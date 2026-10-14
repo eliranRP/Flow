@@ -5,6 +5,8 @@ type ChangePillProps = {
   percent: number;
   comparison: string;
   onBand?: boolean;
+  /** An expense going up hurts, so the tones swap (a rise is the bad tone). */
+  upHurts?: boolean;
 };
 
 type ChangeTone = "flat" | "up" | "down";
@@ -17,20 +19,25 @@ export function formatChange(percent: number): { text: string; tone: ChangeTone 
   return { text: rounded === 0 ? "<1%" : `${String(rounded)}%`, tone: up ? "up" : "down" };
 }
 
-/** Month-over-month change. The caller hides it when there is no comparison period. */
-export function ChangePill({ percent, comparison, onBand = false }: ChangePillProps) {
+/**
+ * Month-over-month change (FLOW-363 (2b)). On the band a change that helps is a grey pill and one
+ * that hurts is a red pill; off the band it is plain text. The caller hides it when there is no
+ * comparison period.
+ */
+export function ChangePill({ percent, comparison, onBand = false, upHurts = false }: ChangePillProps) {
   const change = formatChange(percent);
   const words = change.tone === "flat" ? `0% ${comparison}` : `${change.tone === "up" ? "עלייה" : "ירידה"} של ${change.text} ${comparison}`;
   const arrow = change.tone === "up" ? "▲" : change.tone === "down" ? "▼" : "";
+  const helps = change.tone === "flat" ? null : (change.tone === "up") !== upHurts;
   return (
     <span className="inline-flex items-center gap-2">
       <span
         className={cx(
           "ui-change",
           onBand && "ui-change-band",
-          change.tone === "up" && "ui-delta-good",
-          change.tone === "down" && "ui-delta-bad",
           change.tone === "flat" && "ui-delta-flat",
+          helps === true && "ui-delta-good",
+          helps === false && "ui-delta-bad",
         )}
         aria-label={words}
       >

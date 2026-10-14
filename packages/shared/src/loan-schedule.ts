@@ -1,7 +1,7 @@
 import { divHalfEven } from "./money.ts";
 
 /** Nominal annual rate scale. 60_000 is 6 percent. 1_000_000 is 100 percent. */
-export const RATE_PPM_SCALE = 1_000_000;
+const RATE_PPM_SCALE = 1_000_000;
 
 /**
  * Matches `loans_term_chk` in `supabase/migrations/20261004055306_loans_l1.sql`.
@@ -23,10 +23,10 @@ const ONE_CENT = 1n;
  */
 export type LoanKind = "amortizing" | "interest_only" | "balloon" | "demand";
 
-export const LOAN_KINDS: readonly LoanKind[] = ["amortizing", "interest_only", "balloon", "demand"];
+const LOAN_KINDS: readonly LoanKind[] = ["amortizing", "interest_only", "balloon", "demand"];
 
 /** Interest on a demand loan is daily on an actual/365 basis (decision 0132). */
-export const DEMAND_DAYS_IN_YEAR = 365;
+const DEMAND_DAYS_IN_YEAR = 365;
 
 /**
  * A rate row: from `effectiveDate` on, the loan's nominal annual rate is `annualRatePpm`.
@@ -37,7 +37,7 @@ export type LoanRate = {
   readonly annualRatePpm: number;
 };
 
-export type LoanScheduleErrorCode =
+type LoanScheduleErrorCode =
   | "principal"
   | "rate"
   | "term"
@@ -543,7 +543,7 @@ export type DemandPayment = {
   readonly feesMinor: bigint;
 };
 
-export type DemandTerms = {
+type DemandTerms = {
   readonly principalMinor: bigint;
   readonly annualRatePpm: number;
   /** The day the loan started: interest runs from here until the first payment. */
@@ -551,7 +551,7 @@ export type DemandTerms = {
   readonly rates?: readonly LoanRate[];
 };
 
-export type DemandAccrual = {
+type DemandAccrual = {
   /** The last attached payment's date, or the start date. */
   readonly fromDate: string;
   readonly days: number;

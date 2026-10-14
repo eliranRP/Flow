@@ -271,6 +271,7 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   await page.goto("/e2e/split");
   await page.getByRole("button", { name: "הוספת חלק" }).click();
   await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }).getByRole("radio", { name: "%" }).click();
   const share = page.locator("input[id^='psplit-pct-']").first();
   const shareBox = share.locator("xpath=ancestor::*[contains(@class,'ui-percent-control')]");
@@ -352,11 +353,13 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
   await page.getByRole("button", { name: /פרויקט:/ }).click();
   await page.getByRole("radio", { name: "וילה רעננה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await toast(page, "השיוך נשמר");
   await expect(page.getByRole("button", { name: /וילה רעננה/ })).toBeVisible();
   await page.getByRole("button", { name: /קטגוריה:/ }).click();
   await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await toast(page, "השיוך נשמר");
   const remember = page.getByRole("switch", { name: "לזכור לספק הזה" });
   await remember.click();
@@ -438,6 +441,7 @@ test("a transaction shows its VAT, changes, and confirms delete", async ({ page 
   await page.getByRole("button", { name: /קטגוריה/ }).click();
   await expect(page.getByRole("dialog", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await toast(page, "השיוך נשמר");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /הובלה/ })).toBeVisible();
@@ -771,6 +775,7 @@ test("split parts, units, the hold, and close", async ({ page }) => {
   await expect(page.getByText("נשאר לשורה")).toBeVisible();
   await page.getByRole("button", { name: "הוספת חלק" }).click();
   await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "שיפוץ דירה ביאליק 8 חולון" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await page.getByRole("radiogroup", { name: "יחידה, שיפוץ דירה ביאליק 8 חולון" }).getByRole("radio", { name: "%" }).click();
   const field = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
   await field.fill("120");
@@ -783,6 +788,7 @@ test("split parts, units, the hold, and close", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" })).toHaveCount(0);
   await page.getByRole("button", { name: "הוספת חלק" }).click();
   await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" }).fill("50");
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.locator("#e2e-split-saved")).not.toHaveText("");

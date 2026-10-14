@@ -75,7 +75,7 @@
   color: var(--color-gsi-text);
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
-  transition: background-color var(--dur-press);
+  transition: background-color var(--motion-press);
 }
 
 .ui-gsi-button:active:not(:disabled) {

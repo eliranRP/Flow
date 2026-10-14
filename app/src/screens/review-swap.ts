@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type ReviewMotion = "still" | "out" | "in";
 
-/** How long the leaving card fades before the next one lands (`--dur-base`). */
+/** How long the leaving card fades before the next one lands (`--motion-fade`). */
 export const REVIEW_SWAP_MS = 200;
 
 /** Every field of a review row is a primitive, so a shallow compare says whether the card changed. */

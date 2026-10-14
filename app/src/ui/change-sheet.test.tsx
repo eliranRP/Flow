@@ -142,6 +142,52 @@ function DirectHarness({
   );
 }
 
+/** A category the owner has not confirmed: the summary says הצעה, and the picker's check is on it. */
+function SuggestedHarness({ onCommitPick }: { onCommitPick: (kind: "project" | "category", id: string) => Promise<undefined> }) {
+  const [open, setOpen] = useState(true);
+  const [projectId, setProjectId] = useState("p1");
+  const [categoryId, setCategoryId] = useState("c1");
+  return (
+    <MemoryRouter initialEntries={["/?pick=category"]}>
+      <ChangeAssignment
+        host="overlay"
+        open={open}
+        onOpenChange={setOpen}
+        supplier="נגרייה לדוגמה"
+        amount="₪100"
+        direction="expense"
+        projects={[{ id: "p1", name: "בית הכרם" }]}
+        categories={fewCategories}
+        projectId={projectId}
+        categoryId={categoryId}
+        suggestionCategoryId="c1"
+        onProjectId={setProjectId}
+        onCategoryId={setCategoryId}
+        onCommitPick={onCommitPick}
+        onSplit={() => undefined}
+        onCreateProject={(name) => Promise.resolve({ id: "new", name })}
+      />
+    </MemoryRouter>
+  );
+}
+
+describe("ChangeAssignment confirms a suggestion (FLOW-831)", () => {
+  it("a suggested value that is checked keeps שמירה enabled, and שמירה confirms it", async () => {
+    const onCommitPick = vi.fn(() => Promise.resolve(undefined));
+    render(<SuggestedHarness onCommitPick={onCommitPick} />);
+    const radio = await screen.findByRole("radio", { name: "קטגוריה 1" });
+    expect(radio).toBeChecked();
+    const save = screen.getByRole("button", { name: "שמירה" });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
+    });
+    expect(onCommitPick).toHaveBeenCalledOnce();
+    expect(onCommitPick).toHaveBeenCalledWith("category", "c1");
+  });
+});
+
 describe("ChangeAssignment opened on a picker", () => {
   it("opens each row on its own picker, with no summary on the way", async () => {
     render(<DirectHarness />);
@@ -189,21 +235,52 @@ describe("ChangeAssignment opened on a picker", () => {
     }, { timeout: 2000 });
   });
 
-  it("closes after a pick, so a re-file is two taps", async () => {
+  it("a row tap only moves the check, and שמירה closes the picker with one pick (FLOW-831)", async () => {
     const onCommitPick = vi.fn(() => Promise.resolve(undefined));
     render(<DirectHarness onCommitPick={onCommitPick} />);
     fireEvent.click(screen.getByRole("button", { name: "שורת קטגוריה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "קטגוריה 3" }));
+    expect(screen.getByRole("radio", { name: "קטגוריה 3" })).toBeChecked();
+    expect(screen.getByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
+    expect(onCommitPick).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+    expect(onCommitPick).toHaveBeenCalledOnce();
     expect(onCommitPick).toHaveBeenCalledWith("category", "c3");
+  });
+
+  it("שמירה is disabled while the check is the saved value (FLOW-831)", async () => {
+    render(<DirectHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "שורת קטגוריה" }));
+    expect(await screen.findByRole("button", { name: "שמירה" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: "קטגוריה 3" }));
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("radio", { name: "קטגוריה 1" }));
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  });
+
+  it("✕ without שמירה discards the choice and writes nothing (FLOW-831)", async () => {
+    const onCommitPick = vi.fn(() => Promise.resolve(undefined));
+    render(<DirectHarness onCommitPick={onCommitPick} />);
+    fireEvent.click(screen.getByRole("button", { name: "שורת קטגוריה" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "קטגוריה 3" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(onCommitPick).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "שורת קטגוריה" }));
+    expect(await screen.findByRole("radio", { name: "קטגוריה 1" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "קטגוריה 3" })).not.toBeChecked();
   });
 
   it("shows the summary on a hold, and a picker from there returns to it", async () => {
     render(<DirectHarness hold="בחרו פרויקט וקטגוריה." onCommitPick={() => Promise.resolve("hold" as const)} />);
     fireEvent.click(screen.getByRole("button", { name: "שורת פרויקט" }));
     fireEvent.click(await screen.findByRole("radio", { name: "גבעת אורנים" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
     expect(screen.getByText("בחרו פרויקט וקטגוריה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));

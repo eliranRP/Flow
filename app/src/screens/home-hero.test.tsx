@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeBooks } from "./HomeScreen";
-import { heroExplanation, periodPhrase, stepPeriod, thisMonth, windowLabel } from "../period";
+import { periodPhrase, stepPeriod, thisMonth, windowLabel } from "../period";
 
 function books(overrides: Partial<Dashboard> = {}): Dashboard {
   return {
@@ -59,7 +59,7 @@ describe("Home hero", () => {
     expect(style.textAlign === "start" || style.textAlign === "right").toBe(true);
     expect(screen.getByRole("heading", { name: "₪39,164" })).toBeInTheDocument();
     // FLOW-355 (A): no explanation line, no period tabs or stepper; one pill names the window.
-    expect(screen.queryByText(heroExplanation())).not.toBeInTheDocument();
+    expect(screen.queryByText("הכנסות פחות הוצאות")).not.toBeInTheDocument();
     const income = screen.getByText("הכנסות");
     const spent = screen.getByText("הוצאות");
     expect(income.closest(".ui-band")).toBeNull();
@@ -89,7 +89,7 @@ describe("Home hero", () => {
     }));
     expect(screen.getByRole("heading", { name: "$3,000" })).toBeInTheDocument();
     expect(screen.getByText("$2,000")).toBeInTheDocument();
-    expect(screen.getByText("$5,000")).toBeInTheDocument();
+    expect(screen.getByText("+$5,000")).toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
     expect(screen.queryByText("מחודש שעבר")).not.toBeInTheDocument();
   });

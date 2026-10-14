@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../../packages/shared/src/database.types.ts";
-import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
+import { constantTimeEqual } from "../_shared/constant-time.ts";
+import { decodeKek, envelopeFromRow, openApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import {
   assertSumitUrl,
@@ -28,7 +29,6 @@ const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
 const LIST_DOCUMENTS = "https://api.sumit.co.il/accounting/documents/list/";
 const PAGE_CAP = 20;
 const CLAIM_MS = 10 * 60 * 1000;
-const te = new TextEncoder();
 
 class SyncHold extends Error {
   readonly retryAt: string;
@@ -109,17 +109,6 @@ Deno.serve(async (req) => {
   }
 });
 
-function constantTimeEqual(left: string, right: string): boolean {
-  const a = te.encode(left);
-  const b = te.encode(right);
-  const length = Math.max(a.length, b.length);
-  let diff = a.length ^ b.length;
-  for (let index = 0; index < length; index += 1) {
-    diff |= (a[index] ?? 0) ^ (b[index] ?? 0);
-  }
-  return diff === 0;
-}
-
 async function syncCompany(
   admin: SupabaseClient<Database>,
   companyId: string,
@@ -180,20 +169,7 @@ async function runSync(
   kek: Uint8Array,
   row: Record<string, unknown>,
 ): Promise<{ ok: boolean; documents: number; sumit_reads: number }> {
-  const envelope: Envelope = {
-    keyCiphertext: String(row.key_ciphertext),
-    keyNonce: String(row.key_nonce),
-    dekCiphertext: String(row.dek_ciphertext),
-    dekNonce: String(row.dek_nonce),
-    kekVersion: String(row.kek_version),
-    ...(row.envelope_version == null ? {} : { envelopeVersion: String(row.envelope_version) }),
-  };
-  if (!envelope.keyCiphertext.startsWith("\\x")) {
-    envelope.keyCiphertext = bytesPrefix(row.key_ciphertext);
-    envelope.keyNonce = bytesPrefix(row.key_nonce);
-    envelope.dekCiphertext = bytesPrefix(row.dek_ciphertext);
-    envelope.dekNonce = bytesPrefix(row.dek_nonce);
-  }
+  const envelope = envelopeFromRow(row);
   const sumitCompanyId = Number(row.sumit_company_id);
   let apiKey = "";
   try {
@@ -236,14 +212,6 @@ async function noteSyncFailure(admin: SupabaseClient<Database>, companyId: strin
   if (noted.error) {
     await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", companyId);
   }
-}
-
-function bytesPrefix(value: unknown): string {
-  if (typeof value === "string") {
-    if (value.startsWith("\\x")) return value;
-    if (/^[0-9a-fA-F]+$/.test(value)) return `\\x${value}`;
-  }
-  return String(value);
 }
 
 async function sumitCall(

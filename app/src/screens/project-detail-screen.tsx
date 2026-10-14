@@ -18,7 +18,7 @@ import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { useProjectCashMonthsQuery } from "../project-cash";
 import { assertNoError, useWrite } from "../use-write";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
@@ -28,7 +28,7 @@ import { BandHero, SectionHead } from "../ui/layout";
 import { TextLink } from "../ui/text-link";
 import { List, ListRow } from "../ui/list-row";
 import { FocusTitle } from "../ui/focus-title";
-import { BudgetBar } from "../ui/progress-bar";
+import { ProgressBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
@@ -185,6 +185,7 @@ export function ProjectDetailScreen({
   // Home's late bills and changed charges; the page shows the project's own. FLOW-912: read once the
   // project's own read has landed, like its groups, so two more reads stay out of the page's paint.
   const recurring = useProjectRecurring(
+    projectId,
     sample == null && section === "overview" && detail.data != null && !detail.isFetching,
     sampleRecurring,
   );
@@ -254,7 +255,7 @@ export function ProjectDetailScreen({
         <ScreenHeader title="הוצאות" kicker={project.name} subtitle={periodWords} backTo={sectionHref("overview")} />
         {project.budget_agorot != null && period.kind === "all" ? (
           <div className="ui-page-pad ui-project-budget">
-            <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
+            <ProgressBar variant="split" label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
           </div>
         ) : null}
         <ProjectCategories
@@ -450,7 +451,7 @@ export function ProjectDetailScreen({
         <p className="ui-breakdown-total ui-page-pad">
           {profitRows.map(({ row, profit: rowProfit }) => (
             <span key={row.currency} className="ui-breakdown-total-line">
-              <BigNumber agorot={rowProfit} currency={row.currency} size="display" loss={rowProfit < 0n} />
+              <Amount agorot={rowProfit} currency={row.currency} size="display" loss={rowProfit < 0n} />
             </span>
           ))}
         </p>
@@ -549,7 +550,7 @@ function LegacyEmptyProject() {
         <BandHero>
           <FocusTitle className="t-band-title">פרויקט</FocusTitle>
           <p className="ui-band-label t-label">רווח</p>
-          <p className="t-display"><BigNumber agorot={0n} /></p>
+          <p className="t-display"><Amount agorot={0n} /></p>
         </BandHero>
       </TopBand>
       <EmptyState

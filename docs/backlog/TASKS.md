@@ -32,10 +32,29 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id | Title | Type |
 | --- | --- | --- | --- |
+| R1 | [FLOW-363](#flow-363) | Redesign foundation: type scale, colours, motion and shared parts | UI (design approved) |
+| R2 | [FLOW-371](#flow-371) | Redesign: skeletons, empty states and loaders | UI (design approved) |
+| R3 | [FLOW-372](#flow-372) | Redesign: light theme and the מראה setting | UI (design approved) |
+| R4a | [FLOW-364](#flow-364) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
+| R4b | [FLOW-366](#flow-366) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
+| R5a | [FLOW-365](#flow-365) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
+| R5b | [FLOW-367](#flow-367) | Redesign: open invoices, with a bank match and mark as paid | UI (design approved) |
+| R6a | [FLOW-445](#flow-445) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
+| R6b | [FLOW-446](#flow-446) | Redesign: a property's השקעה והלוואות page | UI (design approved) |
+| R6c | [FLOW-139](#flow-139) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
+| R7a | [FLOW-140](#flow-140) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
+| R7b | [FLOW-141](#flow-141) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
+| R8 | [FLOW-447](#flow-447) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
+| R9a | [FLOW-368](#flow-368) | Redesign: search with one סינון button, and opening from Home's icon | UI (design approved) |
+| R9b | [FLOW-369](#flow-369) | Redesign: the add (+) sheet, receipt, cash or cheque, and the add form | UI (design approved) |
+| R9c | [FLOW-370](#flow-370) | Redesign: one split screen for projects and categories | UI (design approved) |
+| R10a | [FLOW-512](#flow-512) | Redesign: Settings as a menu, its inner pages, and the guided SUMIT, Mercury and MCP pages | UI (design approved) |
+| R10b | [FLOW-513](#flow-513) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
+| R11 | [FLOW-514](#flow-514) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 | 1 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE |
 | 2 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG |
 | 3 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG |
@@ -182,6 +201,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-115"></a>[FLOW-115](tasks/FLOW-115.md) | Loan screens UI follow-ups | BACKLOG NIT |
 | <a id="flow-414"></a>[FLOW-414](tasks/FLOW-414.md) | Loan tools: interest kept out of profit, interest-only term, field-named errors | BUG |
 | <a id="flow-434"></a>[FLOW-434](tasks/FLOW-434.md) | Loan page: next payment, year total and what was paid | UI |
+| <a id="flow-139"></a>[FLOW-139](tasks/FLOW-139.md) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
+| <a id="flow-140"></a>[FLOW-140](tasks/FLOW-140.md) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
+| <a id="flow-141"></a>[FLOW-141](tasks/FLOW-141.md) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
 
 ## MCP
 
@@ -277,6 +299,17 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-429"></a>[FLOW-429](tasks/FLOW-429.md) | A hint part wider than its line wraps instead of clipping | SMALL UI |
 | <a id="flow-346"></a>[FLOW-346](tasks/FLOW-346.md) | Split between projects works like the split by categories, in exact amounts | SMALL UI |
 | <a id="flow-431"></a>[FLOW-431](tasks/FLOW-431.md) | Earlier charges from the same party on the transaction screen | PLAN-FIRST UI |
+| <a id="flow-363"></a>[FLOW-363](tasks/FLOW-363.md) | Redesign foundation: type scale, colours, motion and shared parts | UI (design approved) |
+| <a id="flow-371"></a>[FLOW-371](tasks/FLOW-371.md) | Redesign: skeletons, empty states and loaders | UI (design approved) |
+| <a id="flow-372"></a>[FLOW-372](tasks/FLOW-372.md) | Redesign: light theme and the מראה setting | UI (design approved) |
+| <a id="flow-373"></a>[FLOW-373](tasks/FLOW-373.md) | Expected (כ־) income figures get the "+" | BACKLOG NIT |
+| <a id="flow-364"></a>[FLOW-364](tasks/FLOW-364.md) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
+| <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
+| <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
+| <a id="flow-367"></a>[FLOW-367](tasks/FLOW-367.md) | Redesign: open invoices, with a bank match and mark as paid | UI (design approved) |
+| <a id="flow-368"></a>[FLOW-368](tasks/FLOW-368.md) | Redesign: search with one סינון button, and opening from Home's icon | UI (design approved) |
+| <a id="flow-369"></a>[FLOW-369](tasks/FLOW-369.md) | Redesign: the add (+) sheet, receipt, cash or cheque, and the add form | UI (design approved) |
+| <a id="flow-370"></a>[FLOW-370](tasks/FLOW-370.md) | Redesign: one split screen for projects and categories | UI (design approved) |
 
 ## Projects and reports
 
@@ -309,6 +342,14 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-437"></a>[FLOW-437](tasks/FLOW-437.md) | Month pager keeps a disabled chevron; band Back lines up with the text | SMALL UI |
 | <a id="flow-438"></a>[FLOW-438](tasks/FLOW-438.md) | The month's transactions on the project's cash month page, and the profit page in the same layout | UI (plan-first, owner card) |
 | <a id="flow-439"></a>[FLOW-439](tasks/FLOW-439.md) | The card or account name on the לאישור card | SMALL UI |
+| <a id="flow-440"></a>[FLOW-440](tasks/FLOW-440.md) | The profit page shows what it leaves out, with the cash month page's "לא נספר ברווח" row | SMALL UI |
+| <a id="flow-441"></a>[FLOW-441](tasks/FLOW-441.md) | A project's "income changed" row opens a payment shown under another project | BUG |
+| <a id="flow-442"></a>[FLOW-442](tasks/FLOW-442.md) | The "not counted in profit" list names the loan part it leaves out | BUG |
+| <a id="flow-443"></a>[FLOW-443](tasks/FLOW-443.md) | The project's "לפי חודש" screen: year heads, and one consistent row style | PLAN FIRST |
+| <a id="flow-444"></a>[FLOW-444](tasks/FLOW-444.md) | A project's month profit page names its project | BUG |
+| <a id="flow-445"></a>[FLOW-445](tasks/FLOW-445.md) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
+| <a id="flow-446"></a>[FLOW-446](tasks/FLOW-446.md) | Redesign: a property's השקעה והלוואות page | UI (design approved) |
+| <a id="flow-447"></a>[FLOW-447](tasks/FLOW-447.md) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
 
 ## Onboarding, Settings and connectors
 
@@ -325,6 +366,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-509"></a>[FLOW-509](tasks/FLOW-509.md) | Mercury connector hardening | BACKLOG NIT |
 | <a id="flow-511"></a>[FLOW-511](tasks/FLOW-511.md) | Easy opt-out from the Home setup card | PLAN FIRST |
 | <a id="flow-510"></a>[FLOW-510](tasks/FLOW-510.md) | SUMIT sync follow-ups | BACKLOG NIT |
+| <a id="flow-512"></a>[FLOW-512](tasks/FLOW-512.md) | Redesign: Settings as a menu, its inner pages, and the guided SUMIT, Mercury and MCP pages | UI (design approved) |
+| <a id="flow-513"></a>[FLOW-513](tasks/FLOW-513.md) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
+| <a id="flow-514"></a>[FLOW-514](tasks/FLOW-514.md) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 
 ## Multi-company and team
 
@@ -370,6 +414,19 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-816"></a>[FLOW-816](tasks/FLOW-816.md) | The project-open speed check scales to the container in local gates | SMALL CYCLE |
 | <a id="flow-817"></a>[FLOW-817](tasks/FLOW-817.md) | Docs-only merges don't count toward the deploy batch | SMALL CYCLE |
 | <a id="flow-818"></a>[FLOW-818](tasks/FLOW-818.md) | vitest 4 bump (dependabot #566, #567) | SMALL CYCLE |
+| <a id="flow-819"></a>[FLOW-819](tasks/FLOW-819.md) | Remove the stories and components the app no longer uses | SMALL CYCLE |
+| <a id="flow-820"></a>[FLOW-820](tasks/FLOW-820.md) | Rule: a change removes what it leaves unused | SMALL CYCLE |
+| <a id="flow-821"></a>[FLOW-821](tasks/FLOW-821.md) | Faster local CI and main CI: build once, reuse it | SMALL CYCLE |
+| <a id="flow-822"></a>[FLOW-822](tasks/FLOW-822.md) | Remove CSS rules no screen uses | SMALL CYCLE |
+| <a id="flow-823"></a>[FLOW-823](tasks/FLOW-823.md) | Shared package: drop exports nothing uses | SMALL CYCLE |
+| <a id="flow-824"></a>[FLOW-824](tasks/FLOW-824.md) | One copy of the code two screens duplicate | SMALL CYCLE |
+| <a id="flow-825"></a>[FLOW-825](tasks/FLOW-825.md) | One render helper for the app's tests | SMALL CYCLE |
+| <a id="flow-826"></a>[FLOW-826](tasks/FLOW-826.md) | A load report and the cleanup check order | SMALL CYCLE |
+| <a id="flow-827"></a>[FLOW-827](tasks/FLOW-827.md) | Keep what Home doesn't need out of its first load | SMALL CYCLE |
+| <a id="flow-828"></a>[FLOW-828](tasks/FLOW-828.md) | useWrite draws a tap's result at once and rolls back on failure | SMALL CYCLE |
+| <a id="flow-829"></a>[FLOW-829](tasks/FLOW-829.md) | The everyday taps take effect at once | SMALL CYCLE |
+| <a id="flow-830"></a>[FLOW-830](tasks/FLOW-830.md) | A gate on how fast a tap answers | SMALL CYCLE |
+| <a id="flow-831"></a>[FLOW-831](tasks/FLOW-831.md) | The picker keeps the choice until שמירה, then saves in the background | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 

@@ -278,7 +278,7 @@ describe("ListRow", () => {
     expect(screen.getByRole("link", { name: /משכנתא/ })).toHaveClass("ui-row-tone-warning");
   });
 
-  it("draws an income row green with a hidden הכנסה and no plus, an expense row with a minus in text", () => {
+  it("draws an income row green with a hidden הכנסה and a plus, an expense row with a minus in text", () => {
     const { container } = render(
       <MemoryRouter>
         <>
@@ -287,10 +287,9 @@ describe("ListRow", () => {
         </>
       </MemoryRouter>,
     );
-    const income = screen.getByText("₪3,500");
+    const income = screen.getByText("+₪3,500");
     expect(income).toHaveClass("ui-income");
-    expect(income.textContent).not.toContain("+");
-    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500");
+    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה +₪3,500");
     expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
     const expense = screen.getByText("−₪1,200");
     expect(expense).not.toHaveClass("ui-income");
@@ -308,7 +307,7 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
-    expect(figures.map((node) => node.textContent)).toEqual(["₪1,234.56", "−₪500", "₪988"]);
+    expect(figures.map((node) => node.textContent)).toEqual(["+₪1,234.56", "−₪500", "₪988"]);
     expect(figures.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([".56", null, null]);
   });
 
@@ -419,11 +418,11 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(screen.getByRole("link").getAttribute("aria-label")).toContain("כרטיס שמסתיים ב־4242");
   });
 
-  it("shows income green with no plus and the hidden word", () => {
+  it("shows income green with a plus and the hidden word", () => {
     renderRow({ title: "Northwind Traders", agorot: 500_000n, sign: "in", currency: "USD" });
     const link = screen.getByRole("link");
-    expect(link.querySelector(".ui-income")?.textContent).toBe("$5,000");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה $5,000");
+    expect(link.querySelector(".ui-income")?.textContent).toBe("+$5,000");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה +$5,000");
     expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "ltr");
   });
@@ -447,7 +446,7 @@ describe("ListRow statement (FLOW-305)", () => {
 });
 
 describe("ListRow transaction in a cost list (FLOW-339)", () => {
-  it("draws a cost with no minus and a refund as זיכוי", () => {
+  it("draws a cost with no minus and a refund as זיכוי with a plus", () => {
     render(
       <MemoryRouter>
         <ListRow variant="transaction" title="מלט" agorot={-8_500_000n} sign="cost" source="invoice" href="/t/1" />
@@ -456,7 +455,7 @@ describe("ListRow transaction in a cost list (FLOW-339)", () => {
     );
     expect(screen.getByText("מלט").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("₪85,000");
     const refund = screen.getByText("החזר").closest(".ui-row");
-    expect(refund?.querySelector(".ui-num")?.textContent).toBe("₪500");
+    expect(refund?.querySelector(".ui-num")?.textContent).toBe("+₪500");
     expect(refund?.textContent).toContain("זיכוי");
   });
 });

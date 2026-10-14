@@ -1,26 +1,3 @@
-.ui-split-remain {
-  margin-top: var(--space-6);
-  border-top: 1px solid var(--color-line);
-  padding-top: var(--space-3);
-}
-
-.ui-step-no {
-  display: grid;
-  width: var(--switch-track-h);
-  height: var(--switch-track-h);
-  flex: none;
-  place-items: center;
-  border-radius: var(--radius-chip);
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-}
-
-.ui-settings-kicker {
-  margin-block: var(--space-section) var(--space-1);
-  padding-inline: var(--space-side);
-  color: var(--color-text-muted);
-}
-
 .ui-row-danger {
   color: var(--color-bad);
   width: 100%;
@@ -267,13 +244,6 @@
   white-space: nowrap;
 }
 
-.ui-review-value {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
 .ui-onboard {
   display: flex;
   min-height: 100%;
@@ -322,8 +292,8 @@
     which the design tokens set to 0ms.
   */
   :root {
-    --dur-sheet-in: 1ms;
-    --dur-sheet-out: 1ms;
+    --motion-sheet-in: 1ms;
+    --motion-sheet-out: 1ms;
   }
 
   [data-vaul-drawer][data-state="open"]:not(.vaul-dragging),
@@ -366,10 +336,6 @@
 .ui-period-chevron {
   display: inline-flex;
   color: var(--color-accent-text);
-}
-
-.ui-page .t-title-1 {
-  letter-spacing: var(--type-title-1-tracking);
 }
 
 .ui-page .t-title-1,

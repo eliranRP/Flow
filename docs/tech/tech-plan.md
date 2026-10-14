@@ -12,7 +12,7 @@
 **What Module 1 is:** a Hebrew-only, RTL, mobile-first installable web app (PWA) with one owner user per company, for Israeli contractors. It shows cash-basis profit and loss for the company and for each project, alongside the accountant's books. Data comes from SUMIT (read-only), including bank lines, plus invoice photos and manual entry. There is no Bank Hapoalim file import ([0065](../decisions/0065-review-round5.md) point 40). AI tagging assigns project and category, and stays off until a Gemini key is configured.
 
 **Inputs:**
-- Design spec: `design/` in this repo (`design/system/implementation-guide.md`, `design/system/design-system.md`, `design/system/design-tokens.json`, `design/system/implementation-tokens.css`).
+- Design spec: `design/` in this repo (`design/system/implementation-guide.md`, `design/system/design-system.md`, `design/system/implementation-tokens.css`, the hand-edited token source).
 - Verified SUMIT research: [sumit-api-research.md](sumit-api-research.md), cited as "SUMIT §x".
 
 **Fixed decisions:**

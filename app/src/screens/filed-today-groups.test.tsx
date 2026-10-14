@@ -1,11 +1,10 @@
 import type { FiledTodayRow } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { fireEvent, screen } from "@testing-library/react";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { renderWithProviders } from "../test-render";
 import { readTxnList } from "../txn-nav";
 import { groupByKey } from "../ui/month-groups";
-import { ToastProvider } from "../ui/toast";
 import { FILED_NO_PROJECT, FiledTodayScreen } from "./filed-today-screen";
 
 /** FLOW-334: שויכו היום under one head per project, with its count and total. */
@@ -35,17 +34,12 @@ function CardProbe() {
 }
 
 function renderList(rows: FiledTodayRow[]) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={["/review/filed"]}>
-          <Routes>
-            <Route path="/review/filed" element={<FiledTodayScreen sample={rows} />} />
-            <Route path="/transactions/:transactionId" element={<CardProbe />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/review/filed" element={<FiledTodayScreen sample={rows} />} />
+      <Route path="/transactions/:transactionId" element={<CardProbe />} />
+    </Routes>,
+    { route: "/review/filed" },
   );
 }
 
@@ -82,7 +76,7 @@ describe("FiledTodayScreen by project", () => {
     const projectA = screen.getByRole("group", { name: "Project A" });
     expect(projectA).toHaveTextContent("3 תנועות");
     const figuresA = [...(projectA.querySelectorAll(".ui-month-totals bdi"))];
-    expect(figuresA.map((node) => node.textContent)).toEqual(["₪10,000", "−₪4,340.50"]);
+    expect(figuresA.map((node) => node.textContent)).toEqual(["+₪10,000", "−₪4,340.50"]);
     expect(figuresA[0]).toHaveClass("ui-income");
     // Agorot are drawn small, as on the rows (FLOW-334); a whole figure has no ".00" (owner, 2026-10-10).
     expect(figuresA.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([null, ".50"]);

@@ -150,6 +150,7 @@ describe("change sheet discard", () => {
     renderSheet({ onDiscard, onCommitPick, hold: "" });
     fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "שינוע" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     closeSheet();
     expect(screen.getByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
     expect(onDiscard).not.toHaveBeenCalled();

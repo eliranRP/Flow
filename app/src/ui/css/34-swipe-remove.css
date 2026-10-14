@@ -26,7 +26,7 @@
   color: var(--color-text-secondary);
   /* Hidden at rest; after a release it stays shown until the row has slid back over it. */
   visibility: hidden;
-  transition: visibility 0s linear var(--dur-fast);
+  transition: visibility 0s linear var(--motion-fast);
 }
 
 .ui-sremove[data-drag] .ui-sremove-under {
@@ -37,7 +37,7 @@
 .ui-sremove-row {
   position: relative;
   background: var(--color-surface);
-  transition: transform var(--dur-fast) var(--ease-standard);
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .ui-sremove[data-drag]:not([data-leaving]) .ui-sremove-row {

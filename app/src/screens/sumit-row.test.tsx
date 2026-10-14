@@ -1,14 +1,13 @@
 import type { Session } from "@supabase/supabase-js";
-import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager, QueryClient } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
-import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation } from "react-router-dom";
+import { createMemoryRouter, Route, RouterProvider, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultPeriod } from "../period";
-import { BooksProvider } from "../use-books";
+import { renderWithProviders } from "../test-render";
 import { sheetStack } from "../ui/back";
 import { roleShows } from "../test-waits";
-import { ToastProvider } from "../ui/toast";
 import { OnboardingScreen, ConnectionsScreen } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
@@ -79,19 +78,7 @@ function sumit(partial: Record<string, unknown>) {
 }
 
 function renderSettings(ui: ReactNode = <ConnectionsScreen />) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={["/settings"]}>
-            {ui}
-          </MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
-  return { client, ...view };
+  return renderWithProviders(ui, { route: "/settings" });
 }
 
 function hintOf(row: HTMLElement): string {
@@ -422,17 +409,7 @@ describe("SUMIT status row", () => {
       }
       return Promise.resolve({ data: null, error: null });
     };
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    const { unmount } = renderWithProviders(<ConnectionsScreen />);
     const warning = await screen.findByRole("button", { name: "SUMIT" });
     expect(warning).toHaveClass("ui-row-tone-warning");
     expect(hintOf(warning)).toBe("צריך לחבר מחדש");
@@ -448,17 +425,7 @@ describe("SUMIT status row", () => {
       }
       return Promise.resolve({ data: null, error: null });
     };
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter>
-              <ConnectionsScreen />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    renderWithProviders(<ConnectionsScreen />);
     const row = await screen.findByRole("button", { name: "SUMIT" });
     expect(row).not.toHaveClass("ui-row-tone-warning");
     expect(hintOf(row)).toBe("מחובר");
@@ -519,15 +486,7 @@ describe("SUMIT status row", () => {
       ],
       { initialEntries: ["/settings?sheet=sumit"] },
     );
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <RouterProvider router={router} />
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    const { unmount } = renderWithProviders(<RouterProvider router={router} />, { memoryRouter: false });
     const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
     expect(within(sheet).getByLabelText("מספר חברה")).toBeInTheDocument();
     await waitFor(() => { expect(router.state.location.search).toBe(""); });
@@ -544,21 +503,16 @@ describe("SUMIT status row", () => {
     expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
     unmount();
 
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/onboarding?return=/settings?sheet=sumit"]}>
-              <Routes>
-                <Route path="/onboarding" element={<OnboardingScreen />} />
-                <Route path="/settings" element={<h1>הגדרות</h1>} />
-                <Route path="/" element={<h1>בית</h1>} />
-              </Routes>
-              <Place />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <>
+        <Routes>
+          <Route path="/onboarding" element={<OnboardingScreen />} />
+          <Route path="/settings" element={<h1>הגדרות</h1>} />
+          <Route path="/" element={<h1>בית</h1>} />
+        </Routes>
+        <Place />
+      </>,
+      { route: "/onboarding?return=/settings?sheet=sumit" },
     );
     fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
     fireEvent.click(screen.getByRole("button", { name: "המשך" }));
@@ -585,15 +539,7 @@ describe("SUMIT status row", () => {
       ],
       { initialEntries: ["/settings?sheet=sumit"] },
     );
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <RouterProvider router={router} />
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    renderWithProviders(<RouterProvider router={router} />, { memoryRouter: false });
     try {
       const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
       await waitFor(() => {
@@ -667,15 +613,7 @@ describe("SUMIT status row", () => {
       ],
       { initialEntries: ["/settings?sheet=sumit"] },
     );
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <RouterProvider router={router} />
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    renderWithProviders(<RouterProvider router={router} />, { memoryRouter: false });
     try {
       await screen.findByRole("dialog", { name: "SUMIT" });
       await waitFor(() => { expect(router.state.location.search).toBe(""); });
@@ -710,20 +648,15 @@ describe("SUMIT status row", () => {
       const location = useLocation();
       return <p>{`${location.pathname}${location.search}`}</p>;
     }
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/onboarding?return=https://evil.example/steal"]}>
-              <Routes>
-                <Route path="/onboarding" element={<OnboardingScreen />} />
-                <Route path="/" element={<h1>בית</h1>} />
-              </Routes>
-              <Place />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    const { unmount } = renderWithProviders(
+      <>
+        <Routes>
+          <Route path="/onboarding" element={<OnboardingScreen />} />
+          <Route path="/" element={<h1>בית</h1>} />
+        </Routes>
+        <Place />
+      </>,
+      { route: "/onboarding?return=https://evil.example/steal" },
     );
     fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
     fireEvent.click(screen.getByRole("button", { name: "המשך" }));
@@ -731,20 +664,15 @@ describe("SUMIT status row", () => {
     expect(screen.getByText("/")).toBeInTheDocument();
     unmount();
 
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/onboarding"]}>
-              <Routes>
-                <Route path="/onboarding" element={<OnboardingScreen />} />
-                <Route path="/" element={<h1>בית</h1>} />
-              </Routes>
-              <Place />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <>
+        <Routes>
+          <Route path="/onboarding" element={<OnboardingScreen />} />
+          <Route path="/" element={<h1>בית</h1>} />
+        </Routes>
+        <Place />
+      </>,
+      { route: "/onboarding" },
     );
     fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
     fireEvent.click(screen.getByRole("button", { name: "המשך" }));
@@ -756,21 +684,16 @@ describe("SUMIT status row", () => {
       const location = useLocation();
       return <p>{`${location.pathname}${location.search}`}</p>;
     }
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToastProvider>
-          <BooksProvider>
-            <MemoryRouter initialEntries={["/onboarding?preview=1"]}>
-              <Routes>
-                <Route path="/onboarding" element={<OnboardingScreen />} />
-                <Route path="/" element={<h1>בית</h1>} />
-                <Route path="/sign-in" element={<h1>התחברות</h1>} />
-              </Routes>
-              <Place />
-            </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <>
+        <Routes>
+          <Route path="/onboarding" element={<OnboardingScreen />} />
+          <Route path="/" element={<h1>בית</h1>} />
+          <Route path="/sign-in" element={<h1>התחברות</h1>} />
+        </Routes>
+        <Place />
+      </>,
+      { route: "/onboarding?preview=1" },
     );
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
@@ -788,17 +711,7 @@ describe("SUMIT status row", () => {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       client.setQueryData(["dashboard", "off", defaultPeriod()], dashboard);
       client.setQueryData(["categories", "off"], []);
-      const { unmount } = render(
-        <QueryClientProvider client={client}>
-          <ToastProvider>
-            <BooksProvider>
-              <MemoryRouter>
-                <ConnectionsScreen />
-              </MemoryRouter>
-            </BooksProvider>
-          </ToastProvider>
-        </QueryClientProvider>,
-      );
+      const { unmount } = renderWithProviders(<ConnectionsScreen />, { client });
       const group = await screen.findByRole("group", { name: "SUMIT" });
       expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
       expect(within(group).queryByText("לא מחובר")).not.toBeInTheDocument();
@@ -806,17 +719,7 @@ describe("SUMIT status row", () => {
       expect(screen.queryByLabelText("מספר חברה")).not.toBeInTheDocument();
       unmount();
 
-      render(
-        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-          <ToastProvider>
-            <BooksProvider>
-              <MemoryRouter initialEntries={["/settings?preview=1"]}>
-                <ConnectionsScreen />
-              </MemoryRouter>
-            </BooksProvider>
-          </ToastProvider>
-        </QueryClientProvider>,
-      );
+      renderWithProviders(<ConnectionsScreen />, { route: "/settings?preview=1" });
       const previewRow = screen.getByRole("button", { name: "SUMIT" });
       expect(document.getElementById(previewRow.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
       expect(screen.queryByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toBeInTheDocument();

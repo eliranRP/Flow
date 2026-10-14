@@ -7,8 +7,6 @@ import {
   cashTitle,
   isCashMonthKey,
   isCashSide,
-  notInProfitMinor,
-  notInProfitRest,
   shownCashRows,
   type CashListSide,
 } from "../cash";
@@ -29,14 +27,11 @@ import {
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
 import { BackButton } from "../ui/back";
-import { BigNumber } from "../ui/big-number";
-import { Button } from "../ui/button";
+import { Amount } from "../ui/amount";
 import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
 import { CashRows } from "../ui/cash-rows";
 import { israelToday } from "../ui/date-math";
-import { EmptyState } from "../ui/empty-state";
 import { FocusTitle } from "../ui/focus-title";
-import { DocumentIcon } from "../ui/icons";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
@@ -44,11 +39,11 @@ import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { useProjectQuery } from "../use-books";
+import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, CashLinesMore, cashLinesFigures } from "./cash-lines-parts";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
 
@@ -124,7 +119,7 @@ export function ProjectCashOverview({
             <div className="t-display ui-project-profits">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <BigNumber agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
                 </p>
               ))}
             </div>
@@ -248,7 +243,7 @@ function ProjectCashMonthBody({
         <p className="ui-breakdown-total ui-page-pad">
           {rows.map((row) => (
             <span key={row.currency} className="ui-breakdown-total-line">
-              <BigNumber agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
+              <Amount agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
             </span>
           ))}
         </p>
@@ -272,9 +267,6 @@ function ProjectMonthLines({ lines, loading, search }: { lines: ProjectCashMonth
 }
 
 type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
-
-// Home's words and signs for the lines pages (cash-screens.tsx), for the project's own lines.
-const KEPT_NOTE = "כסף שזז בבנק, אבל אינו הכנסה או הוצאה.";
 
 /** The project's lines behind one month's נכנס, יצא or לא נספר ברווח; a shared bill shows the project's share. */
 export function ProjectCashLinesScreen({
@@ -327,60 +319,31 @@ function ProjectCashLinesBody({
 
   const month = data == null ? undefined : monthOf(data, monthKey);
   const shown = data == null ? [] : shownCashRows(month, data.base_currency);
-  const total = shown.find((row) => row.currency === currency);
-  const figure = total == null ? null : side === "in" ? total.in_minor : side === "out" ? total.out_minor : notInProfitMinor(total);
-  // FLOW-418: VAT, and lines out of the view but in profit, are in the figure but have no row here.
-  const rest = side === "kept" && total != null ? notInProfitRest(total) : 0n;
+  const { figure, rest } = cashLinesFigures(shown, side, currency);
   const more = sample ? false : lines.hasNextPage;
   return (
     <div>
       <ScreenHeader layout="stacked" title={title} backTo={back} kicker={kicker} />
-      {figure != null ? (
-        <p className="ui-breakdown-total ui-page-pad">
-          <span className="ui-breakdown-total-line">
-            <BigNumber agorot={figure} currency={currency} size="display" income={side === "in"} />
-          </span>
-        </p>
-      ) : null}
-      {side === "kept" ? (
-        <p className="ui-breakdown-hint ui-page-pad t-hint">
-          {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
-        </p>
-      ) : null}
-      {shown.length > 1 ? (
-        <div className="ui-page-pad">
-          <SegmentedControl
-            label="מטבע"
-            showLabel={false}
-            value={currency}
-            options={shown.map((row) => ({ value: row.currency, label: row.currency }))}
-            onChange={(next) => {
-              void navigate(projectCashLinesPath(projectId, monthKey, side, next, search), { replace: true });
-            }}
-          />
-        </div>
-      ) : null}
+      <CashLinesHead side={side} currency={currency} figure={figure} rest={rest} />
+      <CashCurrencySwitch
+        currencies={shown.map((row) => row.currency)}
+        currency={currency}
+        onChange={(next) => {
+          void navigate(projectCashLinesPath(projectId, monthKey, side, next, search), { replace: true });
+        }}
+      />
       {rows.length === 0 ? (
-        <EmptyState
-          icon={<DocumentIcon />}
-          title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"}
-          body="תנועות שנכנסות לתזרים יופיעו כאן."
-        />
+        <CashLinesEmpty side={side} rest={rest} />
       ) : (
         <CashLineRows rows={rows} list={side} search={search} />
       )}
       {more ? (
-        <div className="ui-page-pad">
-          <Button
-            variant="pill"
-            busy={lines.isFetchingNextPage}
-            onClick={() => {
-              void lines.fetchNextPage();
-            }}
-          >
-            עוד תנועות
-          </Button>
-        </div>
+        <CashLinesMore
+          busy={lines.isFetchingNextPage}
+          onMore={() => {
+            void lines.fetchNextPage();
+          }}
+        />
       ) : null}
     </div>
   );

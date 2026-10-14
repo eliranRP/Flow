@@ -1,6 +1,5 @@
 import { formatAmountText } from "@flow/shared";
 import type { LocalIssue } from "./line-split";
-import type { WriteFailure } from "./use-write";
 
 /**
  * FLOW-325. Every message `save_line_split` raises (20261008150000_line_split_review.sql,
@@ -138,7 +137,3 @@ export function hasCategorySplit(error: unknown): boolean {
   return error instanceof Error && error.message.includes(LINE_HAS_CATEGORY_SPLIT_REASON);
 }
 
-/** The project split's save failure: that refusal is final and says why, anything else is the usual copy. */
-export function projectSplitFailure(error: Error): WriteFailure {
-  return hasCategorySplit(error) ? { message: LINE_HAS_CATEGORY_SPLIT, retry: false } : "הפיצול לא נשמר";
-}

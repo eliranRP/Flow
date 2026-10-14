@@ -61,18 +61,6 @@ export function setupHost(): string {
   return location.host;
 }
 
-export function progressCaption(step: number): string {
-  return `שלב ${String(step)} מתוך ${String(SETUP_TOTAL)}`;
-}
-
-export function cardHeading(done: number): string {
-  return `הגדרה · ${String(done)} מתוך ${String(SETUP_TOTAL)}`;
-}
-
-export function settingsHint(done: number): string {
-  return `${String(done)} מתוך ${String(SETUP_TOTAL)}`;
-}
-
 export function projectTitle(count: number): string {
   if (count <= 0) return "אין פרויקטים";
   if (count === 1) return "פרויקט אחד";

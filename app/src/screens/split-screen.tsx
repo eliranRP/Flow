@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { amountOf, amountText, percentOf, percentText, shareOfLine, type PartUnit } from "../line-split";
 import { LINE_HAS_CATEGORY_SPLIT, LINE_SPLIT_SAVE_FAILURE, hasCategorySplit, lineSplitCopy } from "../line-split-copy";
@@ -19,7 +19,7 @@ import { useDashboardQuery, useInvalidateBooks, useTransactionQuery } from "../u
 import { useWriteGate } from "../use-is-viewer";
 import { assertNoError } from "../use-write";
 import { useGoBack } from "../ui/back";
-import { BigNumber } from "../ui/big-number";
+import { Amount as AmountFigure } from "../ui/amount";
 import { ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
 import { formatDisplay } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
@@ -29,12 +29,12 @@ import { CloseIcon, PlusIcon, ProjectsIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { SegmentedControl } from "../ui/segmented-control";
 import { SwipeRemove } from "../ui/swipe-remove";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
-import { Amount, LINE_SPLIT_MAX_PARTS, money, Percent } from "./line-split-parts";
+import { Amount, LINE_SPLIT_MAX_PARTS, money, Percent, SplitRemoveButton, SplitRestAmount, SplitSums, SplitUnitToggle } from "./line-split-parts";
 import { combinePhase, saveNewProject, useBlockedPreview } from "./screen-shared";
+import { useSaveOnBack } from "./split-back";
 import { holdSplitPop } from "./split-pop";
 
 /** The keys a project split write refreshes. */
@@ -212,7 +212,6 @@ function ProjectSplitEditor({
   const goBack = useGoBack();
   const invalidate = useInvalidateBooks();
   const blockedPreview = useBlockedPreview();
-  const location = useLocation();
   const [parts, setParts] = useState<ProjectPart[]>(initial.parts);
   const [restProjectId, setRestProjectId] = useState<string | null>(initial.restProjectId);
   const [target, setTarget] = useState<PickTarget | null>(null);
@@ -330,26 +329,8 @@ function ProjectSplitEditor({
     await write(check.shares);
   }
 
-  // Browser back saves like ✕ (0075): the first pop of an invalid split is held.
-  const leaveRef = useRef(leave);
-  leaveRef.current = leave;
-  const here = `${location.pathname}${location.search}${location.hash}`;
-  const hereRef = useRef(here);
-  hereRef.current = here;
-  const gateRef = useRef({ dirty, busy });
-  gateRef.current = { dirty, busy };
-  useEffect(() => {
-    function onPop(event: PopStateEvent) {
-      if (leaving.current) return;
-      const gate = gateRef.current;
-      if (!gate.dirty && !gate.busy) return;
-      event.stopImmediatePropagation();
-      window.history.pushState(window.history.state, "", hereRef.current);
-      void leaveRef.current();
-    }
-    // The guard listens from App's load (split-pop.ts), before the router: this screen loads on demand.
-    return holdSplitPop(onPop);
-  }, []);
+  // The guard listens from App's load (split-pop.ts), before the router: this screen loads on demand.
+  useSaveOnBack({ dirty, busy, leave, leaving, listen: holdSplitPop });
 
   function openPicker(next: PickTarget, opener: HTMLElement | null) {
     if (busy || zero) return;
@@ -428,7 +409,7 @@ function ProjectSplitEditor({
         <div className="ui-lsplit-head">
           <p className="t-display">
             {income ? <span className="sr-only">הכנסה </span> : null}
-            <BigNumber agorot={lineMinor} presentation="detail" currency={currency} income={income} size="display" />
+            <AmountFigure agorot={lineMinor} presentation="detail" currency={currency} income={income} size="display" />
           </p>
           {meta ? <p className="t-label ui-lsplit-meta"><bdi>{meta}</bdi></p> : null}
         </div>
@@ -462,18 +443,14 @@ function ProjectSplitEditor({
                           <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
                         </span>
                       </button>
-                      <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${name}`} onClick={() => { removePart(part.key); }}>
-                        <CloseIcon size={18} />
-                      </IconButton>
+                      <SplitRemoveButton name={name} onRemove={() => { removePart(part.key); }} />
                     </div>
                     <div className="ui-lsplit-end ui-lsplit-end-entry">
                       <div className="ui-lsplit-entry">
-                        <SegmentedControl
-                          label={`יחידה, ${name}`}
-                          showLabel={false}
-                          radius="input"
-                          value={part.unit}
-                          options={[{ value: "percent", label: "%" }, { value: "amount", label: currency === "USD" ? "$" : "₪" }]}
+                        <SplitUnitToggle
+                          name={name}
+                          unit={part.unit}
+                          amountLabel={currency === "USD" ? "$" : "₪"}
                           disabled={busy}
                           onChange={(unit) => {
                             if (unit === part.unit) return;
@@ -543,19 +520,7 @@ function ProjectSplitEditor({
                 </span>
               </span>
               <span className="ui-lsplit-end">
-                {restMinor == null ? (
-                  <span className="ui-lsplit-amount t-body">…</span>
-                ) : restMinor < 0n ? (
-                  <>
-                    <span className="ui-lsplit-amount t-body ui-split-bad"><Amount minor={restMinor} currency={currency} /></span>
-                    <span className="ui-lsplit-resolved t-label">לא נשאר</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="ui-lsplit-amount t-body"><Amount minor={restMinor} currency={currency} /></span>
-                    <span className="ui-lsplit-resolved t-label">{restMinor === 0n ? "יורד" : <Percent value={shareOfLine(restMinor, lineMinor)} />}</span>
-                  </>
-                )}
+                <SplitRestAmount restMinor={restMinor} lineMinor={lineMinor} currency={currency} unknown="…" />
               </span>
             </button>
             {check.restIssue === "no project" && warned ? <p id="psplit-rest-msg" className="ui-lsplit-msg ui-lsplit-rest-msg" role="status">{COPY.restProject}</p> : null}
@@ -575,25 +540,16 @@ function ProjectSplitEditor({
                 הוספת חלק
               </TextLink>
             </span>
-            <span className="ui-lsplit-sums">
-              <span className="ui-lsplit-total">
-                <span className="t-hint">פוצלו</span>
-                <span className="t-body">
-                  {busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
-                  {check.overMinor > 0n
-                    ? <Amount minor={lineMinor + check.overMinor} currency={currency} />
-                    : splitMinor != null ? <Amount minor={splitMinor} currency={currency} /> : "…"}
-                </span>
-              </span>
-              <span className="ui-lsplit-total ui-lsplit-total-end">
-                <span className="t-hint">{check.overMinor > 0n ? "עוברים את השורה" : "נשאר לשורה"}</span>
-                <span className={check.overMinor > 0n ? "t-body ui-split-bad" : "t-body"}>
-                  {check.overMinor > 0n
-                    ? <Amount minor={-check.overMinor} currency={currency} />
-                    : restMinor != null ? <Amount minor={restMinor} currency={currency} /> : "…"}
-                </span>
-              </span>
-            </span>
+            <SplitSums
+              busy={busy}
+              over={check.overMinor > 0n}
+              paid={check.overMinor > 0n
+                ? <Amount minor={lineMinor + check.overMinor} currency={currency} />
+                : splitMinor != null ? <Amount minor={splitMinor} currency={currency} /> : "…"}
+              left={check.overMinor > 0n
+                ? <Amount minor={-check.overMinor} currency={currency} />
+                : restMinor != null ? <Amount minor={restMinor} currency={currency} /> : "…"}
+            />
           </div>
           {showHold ? (
             <HoldLine onDiscard={discard}>

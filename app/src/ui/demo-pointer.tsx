@@ -73,9 +73,9 @@ function easeMove(t: number): number {
   return cubicBezier(t, 0.45, 0, 0.55, 1);
 }
 
-/** `--ease-standard`: cubic-bezier(0.2, 0, 0, 1). */
+/** `--ease-standard`: cubic-bezier(0.4, 0, 0.2, 1). */
 export function easeStandard(t: number): number {
-  return cubicBezier(t, 0.2, 0, 0, 1);
+  return cubicBezier(t, 0.4, 0, 0.2, 1);
 }
 
 function anchor(elapsed: number, moves: readonly PointerMove[]): Pick<PointerPose, "from" | "to" | "moveT"> {

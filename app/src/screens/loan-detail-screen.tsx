@@ -4,9 +4,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
 import { Banner } from "../ui/banner";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
-import { StatusPill } from "../ui/chip";
+import { StatusDot } from "../ui/status-dot";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
@@ -382,11 +382,11 @@ function LoanDetailReady({
           <div className="ui-page-pad ui-loan-head">
             {ended ? null : (
               <p className="t-display">
-                <BigNumber agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
+                <Amount agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
               </p>
             )}
             <div className="ui-status-row">
-              <StatusPill>{statusPill(loan)}</StatusPill>
+              <StatusDot>{statusPill(loan)}</StatusDot>
               {ended ? (
                 // The מצב row goes, so the status changes from here (reopening a loan stays one tap away).
                 holdWrites ? null : (
@@ -400,7 +400,7 @@ function LoanDetailReady({
       ) : (
         <div className="ui-page-pad ui-loan-next">
           <p className="t-label">תשלום הבא · {dueDayLabel(outlook.next.dueDate)}</p>
-          <p className="t-display"><BigNumber agorot={outlook.next.paymentMinor} presentation="detail" cents="always" currency={loan.currency} size="display" /></p>
+          <p className="t-display"><Amount agorot={outlook.next.paymentMinor} presentation="detail" cents="always" currency={loan.currency} size="display" /></p>
         </div>
       )}
         {flagged.length > 0 ? (

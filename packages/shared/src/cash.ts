@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** FLOW-413 (decision 0168). Which date puts a line in a cash month: the payment date or the document date. */
-export const cashBasisSchema = z.enum(["paid", "invoice"]);
+const cashBasisSchema = z.enum(["paid", "invoice"]);
 
 /** JSON numbers and digit strings both become bigint minor units. Fractions are rejected. */
 const minorSchema = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]).transform((value) => BigInt(value));
@@ -74,10 +74,8 @@ export const cashYearsSchema = z
   })
   .nullable();
 
-export const cashSideSchema = z.enum(["in", "out"]);
+const cashSideSchema = z.enum(["in", "out"]);
 
-/** `cash_month_lines`' sides: נכנס, יצא, (FLOW-418) the lines the P&L leaves out of the view's cash, or (FLOW-438) the lines it counts. */
-export const cashLinesSideSchema = z.enum(["in", "out", "not_in_profit", "in_profit"]);
 
 /** `cash_month_lines`: the lines behind one month's נכנס, יצא or לא נספר ברווח, newest first. Amounts are positive on their side. */
 export const cashLinesSchema = z
@@ -106,14 +104,12 @@ export const cashLinesSchema = z
   })
   .nullable();
 
-export type CashBasis = z.infer<typeof cashBasisSchema>;
 export type CashMonths = z.infer<typeof cashMonthsSchema>;
 export type CashMonth = NonNullable<CashMonths>["months"][number];
 export type CashCurrencyRow = CashMonth["by_currency"][number];
 export type CashYears = z.infer<typeof cashYearsSchema>;
-export type CashYear = NonNullable<CashYears>["years"][number];
+type CashYear = NonNullable<CashYears>["years"][number];
 export type CashTotalRow = CashYear["by_currency"][number];
 export type CashSide = z.infer<typeof cashSideSchema>;
-export type CashLinesSide = z.infer<typeof cashLinesSideSchema>;
 export type CashLinesPage = z.infer<typeof cashLinesSchema>;
 export type CashLine = NonNullable<CashLinesPage>["rows"][number];

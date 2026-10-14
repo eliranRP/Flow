@@ -11,6 +11,7 @@ async function addPart(page: Page, project: string) {
   const projects = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(projects).toBeVisible();
   await projects.getByRole("radio", { name: project }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 

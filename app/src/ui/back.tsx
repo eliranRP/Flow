@@ -12,11 +12,6 @@ export function historyIndex(): number | null {
   return typeof idx === "number" ? idx : null;
 }
 
-export function canGoBack(): boolean {
-  const idx = historyIndex();
-  return idx != null && idx > 0;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }

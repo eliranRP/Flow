@@ -1,5 +1,5 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
-import { chargeChangeViews, lateCounts, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
 import { withParam } from "./project-categories";
 import type { BannerRow } from "../ui/banner";
 import { attentionRows } from "./attention-rows";
@@ -10,7 +10,8 @@ export type ProjectRecurringSample = { late: MissingBill[]; changes: RecurringCh
 /**
  * The project page like Home (owner, 2026-10-10): Home's attention rows for one project. Its
  * expenses still waiting for approval open the review on the project; its late bills and income
- * and its changed recurring charges are Home's rows, counting only the project's. The server
+ * and its changed recurring charges are Home's rows, counting only the project's (FLOW-441: each
+ * change measured on the project's own share, from project_recurring_changes). The server
  * already leaves out what this user hid (decision 0175), so a hide on קבועים hides it here too.
  */
 export function projectAttentionRows({
@@ -42,9 +43,10 @@ export function projectAttentionRows({
 }
 
 /** The reads behind the rows: Home's, so a hide or a new bill refreshes both. Off for a sample or another section. */
-export function useProjectRecurring(active: boolean, sample?: ProjectRecurringSample): ProjectRecurringSample {
+export function useProjectRecurring(projectId: string, active: boolean, sample?: ProjectRecurringSample): ProjectRecurringSample {
   const missing = useMissingBillsQuery(active && sample == null);
-  const changes = useRecurringChangesQuery(active && sample == null);
+  // FLOW-441: the project's own changes, not Home's company-wide ones filtered by project.
+  const changes = useProjectRecurringChangesQuery(projectId, active && sample == null);
   if (sample) return sample;
   // A failed read just hides its rows, as on Home.
   return { late: missing.data ?? [], changes: changes.data ?? [] };

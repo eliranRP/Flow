@@ -74,16 +74,6 @@
   background: var(--color-tint-pressed);
 }
 
-.ui-banner-quiet {
-  background: transparent;
-  border-radius: 0;
-  padding-inline: 0;
-}
-
-.ui-banner-quiet:active {
-  background: var(--color-tint);
-}
-
 .ui-tab-icon {
   position: relative;
   display: grid;
@@ -108,16 +98,14 @@
   box-shadow: 0 0 0 var(--badge-ring) var(--color-surface);
 }
 
-.ui-delta-good {
-  color: var(--color-good);
+/* FLOW-363 (2b): off the band a change is coloured text; the one signal colour marks a fall in value. */
+.ui-delta-good,
+.ui-delta-flat {
+  color: var(--color-text-secondary);
 }
 
 .ui-delta-bad {
-  color: var(--color-bad);
-}
-
-.ui-delta-flat {
-  color: var(--color-text);
+  color: var(--color-signal);
 }
 
 .ui-skeleton-w-sm {
@@ -219,10 +207,6 @@
   color: var(--color-disabled-text);
 }
 
-.ui-day-outside {
-  color: var(--color-text-muted);
-}
-
 .ui-cal {
   display: flex;
   flex-direction: column;
@@ -278,7 +262,7 @@
 .ui-chevron-turn {
   display: inline-flex;
   flex: none;
-  transition: transform var(--dur-base) var(--ease-standard);
+  transition: transform var(--motion-fade) var(--ease-standard);
 }
 
 .ui-chevron-turn[data-open="true"] {
@@ -337,18 +321,32 @@
   text-overflow: clip;
 }
 
+/* FLOW-363 (2b): chip type (14/500). The band pill is the only filled one. */
 .ui-change {
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-chip);
-  padding: 1px 10px;
-  background: var(--color-tint);
-  font-weight: 600;
-  font-size: var(--type-label-size);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-change-band {
-  background: var(--color-band-chip);
+  padding: var(--pill-pad-block) var(--pill-pad-inline);
+}
+
+.ui-change-band.ui-delta-good {
+  background: var(--color-pill-helps);
+  color: var(--color-on-band);
+}
+
+.ui-change-band.ui-delta-bad {
+  background: var(--color-pill-hurts);
+  color: var(--color-on-band);
+}
+
+.ui-change-band.ui-delta-flat {
+  color: var(--color-on-band);
 }
 
 .ui-radio-row {
@@ -402,21 +400,4 @@
 
 .ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) .ui-radio {
   border-color: var(--color-line);
-}
-
-.ui-check {
-  display: grid;
-  inline-size: var(--icon-check);
-  block-size: var(--icon-check);
-  flex: none;
-  place-items: center;
-  border: var(--stroke-strong) solid var(--color-control-border);
-  border-radius: var(--radius-check);
-  background: transparent;
-  color: var(--color-on-accent);
-}
-
-.ui-check[data-on="true"] {
-  border: 0;
-  background: var(--color-accent);
 }

@@ -1,11 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GROUP_BY_KEY } from "../breakdown";
 import { allTime, defaultPeriod, periodPillLabel } from "../period";
-import { BooksProvider } from "../use-books";
 import { BreakdownLinesScreen, BreakdownScreen } from "./breakdown";
+import { renderWithProviders } from "../test-render";
 import { readTxnList } from "../txn-nav";
 
 function CardState() {
@@ -67,21 +66,15 @@ const lines = {
 };
 
 function wrap(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <BooksProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route path="/flow/:direction" element={<BreakdownScreen />} />
-            <Route path="/flow/:direction/excluded/:currency" element={<BreakdownLinesScreen excluded />} />
-            <Route path="/flow/:direction/:groupBy/:currency/:groupKey" element={<BreakdownLinesScreen />} />
-            <Route path="/" element={<p>בית</p>} />
-            <Route path="/transactions/:id" element={<CardState />} />
-          </Routes>
-        </MemoryRouter>
-      </BooksProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/flow/:direction" element={<BreakdownScreen />} />
+      <Route path="/flow/:direction/excluded/:currency" element={<BreakdownLinesScreen excluded />} />
+      <Route path="/flow/:direction/:groupBy/:currency/:groupKey" element={<BreakdownLinesScreen />} />
+      <Route path="/" element={<p>בית</p>} />
+      <Route path="/transactions/:id" element={<CardState />} />
+    </Routes>,
+    { route: path },
   );
 }
 
@@ -272,9 +265,8 @@ describe("Breakdown lines screen", () => {
     };
     wrap("/flow/expense/category/ILS/c1");
     const row = await screen.findByRole("link", { name: /זיכוי 12/ });
-    expect(row).toHaveTextContent("זיכוי ₪194");
-    expect(row).not.toHaveTextContent("+");
-    expect(row.querySelector(".ui-income")).toHaveTextContent("₪194");
+    expect(row).toHaveTextContent("זיכוי +₪194");
+    expect(row.querySelector(".ui-income")).toHaveTextContent("+₪194");
     expect(screen.queryByRole("button", { name: "עוד תנועות" })).not.toBeInTheDocument();
   });
 

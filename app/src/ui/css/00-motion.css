@@ -1,0 +1,145 @@
+/* Motion utilities (FLOW-363). Only transform and opacity animate. Durations and easings come
+   only from the motion tokens in design/system/implementation-tokens.css; the reduced-motion
+   block there sets them to 0ms, so the end state shows at once. */
+
+.m-press {
+  transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
+}
+/* A disabled, aria-disabled or busy control (Button sets aria-disabled when busy) does not answer a tap. */
+.m-press:active:not(:disabled, [aria-disabled="true"]) {
+  opacity: 0.72;
+}
+.m-press.m-press-scale:active:not(:disabled, [aria-disabled="true"]) {
+  transform: scale(0.985);
+}
+
+@keyframes m-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise-page));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.m-page-enter {
+  animation: m-page-enter var(--motion-page) var(--ease-enter) both;
+  animation-delay: calc(min(var(--i, 0), 4) * var(--motion-stagger));
+}
+
+@keyframes m-push-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--rise-push)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.m-push-in {
+  animation: m-push-in var(--motion-page) var(--ease-enter);
+}
+
+@keyframes m-push-back {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--rise-push)));
+  }
+}
+/* Back reverses the push: the detail page came in from the left (RTL), so it leaves to the left. */
+.m-push-back {
+  animation: m-push-back var(--motion-sheet-out) var(--ease-exit) forwards;
+}
+
+@keyframes m-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.m-sheet-in {
+  animation: m-sheet-in var(--motion-sheet-in) var(--ease-enter);
+}
+
+@keyframes m-sheet-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+.m-sheet-out {
+  animation: m-sheet-out var(--motion-sheet-out) var(--ease-exit) forwards;
+}
+
+@keyframes m-bar-in {
+  from {
+    transform: translateY(-110%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.m-bar-in {
+  animation: m-bar-in var(--motion-bar) var(--ease-enter);
+}
+
+@keyframes m-bar-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-110%);
+  }
+}
+.m-bar-out {
+  animation: m-bar-out var(--motion-bar) var(--ease-exit) forwards;
+}
+
+/* A row that leaves collapses its height (grid rows 1fr -> 0fr, never a measured height) and fades.
+   A keyframe, not a transition: adding the class also switches display to grid, so a transition
+   would start from `grid-template-rows: none`, which does not interpolate, and the row would snap shut. */
+@keyframes m-row-leave {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+.m-row-leave {
+  display: grid;
+  animation: m-row-leave var(--motion-sheet-out) var(--ease-exit) forwards;
+}
+.m-row-leave > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes m-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.m-bar-grow {
+  transform-origin: right;
+  animation: m-bar-grow var(--motion-bar-grow) var(--ease-enter) both;
+}
+
+/* No reduced-motion block here: the tokens go to 0ms (sheets 1ms) and the rises to 0, so each
+   animation still runs, ends at once on its end state (an exit stays hidden, `forwards`), and fires
+   animationend for whatever waits on it. `animation: none` would show the start state instead. */

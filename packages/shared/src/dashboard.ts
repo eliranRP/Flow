@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const basisSchema = z.enum(["cash", "invoiced"]);
+const basisSchema = z.enum(["cash", "invoiced"]);
 
 /** JSON numbers and digit strings both become bigint agorot. Fractions are rejected. */
 const agorotInput = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
@@ -37,7 +37,7 @@ const companyByCurrencyRowSchema = z.object({
   prev_net_profit_minor: agorotOrNull.optional(),
 });
 
-export const projectRowSchema = z.object({
+const projectRowSchema = z.object({
   id: z.string(),
   name: z.string(),
   status: z.enum(["active", "finished"]),
@@ -57,7 +57,7 @@ export const projectRowSchema = z.object({
 });
 
 /** FLOW-406 (decision 0164): a project group, summed from its projects' rows in SQL. */
-export const projectGroupRowSchema = z.object({
+const projectGroupRowSchema = z.object({
   id: z.string(),
   name: z.string(),
   sort_order: z.number().int(),
@@ -130,7 +130,7 @@ export const unpaidRowSchema = z.object({
  * FLOW-309 (decision 0165): a receipt paired with a connector invoice in review. Amounts are agorot,
  * like every other amount here.
  */
-export const reviewReceiptSchema = z.object({
+const reviewReceiptSchema = z.object({
   transaction_id: z.string(),
   doc_date: z.string(),
   amount_gross: agorotSchema,
@@ -229,7 +229,7 @@ export const categoryRowSchema = z.object({
 });
 
 /** One expense category and currency of a project, month by month (project_category_months). */
-export const projectCategoryMonthRowSchema = z.object({
+const projectCategoryMonthRowSchema = z.object({
   id: z.string().nullable(),
   name: z.string().nullable(),
   group_name: z.string().nullable(),
@@ -291,7 +291,7 @@ export const mercuryStatusSchema = z.object({
 });
 
 /** FLOW-404 (decision 0143). In the project's investment currency; other currencies are listed apart. */
-export const projectInvestmentSchema = z.object({
+const projectInvestmentSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
   purchase_minor: agorotOrNull,
   arv_minor: agorotOrNull,
@@ -443,7 +443,7 @@ export const projectDetailSchema = z
   .nullable();
 
 /** A loan payment's parts as get_transaction returns them (get_loan_split, decisions 0107 and 0136). */
-export const transactionLoanSplitSchema = z.object({
+const transactionLoanSplitSchema = z.object({
   loan_id: z.string(),
   loan_name: z.string().nullable(),
   needs_review: z.boolean().nullable(),
@@ -541,7 +541,7 @@ export const projectCategorySchema = z
   .nullable();
 
 /** Open reviews for a project, plus suggested expenses that have no open review. */
-export const projectWaitingRowSchema = z.object({
+const projectWaitingRowSchema = z.object({
   review_id: z.string().nullable(),
   transaction_id: z.string(),
   description: z.string(),
@@ -564,8 +564,8 @@ export const projectWaitingRowSchema = z.object({
 export const projectWaitingSchema = z.array(projectWaitingRowSchema);
 
 /** FLOW-301. Home's income or expenses by group (decision 0110). Amounts are positive for income and for a normal expense. */
-export const breakdownGroupBySchema = z.enum(["category", "project", "payer"]);
-export const breakdownDirectionSchema = z.enum(["income", "expense"]);
+const breakdownGroupBySchema = z.enum(["category", "project", "payer"]);
+const breakdownDirectionSchema = z.enum(["income", "expense"]);
 
 const breakdownSumSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
@@ -705,10 +705,8 @@ export type SearchRow = SearchPage["expenses"][number];
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
 export type ProjectGroupRow = z.infer<typeof projectGroupRowSchema>;
-export type ProjectGroupDetail = z.infer<typeof projectGroupDetailSchema>;
 export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
 export type ReviewRow = z.infer<typeof reviewRowSchema>;
-export type ReviewReceipt = z.infer<typeof reviewReceiptSchema>;
 export type FiledTodayRow = z.infer<typeof filedTodaySchema>;
 export type CategoryRow = z.infer<typeof categoryRowSchema>;
 export type ProjectCategoryMonthRow = z.infer<typeof projectCategoryMonthRowSchema>;
@@ -716,7 +714,6 @@ export type ProjectCategoryMonths = z.infer<typeof projectCategoryMonthsSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type MercuryStatus = z.infer<typeof mercuryStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
-export type ProjectInvestmentData = z.infer<typeof projectInvestmentSchema>;
 export type ProjectCategoryPage = z.infer<typeof projectCategorySchema>;
 export type ProfitMonths = z.infer<typeof profitMonthsSchema>;
 export type ProfitMonth = NonNullable<ProfitMonths>["months"][number];

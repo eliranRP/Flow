@@ -1,11 +1,9 @@
 import type { ProjectDetail } from "@flow/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ToastProvider } from "../ui/toast";
 import { ProjectDetailScreen } from "./flow-screens";
 import type { ProjectSection } from "./project-detail-screen";
+import { renderWithProviders } from "../test-render";
 
 function usdProject(): NonNullable<ProjectDetail> {
   return {
@@ -46,16 +44,7 @@ function usdProject(): NonNullable<ProjectDetail> {
 }
 
 function renderProject(sample: NonNullable<ProjectDetail>, section: ProjectSection = "profit") {
-  const client = new QueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter>
-          <ProjectDetailScreen sample={sample} section={section} />
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<ProjectDetailScreen sample={sample} section={section} />);
 }
 
 describe("ProjectDetailScreen currency", () => {
@@ -120,7 +109,7 @@ describe("ProjectDetailScreen currency", () => {
     // FLOW-340 C: the band holds the profit; income and expenses are rows, one figure per currency
     // (FLOW-438: in the cash rows' look, one amount under the other).
     expect(document.querySelectorAll(".ui-band-figures")).toHaveLength(0);
-    expect(screen.getByRole("link", { name: /^הכנסות/ })).toHaveTextContent("₪1,000$4,000");
+    expect(screen.getByRole("link", { name: /^הכנסות/ })).toHaveTextContent("+₪1,000+$4,000");
     expect(screen.getByRole("link", { name: /^הוצאות/ })).toHaveTextContent("₪200$1,250");
     overview.unmount();
     renderProject(mixed, "expenses");

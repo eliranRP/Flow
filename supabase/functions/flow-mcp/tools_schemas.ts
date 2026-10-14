@@ -120,7 +120,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_jev_suggestions: new Set(),
   get_missing_bills: new Set(),
   get_expected_months: new Set(["months", "project_id"]),
-  get_recurring_changes: new Set(),
+  get_recurring_changes: new Set(["project_id"]),
   get_line_recurring: new Set(["transaction_id"]),
   get_line_charges: new Set(["transaction_id"]),
   get_recurring_this_month: new Set(),

@@ -47,7 +47,6 @@ TYPE = {  # size px, line-height, weight. heading, amount and meta added and tit
  "meta": (15, 1.4, 400), "hint": (13, 1.45, 400), "micro": (11, 1.3, 500),
  "wordmark": (22, 1.2, 700),
 }
-TRACKING = {"title-1": "-0.01em"}  # letter-spacing per type style, only where it is not 0
 SPACE = {"1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "side": 24, "card-inset": 16, "section": 36}
 RADIUS = {"chip": 9999, "input": 12, "button": 14, "card": 16, "sheet": 24, "band": 28, "fab": 9999}
 FONT = {"family": "Rubik", "fallback": "system-ui, sans-serif", "google": "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap", "numerals": "tabular-nums lining-nums"}

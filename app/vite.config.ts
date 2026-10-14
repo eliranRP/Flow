@@ -41,11 +41,15 @@ function reviewerGuard(): Plugin {
 }
 
 function spaFallback(): Plugin {
+  // The build's own output folder: the e2e, perf and load-report builds write elsewhere than dist.
+  let dist = path.resolve(__dirname, "dist");
   return {
     name: "spa-fallback",
     apply: "build",
+    configResolved(config) {
+      dist = path.resolve(config.root, config.build.outDir);
+    },
     closeBundle() {
-      const dist = path.resolve(__dirname, "dist");
       const index = path.join(dist, "index.html");
       // 404.html keeps a missing file at 404. Deep links are listed in app/public/_redirects
       // and serve this shell. A splat to /index.html is rejected by Pages as a loop.

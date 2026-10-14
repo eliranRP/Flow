@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ReactNode } from "react";
-import { BigNumber } from "./big-number";
+import { Amount } from "./amount";
 import { BandHero } from "./layout";
 import { longHebrew, largeAgorot } from "./story-support";
 import { TopBand } from "./top-band";
@@ -19,7 +19,7 @@ function BandView({ preview, heading, amount, label }: BandArgs) {
   } else {
     body = (
       <h1>
-        <BigNumber agorot={BigInt(amount ?? "0")} size="hero" />
+        <Amount agorot={BigInt(amount ?? "0")} size="hero" />
       </h1>
     );
   }
@@ -61,7 +61,7 @@ function ProjectBand({ name }: { name: string }) {
         <p className="t-band-title">{name}</p>
         <p className="ui-band-label t-label">רווח</p>
         <p className="t-display">
-          <BigNumber agorot={2_940_000n} />
+          <Amount agorot={2_940_000n} />
         </p>
       </BandHero>
     </TopBand>

@@ -3,22 +3,6 @@
   polish. Loaded after the other area files, so a rule here overrides the block it names.
 */
 
-/* The ▼ after the window's name says the label opens the period sheet (FLOW-335). */
-.ui-pbar-caret {
-  display: inline-block;
-  margin-inline-start: var(--space-1);
-  color: var(--color-accent-text);
-  vertical-align: middle;
-}
-
-.ui-pbar-caret svg {
-  display: block;
-}
-
-.ui-pbar-band .ui-pbar-caret {
-  color: var(--color-on-band);
-}
-
 /*
   FLOW-335: a ListRow's action under the row sits on the start side, under the name (Unpaid's mark).
   Only ListRow's own stack: the skipped list on לאישור builds its own .ui-row-stack and keeps it.
@@ -45,18 +29,9 @@
   padding-top: var(--space-2);
 }
 
-.ui-band-hero-project .ui-project-period-label {
-  margin-block: var(--space-1) 0;
-}
-
 /* FLOW-359 (A): Home's one period pill, with Home's --space-2 above and below it. */
 .ui-band-hero-project .ui-hero-pill {
   margin-block: var(--space-2);
-}
-
-/* "לפי חודש" is a plain row right under the band (FLOW-335), not the tinted pending card. */
-.ui-project-months {
-  margin-block-start: var(--space-3);
 }
 
 .ui-project-budget {
@@ -69,7 +44,7 @@
 */
 .ui-pswipe {
   min-inline-size: 0;
-  transition: transform var(--dur-fast) var(--ease-standard);
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 /* pinch-zoom stays with the browser too, so the figure never blocks zooming the page. */

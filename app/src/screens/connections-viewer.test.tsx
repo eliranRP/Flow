@@ -1,10 +1,7 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { BooksProvider } from "../use-books";
-import { ToastProvider } from "../ui/toast";
+import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
 import { ConnectionsScreen } from "./flow-screens";
 import { connectorWord } from "./connections-status";
@@ -22,16 +19,7 @@ const expired = {
 };
 
 function renderScreen(node: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BooksProvider>
-          <MemoryRouter initialEntries={["/settings/connections"]}>{node}</MemoryRouter>
-        </BooksProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(node, { route: "/settings/connections" });
 }
 
 describe("connector rows for a viewer (FLOW-507)", () => {

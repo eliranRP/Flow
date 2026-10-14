@@ -49,6 +49,26 @@ Small files keep builders reading less and stop parallel PRs from colliding. Thi
 - A file already over the limit does not grow: put new code in a new file, and move code out when you change a large part of it. Splits are their own PR, with no behaviour or look change ([FLOW-807](docs/backlog/TASKS.md#flow-807)).
 - Stories live next to their screen or component (`<name>.stories.tsx`). CSS lives in `app/src/ui/css/NN-<area>.css`, imported by `ui.css` in cascade order: put a block in its area's file, or start a new file at the end of the import list; never reorder the imports ([DESIGN-TEAM](docs/design/DESIGN-TEAM.md)).
 
+## Remove what your change leaves unused
+
+Every story, test and CSS block costs time on every push and on every deploy run, so nothing stays after the app stops using it.
+
+- When your change replaces a component, a screen, a helper, a copy string, a CSS block, a script or a fixture, or stops using one, delete it in the same PR. Delete its stories, tests, CSS, sample data and `app/src/ui/index.ts` export with it, and update the docs that name it (DESIGN-RULES, the design log's current pages, runbooks).
+- Don't keep code "for later" or behind an unused export. Git history keeps it.
+- A test that covers only deleted code goes too. A test that also covers something still in use moves to the part that stays.
+- `node scripts/check-unused-app-code.mjs` enforces this for `app/src` in local CI and in `check (core)`. It fails when a module isn't reachable from the app's entry, or an export is used only by stories and tests. A hook a test or story needs (a reset, a sample provider, a duration constant) stays when its doc comment says `@forTests`. Story and test support files are named for it (`*-sample.ts`, `story-support.tsx`, `test-support.ts`).
+- `node scripts/check-unused-css.mjs` does the same for app CSS: every class must be named by the app, a test, a story or a spec, or built from a template prefix (`ui-chip-${kind}`). Unused JavaScript never reaches the build, but every CSS rule ships in Home's first load.
+- Reviewers check this too: a PR that leaves a replaced part behind gets a Should finding.
+- **After removing code, run `pnpm check:cleanup` before you push.** It runs the checks in the order that keeps a pass honest: the two dead-code scans first (repeat until they find nothing, since one deletion can leave another part unused), then lint, typecheck, every unit and Storybook test (not just the related ones), the build with the load report, and the Storybook layout and clip specs that the pre-push gate otherwise leaves to main for CSS changes.
+
+## Loading speed
+
+What Home loads first is decided by imports, not by folders or line counts: the build drops code nothing imports, and splits screens into chunks that load on demand. To keep Home fast:
+
+- Keep code Home does not need out of its first load: import a screen, a sheet or a heavy library with `import()` where it is opened (see `app/src/screen-loaders.ts`), not at the top of `App.tsx`, `auth.tsx` or a module Home imports.
+- Every CSS rule ships up front: delete dead rules (`check-unused-css`).
+- `node scripts/load-report.mjs` compares this branch with main: the gzip and raw size of the JavaScript and CSS Home loads first, all JavaScript, and the chunk count. The pre-push gate runs it and fails when Home's first load grows past its allowance (2 KB of JavaScript, 1 KB of CSS gzipped); `FLOW_LOAD_ALLOW=1 git push` lets a reviewed growth pass, said in the PR. `pnpm load:report` also times Home on the FLOW-804 phone, base and branch alternately, 7 runs each, and only calls the branch slower when most paired runs agree.
+
 ## Review handoff
 
 From r23 on, this is how a change is handed off. Decision [0073](docs/decisions/0073-review-handoff.md). Eliran approved it.

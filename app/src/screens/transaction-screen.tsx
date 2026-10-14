@@ -9,14 +9,14 @@ import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
+import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
-import { BigNumber } from "../ui/big-number";
+import { Amount } from "../ui/amount";
 import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { StatusPill } from "../ui/chip";
+import { StatusDot } from "../ui/status-dot";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { ChartIcon, CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
@@ -123,6 +123,15 @@ function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
   if (pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
   return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.`;
 }
+
+/** What a change to a line's project or category refreshes. */
+const ASSIGN_KEYS = ["txn", "dashboard", "project", "project-category", "project-waiting", "review"];
+
+/** A pick's write: the next ids, and the screen as it was before the tap, for a rollback. */
+type PickBack = {
+  next: { projectId: string; categoryId: string };
+  back: { projectId: string; categoryId: string; projectName: string; categoryName: string; committed: { projectId: string; categoryId: string } };
+};
 
 export function TransactionScreen({
   sample,
@@ -276,9 +285,25 @@ export function TransactionScreen({
     if (complete) setHold("");
   }, [hold, txn, categoryId, projectId]);
   const undoId = useRef<string | null>(null);
+  /** The transaction's cache takes the picked names at once (decision 0180). */
+  const pickCache = (payload: PickBack, withProject: boolean) => {
+    const current = detail.data;
+    if (sample || current == null) return [];
+    const project = namesRef.current.projects.find((entry) => entry.id === payload.next.projectId);
+    const category = namesRef.current.categories.find((entry) => entry.id === payload.next.categoryId);
+    return [{
+      key: transactionQueryOptions(preview, current.id).queryKey,
+      update: (old: unknown) => (old == null ? old : {
+        ...(old),
+        ...(withProject ? { project_id: payload.next.projectId, project_name: project?.name ?? null } : {}),
+        category_id: payload.next.categoryId,
+        category_name: category?.name ?? null,
+      }),
+    }];
+  };
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
+    keys: ASSIGN_KEYS,
     success: "השיוך הקודם חזר",
     onSuccess: () => {
       committed.current = { projectId: "", categoryId: "" };
@@ -291,8 +316,28 @@ export function TransactionScreen({
       assertNoError(await supabase.rpc("undo_reassign", { p_id: undoId.current }));
     },
   });
-  const reassign = useWrite({
+  // A saved project or category: the screen takes the write, and ביטול undoes it when the server kept an undo id.
+  const assignSaved = () => {
+    applyRef.current();
+    const id = undoId.current;
+    toast.show({
+      message: "השיוך נשמר",
+      ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+    });
+  };
+  // The pick is the check, the summary and the row at once; a failure goes back to the pick before (decision 0075).
+  const restorePick = (payload: PickBack | undefined) => {
+    if (payload == null) return;
+    committed.current = payload.back.committed;
+    setProjectId(payload.back.projectId);
+    setCategoryId(payload.back.categoryId);
+    setProjectName(payload.back.projectName);
+    setCategoryName(payload.back.categoryName);
+  };
+  const reassign = useWrite<PickBack>({
     failure: changeSaveFailure,
+    onError: (_error, payload) => { restorePick(payload); },
+    optimistic: (payload) => pickCache(payload, true),
     onSplit: () => {
       if (onOpenSplit) {
         onOpenSplit();
@@ -300,18 +345,10 @@ export function TransactionScreen({
       }
       void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
     },
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
-    run: async () => {
+    keys: ASSIGN_KEYS,
+    onSuccess: assignSaved,
+    run: async ({ next }) => {
       const current = sample ?? detail.data;
-      const next = writeTarget.current;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
       if (!supabase || next.projectId === "" || next.categoryId === "") throw new Error("supabase");
@@ -324,23 +361,18 @@ export function TransactionScreen({
       undoId.current = typeof saved.data === "string" ? saved.data : null;
     },
   });
-  const setCategory = useWrite({
+  const setCategory = useWrite<PickBack>({
     failure: changeSaveFailure,
+    onError: (_error, payload) => { restorePick(payload); },
+    optimistic: (payload) => pickCache(payload, false),
     onSplit: () => {
       void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
     },
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
-    run: async () => {
+    keys: ASSIGN_KEYS,
+    onSuccess: assignSaved,
+    run: async ({ next }) => {
       const current = sample ?? detail.data;
-      const nextCategory = writeTarget.current.categoryId;
+      const nextCategory = next.categoryId;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
       if (!supabase || nextCategory === "") throw new Error("supabase");
@@ -383,7 +415,7 @@ export function TransactionScreen({
     }
     void navigate(`/transactions/${detailRow.id}/split${search}`);
   }
-  async function commitPick(kind: "project" | "category", id: string) {
+  function commitPick(kind: "project" | "category", id: string) {
     const previous = { projectId, categoryId };
     // A split's project row opens the split screen, so a split only picks a category here.
     const categoryOnly = splitRow && kind === "category";
@@ -399,23 +431,29 @@ export function TransactionScreen({
       return "hold" as const;
     }
     setHold("");
-    try {
-      if (sample) {
-        applyRef.current();
-        toast.show({ message: "השיוך נשמר" });
-        return undefined;
-      }
-      if (blocked()) throw new Error("preview");
-      if (categoryOnly) await setCategory.mutateAsync();
-      else await reassign.mutateAsync();
-    } catch (error) {
-      setProjectId(previous.projectId);
-      setCategoryId(previous.categoryId);
-      throw error;
+    if (sample) {
+      applyRef.current();
+      toast.show({ message: "השיוך נשמר" });
+      return undefined;
     }
+    if (blocked()) throw new Error("preview");
+    // The check, the summary and the row take the pick now; the write runs behind them.
+    const back: PickBack["back"] = {
+      projectId: previous.projectId,
+      categoryId: previous.categoryId,
+      projectName,
+      categoryName,
+      committed: committed.current,
+    };
+    applyRef.current();
+    const payload: PickBack = { back, next };
+    if (categoryOnly) setCategory.mutate(payload);
+    else reassign.mutate(payload);
     return undefined;
   }
   const party = txnParty(txn);
+  // An income credit (negative income) reads with its minus and is never green, as its row does (decision 0120).
+  const moneyIn = txn.direction === "income" && txn.amount_net >= 0n;
   const changeProjects = withChoice(
     [
       ...(sample
@@ -449,10 +487,10 @@ export function TransactionScreen({
   const loanLine = txn.pnl_fixed === true || loanSplitFlag || loanSplitView != null;
   const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged || loanLine ? null : txn.pnl_state, splitByCategory);
   const pnlPill = pnl.out ? (
-    <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
+    <StatusDot icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusDot>
   ) : pnl.mixed ? (
-    <StatusPill icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusPill>
-  ) : pnl.forcedIn ? <StatusPill>נספר ברווח</StatusPill> : null;
+    <StatusDot icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusDot>
+  ) : pnl.forcedIn ? <StatusDot>נספר ברווח</StatusDot> : null;
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
   // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
   const lineSplitHint = lineSplitRowHint(lineSplit);
@@ -512,12 +550,12 @@ export function TransactionScreen({
         <div className="ui-page-pad">
           <p className="t-title-3 ui-party">{party}</p>
           <p className="t-display">
-            <BigNumber
+            <Amount
               agorot={absAgorot(txn.amount_net)}
               presentation="detail"
               currency={txn.currency}
-              direction={txn.direction === "income" ? "income" : "expense"}
-              income={txn.direction === "income"}
+              direction={moneyIn ? "income" : "expense"}
+              income={moneyIn}
               size="display"
             />
           </p>
@@ -543,8 +581,8 @@ export function TransactionScreen({
           </p>
           {reviewLabel || paymentLabel || pnlPill ? (
             <div className="ui-status-row">
-              {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
-              {paymentLabel ? <StatusPill icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusPill> : null}
+              {reviewLabel ? <StatusDot>{reviewLabel}</StatusDot> : null}
+              {paymentLabel ? <StatusDot icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusDot> : null}
               {pnlPill}
             </div>
           ) : null}
