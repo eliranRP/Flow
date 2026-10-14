@@ -5,6 +5,7 @@ import {
   cashMonthKey,
   cashSideLabel,
   cashTitle,
+  cashYearTitle,
   isCashMonthKey,
   isCashSide,
   shownCashRows,
@@ -17,6 +18,7 @@ import {
   projectCashHistoryPath,
   projectCashLinesPath,
   projectCashMonthPath,
+  projectCashYearPath,
   projectCashSummaryRows,
   projectEarlierMonthRows,
   useProjectCashLinesQuery,
@@ -26,7 +28,7 @@ import {
   useProjectCashMonthsQuery,
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
-import { BackButton } from "../ui/back";
+import { BackButton, useBackTarget } from "../ui/back";
 import { Amount } from "../ui/amount";
 import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
 import { CashRows } from "../ui/cash-rows";
@@ -198,7 +200,11 @@ function ProjectCashMonthBody({
   const query = useProjectCashMonthData(projectId, monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
-  const back = `/projects/${projectId}${search}`;
+  // FLOW-444: a month opened from its year's page goes back there ("‹ 2025"); the project's name stays a line.
+  const projectBack = `/projects/${projectId}${search}`;
+  const year = Number(monthKey.slice(0, 4));
+  const back = useBackTarget(projectBack, [projectCashYearPath(projectId, year, search)]);
+  const backText = back === projectBack ? undefined : cashYearTitle(year);
   // FLOW-422 (design lead): Back names the project it returns to; the page says which project it is.
   const project = useProjectQuery(sample ? "" : projectId);
   const kicker = sampleName ?? project.data?.name ?? undefined;
@@ -232,7 +238,7 @@ function ProjectCashMonthBody({
   const rows = shownCashRows(month, data.base_currency);
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker={kicker} titleAside={stepper} />
+      <ScreenHeader layout="stacked" title={title} backTo={back} backText={backText} kicker={kicker} titleAside={stepper} />
       <PeriodSwipe
         period={monthPeriod(monthKey)}
         allow={(next: PeriodChoice) => opens(anchorOf(next))}
