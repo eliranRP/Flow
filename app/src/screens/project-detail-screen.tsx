@@ -21,7 +21,7 @@ import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
-import { BackButton } from "../ui/back";
+import { BackButton, useBackTarget } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandHero, SectionHead } from "../ui/layout";
@@ -221,6 +221,8 @@ export function ProjectDetailScreen({
     },
   });
   const holdWrites = useHoldWrites();
+  // FLOW-444: a month opened from the project's "לפי חודש" list goes back to it, with the project's name on Back.
+  const monthsBack = useBackTarget("", [`/projects/${projectId}/months${search}`]);
   if (phase.kind === "loading") {
     // FLOW-438: the profit page waits in its own white layout, so nothing jumps when it lands.
     if (section === "profit") return <ScreenState stacked title="רווח" backTo={`/projects/${projectId}${search}`} phase={phase} onRetry={() => { void detail.refetch(); }} />;
@@ -440,7 +442,7 @@ export function ProjectDetailScreen({
         layout="stacked"
         title={monthKey == null ? bandWord : monthTitle(monthKey)}
         kicker={project.name}
-        backTo={sectionHref("overview")}
+        backTo={monthsBack === "" ? sectionHref("overview") : monthsBack}
         trailing={menu}
         titleAside={profitAside}
       />

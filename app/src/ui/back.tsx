@@ -187,6 +187,18 @@ export function useBackLandsOn(fallback: string): boolean {
   return pathsByIndex.get(idx - 1) === pathOf(fallback);
 }
 
+/**
+ * FLOW-444: the screen Back returns to. A page opened from one of `via` (a project's month from its
+ * "לפי חודש" list) goes back there, so its labelled Back still shows; otherwise `fallback`.
+ */
+export function useBackTarget(fallback: string, via: readonly string[]): string {
+  useLocation();
+  const idx = historyIndex();
+  if (idx == null || idx === 0) return fallback;
+  const previous = pathsByIndex.get(idx - 1);
+  return via.find((to) => pathOf(to) === previous) ?? fallback;
+}
+
 export function ScrollMemory() {
   const location = useLocation();
   useEffect(() => {

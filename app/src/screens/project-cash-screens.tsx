@@ -17,6 +17,7 @@ import {
   projectCashHistoryPath,
   projectCashLinesPath,
   projectCashMonthPath,
+  projectCashYearPath,
   projectCashSummaryRows,
   projectEarlierMonthRows,
   useProjectCashLinesQuery,
@@ -26,7 +27,7 @@ import {
   useProjectCashMonthsQuery,
 } from "../project-cash";
 import { screenPhase } from "../query-phase";
-import { BackButton } from "../ui/back";
+import { BackButton, useBackTarget } from "../ui/back";
 import { Amount } from "../ui/amount";
 import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
 import { CashRows } from "../ui/cash-rows";
@@ -198,7 +199,8 @@ function ProjectCashMonthBody({
   const query = useProjectCashMonthData(projectId, monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
-  const back = `/projects/${projectId}${search}`;
+  // FLOW-444: a month opened from its year's page goes back there, still with the project's name on Back.
+  const back = useBackTarget(`/projects/${projectId}${search}`, [projectCashYearPath(projectId, Number(monthKey.slice(0, 4)), search)]);
   // FLOW-422 (design lead): Back names the project it returns to; the page says which project it is.
   const project = useProjectQuery(sample ? "" : projectId);
   const kicker = sampleName ?? project.data?.name ?? undefined;
