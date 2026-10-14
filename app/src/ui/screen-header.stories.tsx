@@ -23,6 +23,11 @@ export const LongHebrew: Story = { args: { title: longHebrew, subtitle: longHebr
 export const WithBackAndKicker: Story = { args: { title: "קטגוריות", kicker: "הגדרות", backTo: "/settings" } };
 /** A long parent name is cut at about 16 characters. */
 export const LabelledBackLong: Story = { args: { title: "לפי חודש", kicker: longHebrew, backTo: "/projects/p1" } };
+/** FLOW-444: a month opened from "לפי חודש" goes back there by name; the kicker stays, naming the project. */
+export const BackToListKeepsKicker: Story = {
+  args: { layout: "stacked", title: "הפסד ספטמבר", kicker: "וילה לדוגמה", backTo: "/projects/p1/months", backText: "לפי חודש" },
+};
+export const BackToListKeepsKicker320: Story = { ...BackToListKeepsKicker, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /**
  * FLOW-334 H1: once the large title scrolls off, a compact bar keeps Back and a small title at the

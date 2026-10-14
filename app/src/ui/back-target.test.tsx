@@ -6,7 +6,15 @@ import { ScreenHeader } from "./screen-header";
 
 function MonthPage() {
   const back = useBackTarget("/projects/p1", ["/projects/p1/months"]);
-  return <ScreenHeader layout="stacked" title="הפסד ספטמבר" kicker="שיפוץ רחוב הדוגמה 12" backTo={back} />;
+  return (
+    <ScreenHeader
+      layout="stacked"
+      title="הפסד ספטמבר"
+      kicker="שיפוץ רחוב הדוגמה 12"
+      backTo={back}
+      backText={back === "/projects/p1" ? undefined : "לפי חודש"}
+    />
+  );
 }
 
 describe("useBackTarget (FLOW-444)", () => {
@@ -20,11 +28,12 @@ describe("useBackTarget (FLOW-444)", () => {
     );
   }
 
-  it("names the project on Back when a month opens from its by-month list", () => {
+  it("goes back to the by-month list by name, and the page still names its project", () => {
     try {
       at(0, "/projects/p1/months").unmount();
       at(1, "/projects/p1/profit");
-      expect(screen.getByRole("button", { name: "חזרה לשיפוץ רחוב הדוגמה 12" })).toHaveTextContent("שיפוץ רחוב הדוגמה 12");
+      expect(screen.getByRole("button", { name: "חזרה ללפי חודש" })).toHaveTextContent("לפי חודש");
+      expect(screen.getByText("שיפוץ רחוב הדוגמה 12")).toHaveClass("t-hint");
     } finally {
       window.history.replaceState(null, "");
     }
@@ -35,6 +44,7 @@ describe("useBackTarget (FLOW-444)", () => {
       at(0, "/projects/p1").unmount();
       at(1, "/projects/p1/profit");
       expect(screen.getByRole("button", { name: "חזרה לשיפוץ רחוב הדוגמה 12" })).toBeInTheDocument();
+      expect(screen.queryByText("שיפוץ רחוב הדוגמה 12", { selector: "p" })).not.toBeInTheDocument();
     } finally {
       window.history.replaceState(null, "");
     }

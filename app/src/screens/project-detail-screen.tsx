@@ -221,7 +221,7 @@ export function ProjectDetailScreen({
     },
   });
   const holdWrites = useHoldWrites();
-  // FLOW-444: a month opened from the project's "לפי חודש" list goes back to it, with the project's name on Back.
+  // FLOW-444: a month opened from the project's "לפי חודש" list goes back to it ("‹ לפי חודש"); the project's name stays a line.
   const monthsBack = useBackTarget("", [`/projects/${projectId}/months${search}`]);
   if (phase.kind === "loading") {
     // FLOW-438: the profit page waits in its own white layout, so nothing jumps when it lands.
@@ -443,6 +443,7 @@ export function ProjectDetailScreen({
         title={monthKey == null ? bandWord : monthTitle(monthKey)}
         kicker={project.name}
         backTo={monthsBack === "" ? sectionHref("overview") : monthsBack}
+        backText={monthsBack === "" ? undefined : "לפי חודש"}
         trailing={menu}
         titleAside={profitAside}
       />

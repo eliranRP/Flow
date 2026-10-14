@@ -5,6 +5,7 @@ import {
   cashMonthKey,
   cashSideLabel,
   cashTitle,
+  cashYearTitle,
   isCashMonthKey,
   isCashSide,
   shownCashRows,
@@ -199,8 +200,11 @@ function ProjectCashMonthBody({
   const query = useProjectCashMonthData(projectId, monthKey, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const title = cashTitle(monthKey);
-  // FLOW-444: a month opened from its year's page goes back there, still with the project's name on Back.
-  const back = useBackTarget(`/projects/${projectId}${search}`, [projectCashYearPath(projectId, Number(monthKey.slice(0, 4)), search)]);
+  // FLOW-444: a month opened from its year's page goes back there ("‹ 2025"); the project's name stays a line.
+  const projectBack = `/projects/${projectId}${search}`;
+  const year = Number(monthKey.slice(0, 4));
+  const back = useBackTarget(projectBack, [projectCashYearPath(projectId, year, search)]);
+  const backText = back === projectBack ? undefined : cashYearTitle(year);
   // FLOW-422 (design lead): Back names the project it returns to; the page says which project it is.
   const project = useProjectQuery(sample ? "" : projectId);
   const kicker = sampleName ?? project.data?.name ?? undefined;
@@ -234,7 +238,7 @@ function ProjectCashMonthBody({
   const rows = shownCashRows(month, data.base_currency);
   return (
     <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker={kicker} titleAside={stepper} />
+      <ScreenHeader layout="stacked" title={title} backTo={back} backText={backText} kicker={kicker} titleAside={stepper} />
       <PeriodSwipe
         period={monthPeriod(monthKey)}
         allow={(next: PeriodChoice) => opens(anchorOf(next))}
