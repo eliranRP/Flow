@@ -624,9 +624,9 @@ test("pressed buttons and chips keep the hover box", async ({ page }) => {
   const cases = [
     ["components-button--primary", ".ui-btn"],
     ["components-button--secondary", ".ui-btn"],
-    ["components-button--pill", ".ui-btn"],
-    ["components-button--ghost", ".ui-btn"],
-    ["components-button--danger", ".ui-btn"],
+    ["components-button--legacy", ".ui-btn-pill"],
+    ["components-button--legacy", ".ui-btn-ghost"],
+    ["components-button--legacy", ".ui-btn-danger"],
     ["components-chip--choice-off", ".ui-chip"],
     ["components-chip--suggested", ".ui-chip"],
     ["components-chip--selected", ".ui-chip"],
@@ -637,8 +637,15 @@ test("pressed buttons and chips keep the hover box", async ({ page }) => {
     const control = page.locator(selector).first();
     await expect(control).toBeVisible();
     const read = () => control.evaluate((node) => {
-      const box = node.getBoundingClientRect();
       const style = getComputedStyle(node);
+      // A primary or secondary button scales on press by design (decision 0181), so its layout box must hold, not its drawn box.
+      if (node.classList.contains("m-press-scale") && node instanceof HTMLElement) {
+        return {
+          box: [node.offsetLeft, node.offsetLeft + node.offsetWidth, node.offsetTop, node.offsetTop + node.offsetHeight],
+          geometry: [style.margin, style.padding, style.borderWidth, style.borderRadius],
+        };
+      }
+      const box = node.getBoundingClientRect();
       return {
         box: [box.left, box.right, box.top, box.bottom],
         geometry: [style.margin, style.padding, style.borderWidth, style.transform, style.borderRadius],
