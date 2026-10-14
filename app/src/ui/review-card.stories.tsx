@@ -183,6 +183,38 @@ export const MetaCard: Story = {
   args: { ...mercuryCard, meta: storyMeta("t1", { method: "card", card_last4: "4242" }) },
 };
 
+/** FLOW-439: the card's nickname from the bank after its last 4. Invented names. */
+export const MetaCardName: Story = {
+  name: "Meta: card with its name",
+  args: { ...mercuryCard, meta: storyMeta("t1", { method: "card", card_last4: "8408", card_name: "כרטיס חשמל" }) },
+  play: async ({ canvasElement }) => {
+    const line = canvasElement.querySelector(".ui-review-meta");
+    await expect(line?.textContent).toBe("••8408כרטיס שמסתיים ב־8408·כרטיס חשמל");
+  },
+};
+
+/** A name too long for the line ellipsizes; the last 4 stays whole. */
+export const MetaCardLongName320: Story = {
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  name: "Meta: card with a long name, 320",
+  args: {
+    ...mercuryCard,
+    meta: storyMeta("t1", { method: "card", card_last4: "8408", card_name: "Utilities card for the duplex on Maple Street" }),
+  },
+  play: async ({ canvasElement }) => {
+    const name = canvasElement.querySelector<HTMLElement>(".ui-review-meta-name");
+    const last4 = canvasElement.querySelector<HTMLElement>(".ui-review-meta .ui-num");
+    await expect(name != null && name.scrollWidth > name.clientWidth).toBe(true);
+    await expect(last4 != null && last4.scrollWidth <= last4.clientWidth).toBe(true);
+  },
+};
+
+/** A transfer names the account it left from, without the account's last 4. */
+export const MetaAchAccount: Story = {
+  name: "Meta: ACH from a named account",
+  args: { ...mercuryCard, meta: storyMeta("t1", { method: "ach", account: "Operating ••1234" }) },
+};
+
 export const MetaAchMemo: Story = {
   name: "Meta: ACH and memo",
   args: {
