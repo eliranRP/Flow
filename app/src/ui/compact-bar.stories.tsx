@@ -39,7 +39,7 @@ export const Detail: Story = {
 };
 
 /** Hidden from the start: no slide, no focus, no clicks. */
-export const Hidden: Story = { args: { shown: false } };
+export const Hidden: Story = { args: { shown: false }, tags: ["clip-no-text"] };
 
 export const LongHebrew: Story = {
   args: { title: longHebrew, label: longHebrew, backTo: "/projects" },
