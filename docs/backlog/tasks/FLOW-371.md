@@ -17,7 +17,7 @@
 - [ ] Busy keeps the button's own look: today a busy secondary (the 52px outline pill since FLOW-363 2a) fills `tint-pressed` with `accent-text` (`app/src/ui/css/01-base.css`, busy rules); the spinner replaces that fill.
 - [ ] Inline spinner (16 to 18px ring, 800ms a turn) inside the button or field of an action the user started; the button keeps its size, shows the action's label (שומר…, מתחבר…), and is disabled with `aria-busy`.
 - [ ] Sync strip for a background refresh: a 3px indeterminate line at the top and, after 200ms, a pill "מסנכרן עם Mercury…". The content stays usable.
-- [ ] Progress for long known jobs (first sync, import): an 8px bar, a count ("N מתוך כ־M תנועות"), the step list, and always a way to leave.
+- [x] Progress for long known jobs (first sync, import): an 8px bar, a count ("N מתוך כ־M תנועות"), the step list, and always a way to leave.
 
 **Rules**
 - [ ] No full-screen spinner; nothing shows under 300ms; a failure shows one line with "נסו שוב"; under reduced motion the animations stop but the text still says what is loading.
