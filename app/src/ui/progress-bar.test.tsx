@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ProgressBar, budgetUsedPercent } from "./progress-bar";
 import { expectRtl, expectThemePaint } from "./test-support";
 
@@ -42,5 +42,32 @@ describe("ProgressBar", () => {
     const fill = document.querySelector(".ui-bar-fill");
     if (fill instanceof HTMLElement) expect(fill.style.transform).toBe("scaleX(0.99)");
     expect(document.querySelector(".ui-overage")).toBeNull();
+  });
+
+  it("draws a job: a count, the steps in order, and a way to leave that does not stop the job", () => {
+    const onLeave = vi.fn();
+    render(
+      <ProgressBar
+        variant="job"
+        label="התקדמות הסנכרון הראשון"
+        value={120}
+        max={340}
+        count="120 מתוך כ־340 תנועות"
+        steps={[
+          { label: "משיכת תנועות", state: "done" },
+          { label: "התאמה לפרויקטים", state: "doing" },
+          { label: "בדיקת כפילויות", state: "todo" },
+        ]}
+        onLeave={onLeave}
+      />,
+    );
+    expect(screen.getByRole("meter", { name: "התקדמות הסנכרון הראשון" })).toHaveAttribute("aria-valuenow", "35");
+    expect(screen.getByText("120 מתוך כ־340 תנועות")).toBeInTheDocument();
+    const steps = screen.getAllByRole("listitem");
+    expect(steps.map((step) => step.getAttribute("data-state"))).toEqual(["done", "doing", "todo"]);
+    expect(steps[1]).toHaveAttribute("aria-current", "step");
+    expect(document.querySelector(".ui-job-bar")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "המשך ברקע" }));
+    expect(onLeave).toHaveBeenCalledTimes(1);
   });
 });

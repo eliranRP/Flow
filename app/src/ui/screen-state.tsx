@@ -4,7 +4,8 @@ import { useHomePreview } from "../preview";
 import type { ScreenPhase } from "./screen-phase";
 import { ErrorState } from "./error-state";
 import { ScreenHeader } from "./screen-header";
-import { ListSkeleton } from "./skeleton";
+import { DelayedSkeleton, ListSkeleton } from "./skeleton";
+import { SyncStrip } from "./sync-strip";
 
 export function ScreenState({
   title,
@@ -20,6 +21,7 @@ export function ScreenState({
   stacked = false,
   trailing,
   below,
+  syncing,
 }: {
   title: string;
   subtitle?: string;
@@ -37,6 +39,8 @@ export function ScreenState({
   trailing?: ReactNode;
   /** A control under the title that stays real while the data loads (ScreenHeader `below`). */
   below?: ReactNode;
+  /** A background refresh is running: the strip says what it syncs (FLOW-371). Null when none runs. */
+  syncing?: string | null;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -53,15 +57,17 @@ export function ScreenState({
   }
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <SyncStrip label={syncing ?? null} />
       {stacked ? (
         <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} trailing={trailing ?? action} kicker={kicker} below={below} />
       ) : (
         <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
       )}
-      {phase.kind === "loading" ? (loading ?? <ListSkeleton />) : null}
+      {phase.kind === "loading" ? <DelayedSkeleton>{loading ?? <ListSkeleton />}</DelayedSkeleton> : null}
       {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={retry} /> : null}
       {phase.kind === "empty" ? empty : null}
-      {phase.kind === "ready" ? children : null}
+      {/* The content fades in over 200ms as the skeleton leaves (FLOW-371, --motion-fade). */}
+      {phase.kind === "ready" ? <div className="ui-phase-in flex min-h-0 min-w-0 flex-1 flex-col">{children}</div> : null}
     </div>
   );
 }
