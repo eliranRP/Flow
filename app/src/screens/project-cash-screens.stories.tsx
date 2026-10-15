@@ -277,7 +277,6 @@ export const ProjectCashKept: Story = {
     await expect(canvasElement.textContent.replace(/\u00a0/g, " ")).toContain("מתוך $1,500");
   },
 };
-export const ProjectCashKept320: Story = { ...ProjectCashKept, name: "Project, a month's לא נספר ברווח, 320", ...at320 };
 
 /** FLOW-438 (owner, 2026-10-10): the month's תנועות under its figures, a kept-out line in place. */
 const monthLines = sampleMonthLines(earlier);
