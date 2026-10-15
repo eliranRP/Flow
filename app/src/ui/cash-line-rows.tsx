@@ -1,9 +1,10 @@
 import type { CashLine } from "@flow/shared";
+import type { ReactNode } from "react";
 import { NOT_IN_PROFIT_LABEL, cashLineSplit, cashLoanPart } from "../cash";
 import { formatDayMonth } from "./date-math";
 import { rowSource } from "./line-marks";
 import { List, ListRow } from "./list-row";
-import { KeptOutHint, SplitPartsHint } from "./split-parts-hint";
+import { KeptOutHint, SplitAmount, SplitPartsHint } from "./split-parts-hint";
 
 /**
  * FLOW-438: a cash list's lines, as the נכנס, יצא and לא נספר ברווח pages draw them, so a month
@@ -74,8 +75,10 @@ export function CashMonthLines({ counted, kept, search }: { counted: readonly Ca
         const split = cashLineSplit(row);
         // FLOW-442: a kept-out loan part names its part and the whole payment, in the same quiet hint.
         const keptPart = keptOut && split != null && cashLoanPart(row.part) != null ? split : null;
-        const parts = (keptPart == null ? [row.category_name, date] : [keptPart.parts[0]?.name, `מתוך ${keptPart.total}`, date])
-          .filter((part): part is string => part != null && part !== "");
+        const parts = [row.category_name, date].filter((part): part is string => part != null && part !== "");
+        const keptParts: ReactNode[] = keptPart == null
+          ? parts
+          : [keptPart.parts[0]?.name, <>מתוך <SplitAmount text={keptPart.total} /></>, date];
         const incoming = (row.side === "in") !== row.amount_minor < 0n;
         return (
           <ListRow
@@ -83,8 +86,8 @@ export function CashMonthLines({ counted, kept, search }: { counted: readonly Ca
             variant="transaction"
             title={row.supplier_name ?? row.description}
             hint={
-              keptOut ? <KeptOutHint parts={[NOT_IN_PROFIT_LABEL, ...parts]} />
-                : split == null || keptOut ? parts.join(" · ")
+              keptOut ? <KeptOutHint parts={[NOT_IN_PROFIT_LABEL, ...keptParts]} />
+                : split == null ? parts.join(" · ")
                   : <SplitPartsHint parts={split.parts} total={split.total} date={date} />
             }
             wrapHint={split != null && !keptOut}

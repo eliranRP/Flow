@@ -14,7 +14,7 @@ describe("cash line rows (FLOW-442)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("קרן")).toBeInTheDocument();
-    expect((container.textContent ?? "").replace(/\u00a0/g, " ")).toContain("מתוך $3,500");
+    expect(container.textContent.replace(/\u00a0/g, " ")).toContain("מתוך $3,500");
     expect(screen.queryByText(/תשלומי הלוואה/)).not.toBeInTheDocument();
   });
 
@@ -24,10 +24,12 @@ describe("cash line rows (FLOW-442)", () => {
         <CashMonthLines counted={lines.counted} kept={lines.kept} search="" />
       </MemoryRouter>,
     );
-    const text = container.textContent ?? "";
+    const text = container.textContent;
     expect(text).toContain("קרן");
     expect(text).toContain("מתוך $3,500");
     expect(text).toContain("ריבית");
     expect(text).not.toContain("תשלומי הלוואה");
+    const totals = [...container.querySelectorAll('bdi[dir="ltr"]')].map((node) => node.textContent);
+    expect(totals.filter((total) => total === "$3,500")).toHaveLength(2);
   });
 });

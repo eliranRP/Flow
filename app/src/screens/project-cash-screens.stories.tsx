@@ -282,7 +282,7 @@ export const ProjectCashKept: Story = {
     await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
     await expect(canvas.getAllByText("$1,070").length).toBeGreaterThan(0);
     await expect(canvas.getByText("קרן")).toBeInTheDocument();
-    await expect((canvasElement.textContent ?? "").replace(/\u00a0/g, " ")).toContain("מתוך $1,500");
+    await expect(canvasElement.textContent.replace(/\u00a0/g, " ")).toContain("מתוך $1,500");
   },
 };
 export const ProjectCashKept320: Story = { ...ProjectCashKept, name: "Project, a month's לא נספר ברווח, 320", ...at320 };

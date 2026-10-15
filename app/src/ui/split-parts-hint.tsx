@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { HintParts } from "./hint-parts";
 import "./split-parts-hint.css";
 
@@ -69,7 +70,7 @@ function PartAmount({ text }: { text: string }) {
   );
 }
 
-function SplitAmount({ text }: { text: string }) {
+export function SplitAmount({ text }: { text: string }) {
   return (
     <bdi dir="ltr" className="ui-split-hint-amount">
       {text}
@@ -82,7 +83,7 @@ function SplitAmount({ text }: { text: string }) {
  * set the row's minimum width; the later parts take what is left and drop whole, so a long category
  * never pushes the amount out. Lives here, not in ListRow, so Home's entry does not carry it.
  */
-export function KeptOutHint({ parts }: { parts: readonly string[] }) {
+export function KeptOutHint({ parts }: { parts: readonly ReactNode[] }) {
   const [kept, ...rest] = parts;
   return (
     <span className="ui-hint-kept-line">

@@ -1,7 +1,7 @@
 import { formatAmountText, type CashCurrencyRow, type CashLine, type CashMonth, type CashMonths, type CashSide, type CashTotalRow, type CashYears } from "@flow/shared";
 import { cashAmountsText, type CashRow } from "./ui/cash-rows";
 import { HEBREW_MONTHS, israelToday } from "./ui/date-math";
-import { LOAN_PART_LABEL, LOAN_PART_ORDER, type LoanPartKey } from "./ui/loan-parts-sheet";
+import { LOAN_PART_LABEL, LOAN_PART_ORDER, type LoanPartKey } from "./ui/loan-part-terms";
 import type { SplitHintPart } from "./ui/split-parts-hint";
 
 /**

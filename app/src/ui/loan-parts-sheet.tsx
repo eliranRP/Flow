@@ -3,17 +3,9 @@ import { Button } from "./button";
 import { MoneyField } from "./money-field";
 import { Sheet } from "./sheet";
 
-/** The parts of a loan payment, in the order the sheet lists them (FLOW-114, option B). */
-export type LoanPartKey = "principal" | "interest" | "escrow" | "fees";
+import { LOAN_PART_LABEL, LOAN_PART_ORDER, type LoanPartKey } from "./loan-part-terms";
 
-export const LOAN_PART_ORDER: readonly LoanPartKey[] = ["principal", "interest", "escrow", "fees"];
-
-export const LOAN_PART_LABEL: Record<LoanPartKey, string> = {
-  principal: "קרן",
-  interest: "ריבית",
-  escrow: "מסים וביטוח",
-  fees: "עמלות",
-};
+export { LOAN_PART_LABEL, LOAN_PART_ORDER, type LoanPartKey };
 
 /** The matched row's title: "תשלום הלוואה · <loan name>". */
 export function loanPaymentTitle(loanName: string | null | undefined): string {
