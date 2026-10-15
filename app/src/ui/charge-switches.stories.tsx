@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { ChargeSwitches, type ChargeSwitchState } from "./charge-switches";
-import { PaceSheet } from "./pace-sheet";
+import { ChargeSwitches, type ChargeSwitchState, PACE_COPY } from "./charge-switches";
+import { ChoiceSheet } from "./choice-sheet";
 import { ChartIcon } from "./icons";
 import { List } from "./list-row";
 import { padded } from "./story-support";
@@ -26,7 +26,8 @@ function Demo(props: ChargeSwitchState & { disabled?: boolean }) {
           onPace={() => { setOpen(true); }}
         />
       </List>
-      <PaceSheet
+      <ChoiceSheet
+        copy={PACE_COPY}
         open={open}
         onOpenChange={setOpen}
         value={state.pace ?? "month"}

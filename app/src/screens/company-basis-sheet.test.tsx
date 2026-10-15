@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as supabaseModule from "../lib/supabase";
 import { sheetStack } from "../ui/back";
-import type { BasisChoice } from "../ui/basis-sheet";
+import type { BasisChoice } from "../ui/company-choices";
 import { ToastProvider } from "../ui/toast";
 import { BASIS_FAILED, BASIS_REFUSED, BASIS_SAVED, BASIS_UNDONE, CompanyBasisSheet } from "./company-basis-sheet";
 

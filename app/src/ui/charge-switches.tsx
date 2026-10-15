@@ -1,5 +1,6 @@
 import type { RecurringPace } from "@flow/shared";
 import { type ReactNode, useId } from "react";
+import type { ChoiceSheetCopy } from "./choice-sheet";
 import { HintParts } from "./hint-parts";
 import { ChevronDownIcon, LockIcon, RepeatIcon, TransferIcon } from "./icons";
 import { ListRow } from "./list-row";
@@ -34,6 +35,16 @@ export const PACE_LABEL: Record<RecurringPace, string> = {
 
 /** The pace sheet's title, and the name of the row that opens it. */
 export const PACE_TITLE = "כל כמה זמן";
+
+/** Shortest first, as the owner listed them (FLOW-415, 08:40Z). */
+const PACE_CHOICES: readonly RecurringPace[] = ["month", "2months", "quarter", "year"];
+
+/** The "כל כמה זמן" sheet (FLOW-415 D, decision 0175): the four paces, on the choice sheet. */
+export const PACE_COPY: ChoiceSheetCopy<RecurringPace> = {
+  historyKey: "payment-pace",
+  title: PACE_TITLE,
+  choices: PACE_CHOICES.map((pace) => ({ value: pace, label: PACE_LABEL[pace] })),
+};
 
 /** Pace first (design lead): "כל חודש · בערך ב־4 · זוהה לבד", with the day and זוהה לבד when known. */
 export function recurringHint(state: Pick<ChargeSwitchState, "typicalDay" | "detected" | "pace">): string {
