@@ -5,6 +5,15 @@
   display: block;
 }
 
+/* FLOW-442: a kept-out loan part's lead line ("לא נספר ברווח"), above its parts; it never wraps. */
+.ui-split-hint-lead {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-split-hint-line {
   display: flex;
   min-width: 0;

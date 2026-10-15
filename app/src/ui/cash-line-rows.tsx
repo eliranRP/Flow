@@ -1,10 +1,9 @@
 import type { CashLine } from "@flow/shared";
-import type { ReactNode } from "react";
 import { NOT_IN_PROFIT_LABEL, cashLineSplit, cashLoanPart } from "../cash";
 import { formatDayMonth } from "./date-math";
 import { rowSource } from "./line-marks";
 import { List, ListRow } from "./list-row";
-import { KeptOutHint, SplitAmount, SplitPartsHint } from "./split-parts-hint";
+import { KeptOutHint, SplitPartsHint } from "./split-parts-hint";
 
 /**
  * FLOW-438: a cash list's lines, as the נכנס, יצא and לא נספר ברווח pages draw them, so a month
@@ -73,12 +72,10 @@ export function CashMonthLines({ counted, kept, search }: { counted: readonly Ca
       {rows.map(({ row, keptOut }) => {
         const date = formatDayMonth(row.cash_month_date);
         const split = cashLineSplit(row);
-        // FLOW-442: a kept-out loan part names its part and the whole payment, in the same quiet hint.
-        const keptPart = keptOut && split != null && cashLoanPart(row.part) != null ? split : null;
+        // FLOW-442: a kept-out loan part reads like a counted one ("קרן", "מתוך $1,500 · date"), led by the
+        // kept-out label (FLOW-438), and wraps, so the whole payment stays visible; KeptOutHint drops its later parts on one line.
+        const keptLoanPart = keptOut && split != null && cashLoanPart(row.part) != null ? split : null;
         const parts = [row.category_name, date].filter((part): part is string => part != null && part !== "");
-        const keptParts: ReactNode[] = keptPart == null
-          ? parts
-          : [keptPart.parts[0]?.name, <>מתוך <SplitAmount text={keptPart.total} /></>, date];
         const incoming = (row.side === "in") !== row.amount_minor < 0n;
         return (
           <ListRow
@@ -86,11 +83,12 @@ export function CashMonthLines({ counted, kept, search }: { counted: readonly Ca
             variant="transaction"
             title={row.supplier_name ?? row.description}
             hint={
-              keptOut ? <KeptOutHint parts={[NOT_IN_PROFIT_LABEL, ...keptParts]} />
-                : split == null ? parts.join(" · ")
-                  : <SplitPartsHint parts={split.parts} total={split.total} date={date} />
+              keptLoanPart != null ? <SplitPartsHint parts={keptLoanPart.parts} total={keptLoanPart.total} date={date} lead={NOT_IN_PROFIT_LABEL} />
+                : keptOut ? <KeptOutHint parts={[NOT_IN_PROFIT_LABEL, ...parts]} />
+                  : split == null ? parts.join(" · ")
+                    : <SplitPartsHint parts={split.parts} total={split.total} date={date} />
             }
-            wrapHint={split != null && !keptOut}
+            wrapHint={keptLoanPart != null || (split != null && !keptOut)}
             agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
             currency={row.currency}
             sign={incoming ? "in" : "out"}

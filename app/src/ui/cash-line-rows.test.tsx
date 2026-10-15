@@ -24,7 +24,7 @@ describe("cash line rows (FLOW-442)", () => {
         <CashMonthLines counted={lines.counted} kept={lines.kept} search="" />
       </MemoryRouter>,
     );
-    const text = container.textContent;
+    const text = container.textContent.replace(/\u00a0/g, " ");
     expect(text).toContain("קרן");
     expect(text).toContain("מתוך $3,500");
     expect(text).toContain("ריבית");

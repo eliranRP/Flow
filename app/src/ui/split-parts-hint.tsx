@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { HintParts } from "./hint-parts";
 import "./split-parts-hint.css";
 
@@ -10,14 +9,16 @@ export type SplitHintPart = { name: string; amount: string };
  * "מתוך $2,054.86 · 07/10" on a line of its own. More than two parts: the first, then "ועוד N", on
  * one line whose name ellipsizes. One part: its name only, since the row's figure is its amount.
  * The date shares the מתוך line or drops; it never sits alone. Amounts use tabular figures.
+ * FLOW-442: a kept-out loan part passes `lead` ("לא נספר ברווח"), which sits on a line of its own above the parts.
  * FLOW-425: amounts are never cut. Only names ellipsize; with "ועוד N", the first part's amount
  * drops before its name goes under about 3em. The מתוך line drops its date first; in a column too
  * narrow even for "מתוך" and its total, the total wraps whole onto a line of its own.
  */
-export function SplitPartsHint({ parts, total, date }: { parts: readonly SplitHintPart[]; total: string; date?: string }) {
+export function SplitPartsHint({ parts, total, date, lead }: { parts: readonly SplitHintPart[]; total: string; date?: string; lead?: string }) {
   const [first] = parts;
   return (
     <span className="ui-split-hint">
+      {lead == null ? null : <span className="ui-split-hint-lead">{lead}</span>}
       {first == null ? null : parts.length === 1 ? (
         <span className="ui-split-hint-line">
           <span className="ui-split-hint-name">{first.name}</span>
@@ -70,7 +71,7 @@ function PartAmount({ text }: { text: string }) {
   );
 }
 
-export function SplitAmount({ text }: { text: string }) {
+function SplitAmount({ text }: { text: string }) {
   return (
     <bdi dir="ltr" className="ui-split-hint-amount">
       {text}
@@ -83,7 +84,7 @@ export function SplitAmount({ text }: { text: string }) {
  * set the row's minimum width; the later parts take what is left and drop whole, so a long category
  * never pushes the amount out. Lives here, not in ListRow, so Home's entry does not carry it.
  */
-export function KeptOutHint({ parts }: { parts: readonly ReactNode[] }) {
+export function KeptOutHint({ parts }: { parts: readonly string[] }) {
   const [kept, ...rest] = parts;
   return (
     <span className="ui-hint-kept-line">
