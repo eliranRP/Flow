@@ -434,6 +434,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-832"></a>[FLOW-832](tasks/FLOW-832.md) | Push to checks done in 2 minutes | INFRA |
 | <a id="flow-833"></a>[FLOW-833](tasks/FLOW-833.md) | One story per state: delete the width and Dark copies | CLEANUP |
 | <a id="flow-834"></a>[FLOW-834](tasks/FLOW-834.md) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
+| <a id="flow-835"></a>[FLOW-835](tasks/FLOW-835.md) | PR check under 100 seconds | INFRA |
 
 ## Data hygiene (public repo)
 
