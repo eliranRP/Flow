@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
-# The pull-request gate. Pull requests have no GitHub CI: the pre-push hook (.githooks/pre-push) runs
-# this script, and main runs the full suite on GitHub before each batch deploy.
+# The gate. A push runs `local-ci.sh --part quick` from the pre-push hook (.githooks/pre-push), under 20 s.
+# The pr workflow (.github/workflows/pr.yml) runs the rest on GitHub as parallel jobs, one per slice, and
+# main runs the full suite on GitHub on every merge and deploys in batches (ci.yml). The slices are in
+# scripts/local-ci-parts.sh; each shares the scoping below, keeps no marks and writes no stamp.
+#   --part quick (the pre-push hook, 20 s): the scoped lint with eslint's cache, after the migration-order
+#     check. Installs dependencies only when pnpm-lock.yaml changed. No Docker, no build, no tests.
+#   --part static: the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function
+#     typecheck when supabase/functions changed, the typecheck, and the unused-code and CSS checks.
+#   --part tests [--shard i/n]: the app unit and Storybook vitest tests the change reaches (vitest --changed
+#     against main; --shard passes through to vitest), and the scripts tests when scripts/ changed.
+#   --part db: when supabase/ changed: local Supabase (started when it is down), a fresh database, the
+#     flow-mcp smoke, the pgTAP files that name the change, and the db types check.
+# With no option, the default run (what FLOW_LOCAL_CI=default runs, and a manual run) is the scoped gate:
 #   default (under 3 minutes for a UI push, about 5 for a migration): lint, the migration checks,
 #     Deno, typecheck, unit and connector tests, both dist builds, and the parts scoped to what the
 #     branch changes against main (git diff origin/main...HEAD), so a merge of main re-runs nothing
@@ -25,7 +36,8 @@
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
-# On success it writes .git/flow-local-ci with the commit it passed on, so the hook can skip a repeat.
+# On success the default run writes .git/flow-local-ci with the commit it passed on, so the hook can skip a
+# repeat. A slice writes nothing.
 # FLOW-813: the default run skips the app parts (typecheck, builds, app unit tests, Storybook) whose
 # inputs (the git tree of app, packages, design, _shared and the root configs) already passed here.
 # --full runs everything; FLOW_LOCAL_CI_NO_SKIP=1 only turns these skips off. CSS and token changes
@@ -39,11 +51,27 @@
 set -euo pipefail
 
 full=0
-case "${1:-}" in
-  "") ;;
-  --full) full=1 ;;
-  *) echo "Usage: local-ci.sh [--full]" >&2; exit 2 ;;
+slice=""
+shard=""
+usage() {
+  echo "Usage: local-ci.sh [--full | --part quick|static|tests|db [--shard i/n]]" >&2
+  exit 2
+}
+while (( $# )); do
+  case "$1" in
+    --full) full=1 ;;
+    --part) [[ -n "${2:-}" ]] || usage; slice="$2"; shift ;;
+    --shard) [[ -n "${2:-}" ]] || usage; shard="$2"; shift ;;
+    *) usage ;;
+  esac
+  shift
+done
+case "$slice" in
+  ""|quick|static|tests|db) ;;
+  *) usage ;;
 esac
+if [[ -n "$shard" ]] && { [[ "$slice" != tests ]] || [[ ! "$shard" =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]]; }; then usage; fi
+if (( full )) && [[ -n "$slice" ]]; then usage; fi
 # Phases and their budgets, and the process group whose leftovers the gate stops when it ends.
 source "$(dirname "$0")/local-ci-guard.sh"
 guard_session "$@"
@@ -54,6 +82,8 @@ cd "$root"
 export FLOW_E2E_FRESH_SERVER=1 # Playwright starts its own servers: one already on a port may serve an old build.
 head="$(git rev-parse HEAD)"
 started="$(date +%s)"
+# The hook's whole run, the fetch and the migration check included, is the quick slice's budget.
+[[ "$slice" != quick ]] || phase "quick: fetch main, migration order and the scoped lint"
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   echo "local-ci: commit or stash your changes first, so the run tests the commit you push." >&2
@@ -62,7 +92,6 @@ fi
 
 git fetch -q origin main || true
 node scripts/migration-ahead.mjs # FLOW-814: a migration main overtook fails here in seconds; the fix it prints renames it.
-pnpm install --frozen-lockfile --silent
 
 # FLOW-813. A part whose inputs (git trees) passed before is skipped in the default run.
 cache="${FLOW_LOCAL_CI_CACHE:-$(git rev-parse --git-common-dir)/flow-local-ci-cache}"
@@ -74,6 +103,15 @@ fi
 shared="${FLOW_LOCAL_CI_SHARED_CACHE:-}"
 if [[ -n "$shared" ]] && mkdir -p "$shared" 2>/dev/null; then caches+=("$shared"); fi
 head_tree="$(git rev-parse 'HEAD^{tree}')"
+# A slice installs only when pnpm-lock.yaml differs from the one last installed here (FLOW-832); the
+# default run installs every time, as before.
+lock_sum="$(sha256sum pnpm-lock.yaml | cut -c1-40)"
+if [[ -n "$slice" && -d node_modules && "$(cat "$cache/installed-lock" 2>/dev/null)" == "$lock_sum" ]]; then
+  echo "local-ci: dependencies are installed for this pnpm-lock.yaml."
+else
+  pnpm install --frozen-lockfile --silent
+  printf '%s' "$lock_sum" >"$cache/installed-lock"
+fi
 # One line per run in gate-times.log, next to the shared cache when there is one, tab-separated: time,
 # branch, mode, diff kind, seconds, result, and the seconds of each phase ("lint=40 units=95").
 # scripts/gate-times.mjs sums it up against the targets; the lane manager posts that every hour.
@@ -167,6 +205,12 @@ passed() {
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
   [[ -z "$patch_id" ]] || mark_green "patch-$patch_id" "$pr_fork"
 }
+# The --part slices (scripts/local-ci-parts.sh) run on the scoping above and exit here; the default run goes on.
+source "$(dirname "$0")/local-ci-parts.sh"
+if [[ -n "$slice" ]]; then
+  run_part
+  exit 0
+fi
 # The fork a patch mark was written on (empty for a mark from before the fork was stored).
 mark_fork() {
   local dir fork
@@ -236,9 +280,7 @@ branch_changes() {
 changed_base() {
   local commit tree
   (( skips )) || return 1
-  [[ -n "$pr_fork" ]] || return 1
-  [[ "$(git diff --name-status "$pr_fork" HEAD -- "${app_inputs[@]}" \
-    | node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1
+  related_ok || return 1
   while read -r commit tree; do
     [[ "$commit" != "$pr_fork" ]] || break
     if has_mark "tree-$1-$tree" && git merge-base --is-ancestor "$pr_fork" "$commit"; then
@@ -409,18 +451,6 @@ if (( full || db_change || ${#e2e_specs[@]} > 0 )); then
     ) >/dev/null 2>&1 &
   fi
 fi
-# flow-mcp answers 503 in a cloud container until the edge runtime's npm cache is seeded from the host.
-edge_ready() {
-  local api
-  api="$(supabase status -o env | sed -n 's/^API_URL=//p' | head -n 1 | tr -d '"')"
-  [[ "$(curl -s -o /dev/null -w '%{http_code}' "$api/functions/v1/flow-mcp" || true)" == 405 ]] && return 0
-  bash scripts/seed-edge-cache.sh || echo "local-ci: could not seed the edge runtime cache." >&2
-  for _ in $(seq 1 15); do
-    [[ "$(curl -s -o /dev/null -w '%{http_code}' "$api/functions/v1/flow-mcp" || true)" == 405 ]] && return 0
-    sleep 2
-  done
-  echo "local-ci: flow-mcp still does not answer after seeding its cache." >&2
-}
 wait_supabase() {
   phase "e2e: waiting for local Supabase"
   while [[ ! -f "$supabase_exit" ]]; do sleep 2; done
@@ -435,70 +465,6 @@ wait_supabase() {
 
 phase "lint and check: lint, static checks, and builds, side by side"
 logs="$(mktemp -d)"
-# The lint rules read types, so a file's result can change only when the file or something it
-# imports changes: the branch's changed files and every file that imports them, all the way up
-# (scripts/gate-scope.mjs). A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all.
-lint_part() {
-  local scope
-  if (( skips )) && [[ -n "$pr_fork" ]]; then
-    scope="$(git diff --name-status "$pr_fork" HEAD | node scripts/gate-scope.mjs --lint)"
-    if [[ -z "$scope" ]]; then
-      echo "local-ci: lint skipped: this branch changes no file eslint reads (main lints all of it)."
-      return 0
-    fi
-    if [[ "$scope" != all ]]; then
-      echo "local-ci: linting the $(wc -l <<<"$scope") files this branch changes or that import them (main lints all of it)."
-      xargs -d '\n' pnpm exec eslint --no-warn-ignored <<<"$scope"
-      return
-    fi
-  fi
-  pnpm lint
-}
-static_part() {
-  # The lock where this branch left main: the branch may only append to it. (A lock line main added
-  # since then shows up as a merge conflict on the PR.)
-  local fork
-  fork="$(git merge-base HEAD origin/main 2>/dev/null || true)"
-  if [[ -n "$fork" ]] && git cat-file -e "$fork:supabase/migrations.lock" 2>/dev/null; then
-    local base
-    base="$(mktemp)"
-    git show "$fork:supabase/migrations.lock" >"$base"
-    node scripts/check-migration-order.mjs --base "$base"
-    rm -f "$base"
-  else
-    node scripts/check-migration-order.mjs
-  fi
-  node scripts/check-migration-transaction.mjs
-  node scripts/check-file-size.mjs
-  node scripts/backlog-index.mjs --check
-  deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
-  bash scripts/check-edge-functions.sh
-}
-# The same tsc runs as pnpm typecheck, with --incremental: a tsbuildinfo per project in this
-# container's cache keeps what the last run checked, and tsc re-checks only the files a change
-# reaches (its own dependency tracking; a new TypeScript version starts over). --full, an
-# unexpected typecheck script, or a package with another script runs the scripts as they are.
-typecheck_part() {
-  local info dir script
-  info="$(cd "$cache" && pwd)/tsbuildinfo"
-  node scripts/check-unused-app-code.mjs && node scripts/check-unused-css.mjs && node scripts/check-css-tokens.mjs # FLOW-819, 822, 363: no dead code, CSS or raw CSS values.
-  if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
-    != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
-    pnpm typecheck
-    return
-  fi
-  mkdir -p "$info"
-  pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"
-  for dir in app packages/*/; do
-    dir="${dir%/}"
-    script="$(node -p "require('./$dir/package.json').scripts?.typecheck ?? ''")"
-    case "$script" in
-      "") ;;
-      "tsc --noEmit") (cd "$dir" && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile "$info/${dir//\//-}.tsbuildinfo") ;;
-      *) (cd "$dir" && pnpm run typecheck) ;;
-    esac
-  done
-}
 unit_part() {
   if (( ! skips )); then
     pnpm test:unit
@@ -539,7 +505,7 @@ build_part() {
 # One vitest project of @flow/app: skipped when its inputs passed, only the related tests when a
 # green base is near, else all of it. A pass records the tree and the commit.
 app_tests() {
-  local project="$1" base
+  local project="$1" base=""
   if green "$project-$app_key"; then
     echo "local-ci: $project tests skipped: these app inputs already passed."
     return 0
@@ -547,27 +513,12 @@ app_tests() {
   if [[ "$project" == storybook ]]; then
     pnpm --filter @flow/app exec playwright install chromium
   fi
-  # The jsdom tests on one worker per core: vitest's default (one fewer) left 16% of the CPU idle,
-  # since each test file spends about a second starting its own jsdom and setup (the full suite on
-  # 4 cores: 203 s on 3 workers, 178 s on 4; 4 and 6 passed every test twice).
-  local workers=()
-  [[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")
   if base="$(changed_base "$project")"; then
-    echo "local-ci: $project tests related to the changes since ${base:0:7}${workers:+, on $(nproc) workers}."
-    pnpm --filter @flow/app exec vitest run --project "$project" --changed "$base" --passWithNoTests "${workers[@]}"
-    # The module graph doesn't see a glob of the migrations: run the tests that read them by name.
-    local globbing
-    globbing="$(git grep -l 'supabase/migrations' -- 'app/src/*.test.ts' 'app/src/*.test.tsx' || true)"
-    if [[ "$project" == unit && -n "$globbing" ]] \
-      && [[ -n "$(git diff --name-only "$base" HEAD -- supabase/migrations)" ]]; then
-      # shellcheck disable=SC2086
-      pnpm --filter @flow/app exec vitest run --project unit ${globbing//app\//}
-    fi
-  elif [[ "$project" == unit ]]; then
-    pnpm --filter @flow/app test "${workers[@]}"
+    echo "local-ci: $project tests related to the changes since ${base:0:7}."
   else
-    pnpm test:storybook
+    base=""
   fi
+  vitest_project "$project" "$base" ""
   mark_green "$project-$app_key"
   mark_green "tree-$project-$head_tree"
 }

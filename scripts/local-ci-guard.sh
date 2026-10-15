@@ -6,10 +6,11 @@
 # Storybook tests for 24 minutes. Docker's daemons start detached (`detach`), outside the group.
 # Without setsid (macOS) the gate runs as before, and a budget stops only the gate's own children.
 
+# quick (the pre-push hook, FLOW-832) gets 20 seconds, the whole of its run.
 # Seconds a phase may run before the gate stops with its name: well past the slowest pass in
 # gate-times.log (storybook p90 102 s, max 337; smoke max 1341; e2e max 340; --full's whole e2e suite
 # gets twice that; the 4 perf specs take 75 s). FLOW_LOCAL_CI_BUDGET=0 turns budgets off.
-declare -A budgets=([storybook]=600 [storybook-smoke]=1800 [e2e]=$(( ${full:-0} ? 1800 : 900 )) [perf]=600)
+declare -A budgets=([quick]=20 [storybook]=600 [storybook-smoke]=1800 [e2e]=$(( ${full:-0} ? 1800 : 900 )) [perf]=600)
 
 # Runs this script again as its own process group and waits; returns at once inside that run.
 guard_session() {
@@ -59,6 +60,7 @@ detach() {
 ran=()
 phase_key() {
   case "$1" in
+    "quick:"*) echo quick ;;
     "docs only"*) echo lint ;;
     "lint and check"*) echo lint-build ;;
     "check: app unit tests"* | "check: unit and connector tests"*) echo units ;;
