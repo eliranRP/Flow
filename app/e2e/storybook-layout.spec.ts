@@ -821,7 +821,7 @@ async function checkFocusTitles(page: Page, part: number): Promise<void> {
     await page.locator("#storybook-root").waitFor();
     // A copy of a story made by spreading it (`{ ...Story, ...dark }`) keeps its play function but
     // not the index's play-fn tag, so the filter above misses it, and its play ran while the
-    // check read focus (red main twice on project-group-removed-dark). Wait for the render to end
+    // check read focus (red main twice on the ProjectGroupRemoved story). Wait for the render to end
     // and skip a story that played, as the filter means to.
     const played = await page.waitForFunction((want) => {
       const render = (window as { __STORYBOOK_PREVIEW__?: { currentRender?: { id?: string; phase?: string; story?: { playFunction?: unknown } } } })
