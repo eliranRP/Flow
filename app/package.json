@@ -10,7 +10,7 @@
     "test": "vitest run --project unit",
     "storybook": "storybook dev -p 6006 --host 0.0.0.0",
     "build-storybook": "storybook build",
-    "test:storybook": "vitest run --project storybook",
+    "test:storybook": "vitest run --project storybook --project storybook-dark",
     "test:storybook:smoke": "playwright test -c playwright.storybook.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:live": "playwright test -c playwright.live.config.ts",

@@ -174,6 +174,7 @@ slice_tests() {
   if [[ -z "${CI:-}" ]]; then pnpm --filter @flow/app exec playwright install chromium; fi
   vitest_project unit "$base" "$shard"
   vitest_project storybook "$base" "$shard"
+  vitest_project storybook-dark "$base" "$shard"
 }
 
 slice_db() {
