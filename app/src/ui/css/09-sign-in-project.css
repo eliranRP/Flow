@@ -143,6 +143,11 @@
   max-inline-size: 100%;
 }
 
+/* The 6px track of a progress block (board projectsLoading, profitLoading): a pill, not a block. */
+.ui-skel-track {
+  border-radius: var(--radius-chip);
+}
+
 .ui-skel-copy {
   display: flex;
   min-inline-size: 0;
