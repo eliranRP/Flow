@@ -721,6 +721,15 @@ test("the gate seeds the edge runtime's npm cache and waits for a local Supabase
   assert.ok(retry > 0 && local.indexOf("{{.State.Health.Status}}", retry) > retry && local.indexOf("up || rc=$?", retry) > retry);
 });
 
+test("the PR-equivalent Storybook path runs the light project only, as local-ci-parts does (FLOW-834)", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const parts = readFileSync(new URL("./local-ci-parts.sh", import.meta.url), "utf8");
+  const skipPath = local.slice(local.indexOf('elif (( skips )); then\n  app_tests storybook\n'));
+  assert.ok(skipPath.startsWith('elif (( skips )); then\n  app_tests storybook\nelse\n'));
+  assert.ok(!local.includes("storybook-dark"), "the dark pass runs on main only, through pnpm test:storybook in ci.yml");
+  assert.ok(parts.includes("vitest_project storybook \"$base\" \"$shard\""));
+});
+
 test("the gate treats design images as docs and asks storybook-stories.mjs whether the build changed", () => {
   const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
   const pattern = local.match(/^docs_files='([^']+)'$/m)?.[1];

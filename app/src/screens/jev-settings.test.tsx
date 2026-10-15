@@ -457,6 +457,8 @@ describe("Jev settings card", () => {
     expect(said).toHaveTextContent(/^$/);
     fireEvent.click(toggle);
     await waitFor(() => expect(said).toHaveTextContent("תיוג חכם (Jev): פעיל · הצעות בלבד"));
+    fireEvent.click(toggle);
+    await waitFor(() => expect(said).toHaveTextContent("תיוג חכם (Jev): כבוי"));
   });
 
   it("says nothing when the toggle's save fails (FLOW-704)", async () => {
