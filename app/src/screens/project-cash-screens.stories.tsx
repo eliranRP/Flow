@@ -301,7 +301,7 @@ export const ProjectCashMonthWithLines: Story = {
     const canvas = within(canvasElement);
     const list = canvas.getByRole("region", { name: "תנועות" });
     await expect(within(list).getAllByRole("link")).toHaveLength(4);
-    await expect(within(list).getByText("לא נספר ברווח")).toBeInTheDocument();
+    await expect(within(list).getByRole("img", { name: "לא נספר ברווח" })).toBeInTheDocument();
   },
 };
 export const ProjectCashMonthWithLinesDark: Story = { ...ProjectCashMonthWithLines, name: "Project, a month with its lines, dark", ...dark };
