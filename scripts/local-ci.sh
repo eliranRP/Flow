@@ -512,7 +512,7 @@ app_tests() {
     echo "local-ci: $project tests skipped: these app inputs already passed."
     return 0
   fi
-  if [[ "$project" == storybook || "$project" == storybook-dark ]]; then
+  if [[ "$project" == storybook ]]; then
     pnpm --filter @flow/app exec playwright install chromium
   fi
   if base="$(changed_base "$project")"; then
@@ -581,9 +581,10 @@ fi
 phase "check: Storybook"
 if (( base_only )); then
   echo "local-ci: Storybook skipped: this branch's stories passed, and main changed none of their inputs it can reach."
+# The PR-equivalent path runs the light project only, as local-ci-parts.sh does. The dark pass runs on
+# main, through pnpm test:storybook in ci.yml (FLOW-833).
 elif (( skips )); then
   app_tests storybook
-  app_tests storybook-dark
 else
   pnpm --filter @flow/app exec playwright install chromium
   pnpm test:storybook
