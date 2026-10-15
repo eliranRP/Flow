@@ -1,6 +1,7 @@
 import { formatAmountText, type CashCurrencyRow, type CashLine, type CashMonth, type CashMonths, type CashSide, type CashTotalRow, type CashYears } from "@flow/shared";
 import { cashAmountsText, type CashRow } from "./ui/cash-rows";
 import { HEBREW_MONTHS, israelToday } from "./ui/date-math";
+import { LOAN_PART_LABEL, LOAN_PART_ORDER, type LoanPartKey } from "./ui/loan-part-terms";
 import type { SplitHintPart } from "./ui/split-parts-hint";
 
 /**
@@ -312,11 +313,24 @@ export function cashYearMonthRows(months: CashMonth[], base: string, search: str
   });
 }
 
+/** FLOW-442: a cash line's loan part, when the row is one part of a loan payment. */
+export function cashLoanPart(part: string | null | undefined): LoanPartKey | null {
+  return part != null && (LOAN_PART_ORDER as readonly string[]).includes(part) ? (part as LoanPartKey) : null;
+}
+
 /**
  * FLOW-432. A split line's parts as its row hint names them: each part this row counts, by its
  * category, with its amount (cents when it has them), and the whole line. null for any other row.
  */
-export function cashLineSplit(row: Pick<CashLine, "parts" | "line_minor" | "currency">): { parts: SplitHintPart[]; total: string } | null {
+export function cashLineSplit(row: Pick<CashLine, "parts" | "line_minor" | "currency"> & Partial<Pick<CashLine, "part" | "amount_minor">>): { parts: SplitHintPart[]; total: string } | null {
+  // FLOW-442: a loan payment's part is a row of its own; it names its part ("קרן"), out of the whole payment.
+  const loanPart = cashLoanPart(row.part);
+  if (loanPart != null && row.line_minor != null && row.amount_minor != null) {
+    return {
+      parts: [{ name: LOAN_PART_LABEL[loanPart], amount: formatAmountText(row.amount_minor < 0n ? -row.amount_minor : row.amount_minor, row.currency, { detail: true }) }],
+      total: formatAmountText(row.line_minor, row.currency, { detail: true }),
+    };
+  }
   if (row.parts == null || row.parts.length === 0 || row.line_minor == null) return null;
   return {
     parts: row.parts.map((part) => ({

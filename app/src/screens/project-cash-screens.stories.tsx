@@ -269,9 +269,11 @@ export const ProjectCashKept: Story = {
   render: () => {
     const key = cashMonthKey(cash.months[0]?.month ?? "");
     const owner: CashLine = { ...line("4", "השקעת בעלים לדוגמה", "השקעת בעלים", 107_000n), supplier_name: null, side: "in" };
+    // FLOW-442: a $1,500 loan payment's principal ($900) names its part, out of the whole payment.
+    const principal: CashLine = { ...line("7", "מלווה לדוגמה", "תשלומי הלוואה", 90_000n), transaction_id: "loan-7", part: "principal", line_minor: 150_000n };
     return (
       <StoryRoute entry={`/projects/p-c/cash/${key}/kept/USD`} tabs>
-        <ProjectCashLinesScreen sample={{ months: cash, lines: [owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
+        <ProjectCashLinesScreen sample={{ months: cash, lines: [principal, owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
       </StoryRoute>
     );
   },
@@ -279,8 +281,11 @@ export const ProjectCashKept: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
     await expect(canvas.getAllByText("$1,070").length).toBeGreaterThan(0);
+    await expect(canvas.getByText("קרן")).toBeInTheDocument();
+    await expect(canvasElement.textContent.replace(/\u00a0/g, " ")).toContain("מתוך $1,500");
   },
 };
+export const ProjectCashKept320: Story = { ...ProjectCashKept, name: "Project, a month's לא נספר ברווח, 320", ...at320 };
 
 /** FLOW-438 (owner, 2026-10-10): the month's תנועות under its figures, a kept-out line in place. */
 const monthLines = sampleMonthLines(earlier);
@@ -296,7 +301,7 @@ export const ProjectCashMonthWithLines: Story = {
     const canvas = within(canvasElement);
     const list = canvas.getByRole("region", { name: "תנועות" });
     await expect(within(list).getAllByRole("link")).toHaveLength(4);
-    await expect(within(list).getByText("לא נספר ברווח")).toBeInTheDocument();
+    await expect(within(list).getByRole("img", { name: "לא נספר ברווח" })).toBeInTheDocument();
   },
 };
 export const ProjectCashMonthWithLinesDark: Story = { ...ProjectCashMonthWithLines, name: "Project, a month with its lines, dark", ...dark };
