@@ -46,7 +46,9 @@
   white-space: nowrap;
 }
 
-/* FLOW-334 H1: the compact bar pinned to the top once the large title scrolls off. */
+/* FLOW-334 H1: the compact bar pinned to the top once the large title scrolls off. The bar is
+   mounted once a page can show it (compact-bar.tsx): m-bar-in and m-bar-out slide it (00-motion.css),
+   and a hidden bar that has slid out is visibility hidden (ui-compact-bar-gone). */
 .ui-compact-mark {
   display: block;
   block-size: 0;
@@ -64,46 +66,59 @@
   padding-block-start: var(--safe-top);
   border-bottom: 1px solid var(--color-line);
   background: var(--color-bg);
-  animation: ui-compact-in 120ms ease-out;
 }
 
+.ui-compact-bar-gone {
+  visibility: hidden;
+  transform: translateY(-110%);
+}
+
+/* Back on the start side, the title centred in the room between Back and the actions, one line. */
 .ui-compact-bar-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-1);
   block-size: var(--touch-min);
   padding-inline: calc(var(--space-side) - (var(--touch-min) - 24px) / 2) var(--space-side);
 }
 
+.ui-compact-bar-detail .ui-compact-bar-row {
+  block-size: var(--compact-bar-detail);
+}
+
 .ui-compact-title {
-  overflow: hidden;
   min-inline-size: 0;
   margin: 0;
+  justify-self: center;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.ui-compact-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+}
+
+/* The bar's height feeds the offsets under it: 44px on a list page, 56px on a detail page. */
 html[data-compact-bar] {
-  --month-sticky-top: calc(var(--safe-top) + var(--touch-min) + 1px);
+  --compact-bar-h: var(--touch-min);
+  --month-sticky-top: calc(var(--safe-top) + var(--compact-bar-h) + 1px);
   /* A row reached by Tab stops below the bar, not under it (WCAG 2.4.11). */
-  scroll-padding-block-start: calc(var(--safe-top) + var(--touch-min) + 1px);
+  scroll-padding-block-start: calc(var(--safe-top) + var(--compact-bar-h) + 1px);
+}
+
+html[data-compact-bar="detail"] {
+  --compact-bar-h: var(--compact-bar-detail);
 }
 
 /* With month heads pinned under the bar, both are reserved (11-month-lists.css). */
 html[data-compact-bar]:has(.ui-month-head) {
-  scroll-padding-block-start: calc(var(--safe-top) + var(--touch-min) + 1px + var(--space-10) * 3);
-}
-
-@keyframes ui-compact-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ui-compact-bar {
-    animation: none;
-  }
+  scroll-padding-block-start: calc(var(--safe-top) + var(--compact-bar-h) + 1px + var(--space-10) * 3);
 }
 
 /* FLOW-322: a linked row with its own action (the categories ⋯): the link and the action side by side. */
@@ -139,7 +154,7 @@ html[data-compact-bar]:has(.ui-month-head) {
   gap: var(--space-2);
 }
 
-.ui-page-title-line > .t-title-1 {
+.ui-page-title-line > .t-title {
   min-inline-size: 0;
   text-wrap: balance;
 }

@@ -47,7 +47,7 @@ export const CompactBarScrolled: Story = {
   play: async ({ canvasElement }) => {
     const doc = canvasElement.ownerDocument;
     doc.defaultView?.scrollTo(0, 400);
-    await waitFor(() => expect(doc.querySelector(".ui-compact-bar")).not.toBeNull());
+    await waitFor(() => expect(doc.querySelector(".ui-compact-bar")?.classList.contains("m-bar-in")).toBe(true));
   },
 };
 /** A tab root keeps the title on the bar next to its action. */

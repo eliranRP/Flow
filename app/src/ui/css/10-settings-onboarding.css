@@ -209,10 +209,13 @@
   margin-inline-start: auto;
 }
 
-/* A page under Back takes a 28px title, one step under a tab root's 34px, and Back's chevron lines
-   up with the title's start edge instead of sitting 18px in (owner, 2026-10-09). The 44px target
+/* A page under Back takes the 32/600 title (`.t-title`, FLOW-363 3a), and Back's chevron lines up
+   with the title's start edge instead of sitting 18px in (owner, 2026-10-09). The 44px target
    keeps its size; only its inner padding and the glyph's own inset hang past the side gutter. */
-.ui-page-stacked .t-title-1,
+.ui-page-stacked .t-title {
+  margin: 0;
+}
+
 .ui-loan-skel-title {
   margin: 0;
   font-size: 1.75rem;
@@ -338,6 +341,7 @@
   color: var(--color-accent-text);
 }
 
+.ui-page .t-title,
 .ui-page .t-title-1,
 .ui-page .t-label {
   display: -webkit-box;

@@ -146,6 +146,7 @@
 
   /* ---- layout (guide-defined, from design-system.md) ---- */
   --touch-min: 44px;
+  --compact-bar-detail: 56px;    /* the compact bar on a detail page (FLOW-363 3a) */
   --control-height: 52px;        /* buttons, text inputs */
   --control-height-sm: 36px;     /* small pill buttons, chips (hit area still 44px) */
   --search-height: 46px;

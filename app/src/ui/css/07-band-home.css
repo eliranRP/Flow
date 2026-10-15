@@ -85,6 +85,11 @@
   margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
 }
 
+/* FLOW-363 (3a): the band's figures fade with the page's scroll (TopBand sets --band-fade). */
+.ui-band-fade {
+  opacity: var(--band-fade, 1);
+}
+
 .ui-band-hero {
   min-width: 0;
   padding: var(--space-6) var(--space-side) 0;

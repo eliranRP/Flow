@@ -33,7 +33,7 @@ describe("useBackTarget (FLOW-444)", () => {
       at(0, "/projects/p1/months").unmount();
       at(1, "/projects/p1/profit");
       expect(screen.getByRole("button", { name: "חזרה ללפי חודש" })).toHaveTextContent("לפי חודש");
-      expect(screen.getByText("שיפוץ רחוב הדוגמה 12")).toHaveClass("t-hint");
+      expect(screen.getByText("שיפוץ רחוב הדוגמה 12", { selector: "p" })).toHaveClass("t-hint");
     } finally {
       window.history.replaceState(null, "");
     }
