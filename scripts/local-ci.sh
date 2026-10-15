@@ -50,6 +50,7 @@
 # fails when it can't. No required phase is skipped; a phase left to main says why.
 set -euo pipefail
 
+args=("$@") # the parser below shifts them away; the guard runs the gate again with them
 full=0
 slice=""
 shard=""
@@ -74,7 +75,7 @@ if [[ -n "$shard" ]] && { [[ "$slice" != tests ]] || [[ ! "$shard" =~ ^[1-9][0-9
 if (( full )) && [[ -n "$slice" ]]; then usage; fi
 # Phases and their budgets, and the process group whose leftovers the gate stops when it ends.
 source "$(dirname "$0")/local-ci-guard.sh"
-guard_session "$@"
+guard_session "${args[@]}"
 source "$(dirname "$0")/local-ci-docker.sh" # start_docker
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
