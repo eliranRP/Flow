@@ -4,7 +4,7 @@ import { useHomePreview } from "../preview";
 import type { ScreenPhase } from "./screen-phase";
 import { ErrorState } from "./error-state";
 import { ScreenHeader } from "./screen-header";
-import { DelayedSkeleton, ListSkeleton } from "./skeleton";
+import { ListSkeleton, SkeletonSwap } from "./skeleton";
 import { SyncStrip } from "./sync-strip";
 
 export function ScreenState({
@@ -63,11 +63,13 @@ export function ScreenState({
       ) : (
         <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
       )}
-      {phase.kind === "loading" ? <DelayedSkeleton>{loading ?? <ListSkeleton />}</DelayedSkeleton> : null}
-      {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={retry} /> : null}
-      {phase.kind === "empty" ? empty : null}
-      {/* The content fades in over 200ms as the skeleton leaves (FLOW-371, --motion-fade). */}
-      {phase.kind === "ready" ? <div className="ui-phase-in flex min-h-0 min-w-0 flex-1 flex-col">{children}</div> : null}
+      {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <SkeletonSwap loading={phase.kind === "loading"}>{loading ?? <ListSkeleton />}</SkeletonSwap>
+        {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={retry} /> : null}
+        {phase.kind === "empty" ? empty : null}
+        {phase.kind === "ready" ? <div className="ui-phase-in flex min-h-0 min-w-0 flex-1 flex-col">{children}</div> : null}
+      </div>
     </div>
   );
 }

@@ -354,7 +354,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   width: 40%;
   height: 100%;
   background: var(--color-accent-text);
-  animation: ui-sync-run var(--dur-shimmer) var(--ease-standard) infinite;
+  animation: ui-sync-run var(--motion-indet) var(--ease-standard) infinite;
 }
 
 @keyframes ui-sync-run {
@@ -386,6 +386,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   line-height: var(--type-chip-line);
   font-weight: var(--type-chip-weight);
   white-space: nowrap;
+  box-shadow: var(--shadow-pill);
 }
 
 .ui-sync-spin {
@@ -416,6 +417,23 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   }
 }
 
+/* A skeleton that is leaving sits over the body and fades out over 200ms, linear (board States homeReveal). */
+.ui-skel-leaving {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: ui-skel-out var(--motion-fade) var(--ease-linear) forwards;
+}
+
+@keyframes ui-skel-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* A screen's content fades in over 200ms, linear, as the skeleton leaves (board States homeReveal). */
 .ui-phase-in {
   animation: ui-phase-in var(--motion-fade) var(--ease-linear) both;
@@ -439,6 +457,19 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-job-bar {
   height: var(--bar-job);
+  background: var(--color-track);
+}
+
+/* A busy button keeps its size: the spinner sits in the end padding and takes no width (FLOW-371). */
+.ui-btn[aria-busy="true"] {
+  position: relative;
+}
+
+.ui-btn[aria-busy="true"] > .ui-spinner {
+  position: absolute;
+  inset-inline-end: var(--space-5);
+  top: 50%;
+  margin-top: calc(var(--spinner) / -2);
 }
 
 .ui-job-steps {
