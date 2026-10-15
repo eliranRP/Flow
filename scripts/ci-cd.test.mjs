@@ -1007,8 +1007,8 @@ test("the --part slices: quick lints only, static and tests and db run the scope
   assert.ok(staticSlice.includes("lint_part"));
   assert.ok(staticSlice.includes("grep -q '^supabase/functions/' <<<\"$pr_files\""));
   assert.ok(staticSlice.includes("typecheck_part"));
-  // The connector tests need no secret, so every static run does them; the deny-list check needs one, so it stays on main.
-  assert.ok(staticSlice.includes("pnpm test:connectors"));
+  // The connector tests read the fixture secret, which PR runs lack: the static slice runs them only when CI is unset.
+  assert.ok(staticSlice.includes('if [[ -z "${CI:-}" ]]; then pnpm test:connectors; fi'));
   assert.equal(staticSlice.includes("check-deny-list"), false);
   // The Playwright image carries the browsers in CI, so the tests slice installs them only for a local run.
   assert.ok(functionBody(parts, "slice_tests").includes('if [[ -z "${CI:-}" ]]; then pnpm --filter @flow/app exec playwright install chromium; fi'));

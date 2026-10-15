@@ -6,7 +6,7 @@
 #   --part quick (the pre-push hook, 20 s): eslint with its cache on the files the branch changes, after the migration-order
 #     check. Installs dependencies only when pnpm-lock.yaml changed. No Docker, no build, no tests.
 #   --part static: eslint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function
-#     typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, the connector tests, and the scripts tests when scripts/ changed.
+#     typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, the connector tests on a local run (main runs them on GitHub with the secret), and the scripts tests when scripts/ changed.
 #   --part tests [--shard i/n]: the app unit and Storybook vitest tests the change reaches (vitest --changed
 #     against main; --shard passes through to vitest).
 #   --part db: when supabase/ changed: local Supabase (started when it is down), a fresh database, the

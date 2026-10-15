@@ -3,8 +3,9 @@
 #   quick   the pre-push hook: eslint on the changed files, 20 s (the budget is in local-ci-guard.sh)
 #   static  eslint on the changed files and the files that import them, the migration checks, the edge-function
 #           typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, the
-#           connector tests (no secret needed), and the scripts tests when scripts/ changed (on a plain runner,
-#           not in the Playwright image). The deny-list check and the dist builds stay on main.
+#           connector tests on a local run, and the scripts tests when scripts/ changed (on a plain runner,
+#           not in the Playwright image). The connector tests need the MERCURY_FIXTURE_DENYLIST secret, so on
+#           GitHub they and the deny-list check run on main only; the dist builds run on main too.
 #   tests   the app unit and Storybook vitest tests the change reaches (--shard i/n passes through to vitest)
 #   db      when supabase/ changed: local Supabase, a fresh database, the flow-mcp smoke, the pgTAP files that
 #           name the change, and the db types check
@@ -154,7 +155,8 @@ slice_static() {
     echo "local-ci: edge-function typecheck skipped: this branch changes no supabase/functions file (main checks them all)."
   fi
   typecheck_part
-  pnpm test:connectors
+  # The connector tests read the MERCURY_FIXTURE_DENYLIST secret, which GitHub's PR runs do not have: CI is set there.
+  if [[ -z "${CI:-}" ]]; then pnpm test:connectors; fi
   if grep -q '^scripts/' <<<"$pr_files"; then
     node --test scripts/*.test.mjs
   fi
