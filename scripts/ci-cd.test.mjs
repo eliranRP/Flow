@@ -937,6 +937,8 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // Tests: six shards in the Playwright image of the version app/package.json pins, so no browser install.
   const tests = jobIn(pr, "tests");
   assert.match(tests, /shard: \[1, 2, 3, 4, 5, 6\]\n/);
+  // The container's home differs from the runner's: the store path is pinned to main's so the restore hits.
+  assert.match(tests, /npm_config_store_dir: \/home\/runner\/setup-pnpm\/node_modules\/\.bin\/store\n/);
   assert.match(tests, /fail-fast: false\n/);
   assert.ok(tests.includes(`image: mcr.microsoft.com/playwright:v${playwrightVersion}-noble`));
   assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/6"));

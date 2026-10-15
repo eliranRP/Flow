@@ -118,6 +118,10 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6]
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      # The container's PNPM_HOME is not the runner's, so pnpm would pick another store path, and actions/cache
+      # keys its version on the path: pin main's path so the restore hits.
+      npm_config_store_dir: /home/runner/setup-pnpm/node_modules/.bin/store
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
