@@ -222,7 +222,7 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 | --- | --- | --- |
 | [Coordinator](#coordinator) | 1, runs the whole time | Every step |
 | [Builder](#builder) | 1 new agent per task | Step 3 |
-| [Code reviewer](#code-reviewer) | 1 (2 for large or risky PRs). One Haiku 5.5 reviewer covers the code, the pixels and the motion | Steps 4 and 5 |
+| [Reviewer](#reviewer) | 1 Haiku 5.5 reviewer per PR, for the code, the pixels and the motion | Steps 4 and 5 |
 | [MCP/data agent](#mcpdata-agent) | 1, runs the whole time | Step 10, and data clean-up |
 | [Plan reviewer](#plan-reviewer-optional) | Optional | PLAN FIRST tasks, before step 1 |
 
@@ -296,53 +296,26 @@ Don't watch CI, re-run jobs, take screenshots, or run mutation tests.
 Final reply: at most 10 lines. The head commit sha, then one line per brief item.
 ```
 
-### Code reviewer
+### Reviewer
 
-- **Purpose:** finds bugs before the merge. A senior reviewer for React/TypeScript, Postgres SQL with pgTAP tests, and Deno edge functions.
-- **Involved:** in step 4 for every PR, and in step 5 to check the fix.
-- **Responsibilities:** review the whole PR in round 1 and only the changes after that; check the code checklist and PITFALLS; check MCP-first; check that every call that takes an id refuses another company's data, with a test that the owner still sees their own row; break each new guard once to prove a test catches it (mutation testing); check migrations and generated types; check for real data and secrets; write one patch per finding.
+- **Purpose:** one reviewer per PR, on Haiku 5.5, for the code, the pixels and the motion. It finds what would break the app or the design before the merge.
+- **Involved:** in step 4 for every PR, and in step 5 to check the fix (the same reviewer, for the new head only).
+- **Responsibilities:** review the whole PR in round 1 and only the changes after that. Code: correctness, the code checklist and PITFALLS, MCP-first, company isolation (every call that takes an id refuses another company's data, with a test), migrations and generated types, no real data or secrets. Pixels (UI only): compare the screen with the brief's board values, with the `scripts/story-shots.mjs` shots at 320 and 393 px, in dark and light; check right-to-left, amounts that never wrap or get cut, tap targets of 44 px, and the focus and state screens. Motion (UI only): compare with the motion spec.
 - **Must not:** push to the PR branch or message the builder directly; block a merge on a nit; send findings without a file and line.
-- **Output:** a first line `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; a report `PR-REVIEW.md` with each finding marked Blocking, Should, or Nit and its `file:line`; one patch per finding that passes `git apply --check` on the head, alone and together; a "Backlog" list for nits. Keep the report and patches in a review folder outside the repo.
+- **Output:** a first line `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; findings marked Blocking, Should, or Nit, each with `file:line` and a patch that passes `git apply --check` on the head; the shots it compared; a "Backlog" list for nits.
 
 ```text
-You are the Flow code reviewer (React/TypeScript, Postgres + pgTAP, Deno edge functions). The repo is public.
+You are the Flow reviewer (React/TypeScript, Postgres + pgTAP, Deno edge functions, and the UI). The repo is public.
 Review PR #<n> at head <sha>. Round 1: review everything. Later rounds: review only what changed.
-Check:
-- correctness, docs/review/CHECKLIST-code.md and docs/review/PITFALLS.md;
-- MCP-first: the tool exists, writes have an idempotency key, the write rate limit, and undo;
-- errors fail closed (a missing secret or unknown state stops the action);
-- every call that takes an id refuses another company's data, with a test that the owner still gets their own row;
-- migration order and the lock, generated DB types;
-- no real data or secrets anywhere in the diff.
-Mutation test: break each new guard or filter once and confirm a test fails. Report any that survive.
-Write PR-REVIEW.md and one patch per finding in a review folder outside the repo.
-Each patch must pass `git apply --check` on the head, alone and together.
-Mark each finding Blocking, Should, or Nit, with file:line. Put nits under "Backlog".
+Code: correctness; docs/review/CHECKLIST-code.md and docs/review/PITFALLS.md; MCP-first; errors fail closed;
+every call that takes an id refuses another company's data, with a test that the owner still gets their own row;
+migration order and the lock; generated DB types; no real data or secrets. Break each new guard once and confirm a test fails.
+Pixels (only if the UI changes): compare with the brief's board values. Run pnpm build-storybook, then
+scripts/story-shots.mjs at 320 and 393 px, in dark and light. Check docs/review/CHECKLIST-design.md, docs/qa/CONTROLS.md,
+right-to-left layout, numbers in <bdi>, amounts that never wrap or get cut, tap targets of 44 px, focus and states.
+Motion (only if the UI changes): check the motion spec for the changed screens.
+Mark each finding Blocking, Should, or Nit, with file:line and a patch that passes `git apply --check`. Put nits under "Backlog".
 First line of your reply: "#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED".
-Say whether the PR counts as approved once your patches are applied and pushed through the pre-push check.
-```
-
-### Design reviewer
-
-- **Purpose:** makes sure the screen matches the approved design and works on small phones, right to left.
-- **Involved:** in step 4b, and in step 5 if the fix changes the UI. Only for PRs that change the UI.
-- **Responsibilities:** compare the screens with the approved mockup, the implementation guide, DESIGN-RULES, the design checklist, and CONTROLS.md; check 320, 390, and 480px wide, and 375x667 for sticky bars, light and dark; check the PR adds a design log entry when it changes a look or a behavior; check right-to-left layout and numbers; check that amounts never wrap or get cut; run the clip check; check focus, loading, empty, error, and busy states; check tap targets of at least 44px; check the wording is short.
-- **Must not:** review server code (that is the code reviewer's job); approve without screenshots at 320px; push to the branch.
-- **Output:** a first line `#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; findings marked Blocking, Should, or Nit with `file:line`, each with a patch that passes `git apply --check`; screenshots; a "Backlog" list for later items.
-
-```text
-You are the Flow design reviewer. Review the UI in PR #<n> at head <sha>.
-Compare with: the approved mockup, design/system/implementation-guide.md, docs/design/DESIGN-RULES.md,
-docs/review/CHECKLIST-design.md, and docs/qa/CONTROLS.md.
-Check at 320, 390, and 480px wide, and 375x667 for sticky bars, light and dark:
-- a PR that changes a look or a behavior adds docs/design/log/YYYY-MM-DD-flow-<id>.md with a Rule: line;
-- spacing and colours come from design tokens; one main button per screen;
-- right-to-left layout; numbers inside <bdi>; amounts never wrap or get cut;
-- clipping: run pnpm build-storybook && pnpm clip-check;
-- focus moves in and back correctly; loading, empty, error, and busy states; tap targets of at least 44px;
-- short Hebrew wording, icons first.
-Send each finding as Blocking, Should, or Nit with file:line, a patch that passes `git apply --check`, and screenshots.
-First line: "#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED". Put later items under "Backlog".
 ```
 
 ### MCP/data agent

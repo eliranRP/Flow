@@ -255,26 +255,23 @@ Each file is deleted in the PR that removes its last reference. Before deleting,
 
 ## 6. Design review team
 
-Two Opus 5.5 reviewers per UI PR, in parallel, each with a narrow brief. Both must approve the head commit.
+One Haiku 5.5 reviewer per UI PR, which also reviews the code (see the [backlog README](../backlog/README.md#reviewer)). The pixel and motion checks are part of its one checklist, and it must approve the head commit.
 
-**Pixel reviewer:**
+**Pixels:**
 - Compares each component or screen with its canvas board at 320 and 393px wide, in dark and light (the board's light twin is on the Light theme page).
 - Measures sizes, type role (size and weight), colour token, spacing, radius, bar thickness and touch targets.
 - Checks RTL: amounts in `<bdi dir="ltr">`, U+2212, chevron icons, and time running right to left.
 - Works from screenshots of the PR's stories made with `scripts/story-shots.mjs`, plus `pnpm clip-check`.
 
-**Motion reviewer:**
+**Motion:**
 - Checks each transition against §2.1: duration, easing, stagger, rise distance and direction (in from the left, past on the right).
 - Checks that reduced motion shows the end state at once.
 - Reads the CSS and the computed styles from the motion tests, and steps the Storybook interaction stories.
 
 **Output and verdict:**
-- Each reviewer opens with `#<n> design-pixel r<round> (head <sha>): APPROVED | CHANGES REQUESTED`, or `design-motion`.
+- The reviewer opens with `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`.
 - After that comes a short list of differences: what, where (`file:line` or story), the board's value and the build's value. A patch is attached when it is small.
 - **Any difference blocks the merge.** There are no "nit" passes on a design difference. A difference that the canvas itself is unclear on goes to the lane manager, who asks the owner.
-
-The charter goes into each design reviewer's prompt, next to the [design reviewer charter](../backlog/README.md#design-reviewer).
-
 ## 7. Briefs for the Haiku builders
 
 Each brief follows [Writing a brief](../backlog/README.md#writing-a-brief) and adds:
