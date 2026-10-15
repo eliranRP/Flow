@@ -2,14 +2,10 @@
    row inside a card (the list is the card; the rows sit between hairlines). No layout prop keeps the
    default row. Values come from the tokens. */
 
-/* Flat: the row is 64px tall, and its initial circle is 36px. */
+/* Flat: the row is about 64px tall (9px above and below a 24.65px title line and a 21px hint line). */
 .ui-row-flat {
   min-height: var(--row-height);
-}
-
-.ui-row-flat .ui-avatar {
-  inline-size: var(--avatar);
-  block-size: var(--avatar);
+  padding-block: 9px;
 }
 
 /* Inset: one Card surface holds the rows. The rows are inset 14px, and a hairline sits between them. */

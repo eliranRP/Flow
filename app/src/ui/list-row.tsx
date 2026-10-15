@@ -10,7 +10,7 @@ import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
 
 /**
- * FLOW-363 (2d): `flat` is a long list's row (no divider, a 64px line, the 36px initial); `inset` is a
+ * FLOW-363 (2d): `flat` is a long list's row (no divider, about a 64px line, no chevron); `inset` is a
  * row inside a card (14px side padding, a hairline between rows). No prop keeps today's row.
  */
 export type ListLayout = "flat" | "inset";
@@ -143,7 +143,7 @@ export type StatementRowProps = {
 export function ListRow(props: ListRowProps) {
   const hintId = useId();
   if (props.variant === "statement") return <StatementRow {...props} />;
-  const layoutClass = props.layout === "flat" ? "ui-row-flat" : props.layout === "inset" ? "ui-row-inset" : false;
+  const layoutClass = props.layout === "flat" ? "ui-row-flat" : false;
   if (props.variant === "skeleton") {
     return (
       <div className={cx("ui-row", layoutClass)} aria-hidden="true">
@@ -167,7 +167,8 @@ export function ListRow(props: ListRowProps) {
   // A tappable row (a link, or a project row with a button) gets the approved press: opacity only, no scale.
   const tappable = props.href != null || (props.variant === "project" && props.onClick != null);
   // A linked transaction row opens its card, so it carries the chevron unless the caller opts out (FLOW-328).
-  const wantsChevron = props.chevron ?? (props.variant === "transaction" && props.href != null);
+  // A flat row has no chevron (REDESIGN-PLAN §2.2 row 3: the chevron is inset only).
+  const wantsChevron = props.chevron ?? (props.layout !== "flat" && props.variant === "transaction" && props.href != null);
   const showChevron = wantsChevron && props.variant !== "static" && !rowDisabled && !busyRow;
   const toneClass = props.tone === "warning" ? "ui-row-tone-warning" : props.tone === "muted" ? "ui-row-tone-muted" : false;
   const baseIcon =
@@ -554,6 +555,6 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
 }
 
 export function List({ children, className, layout }: { children: ReactNode; className?: string; layout?: ListLayout }) {
-  const layoutClass = layout === "flat" ? "ui-list-flat" : layout === "inset" ? "ui-list-inset" : false;
+  const layoutClass = layout === "inset" ? "ui-list-inset" : false;
   return <div className={cx("ui-project-list", layoutClass, className)}>{children}</div>;
 }

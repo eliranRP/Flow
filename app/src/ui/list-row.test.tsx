@@ -490,13 +490,13 @@ describe("ListRow and List layouts (FLOW-363 2d)", () => {
         </List>
       </MemoryRouter>,
     );
-    expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-flat", "ui-list-inset");
+    expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-inset");
     for (const row of container.querySelectorAll(".ui-row")) {
-      expect(row).not.toHaveClass("ui-row-flat", "ui-row-inset");
+      expect(row).not.toHaveClass("ui-row-flat");
     }
   });
 
-  it("gives a flat row and a flat List the flat classes on every variant", () => {
+  it("gives a flat row the flat class on every variant, and a flat List no inset class", () => {
     const { container } = render(
       <MemoryRouter>
         <List layout="flat">
@@ -512,14 +512,21 @@ describe("ListRow and List layouts (FLOW-363 2d)", () => {
         </List>
       </MemoryRouter>,
     );
-    expect(container.querySelector(".ui-project-list")).toHaveClass("ui-list-flat");
     expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-inset");
     const rows = container.querySelectorAll(".ui-row");
     expect(rows).toHaveLength(9);
     for (const row of rows) {
       expect(row).toHaveClass("ui-row-flat");
-      expect(row).not.toHaveClass("ui-row-inset");
     }
+  });
+
+  it("draws no chevron on a flat transaction row with a href", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ListRow layout="flat" variant="transaction" title="מלט" agorot={-100n} sign="out" source="invoice" href="/transactions/t1" />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector(".ui-row-chevron")).toBeNull();
   });
 
   it("gives an inset row and an inset List the inset classes on every variant", () => {
@@ -538,11 +545,10 @@ describe("ListRow and List layouts (FLOW-363 2d)", () => {
       </MemoryRouter>,
     );
     expect(container.querySelector(".ui-project-list")).toHaveClass("ui-list-inset");
-    expect(container.querySelector(".ui-project-list")).not.toHaveClass("ui-list-flat");
     const rows = container.querySelectorAll(".ui-row");
     expect(rows).toHaveLength(8);
     for (const row of rows) {
-      expect(row).toHaveClass("ui-row-inset");
+      expect(row.closest(".ui-list-inset")).not.toBeNull();
       expect(row).not.toHaveClass("ui-row-flat");
     }
   });
