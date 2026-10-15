@@ -86,11 +86,6 @@ export const MercuryImportFromDate: Story = {
   },
 };
 
-export const MercuryImportFromDateDark: Story = {
-  render: () => <MercuryDemo initialKey="sample-token-12" initialFrom="2026-01-01" />,
-  globals: { theme: "dark" },
-};
-
 /** מההתחלה hides the day; מתאריך brings it back. */
 export const SumitImportFromToggle: Story = {
   render: () => <SumitDemo />,
@@ -103,7 +98,7 @@ export const SumitImportFromToggle: Story = {
   },
 };
 
-/** FLOW-350: with מתאריך on, חיבור stays pinned in the sheet's foot at 320 and 375x667. */
+/** FLOW-350: with מתאריך on, חיבור stays pinned in the sheet's foot at 375x667. SumitImportFromDate is the 320 check of the same sheet. */
 const pinnedPlay: Story["play"] = async ({ canvasElement }) => {
   const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "חיבור SUMIT" });
   const submit = within(dialog).getByRole("button", { name: "חיבור" });
@@ -112,20 +107,12 @@ const pinnedPlay: Story["play"] = async ({ canvasElement }) => {
   await expect(submit.closest("form")).toBeNull();
 };
 
-export const SumitImportFromDate320: Story = {
-  render: () => <SumitDemo initialFrom="2026-01-01" />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  play: pinnedPlay,
-};
-
 export const SumitImportFromDateSe: Story = {
   render: () => <SumitDemo initialFrom="2026-01-01" />,
   parameters: { viewport: { defaultViewport: "flow375-se" } },
   play: pinnedPlay,
 };
-
-export const SumitImportFromDateDark320: Story = {
+export const SumitImportFromDate: Story = {
   render: () => <SumitDemo initialFrom="2026-01-01" />,
   parameters: { viewport: { defaultViewport: "flow320" } },
-  globals: { theme: "dark" },
 };

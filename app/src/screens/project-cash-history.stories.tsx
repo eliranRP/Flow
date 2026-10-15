@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "../dev/cash-sample";
 import { SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_RECURRING_CHANGES } from "../forecast-sample";
-import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
+import { exampleOnBand } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ProjectDetailScreen } from "./flow-screens";
 import { ProjectCashHistoryScreen, ProjectCashYearScreen } from "./project-cash-history";
@@ -61,8 +61,6 @@ export const PageLikeHome: Story = {
     await expect(canvas.getByRole("link", { name: /חשמל עלה ב־38%/ })).toBeInTheDocument();
   },
 };
-export const PageLikeHomeDark: Story = { ...PageLikeHome, name: "Project page, alerts and לכל החודשים, dark", ...dark };
-export const PageLikeHome320: Story = { ...PageLikeHome, name: "Project page, alerts and לכל החודשים, 320", ...at320 };
 
 export const Years: Story = {
   name: "Project history, years",
@@ -80,8 +78,6 @@ export const Years: Story = {
     await expect(years[0]?.getAttribute("href")).toMatch(/^\/projects\/p1\/cash\/year\/\d{4}$/);
   },
 };
-export const YearsDark: Story = { ...Years, name: "Project history, years, dark", ...dark };
-export const Years320: Story = { ...Years, name: "Project history, years, 320", ...at320 };
 
 function yearSample() {
   const months = sampleCashYearMonths();
@@ -106,5 +102,3 @@ export const Year: Story = {
     await expect(months[0]?.getAttribute("href")).toMatch(/^\/projects\/p1\/cash\/\d{4}-12$/);
   },
 };
-export const YearDark: Story = { ...Year, name: "Project history, a past year, dark", ...dark };
-export const Year320: Story = { ...Year, name: "Project history, a past year, 320", ...at320 };

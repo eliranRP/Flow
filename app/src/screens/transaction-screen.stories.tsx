@@ -5,7 +5,7 @@ import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";
 import type { TxnMeta } from "../txn-meta";
-import { ExampleBar, at320, dark, storyBody } from "../ui/screen-stories-support";
+import { ExampleBar, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -92,8 +92,6 @@ function AssumedVatStory() {
     </StoryRoute>
   );
 }
-export const TransactionAssumedVat320: Story = { render: () => <AssumedVatStory />, ...at320 };
-export const TransactionAssumedVatDark320: Story = { render: () => <AssumedVatStory />, ...at320, ...dark };
 export const TransactionAssumedVat: Story = { render: () => <AssumedVatStory /> };
 
 /** FLOW-320: the project row opens the change sheet straight on the project picker. */
@@ -550,6 +548,4 @@ function RecurringStory({ income = false }: { income?: boolean }) {
   );
 }
 export const TransactionRecurring: Story = { name: "Recurring charge, found by itself", render: () => <RecurringStory /> };
-export const TransactionRecurringDark: Story = { name: "Recurring charge, found by itself, dark", render: () => <RecurringStory />, ...dark };
-export const TransactionRecurring320: Story = { name: "Recurring charge, found by itself, 320", render: () => <RecurringStory />, ...at320 };
 export const TransactionRecurringIncome: Story = { name: "Recurring income", render: () => <RecurringStory income /> };

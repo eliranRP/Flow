@@ -67,19 +67,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
 const se = { parameters: { flowRouter: false, viewport: { defaultViewport: "flow375-se" } } };
 
 export const Card: Story = {};
 export const CardMissing: Story = { args: { project: "missing" } };
 export const CardViewer: Story = { args: { project: "missing", viewer: true } };
 export const EditPurchase: Story = { args: { sheet: "purchase" } };
-export const EditValue: Story = { args: { sheet: "value" } };
 export const EditValueSE: Story = { args: { sheet: "value" }, ...se };
-export const EditValueDark: Story = { args: { sheet: "value" }, ...dark };
 export const AddArv: Story = { args: { project: "missing", sheet: "arv" } };
-/** Every category row, counted or left out, opens its lines; the row with no category does not. */
-export const RehabList: Story = { args: { sheet: "rehab" } };
 export const RehabListSE: Story = { args: { sheet: "rehab" }, ...se };
-export const RehabListDark: Story = { args: { sheet: "rehab" }, ...dark };
 export const LoansList: Story = { args: { project: "missing", sheet: "loans" } };

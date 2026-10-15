@@ -33,12 +33,10 @@ export const Saving: Story = {
   args: { value: "editor", busy: "viewer", onChange: () => undefined },
 };
 
-export const InviteDark: Story = {
+export const InviteViewerArgs: Story = {
   args: { value: "viewer", hints: true, onChange: () => undefined },
-  globals: { theme: "dark" },
 };
 
-export const Invite320: Story = {
+export const InviteEditorArgs: Story = {
   args: { value: "editor", hints: true, onChange: () => undefined },
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };

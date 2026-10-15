@@ -2,7 +2,7 @@ import type { ProfitMonths } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ProfitMonthsScreen } from "./profit-months";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark, ExampleBar, periodMonths } from "../ui/screen-stories-support";
+import { ExampleBar, periodMonths } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -22,9 +22,6 @@ function MonthsRoute({ data }: { data: NonNullable<ProfitMonths> }) {
 }
 
 export const ProfitByMonth: Story = { name: "Project by month", render: () => <MonthsRoute data={periodMonths} /> };
-export const ProfitByMonthDark: Story = { ...ProfitByMonth, name: "Project by month, dark", ...dark };
-export const ProfitByMonth320: Story = { ...ProfitByMonth, name: "Project by month, 320", ...at320 };
-export const ProfitByMonthDark320: Story = { ...ProfitByMonth, name: "Project by month, dark, 320", ...dark, ...at320 };
 /** Overhead on: a month with project income shows its share; one without says לפני הוצאות כלליות. */
 export const ProfitByMonthOverhead: Story = {
   name: "Project by month, after overhead, two currencies",
@@ -45,11 +42,8 @@ export const ProfitByMonthOverhead: Story = {
     />
   ),
 };
-export const ProfitByMonth320Overhead: Story = { ...ProfitByMonthOverhead, name: "Project by month, after overhead, 320", ...at320 };
 /** A project with no line yet: the page is already the whole project, so there is nothing to widen (FLOW-335, FLOW-337). */
 export const ProfitByMonthEmpty: Story = {
   name: "Project by month, empty",
   render: () => <MonthsRoute data={{ ...periodMonths, months: [], by_currency: [] }} />,
 };
-export const ProfitByMonthEmptyDark: Story = { ...ProfitByMonthEmpty, name: "Project by month, empty, dark", ...dark };
-export const ProfitByMonthEmpty320: Story = { ...ProfitByMonthEmpty, name: "Project by month, empty, 320", ...at320 };

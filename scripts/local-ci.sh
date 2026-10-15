@@ -512,7 +512,7 @@ app_tests() {
     echo "local-ci: $project tests skipped: these app inputs already passed."
     return 0
   fi
-  if [[ "$project" == storybook ]]; then
+  if [[ "$project" == storybook || "$project" == storybook-dark ]]; then
     pnpm --filter @flow/app exec playwright install chromium
   fi
   if base="$(changed_base "$project")"; then
@@ -583,6 +583,7 @@ if (( base_only )); then
   echo "local-ci: Storybook skipped: this branch's stories passed, and main changed none of their inputs it can reach."
 elif (( skips )); then
   app_tests storybook
+  app_tests storybook-dark
 else
   pnpm --filter @flow/app exec playwright install chromium
   pnpm test:storybook

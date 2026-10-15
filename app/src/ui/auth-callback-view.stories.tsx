@@ -14,5 +14,4 @@ export const Connecting: Story = { args: { message: "מתחברים…" } };
 export const ToHome: Story = { args: { message: afterSignInMessage(true, null) } };
 /** The longest return line, the 320 check. */
 export const ToFiledToday: Story = { args: { message: afterSignInMessage(true, "/review/filed") } };
-export const ToFiledTodayDark: Story = { args: { message: afterSignInMessage(true, "/review/filed") }, globals: { theme: "dark" } };
 export const ToSetup: Story = { args: { message: afterSignInMessage(false, null) } };

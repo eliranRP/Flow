@@ -246,25 +246,17 @@ export const MetaHebrewMemo: Story = {
 
 /** הצעת Jev marks the field whose value Jev filled. Invented data. */
 const jevCard = { ...OneCard.args, project: "וילה רעננה", category: "חומרים" };
-const dark = { globals: { theme: "dark" } };
 const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const JevProject: Story = { name: "Jev: project", args: { ...jevCard, projectJev: true } };
-export const JevProjectDark: Story = { ...dark, name: "Jev: project, dark", args: JevProject.args };
-export const JevProject320: Story = { ...narrow, name: "Jev: project, 320", args: JevProject.args };
 
 export const JevCategory: Story = { name: "Jev: category", args: { ...jevCard, categoryJev: true } };
-export const JevCategoryDark: Story = { ...dark, name: "Jev: category, dark", args: JevCategory.args };
-export const JevCategory320: Story = { ...narrow, name: "Jev: category, 320", args: JevCategory.args };
 
 export const JevBoth: Story = { name: "Jev: both", args: { ...jevCard, projectJev: true, categoryJev: true } };
-export const JevBothDark: Story = { ...dark, name: "Jev: both, dark", args: JevBoth.args };
-export const JevBoth320: Story = { ...narrow, name: "Jev: both, 320", args: JevBoth.args };
 
 /** A long value is cut with an ellipsis; the pill and the chevron stay on the row. */
-export const JevBothLong320: Story = {
-  ...narrow,
-  name: "Jev: both, long names, 320",
+export const JevBothLong: Story = {
+  name: "Jev: both, long names",
   args: {
     ...JevBoth.args,
     supplier: "ספק חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי",
@@ -276,14 +268,10 @@ export const JevBothLong320: Story = {
 /** FLOW-327 item 3: the mismatch card names the parts in one row; the actions sit in the bar. */
 export const SplitMismatchParts: Story = { args: { ...splitMismatchArgs, splitParts: 2 } };
 export const SplitMismatchOnePart: Story = { args: { ...splitMismatchArgs, splitParts: 1 } };
-export const SplitMismatchPartsDark: Story = { ...dark, args: SplitMismatchParts.args };
-export const SplitMismatchParts320: Story = { ...narrow, args: SplitMismatchParts.args };
 export const SplitMismatchPartsLoading: Story = { args: { ...splitMismatchArgs, splitParts: "loading" } };
 
 /** FLOW-333 C8: both fields empty, so אישור is off and this line says why. */
 export const BothMissingHint: Story = { args: { ...OneCard.args, missingBoth: true } };
-export const BothMissingHint320: Story = { ...narrow, args: BothMissingHint.args };
-export const BothMissingHintDark: Story = { ...dark, args: BothMissingHint.args };
 
 /** FLOW-327 / 0134: Jev's reason, one line under the rows. Invented data. */
 const jevBoth = { ...jevCard, projectJev: true, categoryJev: true };
@@ -292,13 +280,9 @@ export const JevReasonUsual: Story = { name: "Jev reason: usual for party", args
 export const JevReasonNewParty: Story = { name: "Jev reason: new party", args: { ...jevBoth, why: "new_party" } };
 export const JevReasonNewPartyIncome: Story = { name: "Jev reason: new party, income", args: { ...jevBoth, why: "new_party", direction: "income", netAgorot: "1850000" } };
 export const JevReasonModelOnly: Story = { name: "Jev reason: model only", args: { ...jevBoth, why: "model_only" } };
-export const JevReasonUsual320: Story = { ...narrow, name: "Jev reason: usual, 320", args: JevReasonUsual.args };
-export const JevReasonUsualDark: Story = { ...dark, name: "Jev reason: usual, dark", args: JevReasonUsual.args };
 
 /** FLOW-703: Jev's answer is "no project"; the field shows it with the pill. */
 export const JevNoProject: Story = { name: "Jev: no project", args: { ...OneCard.args, category: "משרד", categoryJev: true, projectNoneJev: true, why: "usual_for_party" } };
-export const JevNoProject320: Story = { ...narrow, name: "Jev: no project, 320", args: JevNoProject.args };
-export const JevNoProjectDark: Story = { ...dark, name: "Jev: no project, dark", args: JevNoProject.args };
 
 /** FLOW-327 / 0131: one flag per card, loud from a Jev score of 0.7. Invented data. */
 const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<ReviewFlag> = {}): ReviewFlag => ({
@@ -307,11 +291,7 @@ const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<Rev
 export const FlagDuplicateLoud: Story = { name: "Flag: duplicate, loud", args: { ...jevCard, flags: [flag("duplicate", 0.86, { other_doc_date: "2026-10-03" })] } };
 /** 2026-10-09 option A: "↑ 240%" right after the amount and "בדרך כלל ₪2,500" under it; no flag row beside the pill. */
 export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
-export const FlagSpikeLoud320: Story = { ...narrow, name: "Flag: amount spike, loud, 320", args: FlagSpikeLoud.args };
-export const FlagSpikeLoudDark: Story = { ...dark, name: "Flag: amount spike, loud, dark", args: FlagSpikeLoud.args };
 export const FlagSpikeQuiet: Story = { name: "Flag: amount spike, quiet", args: { ...jevCard, flags: [flag("amount_spike", 0.4, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
-export const FlagSpikeQuiet320: Story = { ...narrow, name: "Flag: amount spike, quiet, 320", args: FlagSpikeQuiet.args };
-export const FlagSpikeQuietDark: Story = { ...dark, name: "Flag: amount spike, quiet, dark", args: FlagSpikeQuiet.args };
 /** With no ratio there is no pill: the quiet line stays, and the usual amount still sits under the amount. */
 export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ratio", args: { ...jevCard, flags: [flag("amount_spike", null, { typical_amount_minor: 250_000 })] } };
 /** At 320 a long amount may leave no room: the pill drops under it, and the amount is never cut. */
@@ -347,10 +327,6 @@ export const FlagDuplicateQuiet: Story = { name: "Flag: duplicate, quiet", args:
 export const FlagSpikeQuietIncome: Story = { name: "Flag: amount spike, quiet, income", args: { ...jevCard, direction: "income", flags: [flag("amount_spike", 0.5, { ratio: 3 })] } };
 export const FlagNewPartyUnscored: Story = { name: "Flag: new party, unscored (Jev off)", args: { ...jevCard, flags: [flag("new_party_large", null)] } };
 export const FlagWithJevReason: Story = { name: "Flag: loud, with Jev reason", args: { ...jevBoth, why: "usual_for_party", flags: [flag("amount_spike", 0.8, { ratio: 3.1, typical_amount_minor: 95_000 })] } };
-export const FlagLoud320: Story = { ...narrow, name: "Flag: loud, 320", args: FlagWithJevReason.args };
-export const FlagLoudDark: Story = { ...dark, name: "Flag: loud, dark", args: FlagWithJevReason.args };
-export const FlagQuiet320: Story = { ...narrow, name: "Flag: quiet, 320", args: FlagDuplicateQuiet.args };
-export const FlagQuietDark: Story = { ...dark, name: "Flag: quiet, dark", args: FlagDuplicateQuiet.args };
 
 // FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with ביטול at the end, one line, no reason.
 /**
@@ -371,18 +347,14 @@ export const JevFilled: Story = {
     await expect(document.elementFromPoint(x, box.bottom + 10)?.closest(".ui-review-filled-undo")).not.toBeNull();
   },
 };
-export const JevFilledDark: Story = { ...dark, name: "Jev filled: undo, dark", args: JevFilled.args, play: JevFilled.play };
 export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", args: JevFilled.args, play: JevFilled.play };
 export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
 export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
-export const JevFilledFlag320: Story = { ...narrow, name: "Jev filled: with quiet flag, 320", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };
+export const JevFilledFlag: Story = { name: "Jev filled: with quiet flag", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };
 // FLOW-702 plan item 3: the anomaly gate held the auto fill back. The flag shows, the values stay suggestions, no fill line.
 export const JevAutoHeldFlag: Story = { name: "Jev auto: held flagged line", args: { ...jevBoth, why: "usual_for_party", flags: [flag("duplicate", 0.8, { other_doc_date: "2026-10-03" })] } };
-export const JevAutoHeldFlag320: Story = { ...narrow, name: "Jev auto: held flagged line, 320", args: JevAutoHeldFlag.args };
 // FLOW-706: Jev is off. The stored values with הצעה, no הצעת Jev pill, and the fill still undoable.
 export const JevFilledOff: Story = { name: "Jev filled: Jev off", args: { ...jevCard, filled: "off" } };
-export const JevFilledOff320: Story = { ...narrow, name: "Jev filled: Jev off, 320", args: JevFilledOff.args };
-export const JevFilledOffDark: Story = { ...dark, name: "Jev filled: Jev off, dark", args: JevFilledOff.args };
 
 /**
  * FLOW-309 option A (decision 0165): a connector invoice and its receipt are one card. Invented data;
@@ -398,37 +370,27 @@ const pairCard = {
   category: "עבודה",
   editable: true,
 };
-const darkNarrow = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const PairPaid: Story = { name: "Pair: paid", args: { ...pairCard, receipts: ["2026-10-12"], paid: true, paidOn: "2026-10-12" } };
-export const PairPaid320: Story = { ...narrow, name: "Pair: paid, 320", args: PairPaid.args };
-export const PairPaidDark320: Story = { ...darkNarrow, name: "Pair: paid, dark, 320", args: PairPaid.args };
 
 /** A part payment: the receipts don't cover the invoice yet. No ✓, the latest receipt's date. */
 export const PairPartPaid: Story = {
   name: "Pair: part paid",
   args: { ...pairCard, receipts: ["2026-10-06", "2026-10-12"], paid: false, paidOn: "2026-10-12" },
 };
-export const PairPartPaid320: Story = { ...narrow, name: "Pair: part paid, 320", args: PairPartPaid.args };
-export const PairPartPaidDark320: Story = { ...darkNarrow, name: "Pair: part paid, dark, 320", args: PairPartPaid.args };
 
 /** An invoice with no receipt yet: no line. */
 export const PairUnpaid: Story = { name: "Pair: unpaid invoice", args: { ...pairCard, receipts: [], paid: false, paidOn: null } };
-export const PairUnpaid320: Story = { ...narrow, name: "Pair: unpaid invoice, 320", args: PairUnpaid.args };
-export const PairUnpaidDark320: Story = { ...darkNarrow, name: "Pair: unpaid invoice, dark, 320", args: PairUnpaid.args };
 
 /** A receipt whose invoice isn't in Flow is a card like any other, with no line. */
 export const PairReceiptOnly: Story = {
   name: "Pair: receipt only",
   args: { ...pairCard, sourceLine: "הכנסה · 12/10/2026", vatLine: "", receipts: [], paid: false, paidOn: null },
 };
-export const PairReceiptOnly320: Story = { ...narrow, name: "Pair: receipt only, 320", args: PairReceiptOnly.args };
-export const PairReceiptOnlyDark320: Story = { ...darkNarrow, name: "Pair: receipt only, dark, 320", args: PairReceiptOnly.args };
 
 /** Stress: a supplier name that takes three lines at 320 wraps whole; a fourth line would end in an ellipsis. */
-export const SupplierThreeLines320: Story = {
-  ...narrow,
-  name: "Stress: supplier on three lines, 320",
+export const SupplierThreeLines: Story = {
+  name: "Stress: supplier on three lines",
   args: {
     ...jevCard,
     editable: true,
@@ -438,5 +400,4 @@ export const SupplierThreeLines320: Story = {
 
 /** FLOW-352 1 (cycle 11): beside the הצעה pill at 320 a long value wraps to a second line. Invented names. */
 const longValueCard = { ...OneCard.args, project: "וילה הדקלים", category: "חומרי גמר וצבע", editable: true };
-export const ValueWraps320: Story = { ...narrow, name: "Stress: value on two lines beside הצעה, 320", args: longValueCard };
-export const ValueWrapsDark320: Story = { ...dark, ...narrow, name: "Stress: value on two lines beside הצעה, dark 320", args: longValueCard };
+export const ValueWraps: Story = { name: "Stress: value on two lines beside הצעה", args: longValueCard };

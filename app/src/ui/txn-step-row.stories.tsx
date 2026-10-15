@@ -40,8 +40,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 function group(canvasElement: HTMLElement) {
   return within(canvasElement).getByRole("group", { name: "מעבר בין תנועות" });
@@ -65,8 +63,6 @@ export const Middle: Story = {
     await expect(group(canvasElement)).not.toHaveAttribute("data-under");
   },
 };
-export const Middle320: Story = { ...Middle, name: "Middle, 320", ...at320 };
-export const MiddleDark: Story = { ...Middle, name: "Middle, dark", ...dark };
 
 /** The last card: הבאה is hidden in its place. */
 export const Last: Story = {
@@ -86,7 +82,6 @@ export const ContentUnder: Story = {
     await expect(within(canvasElement).getByText("12 מתוך 24")).toBeInTheDocument();
   },
 };
-export const ContentUnderDark: Story = { ...ContentUnder, name: "Content under the row, dark", ...dark };
 
 /**
  * FLOW-314: the last loaded row of a paged list. הבאה stays and shows busy while the next page loads; the
@@ -103,5 +98,3 @@ export const LoadingNextPage: Story = {
     await expect(group(canvasElement)).not.toHaveTextContent("מתוך");
   },
 };
-export const LoadingNextPage320: Story = { ...LoadingNextPage, name: "Last loaded row, next page loading, 320", ...at320 };
-export const LoadingNextPageDark: Story = { ...LoadingNextPage, name: "Last loaded row, next page loading, dark", ...dark };

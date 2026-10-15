@@ -9,7 +9,7 @@ import {
   SAMPLE_RECURRING_THIS_MONTH,
 } from "../forecast-sample";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark, ExampleBar } from "../ui/screen-stories-support";
+import { ExampleBar } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -37,8 +37,6 @@ const full: RecurringSample = {
 // FLOW-415 (owner 08:43Z, frame b-2): "קבועים", opened from Home's pending card. FLOW-913 layout A:
 // one line per row; a late row and a change close by swipe, or with "סגירה" under עריכה.
 export const MissingBills: Story = { name: "Recurring", render: () => <Recurring sample={full} /> };
-export const MissingBillsDark: Story = { ...MissingBills, name: "Recurring, dark", ...dark };
-export const MissingBills320: Story = { ...MissingBills, name: "Recurring, 320", ...at320 };
 export const MissingBillsIncome: Story = {
   name: "Recurring, late income",
   render: () => <Recurring sample={{ ...full, late: [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME] }} />,
@@ -54,5 +52,3 @@ export const MissingBillsMatch: Story = {
   name: "Recurring, suggested match",
   render: () => <Recurring sample={{ ...full, late: [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_RENAMED] }} />,
 };
-export const MissingBillsMatch320: Story = { ...MissingBillsMatch, name: "Recurring, suggested match, 320", ...at320 };
-export const MissingBillsMatchDark: Story = { ...MissingBillsMatch, name: "Recurring, suggested match, dark", ...dark };

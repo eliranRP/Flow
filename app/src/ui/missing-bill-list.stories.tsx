@@ -24,8 +24,6 @@ type Story = StoryObj<typeof meta>;
 // FLOW-403, plan option A2: one row per late bill, one "כ־" amount. FLOW-415 layout A: two hint lines,
 // "project · category" and "כל חודש ב־N · אחרון dd/mm".
 export const Several: Story = { render: () => <MissingBillList rows={rows} /> };
-export const SeveralDark: Story = { name: "Several, dark", render: () => <MissingBillList rows={rows} />, globals: { theme: "dark" } };
-export const Several320: Story = { name: "Several, 320", render: () => <MissingBillList rows={rows} />, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const One: Story = { render: () => <MissingBillList rows={rows.slice(1)} /> };
 export const NoPlace: Story = {
   name: "Files nowhere: one hint line",
@@ -42,10 +40,8 @@ export const DueLastDay: Story = {
 export const LongHebrew: Story = {
   name: "Long Hebrew",
   render: () => <MissingBillList rows={missingBillViews(power == null ? [] : [{ ...power, supplier_name: longHebrew, party_name: longHebrew, typical_amount_minor: -12_345_600n, project_name: longHebrew }], "", now)} />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 export const Empty: Story = { render: () => <MissingBillList rows={[]} /> };
-export const EmptyDark: Story = { name: "Empty, dark", render: () => <MissingBillList rows={[]} />, globals: { theme: "dark" } };
 export const Loading: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "loading" }} /> };
 export const Error: Story = { render: () => <MissingBillList rows={[]} phase={{ kind: "error", offline: false }} /> };
 
@@ -62,16 +58,6 @@ export const Editing: Story = {
   name: "Editing: סגירה",
   render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
 };
-export const EditingDark: Story = {
-  name: "Editing: סגירה, dark",
-  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
-  globals: { theme: "dark" },
-};
-export const Editing320: Story = {
-  name: "Editing: סגירה, 320",
-  render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} editing />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 export const Peek: Story = {
   name: "First visit: the top row peeks",
   render: () => <MissingBillList rows={closeRows} arrived={closeArrived} onHide={noop} peek />,
@@ -81,8 +67,6 @@ const matched = missingBillViews([...filed, SAMPLE_MISSING_RENAMED], "", now);
 const answer = () => undefined;
 const suggested = SAMPLE_MISSING_RENAMED.suggestion;
 export const SuggestedMatch: Story = { name: "Suggested match", render: () => <MissingBillList rows={matched} onMatch={answer} onHide={answer} /> };
-export const SuggestedMatch320: Story = { ...SuggestedMatch, name: "Suggested match, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
-export const SuggestedMatchDark: Story = { ...SuggestedMatch, name: "Suggested match, dark", globals: { theme: "dark" } };
 export const SuggestedMatchLongHebrew: Story = {
   name: "Suggested match, long Hebrew",
   render: () => (
@@ -91,5 +75,4 @@ export const SuggestedMatchLongHebrew: Story = {
       onMatch={answer}
     />
   ),
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };

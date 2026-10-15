@@ -1,6 +1,5 @@
 import type { Breakdown, BreakdownGroupBy, BreakdownLinesPage } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { ReactElement } from "react";
 import { Route, Routes } from "react-router-dom";
 import { StoryRoute } from "../ui/story-route";
 import { BreakdownLinesScreen, BreakdownScreen } from "./breakdown";
@@ -104,28 +103,11 @@ function breakdownStory(sample: Breakdown | undefined, entry = "/flow/expense", 
   );
 }
 
-function quadrant(render: () => ReactElement): { base: Story; dark: Story; narrow: Story; darkNarrow: Story } {
-  return {
-    base: { render },
-    dark: { render, globals: { theme: "dark" } },
-    narrow: { render, parameters: { viewport: { defaultViewport: "flow320" } } },
-    darkNarrow: { render, globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } },
-  };
-}
+export const ExpensesByCategory: Story = { render: breakdownStory(expenses) };
 
-const byCategory = quadrant(breakdownStory(expenses));
-export const ExpensesByCategory: Story = byCategory.base;
-export const ExpensesByCategoryDark: Story = byCategory.dark;
-export const ExpensesByCategory320: Story = byCategory.narrow;
-export const ExpensesByCategoryDark320: Story = byCategory.darkNarrow;
+export const ExpensesByProject: Story = { render: breakdownStory(byProject) };
 
-const projects = quadrant(breakdownStory(byProject));
-export const ExpensesByProject: Story = projects.base;
-export const ExpensesByProjectDark: Story = projects.dark;
-
-const long = quadrant(breakdownStory(longNames));
-export const LongNamesAndUsd: Story = long.base;
-export const LongNamesAndUsd320: Story = long.narrow;
+export const LongNamesAndUsd: Story = { render: breakdownStory(longNames) };
 
 /** FLOW-307: the largest totals step down from display until they fit, each line on its own. */
 const hugeTotals: NonNullable<Breakdown> = {
@@ -135,13 +117,12 @@ const hugeTotals: NonNullable<Breakdown> = {
     { currency: "USD", amount_minor: 9_999_999_999n, count: 3 },
   ],
 };
-const huge = quadrant(breakdownStory(hugeTotals));
-export const LargestTotals: Story = huge.base;
-export const LargestTotalsDark320: Story = huge.darkNarrow;
+export const LargestTotals: Story = {
+  render: breakdownStory(hugeTotals),
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
 
-const incomeStory = quadrant(breakdownStory(income, "/flow/income"));
-export const IncomeByCustomer: Story = incomeStory.base;
-export const IncomeByCustomerDark: Story = incomeStory.dark;
+export const IncomeByCustomer: Story = { render: breakdownStory(income, "/flow/income") };
 
 export const Empty: Story = { render: breakdownStory(undefined, "/flow/expense?preview=empty", "category") };
 export const Loading: Story = { render: breakdownStory(undefined, "/flow/expense?preview=loading", "category") };
@@ -160,12 +141,7 @@ function linesStory(pages: Array<NonNullable<BreakdownLinesPage>> = [linesPage])
   );
 }
 
-const lines = quadrant(() => linesStory());
-export const GroupLines: Story = lines.base;
-export const GroupLinesDark: Story = lines.dark;
-export const GroupLines320: Story = lines.narrow;
+export const GroupLines: Story = { render: () => linesStory() };
 
 /** FLOW-322: the lines pick their own period; an empty one offers another instead of a dead end. */
-const emptyLines = quadrant(() => linesStory([{ ...linesPage, rows: [] }]));
-export const GroupLinesEmpty: Story = emptyLines.base;
-export const GroupLinesEmpty320: Story = emptyLines.narrow;
+export const GroupLinesEmpty: Story = { render: () => linesStory([{ ...linesPage, rows: [] }]) };

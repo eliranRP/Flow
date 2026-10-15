@@ -114,8 +114,6 @@ export const WithPill: Story = {
   args: { label: "רווח ב־3 חודשים", agorot: "20000000", explanation: "", income: "", expense: "", pill: "אוגוסט – אוקטובר 2026" },
   render: (args) => <PillHero label={args.label} agorot={args.agorot} pill={args.pill} />,
 };
-export const WithPillDark: Story = { ...WithPill, globals: { theme: "dark" } };
-export const WithPill320: Story = { ...WithPill, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** FLOW-435: a project's history names the project on a small line above Home's label. */
 export const WithKicker: Story = {
@@ -126,4 +124,3 @@ export const WithKicker: Story = {
     </TopBand>
   ),
 };
-export const WithKickerDark: Story = { ...WithKicker, globals: { theme: "dark" } };

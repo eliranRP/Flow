@@ -20,5 +20,3 @@ export const Waiting: Story = { name: "Another invite is running", args: { disab
 export const LongName: Story = {
   args: { company: "חברת השקעות ונכסים לדוגמה מהמרכז והשפלה בע״מ", line: "צופה · מאלכסנדרה בן־שושן־רוזנבלום" },
 };
-export const Dark: Story = { globals: { theme: "dark" } };
-export const At320: Story = { ...LongName, name: "320", parameters: { viewport: { defaultViewport: "flow320" } } };

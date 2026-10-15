@@ -62,14 +62,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark390 = { globals: { theme: "dark" } };
-const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 const sheet = () => within(document.body);
 
 /** One installment by the schedule; the line's extra cents go to principal. */
 export const Schedule: Story = {};
-export const ScheduleDark: Story = { ...dark390 };
-export const Schedule320: Story = { ...light320 };
 
 /** Fees off the top: the picker asks where they go, and offers to keep the pick on the loan. */
 export const WithFees: Story = {
@@ -80,8 +76,6 @@ export const WithFees: Story = {
     await expect(body.getByRole("switch", { name: "לשמור להלוואה הזו" })).toBeChecked();
   },
 };
-export const WithFeesDark: Story = { ...WithFees, ...dark390 };
-export const WithFees320: Story = { ...WithFees, ...light320 };
 
 /** Fees typed, no category yet: שמירה waits and says why. */
 export const FeesCategoryMissing: Story = {
@@ -103,7 +97,6 @@ export const ThreeInstallments: Story = {
     await waitFor(() => expect(body.getByRole("spinbutton", { name: "מספר תשלומים" })).toHaveAttribute("aria-valuenow", "3"));
   },
 };
-export const ThreeInstallments320: Story = { ...ThreeInstallments, ...light320 };
 
 /** The lender's own parts, still short of the line: שמירה waits. */
 export const ExactShort: Story = {
@@ -114,8 +107,6 @@ export const ExactShort: Story = {
     await expect(body.getByText(/חסרים/)).toBeVisible();
   },
 };
-export const ExactShortDark: Story = { ...ExactShort, ...dark390 };
-export const ExactShort320: Story = { ...ExactShort, ...light320 };
 
 /** The parts pass the line. */
 export const ExactOver: Story = {
@@ -126,12 +117,9 @@ export const ExactOver: Story = {
     await expect(body.getByText(/עודף/)).toBeVisible();
   },
 };
-export const ExactOver320: Story = { ...ExactOver, ...light320 };
-export const ExactOverDark320: Story = { ...ExactOver, ...dark390, ...light320 };
 
 /** A demand loan: its accrued interest, no installments. */
 export const Demand: Story = { args: { demand: true, lineMinor: 100_000 } };
-export const DemandDark: Story = { args: { demand: true, lineMinor: 100_000 }, ...dark390 };
 
 /** Two loans that can take the line: the editor asks which one. */
 export const TwoLoans: Story = { args: { twoLoans: true } };

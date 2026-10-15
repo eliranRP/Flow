@@ -67,7 +67,6 @@ export const RowsBoth: Story = {
   args: { title: "" },
   render: () => <BannerRows rows={[reviewRow, unpaidRow]} />,
 };
-export const RowsBothDark: Story = { ...RowsBoth, name: "Rows, review and unpaid, dark", globals: { theme: "dark" } };
 export const RowsReviewOnly: Story = {
   name: "Rows, review only",
   args: { title: "" },
@@ -95,8 +94,6 @@ export const RowsThree: Story = {
   args: { title: "" },
   render: () => <BannerRows rows={[reviewRow, unpaidRow, missingRow]} />,
 };
-export const RowsThreeDark: Story = { ...RowsThree, name: "Rows, three, dark", globals: { theme: "dark" } };
-export const RowsThree320: Story = { ...RowsThree, name: "Rows, three, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
 export const RowsMissingOnly: Story = {
   name: "Rows, missing only",
   args: { title: "" },
@@ -120,8 +117,6 @@ export const RowsChargeUp: Story = {
   args: { title: "" },
   render: () => <BannerRows rows={[{ ...reviewRow, title: <><bdi dir="ltr">2</bdi> פריטים ממתינים לאישור</> }, missingRow, changeRow]} />,
 };
-export const RowsChargeUpDark: Story = { ...RowsChargeUp, name: "Rows, a charge above usual, dark", globals: { theme: "dark" } };
-export const RowsChargeUp320: Story = { ...RowsChargeUp, name: "Rows, a charge above usual, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
 export const RowsChargeUpOnly: Story = {
   name: "Rows, a charge above usual only",
   args: { title: "" },
@@ -163,12 +158,10 @@ function SlimFiled({ count }: { count: number }) {
   );
 }
 export const Slim: Story = { args: { title: "" }, render: () => <SlimFiled count={12} /> };
-export const SlimDark: Story = { ...Slim, name: "Slim, dark", globals: { theme: "dark" } };
 export const SlimSingular: Story = { args: { title: "" }, render: () => <SlimFiled count={1} /> };
-export const Slim320: Story = {
+export const SlimBigCount: Story = {
   ...Slim,
-  name: "Slim, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  name: "Slim",
   render: () => <SlimFiled count={1234} />,
 };
 export const NoticeNeutral: Story = {

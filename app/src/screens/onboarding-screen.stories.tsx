@@ -29,13 +29,3 @@ const OnboardingNameErrorRoute = () => (
 );
 
 export const OnboardingNameError: Story = { name: "Onboarding, name error", render: OnboardingNameErrorRoute };
-export const OnboardingNameErrorDark: Story = {
-  name: "Onboarding, name error, dark",
-  render: OnboardingNameErrorRoute,
-  globals: { theme: "dark" },
-};
-export const OnboardingNameError320: Story = {
-  name: "Onboarding, name error, 320",
-  render: OnboardingNameErrorRoute,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};

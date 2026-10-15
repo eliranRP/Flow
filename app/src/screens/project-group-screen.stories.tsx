@@ -29,18 +29,6 @@ export const ProjectGroup: Story = {
     await expect(names.findIndex((text) => text.includes("דירה 4"))).toBe(names.length - 1);
   },
 };
-export const ProjectGroupDark: Story = { ...ProjectGroup, name: "Project group, dark", globals: { theme: "dark" } };
-export const ProjectGroup320: Story = {
-  ...ProjectGroup,
-  name: "Project group, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-export const ProjectGroupDark320: Story = {
-  ...ProjectGroup,
-  name: "Project group, dark, 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
 /** A link to a group that is gone says so and goes back to פרויקטים. */
 export const ProjectGroupMissing: Story = {

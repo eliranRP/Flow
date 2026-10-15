@@ -60,16 +60,6 @@ const businessNameError = {
 };
 
 export const BusinessNameError: Story = { ...businessNameError, name: "Business step, name error" };
-export const BusinessNameErrorDark: Story = {
-  ...businessNameError,
-  name: "Business step, name error, dark",
-  globals: { theme: "dark" },
-};
-export const BusinessNameError320: Story = {
-  ...businessNameError,
-  name: "Business step, name error, 320",
-  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
-};
 
 /** FLOW-406: the starter pick right after the company step, כללי picked on arrival. */
 const starterStep = {
@@ -83,12 +73,6 @@ const starterStep = {
 };
 
 export const StarterStep: Story = { ...starterStep, name: "Starter categories" };
-export const StarterStepDark: Story = { ...starterStep, name: "Starter categories, dark", globals: { theme: "dark" } };
-export const StarterStep320: Story = {
-  ...starterStep,
-  name: "Starter categories, 320",
-  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
-};
 
 /** FLOW-503: SUMIT and Mercury side by side on step 1, each opening its shared connect sheet. */
 const connectStep = {
@@ -102,11 +86,6 @@ const connectStep = {
 };
 
 export const ConnectStep: Story = { ...connectStep, name: "Connect step, SUMIT or Mercury" };
-export const ConnectStep320: Story = {
-  ...connectStep,
-  name: "Connect step, SUMIT or Mercury, 320",
-  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
-};
 
 /** FLOW-506: a failed SUMIT connect leaves the note under the demo, at the demo frame's inset. */
 const connectFailed = {
@@ -131,12 +110,6 @@ const connectFailed = {
 };
 
 export const ConnectFailed: Story = { ...connectFailed, name: "Connect step, SUMIT failed" };
-export const ConnectFailed320: Story = {
-  ...connectFailed,
-  name: "Connect step, SUMIT failed, 320",
-  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
-};
-export const ConnectFailedDark: Story = { ...connectFailed, name: "Connect step, SUMIT failed, dark", globals: { theme: "dark" } };
 
 /** FLOW-506: step 5 draws the install screen's numbered steps. */
 const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
@@ -156,24 +129,5 @@ const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
   ),
 });
 
-export const InstallStepIphone: Story = { ...installStep("iphone"), name: "Install step, iPhone" };
 export const InstallStepAndroid: Story = { ...installStep("android-steps"), name: "Install step, Android steps" };
-export const InstallStepIphoneDark: Story = { ...installStep("iphone"), name: "Install step, iPhone, dark", globals: { theme: "dark" } };
-export const InstallStepIphone320: Story = {
-  ...installStep("iphone"),
-  name: "Install step, iPhone, 320",
-  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
-};
 
-/** FLOW-502: step 5 offers the review card's evening reminder once. */
-export const InstallStepReminder: Story = { ...installStep("android-steps", true), name: "Install step, evening reminder" };
-export const InstallStepReminderDark: Story = {
-  ...installStep("android-steps", true),
-  name: "Install step, evening reminder, dark",
-  globals: { theme: "dark" },
-};
-export const InstallStepReminder320: Story = {
-  ...installStep("android-steps", true),
-  name: "Install step, evening reminder, 320",
-  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
-};

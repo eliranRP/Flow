@@ -76,8 +76,3 @@ export const ProjectNameLong: Story = {
   args: { heading: longHebrew },
   render: ({ heading }) => <ProjectBand name={heading} />,
 };
-export const ProjectNameDark: Story = {
-  args: { heading: "וילה לדוגמה" },
-  globals: { theme: "dark" },
-  render: ({ heading }) => <ProjectBand name={heading} />,
-};

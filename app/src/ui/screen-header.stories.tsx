@@ -27,7 +27,6 @@ export const LabelledBackLong: Story = { args: { title: "לפי חודש", kicke
 export const BackToListKeepsKicker: Story = {
   args: { layout: "stacked", title: "הפסד ספטמבר", kicker: "וילה לדוגמה", backTo: "/projects/p1/months", backText: "לפי חודש" },
 };
-export const BackToListKeepsKicker320: Story = { ...BackToListKeepsKicker, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /**
  * FLOW-334 H1: once the large title scrolls off, a compact bar keeps Back and a small title at the

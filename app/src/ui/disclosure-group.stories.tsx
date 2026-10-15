@@ -23,14 +23,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const Collapsed: Story = {};
-export const CollapsedDark: Story = { ...dark };
 export const Open: Story = { args: { defaultOpen: true } };
-export const OpenDark: Story = { args: { defaultOpen: true }, ...dark };
-export const Open320: Story = { args: { defaultOpen: true }, ...at320 };
-export const LongLabel320: Story = { args: { label: longHebrew, count: 12 }, ...at320 };
+export const LongLabel: Story = { args: { label: longHebrew, count: 12 } };
 /** No rows: nothing is drawn. */
 export const Empty: Story = { args: { count: 0 } };

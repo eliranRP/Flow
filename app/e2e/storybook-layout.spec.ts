@@ -771,7 +771,7 @@ test("split between projects pins its totals and keeps names on one line", async
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-mixed-320&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.goto("/iframe.html?id=screens-routes--split-mixed&viewMode=story", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".ui-lsplit-part").first()).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
 });
@@ -821,7 +821,7 @@ async function checkFocusTitles(page: Page, part: number): Promise<void> {
     await page.locator("#storybook-root").waitFor();
     // A copy of a story made by spreading it (`{ ...Story, ...dark }`) keeps its play function but
     // not the index's play-fn tag, so the filter above misses it, and its play ran while the
-    // check read focus (red main twice on project-group-removed-dark). Wait for the render to end
+    // check read focus (red main twice on the ProjectGroupRemoved story). Wait for the render to end
     // and skip a story that played, as the filter means to.
     const played = await page.waitForFunction((want) => {
       const render = (window as { __STORYBOOK_PREVIEW__?: { currentRender?: { id?: string; phase?: string; story?: { playFunction?: unknown } } } })

@@ -107,13 +107,6 @@ function ReviewStatement() {
 }
 
 export const ReviewAllStatement: Story = { render: () => <ReviewStatement /> };
-export const ReviewAllStatementDark: Story = { render: () => <ReviewStatement />, globals: { theme: "dark" } };
-export const ReviewAllStatement320: Story = { render: () => <ReviewStatement />, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const ReviewAllStatement320Dark: Story = {
-  render: () => <ReviewStatement />,
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
 export const ReviewWithoutSuggestion: Story = {
   render: () => (

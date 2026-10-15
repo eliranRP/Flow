@@ -22,11 +22,3 @@ export const Dollars: Story = {
 export const Saving: Story = {
   args: { ...Shekels.args, value: "ILS", saving: "USD" },
 };
-export const DollarsDark: Story = {
-  args: Dollars.args,
-  globals: { theme: "dark" },
-};
-export const SavingDark: Story = {
-  args: Saving.args,
-  globals: { theme: "dark" },
-};

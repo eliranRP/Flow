@@ -26,15 +26,12 @@ type Story = StoryObj<typeof meta>;
 
 // FLOW-403, plan option A4: who makes up one month's figure. Income in green; no edit.
 export const Filled: Story = { decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties} /> };
-export const FilledDark: Story = { name: "Filled, dark", decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties} />, globals: { theme: "dark" } };
-export const Filled320: Story = { name: "Filled, 320", decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties} />, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const OneParty: Story = { decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties.slice(0, 1)} /> };
 export const OtherCurrency: Story = { decorators: [inSheet], render: () => <ExpectedMonthParties parties={novemberTwo.parties} /> };
 export const LongHebrew: Story = {
   name: "Long Hebrew",
   decorators: [inSheet],
   render: () => <ExpectedMonthParties parties={firstParty} />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 function OpenSheet({ month }: { month: ExpectedMonthRow }) {

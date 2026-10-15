@@ -8,7 +8,7 @@ import { Banner } from "../ui/banner";
 import { OfflineIcon } from "../ui/icons";
 import { TextLink } from "../ui/text-link";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark, ExampleBar, exampleOnBand, sampleDashboard } from "../ui/screen-stories-support";
+import { ExampleBar, exampleOnBand, sampleDashboard } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -87,20 +87,10 @@ function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number;
   );
 }
 
-const homeAt320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-const homeDark = { globals: { theme: "dark" } };
 
 export const HomeAttentionBoth: Story = {
   name: "Home attention, review and unpaid",
   render: () => <AttentionHome pending={7} unpaidCount={3} unpaidGross={2_340_000n} />,
-};
-export const HomeAttentionBothDark: Story = { ...HomeAttentionBoth, name: "Home attention, review and unpaid, dark", ...homeDark };
-export const HomeAttentionBoth320: Story = { ...HomeAttentionBoth, name: "Home attention, review and unpaid, 320", ...homeAt320 };
-export const HomeAttentionBothDark320: Story = {
-  ...HomeAttentionBoth,
-  name: "Home attention, review and unpaid, dark, 320",
-  ...homeDark,
-  ...homeAt320,
 };
 export const HomeAttentionReviewOnly: Story = {
   name: "Home attention, review only",
@@ -114,7 +104,6 @@ export const HomeAttentionSingular: Story = {
   name: "Home attention, one of each",
   render: () => <AttentionHome pending={1} unpaidCount={1} unpaidGross={468_000n} />,
 };
-export const HomeAttentionSingular320: Story = { ...HomeAttentionSingular, name: "Home attention, one of each, 320", ...homeAt320 };
 
 export const HomeLongHero: Story = {
   render: () => (
@@ -238,7 +227,6 @@ export const HomeUsdOnly: Story = {
   ),
 };
 
-export const HomeUsdOnlyDark: Story = { ...HomeUsdOnly, globals: { theme: "dark" } };
 
 export const HomeMixedCurrency: Story = {
   render: () => (
@@ -281,8 +269,6 @@ export const HomeMixedSigns: Story = {
   ),
 };
 
-export const HomeMixedSignsDark: Story = { ...HomeMixedSigns, globals: { theme: "dark" } };
-export const HomeMixedSigns320: Story = { ...HomeMixedSigns, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 // Profit by period (decision 0141, plan option A): Home on the period bar, the project with its own
 // period and the summary first, the "לפי חודש" page, and Unpaid with a mark that stays (FLOW-330).
@@ -319,9 +305,6 @@ function PeriodHome() {
 }
 
 export const HomePeriod: Story = { name: "Home, period pill, 3 months", render: () => <PeriodHome /> };
-export const HomePeriodDark: Story = { ...HomePeriod, name: "Home, period pill, 3 months, dark", ...dark };
-export const HomePeriod320: Story = { ...HomePeriod, name: "Home, period pill, 3 months, 320", ...at320 };
-export const HomePeriodDark320: Story = { ...HomePeriod, name: "Home, period pill, 3 months, dark, 320", ...dark, ...at320 };
 
 /** FLOW-355 (A): on a 375x667 phone the first project row shows above the tab bar; the review and invoices rows follow two projects. */
 export const HomePeriodSmallPhone: Story = {

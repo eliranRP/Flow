@@ -64,31 +64,22 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark390 = { globals: { theme: "dark" } };
-const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const MatchRow: Story = {};
-export const MatchRowDark: Story = { ...dark390 };
-export const MatchRow320: Story = { ...light320 };
 /** FLOW-115: two loans in the line's currency; the hint counts them, so the row keeps its height. */
 export const MatchRowTwoLoans: Story = { args: { loanCount: 2 } };
 /** FLOW-115: no loan in the line's currency; the hint says so in the sheet's words. */
 export const MatchRowNoLoanInCurrency: Story = { args: { lineCurrency: "ILS" } };
 /** FLOW-115: no loan yet. The sheet says so and offers הלוואה חדשה. */
 export const SheetNoLoans: Story = { args: { loanCount: 0, open: true } };
-export const SheetNoLoansDark320: Story = { args: { loanCount: 0, open: true }, ...dark390, ...light320 };
-/** FLOW-115: loans exist, none in the line's currency. The sheet names the currency and offers a new one. */
-export const SheetOtherCurrency: Story = { args: { lineCurrency: "ILS", open: true } };
-export const SheetOtherCurrency320: Story = { args: { lineCurrency: "ILS", open: true }, ...light320 };
 /** FLOW-115: a long loan name stays on one line, so the row keeps its height. */
-export const MatchRowLongName: Story = { args: { matchHint: "משכנתא ארוכה מאוד מבנק לדוגמה על הנכס ברחוב הארוך ביותר בעיר, 320" }, ...light320 };
+export const MatchRowLongName: Story = { args: { matchHint: "משכנתא ארוכה מאוד מבנק לדוגמה על הנכס ברחוב הארוך ביותר בעיר, 320" } };
 /** FLOW-115: the row while the loans load. Same height as the rows above. */
 export const MatchRowLoading: StoryObj = { render: () => <LoanMatchSkeleton /> };
 /** Two loans: the picker lists both; the paid-off one is off with its reason. */
 export const Picker: Story = { args: { loanCount: 2, open: true } };
 /** FLOW-115: the only loans are in another currency, so the sheet names the line's currency. */
 export const PickerOtherCurrency: Story = { args: { lineCurrency: "ILS", open: true } };
-export const PickerOtherCurrency320Dark: Story = { args: { lineCurrency: "ILS", open: true }, globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const PickerSaving: Story = { args: { loanCount: 2, open: true, savingId: "loan-1" } };
 
 /**
@@ -125,5 +116,3 @@ function KindsPicker() {
 }
 
 export const PickerKinds: StoryObj = { render: () => <KindsPicker /> };
-export const PickerKindsDark: StoryObj = { render: () => <KindsPicker />, ...dark390 };
-export const PickerKinds320: StoryObj = { render: () => <KindsPicker />, ...light320 };

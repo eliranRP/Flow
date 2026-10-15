@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { cashMonthKey } from "../cash";
 import { sampleCashLines, sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
-import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
+import { exampleOnBand } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { CashLinesScreen, CashMonthScreen } from "./cash-screens";
 import { attentionRows, CashHome } from "./HomeScreen";
@@ -38,8 +38,6 @@ export const CashHomeMonth: Story = {
     await expect(canvas.getByRole("link", { name: "לכל הקבועים" })).toHaveAttribute("href", "/missing-bills");
   },
 };
-export const CashHomeMonthDark: Story = { ...CashHomeMonth, name: "Home cash, attention box, dark", ...dark };
-export const CashHomeMonth320: Story = { ...CashHomeMonth, name: "Home cash, attention box, 320", ...at320 };
 
 export const CashHomeNoBox: Story = {
   name: "Home cash, nothing waiting",
@@ -78,8 +76,6 @@ export const CashMonth: Story = {
     await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(2);
   },
 };
-export const CashMonthDark: Story = { ...CashMonth, name: "Cash, an earlier month, dark", ...dark };
-export const CashMonth320: Story = { ...CashMonth, name: "Cash, an earlier month, 320", ...at320 };
 
 export const CashMonthCurrent: Story = {
   name: "Cash, this month (no later chevron)",
@@ -111,7 +107,6 @@ export const CashLinesOut: Story = {
     );
   },
 };
-export const CashLinesOut320: Story = { ...CashLinesOut, name: "Cash, the month's יצא, 320", ...at320 };
 
 /** FLOW-418: the lines behind לא נספר ברווח, money in and out mixed. */
 export const CashLinesKept: Story = {
@@ -133,5 +128,3 @@ export const CashLinesKept: Story = {
     await expect(canvas.getByText("כסף שזז בבנק, אבל אינו הכנסה או הוצאה.")).toBeInTheDocument();
   },
 };
-export const CashLinesKeptDark: Story = { ...CashLinesKept, name: "Cash, the month's לא נספר ברווח, dark", ...dark };
-export const CashLinesKept320: Story = { ...CashLinesKept, name: "Cash, the month's לא נספר ברווח, 320", ...at320 };

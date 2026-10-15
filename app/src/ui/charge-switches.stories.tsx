@@ -51,10 +51,8 @@ type Story = StoryObj<typeof meta>;
 
 const detected = { inCash: true, recurring: true, typicalDay: 4, detected: true };
 export const Detected: Story = { name: "Recurring, found by itself", args: detected };
-export const DetectedDark: Story = { name: "Recurring, found by itself, dark", args: detected, globals: { theme: "dark" } };
-export const Detected320: Story = { name: "Recurring, found by itself, 320", args: detected, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const EveryQuarter: Story = { name: "Recurring every quarter, set by the owner", args: { ...detected, detected: false, pace: "quarter" } };
-export const EveryQuarter320: Story = { name: "Recurring every quarter, 320", args: { ...detected, pace: "quarter" }, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const EveryQuarterDetected: Story = { name: "Recurring every quarter", args: { ...detected, pace: "quarter" } };
 export const SetByOwner: Story = { name: "Recurring, set by the owner", args: { ...detected, detected: false } };
 export const NotRecurring: Story = { name: "Not recurring, no usual day", args: { inCash: true, recurring: false, typicalDay: null, detected: false } };
 export const OutOfCash: Story = { name: "Kept out of the cash view", args: { ...detected, inCash: false } };

@@ -47,7 +47,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
 const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** At rest: the parts with their ✕; the "הסרה" mark under each row stays hidden. */
@@ -61,7 +60,6 @@ export const Parts: Story = {
     await expect(within(canvasElement).getByRole("button", { name: "הסרת החלק חשמל" })).toBeVisible();
   },
 };
-export const PartsDark: Story = { ...Parts, name: "Parts, dark", ...dark };
 
 /** Mid-swipe: the first part has moved 120px toward the start side over "הסרה". */
 export const Dragging: Story = {
@@ -75,5 +73,4 @@ export const Dragging: Story = {
     await expect(getComputedStyle(mark as HTMLElement).visibility).toBe("visible");
   },
 };
-export const DraggingDark: Story = { ...Dragging, name: "Dragging, dark", ...dark };
 export const Dragging320: Story = { ...Dragging, name: "Dragging, 320", ...at320 };

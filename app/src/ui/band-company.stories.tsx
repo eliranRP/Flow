@@ -22,5 +22,3 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 export const LongName: Story = { args: { name: "חברת השקעות ונכסים לדוגמה מהמרכז והשפלה בע״מ" } };
-export const Dark: Story = { globals: { theme: "dark" } };
-export const At320: Story = { ...LongName, name: "320", parameters: { flowRouter: true, viewport: { defaultViewport: "flow320" } } };

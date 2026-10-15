@@ -179,6 +179,8 @@ slice_tests() {
   # GitHub's Playwright image carries the browsers (CI is set there); a local run installs them here.
   if [[ -z "${CI:-}" ]]; then pnpm --filter @flow/app exec playwright install chromium; fi
   vitest_project unit "$base" "$shard"
+  # The dark pass (storybook-dark) runs on main (pnpm test:storybook), not in the PR check: it renders every
+  # story a second time, and the PR check keeps to light (FLOW-833).
   vitest_project storybook "$base" "$shard"
 }
 

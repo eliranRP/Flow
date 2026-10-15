@@ -116,8 +116,6 @@ function row(canvasElement: HTMLElement) {
   return within(canvasElement).getByRole("group", { name: "מעבר בין תנועות" });
 }
 
-const dark = { globals: { theme: "dark" } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** The first row: הקודמת is hidden in its place, so "1 מתוך 3" stays centred. */
 export const First: Story = {
@@ -129,8 +127,6 @@ export const First: Story = {
     await expect(within(canvasElement).getByRole("button", { name: "התנועה הבאה" })).toBeVisible();
   },
 };
-export const First320: Story = { ...First, name: "First in a list, 320", ...at320 };
-export const FirstDark: Story = { ...First, name: "First in a list, dark", ...dark };
 
 /** A middle row: both words, the counter between them, and no arrows in the top bar. */
 export const Middle: Story = {
@@ -142,8 +138,6 @@ export const Middle: Story = {
     await expect(within(canvasElement).getByRole("button", { name: "התנועה הבאה" })).toBeVisible();
   },
 };
-export const Middle320: Story = { ...Middle, name: "In a list, 320", ...at320 };
-export const MiddleDark: Story = { ...Middle, name: "In a list, dark", ...dark };
 
 /** The last row: הבאה is hidden in its place. */
 export const Last: Story = {
@@ -155,5 +149,3 @@ export const Last: Story = {
     await expect(within(canvasElement).getByRole("button", { name: "התנועה הקודמת" })).toBeVisible();
   },
 };
-export const Last320: Story = { ...Last, name: "Last in a list, 320", ...at320 };
-export const LastDark: Story = { ...Last, name: "Last in a list, dark", ...dark };

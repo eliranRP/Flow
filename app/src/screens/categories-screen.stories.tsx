@@ -21,14 +21,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const CategoriesList: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/categories" tabs>
-      <ExampleBar />
-      <CategoriesScreen sample={sampleCategories} />
-    </StoryRoute>
-  ),
-};
 
 /** FLOW-406 (mockup cat-b): a parent says how many sub-categories it has and opens them. */
 const parentCategories: Array<CategoryRow & { count?: number }> = [
@@ -120,7 +112,6 @@ const longHebrewCategories: Array<CategoryRow & { count?: number }> = [
 ];
 
 export const CategoriesLongHebrew: Story = {
-  parameters: { viewport: { defaultViewport: "flow320" } },
   render: () => (
     <StoryRoute entry="/settings/categories" tabs>
       <ExampleBar />
@@ -187,7 +178,6 @@ export const CategoriesKeptOutLoanMenu: Story = {
 };
 
 export const CategoriesKeptOutLongHebrew: Story = {
-  parameters: { viewport: { defaultViewport: "flow320" } },
   render: () => (
     <StoryRoute entry="/settings/categories" tabs>
       <ExampleBar />

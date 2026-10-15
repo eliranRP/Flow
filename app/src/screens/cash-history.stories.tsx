@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { sampleCashYearMonths, sampleCashYears } from "../dev/cash-sample";
-import { at320, dark } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { CashHistorySkeleton, CashHistoryScreen, CashYearScreen } from "./cash-history";
 
@@ -29,8 +28,6 @@ export const Years: Story = {
     await expect(canvas.getAllByRole("link", { name: /^תזרים \d{4} / })).toHaveLength(4);
   },
 };
-export const YearsDark: Story = { ...Years, name: "History, years, dark", ...dark };
-export const Years320: Story = { ...Years, name: "History, years, 320", ...at320 };
 
 export const YearsTwoCurrencies: Story = {
   name: "History, years, a second currency",
@@ -62,8 +59,6 @@ export const Year: Story = {
     await expect(canvas.getAllByRole("link", { name: /^תזרים \S+ \d{4} / })).toHaveLength(12);
   },
 };
-export const YearDark: Story = { ...Year, name: "A past year, dark", ...dark };
-export const Year320: Story = { ...Year, name: "A past year, 320", ...at320 };
 
 export const Loading: Story = {
   name: "History, loading",

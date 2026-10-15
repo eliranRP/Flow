@@ -34,6 +34,4 @@ function OnBand() {
 }
 
 export const Page: Story = { tags: ["clip-no-text"], render: () => <OnPage /> };
-export const PageDark: Story = { tags: ["clip-no-text"], globals: { theme: "dark" }, render: () => <OnPage /> };
 export const Band: Story = { tags: ["clip-no-text"], render: () => <OnBand /> };
-export const BandDark: Story = { tags: ["clip-no-text"], globals: { theme: "dark" }, render: () => <OnBand /> };
