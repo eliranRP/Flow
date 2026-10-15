@@ -16,7 +16,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-
 function page(options: SampleTeamOptions = {}) {
   return () => (
     <TeamStory entry="/settings/team" tabs options={options}>
@@ -29,9 +28,14 @@ function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
+export const Team: Story = { name: "Team (a-1)", render: page() };
 
+export const Pending: Story = { name: "Pending invite (invite-2)", render: page({ pendingInvite: true }) };
 
 export const Alone: Story = { name: "Only the owner", render: page({ alone: true }) };
+export const Loading: Story = { render: page({ hold: ["listTeam"] }) };
+export const Failed: Story = { name: "Read failed", render: page({ fail: { listTeam: "Failed to fetch" } }) };
+export const Editor: Story = { name: "An editor reads it", render: page({ role: "editor" }) };
 
 export const Invite: Story = {
   name: "Invite sheet (invite-1)",

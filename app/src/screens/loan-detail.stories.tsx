@@ -64,6 +64,8 @@ export const Demand: Story = { name: "Demand", ...loan("loan-partner") };
 /** FLOW-138 "Hide" (FLOW-356): נפרעה and its date lead; no balance, no תשלום חודשי and no מצב row. */
 export const PaidOffWithBalanceSE: Story = { name: "Paid off with a balance left, 375×667", ...loan("loan-old"), ...se };
 export const Viewer: Story = { name: "Viewer", args: { loanId: "loan-bridge", store: () => oneLoanStore("loan-bridge"), viewer: true } };
+export const Loading: Story = { name: "Loading", ...loan("loan-mortgage", { phase: "loading" }) };
+export const LoadError: Story = { name: "Error", ...loan("loan-mortgage", { phase: "error" }) };
 export const NotFound: Story = { name: "Not found", args: { loanId: "no-such-loan", store: () => sampleLoanStore() } };
 
 function bodyOf(canvasElement: HTMLElement) {

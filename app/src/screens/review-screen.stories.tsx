@@ -24,6 +24,14 @@ export const ReviewEmpty: Story = {
   ),
 };
 
+export const ReviewCardQueue: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[sampleReview]} search="" sample />
+    </StoryRoute>
+  ),
+};
 
 export const ReviewCardViewer: Story = {
   render: () => (

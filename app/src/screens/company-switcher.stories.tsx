@@ -54,6 +54,11 @@ async function open(canvasElement: HTMLElement) {
 
 export const Band: Story = { name: "Band, the company's name", render: home({ twoCompanies: true }) };
 
+export const Switcher: Story = {
+  name: "Switcher (a-3)",
+  render: home({ twoCompanies: true }),
+  play: async ({ canvasElement }) => { await open(canvasElement); },
+};
 
 export const WithInvite: Story = {
   name: "Switcher with an invite (invite-4)",
@@ -74,6 +79,11 @@ export const Declined: Story = {
   },
 };
 
+export const ViewerNoNew: Story = {
+  name: "Switcher, a viewer (no + חברה חדשה)",
+  render: home({ role: "viewer", twoCompanies: true }),
+  play: async ({ canvasElement }) => { await open(canvasElement); },
+};
 
 export const ListLoading: Story = {
   name: "Switcher, list loading",
