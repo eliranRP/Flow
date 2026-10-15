@@ -88,7 +88,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: git fetch --no-tags origin main
+      # The container runs as root, but the checkout belongs to the runner's user: git refuses the repo
+      # until the workspace is marked safe.
+      - name: Mark the workspace safe and fetch main
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git fetch --no-tags origin main
       - name: Related app unit and Storybook tests (shard ${{ matrix.shard }}/3)
         run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/3
 

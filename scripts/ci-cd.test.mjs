@@ -927,6 +927,10 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   assert.ok(tests.includes(`image: mcr.microsoft.com/playwright:v${playwrightVersion}-noble`));
   assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/3"));
   assert.equal(tests.includes("playwright install"), false);
+  // The container runs as root on a checkout the runner owns: the workspace is marked safe before the fetch.
+  const containerSteps = tests.slice(tests.indexOf("Mark the workspace safe"));
+  assert.ok(containerSteps.indexOf("safe.directory") < containerSteps.indexOf("git fetch --no-tags origin main"));
+  assert.match(tests, /Mark the workspace safe and fetch main\n {8}shell: bash\n/);
 
   // Database: only when the diff touches supabase/, and Supabase starts without the services the checks don't use.
   const db = jobIn(pr, "db");
