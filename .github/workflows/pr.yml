@@ -6,8 +6,8 @@ name: pr
 # because the diff does not touch its area. main runs the full suite on every merge (ci.yml).
 # No secrets here: the production deny-list secret stays on main.
 # FLOW-835: the typecheck is its own job (types), beside static; the app tests run in six shards; and the
-# PR jobs restore the pnpm store from main's cache and never save one (ci.yml saves it), so a job's
-# post-step does not wait on an upload.
+# runner jobs restore the pnpm store from main's cache and never save one (ci.yml saves it), so a job's
+# post-step does not wait on an upload. The test shards run in a container and install without it.
 on:
   pull_request:
     branches:
@@ -118,10 +118,6 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6]
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
-    env:
-      # The container's PNPM_HOME is not the runner's, so pnpm would pick another store path, and actions/cache
-      # keys its version on the path: pin main's path so the restore hits.
-      npm_config_store_dir: /home/runner/setup-pnpm/node_modules/.bin/store
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -133,16 +129,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - name: Locate the pnpm store
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      # Read only: a PR job restores main's store and never saves one, so no post-step upload is waited on.
-      - name: Restore the pnpm store
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: node-cache-Linux-x64-pnpm-
+      # No store restore here: main saves its store with zstd, and the cache version of an archive made in
+      # this container differs, so a restore always misses. A cold install costs a few seconds.
       # The container runs as root, but the checkout belongs to the runner's user: git refuses the repo
       # until the workspace is marked safe.
       - name: Mark the workspace safe and fetch main

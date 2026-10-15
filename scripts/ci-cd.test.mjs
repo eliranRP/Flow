@@ -910,13 +910,16 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
     assert.match(body, /uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1\n {8}with:\n {10}fetch-depth: 0\n/, name);
     assert.ok(body.indexOf("actions/checkout") < body.indexOf("git fetch --no-tags origin main"), name);
   }
-  // FLOW-835: the PR jobs restore main's pnpm store read-only, keyed on pnpm-lock.yaml, and set setup-node's cache off,
-  // so no job waits on a cache save in its post-step. Only ci.yml saves the store.
+  // FLOW-835: the PR jobs set setup-node's cache off, so no job waits on a cache save in its post-step, and the
+  // runner jobs restore main's pnpm store read-only, keyed on pnpm-lock.yaml. Only ci.yml saves the store.
   for (const name of ["static", "types", "tests", "db"]) {
+    const body = jobIn(pr, name);
+    assert.equal(body.includes("cache: pnpm"), false, `${name} saves no cache`);
+  }
+  for (const name of ["static", "types", "db"]) {
     const body = jobIn(pr, name);
     assert.match(body, /uses: pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n {8}with:\n {10}version: 10\.33\.3\n/, name);
     assert.match(body, /uses: actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0\n {8}with:\n {10}node-version: 22\n/, name);
-    assert.equal(body.includes("cache: pnpm"), false, `${name} saves no cache`);
     assert.ok(body.includes("run: echo \"path=$(pnpm store path --silent)\" >> \"$GITHUB_OUTPUT\"\n"), name);
     assert.match(body, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: \$\{\{ steps\.pnpm-store\.outputs\.path \}\}\n {10}key: node-cache-Linux-x64-pnpm-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}\n {10}restore-keys: node-cache-Linux-x64-pnpm-\n/, name);
     assert.ok(body.indexOf("actions/setup-node") < body.indexOf("pnpm store path"), name);
@@ -937,8 +940,8 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // Tests: six shards in the Playwright image of the version app/package.json pins, so no browser install.
   const tests = jobIn(pr, "tests");
   assert.match(tests, /shard: \[1, 2, 3, 4, 5, 6\]\n/);
-  // The container's home differs from the runner's: the store path is pinned to main's so the restore hits.
-  assert.match(tests, /npm_config_store_dir: \/home\/runner\/setup-pnpm\/node_modules\/\.bin\/store\n/);
+  // The container cannot read main's store cache (another cache version), so the shards restore none.
+  assert.equal(tests.includes("actions/cache/restore"), false);
   assert.match(tests, /fail-fast: false\n/);
   assert.ok(tests.includes(`image: mcr.microsoft.com/playwright:v${playwrightVersion}-noble`));
   assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/6"));
