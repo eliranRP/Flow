@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Decides whether this main run tests and deploys. Pull requests are checked locally before the push
-# (scripts/local-ci.sh), so main runs the full suite and the deploy in batches: once FLOW_DEPLOY_BATCH
-# merges (default 5) that change something outside docs/ have landed since the last successful
-# production deploy, or on a manual run.
-# Writes run=true or run=false to $GITHUB_OUTPUT.
+# Decides what this main run does. Every push to main runs the full suite (run=true): the pr workflow
+# checks a PR before its merge, but a merge can still break what it did not reach. The deploy runs in
+# batches (deploy=true): once FLOW_DEPLOY_BATCH merges (default 5) that change something outside docs/ have
+# landed since the last successful production deploy, or on a manual run.
+# Writes run=true and deploy=true or deploy=false to $GITHUB_OUTPUT.
 set -euo pipefail
 
 batch="${FLOW_DEPLOY_BATCH:-5}"
@@ -11,8 +11,9 @@ out="${GITHUB_OUTPUT:-/dev/stdout}"
 gh_cmd="${FLOW_GH:-gh}"
 repo="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
+# decide DEPLOY MESSAGE: every main run tests; DEPLOY says whether this one also deploys.
 decide() {
-  echo "run=$1" >> "$out"
+  printf 'run=true\ndeploy=%s\n' "$1" >> "$out"
   echo "$2"
   if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo "$2" >> "$GITHUB_STEP_SUMMARY"
@@ -44,4 +45,4 @@ count="$(git rev-list --count --first-parent "${last}..HEAD" -- ':(top)' ':(top,
 if (( count >= batch )); then
   decide true "${count} merges since the last deploy (${last:0:7}): the full suite runs, then the deploy."
 fi
-decide false "${count} of ${batch} merges since the last deploy (${last:0:7}). No CI or deploy this time. Run the ci workflow by hand to deploy now."
+decide false "${count} of ${batch} merges since the last deploy (${last:0:7}). The full suite runs; no deploy this time. Run the ci workflow by hand to deploy now."

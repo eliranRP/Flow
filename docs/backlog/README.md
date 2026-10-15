@@ -29,12 +29,11 @@ Every task goes through these steps, in this order. Work on one small task per c
 | 1 | Claim | Coordinator | A `ready` task file | A branch and a draft PR titled `FLOW-<id>: <title>` | The draft PR exists and the task's status says `claimed` |
 | 2 | Brief | Coordinator | The task | A short brief (see [Writing a brief](#writing-a-brief)) | Every open question is answered in the brief |
 | 3 | Build | Builder | The brief and the branch | Commits pushed to the branch, PR marked ready | Lint, typecheck, and the touched tests pass locally, the push passed the pre-push check, and the builder has stopped |
-| 4 | Code review | Code reviewer | The PR and its head commit, as soon as it is pushed | A verdict, a findings report, and patches | The verdict is APPROVED or CHANGES REQUESTED |
-| 4b | Design review (only if the UI changes) | Design reviewer | The PR, the approved mockup, screenshots, as soon as it is pushed | A verdict, findings, and patches | The verdict is APPROVED or CHANGES REQUESTED |
+| 4 | Review | One Haiku 5.5 reviewer per PR, with one checklist: code; pixels; motion. The pixel check runs only when the UI changes | The PR and its head commit, as soon as it is pushed. For pixels: the brief's board values, and the `scripts/story-shots.mjs` shots at 320 and 393 px, in dark and light | A verdict, a findings report, and patches | The verdict is APPROVED or CHANGES REQUESTED, for the head it reviewed |
 | 5 | Fix round (only if changes were requested) | Coordinator | The reviewers' patches | The patches applied and pushed | Tests pass and the reviewers approve the new head. One round only |
-| 6 | Local CI | The pre-push hook, on whoever pushes | Every push to a PR branch (steps 3 and 5) | `scripts/local-ci.sh`, scoped to what the branch changes against `main` (`git diff origin/main...HEAD`; FLOW-813): lint, the `check (core)` steps, the unit and Storybook vitest tests those files reach (on a later push of the branch, only what changed since its last green push, FLOW-821; app CSS and e2e files no longer run every test; setup, config, design, scripts or a removed file still do), up to 6 e2e specs that reach them, and, for a migration or pgTAP change, a fresh local database, the flow-mcp smoke, the db types check and the pgTAP files that name what changed. Under 3 minutes for a UI push, about 5 for a migration. A merge of `main` re-runs nothing for `main`'s own changes | The push went through. The hook stops a push that fails, and GitHub runs no CI on pull requests |
-| 7 | Merge | Coordinator | A PR whose reviewers approved its current head | A squash merge | The PR is merged right after the approval. The branch does not need to be up to date with `main` |
-| 8 | Deploy check (per batch) | Coordinator | The `ci` run on `main` that deploys the batch: after every 5 merges, or a manual run | The `deploy` job result and `build.txt` on the Pages site | The last line of `build.txt` is the batch's last merge sha, and any migration is recorded |
+| 6 | PR check | Two parts: the pre-push hook (on whoever pushes), then the `pr` workflow on GitHub (`.github/workflows/pr.yml`) | Every push to a PR branch (steps 3 and 5). The hook runs `scripts/local-ci.sh --part quick`: ESLint on the files the branch changes against `main`, under 20 seconds. The `pr` workflow runs, as parallel jobs: `pr (static)` (`--part static`: migration, file-size and backlog checks, flow-mcp's Deno tests, the typecheck, the unused-code and CSS checks, the scripts tests when `scripts/` changed, and the edge functions when they change; the connector tests and the Mercury deny-list check run on main only, since they read the `MERCURY_FIXTURE_DENYLIST` secret, and so do the dist builds), `pr (tests 1/3..3/3)` (`--part tests`: the app unit and Storybook vitest tests the change reaches, in three shards), and `pr (db)` (`--part db`, only when the diff touches `supabase/`: a fresh local database, the flow-mcp smoke, the pgTAP files that name the change, and the db types check) | The `pr` check is green: it passes only when every job it needs passed, or `pr (db)` was skipped because the diff does not touch `supabase/`. The hook stops a push whose quick check fails. Target: 2 minutes or less for a UI or server PR, about 4 for a migration (FLOW-832) |
+| 7 | Merge | Coordinator | A PR whose `pr` check is green on its current head, and whose reviewer approved that head | A squash merge | The PR is merged right after both. The branch does not need to be up to date with `main` |
+| 8 | Deploy check (per batch) | Coordinator | The `ci` run on `main`. Every merge runs the full suite there; the `deploy` job runs on every 5th merge since the last deploy (or on a manual run) | The `deploy` job result and `build.txt` on the Pages site, for a batch that deployed | The last line of `build.txt` is the batch's last merge sha, and any migration is recorded |
 | 9 | Prod check (per batch) | Coordinator | The live app and the MCP tools, for every task in the batch | A short note of what was checked | The changed screen or tool works on a real company, read-only, and the numbers match the PR |
 | 10 | Tell the data agent | Coordinator | What went live | A message to the MCP/data agent | The message is sent, with the new or changed tools |
 | 11 | Close the task | Coordinator | The merged PR | The task moved to Done; follow-ups added as new tasks | The task file says `done (#PR)` in the next PR that touches it, and TASKS.md is regenerated |
@@ -43,10 +42,11 @@ Every task goes through these steps, in this order. Work on one small task per c
 flowchart TD
   A["1. Claim: draft PR"] --> B["2. Brief"]
   B --> C["3. Build, push, stop"]
-  C --> D["4. Code review (4b. design review if UI)"]
+  C --> P["6. PR check: the pr workflow runs on GitHub"]
+  P --> D["4. Review (code, pixels, motion)"]
   D -->|"changes requested"| E["5. Coordinator applies patches (one round)"]
   E --> D
-  D -->|"approved"| G["7. Merge"]
+  D -->|"approved, pr check green"| G["7. Merge"]
   G -->|"5th merge since the last deploy, or a manual run"| H["8. main runs the full suite and deploys; build.txt shows the batch's last sha"]
   H --> I["9. Prod check, read-only"]
   I --> J["10. Tell the MCP/data agent"]
@@ -60,12 +60,12 @@ Limits that apply to the whole cycle:
 - **At most 2 builder runs per task.** A third run needs the coordinator's written reason in the PR. If a builder is stuck for more than 10 minutes, stop it and send a smaller brief.
 - **Only Blocking and Should findings block a merge.** Nits become new task files (`docs/backlog/tasks/FLOW-<id>.md`, type `BACKLOG NIT`).
 - **Fixes first.** A fix round for a PR in review goes before any new build.
-- **Local CI on every push.** Every agent runs `bash scripts/cloud-agent-install.sh` before its first push. It turns on the pre-push hook in `.githooks/`, which runs `scripts/local-ci.sh` and stops a push that fails. Never push with `--no-verify`. The default gate is enough for every PR, migrations included; `main` runs the full suite before each deploy. `FLOW_LOCAL_CI=full git push` (about 12 minutes) is optional, for a change you want checked against everything first.
+- **Quick check on every push.** Every agent runs `bash scripts/cloud-agent-install.sh` before its first push. It turns on the pre-push hook in `.githooks/`, which runs `scripts/local-ci.sh --part quick` (the scoped lint, under 20 seconds) and stops a push that fails. Never push with `--no-verify`. The rest of the gate runs on GitHub in the `pr` check, so a PR is checked before it merges; `main` runs the full suite on every merge. `FLOW_LOCAL_CI=default git push` runs the scoped default gate on the pusher's machine instead, and `FLOW_LOCAL_CI=full git push` (about 12 minutes) the full suite.
 - **After a merge of main.** The default gate looks only at what the PR changes against `main`. When a merge of `main` leaves the PR's own patch unchanged, the push passes in seconds; otherwise it re-runs only what the PR's files reach.
 - **Claim at once.** A push that changes only `docs/` or Markdown runs the file-size check only, so open the draft PR with its docs-only claim commit (the task's status line) the moment you claim the task.
 - **Gate times.** Every run appends a line to `gate-times.log` beside the shared cache (`/mnt/project-files/ci/`): time, branch, mode, seconds, result, and when each part started.
-- **Merge on approval.** Send the PR to the reviewers as soon as it is pushed. Merge (squash) as soon as they approve the current head. GitHub runs no CI on pull requests, so there is nothing else to wait for.
-- **Deploys go in batches.** A push to `main` runs the `ci` workflow, but its `plan` job stops it until 5 PRs have merged since the last successful deploy. Then `main` runs the full suite (every story, both e2e shards, pgTAP) and deploys. To deploy sooner, run the `ci` workflow by hand on `main` (Actions, then `ci`, then Run workflow). The deploy check and the prod check happen once per batch, for every task in it.
+- **Merge on approval.** Send the PR to the reviewer as soon as it is pushed. Merge (squash) once the reviewer approves the current head and the `pr` check is green on that same head. An approval counts only for the head it was given on.
+- **Main tests every merge; deploys go in batches.** Every push to `main` runs the full suite in the `ci` workflow: every story, both e2e shards, pgTAP. The workflow's `plan` job lets the deploy through only on the 5th merge since the last successful deploy (a merge that changes only `docs/` does not count), or on a manual run. To deploy sooner, run the `ci` workflow by hand on `main` (Actions, then `ci`, then Run workflow). The deploy check and the prod check happen once per batch, for every task in it.
 - **A red batch comes first.** If the full suite fails on `main`, nothing deploys. The fix is the next PR to merge, and no other PR merges before it. After it merges, run the `ci` workflow by hand to deploy the batch.
 - **No catch-up merges.** Merge `main` into a branch only to fix a conflict. Check for conflicts after every merge.
 - **Production is read-only for checks.** Never write to production to test a change.
@@ -105,7 +105,7 @@ pnpm db:types:check
 pnpm build-storybook && pnpm clip-check   # then read clip-report.txt; the console shows only 40 lines
 ```
 
-The builder runs lint, typecheck, and the touched tests, then pushes. The pre-push hook runs `scripts/local-ci.sh` on the files the PR changes against `main` (app parts that already passed on the same inputs are skipped) and stops a push that fails. It builds Storybook and runs the layout specs and the every-story check only when a Storybook spec or the Storybook setup changes; otherwise the vitest Storybook tests cover the changed stories. A `package.json`, tsconfig or `pnpm-lock.yaml` change counts as a setup change only when it changes what the Storybook build reads: the app's dependencies and Storybook scripts, the compiler options, or the app's lockfile entries (`scripts/storybook-stories.mjs`). `main` runs the full set before each deploy. A reviewer may run it locally on the patched code.
+The builder runs lint, typecheck, and the touched tests, then pushes. The pre-push hook runs the quick check (`scripts/local-ci.sh --part quick`: ESLint on the files the PR changes against `main`) and stops a push that fails. The `pr` check runs the rest on GitHub: the static checks and the lint of the files that import them, the vitest unit and Storybook tests the change reaches (`scripts/storybook-stories.mjs` says which), and the database checks when the diff touches `supabase/`. The Storybook build, its layout specs, the every-story check and the e2e specs are not in the `pr` check; `main` runs them on every merge. A reviewer or builder may run them locally with `FLOW_LOCAL_CI=default git push`, or `bash scripts/local-ci.sh` for the scoped default gate.
 
 ## How the team works
 
@@ -152,8 +152,8 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 
 ### Merging and after the merge
 
-- A lane merges its own PR once every gate has passed (code review, design review if the UI changed, local CI on the push). It does not ask the owner.
-- PR flow: run `bash scripts/cloud-agent-install.sh` before the first push, so the pre-push hook runs local CI; send the PR to reviewers right after the push; squash-merge (or turn on squash auto-merge) once they approve the current head. Before any later push, turn auto-merge off; turn it on again after the new head is approved. Changelog entries go in `docs/changelog.d/` only.
+- A lane merges its own PR once every gate has passed (the review of the current head, and the `pr` check green on it). It does not ask the owner.
+- PR flow: run `bash scripts/cloud-agent-install.sh` before the first push, so the pre-push hook runs the quick check; send the PR to the reviewer right after the push; squash-merge (or turn on squash auto-merge) once the reviewer approves the current head and the `pr` check is green on it. Before any later push, turn auto-merge off; turn it on again after the new head is approved. Changelog entries go in `docs/changelog.d/` only.
 - While a PR waits on review, check it about once a minute. Never leave a PR idle.
 - After the merge, tell the MCP/data agent what changed and what it means for bookkeeping (new or changed tools, totals that will move).
 
@@ -222,8 +222,7 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 | --- | --- | --- |
 | [Coordinator](#coordinator) | 1, runs the whole time | Every step |
 | [Builder](#builder) | 1 new agent per task | Step 3 |
-| [Code reviewer](#code-reviewer) | 1 (2 for large or risky PRs) | Steps 4 and 5 |
-| [Design reviewer](#design-reviewer) | 1 | Steps 4b and 5, only when the UI changes |
+| [Reviewer](#reviewer) | 1 Haiku 5.5 reviewer per PR, for the code, the pixels and the motion | Steps 4 and 5 |
 | [MCP/data agent](#mcpdata-agent) | 1, runs the whole time | Step 10, and data clean-up |
 | [Plan reviewer](#plan-reviewer-optional) | Optional | PLAN FIRST tasks, before step 1 |
 
@@ -233,7 +232,7 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 - Start a new builder for every task, and retire it at the merge. Never reuse an agent with a long history.
 - Briefs point to exact files and line ranges, so the builder reads little.
 - The coordinator applies reviewer patches itself. That costs no builder run.
-- A small fix round needs only the code reviewer. The design reviewer joins only if the fix changes the UI.
+- A small fix round goes back to the same reviewer, one checklist, for the new head only.
 - Answer open questions before the builder starts, so no run is wasted on a wrong guess.
 
 ### Coordinator
@@ -247,16 +246,16 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 ```text
 You are the Flow coordinator for this public repo.
 Your job: move one task or batch at a time through the cycle in docs/backlog/README.md:
-claim -> brief -> build (the pre-push hook runs local CI) -> code review (+ design review if UI)
+claim -> brief -> build (the pre-push quick check; the pr check on GitHub) -> review (code, pixels, motion)
 -> one fix round -> merge -> per batch of 5 merges: deploy check (build.txt shows the last sha) -> prod check
 -> tell the MCP/data agent -> close.
 Do:
 - Before claiming, search open PRs and branches for the task id. Claim with a draft PR "FLOW-<id>: <title>".
 - Write a short brief: exact files and line ranges, tests to write first, the MCP tool, the gate, "push and stop".
 - Start ONE new builder per task on a cheap model. At most 2 builder runs per task.
-- Send every PR to the code reviewer. Add the design reviewer only when the UI changes.
+- Send every PR to the reviewer. The reviewer's checklist covers the code, the pixels (UI only) and the motion.
 - Apply reviewer patches yourself: git apply --check, run the touched tests, push. One fix round.
-- Run bash scripts/cloud-agent-install.sh before your first push, so the pre-push hook runs local CI. Never --no-verify.
+- Run bash scripts/cloud-agent-install.sh before your first push, so the pre-push quick check runs. Never --no-verify.
 - Send the PR to the reviewers right after the push. Squash-merge as soon as they approve the current head.
   Merge main into a branch only to fix a conflict.
 - main deploys after every 5 merges, or when you run the ci workflow by hand. If that run is red, the fix PR
@@ -291,59 +290,32 @@ Do:
   (never edit docs/changelog.md).
 - Write anything unclear under "Decisions needed" in the PR body. Don't guess.
 Run bash scripts/cloud-agent-install.sh once first; it turns on the pre-push hook.
-Then run pnpm lint, pnpm typecheck, and the touched tests. Push (the hook runs scripts/local-ci.sh;
+Then run pnpm lint, pnpm typecheck, and the touched tests. Push (the hook runs the quick check;
 if it fails, fix it and push again, never --no-verify), open or update the PR, and STOP.
 Don't watch CI, re-run jobs, take screenshots, or run mutation tests.
 Final reply: at most 10 lines. The head commit sha, then one line per brief item.
 ```
 
-### Code reviewer
+### Reviewer
 
-- **Purpose:** finds bugs before the merge. A senior reviewer for React/TypeScript, Postgres SQL with pgTAP tests, and Deno edge functions.
-- **Involved:** in step 4 for every PR, and in step 5 to check the fix.
-- **Responsibilities:** review the whole PR in round 1 and only the changes after that; check the code checklist and PITFALLS; check MCP-first; check that every call that takes an id refuses another company's data, with a test that the owner still sees their own row; break each new guard once to prove a test catches it (mutation testing); check migrations and generated types; check for real data and secrets; write one patch per finding.
+- **Purpose:** one reviewer per PR, on Haiku 5.5, for the code, the pixels and the motion. It finds what would break the app or the design before the merge.
+- **Involved:** in step 4 for every PR, and in step 5 to check the fix (the same reviewer, for the new head only).
+- **Responsibilities:** review the whole PR in round 1 and only the changes after that. Code: correctness, the code checklist and PITFALLS, MCP-first, company isolation (every call that takes an id refuses another company's data, with a test), migrations and generated types, no real data or secrets. Pixels (UI only): compare the screen with the brief's board values, with the `scripts/story-shots.mjs` shots at 320 and 393 px, in dark and light; check right-to-left, amounts that never wrap or get cut, tap targets of 44 px, and the focus and state screens. Motion (UI only): compare with the motion spec.
 - **Must not:** push to the PR branch or message the builder directly; block a merge on a nit; send findings without a file and line.
-- **Output:** a first line `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; a report `PR-REVIEW.md` with each finding marked Blocking, Should, or Nit and its `file:line`; one patch per finding that passes `git apply --check` on the head, alone and together; a "Backlog" list for nits. Keep the report and patches in a review folder outside the repo.
+- **Output:** a first line `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; findings marked Blocking, Should, or Nit, each with `file:line` and a patch that passes `git apply --check` on the head; the shots it compared; a "Backlog" list for nits.
 
 ```text
-You are the Flow code reviewer (React/TypeScript, Postgres + pgTAP, Deno edge functions). The repo is public.
+You are the Flow reviewer (React/TypeScript, Postgres + pgTAP, Deno edge functions, and the UI). The repo is public.
 Review PR #<n> at head <sha>. Round 1: review everything. Later rounds: review only what changed.
-Check:
-- correctness, docs/review/CHECKLIST-code.md and docs/review/PITFALLS.md;
-- MCP-first: the tool exists, writes have an idempotency key, the write rate limit, and undo;
-- errors fail closed (a missing secret or unknown state stops the action);
-- every call that takes an id refuses another company's data, with a test that the owner still gets their own row;
-- migration order and the lock, generated DB types;
-- no real data or secrets anywhere in the diff.
-Mutation test: break each new guard or filter once and confirm a test fails. Report any that survive.
-Write PR-REVIEW.md and one patch per finding in a review folder outside the repo.
-Each patch must pass `git apply --check` on the head, alone and together.
-Mark each finding Blocking, Should, or Nit, with file:line. Put nits under "Backlog".
+Code: correctness; docs/review/CHECKLIST-code.md and docs/review/PITFALLS.md; MCP-first; errors fail closed;
+every call that takes an id refuses another company's data, with a test that the owner still gets their own row;
+migration order and the lock; generated DB types; no real data or secrets. Break each new guard once and confirm a test fails.
+Pixels (only if the UI changes): compare with the brief's board values. Run pnpm build-storybook, then
+scripts/story-shots.mjs at 320 and 393 px, in dark and light. Check docs/review/CHECKLIST-design.md, docs/qa/CONTROLS.md,
+right-to-left layout, numbers in <bdi>, amounts that never wrap or get cut, tap targets of 44 px, focus and states.
+Motion (only if the UI changes): check the motion spec for the changed screens.
+Mark each finding Blocking, Should, or Nit, with file:line and a patch that passes `git apply --check`. Put nits under "Backlog".
 First line of your reply: "#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED".
-Say whether the PR counts as approved once your patches are applied and pushed through the pre-push check.
-```
-
-### Design reviewer
-
-- **Purpose:** makes sure the screen matches the approved design and works on small phones, right to left.
-- **Involved:** in step 4b, and in step 5 if the fix changes the UI. Only for PRs that change the UI.
-- **Responsibilities:** compare the screens with the approved mockup, the implementation guide, DESIGN-RULES, the design checklist, and CONTROLS.md; check 320, 390, and 480px wide, and 375x667 for sticky bars, light and dark; check the PR adds a design log entry when it changes a look or a behavior; check right-to-left layout and numbers; check that amounts never wrap or get cut; run the clip check; check focus, loading, empty, error, and busy states; check tap targets of at least 44px; check the wording is short.
-- **Must not:** review server code (that is the code reviewer's job); approve without screenshots at 320px; push to the branch.
-- **Output:** a first line `#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; findings marked Blocking, Should, or Nit with `file:line`, each with a patch that passes `git apply --check`; screenshots; a "Backlog" list for later items.
-
-```text
-You are the Flow design reviewer. Review the UI in PR #<n> at head <sha>.
-Compare with: the approved mockup, design/system/implementation-guide.md, docs/design/DESIGN-RULES.md,
-docs/review/CHECKLIST-design.md, and docs/qa/CONTROLS.md.
-Check at 320, 390, and 480px wide, and 375x667 for sticky bars, light and dark:
-- a PR that changes a look or a behavior adds docs/design/log/YYYY-MM-DD-flow-<id>.md with a Rule: line;
-- spacing and colours come from design tokens; one main button per screen;
-- right-to-left layout; numbers inside <bdi>; amounts never wrap or get cut;
-- clipping: run pnpm build-storybook && pnpm clip-check;
-- focus moves in and back correctly; loading, empty, error, and busy states; tap targets of at least 44px;
-- short Hebrew wording, icons first.
-Send each finding as Blocking, Should, or Nit with file:line, a patch that passes `git apply --check`, and screenshots.
-First line: "#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED". Put later items under "Backlog".
 ```
 
 ### MCP/data agent

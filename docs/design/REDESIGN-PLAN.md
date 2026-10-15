@@ -16,16 +16,15 @@ This plan turns the approved [Design canvas](https://claude.ai/artifact/9grt9spj
 
 | Team | Model | Does |
 | --- | --- | --- |
-| Planning (lane manager for the redesign) | Opus 5.5 (`claude-opus-5-5`) | This plan, the briefs, the queue, claims, merges, the owner's questions |
+| Planning (lane manager for the redesign) | Opus 5.5 (`claude-opus-5-5`) | This plan, the technical designs, the board-value briefs, the queue, claims, merges, the owner's questions |
 | Execution: builders, one per PR | Haiku 5.5 (`claude-haiku-5-5`) | Builds from a brief, runs lint, typecheck and the touched tests, pushes, and stops ([backlog README, builder](../backlog/README.md#builder)) |
-| Code review | Opus 5.5 | As in the backlog README |
-| Design review team | Opus 5.5, two reviewers per PR | Reviews every component and screen against its canvas board before the merge (see [§6](#6-design-review-team)). Any difference blocks the merge, and the reviewer sends a short list of the differences |
+| Review (code, pixels and motion) | Haiku 5.5 (`claude-haiku-5-5`), one reviewer per PR | One checklist, as in the [backlog README](../backlog/README.md) step 4. Reviews every component and screen against its canvas board before the merge: pixels at 320 and 393 px, in dark and light, and motion (see [§6](#6-design-review-team)). Any difference blocks the merge, and the reviewer sends a short list of the differences |
 
 Execution follows the [backlog README](../backlog/README.md):
 - Two UI lanes, one area per lane.
 - Each PR claims its work with a draft PR.
-- The pre-push hook runs local CI.
-- The PR gets a code review and a design review.
+- The pre-push hook runs the quick check, and the `pr` check runs the rest on GitHub.
+- The PR gets one review, of the code, the pixels and the motion.
 - There is one fix round, then a squash merge.
 
 ## 1. Order
@@ -256,25 +255,23 @@ Each file is deleted in the PR that removes its last reference. Before deleting,
 
 ## 6. Design review team
 
-Two Opus 5.5 reviewers per UI PR, in parallel, each with a narrow brief. Both must approve the head commit.
+One Haiku 5.5 reviewer per UI PR, which also reviews the code (see the [backlog README](../backlog/README.md#reviewer)). The pixel and motion checks are part of its one checklist, and it must approve the head commit.
 
-**Pixel reviewer:**
+**Pixels:**
 - Compares each component or screen with its canvas board at 320 and 393px wide, in dark and light (the board's light twin is on the Light theme page).
 - Measures sizes, type role (size and weight), colour token, spacing, radius, bar thickness and touch targets.
 - Checks RTL: amounts in `<bdi dir="ltr">`, U+2212, chevron icons, and time running right to left.
 - Works from screenshots of the PR's stories made with `scripts/story-shots.mjs`, plus `pnpm clip-check`.
 
-**Motion reviewer:**
+**Motion:**
 - Checks each transition against §2.1: duration, easing, stagger, rise distance and direction (in from the left, past on the right).
 - Checks that reduced motion shows the end state at once.
 - Reads the CSS and the computed styles from the motion tests, and steps the Storybook interaction stories.
 
 **Output and verdict:**
-- Each reviewer opens with `#<n> design-pixel r<round> (head <sha>): APPROVED | CHANGES REQUESTED`, or `design-motion`.
+- The reviewer opens with `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`.
 - After that comes a short list of differences: what, where (`file:line` or story), the board's value and the build's value. A patch is attached when it is small.
 - **Any difference blocks the merge.** There are no "nit" passes on a design difference. A difference that the canvas itself is unclear on goes to the lane manager, who asks the owner.
-
-The charter goes into each design reviewer's prompt, next to the [design reviewer charter](../backlog/README.md#design-reviewer).
 
 ## 7. Briefs for the Haiku builders
 
