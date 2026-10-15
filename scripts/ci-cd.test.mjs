@@ -940,8 +940,9 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // Tests: six shards in the Playwright image of the version app/package.json pins, so no browser install.
   const tests = jobIn(pr, "tests");
   assert.match(tests, /shard: \[1, 2, 3, 4, 5, 6\]\n/);
-  // The container cannot read main's store cache (another cache version), so the shards restore none.
+  // The container missed main's store cache, so the shards restore none and look up no store path.
   assert.equal(tests.includes("actions/cache/restore"), false);
+  assert.equal(tests.includes("pnpm store path"), false);
   assert.match(tests, /fail-fast: false\n/);
   assert.ok(tests.includes(`image: mcr.microsoft.com/playwright:v${playwrightVersion}-noble`));
   assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/6"));
