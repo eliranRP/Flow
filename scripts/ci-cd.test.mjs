@@ -675,7 +675,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.includes('  related_ok || return 1\n'));
   // Lint the changed files and their importers; build only when the change reaches the built app.
   assert.ok(local.includes('scope="$(git diff --name-status "$pr_fork" HEAD | node scripts/gate-scope.mjs --lint)"'));
-  assert.ok(local.includes("xargs -d '\\n' pnpm exec eslint --no-warn-ignored \"$@\" <<<\"$scope\""));
+  assert.ok(local.includes("xargs -d '\\n' pnpm exec eslint --no-warn-ignored <<<\"$scope\""));
   assert.ok(local.includes('-- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]'));
   assert.ok(local.includes('pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"'));
   assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests "${args[@]}"'));
@@ -980,7 +980,10 @@ test("the --part slices: quick lints only, static and tests and db run the scope
 
   // quick: the scoped lint with eslint's cache, nothing else; its whole run has a 20 s budget.
   const quick = functionBody(parts, "slice_quick");
-  assert.ok(quick.includes('lint_part --cache --cache-strategy content --cache-location "$cache/eslint-cache.json"'));
+  // quick lints the files the branch changes, not the files that import them: no lint_part, no gate-scope.
+  assert.ok(quick.includes('--cache --cache-strategy content'));
+  assert.equal(quick.includes("lint_part"), false);
+  assert.equal(quick.includes("gate-scope"), false);
   for (const word of ["install", "build", "vitest", "supabase", "docker", "playwright", "migration-ahead"]) {
     assert.equal(quick.includes(word), false, word);
   }
@@ -994,6 +997,8 @@ test("the --part slices: quick lints only, static and tests and db run the scope
 
   // static: the edge functions only when supabase/functions changed; the typecheck and unused-code checks always.
   const staticSlice = functionBody(parts, "slice_static");
+  // The importer walk runs here, so the PR check covers every file a change reaches.
+  assert.ok(staticSlice.includes("lint_part"));
   assert.ok(staticSlice.includes("grep -q '^supabase/functions/' <<<\"$pr_files\""));
   assert.ok(staticSlice.includes("typecheck_part"));
   assert.ok(functionBody(parts, "typecheck_part").includes("node scripts/check-unused-app-code.mjs"));

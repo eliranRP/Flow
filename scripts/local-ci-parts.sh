@@ -10,7 +10,7 @@
 # A slice runs in a fresh CI container too, so it keeps no marks: the caches above only make a local run faster.
 
 # What eslint reads: the lint of the changed files and every file that imports them (scripts/gate-scope.mjs).
-# A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all. Extra arguments go to eslint.
+# A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all.
 lint_part() {
   local scope
   if (( skips )) && [[ -n "$pr_fork" ]]; then
@@ -21,7 +21,7 @@ lint_part() {
     fi
     if [[ "$scope" != all ]]; then
       echo "local-ci: linting the $(wc -l <<<"$scope") files this branch changes or that import them (main lints all of it)."
-      xargs -d '\n' pnpm exec eslint --no-warn-ignored "$@" <<<"$scope"
+      xargs -d '\n' pnpm exec eslint --no-warn-ignored <<<"$scope"
       return
     fi
   fi
@@ -130,12 +130,23 @@ edge_ready() {
   echo "local-ci: flow-mcp still does not answer after seeding its cache." >&2
 }
 
+# quick (FLOW-832): eslint on the files this branch changes, and nothing they import. The importer walk
+# (lint_part) runs in the static slice, on the PR check, in parallel. A file deleted on the branch is skipped.
 slice_quick() {
-  lint_part --cache --cache-strategy content --cache-location "$cache/eslint-cache.json"
+  local files
+  files="$(git diff --name-only --diff-filter=d "$pr_fork" HEAD | grep -E '\.([cm]?[jt]s|tsx|json)$' || true)"
+  if [[ -z "$files" ]]; then
+    echo "local-ci: lint skipped: this branch changes no file eslint reads."
+    return 0
+  fi
+  echo "local-ci: linting the $(wc -l <<<"$files") files this branch changes (the importers are the static slice's)."
+  xargs -d '\n' pnpm exec eslint --no-warn-ignored --cache --cache-strategy content \
+    --cache-location "$cache/eslint-cache.json" <<<"$files"
 }
 
 slice_static() {
   static_checks
+  lint_part
   if grep -q '^supabase/functions/' <<<"$pr_files"; then
     edge_part
   else
