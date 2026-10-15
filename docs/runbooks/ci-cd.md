@@ -8,7 +8,7 @@ A push to a PR branch is checked in two places. `bash scripts/cloud-agent-instal
 
 `.github/workflows/pr.yml` runs the rest on GitHub for every push to a PR into `main`, as parallel jobs. The `pr` job is the check a merge waits for. It passes only when every job it needs passed, or `pr (db)` was skipped because the diff does not touch `supabase/`.
 
-- `pr (static)`: `--part static`. ESLint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function typecheck when `supabase/functions` changed, the typecheck, the unused-code and CSS checks, and the scripts suite (`node --test scripts/*.test.mjs`) when `scripts/` changed. It runs on a plain runner, not in the Playwright image.
+- `pr (static)`: `--part static`. ESLint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function typecheck when `supabase/functions` changed, the typecheck, the unused-code and CSS checks, the connector tests (`pnpm test:connectors`, which needs no secret), and the scripts suite (`node --test scripts/*.test.mjs`) when `scripts/` changed. It runs on a plain runner, not in the Playwright image. The Mercury deny-list check (`scripts/check-deny-list.mjs`) and both dist builds run on main only: the deny-list needs an Actions secret that fork PRs do not get, and main builds the hosted dist.
 - `pr (tests 1/3)` to `pr (tests 3/3)`: `--part tests --shard i/3`. The app unit and Storybook vitest tests the change reaches, split by shard, in the Playwright image of the version `app/package.json` pins.
 - `pr (db)`, only when the diff touches `supabase/`: `--part db`, on a local Supabase started without studio, postgres-meta, logflare, vector, mailpit, imgproxy, supavisor, realtime, and storage-api. It runs a fresh database, the flow-mcp smoke, the pgTAP files that name the change, and the db types check.
 
@@ -16,7 +16,7 @@ The pull-request workflow runs no e2e specs, no Storybook build or layout specs,
 
 `FLOW_LOCAL_CI=default git push` runs the scoped default gate on the pusher's machine instead (`bash scripts/local-ci.sh`). It also runs the e2e specs the change reaches, with Docker. `FLOW_LOCAL_CI=full git push`, or `bash scripts/local-ci.sh --full`, runs the full suite (about 12 minutes).
 
-- The tree must be clean. A default pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it. A slice writes nothing.
+- The tree must be clean. A default pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it. A slice appends its gate-times line and writes no pass stamp.
 - A change that needs Docker (a database change, or e2e specs that reach it) starts Docker when it is down: containerd first, then `dockerd --containerd=/run/containerd/containerd.sock`. It starts containerd whenever none runs, even if an old socket file is left, waits for it to boot, and starts dockerd once more if the first one exited. In cloud containers a bare `dockerd` can fail with "timeout waiting for containerd". If Docker still won't start, the push fails with those two commands to run by hand. The gate never passes a push with a required phase skipped. A phase it leaves to main (more e2e specs than `FLOW_E2E_MAX`, a patch that already passed on a main that didn't move the database) prints why.
 
 ## When main runs CI and deploys

@@ -2,8 +2,9 @@
 # both the default run and the --part slices use, and the slices themselves (FLOW-832):
 #   quick   the pre-push hook: eslint on the changed files, 20 s (the budget is in local-ci-guard.sh)
 #   static  eslint on the changed files and the files that import them, the migration checks, the edge-function
-#           typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, and the
-#           scripts tests when scripts/ changed (on a plain runner, not in the Playwright image)
+#           typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, the
+#           connector tests (no secret needed), and the scripts tests when scripts/ changed (on a plain runner,
+#           not in the Playwright image). The deny-list check and the dist builds stay on main.
 #   tests   the app unit and Storybook vitest tests the change reaches (--shard i/n passes through to vitest)
 #   db      when supabase/ changed: local Supabase, a fresh database, the flow-mcp smoke, the pgTAP files that
 #           name the change, and the db types check
@@ -153,6 +154,7 @@ slice_static() {
     echo "local-ci: edge-function typecheck skipped: this branch changes no supabase/functions file (main checks them all)."
   fi
   typecheck_part
+  pnpm test:connectors
   if grep -q '^scripts/' <<<"$pr_files"; then
     node --test scripts/*.test.mjs
   fi
@@ -166,7 +168,8 @@ slice_tests() {
   else
     echo "local-ci: every app unit and Storybook test${shard:+, shard $shard}: the change reaches a file the module graph can't follow."
   fi
-  pnpm --filter @flow/app exec playwright install chromium
+  # GitHub's Playwright image carries the browsers (CI is set there); a local run installs them here.
+  if [[ -z "${CI:-}" ]]; then pnpm --filter @flow/app exec playwright install chromium; fi
   vitest_project unit "$base" "$shard"
   vitest_project storybook "$base" "$shard"
 }

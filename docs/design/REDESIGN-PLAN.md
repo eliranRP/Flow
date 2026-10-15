@@ -272,6 +272,7 @@ One Haiku 5.5 reviewer per UI PR, which also reviews the code (see the [backlog 
 - The reviewer opens with `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`.
 - After that comes a short list of differences: what, where (`file:line` or story), the board's value and the build's value. A patch is attached when it is small.
 - **Any difference blocks the merge.** There are no "nit" passes on a design difference. A difference that the canvas itself is unclear on goes to the lane manager, who asks the owner.
+
 ## 7. Briefs for the Haiku builders
 
 Each brief follows [Writing a brief](../backlog/README.md#writing-a-brief) and adds:

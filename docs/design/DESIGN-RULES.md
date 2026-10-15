@@ -1,6 +1,6 @@
 # Flow design rules
 
-Authoritative reference for code review and design review. Rules below are compiled from records already in the repo. Each rule cites its source. If this file and a cited source disagree, the source wins.
+Authoritative reference for the Reviewer's checks (code, pixels and motion). Rules below are compiled from records already in the repo. Each rule cites its source. If this file and a cited source disagree, the source wins.
 
 **Source of truth:** the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) (Design guide and Flow & motion pages) and [REDESIGN-BUILD](REDESIGN-BUILD.md). [implementation-tokens.css](../../design/system/implementation-tokens.css) is the one hand-edited token file ([0181](../decisions/0181-redesign-foundation.md)). Where this file, the implementation guide and the canvas disagree, the canvas wins, and this file is updated.
 

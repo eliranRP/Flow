@@ -6,7 +6,7 @@
 #   --part quick (the pre-push hook, 20 s): eslint with its cache on the files the branch changes, after the migration-order
 #     check. Installs dependencies only when pnpm-lock.yaml changed. No Docker, no build, no tests.
 #   --part static: eslint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function
-#     typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, and the scripts tests when scripts/ changed.
+#     typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, the connector tests, and the scripts tests when scripts/ changed.
 #   --part tests [--shard i/n]: the app unit and Storybook vitest tests the change reaches (vitest --changed
 #     against main; --shard passes through to vitest).
 #   --part db: when supabase/ changed: local Supabase (started when it is down), a fresh database, the
@@ -37,7 +37,7 @@
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
 # On success the default run writes .git/flow-local-ci with the commit it passed on, so the hook can skip a
-# repeat. A slice writes nothing.
+# repeat. A slice appends its gate-times line and writes no pass stamp.
 # FLOW-813: the default run skips the app parts (typecheck, builds, app unit tests, Storybook) whose
 # inputs (the git tree of app, packages, design, _shared and the root configs) already passed here.
 # --full runs everything; FLOW_LOCAL_CI_NO_SKIP=1 only turns these skips off. CSS and token changes

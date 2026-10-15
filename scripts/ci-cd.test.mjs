@@ -856,7 +856,9 @@ test("a gate stopped by a signal stops its whole group and logs a failure", { sk
 test("local-ci.sh sources the guard first, and Docker's daemons start outside the gate's group", () => {
   const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
   const guard = readFileSync(new URL("./local-ci-guard.sh", import.meta.url), "utf8");
-  assert.ok(local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"\nguard_session "$@"\n') < local.indexOf('cd "$root"'));
+  const guardAt = local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"\nguard_session "${args[@]}"\n');
+  assert.ok(guardAt >= 0);
+  assert.ok(guardAt < local.indexOf('cd "$root"'));
   assert.ok(local.includes('rc="$(guard_exit_rc "$rc")"'));
   const docker = readFileSync(new URL("./local-ci-docker.sh", import.meta.url), "utf8");
   assert.ok(local.indexOf('source "$(dirname "$0")/local-ci-docker.sh"') > local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"'));
@@ -1005,6 +1007,11 @@ test("the --part slices: quick lints only, static and tests and db run the scope
   assert.ok(staticSlice.includes("lint_part"));
   assert.ok(staticSlice.includes("grep -q '^supabase/functions/' <<<\"$pr_files\""));
   assert.ok(staticSlice.includes("typecheck_part"));
+  // The connector tests need no secret, so every static run does them; the deny-list check needs one, so it stays on main.
+  assert.ok(staticSlice.includes("pnpm test:connectors"));
+  assert.equal(staticSlice.includes("check-deny-list"), false);
+  // The Playwright image carries the browsers in CI, so the tests slice installs them only for a local run.
+  assert.ok(functionBody(parts, "slice_tests").includes('if [[ -z "${CI:-}" ]]; then pnpm --filter @flow/app exec playwright install chromium; fi'));
   assert.ok(functionBody(parts, "typecheck_part").includes("node scripts/check-unused-app-code.mjs"));
 
   // The scripts suite runs in the static slice on a plain runner, only when scripts/ changed, and not in the tests slice.
@@ -1021,6 +1028,10 @@ test("the --part slices: quick lints only, static and tests and db run the scope
   assert.ok(db.includes("bash scripts/mcp-function-smoke.sh"));
   assert.ok(db.includes("bash scripts/check-db-types.sh"));
 
+  // A slice logs its gate-times line (the EXIT trap is set before the slice dispatch) and writes no pass stamp.
+  assert.ok(local.indexOf("trap log_time EXIT") >= 0);
+  assert.ok(local.indexOf("trap log_time EXIT") < local.indexOf('source "$(dirname "$0")/local-ci-parts.sh"'));
+  assert.equal(functionBody(local, "log_time").includes("slice"), false);
   // A slice keeps no marks and writes no stamp: only the default run records a pass.
   assert.equal(parts.includes("mark_green"), false);
   assert.equal(parts.includes("flow-local-ci"), false);
