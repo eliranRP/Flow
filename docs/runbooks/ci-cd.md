@@ -4,11 +4,11 @@ GitHub Actions runs the checks and the production deploy from `.github/workflows
 
 ## Checks on pull requests
 
-A push to a PR branch is checked in two places. `bash scripts/cloud-agent-install.sh` sets `core.hooksPath` to `.githooks`, and `.githooks/pre-push` runs `bash scripts/local-ci.sh --part quick` before the push leaves: the scoped ESLint of the files the branch changes against `main`, and of the files that import them, under a 20-second budget. A failure stops the push.
+A push to a PR branch is checked in two places. `bash scripts/cloud-agent-install.sh` sets `core.hooksPath` to `.githooks`, and `.githooks/pre-push` runs `bash scripts/local-ci.sh --part quick` before the push leaves: ESLint on the files the branch changes against `main`, under a 20-second budget. A failure stops the push.
 
 `.github/workflows/pr.yml` runs the rest on GitHub for every push to a PR into `main`, as parallel jobs. The `pr` job is the check a merge waits for. It passes only when every job it needs passed, or `pr (db)` was skipped because the diff does not touch `supabase/`.
 
-- `pr (static)`: `--part static`. The migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function typecheck when `supabase/functions` changed, the typecheck, and the unused-code and CSS checks.
+- `pr (static)`: `--part static`. ESLint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function typecheck when `supabase/functions` changed, the typecheck, and the unused-code and CSS checks.
 - `pr (tests 1/3)` to `pr (tests 3/3)`: `--part tests --shard i/3`. The app unit and Storybook vitest tests the change reaches, split by shard, in the Playwright image of the version `app/package.json` pins. The scripts suite runs in the first shard when `scripts/` changed.
 - `pr (db)`, only when the diff touches `supabase/`: `--part db`, on a local Supabase started without studio, postgres-meta, logflare, vector, mailpit, imgproxy, supavisor, realtime, and storage-api. It runs a fresh database, the flow-mcp smoke, the pgTAP files that name the change, and the db types check.
 

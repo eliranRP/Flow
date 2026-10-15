@@ -1,15 +1,15 @@
 # Sourced by scripts/local-ci.sh, after the scoping it sets up (pr_fork, pr_files, skips, cache). The checks
 # both the default run and the --part slices use, and the slices themselves (FLOW-832):
-#   quick   the pre-push hook: the scoped lint, 20 s (the budget is in local-ci-guard.sh)
-#   static  the migration checks, the edge-function typecheck when supabase/functions changed, the typecheck
-#           and the unused-code and CSS checks
+#   quick   the pre-push hook: eslint on the changed files, 20 s (the budget is in local-ci-guard.sh)
+#   static  eslint on the changed files and the files that import them, the migration checks, the edge-function
+#           typecheck when supabase/functions changed, the typecheck and the unused-code and CSS checks
 #   tests   the app unit and Storybook vitest tests the change reaches (--shard i/n passes through to vitest),
 #           and the scripts tests when scripts/ changed
 #   db      when supabase/ changed: local Supabase, a fresh database, the flow-mcp smoke, the pgTAP files that
 #           name the change, and the db types check
 # A slice runs in a fresh CI container too, so it keeps no marks: the caches above only make a local run faster.
 
-# What eslint reads: the lint of the changed files and every file that imports them (scripts/gate-scope.mjs).
+# What eslint reads, with the files that import the changed ones (scripts/gate-scope.mjs). The static slice runs it.
 # A config, tsconfig, manifest, lockfile, .d.ts, delete or rename lints all.
 lint_part() {
   local scope

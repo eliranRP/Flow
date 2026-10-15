@@ -3,9 +3,9 @@
 # The pr workflow (.github/workflows/pr.yml) runs the rest on GitHub as parallel jobs, one per slice, and
 # main runs the full suite on GitHub on every merge and deploys in batches (ci.yml). The slices are in
 # scripts/local-ci-parts.sh; each shares the scoping below, keeps no marks and writes no stamp.
-#   --part quick (the pre-push hook, 20 s): the scoped lint with eslint's cache, after the migration-order
+#   --part quick (the pre-push hook, 20 s): eslint with its cache on the files the branch changes, after the migration-order
 #     check. Installs dependencies only when pnpm-lock.yaml changed. No Docker, no build, no tests.
-#   --part static: the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function
+#   --part static: eslint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function
 #     typecheck when supabase/functions changed, the typecheck, and the unused-code and CSS checks.
 #   --part tests [--shard i/n]: the app unit and Storybook vitest tests the change reaches (vitest --changed
 #     against main; --shard passes through to vitest), and the scripts tests when scripts/ changed.
