@@ -771,7 +771,7 @@ test("split between projects pins its totals and keeps names on one line", async
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-mixed-320&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.goto("/iframe.html?id=screens-routes--split-mixed&viewMode=story", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".ui-lsplit-part").first()).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
 });
