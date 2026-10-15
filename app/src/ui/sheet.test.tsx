@@ -81,6 +81,66 @@ describe("Sheet", () => {
   });
 });
 
+describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
+  const tick = () => act(async () => { await Promise.resolve(); });
+
+  it("has no ✕ and marks the dialog busy; a closed sheet shows ✕ again", () => {
+    const { rerender } = render(
+      <Sheet open busy onOpenChange={() => undefined} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByRole("button", { name: "סגירה" })).toBeNull();
+    rerender(
+      <Sheet open onOpenChange={() => undefined} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    expect(screen.getByRole("dialog", { name: "תקופה" })).not.toHaveAttribute("aria-busy");
+    expect(screen.getByRole("button", { name: "סגירה" })).toBeInTheDocument();
+  });
+
+  it("keeps a busy sheet open on Escape and a scrim tap, then closes it once when the save settles", async () => {
+    const onOpenChange = vi.fn();
+    const sheet = (busy: boolean) => (
+      <Sheet open busy={busy} onOpenChange={onOpenChange} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    fireEvent.pointerDown(document.querySelector(".ui-sheet-scrim") ?? document.body);
+    await tick();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
+    rerender(sheet(false));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a sheet open when onBeforeClose refuses, and the next accepted ✕ closes it", async () => {
+    const veto = { current: true };
+    const onOpenChange = vi.fn();
+    render(
+      <Sheet open onOpenChange={onOpenChange} title="תקופה" onBeforeClose={() => (veto.current ? false : undefined)}>
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
+    veto.current = false;
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+});
+
 function tallSheetHeightRule(): string {
   for (const sheet of document.styleSheets) {
     let rules: CSSRuleList;
