@@ -51,20 +51,16 @@ describe("App", () => {
 
   it("shows the offline error from preview=error, without the ui-band", async () => {
     await renderAt("/?preview=error");
-    expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
-    expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).not.toHaveClass("ui-btn-retry");
+    expect(screen.getByText("אין חיבור לאינטרנט.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
     expect(document.querySelector(".ui-band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
   it("shows the server load error from preview=error-server", async () => {
     await renderAt("/?preview=error-server");
-    expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
-    expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).not.toHaveClass("ui-btn-retry");
+    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
     expect(document.querySelector(".ui-band")).toBeNull();
   });
 
@@ -83,7 +79,8 @@ describe("App", () => {
 
   it("shows the ld-01 loading skeleton from preview=loading", async () => {
     await renderAt("/?preview=loading");
-    expect(screen.getByText("טוען…")).toBeInTheDocument();
+    // Nothing shows before the 300ms delay (FLOW-371), so the loading line waits for it.
+    expect(await screen.findByText("טוען…", undefined, { timeout: 1000 })).toBeInTheDocument();
     // FLOW-413: Home is the month's cash, so it loads as the band, three rows and the earlier months.
     expect(screen.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
     expect(document.querySelector(".ui-band")).not.toBeNull();

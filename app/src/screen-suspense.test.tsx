@@ -26,7 +26,7 @@ describe("ScreenSuspense (FLOW-804)", () => {
         <Screen />
       </ScreenSuspense>,
     );
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.getByText(/לא הצלחנו לטעון|אין חיבור לאינטרנט/)).toBeInTheDocument();
   });
 });

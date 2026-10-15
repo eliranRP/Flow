@@ -184,11 +184,11 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
 
 test("a preview load error returns to the empty preview", async ({ page }) => {
   await page.goto("/?preview=error");
-  await page.getByRole("button", { name: "ניסיון חוזר" }).click();
+  await page.getByRole("button", { name: "נסו שוב" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
   await page.goto("/unpaid?preview=error");
-  await page.getByRole("button", { name: "ניסיון חוזר" }).click();
+  await page.getByRole("button", { name: "נסו שוב" }).click();
   await expect(page).toHaveURL(/\/unpaid\?preview=1$/);
   await expect(page.getByText("אין חיבור לאינטרנט")).toHaveCount(0);
 });

@@ -99,6 +99,20 @@ button.ui-tab-slot {
   white-space: nowrap;
 }
 
+/* A failure is one line, the message and the 44px retry link (FLOW-371). */
+.ui-failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  text-align: center;
+}
+
 .ui-empty-state {
   display: flex;
   flex: 1;
