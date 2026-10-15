@@ -1,5 +1,5 @@
 import type { CashLine } from "@flow/shared";
-import { NOT_IN_PROFIT_LABEL, cashLineSplit } from "../cash";
+import { NOT_IN_PROFIT_LABEL, cashLineSplit, cashLoanPart } from "../cash";
 import { formatDayMonth } from "./date-math";
 import { rowSource } from "./line-marks";
 import { List, ListRow } from "./list-row";
@@ -71,8 +71,11 @@ export function CashMonthLines({ counted, kept, search }: { counted: readonly Ca
     <List>
       {rows.map(({ row, keptOut }) => {
         const date = formatDayMonth(row.cash_month_date);
-        const parts = [row.category_name, date].filter((part): part is string => part != null && part !== "");
-        const split = keptOut ? null : cashLineSplit(row);
+        const split = cashLineSplit(row);
+        // FLOW-442: a kept-out loan part names its part and the whole payment, in the same quiet hint.
+        const keptPart = keptOut && split != null && cashLoanPart(row.part) != null ? split : null;
+        const parts = (keptPart == null ? [row.category_name, date] : [keptPart.parts[0]?.name, `מתוך ${keptPart.total}`, date])
+          .filter((part): part is string => part != null && part !== "");
         const incoming = (row.side === "in") !== row.amount_minor < 0n;
         return (
           <ListRow
@@ -81,10 +84,10 @@ export function CashMonthLines({ counted, kept, search }: { counted: readonly Ca
             title={row.supplier_name ?? row.description}
             hint={
               keptOut ? <KeptOutHint parts={[NOT_IN_PROFIT_LABEL, ...parts]} />
-                : split == null ? parts.join(" · ")
+                : split == null || keptOut ? parts.join(" · ")
                   : <SplitPartsHint parts={split.parts} total={split.total} date={date} />
             }
-            wrapHint={split != null}
+            wrapHint={split != null && !keptOut}
             agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
             currency={row.currency}
             sign={incoming ? "in" : "out"}

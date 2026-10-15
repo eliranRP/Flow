@@ -37,9 +37,10 @@ export function sampleMonthLines(month: string): ProjectCashMonthLines {
     counted: [
       cashLine(month, 3, "שוכר לדוגמה", "שכירות", 310_000n, "in"),
       cashLine(month, 2, "חנות חומרים לדוגמה", "תיקונים ותחזוקה", 155_000n, "out"),
-      cashLine(month, 6, "מלווה לדוגמה", "ריבית משכנתא", 60_000n, "out"),
+      // FLOW-442: one loan payment of $3,500 (principal $2,850, interest $600, escrow $50); each part is a row.
+      { ...cashLine(month, 6, "מלווה לדוגמה", "ריבית משכנתא", 60_000n, "out"), transaction_id: `${month}-loan`, part: "interest", line_minor: 350_000n },
     ],
-    kept: [cashLine(month, 5, "מלווה לדוגמה", "תשלומי הלוואה", 285_000n, "out")],
+    kept: [{ ...cashLine(month, 6, "מלווה לדוגמה", "תשלומי הלוואה", 285_000n, "out"), transaction_id: `${month}-loan`, part: "principal", line_minor: 350_000n }],
     more: false,
   };
 }

@@ -210,6 +210,13 @@ describe("cashLineSplit (FLOW-432)", () => {
     });
   });
 
+  it("names a loan payment's part, out of the whole payment (FLOW-442)", () => {
+    const row = { currency: "USD", part: "principal", amount_minor: 90_000n, line_minor: 150_000n, parts: null };
+    expect(cashLineSplit(row)).toEqual({ parts: [{ name: "קרן", amount: "$900" }], total: "$1,500" });
+    expect(cashLineSplit({ ...row, part: "escrow", amount_minor: 10_000n })?.parts[0]?.name).toBe("מסים וביטוח");
+    expect(cashLineSplit({ ...row, line_minor: null })).toBeNull();
+  });
+
   it("is null for a line with no split", () => {
     expect(cashLineSplit({ currency: "USD", line_minor: null, parts: null })).toBeNull();
     expect(cashLineSplit({ currency: "USD" })).toBeNull();
