@@ -52,7 +52,6 @@
   --token-disabled-bg: var(--color-disabled-bg);
   --token-disabled-text: var(--color-disabled-text);
   --token-skeleton: var(--color-skeleton);
-  --token-skeleton-shine: var(--color-skeleton-shine);
   --token-knob: var(--color-knob);
   --token-bad-tint: var(--color-bad-tint);
   --token-badge-bg: var(--color-badge-bg);
@@ -108,7 +107,6 @@
   --color-disabled-bg: var(--token-disabled-bg);
   --color-disabled-text: var(--token-disabled-text);
   --color-skeleton: var(--token-skeleton);
-  --color-skeleton-shine: var(--token-skeleton-shine);
   --color-knob: var(--token-knob);
   --color-bad-tint: var(--token-bad-tint);
   --color-badge-bg: var(--token-badge-bg);
