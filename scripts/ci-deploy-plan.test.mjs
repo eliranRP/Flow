@@ -60,23 +60,23 @@ esac
   return { dir, run, output: () => readFileSync(output, "utf8") };
 }
 
-test("fewer than 5 merges since the last good deploy skip CI and the deploy", () => {
+test("fewer than 5 merges since the last good deploy run the full suite and skip the deploy", () => {
   const ctx = setup({ merges: 4, deployments: (sha) => [{ id: 7, sha, state: "success" }] });
   try {
     const result = ctx.run();
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(ctx.output(), "run=false\n");
+    assert.equal(ctx.output(), "run=true\ndeploy=false\n");
     assert.match(result.stdout, /4 of 5 merges/);
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
   }
 });
 
-test("the fifth merge runs CI and the deploy", () => {
+test("the fifth merge runs the full suite and the deploy", () => {
   const ctx = setup({ merges: 5, deployments: (sha) => [{ id: 7, sha, state: "success" }] });
   try {
     assert.equal(ctx.run().status, 0);
-    assert.equal(ctx.output(), "run=true\n");
+    assert.equal(ctx.output(), "run=true\ndeploy=true\n");
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
   }
@@ -87,7 +87,7 @@ test("a merge that changes only docs/ does not count toward the batch", () => {
   try {
     const result = ctx.run();
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(ctx.output(), "run=false\n");
+    assert.equal(ctx.output(), "run=true\ndeploy=false\n");
     assert.match(result.stdout, /4 of 5 merges/);
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
@@ -104,7 +104,7 @@ test("a failed deploy does not count, so the batch counts from the last good one
   });
   try {
     assert.equal(ctx.run().status, 0);
-    assert.equal(ctx.output(), "run=true\n");
+    assert.equal(ctx.output(), "run=true\ndeploy=true\n");
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
   }
@@ -114,7 +114,7 @@ test("a manual run always tests and deploys", () => {
   const ctx = setup({ merges: 1, deployments: (sha) => [{ id: 7, sha, state: "success" }] });
   try {
     assert.equal(ctx.run("workflow_dispatch").status, 0);
-    assert.equal(ctx.output(), "run=true\n");
+    assert.equal(ctx.output(), "run=true\ndeploy=true\n");
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
   }
@@ -124,7 +124,7 @@ test("no known good deploy runs CI and the deploy", () => {
   const ctx = setup({ merges: 1, deployments: () => [] });
   try {
     assert.equal(ctx.run().status, 0);
-    assert.equal(ctx.output(), "run=true\n");
+    assert.equal(ctx.output(), "run=true\ndeploy=true\n");
   } finally {
     rmSync(ctx.dir, { recursive: true, force: true });
   }
