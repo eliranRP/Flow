@@ -3,6 +3,8 @@ import { Amount } from "./amount";
 import { CompactBar } from "./compact-bar";
 import { longHebrew } from "./story-support";
 
+// Amounts are bigint, so the figure stays in render: story args go through JSON.
+
 const meta = {
   title: "Components/CompactBar",
   component: CompactBar,
@@ -26,18 +28,20 @@ export const ListWithFigure: Story = {
     title: "קטגוריות",
     label: "הגדרות",
     backTo: "/settings",
-    figure: <Amount agorot={125_000n} size="list" />,
   },
+  render: (args) => <CompactBar {...args} figure={<Amount agorot={125_000n} size="list" />} />,
 };
 
 /** A detail page: 56px. */
 export const Detail: Story = {
-  args: { title: "שיפוץ הרצל 12", label: "פרויקטים", backTo: "/projects", size: "detail", figure: <Amount agorot={2_940_000n} size="list" /> },
+  args: { title: "שיפוץ הרצל 12", label: "פרויקטים", backTo: "/projects", size: "detail" },
+  render: (args) => <CompactBar {...args} figure={<Amount agorot={2_940_000n} size="list" />} />,
 };
 
 /** Hidden from the start: no slide, no focus, no clicks. */
 export const Hidden: Story = { args: { shown: false } };
 
 export const LongHebrew: Story = {
-  args: { title: longHebrew, label: longHebrew, backTo: "/projects", figure: <Amount agorot={125_000n} size="list" /> },
+  args: { title: longHebrew, label: longHebrew, backTo: "/projects" },
+  render: (args) => <CompactBar {...args} figure={<Amount agorot={125_000n} size="list" />} />,
 };
