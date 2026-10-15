@@ -1,0 +1,153 @@
+name: pr
+
+# The check a pull request waits for (FLOW-832). The pre-push hook runs scripts/local-ci.sh --part quick
+# before each push; this workflow runs the rest of the gate on GitHub, as parallel jobs, one per slice of
+# scripts/local-ci.sh. `pr` is the required check: it passes when every job it needs passed, or was skipped
+# because the diff does not touch its area. main runs the full suite on every merge (ci.yml).
+# No secrets here: the production deny-list secret stays on main.
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Whether the diff touches supabase/ (a migration, a seed, a pgTAP file or an edge function).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      db: ${{ steps.paths.outputs.db }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: git fetch --no-tags origin main
+      - id: paths
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only origin/main...HEAD)"
+          if grep -q '^supabase/' <<<"$files"; then
+            echo "db=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "db=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  static:
+    name: pr (static)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.7
+      - run: git fetch --no-tags origin main
+      - name: Migration, file-size and backlog checks, flow-mcp tests, edge functions, typecheck, unused code
+        run: bash scripts/local-ci.sh --part static
+
+  # Three shards of the app's unit and Storybook vitest tests that the change reaches. The Playwright
+  # image carries the browsers, so the job installs none.
+  tests:
+    name: pr (tests ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: git fetch --no-tags origin main
+      - name: Related app unit and Storybook tests (shard ${{ matrix.shard }}/3)
+        run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/3
+
+  # Local Supabase with every service but the database, the REST API, auth and the edge runtime.
+  db:
+    name: pr (db)
+    needs: [changes]
+    if: needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.7
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.118.0
+      - run: git fetch --no-tags origin main
+      - name: Start local Supabase (database, REST, auth and edge runtime only)
+        run: supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime,storage-api
+      - name: Migrations, flow-mcp smoke, pgTAP and db types
+        run: bash scripts/local-ci.sh --part db
+
+  # The check a merge waits for. Every job it needs must have passed, or been skipped on purpose (db when
+  # the diff does not touch supabase/). always(), not !cancelled(): a skipped job must not hide a failed one.
+  pr:
+    needs: [changes, static, tests, db]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job the diff needs passed
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          STATIC: ${{ needs.static.result }}
+          TESTS: ${{ needs.tests.result }}
+          DB: ${{ needs.db.result }}
+          DB_CHANGED: ${{ needs.changes.outputs.db }}
+        run: |
+          echo "changes: $CHANGES"
+          echo "static: $STATIC"
+          echo "tests: $TESTS"
+          echo "db: $DB (the diff touches supabase/: $DB_CHANGED)"
+          test "$CHANGES" = success
+          test "$STATIC" = success
+          test "$TESTS" = success
+          if [ "$DB_CHANGED" = true ]; then
+            test "$DB" = success
+          else
+            test "$DB" = skipped
+          fi
