@@ -57,7 +57,7 @@ The full plan (component inventory with states and motion, the four FLOW-363 PRs
 
 ## Definition of done for each screen PR
 
-- Storybook stories at 320 and 393px wide, in dark and light, with invented data.
+- Storybook stories with invented data, and a new story only for a state the others do not show. Every story runs in dark (the `storybook-dark` vitest project), and `clip-check` measures every story at 320, 360 and 390, in light and dark (FLOW-833). Do not add a story for a theme or a width.
 - A side-by-side check against the matching canvas board: sizes, colours, spacing and motion.
 - No raw values in the screen's CSS. Anything the new parts replace is deleted in the same PR ([CONTRIBUTING](../../CONTRIBUTING.md#remove-what-your-change-leaves-unused)).
 - Design review before merge, as the backlog README describes.
