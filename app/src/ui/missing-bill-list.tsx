@@ -10,7 +10,7 @@ import { CheckIcon, ChevronIcon } from "./icons";
 import { SectionHead } from "./layout";
 import { List } from "./list-row";
 import type { ScreenPhase } from "./screen-phase";
-import { ListSkeleton } from "./skeleton";
+import { RecurringSkeleton } from "./screen-skeletons";
 import { SwipeRemove } from "./swipe-remove";
 import { TextLink } from "./text-link";
 import "./css/39-missing-bills.css";
@@ -178,7 +178,7 @@ export function MissingBillList({
   /** FLOW-430: the user's answer to a row's suggestion. */
   onMatch?: (rowId: string, same: boolean) => void;
 }) {
-  if (phase.kind === "loading") return <ListSkeleton />;
+  if (phase.kind === "loading") return <RecurringSkeleton />;
   if (phase.kind === "error") return <ErrorState offline={phase.offline} onRetry={() => { onRetry?.(); }} />;
   if (phase.kind === "empty" || (rows.length === 0 && arrived.length === 0)) {
     return <EmptyState icon={<CheckIcon />} title="הכל הגיע" body="אין תשלומים קבועים שמאחרים החודש." />;

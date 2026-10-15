@@ -87,8 +87,7 @@
    the list's loading rows (FLOW-358). */
 @media (max-width: 359px) {
   .ui-loan-list .ui-row-icon,
-  .ui-loan-new .ui-row-icon,
-  .ui-loan-skel-list .ui-row-icon {
+  .ui-loan-new .ui-row-icon {
     display: none;
   }
 }

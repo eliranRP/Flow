@@ -9,6 +9,7 @@ import { List, ListRow } from "../ui/list-row";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Skeleton } from "../ui/skeleton";
+import { LoansSkeleton } from "../ui/screen-skeletons";
 import { DateSheet } from "../ui/date-sheet";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
@@ -633,13 +634,7 @@ export function LoanSettingsSection({
   return (
     <>
       {loading ? (
-        <>
-          <p className="sr-only" role="status">טוען…</p>
-          <List className="ui-loan-skel-rows ui-loan-skel-list">
-            <ListRow variant="skeleton" icon />
-            <ListRow variant="skeleton" icon />
-          </List>
-        </>
+        <LoansSkeleton />
       ) : failed ? (
         <EmptyState
           icon={<InfoIcon size={36} />}

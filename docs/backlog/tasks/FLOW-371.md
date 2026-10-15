@@ -6,7 +6,7 @@
 **Skeleton (first load)**
 - [x] The real header, title and bottom bar, plus blocks shaped like the rows and cards to come: #251F33 on the background, rgba(255,255,255,.16) on the band. The blocks pulse together (opacity 1 → .55, 1.2s).
 - [x] Shown only after 300ms of waiting; then a 200ms crossfade to the content, followed by the page-enter motion (FLOW-363).
-- [ ] Designed: Home, month lines, Projects, Loans, קבועים, Profit, transaction page. Every other screen reuses the closest one.
+- [x] Designed: Home, month lines, Projects, Loans, קבועים, Profit, transaction page. Every other screen reuses the closest one.
 
 **Empty state**
 - [x] A 64px tint circle with an outline icon (#B894FF), title 24/600, one or two lines at 15/400 #B1A8C4, and at most one action: a primary pill when it is the next step, an outline pill when it only helps, none when the user just waits. The screen keeps its header, title and totals ($0 muted).
