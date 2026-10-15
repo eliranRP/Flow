@@ -119,7 +119,7 @@ button.ui-tab-slot {
   margin-bottom: var(--space-5);
   border-radius: var(--radius-chip);
   background: var(--color-tint);
-  color: var(--color-text-muted);
+  color: var(--color-accent);
 }
 
 .ui-empty-title {
@@ -138,7 +138,7 @@ button.ui-tab-slot {
   font-size: var(--type-label-size);
   line-height: var(--type-label-line);
   font-weight: 400;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -149,9 +149,8 @@ button.ui-tab-slot {
 }
 
 .ui-empty-action {
-  width: 100%;
   max-width: 100%;
-  margin-top: var(--space-6);
+  margin-top: var(--space-2);
 }
 
 /* Empty and error states share the standard 44px button shape, not the 36px pill (FLOW-328, ds-7). */
@@ -159,6 +158,11 @@ button.ui-tab-slot {
   height: auto;
   min-height: var(--touch-min);
   border-radius: var(--radius-button);
+}
+
+/* The outline pill that only helps is 44px on the board, the primary next step 52px. */
+.ui-empty-action .ui-btn-secondary {
+  height: var(--touch-min);
 }
 
 .ui-sheet-scrim {
@@ -323,4 +327,155 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   line-height: var(--type-label-line);
   font-weight: var(--type-label-weight);
   color: var(--color-text-secondary);
+}
+
+/* Background sync strip (FLOW-371, board States "syncing"): a 3px line at the top, and a pill with a
+   16px spinner. It takes no taps, so the content under it stays usable. */
+.ui-sync {
+  position: relative;
+  z-index: 6;
+  height: 0;
+  pointer-events: none;
+}
+
+.ui-sync-line {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: var(--bar-sync);
+  overflow: hidden;
+}
+
+.ui-sync-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -40%;
+  width: 40%;
+  height: 100%;
+  background: var(--color-accent-text);
+  animation: ui-sync-run var(--dur-shimmer) var(--ease-standard) infinite;
+}
+
+@keyframes ui-sync-run {
+  from {
+    right: -40%;
+  }
+  to {
+    right: 100%;
+  }
+}
+
+.ui-sync-pill {
+  position: absolute;
+  top: var(--space-4);
+  inset-inline: 0;
+  margin-inline: auto;
+  inline-size: max-content;
+  max-inline-size: calc(100% - var(--space-10));
+  block-size: 36px;
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+  white-space: nowrap;
+}
+
+.ui-sync-spin {
+  inline-size: 16px;
+  block-size: 16px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--color-tint-strong);
+  border-top-color: var(--color-accent-text);
+  box-sizing: border-box;
+  animation: ui-sync-turn var(--motion-spin) linear infinite;
+}
+
+@keyframes ui-sync-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reduced motion stops the line and the spinner; the line stays at 40% and the label still says what syncs. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-sync-line::before {
+    right: 0;
+    animation: none;
+  }
+  .ui-sync-spin {
+    animation: none;
+  }
+}
+
+/* A screen's content fades in over 200ms, linear, as the skeleton leaves (board States homeReveal). */
+.ui-phase-in {
+  animation: ui-phase-in var(--motion-fade) var(--ease-linear) both;
+}
+
+@keyframes ui-phase-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* A long known job (first sync, import): the 8px bar, its count, and the steps (FLOW-371). */
+.ui-job {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-job-bar {
+  height: var(--bar-job);
+}
+
+.ui-job-steps {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-job-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-job-step[data-state="todo"] {
+  color: var(--color-text-muted);
+}
+
+.ui-job-mark {
+  display: grid;
+  flex: none;
+  inline-size: var(--spinner);
+  block-size: var(--spinner);
+  place-items: center;
+  color: var(--color-accent-text);
+}
+
+.ui-job-ring {
+  inline-size: var(--spinner);
+  block-size: var(--spinner);
+  border-radius: 50%;
+  border: 2px solid var(--color-control-border);
+  box-sizing: border-box;
 }
