@@ -1007,9 +1007,13 @@ test("the --part slices: quick lints only, static and tests and db run the scope
   assert.ok(staticSlice.includes("typecheck_part"));
   assert.ok(functionBody(parts, "typecheck_part").includes("node scripts/check-unused-app-code.mjs"));
 
-  // tests: vitest gets the shard; the scripts suite runs once, in the first shard, and only when scripts/ changed.
+  // The scripts suite runs in the static slice on a plain runner, only when scripts/ changed, and not in the tests slice.
+  assert.ok(staticSlice.includes("node --test scripts/*.test.mjs"));
+  assert.ok(staticSlice.includes("grep -q '^scripts/' <<<\"$pr_files\""));
+  assert.equal(functionBody(parts, "slice_tests").includes("scripts/*.test.mjs"), false);
+
+  // tests: vitest gets the shard.
   assert.ok(parts.includes('[[ -z "$shard" ]] || args+=(--shard "$shard")'));
-  assert.ok(parts.includes('if grep -q \'^scripts/\' <<<"$pr_files" && [[ -z "$shard" || "$shard" == 1/* ]]; then'));
 
   // db: only when the diff touches supabase/.
   const db = functionBody(parts, "slice_db");

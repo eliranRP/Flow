@@ -8,8 +8,8 @@ A push to a PR branch is checked in two places. `bash scripts/cloud-agent-instal
 
 `.github/workflows/pr.yml` runs the rest on GitHub for every push to a PR into `main`, as parallel jobs. The `pr` job is the check a merge waits for. It passes only when every job it needs passed, or `pr (db)` was skipped because the diff does not touch `supabase/`.
 
-- `pr (static)`: `--part static`. ESLint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function typecheck when `supabase/functions` changed, the typecheck, and the unused-code and CSS checks.
-- `pr (tests 1/3)` to `pr (tests 3/3)`: `--part tests --shard i/3`. The app unit and Storybook vitest tests the change reaches, split by shard, in the Playwright image of the version `app/package.json` pins. The scripts suite runs in the first shard when `scripts/` changed.
+- `pr (static)`: `--part static`. ESLint on the files the branch changes and the files that import them, the migration, file-size and backlog checks, flow-mcp's Deno tests, the edge-function typecheck when `supabase/functions` changed, the typecheck, the unused-code and CSS checks, and the scripts suite (`node --test scripts/*.test.mjs`) when `scripts/` changed. It runs on a plain runner, not in the Playwright image.
+- `pr (tests 1/3)` to `pr (tests 3/3)`: `--part tests --shard i/3`. The app unit and Storybook vitest tests the change reaches, split by shard, in the Playwright image of the version `app/package.json` pins.
 - `pr (db)`, only when the diff touches `supabase/`: `--part db`, on a local Supabase started without studio, postgres-meta, logflare, vector, mailpit, imgproxy, supavisor, realtime, and storage-api. It runs a fresh database, the flow-mcp smoke, the pgTAP files that name the change, and the db types check.
 
 The pull-request workflow runs no e2e specs, no Storybook build or layout specs, no perf specs, and no secrets. Those run on `main` after each merge (`ci`).
