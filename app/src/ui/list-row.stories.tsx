@@ -1,99 +1,92 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
-import type { ReactElement } from "react";
-import { Amount } from "./amount";
 import { BankIcon } from "./icons";
 import { KeptOutTag } from "./line-marks";
-import { List, ListRow } from "./list-row";
-import { statementMethodOf } from "./statement";
-import { largeAgorot, longHebrew, padded, storyMeta } from "./story-support";
+import { List, ListRow, type ListLayout } from "./list-row";
+import { largeAgorot, longHebrew, padded } from "./story-support";
 
-/** Agorot is a decimal string so story args stay JSON-serializable. */
+/** Args are JSON: agorot is a decimal string, and the icon and the tag are flags the view draws. */
 type RowArgs = {
-  variant: "project" | "transaction" | "item" | "static" | "button" | "danger" | "selectable";
+  variant: "item" | "static" | "button" | "danger" | "skeleton" | "project" | "transaction" | "statement";
+  layout: "none" | ListLayout;
   title: string;
   hint?: string;
   href?: string;
+  chevron?: boolean;
+  muted?: boolean;
+  tone?: "warning" | "muted";
+  setAside?: boolean;
+  busy?: boolean;
+  disabled?: boolean;
+  icon?: boolean;
+  tag?: boolean;
   agorot?: string;
   loss?: boolean;
-  sign?: "in" | "out";
+  sign?: "in" | "out" | "cost";
   source?: "invoice" | "bank";
-  selected?: boolean;
+  currency?: string;
 };
 
-function RowView({ variant, title, hint, href, agorot = "0", loss, sign = "in", source = "invoice", selected = false }: RowArgs) {
-  if (variant === "item") return <ListRow variant="item" title={title} hint={hint} href={href} />;
-  if (variant === "static") return <ListRow variant="static" title={title} hint={hint} />;
-  if (variant === "button") return <ListRow variant="button" title={title} hint={hint} onClick={() => undefined} />;
-  if (variant === "danger") return <ListRow variant="danger" title={title} hint={hint} onClick={() => undefined} />;
-  if (variant === "selectable") return <ListRow variant="selectable" title={title} hint={hint} selected={selected} onSelect={() => undefined} />;
-  if (variant === "transaction") {
-    return <ListRow variant="transaction" title={title} hint={hint} href={href} agorot={BigInt(agorot)} sign={sign} source={source} />;
+const noop = () => undefined;
+
+function RowView(args: RowArgs) {
+  const layout = args.layout === "none" ? undefined : args.layout;
+  const amount = BigInt(args.agorot ?? "0");
+  if (args.variant === "statement") {
+    return <ListRow variant="statement" title={args.title} fallback={args.source === "bank" ? "bank" : "invoice"} agorot={amount} sign={args.sign === "in" ? "in" : "out"} href={args.href ?? "/review/all?item=1"} setAside={args.setAside} />;
   }
-  return <ListRow variant="project" title={title} hint={hint} href={href} agorot={BigInt(agorot)} loss={loss} />;
+  if (args.variant === "skeleton") return <ListRow variant="skeleton" icon={args.icon} />;
+  const copy = {
+    layout,
+    title: args.title,
+    hint: args.hint,
+    chevron: args.chevron,
+    muted: args.muted,
+    tone: args.tone,
+    setAside: args.setAside,
+    icon: args.icon ? <BankIcon /> : undefined,
+    tag: args.tag ? <KeptOutTag label="לא נספר ברווח" /> : undefined,
+  };
+  if (args.variant === "item") return <ListRow variant="item" {...copy} href={args.href} />;
+  if (args.variant === "static") return <ListRow variant="static" {...copy} busy={args.busy} />;
+  if (args.variant === "button") return <ListRow variant="button" {...copy} busy={args.busy} disabled={args.disabled} onClick={noop} />;
+  if (args.variant === "danger") return <ListRow variant="danger" {...copy} busy={args.busy} disabled={args.disabled} onClick={noop} />;
+  if (args.variant === "project") {
+    return <ListRow variant="project" {...copy} agorot={amount} loss={args.loss} currency={args.currency} href={args.href} />;
+  }
+  return <ListRow variant="transaction" {...copy} agorot={amount} sign={args.sign ?? "out"} source={args.source ?? "invoice"} currency={args.currency} href={args.href} />;
 }
 
 const meta = {
   title: "Components/ListRow",
-  component: RowView,
+  component: ListRow,
+  tags: ["autodocs"],
   decorators: [padded],
-} satisfies Meta<typeof RowView>;
+  args: { variant: "item", layout: "none", title: "ביטוח המגן", hint: "ספק · פטור ממע״מ" },
+  argTypes: {
+    variant: {
+      control: "select",
+      options: ["item", "static", "button", "danger", "skeleton", "project", "transaction", "statement"],
+    },
+    layout: { control: "select", options: ["none", "flat", "inset"] },
+    tone: { control: "select", options: [undefined, "warning", "muted"] },
+    chevron: { control: "boolean" },
+    muted: { control: "boolean" },
+    setAside: { control: "boolean" },
+    busy: { control: "boolean" },
+    disabled: { control: "boolean" },
+  },
+  render: (args) => <RowView {...args} />,
+} satisfies Meta<RowArgs>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<RowArgs>;
 
-export const Skeleton: Story = {
-  tags: ["clip-no-text"],
-  args: { variant: "item", title: "טוען" },
-  render: () => (
-    <List>
-      <ListRow variant="skeleton" />
-      <ListRow variant="skeleton" />
-    </List>
-  ),
-};
-
-// FLOW-358: loading rows shaped like the loaded ones: an icon slot, and on an eyebrow row a short
-// label over a long value with nothing at the end (the loaded row has only a chevron there).
-export const SkeletonShaped: Story = {
-  tags: ["clip-no-text"],
-  args: { variant: "item", title: "טוען" },
-  render: () => (
-    <List>
-      <ListRow variant="skeleton" icon />
-      <ListRow variant="skeleton" icon eyebrow end={false} />
-    </List>
-  ),
-};
-export const SkeletonShaped320: Story = { ...SkeletonShaped, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const SkeletonShapedDark: Story = { ...SkeletonShaped, globals: { theme: "dark" } };
-
-export const Project: Story = {
-  args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
-};
-// FLOW-335: an outside link (SUMIT's document) opens in a new tab; the name says so.
-export const ProjectExternal: Story = {
-  name: "Project, outside link",
-  args: { variant: "project", title: "לקוח לדוגמה", hint: "01/09", agorot: "1000000" },
-  render: () => (
-    <List>
-      <ListRow variant="project" title="לקוח לדוגמה" hint="01/09" agorot={1_000_000n} loss={false} href="https://pay.sumit.co.il/example/doc-1" external chevron />
-    </List>
-  ),
-};
-export const TransactionIn: Story = {
-  args: { variant: "transaction", title: "קבלה 1042", hint: "חומרים · 12/09", agorot: "1800000", sign: "in", source: "invoice" },
-};
-export const TransactionOut: Story = {
-  args: { variant: "transaction", title: "העברה", hint: "בנק", agorot: "450000", sign: "out", source: "bank" },
-};
-export const Item: Story = {
-  args: { variant: "item", title: "ביטוח המגן", hint: "ספק · פטור ממע״מ" },
-};
+export const Item: Story = {};
 export const Static: Story = {
   args: { variant: "static", title: "אלפא בנייה", hint: "עוסק מורשה" },
 };
-export const ButtonRow: Story = {
+export const Button: Story = {
   args: { variant: "button", title: "חיבור SUMIT", hint: "מספר חברה ומפתח API" },
   // FLOW-326: a <button> row starts its title and hint on the start side instead of centring them.
   play: async ({ canvasElement }) => {
@@ -111,20 +104,61 @@ export const ButtonRow: Story = {
   },
 };
 export const Danger: Story = {
-  args: { variant: "danger", title: "התנתקות" },
+  args: { variant: "danger", title: "התנתקות", hint: "הנתונים נשארים בחשבון" },
 };
-export const Selectable: Story = {
-  args: { variant: "selectable", title: "וילה רעננה", hint: "פעיל", selected: true },
+export const Skeleton: Story = {
+  tags: ["clip-no-text"],
+  args: { variant: "skeleton" },
+  // FLOW-358: loading rows shaped like the loaded ones: an icon slot, and on an eyebrow row a short
+  // label over a long value with nothing at the end (the loaded row has only a chevron there).
+  render: () => (
+    <List>
+      <ListRow variant="skeleton" icon />
+      <ListRow variant="skeleton" icon eyebrow end={false} />
+    </List>
+  ),
 };
-export const EmptyHint: Story = {
-  args: { variant: "project", title: "פרויקט בלי תנועות", agorot: "0" },
+export const Project: Story = {
+  args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "2940000", href: "/projects/tek" },
+};
+export const ProjectLoss: Story = {
+  args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
+};
+export const Transaction: Story = {
+  args: { variant: "transaction", title: "העברה", hint: "בנק · 12/09", agorot: "450000", sign: "out", source: "bank" },
+};
+export const TransactionIncome: Story = {
+  args: { variant: "transaction", title: "קבלה 1042", hint: "חומרים · 12/09", agorot: "1800000", sign: "in", source: "invoice" },
+};
+export const Statement: Story = {
+  args: { variant: "statement", title: "לקוח לדוגמה", agorot: "500000", sign: "in", source: "invoice" },
+};
+export const WithIcon: Story = {
+  args: { variant: "item", title: "חשבון בנק", hint: "בנק הדואר · 03/10", icon: true },
+};
+export const WithTag: Story = {
+  args: { variant: "transaction", title: "Sample supplier", hint: "10/05", agorot: "170000", sign: "cost", source: "bank", tag: true, setAside: true },
+};
+export const Muted: Story = {
+  args: { variant: "item", title: "קטגוריה מוסתרת", hint: "מוסתרת", muted: true },
+};
+export const SetAside: Story = {
+  args: { variant: "transaction", title: "החזר ציוד לדוגמה", hint: "לא נספר ברווח · ציוד · 02/10", agorot: "150000", sign: "out", setAside: true },
+};
+export const Busy: Story = {
+  args: { variant: "button", title: "מרענן…", hint: "רענון הנתונים", busy: true },
+};
+export const Disabled: Story = {
+  args: { variant: "button", title: "רענון עכשיו", hint: "אפשר לנסות שוב ב־12:00", disabled: true },
 };
 export const LongHebrew: Story = {
   args: { variant: "project", title: longHebrew, hint: longHebrew, agorot: String(largeAgorot), href: "/projects/long" },
 };
-export const LargeAmount: Story = {
-  args: { variant: "transaction", title: "חשבונית גדולה", agorot: String(largeAgorot), sign: "in", source: "invoice" },
+export const LatinTitle: Story = {
+  args: { variant: "transaction", title: "Sample vendor", hint: "Utilities · 10/09", agorot: "125000", sign: "out", source: "bank", currency: "USD" },
 };
+
+/** The show-hover tint: a row that tints on pointer hover only inside its wrapper. The e2e spec opens this id. */
 export const Hover: Story = {
   args: { variant: "project", title: "וילה הרצליה", hint: "שיפוץ", agorot: "2000000" },
   render: () => (
@@ -137,291 +171,28 @@ export const Hover: Story = {
   ),
 };
 
-export const SharedNone: Story = {
-  name: "Shared cost, no shares",
-  args: { variant: "button", title: "עלות משותפת · טרם פוצלה" },
+/** FLOW-363 (2d): four rows on the background, no dividers, 64px tall. Invented names, round amounts. */
+export const FlatList: Story = {
+  args: { variant: "transaction", title: "קבלה 1042", layout: "flat" },
   render: () => (
-    <List>
-      <ListRow variant="button" title="עלות משותפת · טרם פוצלה" chevron onClick={() => undefined} />
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="קבלה 1042" hint="חומרים · 12/09" agorot={1_800_000n} sign="in" source="invoice" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="העברה" hint="בנק · 10/09" agorot={450_000n} sign="out" source="bank" href="/transactions/2" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="חומרים · 08/09" agorot={1_000_000n} sign="out" source="invoice" href="/transactions/3" />
+      <ListRow layout="flat" variant="project" title="וילה לדוגמה" hint="רווחיות 27%" agorot={2_000_000n} href="/projects/1" />
     </List>
   ),
 };
 
-export const SharedOne: Story = {
-  name: "Shared cost, one share",
-  args: { variant: "button", title: "בניין מגורים חולון" },
+/** FLOW-363 (2d): four rows in one card, 14px inside and a hairline between rows. Invented names, round amounts. */
+export const InsetList: Story = {
+  args: { variant: "transaction", title: "קבלה 1042", layout: "inset" },
   render: () => (
-    <List>
-      <ListRow variant="button" title="בניין מגורים חולון" chevron onClick={() => undefined} />
+    <List layout="inset">
+      <ListRow layout="inset" variant="transaction" title="קבלה 1042" hint="חומרים · 12/09" agorot={1_800_000n} sign="in" source="invoice" href="/transactions/1" />
+      <ListRow layout="inset" variant="transaction" title="העברה" hint="בנק · 10/09" agorot={450_000n} sign="out" source="bank" href="/transactions/2" />
+      <ListRow layout="inset" variant="transaction" title="ספק לדוגמה" hint="חומרים · 08/09" agorot={1_000_000n} sign="out" source="invoice" href="/transactions/3" />
+      <ListRow layout="inset" variant="project" title="וילה לדוגמה" hint="רווחיות 27%" agorot={2_000_000n} href="/projects/1" />
     </List>
   ),
 };
-
-export const ListOfRows: Story = {
-  args: { variant: "project", title: "טק-ליין", agorot: "-2940000", loss: true },
-  render: () => (
-    <List>
-      <ListRow variant="transaction" title="Sample vendor" hint="Utilities · 10/09" agorot={125_000n} sign="out" source="bank" currency="USD" />
-      <ListRow variant="project" title="טק-ליין" agorot={-2_940_000n} loss />
-      <ListRow variant="project" title={longHebrew} agorot={largeAgorot} />
-    </List>
-  ),
-};
-
-/** FLOW-408: a row that opens nothing keeps the chevron's space, so its amount lines up with linked rows. */
-export const ProjectRowsLineUp: Story = {
-  args: { variant: "project", title: "חומרים", agorot: "3000000" },
-  render: () => (
-    <List>
-      <ListRow variant="project" title="חומרים" agorot={3_000_000n} loss={false} href="/projects/1/categories/c1" chevron />
-      <ListRow variant="project" title="בלי קטגוריה" agorot={420_000n} loss={false} chevronSpace />
-      <ListRow variant="project" title="חשמל ומים לדוגמה" agorot={125_000n} currency="USD" loss={false} href="/projects/1/categories/c2?currency=USD" chevron />
-    </List>
-  ),
-};
-
-/** Option C (decision 0120): income green with a "+" and small agorot (none on a whole amount), expense with − and agorot,
-    a negative income with its minus and never green, and a project row in whole units. No hairlines. */
-function MercuryRows() {
-  return (
-    <List>
-      <ListRow variant="transaction" title="לקוח לדוגמה" hint="מקדמה · 14/09" agorot={1_200_000n} sign="in" source="invoice" href="/transactions/1" />
-      <ListRow variant="transaction" title="לקוח שני" hint="תשלום · 12/09" agorot={345_050n} sign="in" source="bank" href="/transactions/2" />
-      <ListRow variant="transaction" title="ספק לדוגמה" hint="חומרים · 10/09" agorot={123_456n} sign="out" source="invoice" href="/transactions/3" />
-      <ListRow variant="transaction" title="זיכוי ללקוח" hint="זיכוי · 08/09" agorot={-20_000n} sign="in" source="invoice" href="/transactions/4" />
-      <ListRow variant="project" title="פרויקט לדוגמה" hint="רווחיות 27%" agorot={2_940_000n} href="/projects/1" />
-      <ListRow
-        variant="static"
-        title="הכנסה שלילית בסיכום"
-        meta={<Amount agorot={-40_000n} income />}
-      />
-    </List>
-  );
-}
-
-/** A line kept out of profit fades but keeps its hint readable, next to one that counts (owner's pick C, FLOW-352). */
-function SetAsideRows() {
-  return (
-    <List>
-      <ListRow variant="transaction" title="חשמלאי לדוגמה" hint="עבודה · 05/10" agorot={-632_000n} sign="out" source="invoice" href="/transactions/1" />
-      <ListRow variant="transaction" title="החזר ציוד לדוגמה" hint="לא נספר ברווח · ציוד · 02/10" agorot={-150_000n} sign="out" source="invoice" href="/transactions/2" setAside />
-      <ListRow variant="statement" title="ספק לדוגמה" fallback="invoice" details={[{ text: "לא נספר ברווח" }]} agorot={-42_000n} sign="out" href="/transactions/3" setAside />
-    </List>
-  );
-}
-
-/** A category's lines mark a kept-out line with the ⊘ tag; the name keeps the row's width. */
-export const SetAsideTagged: Story = {
-  args: { variant: "transaction", title: "Sample supplier" },
-  render: () => (
-    <List>
-      <ListRow variant="transaction" title="Sample supplier" hint="10/05" agorot={-170_000n} sign="cost" source="bank" href="/transactions/1" tag={<KeptOutTag label="לא נספר ברווח" />} setAside />
-    </List>
-  ),
-};
-
-export const SetAside: Story = {
-  args: { variant: "transaction", title: "החזר ציוד לדוגמה" },
-  render: () => <SetAsideRows />,
-};
-export const SetAsideDark: Story = {
-  args: { variant: "transaction", title: "החזר ציוד לדוגמה" },
-  globals: { theme: "dark" },
-  render: () => <SetAsideRows />,
-};
-/** FLOW-909: a kept-out line's name uses the row's free width like a counted line's; it was cut to "City Of Pri…" with room to spare. */
-export const SetAsideShortName: Story = {
-  args: { variant: "transaction", title: "Sample City Water" },
-  render: () => (
-    <List>
-      <ListRow variant="transaction" title="Sample Electric Cooperative" hint="02/10" agorot={-36_500n} sign="out" source="bank" href="/transactions/1" />
-      <ListRow variant="transaction" title="Sample City Water" hint="לא נספר ברווח" agorot={-20_000n} sign="out" source="bank" href="/transactions/2" setAside />
-    </List>
-  ),
-  play: async ({ canvasElement }) => {
-    const title = within(canvasElement).getByText("Sample City Water");
-    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
-  },
-};
-/** FLOW-352: the hint keeps its full muted grey (AA); the icon, name and amount fade. */
-export const SetAside320: Story = { ...SetAside, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const SetAsideDark320: Story = { ...SetAsideDark, parameters: { viewport: { defaultViewport: "flow320" } } };
-
-export const MercuryLight: Story = {
-  args: { variant: "transaction", title: "לקוח לדוגמה" },
-  render: () => <MercuryRows />,
-};
-export const MercuryDark: Story = {
-  args: { variant: "transaction", title: "לקוח לדוגמה" },
-  globals: { theme: "dark" },
-  render: () => <MercuryRows />,
-};
-
-/**
- * FLOW-305 option A: the statement row. Initials in the tint, the counterparty, a pending chip and
- * "✦ project · category", the amount with small cents and the method under it. Invented data.
- */
-const bankMethod = statementMethodOf("mercury", undefined);
-const invoiceMethod = statementMethodOf("sumit", "invoice");
-// FLOW-305 with FLOW-304 bank details: the method comes from the line's meta. Invented card digits.
-const cardMethod = statementMethodOf("mercury", undefined, storyMeta("t-card", { method: "card", card_last4: "4242" }));
-const achMethod = statementMethodOf("mercury", undefined, storyMeta("t-ach", { method: "ach" }));
-const wireMethod = statementMethodOf("mercury", undefined, storyMeta("t-wire", { method: "wire" }));
-const checkMethod = statementMethodOf("mercury", undefined, storyMeta("t-check", { method: "check" }));
-const noMetaMethod = statementMethodOf("mercury", undefined, null);
-
-type BankKind = "card" | "ach" | "wire" | "check" | "none";
-
-/** One bank line per payment method, and one with no bank details ("בנק"). */
-function StatementBankRows({ only }: { only?: BankKind }) {
-  const rows: Record<BankKind, ReactElement> = {
-    card: <ListRow key="card" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=11" />,
-    ach: <ListRow key="ach" variant="statement" title="Fabrikam Supply Co" fallback="bank" method={achMethod} suggestion="וילה לדוגמה · חומרים" agorot={-245_000n} currency="USD" sign="out" href="/review/all?item=12" />,
-    wire: <ListRow key="wire" variant="statement" title="לקוח לדוגמה" fallback="bank" method={wireMethod} agorot={1_500_000n} currency="USD" sign="in" href="/review/all?item=13" />,
-    check: <ListRow key="check" variant="statement" title="קבלן לדוגמה" fallback="bank" method={checkMethod} pending agorot={-80_000n} currency="USD" sign="out" href="/review/all?item=14" />,
-    none: <ListRow key="none" variant="statement" title="חשמל לדוגמה בע״מ" fallback="bank" method={noMetaMethod} agorot={-120_050n} sign="out" href="/review/all?item=15" />,
-  };
-  return <List>{only ? rows[only] : Object.values(rows)}</List>;
-}
-
-function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "jev" | "jevPending" | "jevPair" | "long" | "fallback" | "all" }) {
-  const rows = {
-    income: <ListRow key="income" variant="statement" title="לקוח לדוגמה" fallback="invoice" method={invoiceMethod} agorot={500_000n} sign="in" href="/review/all?item=1" />,
-    expense: <ListRow key="expense" variant="statement" title="חשמל לדוגמה בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
-    pending: <ListRow key="pending" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} pending agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=3" />,
-    suggestion: (
-      <ListRow key="suggestion" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
-    ),
-    // FLOW-704: Jev's fill reads "✦ Jev · …" and the row's name says הצעת Jev.
-    jev: (
-      <ListRow key="jev" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=7" />
-    ),
-    // With בהמתנה at 320 only "✦" fits; the row's name still says הצעת Jev.
-    jevPending: (
-      <ListRow key="jevPending" variant="statement" title="שיש לדוגמה" fallback="invoice" method={invoiceMethod} pending suggestion="וילה לדוגמה · חומרים" suggestionJev agorot={-345_000n} sign="out" href="/review/all?item=8" />
-    ),
-    long: (
-      <ListRow
-        key="long"
-        variant="statement"
-        title="Contoso Building Supplies International"
-        fallback="bank"
-        method={bankMethod}
-        pending
-        suggestion={longHebrew}
-        agorot={-999_999_999n}
-        currency="USD"
-        sign="out"
-        href="/review/all?item=5"
-      />
-    ),
-    fallback: <ListRow key="fallback" variant="statement" title="4242-1234" fallback="bank" method={bankMethod} agorot={-10_000n} sign="out" href="/review/all?item=6" />,
-  };
-  if (kind === "all") return <List>{Object.values(rows).filter((row) => row.key !== "jev" && row.key !== "jevPending")}</List>;
-  if (kind === "jevPair") return <List>{[rows.suggestion, rows.jev, rows.jevPending]}</List>;
-  return <List>{rows[kind]}</List>;
-}
-
-const statementArgs = { variant: "transaction", title: "statement" } as const;
-function statementFrame(width: "flow320" | "flow390", theme: "light" | "dark"): Pick<Story, "globals" | "parameters"> {
-  return {
-    ...(theme === "dark" ? { globals: { theme: "dark" as const } } : {}),
-    parameters: { viewport: { defaultViewport: width } },
-  };
-}
-
-export const StatementIncome: Story = { args: statementArgs, render: () => <StatementSample kind="income" /> };
-export const StatementExpense: Story = { args: statementArgs, render: () => <StatementSample kind="expense" /> };
-export const StatementPending: Story = { args: statementArgs, render: () => <StatementSample kind="pending" /> };
-export const StatementSuggestion: Story = { args: statementArgs, render: () => <StatementSample kind="suggestion" /> };
-export const StatementJev320: Story = { args: statementArgs, render: () => <StatementSample kind="jevPair" />, ...statementFrame("flow320", "light") };
-export const StatementJev390: Story = { args: statementArgs, render: () => <StatementSample kind="jevPair" />, ...statementFrame("flow390", "light") };
-export const StatementJev320Dark: Story = { args: statementArgs, render: () => <StatementSample kind="jevPair" />, ...statementFrame("flow320", "dark") };
-export const StatementLongName: Story = { args: statementArgs, render: () => <StatementSample kind="long" /> };
-export const StatementNoLetters: Story = { args: statementArgs, render: () => <StatementSample kind="fallback" /> };
-export const StatementAll390: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow390", "light") };
-export const StatementAll390Dark: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow390", "dark") };
-export const StatementAll320: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow320", "light") };
-export const StatementAll320Dark: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow320", "dark") };
-
-export const StatementCard: Story = { args: statementArgs, render: () => <StatementBankRows only="card" /> };
-export const StatementCardDark: Story = { args: statementArgs, render: () => <StatementBankRows only="card" />, globals: { theme: "dark" } };
-export const StatementAch: Story = { args: statementArgs, render: () => <StatementBankRows only="ach" /> };
-export const StatementAchDark: Story = { args: statementArgs, render: () => <StatementBankRows only="ach" />, globals: { theme: "dark" } };
-export const StatementWire: Story = { args: statementArgs, render: () => <StatementBankRows only="wire" /> };
-export const StatementWireDark: Story = { args: statementArgs, render: () => <StatementBankRows only="wire" />, globals: { theme: "dark" } };
-export const StatementCheck: Story = { args: statementArgs, render: () => <StatementBankRows only="check" /> };
-export const StatementCheckDark: Story = { args: statementArgs, render: () => <StatementBankRows only="check" />, globals: { theme: "dark" } };
-export const StatementNoBankDetails: Story = { args: statementArgs, render: () => <StatementBankRows only="none" /> };
-export const StatementNoBankDetailsDark: Story = { args: statementArgs, render: () => <StatementBankRows only="none" />, globals: { theme: "dark" } };
-export const StatementMethods320: Story = { args: statementArgs, render: () => <StatementBankRows />, ...statementFrame("flow320", "light") };
-export const StatementMethods320Dark: Story = { args: statementArgs, render: () => <StatementBankRows />, ...statementFrame("flow320", "dark") };
-
-/** FLOW-501: a loan on the Loans page. The meta slot holds the balance with small cents; a waiting loan warns. */
-function LoanRows() {
-  return (
-    <List className="ui-loan-list">
-      <ListRow
-        variant="button"
-        title="משכנתא אלון"
-        icon={<BankIcon />}
-        hint="וילה אלון"
-        meta={<bdi className="ui-num ui-loan-amount" dir="ltr">$200,000<span className="ui-num-cents">.00</span></bdi>}
-        chevron
-        onClick={() => undefined}
-      />
-      <ListRow
-        variant="button"
-        title={longHebrew}
-        icon={<BankIcon />}
-        tone="warning"
-        hint="ממתין לבדיקה · פרויקט גפן"
-        wrapHint
-        meta={<bdi className="ui-num ui-loan-amount" dir="ltr">₪50,000<span className="ui-num-cents">.00</span></bdi>}
-        chevron
-        onClick={() => undefined}
-      />
-      <ListRow
-        variant="static"
-        title="הלוואת ציוד"
-        icon={<BankIcon />}
-        meta={<bdi className="ui-num ui-loan-amount" dir="ltr">₪1,250<span className="ui-num-cents">.50</span></bdi>}
-      />
-    </List>
-  );
-}
-
-export const LoanBalance: Story = {
-  args: { variant: "button", title: "משכנתא אלון" },
-  render: () => <LoanRows />,
-};
-export const LoanBalanceDark: Story = {
-  args: { variant: "button", title: "משכנתא אלון" },
-  globals: { theme: "dark" },
-  render: () => <LoanRows />,
-};
-export const LoanBalance320: Story = {
-  args: { variant: "button", title: "משכנתא אלון" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <LoanRows />,
-};
-
-/**
- * FLOW-323: a search result. The typed text is tinted in the name; line 2 is the date, then the
- * project and category, "ממתינה לאישור" in the accent, "פוצלה ל־N", or "לא נספר ברווח" first. Invented data.
- */
-function StatementSearchRows() {
-  return (
-    <List>
-      <ListRow variant="statement" title="חומרי בניין לדוגמה" fallback="invoice" match="חומרי" details={[{ text: "08/10" }, { text: "שיפוץ לדוגמה" }, { text: "חומרים" }]} agorot={-124_000n} sign="out" href="/transactions/s1" />
-      <ListRow variant="statement" title="חומרי בניין לדוגמה" fallback="invoice" match="חומרי" details={[{ text: "02/10" }, { text: "ממתינה לאישור", tone: "accent" }]} agorot={-38_600n} sign="out" href="/transactions/s2" />
-      <ListRow variant="statement" title="החזר חומרי גמר" fallback="invoice" match="חומרי" details={[{ text: "21/09" }, { text: "וילה לדוגמה" }, { text: "פוצלה ל־2" }]} agorot={31_000n} sign="in" inWord="זיכוי" href="/transactions/s3" />
-      <ListRow variant="statement" title="Contoso Building Supplies International" fallback="bank" match="supplies" details={[{ text: "לא נספר ברווח" }, { text: "14/09" }, { text: longHebrew }]} agorot={-999_999_999n} currency="USD" sign="out" href="/transactions/s4" />
-    </List>
-  );
-}
-
-export const StatementSearch: Story = { args: statementArgs, render: () => <StatementSearchRows /> };
-export const StatementSearchDark: Story = { args: statementArgs, render: () => <StatementSearchRows />, globals: { theme: "dark" } };
-export const StatementSearch320: Story = { args: statementArgs, render: () => <StatementSearchRows />, ...statementFrame("flow320", "light") };
-export const StatementSearch320Dark: Story = { args: statementArgs, render: () => <StatementSearchRows />, ...statementFrame("flow320", "dark") };

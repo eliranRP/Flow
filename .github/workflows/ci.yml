@@ -1,8 +1,9 @@
 name: ci
 
-# Pull requests have no GitHub CI: scripts/local-ci.sh runs the same suite from the pre-push hook.
-# main runs the suite and the deploy in batches (see the plan job), and anyone can run it by hand
-# (Actions, ci, Run workflow). A manual run on another branch tests it without deploying.
+# Every push to main runs the full suite here. Pull requests are checked before their merge: the pre-push
+# hook runs scripts/local-ci.sh --part quick, and the pr workflow (.github/workflows/pr.yml) runs the rest on
+# GitHub. The deploy runs in batches (see the plan job), and anyone can run this workflow by hand (Actions,
+# ci, Run workflow). A manual run on another branch tests it without deploying.
 on:
   push:
     branches:
@@ -17,8 +18,8 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # Decides whether this run tests and deploys: on the 5th merge since the last good deploy, or on a
-  # manual run. Other pushes to main stop here.
+  # Every run on main tests (run is always true there). deploy is the batch rule: true on the 5th merge
+  # since the last good deploy, or on a manual run.
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -27,6 +28,7 @@ jobs:
       deployments: read
     outputs:
       run: ${{ steps.plan.outputs.run }}
+      deploy: ${{ steps.plan.outputs.deploy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -455,7 +457,7 @@ jobs:
 
   deploy:
     needs: [plan, lint, check, e2e]
-    if: needs.plan.outputs.run == 'true' && github.ref == 'refs/heads/main'
+    if: needs.plan.outputs.deploy == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     concurrency:

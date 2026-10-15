@@ -473,7 +473,7 @@ describe("settings account", () => {
     expect(single).not.toBeNull();
     expect(single?.querySelector(".ui-row-hint")).toBeNull();
     expect(getComputedStyle(single as Element).boxSizing).toBe("border-box");
-    expect(rowHeight(false)).toBe(50);
+    expect(rowHeight(false)).toBe(53);
     unmount();
 
     renderWithProviders(
@@ -490,7 +490,7 @@ describe("settings account", () => {
     const paired = screen.getByText("owner@example.com").closest(".ui-row");
     expect(paired?.querySelector(".ui-row-hint")).toBeNull();
     expect(screen.getByText("אלפא").closest(".ui-row")?.querySelector(".ui-row-hint")).toBeNull();
-    expect(rowHeight(false)).toBe(50);
+    expect(rowHeight(false)).toBe(53);
     document.documentElement.style.removeProperty("--row-pad");
   });
 

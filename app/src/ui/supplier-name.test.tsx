@@ -106,9 +106,9 @@ describe("supplier names", () => {
     expect(join?.textContent).toBe("←");
     const dest = join?.closest(".ui-remember-dest");
     expect(dest?.textContent).toBe("←\u00A0\u2060פרויקט · מלט");
-    // The summary values read at the row-title weight, like the transaction detail.
+    // The summary values read at the row-title role (body, FLOW-363 2d), like the transaction detail.
     for (const title of document.querySelectorAll(".ui-change-summary .ui-row-title")) {
-      expect(getComputedStyle(title).fontWeight).toBe("var(--type-meta-weight)");
+      expect(getComputedStyle(title).fontWeight).toBe("var(--type-body-weight)");
     }
     expect(document.querySelectorAll(".ui-change-summary .ui-row-title").length).toBeGreaterThan(0);
   });
