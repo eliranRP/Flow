@@ -80,7 +80,7 @@ fi
 
 pnpm install --frozen-lockfile
 pnpm --filter @flow/app exec playwright install --with-deps chromium
-# Pull requests have no GitHub CI: the pre-push hook runs scripts/local-ci.sh.
+# The pre-push hook runs the quick check (scripts/local-ci.sh --part quick); the pr workflow runs the rest on GitHub.
 git config core.hooksPath .githooks
 # A container restart empties the edge runtime's cache and stops it; the push gate's flow-mcp smoke
 # needs both back (local-ci seeds again after a fresh supabase start).

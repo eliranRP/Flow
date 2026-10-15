@@ -16,16 +16,15 @@ This plan turns the approved [Design canvas](https://claude.ai/artifact/9grt9spj
 
 | Team | Model | Does |
 | --- | --- | --- |
-| Planning (lane manager for the redesign) | Opus 5.5 (`claude-opus-5-5`) | This plan, the briefs, the queue, claims, merges, the owner's questions |
+| Planning (lane manager for the redesign) | Opus 5.5 (`claude-opus-5-5`) | This plan, the technical designs, the board-value briefs, the queue, claims, merges, the owner's questions |
 | Execution: builders, one per PR | Haiku 5.5 (`claude-haiku-5-5`) | Builds from a brief, runs lint, typecheck and the touched tests, pushes, and stops ([backlog README, builder](../backlog/README.md#builder)) |
-| Code review | Opus 5.5 | As in the backlog README |
-| Design review team | Opus 5.5, two reviewers per PR | Reviews every component and screen against its canvas board before the merge (see [§6](#6-design-review-team)). Any difference blocks the merge, and the reviewer sends a short list of the differences |
+| Review (code, pixels and motion) | Haiku 5.5 (`claude-haiku-5-5`), one reviewer per PR | One checklist, as in the [backlog README](../backlog/README.md) step 4. Reviews every component and screen against its canvas board before the merge: pixels at 320 and 393 px, in dark and light, and motion (see [§6](#6-design-review-team)). Any difference blocks the merge, and the reviewer sends a short list of the differences |
 
 Execution follows the [backlog README](../backlog/README.md):
 - Two UI lanes, one area per lane.
 - Each PR claims its work with a draft PR.
-- The pre-push hook runs local CI.
-- The PR gets a code review and a design review.
+- The pre-push hook runs the quick check, and the `pr` check runs the rest on GitHub.
+- The PR gets one review, of the code, the pixels and the motion.
 - There is one fix round, then a squash merge.
 
 ## 1. Order
