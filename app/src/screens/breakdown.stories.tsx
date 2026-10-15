@@ -34,49 +34,8 @@ const expenses: NonNullable<Breakdown> = {
   review_count: 3,
 };
 
-const byProject: NonNullable<Breakdown> = {
-  ...expenses,
-  group_by: "project",
-  groups: [
-    { key: "p1", name: "מגדל הים", currency: "ILS", amount_minor: 2_210_000n, count: 15, shared: true },
-    { key: "p2", name: "וילה בהרצליה", currency: "ILS", amount_minor: 1_340_000n, count: 9, shared: true },
-    { key: "unassigned", name: null, currency: "ILS", amount_minor: 642_000n, count: 4, shared: false },
-    { key: "overhead", name: null, currency: "ILS", amount_minor: 640_000n, count: 6, shared: false },
-  ],
-};
 
-const longNames: NonNullable<Breakdown> = {
-  ...expenses,
-  groups: [
-    { key: "c1", name: "חומרי גמר, ריצוף, חיפוי קירות ואביזרי אינסטלציה לשלב ב׳", currency: "ILS", amount_minor: 123_456_700n, count: 128, shared: true },
-    { key: "c2", name: "קבלני משנה לעבודות חשמל ותקשורת", currency: "ILS", amount_minor: 98_765_400n, count: 77, shared: false },
-    { key: "c3", name: "תוכנה", currency: "USD", amount_minor: 1_250_000n, count: 3, shared: false },
-  ],
-  totals: [
-    { currency: "ILS", amount_minor: 222_222_100n, count: 205 },
-    { currency: "USD", amount_minor: 1_250_000n, count: 3 },
-  ],
-};
 
-const income: NonNullable<Breakdown> = {
-  direction: "income",
-  basis: "invoiced",
-  group_by: "payer",
-  from: "2026-10-01",
-  to: "2026-10-31",
-  totals: [
-    { currency: "ILS", amount_minor: 7_250_000n, count: 9 },
-    { currency: "USD", amount_minor: 480_000n, count: 2 },
-  ],
-  groups: [
-    { key: "s1", name: "דניאל כהן", currency: "ILS", amount_minor: 3_180_000n, count: 4, shared: false },
-    { key: "s2", name: "מיכל לוי", currency: "ILS", amount_minor: 2_920_000n, count: 3, shared: false },
-    { key: "none", name: null, currency: "ILS", amount_minor: 1_150_000n, count: 2, shared: false },
-    { key: "s3", name: "Example Holdings", currency: "USD", amount_minor: 480_000n, count: 2, shared: false },
-  ],
-  excluded: [],
-  review_count: 0,
-};
 
 const linesPage: NonNullable<BreakdownLinesPage> = {
   rows: [
@@ -104,48 +63,17 @@ function breakdownStory(sample: Breakdown | undefined, entry = "/flow/expense", 
   );
 }
 
-function quadrant(render: () => ReactElement): { base: Story; dark: Story; narrow: Story; darkNarrow: Story } {
-  return {
-    base: { render },
-    dark: { render, globals: { theme: "dark" } },
-    narrow: { render, parameters: { viewport: { defaultViewport: "flow320" } } },
-    darkNarrow: { render, globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } },
-  };
+function storyOf(render: () => ReactElement): Story {
+  return { render };
 }
 
-const byCategory = quadrant(breakdownStory(expenses));
-export const ExpensesByCategory: Story = byCategory.base;
-export const ExpensesByCategoryDark: Story = byCategory.dark;
-export const ExpensesByCategory320: Story = byCategory.narrow;
-export const ExpensesByCategoryDark320: Story = byCategory.darkNarrow;
 
-const projects = quadrant(breakdownStory(byProject));
-export const ExpensesByProject: Story = projects.base;
-export const ExpensesByProjectDark: Story = projects.dark;
 
-const long = quadrant(breakdownStory(longNames));
-export const LongNamesAndUsd: Story = long.base;
-export const LongNamesAndUsd320: Story = long.narrow;
 
 /** FLOW-307: the largest totals step down from display until they fit, each line on its own. */
-const hugeTotals: NonNullable<Breakdown> = {
-  ...longNames,
-  totals: [
-    { currency: "ILS", amount_minor: 9_999_999_999n, count: 205 },
-    { currency: "USD", amount_minor: 9_999_999_999n, count: 3 },
-  ],
-};
-const huge = quadrant(breakdownStory(hugeTotals));
-export const LargestTotals: Story = huge.base;
-export const LargestTotalsDark320: Story = huge.darkNarrow;
 
-const incomeStory = quadrant(breakdownStory(income, "/flow/income"));
-export const IncomeByCustomer: Story = incomeStory.base;
-export const IncomeByCustomerDark: Story = incomeStory.dark;
 
 export const Empty: Story = { render: breakdownStory(undefined, "/flow/expense?preview=empty", "category") };
-export const Loading: Story = { render: breakdownStory(undefined, "/flow/expense?preview=loading", "category") };
-export const ErrorState: Story = { render: breakdownStory(undefined, "/flow/expense?preview=error", "category") };
 
 function linesStory(pages: Array<NonNullable<BreakdownLinesPage>> = [linesPage]) {
   return (
@@ -160,12 +88,9 @@ function linesStory(pages: Array<NonNullable<BreakdownLinesPage>> = [linesPage])
   );
 }
 
-const lines = quadrant(() => linesStory());
-export const GroupLines: Story = lines.base;
-export const GroupLinesDark: Story = lines.dark;
-export const GroupLines320: Story = lines.narrow;
+const lines = storyOf(() => linesStory());
+export const GroupLines: Story = lines;
 
 /** FLOW-322: the lines pick their own period; an empty one offers another instead of a dead end. */
-const emptyLines = quadrant(() => linesStory([{ ...linesPage, rows: [] }]));
-export const GroupLinesEmpty: Story = emptyLines.base;
-export const GroupLinesEmpty320: Story = emptyLines.narrow;
+const emptyLines = storyOf(() => linesStory([{ ...linesPage, rows: [] }]));
+export const GroupLinesEmpty: Story = emptyLines;

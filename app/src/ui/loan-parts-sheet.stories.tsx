@@ -64,8 +64,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-export const Dark: Story = { globals: { theme: "dark" } };
-export const Narrow320: Story = { parameters: { viewport: { defaultViewport: "flow320" } } };
 /** Three parts: a payment with no fees. */
 export const ThreeParts: Story = { args: { fields: FIELDS.slice(0, 3), total: "₪6,160" } };
 /** The parts no longer add up to the line: שמירה stays off and the line says the total it needs. */
@@ -75,13 +73,11 @@ export const Unmatching: Story = { args: { unmatching: true } };
 /** A part waits for review: one line above the parts says why. */
 export const NeedsReview: Story = { args: { note: "סכום השורה עלה ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו." } };
 /** A dollar loan. Largest amounts still fit at 320. */
-export const DollarsLarge320: Story = {
+export const DollarsLarge: Story = {
   args: { prefix: "$", total: "$9,999,999.99", fields: [{ part: "principal", value: "9999999.99" }, { part: "interest", value: "0" }, { part: "escrow", value: "0" }] },
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 /** The stored parts failed to load: the line says so and ניסיון חוזר reads them again. */
 export const ReadFailed: Story = { args: { problem: "לא הצלחנו לטעון את הפיצול.", retry: true } };
-export const ReadFailed320: Story = { args: { problem: "לא הצלחנו לטעון את הפיצול.", retry: true }, parameters: { viewport: { defaultViewport: "flow320" } } };
 /** A viewer reads the parts and the total; no fields, no actions (screen 11a). */
 export const Viewer: Story = {
   args: {
@@ -94,7 +90,6 @@ export const Viewer: Story = {
     ],
   },
 };
-export const ViewerDark: Story = { ...Viewer, globals: { theme: "dark" } };
 
 /** FLOW-362: one editor. The parts read as static amounts and "עריכת הפיצול" is the 44px tint button. */
 const SHOWN: LoanPartField[] = [
@@ -104,5 +99,3 @@ const SHOWN: LoanPartField[] = [
   { part: "fees", value: "₪40" },
 ];
 export const EditButton: Story = { args: { edit: true, fields: SHOWN }, parameters: { viewport: { defaultViewport: "flow390" } } };
-export const EditButton320: Story = { args: { edit: true, fields: SHOWN }, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const EditButtonDark: Story = { ...EditButton, globals: { theme: "dark" } };

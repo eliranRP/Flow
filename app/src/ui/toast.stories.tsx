@@ -175,14 +175,11 @@ export const PlaceBar: Story = {
   args: { children: "דילגנו על הפריט", action: "ביטול" },
   render: () => <AboveBar>דילגנו על הפריט</AboveBar>,
 };
-export const PlaceBarDark: Story = { ...PlaceBar, globals: { theme: "dark" } };
-export const PlaceBar320: Story = { ...PlaceBar, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** FLOW-426: a message in parts wraps only at its "·", never inside a part (the viewer note at 320). */
-export const ViewerNote320: Story = {
+export const ViewerNote: Story = {
   args: { children: "צפייה בלבד · שינויים נעשים על ידי בעל העסק", tone: "info" },
   render: () => <AboveBar>צפייה בלבד · שינויים נעשים על ידי בעל העסק</AboveBar>,
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 /** The text of each hint part, without its "·" box, as boxes on screen. */

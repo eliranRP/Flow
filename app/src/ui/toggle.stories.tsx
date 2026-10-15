@@ -48,7 +48,3 @@ export const LongHebrew: Story = {
 export const RowWithIcon: Story = {
   args: { label: "רווח אחרי הוצאות כלליות", hint: "חלק מההוצאות הכלליות נכנס לכל פרויקט", withIcon: true },
 };
-export const RowWithIconDark: Story = {
-  ...RowWithIcon,
-  globals: { theme: "dark" },
-};

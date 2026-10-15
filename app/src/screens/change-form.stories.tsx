@@ -115,31 +115,17 @@ export const ChangeSheet: Story = {
 };
 
 /** FLOW-704: Jev's fill says הצעת Jev on שינוי שיוך, as on the card. */
-export const ChangeJevSummary320: Story = {
-  name: "Summary (Jev fill) 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+export const ChangeJevSummary: Story = {
+  name: "Summary (Jev fill)",
   render: () => <ChangeStory jev={{ project: true, category: true }} />,
 };
 
-export const ChangeJevSummaryDark320: Story = {
-  name: "Summary (Jev fill) dark 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory jev={{ project: true, category: true }} />,
-};
 
-export const ChangeJevPicker320: Story = {
-  name: "Project picker (Jev fill) 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+export const ChangeJevPicker: Story = {
+  name: "Project picker (Jev fill)",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" jev={{ project: true }} />,
 };
 
-export const ChangeJevPickerDark320: Story = {
-  name: "Project picker (Jev fill) dark 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" jev={{ project: true }} />,
-};
 
 export const ChangeSummaryChanged: Story = {
   name: "Summary (changed)",
@@ -153,19 +139,7 @@ export const ChangeProjectPicker: Story = {
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
 };
 
-/** FLOW-325 §10 (option A): פיצול לפי קטגוריות under פיצול בין פרויקטים approves, then opens the parts editor. */
-export const ChangeProjectPickerDark: Story = {
-  name: "Project picker dark",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
-};
 
-export const ChangeProjectPicker320: Story = {
-  name: "Project picker 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
-};
 
 /** No category yet: the line cannot be approved, so the sheet offers no split by categories. */
 export const ChangeProjectPickerNoCategory: Story = {
@@ -175,9 +149,8 @@ export const ChangeProjectPickerNoCategory: Story = {
 };
 
 /** FLOW-831: a row tap only moves the check, so שמירה is enabled once the check differs from the saved project. */
-export const ChangeProjectChoicePending320: Story = {
-  name: "Project picker, choice pending 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+export const ChangeProjectChoicePending: Story = {
+  name: "Project picker, choice pending",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
@@ -186,22 +159,10 @@ export const ChangeProjectChoicePending320: Story = {
   },
 };
 
-export const ChangeProjectChoicePendingDark320: Story = {
-  name: "Project picker, choice pending dark 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("radio", { name: /וילה/ }));
-    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
-  },
-};
 
 /** FLOW-831: nothing changed yet, so שמירה is disabled. */
-export const ChangeProjectUnchanged320: Story = {
-  name: "Project picker, nothing changed 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+export const ChangeProjectUnchanged: Story = {
+  name: "Project picker, nothing changed",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" suggestionId="" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
@@ -209,21 +170,10 @@ export const ChangeProjectUnchanged320: Story = {
   },
 };
 
-export const ChangeProjectUnchangedDark320: Story = {
-  name: "Project picker, nothing changed dark 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" suggestionId="" />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByRole("button", { name: "שמירה" })).toBeDisabled();
-  },
-};
 
 /** FLOW-831: a category row tap only moves the check; שמירה saves it. */
-export const ChangeCategoryChoicePending320: Story = {
-  name: "Category picker, choice pending 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+export const ChangeCategoryChoicePending: Story = {
+  name: "Category picker, choice pending",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
@@ -232,17 +182,6 @@ export const ChangeCategoryChoicePending320: Story = {
   },
 };
 
-export const ChangeCategoryChoicePendingDark320: Story = {
-  name: "Category picker, choice pending dark 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("radio", { name: /הובלה/ }));
-    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
-  },
-};
 
 export const ChangeProjectSearching: Story = {
   name: "Project picker searching",
@@ -281,14 +220,12 @@ export const ChangeReversalPicker: Story = {
 };
 
 export const ChangeReversalPicked: Story = {
-  name: "Reversal picked, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  name: "Reversal picked",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
 };
 
 export const ChangeReversalSummary: Story = {
-  name: "Reversal on the summary, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  name: "Reversal on the summary",
   render: () => <ChangeStory categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
 };
 
@@ -299,14 +236,12 @@ const keptOutReversalCategories = [
 ];
 
 export const ChangeReversalKeptOutSummary: Story = {
-  name: "Kept-out reversal on the summary, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  name: "Kept-out reversal on the summary",
   render: () => <ChangeStory categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
 };
 
 export const ChangeReversalKeptOutPicker: Story = {
-  name: "Kept-out reversal in the picker, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  name: "Kept-out reversal in the picker",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
 };
 
@@ -318,7 +253,6 @@ export const ChangeSaveError: Story = {
 
 export const ChangeLongHebrew: Story = {
   name: "Long Hebrew",
-  parameters: { viewport: { defaultViewport: "flow320" } },
   render: () => (
     <ChangeStory
       supplier="חומרי בניין לדוגמה בע״מ סניף גבעת הדוגמה"
@@ -358,20 +292,8 @@ export const ChangeProjectPickerGrouped: Story = {
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" projects={groupedChangeProjects} />,
 };
 
-export const ChangeProjectPickerGroupedDark: Story = { ...ChangeProjectPickerGrouped, name: "Project picker, grouped, dark", globals: { theme: "dark" } };
 
-export const ChangeProjectPickerGrouped320: Story = {
-  ...ChangeProjectPickerGrouped,
-  name: "Project picker, grouped, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
-export const ChangeProjectPickerGroupedDark320: Story = {
-  ...ChangeProjectPickerGrouped,
-  name: "Project picker, grouped, dark, 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
 /** A search lists the matches flat, a group's name included in what it matches. */
 export const ChangeProjectPickerGroupedSearch: Story = {

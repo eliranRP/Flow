@@ -24,14 +24,6 @@ export const ReviewEmpty: Story = {
   ),
 };
 
-export const ReviewCardQueue: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
-      <ExampleBar />
-      <ReviewQueue rows={[sampleReview]} search="" sample />
-    </StoryRoute>
-  ),
-};
 
 export const ReviewCardViewer: Story = {
   render: () => (
@@ -107,13 +99,6 @@ function ReviewStatement() {
 }
 
 export const ReviewAllStatement: Story = { render: () => <ReviewStatement /> };
-export const ReviewAllStatementDark: Story = { render: () => <ReviewStatement />, globals: { theme: "dark" } };
-export const ReviewAllStatement320: Story = { render: () => <ReviewStatement />, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const ReviewAllStatement320Dark: Story = {
-  render: () => <ReviewStatement />,
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
 export const ReviewWithoutSuggestion: Story = {
   render: () => (

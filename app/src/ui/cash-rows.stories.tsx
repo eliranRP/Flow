@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { CashRows, type CashRow } from "./cash-rows";
-import { at320, dark } from "./screen-stories-support";
 import { StoryRoute } from "./story-route";
 
 /** FLOW-413 + FLOW-418 + FLOW-417: the cash view's rows. Invented figures. Rows hold bigints, so stories render them rather than pass args. */
@@ -44,8 +43,6 @@ export const Month: Story = {
     await expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים")).toBeInTheDocument();
   },
 };
-export const MonthDark: Story = { ...Month, name: "A month, dark", ...dark };
-export const Month320: Story = { ...Month, name: "A month, 320", ...at320 };
 
 const months: CashRow[] = [
   { id: "09", label: "ספטמבר", tone: "net", amounts: ils(-115_000n), href: "/cash/2026-09", name: "תזרים ספטמבר −₪1,150" },

@@ -48,7 +48,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
 const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** A middle card: both sides have a card, so the card takes sideways moves and leaves vertical ones to the page. */
@@ -61,7 +60,6 @@ export const Middle: Story = {
     await expect(within(canvasElement).getByText("ספק 2")).toBeVisible();
   },
 };
-export const MiddleDark: Story = { ...Middle, name: "Middle, dark", ...dark };
 export const Middle320: Story = { ...Middle, name: "Middle, 320", ...at320 };
 /** The last card: a swipe right gives a little and springs back, with nothing peeking in. */
 export const Last: Story = { args: { start: 2 } };

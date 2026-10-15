@@ -62,14 +62,3 @@ export const SharedSheet: Story = {
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <Shared />,
 };
-export const SharedSheet320: Story = {
-  args,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <Shared />,
-};
-export const SharedSheetDark320: Story = {
-  args,
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <Shared />,
-};

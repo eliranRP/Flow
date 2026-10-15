@@ -22,11 +22,3 @@ export const InvoiceDate: Story = {
 export const Saving: Story = {
   args: { ...PaymentDate.args, saving: "invoiced" },
 };
-export const PaymentDateDark: Story = {
-  args: PaymentDate.args,
-  globals: { theme: "dark" },
-};
-export const PaymentDate320: Story = {
-  args: PaymentDate.args,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};

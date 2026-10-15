@@ -66,6 +66,3 @@ export const LongHebrew: Story = {
   },
 };
 
-/** FLOW-334: Home's empty action beside the error retry: both the 44px tint button, dark and 320. */
-export const DefaultDark: Story = { args: Default.args, globals: { theme: "dark" } };
-export const Default320: Story = { args: Default.args, parameters: { viewport: { defaultViewport: "flow320" } } };

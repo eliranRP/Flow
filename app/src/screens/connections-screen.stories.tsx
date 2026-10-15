@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ConnectionsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
-import { at320, dark, ExampleBar, pagesBusiness } from "../ui/screen-stories-support";
+import { ExampleBar, pagesBusiness } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -317,8 +317,6 @@ export const Connections: Story = {
     </StoryRoute>
   ),
 };
-export const Connections320: Story = { ...Connections, name: "Connections, 320", ...at320 };
-export const ConnectionsDark: Story = { ...Connections, name: "Connections, dark", ...dark };
 
 export const ConnectionsReconnect: Story = {
   name: "Connections, reconnect",
@@ -365,7 +363,6 @@ export const ConnectionsError: Story = {
     </StoryRoute>
   ),
 };
-export const ConnectionsError320: Story = { ...ConnectionsError, name: "Connections, error, 320", ...at320 };
 
 export const ConnectionsViewer: Story = {
   name: "Connections, viewer",
@@ -391,7 +388,6 @@ export const ConnectionsViewerReconnect: Story = {
     </StoryRoute>
   ),
 };
-export const ConnectionsViewerReconnectDark: Story = { ...ConnectionsViewerReconnect, name: "Connections, viewer, reconnect, dark", ...dark };
 
 export const ConnectionsNoCompany: Story = {
   name: "Connections, no company",

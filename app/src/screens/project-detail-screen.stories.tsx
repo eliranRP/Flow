@@ -4,7 +4,7 @@ import { expect, userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, dark, ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
+import { at320, ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -197,8 +197,6 @@ export const ProjectMixedSigns: Story = {
   ),
 };
 
-export const ProjectMixedSignsDark: Story = { ...ProjectMixedSigns, globals: { theme: "dark" } };
-export const ProjectMixedSigns320: Story = { ...ProjectMixedSigns, parameters: { viewport: { defaultViewport: "flow320" } } };
 
 const periodProject: NonNullable<ProjectDetailData> = {
   id: "p-a",
@@ -233,9 +231,6 @@ export const ProjectPeriod: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectPeriodDark: Story = { ...ProjectPeriod, name: "Project, own period, dark", ...dark };
-export const ProjectPeriod320: Story = { ...ProjectPeriod, name: "Project, own period, 320", ...at320 };
-export const ProjectPeriodDark320: Story = { ...ProjectPeriod, name: "Project, own period, dark, 320", ...dark, ...at320 };
 /** A month from the "לפי חודש" list. The row still shows: the page lists the whole project (FLOW-337). */
 export const ProjectOneMonth: Story = {
   name: "Project, one month opened from by month",
@@ -245,7 +240,6 @@ export const ProjectOneMonth: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectOneMonth320: Story = { ...ProjectOneMonth, name: "Project, one month, 320", ...at320 };
 /** FLOW-444: Back names the project; a long name is cut with an ellipsis. */
 export const ProjectOneMonthLongName: Story = {
   name: "Project, one month, long project name",
@@ -259,7 +253,6 @@ export const ProjectOneMonthLongName: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectOneMonthLongName320: Story = { ...ProjectOneMonthLongName, name: "Project, one month, long project name, 320", ...at320 };
 /** הכול on a project reads מתחילת הפרויקט (FLOW-411), and the budget shows. */
 export const ProjectFromStart: Story = {
   name: "Project, from the start",
@@ -321,9 +314,6 @@ export const ProjectOverview: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectOverviewDark: Story = { ...ProjectOverview, name: "Project, short page, dark", ...dark };
-export const ProjectOverview320: Story = { ...ProjectOverview, name: "Project, short page, 320", ...at320 };
-export const ProjectOverviewDark320: Story = { ...ProjectOverview, name: "Project, short page, dark, 320", ...dark, ...at320 };
 
 /** FLOW-334: the ⋯ menu, the overhead switch then "סיום הפרויקט" as a row. */
 export const ProjectMenu: Story = {
@@ -334,8 +324,6 @@ export const ProjectMenu: Story = {
     await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
   },
 };
-export const ProjectMenuDark: Story = { ...ProjectMenu, name: "Project, ⋯ menu, dark", ...dark };
-export const ProjectMenu320: Story = { ...ProjectMenu, name: "Project, ⋯ menu, 320", ...at320 };
 
 /** FLOW-360 A: the ⋯ menu's קבוצה row, then its picker and the new group sheet. */
 const sampleGroups = {
@@ -358,8 +346,6 @@ export const ProjectMenuGroup: Story = {
   render: groupedRender(null),
   play: ProjectMenu.play,
 };
-export const ProjectMenuGroupDark: Story = { ...ProjectMenuGroup, name: "Project, ⋯ menu with קבוצה, dark", ...dark };
-export const ProjectMenuGroup320: Story = { ...ProjectMenuGroup, name: "Project, ⋯ menu with קבוצה, 320", ...at320 };
 
 export const ProjectGroupPicker: Story = {
   name: "Project, group picker",
@@ -370,8 +356,6 @@ export const ProjectGroupPicker: Story = {
     await storyBody(context.canvasElement).findByRole("radiogroup", { name: "קבוצה" });
   },
 };
-export const ProjectGroupPickerDark: Story = { ...ProjectGroupPicker, name: "Project, group picker, dark", ...dark };
-export const ProjectGroupPicker320: Story = { ...ProjectGroupPicker, name: "Project, group picker, 320", ...at320 };
 
 export const ProjectGroupNew: Story = {
   name: "Project, new group",
@@ -382,7 +366,6 @@ export const ProjectGroupNew: Story = {
     await userEvent.type(await storyBody(context.canvasElement).findByLabelText("שם הקבוצה"), "מתחם הגפן");
   },
 };
-export const ProjectGroupNewDark: Story = { ...ProjectGroupNew, name: "Project, new group, dark", ...dark };
 
 /** A pick saves at once; the toast says where the project went and offers ביטול. */
 export const ProjectGroupMoved: Story = {
@@ -403,7 +386,6 @@ export const ProjectGroupRemoved: Story = {
     await storyBody(context.canvasElement).findByText("הפרויקט הוצא מהקבוצה בניין לדוגמה");
   },
 };
-export const ProjectGroupRemovedDark: Story = { ...ProjectGroupRemoved, name: "Project, taken out of its group, dark", ...dark };
 
 /** A finished project offers "החזרה לפעיל" in the same place. */
 export const ProjectMenuFinished: Story = {
@@ -432,8 +414,6 @@ export const ProjectFinishConfirm: Story = {
     await body.findByRole("dialog", { name: "לסיים את הפרויקט?" });
   },
 };
-export const ProjectFinishConfirmDark: Story = { ...ProjectFinishConfirm, name: "Project, finish confirm, dark", ...dark };
-export const ProjectFinishConfirm320: Story = { ...ProjectFinishConfirm, name: "Project, finish confirm, 320", ...at320 };
 
 export const ProjectExpenses: Story = {
   name: "Project, expenses section",
@@ -443,8 +423,6 @@ export const ProjectExpenses: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectExpensesDark: Story = { ...ProjectExpenses, name: "Project, expenses section, dark", ...dark };
-export const ProjectExpenses320: Story = { ...ProjectExpenses, name: "Project, expenses section, 320", ...at320 };
 
 /** FLOW-334: the waiting row reads as Home's review row (inbox icon, tint), not a category. */
 export const ProjectExpensesWaiting: Story = {
@@ -460,8 +438,6 @@ export const ProjectExpensesWaiting: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectExpensesWaitingDark: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, dark", ...dark };
-export const ProjectExpensesWaiting320: Story = { ...ProjectExpensesWaiting, name: "Project, expenses section, waiting row, 320", ...at320 };
 
 export const ProjectTransactionsSection: Story = {
   name: "Project, transactions section",
@@ -471,8 +447,6 @@ export const ProjectTransactionsSection: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectTransactionsSectionDark: Story = { ...ProjectTransactionsSection, name: "Project, transactions section, dark", ...dark };
-export const ProjectTransactionsSection320: Story = { ...ProjectTransactionsSection, name: "Project, transactions section, 320", ...at320 };
 
 // FLOW-424 (C18-1): a kept-out line with a long category keeps its amount and chevron in line with
 // the counted rows at 320; the category drops whole instead of pushing them out.
@@ -506,7 +480,6 @@ export const ProjectLoansSection: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectLoansSection320: Story = { ...ProjectLoansSection, name: "Project, loans section, 320", ...at320 };
 
 export const ProjectInvestmentScreen: Story = {
   name: "Project, investment and loans section",
@@ -516,4 +489,3 @@ export const ProjectInvestmentScreen: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectInvestmentScreen320: Story = { ...ProjectInvestmentScreen, name: "Project, investment and loans section, 320", ...at320 };

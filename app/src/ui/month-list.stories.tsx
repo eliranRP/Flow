@@ -100,17 +100,13 @@ export const ThreeMonths: Story = { args: { set: "three" } };
 export const StillLoading: Story = { args: { set: "three", complete: false } };
 /** Search: every month shows its whole net from the server, July too while its lines page in. */
 export const ServerTotalsWhilePaging: Story = { args: { set: "three", complete: false, server: true } };
-export const ServerTotalsWhilePagingDark: Story = { args: { set: "three", complete: false, server: true }, globals: { theme: "dark" } };
 export const LargeAmounts: Story = { args: { set: "large" } };
 export const TwoCurrenciesOneRow: Story = { args: { set: "mixed" } };
 export const OneMonth: Story = { args: { set: "one" } };
 
 /** Decision 0120: two months of income and expense rows, no hairlines, 32px between the months. */
 export const TwoMonthsMercury: Story = { args: { set: "two" } };
-export const TwoMonthsMercuryDark: Story = { args: { set: "two" }, globals: { theme: "dark" } };
 
 /** FLOW-305: quiet day heads (h3) under each sticky month head, and month totals with exact cents. */
 export const DayHeads: Story = { args: { set: "two", days: true } };
-export const DayHeadsDark: Story = { args: { set: "two", days: true }, globals: { theme: "dark" } };
-export const DayHeads320: Story = { args: { set: "two", days: true }, parameters: { viewport: { defaultViewport: "flow320" } } };
 export const DayHeadsOneMonth: Story = { args: { set: "one", days: true } };

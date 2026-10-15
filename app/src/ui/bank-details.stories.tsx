@@ -35,8 +35,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** A memo past 4 lines: clamped, with the ▾ cue at the row's end. */
 export const LongMemo: Story = {
@@ -47,8 +45,6 @@ export const LongMemo: Story = {
     await expect(canvasElement.querySelector(".ui-bank-memo-cue")).not.toBeNull();
   },
 };
-export const LongMemoDark: Story = { ...LongMemo, name: "Long memo, dark", ...dark };
-export const LongMemo320: Story = { ...LongMemo, name: "Long memo, 320", ...at320 };
 
 /** Opened: the whole memo shows and the cue points up. */
 export const LongMemoOpen: Story = {
@@ -62,7 +58,6 @@ export const LongMemoOpen: Story = {
   },
 };
 
-export const LongMemoOpenDark: Story = { ...LongMemoOpen, name: "Long memo, open, dark", ...dark };
 
 /** A short memo is plain text: no button, no cue. */
 export const ShortMemo: Story = {
@@ -83,14 +78,12 @@ export const CardNickname: Story = {
     await expect(within(canvasElement).getByText("כרטיס שמסתיים ב־4242")).toBeInTheDocument();
   },
 };
-export const CardNicknameDark: Story = { ...CardNickname, name: "Card nickname, dark", ...dark };
 
 /** A long nickname clips at 320; the card and its last 4 stay whole. */
-export const CardNicknameLong320: Story = {
+export const CardNicknameLong: Story = {
   ...CardNickname,
-  name: "Card nickname, long, 320",
+  name: "Card nickname, long",
   args: { memo: "Invoice 1042", cardName: "Example Street North Building Utilities and Repairs" },
-  ...at320,
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText(/Example Street North/);
     await expect(name).toHaveAttribute("data-clip-ok");

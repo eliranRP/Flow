@@ -15,9 +15,4 @@ const row = { label: "מגדל משרדים פ״ת", value: "₪250", onChange: 
 
 export const Unchecked: Story = { args: { ...row, checked: false } };
 export const Checked: Story = { args: { ...row, checked: true } };
-export const CheckedDark: Story = { args: { ...row, checked: true }, globals: { theme: "dark" } };
-export const Checked320: Story = {
-  args: { ...row, checked: true },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 export const ReadOnly: Story = { args: { label: "וילה רעננה", value: "₪250", readOnly: true } };

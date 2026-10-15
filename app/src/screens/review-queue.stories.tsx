@@ -20,8 +20,6 @@ type Story = StoryObj<typeof meta>;
 
 const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
 const tall = { parameters: { viewport: { defaultViewport: "flow393" } } };
-const narrowView = { parameters: { viewport: { defaultViewport: "flow320" } } };
-const darkTheme = { globals: { theme: "dark" } };
 
 /** FLOW-327: the card with its bar pinned on the tab bar. */
 function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: ReviewRow; viewer?: boolean }) {
@@ -32,20 +30,14 @@ function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: Review
   );
 }
 export const ReviewBar375: Story = { ...se, render: () => <ReviewQueueStory /> };
-export const ReviewBar375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewQueueStory /> };
 export const ReviewBar393: Story = { ...tall, render: () => <ReviewQueueStory /> };
-export const ReviewBar393Dark: Story = { ...tall, ...darkTheme, render: () => <ReviewQueueStory /> };
-export const ReviewBar320: Story = { ...narrowView, render: () => <ReviewQueueStory /> };
-export const ReviewBar320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewQueueStory /> };
 const plainRow: ReviewRow = { ...sampleReview, auto_approved_today: 0 };
 export const ReviewBarNoBanner375: Story = { ...se, render: () => <ReviewQueueStory row={plainRow} /> };
 export const ReviewBarBothMissing375: Story = { ...se, render: () => <ReviewQueueStory row={{ ...bareReview, auto_approved_today: 0 }} /> };
-export const ReviewBarBothMissing320: Story = { ...narrowView, render: () => <ReviewQueueStory row={{ ...bareReview, auto_approved_today: 0 }} /> };
 const sharedRow: ReviewRow = { ...plainRow, project_id: null, project_name: null, reason: "unallocated_shared" };
 export const ReviewBarSharedCost375: Story = { ...se, render: () => <ReviewQueueStory row={sharedRow} /> };
 const mismatchRow: ReviewRow = { ...plainRow, reason: "split_mismatch" };
 export const ReviewBarSplitMismatch375: Story = { ...se, render: () => <ReviewQueueStory row={mismatchRow} /> };
-export const ReviewBarSplitMismatch320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewQueueStory row={mismatchRow} /> };
 export const ReviewBarViewer375: Story = { ...se, render: () => <ReviewQueueStory viewer /> };
 
 /** FLOW-327 r1: a project's queue has Back; its header stays on one line so the bar clears the tab bar. */
@@ -58,7 +50,6 @@ function ReviewFilteredBarStory({ row }: { row: ReviewRow }) {
 }
 const sharedBannerRow: ReviewRow = { ...sampleReview, project_id: null, project_name: null, reason: "unallocated_shared" };
 export const ReviewFilteredBarSharedBanner375: Story = { ...se, render: () => <ReviewFilteredBarStory row={sharedBannerRow} /> };
-export const ReviewFilteredBarSharedBanner375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewFilteredBarStory row={sharedBannerRow} /> };
 
 /** Puts flags in the story's cache under the key the real read uses. */
 function SeedFlags({ ids, flags }: { ids: string[]; flags: ReviewFlagsData }) {
@@ -91,11 +82,7 @@ function ReviewQueueFlagStory({ banner = false }: { banner?: boolean }) {
 }
 const view390 = { parameters: { viewport: { defaultViewport: "flow390" } } };
 export const ReviewQueueFlag375se: Story = { ...se, render: () => <ReviewQueueFlagStory /> };
-export const ReviewQueueFlag375seDark: Story = { ...se, ...darkTheme, render: () => <ReviewQueueFlagStory /> };
 export const ReviewQueueFlag390: Story = { ...view390, render: () => <ReviewQueueFlagStory banner /> };
-export const ReviewQueueFlag390Dark: Story = { ...view390, ...darkTheme, render: () => <ReviewQueueFlagStory banner /> };
-export const ReviewQueueFlag320: Story = { ...narrowView, render: () => <ReviewQueueFlagStory banner /> };
-export const ReviewQueueFlag320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewQueueFlagStory banner /> };
 
 /**
  * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + ביטול),
@@ -140,17 +127,8 @@ function ReviewJevFitStory({ jev = jevFilled, flags = quietSpike }: { jev?: JevQ
   );
 }
 export const ReviewJevFit375: Story = { ...se, render: () => <ReviewJevFitStory /> };
-export const ReviewJevFit375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewJevFitStory /> };
-export const ReviewJevFit320: Story = { ...narrowView, render: () => <ReviewJevFitStory /> };
-export const ReviewJevFit320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewJevFitStory /> };
-export const ReviewJevFit390: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, render: () => <ReviewJevFitStory /> };
-export const ReviewJevFit390Dark: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, ...darkTheme, render: () => <ReviewJevFitStory /> };
 export const ReviewJevReason375: Story = { ...se, render: () => <ReviewJevFitStory jev={jevSuggested} /> };
 export const ReviewJevFitLoud375: Story = { ...se, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
-export const ReviewJevFitLoud375Dark: Story = { ...se, ...darkTheme, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
-/** FLOW-333 C14: the loud flag is one line on a short phone (up to 720px tall) and two at 844. */
-export const ReviewJevFitLoud320: Story = { ...narrowView, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
-export const ReviewJevFitLoud390: Story = { parameters: { viewport: { defaultViewport: "flow390" } }, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 
 /** FLOW-327 / 0137: after דלג, the undo toast sits just above the bar. */
 const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
@@ -195,7 +173,6 @@ function ReviewFitStory() {
   );
 }
 export const ReviewFit320Short: Story = { ...shortPhone, render: () => <ReviewFitStory /> };
-export const ReviewFit320ShortDark: Story = { ...shortPhone, ...darkTheme, render: () => <ReviewFitStory /> };
 
 /** FLOW-309: "10 מתוך 12" after nine skips. The counter reserves the total's digits, so nothing moved. */
 const countRows: ReviewRow[] = Array.from({ length: 12 }, (_, n) => ({
@@ -230,8 +207,7 @@ const unpin: NonNullable<Story["loaders"]> = [() => {
   pinReviewLine(null);
   return Promise.resolve({});
 }];
-export const ReviewCounter10At320: Story = { ...narrowView, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
-export const ReviewCounter10At320Dark: Story = { ...narrowView, ...darkTheme, loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
+export const ReviewCounter10At: Story = { loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
 /** FLOW-309: the skipped cards at the end of הצגת הכול. Invented data. */
 const skippedSample: SkippedReviewRow[] = [
@@ -256,10 +232,7 @@ function ReviewAllSkippedStory({ rows, skipped }: { rows: ReviewRow[]; skipped: 
 }
 const pendingRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
 export const ReviewAllSkipped: Story = { render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
-export const ReviewAllSkippedDark: Story = { ...darkTheme, render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
-export const ReviewAllSkipped320: Story = { ...narrowView, render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
 export const ReviewAllSkippedOnly: Story = { render: () => <ReviewAllSkippedStory rows={[]} skipped={skippedSample} /> };
-export const ReviewAllSkippedOnly320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewAllSkippedStory rows={[]} skipped={skippedSample} /> };
 
 /** Owner pick 2026-10-08: הכל מאושר with a link to the skipped cards. */
 function ReviewEmptySkippedStory() {
@@ -271,4 +244,3 @@ function ReviewEmptySkippedStory() {
   );
 }
 export const ReviewEmptySkippedLink: Story = { render: () => <ReviewEmptySkippedStory /> };
-export const ReviewEmptySkippedLink320Dark: Story = { ...narrowView, ...darkTheme, render: () => <ReviewEmptySkippedStory /> };

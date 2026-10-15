@@ -6,7 +6,7 @@ import { monthPeriod, shiftMonthKey } from "../period";
 import { withPeriodSearch } from "../project-period";
 import { israelToday } from "../ui/date-math";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
+import { exampleOnBand } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ProjectDetailScreen } from "./flow-screens";
 import { ProjectCashLinesScreen, ProjectCashMonthScreen } from "./project-cash-screens";
@@ -108,9 +108,6 @@ export const ProjectCash: Story = {
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
   },
 };
-export const ProjectCashDark: Story = { ...ProjectCash, name: "Project, cash first, dark", ...dark };
-export const ProjectCash320: Story = { ...ProjectCash, name: "Project, cash first, 320", ...at320 };
-export const ProjectCashDark320: Story = { ...ProjectCash, name: "Project, cash first, dark, 320", ...dark, ...at320 };
 
 export const ProjectCashLoss: Story = {
   name: "Project, cash first, more out than in this month",
@@ -154,7 +151,6 @@ export const ProjectCashTwoCurrencies: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectCashTwoCurrencies320: Story = { ...ProjectCashTwoCurrencies, name: "Project, cash first, two currencies, 320", ...at320 };
 
 export const ProjectProfitPage: Story = {
   name: "Project, profit page",
@@ -193,7 +189,6 @@ export const ProjectInvestmentLoans: Story = {
     await expect(canvas.getAllByText("$213,600").length).toBe(2);
   },
 };
-export const ProjectProfitPage320: Story = { ...ProjectProfitPage, name: "Project, profit page, 320", ...at320 };
 
 const earlier = cashMonthKey(cash.months[1]?.month ?? "");
 
@@ -211,8 +206,6 @@ export const ProjectCashMonth: Story = {
     await expect(canvas.getAllByRole("button", { name: /^תזרים / })).toHaveLength(2);
   },
 };
-export const ProjectCashMonthDark: Story = { ...ProjectCashMonth, name: "Project, an earlier month, dark", ...dark };
-export const ProjectCashMonth320: Story = { ...ProjectCashMonth, name: "Project, an earlier month, 320", ...at320 };
 
 const oldest = cashMonthKey(cash.months.at(-1)?.month ?? "");
 
@@ -262,7 +255,6 @@ export const ProjectCashLines: Story = {
     );
   },
 };
-export const ProjectCashLines320: Story = { ...ProjectCashLines, name: "Project, a month's יצא, 320", ...at320 };
 
 export const ProjectCashKept: Story = {
   name: "Project, a month's לא נספר ברווח",
@@ -299,5 +291,3 @@ export const ProjectCashMonthWithLines: Story = {
     await expect(within(list).getByText("לא נספר ברווח")).toBeInTheDocument();
   },
 };
-export const ProjectCashMonthWithLinesDark: Story = { ...ProjectCashMonthWithLines, name: "Project, a month with its lines, dark", ...dark };
-export const ProjectCashMonthWithLines320: Story = { ...ProjectCashMonthWithLines, name: "Project, a month with its lines, 320", ...at320 };

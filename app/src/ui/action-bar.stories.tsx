@@ -87,20 +87,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
-const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
 const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
 
-export const Review: Story = {};
 export const ReviewSE: Story = { ...se };
 export const ReviewBusy: Story = { args: { busy: true } };
 export const ReviewDisabled: Story = { args: { disabled: true } };
-export const Review320: Story = { ...narrow };
-export const ReviewDark: Story = { ...dark };
 export const SplitMismatch: Story = { args: { kind: "mismatch" } };
-export const SplitMismatch320: Story = { ...narrow, args: { kind: "mismatch" } };
-export const SplitMismatchDark: Story = { ...dark, args: { kind: "mismatch" } };
 /** Decision 0137: the undo toast sits just above the bar. */
 export const ToastAboveBar: Story = { args: { toast: "הפריט אושר" } };
 export const ToastAboveBarSE: Story = { ...se, args: { toast: "דילגנו על הפריט" } };
-export const ToastAboveBarDark: Story = { ...dark, args: { toast: "הפריט אושר" } };

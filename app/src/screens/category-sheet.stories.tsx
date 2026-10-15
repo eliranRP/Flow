@@ -28,8 +28,6 @@ const categories: CategoryRow[] = [
   { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal", lines: 12, loan_used: true },
 ];
 
-const dark = { globals: { theme: "dark" as const } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
@@ -56,15 +54,12 @@ export const Menu: Story = {
   render: () => <Screen />,
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "חומרים"); },
 };
-export const Menu320: Story = { ...Menu, name: "Menu, 320", ...at320 };
-export const MenuDark: Story = { ...Menu, name: "Menu, dark", ...dark };
 
 export const MenuLoanUsed: Story = {
   name: "Menu, a loan uses it (delete disabled)",
   render: () => <Screen />,
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "ביטוח נכס"); },
 };
-export const MenuLoanUsedDark: Story = { ...MenuLoanUsed, name: "Menu, a loan uses it, dark", ...dark };
 
 /** FLOW-106 §3.5: a loan names the category for escrow, so it is locked like the built-in loan ones. */
 export const MenuLoanOwnCategory: Story = {
@@ -72,8 +67,6 @@ export const MenuLoanOwnCategory: Story = {
   render: () => <Screen withLoans />,
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "ביטוח נכס"); },
 };
-export const MenuLoanOwnCategory320: Story = { ...MenuLoanOwnCategory, name: "Menu, a loan's own category, 320", ...at320 };
-export const MenuLoanOwnCategoryDark: Story = { ...MenuLoanOwnCategory, name: "Menu, a loan's own category, dark", ...dark };
 
 export const MenuLoanCategory: Story = {
   name: "Menu, a built-in loan category",
@@ -90,7 +83,6 @@ export const MenuNowhereToMove: Story = {
     await openMenu(canvasElement, "שכר דירה");
   },
 };
-export const MenuNowhereToMove320: Story = { ...MenuNowhereToMove, name: "Menu, no move row, 320", ...at320 };
 
 export const MovePicker: Story = {
   name: "Move all lines: pick where they go",
@@ -101,7 +93,6 @@ export const MovePicker: Story = {
     await body(canvasElement).findByRole("dialog", { name: "העברת 42 תנועות אל" });
   },
 };
-export const MovePickerDark: Story = { ...MovePicker, name: "Move all lines, dark", ...dark };
 
 export const MoveAndHide: Story = {
   name: "Move with the hide switch on: confirm the merge",
@@ -125,8 +116,6 @@ export const DeleteConfirm: Story = {
     await body(canvasElement).findByRole("dialog", { name: "למחוק את הקטגוריה?" });
   },
 };
-export const DeleteConfirm320: Story = { ...DeleteConfirm, name: "Delete, 320", ...at320 };
-export const DeleteConfirmDark: Story = { ...DeleteConfirm, name: "Delete, dark", ...dark };
 
 export const DeleteEmpty: Story = {
   name: "Delete, an empty category",
@@ -147,8 +136,6 @@ export const Rename: Story = {
     await body(canvasElement).findByRole("dialog", { name: "שינוי שם" });
   },
 };
-export const Rename320: Story = { ...Rename, name: "Rename, 320", ...at320 };
-export const RenameDark: Story = { ...Rename, name: "Rename, dark", ...dark };
 
 /** FLOW-401: the קטגוריית אב row after שינוי שם, and its picker. One tap applies a group. */
 export const Group: Story = {
@@ -160,8 +147,6 @@ export const Group: Story = {
     await body(canvasElement).findByRole("dialog", { name: "בחירת קטגוריית אב" });
   },
 };
-export const Group320: Story = { ...Group, name: "Group, 320", ...at320 };
-export const GroupDark: Story = { ...Group, name: "Group, dark", ...dark };
 
 export const GroupNew: Story = {
   name: "Group, a new group",

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { UnpaidScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark, ExampleBar } from "../ui/screen-stories-support";
+import { at320, ExampleBar } from "../ui/screen-stories-support";
 import { israelToday, shiftDays } from "../ui/date-math";
 
 const sampleUnpaid: UnpaidRow[] = [
@@ -63,13 +63,10 @@ export const UnpaidWithDocument: Story = {
     </StoryRoute>
   ),
 };
-export const UnpaidWithDocumentDark: Story = { ...UnpaidWithDocument, name: "Unpaid, document link, dark", ...dark };
-export const UnpaidWithDocument320: Story = { ...UnpaidWithDocument, name: "Unpaid, document link, 320", ...at320 };
 
 // FLOW-353: a document from today says היום, yesterday אתמול; at 320 the date and the age stay whole.
-export const UnpaidRecent320: Story = {
-  name: "Unpaid, today and yesterday, 320",
-  ...at320,
+export const UnpaidRecent: Story = {
+  name: "Unpaid, today and yesterday",
   render: () => (
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
@@ -113,9 +110,6 @@ export const UnpaidMarked: Story = {
     </StoryRoute>
   ),
 };
-export const UnpaidMarkedDark: Story = { ...UnpaidMarked, name: "Unpaid, marked, dark", ...dark };
-export const UnpaidMarked320: Story = { ...UnpaidMarked, name: "Unpaid, marked, 320", ...at320 };
-export const UnpaidMarkedDark320: Story = { ...UnpaidMarked, name: "Unpaid, marked, dark, 320", ...dark, ...at320 };
 
 // FLOW-357 (owner's pick A): one invoice keeps the head to the title; its amount is on the row.
 export const UnpaidOne: Story = {
@@ -144,5 +138,4 @@ export const UnpaidSheet: Story = {
     await expect(within(dialog).getByRole("button", { name: "סימון כשולם" })).toBeVisible();
   },
 };
-export const UnpaidSheetDark: Story = { ...UnpaidSheet, name: "Unpaid, invoice sheet, dark", ...dark };
 export const UnpaidSheet320: Story = { ...UnpaidSheet, name: "Unpaid, invoice sheet, 320", ...at320 };

@@ -29,9 +29,6 @@ function Pushed({ pull, armed }: { pull: number; armed: boolean }) {
   );
 }
 
-const dark = { globals: { theme: "dark" as const } };
 
 export const Pulling: Story = { name: "Pulling", render: () => <Pushed pull={60} armed={false} /> };
-export const PullingDark: Story = { ...Pulling, name: "Pulling, dark", ...dark };
 export const Armed: Story = { name: "Armed: release goes back", render: () => <Pushed pull={140} armed /> };
-export const ArmedDark: Story = { ...Armed, name: "Armed, dark", ...dark };

@@ -19,5 +19,3 @@ export const Monthly: Story = {
 export const Quarterly: Story = { args: { ...Monthly.args, value: "quarter" } };
 /** The tapped row spins; the others wait until the save settles. */
 export const Saving: Story = { args: { ...Monthly.args, saving: "2months" } };
-export const MonthlyDark: Story = { args: Monthly.args, globals: { theme: "dark" } };
-export const Monthly320: Story = { args: Monthly.args, parameters: { viewport: { defaultViewport: "flow320" } } };

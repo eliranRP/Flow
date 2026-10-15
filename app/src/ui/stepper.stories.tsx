@@ -18,14 +18,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark390 = { globals: { theme: "dark" } };
-const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** At the minimum: − is off. */
 export const AtMin: Story = { args: { hint: "01/06/2026" } };
 export const Middle: Story = { args: { start: 3, hint: "01/06–01/08/2026" } };
-export const MiddleDark: Story = { args: { start: 3, hint: "01/06–01/08/2026" }, ...dark390 };
-export const Middle320: Story = { args: { start: 3, hint: "01/06–01/08/2026" }, ...light320 };
 /** At the maximum: + is off. */
 export const AtMax: Story = { args: { start: 12, max: 12 } };
 export const Disabled: Story = { args: { disabled: true } };

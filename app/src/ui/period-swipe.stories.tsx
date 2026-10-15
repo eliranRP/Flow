@@ -29,7 +29,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
 const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** A steppable window: the figure takes the swipe and leaves vertical moves to the page. */
@@ -43,7 +42,6 @@ export const Steppable: Story = {
     await expect(within(canvasElement).getByRole("heading", { name: "₪18,400" })).toBeVisible();
   },
 };
-export const SteppableDark: Story = { ...Steppable, name: "Steppable, dark", ...dark };
 export const Steppable320: Story = { ...Steppable, name: "Steppable, 320", ...at320 };
 /** הכול has no arrows, so the figure takes no swipe either. */
 export const All: Story = {
@@ -53,4 +51,3 @@ export const All: Story = {
     await expect(box).not.toHaveAttribute("data-period-swipe");
   },
 };
-export const AllDark: Story = { ...All, name: "All, dark", ...dark };

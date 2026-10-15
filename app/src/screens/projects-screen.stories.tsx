@@ -77,18 +77,6 @@ export const ProjectsSearch: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectsSearchDark: Story = { ...ProjectsSearch, name: "Projects, search finds a finished project, dark", globals: { theme: "dark" } };
-export const ProjectsSearch320: Story = {
-  ...ProjectsSearch,
-  name: "Projects, search finds a finished project, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-export const ProjectsSearchDark320: Story = {
-  ...ProjectsSearch,
-  name: "Projects, search finds a finished project, dark, 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
 /** FLOW-410: with no query every active project shows, past the first six. */
 /** FLOW-342 (A): a name that is no project offers the transaction search, one row. */
@@ -101,18 +89,6 @@ export const ProjectsMiss: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectsMissDark: Story = { ...ProjectsMiss, name: "Projects, no project matches, dark", globals: { theme: "dark" } };
-export const ProjectsMiss320: Story = {
-  ...ProjectsMiss,
-  name: "Projects, no project matches, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-export const ProjectsMissDark320: Story = {
-  ...ProjectsMiss,
-  name: "Projects, no project matches, dark, 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 
 export const ProjectsManyActive: Story = {
   name: "Projects, every active project",
@@ -122,18 +98,6 @@ export const ProjectsManyActive: Story = {
       <ProjectsScreen sample={projectsSearch} />
     </StoryRoute>
   ),
-};
-export const ProjectsManyActiveDark: Story = { ...ProjectsManyActive, name: "Projects, every active project, dark", globals: { theme: "dark" } };
-export const ProjectsManyActive320: Story = {
-  ...ProjectsManyActive,
-  name: "Projects, every active project, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-export const ProjectsManyActiveDark320: Story = {
-  ...ProjectsManyActive,
-  name: "Projects, every active project, dark, 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 export const ProjectsLoading: Story = {
@@ -163,18 +127,6 @@ export const ProjectsGrouped: Story = {
       <ProjectsScreen sample={projectsGrouped} />
     </StoryRoute>
   ),
-};
-export const ProjectsGroupedDark: Story = { ...ProjectsGrouped, name: "Projects, grouped, dark", globals: { theme: "dark" } };
-export const ProjectsGrouped320: Story = {
-  ...ProjectsGrouped,
-  name: "Projects, grouped, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-export const ProjectsGroupedDark320: Story = {
-  ...ProjectsGrouped,
-  name: "Projects, grouped, dark, 320",
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 /** A query finds a project inside a group, and the group by its own name. */

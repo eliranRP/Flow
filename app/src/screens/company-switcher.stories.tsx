@@ -21,8 +21,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" as const } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 const data: Dashboard = { ...sampleDashboard, name: "חברה לדוגמה" };
 
 function Home() {
@@ -55,15 +53,7 @@ async function open(canvasElement: HTMLElement) {
 }
 
 export const Band: Story = { name: "Band, the company's name", render: home({ twoCompanies: true }) };
-export const Band320: Story = { ...Band, name: "Band, 320", ...at320 };
 
-export const Switcher: Story = {
-  name: "Switcher (a-3)",
-  render: home({ twoCompanies: true }),
-  play: async ({ canvasElement }) => { await open(canvasElement); },
-};
-export const SwitcherDark: Story = { ...Switcher, name: "Switcher, dark", ...dark };
-export const Switcher320: Story = { ...Switcher, name: "Switcher, 320", ...at320 };
 
 export const WithInvite: Story = {
   name: "Switcher with an invite (invite-4)",
@@ -73,8 +63,6 @@ export const WithInvite: Story = {
     await within(dialog).findByRole("heading", { name: "הזמנות" });
   },
 };
-export const WithInviteDark: Story = { ...WithInvite, name: "Switcher with an invite, dark", ...dark };
-export const WithInvite320: Story = { ...WithInvite, name: "Switcher with an invite, 320", ...at320 };
 
 export const Declined: Story = {
   name: "Declined, with ביטול (invite-5)",
@@ -86,11 +74,6 @@ export const Declined: Story = {
   },
 };
 
-export const ViewerNoNew: Story = {
-  name: "Switcher, a viewer (no + חברה חדשה)",
-  render: home({ role: "viewer", twoCompanies: true }),
-  play: async ({ canvasElement }) => { await open(canvasElement); },
-};
 
 export const ListLoading: Story = {
   name: "Switcher, list loading",

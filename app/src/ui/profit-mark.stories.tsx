@@ -32,12 +32,4 @@ type Story = StoryObj<typeof meta>;
 
 export const Profit: Story = { args: { loss: false } };
 export const Loss: Story = { args: { loss: true } };
-export const LossDark: Story = { args: { loss: true }, name: "Loss, dark", globals: { theme: "dark" } };
 export const ProjectRows: Story = { args: { loss: false }, render: () => <Rows /> };
-export const ProjectRowsDark: Story = { args: { loss: false }, name: "Project rows, dark", render: () => <Rows />, globals: { theme: "dark" } };
-export const ProjectRows320: Story = {
-  args: { loss: false },
-  name: "Project rows, 320",
-  render: () => <Rows />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};

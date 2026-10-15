@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { SectionHead } from "../ui/layout";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
+import { exampleOnBand } from "../ui/screen-stories-support";
 import { ProjectDetailScreen } from "./project-detail-screen";
 import { ProjectCategories } from "./project-categories";
 
@@ -65,8 +65,6 @@ function List({ withMonth = true }: { withMonth?: boolean }) {
 }
 
 export const Month: Story = { name: "Month: up marks, group folded", render: () => <List /> };
-export const Month320: Story = { ...Month, name: "Month, 320", ...at320 };
-export const MonthDark: Story = { ...Month, name: "Month, dark", ...dark };
 
 export const GroupOpen: Story = {
   name: "Month: group open, a bill not in yet",
@@ -75,8 +73,6 @@ export const GroupOpen: Story = {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: /חשבונות/ }));
   },
 };
-export const GroupOpen320: Story = { ...GroupOpen, name: "Group open, 320", ...at320 };
-export const GroupOpenDark: Story = { ...GroupOpen, name: "Group open, dark", ...dark };
 
 /** FLOW-406: a parent folds its sub-categories, and its own lines sit last as "בלי תת־קטגוריה". */
 const parentRow = (id: string, name: string, parent_id: string | null = null) => ({ id, name, kind: "expense" as const, hidden: false, is_default: false, parent_id });
@@ -110,4 +106,3 @@ export const FullPage: Story = {
     </StoryRoute>
   ),
 };
-export const FullPage320: Story = { ...FullPage, name: "Whole page, 320", ...at320 };

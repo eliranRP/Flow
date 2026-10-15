@@ -6,7 +6,7 @@ import { LoansScreen, SettingsScreen } from "./flow-screens";
 import { NotificationsLockFrame } from "../ui/reference-frames.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
-import { at320, dark, ExampleBar, pagesBusiness, storyBody } from "../ui/screen-stories-support";
+import { ExampleBar, pagesBusiness, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -71,17 +71,6 @@ export const SettingsBusinessRow: Story = {
   ),
 };
 
-export const SettingsBusinessRowViewer: Story = {
-  name: "Business row, viewer",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <SettingsScreen sample={renameBusiness} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
-};
 
 export const SettingsRenameSheet: Story = {
   name: "Rename sheet",
@@ -107,8 +96,6 @@ export const SettingsCurrencyRow: Story = {
     </StoryRoute>
   ),
 };
-export const SettingsCurrencyRow320: Story = { ...SettingsCurrencyRow, name: "Company currency row, dollars, 320", ...at320 };
-export const SettingsCurrencyRowDark: Story = { ...SettingsCurrencyRow, name: "Company currency row, dollars, dark", ...dark };
 
 export const SettingsCurrencyRowViewer: Story = {
   name: "Company currency row, viewer",
@@ -130,7 +117,6 @@ export const SettingsCurrencySheet: Story = {
     await storyBody(canvasElement).findByRole("dialog", { name: "מטבע העסק" });
   },
 };
-export const SettingsCurrencySheetDark: Story = { ...SettingsCurrencySheet, name: "Company currency sheet, dark", ...dark };
 
 /** FLOW-103: the company's one date for profit, the תזרים and the agent, under the currency. */
 export const SettingsBasisRow: Story = {
@@ -142,7 +128,6 @@ export const SettingsBasisRow: Story = {
     </StoryRoute>
   ),
 };
-export const SettingsBasisRow320: Story = { ...SettingsBasisRow, name: "Company date row, invoice date, 320", ...at320 };
 
 export const SettingsBasisRowViewer: Story = {
   name: "Company date row, viewer",
@@ -169,7 +154,6 @@ export const SettingsBasisSheet: Story = {
     await storyBody(canvasElement).findByRole("dialog", { name: "רווח ותזרים לפי" });
   },
 };
-export const SettingsBasisSheetDark: Story = { ...SettingsBasisSheet, name: "Company date sheet, dark", ...dark };
 
 export const SettingsAssistantScope: Story = {
   name: "Assistant scope",
@@ -265,8 +249,6 @@ export const SettingsPages: Story = {
     </StoryRoute>
   ),
 };
-export const SettingsPages320: Story = { ...SettingsPages, name: "Settings, connections and loans rows, 320", ...at320 };
-export const SettingsPagesDark: Story = { ...SettingsPages, name: "Settings, connections and loans rows, dark", ...dark };
 
 export const SettingsAttention: Story = {
   name: "Settings, Mercury needs reconnecting",
@@ -277,7 +259,6 @@ export const SettingsAttention: Story = {
     </StoryRoute>
   ),
 };
-export const SettingsAttention320: Story = { ...SettingsAttention, name: "Settings, Mercury needs reconnecting, 320", ...at320 };
 
 export const SettingsHintsLoading: Story = {
   name: "Settings, hints loading",
@@ -310,9 +291,6 @@ export const Loans: Story = {
     </StoryRoute>
   ),
 };
-export const Loans320: Story = { ...Loans, name: "Loans, 320", ...at320 };
-export const LoansDark: Story = { ...Loans, name: "Loans, dark", ...dark };
-export const LoansDark320: Story = { ...Loans, name: "Loans, dark, 320", ...dark, ...at320 };
 
 export const LoansEmpty: Story = {
   name: "Loans, empty",
@@ -323,7 +301,6 @@ export const LoansEmpty: Story = {
     </StoryRoute>
   ),
 };
-export const LoansEmpty320: Story = { ...LoansEmpty, name: "Loans, empty, 320", ...at320 };
 
 export const LoansLoading: Story = {
   name: "Loans, loading",
@@ -335,7 +312,6 @@ export const LoansLoading: Story = {
   ),
 };
 // FLOW-358: under 360px the loading rows drop the icon slot, as the loaded list does.
-export const LoansLoading320: Story = { ...LoansLoading, name: "Loans, loading, 320", ...at320 };
 
 export const LoansError: Story = {
   name: "Loans, error",
@@ -358,7 +334,6 @@ export const LoansViewer: Story = {
     </StoryRoute>
   ),
 };
-export const LoansViewer320: Story = { ...LoansViewer, name: "Loans, viewer, 320", ...at320 };
 
 export const LoansEmptyViewer: Story = {
   name: "Loans, empty, viewer",

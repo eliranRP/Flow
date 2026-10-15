@@ -75,46 +75,32 @@ function Search({ entry, data = sample }: { entry: string; data?: SearchSample }
   );
 }
 
-const dark = { globals: { theme: "dark" as const } };
-const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** Every line, newest first, with no text typed. */
 export const AllLines: Story = { render: () => <Search entry="/search" /> };
-export const AllLinesDark: Story = { ...dark, render: () => <Search entry="/search" /> };
-export const AllLines320: Story = { ...narrow, render: () => <Search entry="/search" /> };
-export const AllLines320Dark: Story = { ...dark, ...narrow, render: () => <Search entry="/search" /> };
 
 /** Typed text, tinted in each name it matches; the count line totals the shown rows. */
 export const Results: Story = { render: () => <Search entry="/search?q=חומרי" /> };
-export const ResultsDark: Story = { ...dark, render: () => <Search entry="/search?q=חומרי" /> };
-export const Results320: Story = { ...narrow, render: () => <Search entry="/search?q=חומרי" /> };
-export const Results320Dark: Story = { ...dark, ...narrow, render: () => <Search entry="/search?q=חומרי" /> };
 
 /** FLOW-351: a picked period names the chip with the shared sheet's own row (3 חודשים). */
-export const PeriodChip320: Story = { ...narrow, render: () => <Search entry="/search?period=months3" /> };
-export const PeriodChip320Dark: Story = { ...dark, ...narrow, render: () => <Search entry="/search?period=months3" /> };
+export const PeriodChip: Story = { render: () => <Search entry="/search?period=months3" /> };
 
 /** FLOW-402: opened from a project's "כל התנועות", with the project chip set. */
 export const ProjectChip: Story = { render: () => <Search entry="/search?project=p2" /> };
-export const ProjectChipDark: Story = { ...dark, render: () => <Search entry="/search?project=p2" /> };
-export const ProjectChip320: Story = { ...narrow, render: () => <Search entry="/search?project=p2" /> };
 
 /** Chips together: expenses, waiting for review. */
 export const ExpensesWaiting: Story = { render: () => <Search entry="/search?dir=expense&review=1" /> };
 
 /** Nothing matches the text: the es-06 pattern with one way out. */
 export const NoResults: Story = { render: () => <Search entry="/search?q=מעליות" /> };
-export const NoResultsDark: Story = { ...dark, render: () => <Search entry="/search?q=מעליות" /> };
 export const NoResultsFiltered: Story = { render: () => <Search entry="/search?q=מעליות&dir=income" /> };
 
 /** A company with no lines yet. */
 export const NoLines: Story = { render: () => <Search entry="/search" data={{ ...sample, rows: [] }} /> };
 
 export const Loading: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
-export const LoadingDark: Story = { ...dark, render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
 export const Failed: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: false } }} /> };
 export const Offline: Story = { render: () => <Search entry="/search" data={{ ...sample, phase: { kind: "error", offline: true } }} /> };
-export const OfflineDark: Story = { ...dark, render: () => <Search entry="/search" data={{ ...sample, phase: { kind: "error", offline: true } }} /> };
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
 export const MorePages: Story = { render: () => <Search entry="/search" data={{ ...sample, total: 120 }} /> };

@@ -47,26 +47,7 @@ const emptyArgs = {
   onCopy,
 };
 
-function frame(width: "flow320" | "flow390", theme: "light" | "dark"): Pick<Story, "globals" | "parameters"> {
-  return {
-    ...(theme === "dark" ? { globals: { theme: "dark" as const } } : {}),
-    parameters: { viewport: { defaultViewport: width } },
-  };
-}
-
-export const Short390: Story = { args: shortArgs, ...frame("flow390", "light") };
-export const Short390Dark: Story = { args: shortArgs, ...frame("flow390", "dark") };
-export const Short320: Story = { args: shortArgs, ...frame("flow320", "light") };
-export const Short320Dark: Story = { args: shortArgs, ...frame("flow320", "dark") };
-export const Long390: Story = { args: longArgs, ...frame("flow390", "light") };
-export const Long390Dark: Story = { args: longArgs, ...frame("flow390", "dark") };
-export const Long320: Story = { args: longArgs, ...frame("flow320", "light") };
-export const Long320Dark: Story = { args: longArgs, ...frame("flow320", "dark") };
-export const Failed390: Story = { args: failedArgs, ...frame("flow390", "light") };
-export const Failed390Dark: Story = { args: failedArgs, ...frame("flow390", "dark") };
-export const Failed320: Story = { args: failedArgs, ...frame("flow320", "light") };
-export const Failed320Dark: Story = { args: failedArgs, ...frame("flow320", "dark") };
-export const Empty390: Story = { args: emptyArgs, ...frame("flow390", "light") };
-export const Empty390Dark: Story = { args: emptyArgs, ...frame("flow390", "dark") };
-export const Empty320: Story = { args: emptyArgs, ...frame("flow320", "light") };
-export const Empty320Dark: Story = { args: emptyArgs, ...frame("flow320", "dark") };
+export const Short: Story = { args: shortArgs };
+export const Long: Story = { args: longArgs };
+export const Failed: Story = { args: failedArgs };
+export const Empty: Story = { args: emptyArgs };

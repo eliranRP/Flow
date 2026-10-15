@@ -10,22 +10,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const light390 = { parameters: { viewport: { defaultViewport: "flow390" } } };
-const dark390 = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow390" } } };
-const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-const dark320 = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const On: Story = { args: { connectorOn: true } };
 
-export const On: Story = { args: { connectorOn: true }, ...light390 };
-export const OnDark: Story = { args: { connectorOn: true }, ...dark390 };
-export const On320: Story = { args: { connectorOn: true }, ...light320 };
-export const OnDark320: Story = { args: { connectorOn: true }, ...dark320 };
-
-export const Off: Story = { args: { connectorOn: false }, ...light390 };
-export const OffDark: Story = { args: { connectorOn: false }, ...dark390 };
-export const Off320: Story = { args: { connectorOn: false }, ...light320 };
-export const OffDark320: Story = { args: { connectorOn: false }, ...dark320 };
+export const Off: Story = { args: { connectorOn: false } };
 
 /** FLOW-704: each card waiting on Jev, then settled. A card Jev fills keeps its height (the ✦ line is held). */
-export const WaitAndSettle: Story = { render: () => <JevReviewLayout />, ...light390 };
-export const WaitAndSettleDark320: Story = { render: () => <JevReviewLayout />, ...dark320 };
-export const WaitAndSettle320: Story = { render: () => <JevReviewLayout />, ...light320 };
+export const WaitAndSettle: Story = { render: () => <JevReviewLayout /> };

@@ -23,4 +23,3 @@ export const Disabled: Story = {
   args: { children: "החזרה לתור" },
   render: (args) => <TextLink disabled onClick={() => undefined}>{args.children}</TextLink>,
 };
-export const DisabledDark: Story = { ...Disabled, globals: { theme: "dark" } };

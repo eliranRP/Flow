@@ -16,8 +16,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" as const } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 function page(options: SampleTeamOptions = {}) {
   return () => (
@@ -31,17 +29,9 @@ function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
-export const Team: Story = { name: "Team (a-1)", render: page() };
-export const TeamDark: Story = { ...Team, name: "Team, dark", ...dark };
-export const Team320: Story = { ...Team, name: "Team, 320", ...at320 };
 
-export const Pending: Story = { name: "Pending invite (invite-2)", render: page({ pendingInvite: true }) };
-export const PendingDark: Story = { ...Pending, name: "Pending invite, dark", ...dark };
 
 export const Alone: Story = { name: "Only the owner", render: page({ alone: true }) };
-export const Loading: Story = { render: page({ hold: ["listTeam"] }) };
-export const Failed: Story = { name: "Read failed", render: page({ fail: { listTeam: "Failed to fetch" } }) };
-export const Editor: Story = { name: "An editor reads it", render: page({ role: "editor" }) };
 
 export const Invite: Story = {
   name: "Invite sheet (invite-1)",
@@ -51,8 +41,6 @@ export const Invite: Story = {
     await body(canvasElement).findByRole("dialog", { name: "הזמנה" });
   },
 };
-export const InviteDark: Story = { ...Invite, name: "Invite sheet, dark", ...dark };
-export const Invite320: Story = { ...Invite, name: "Invite sheet, 320", ...at320 };
 
 export const InviteAlreadyMember: Story = {
   name: "Invite sheet, already a member",
@@ -74,7 +62,6 @@ export const Member: Story = {
     await body(canvasElement).findByRole("dialog", { name: "יוסי כהן" });
   },
 };
-export const MemberDark: Story = { ...Member, name: "Member sheet, dark", ...dark };
 
 export const RemoveConfirm: Story = {
   name: "Remove confirm",

@@ -89,7 +89,6 @@ export const pagesBusiness = {
 };
 
 export const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-export const dark = { globals: { theme: "dark" } };
 
 /** FLOW-309. Puts the skipped list in the story's cache under the key the real read uses. */
 export function SeedSkipped({ rows }: { rows: SkippedReviewRow[] }) {

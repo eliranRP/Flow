@@ -25,5 +25,3 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Team: Story = {};
-export const TeamDark: Story = { globals: { theme: "dark" } };
-export const Team320: Story = { parameters: { viewport: { defaultViewport: "flow320" } } };

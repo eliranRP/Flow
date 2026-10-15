@@ -2,7 +2,6 @@ import type { CashLine } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { CashLineRows, CashMonthLines } from "./cash-line-rows";
-import { at320, dark } from "./screen-stories-support";
 import { StoryRoute } from "./story-route";
 
 /** FLOW-438: a month's cash lines in the project's תנועות rows. Invented names and figures. */
@@ -51,9 +50,6 @@ export const MonthLines: Story = {
     await expect(canvas.getAllByText("לא נספר ברווח")).toHaveLength(2);
   },
 };
-export const MonthLinesDark: Story = { ...MonthLines, ...dark };
-/** A long kept-out category drops whole; amounts stay in line. */
-export const MonthLines320: Story = { ...MonthLines, ...at320 };
 
 /** The יצא page's rows, which share the component. */
 export const OutLines: Story = {

@@ -23,6 +23,4 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const All: Story = {};
-export const AllDark: Story = { globals: { theme: "dark" } };
-export const All320: Story = { parameters: { viewport: { defaultViewport: "flow320" } } };
 export const Jev: Story = { render: () => <JevTag /> };

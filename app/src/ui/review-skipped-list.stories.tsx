@@ -62,18 +62,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
-const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const Rows: Story = {};
-export const RowsDark: Story = { ...dark };
-export const Rows320: Story = { ...narrow };
 export const Busy: Story = { args: { busyId: "r1" } };
 /** A viewer sees the rows without החזרה לתור. */
 export const Viewer: Story = { args: { viewer: true } };
 export const LoadError: Story = { args: { state: "error" } };
-export const LoadErrorDark: Story = { ...dark, args: { state: "error" } };
-export const LoadError320: Story = { ...narrow, args: { state: "error" } };
 /** No rows: nothing renders. */
 export const Empty: Story = { tags: ["clip-no-text"], args: { empty: true } };
 
@@ -97,5 +91,4 @@ function EmptyWithLink({ count }: { count: number }) {
 }
 export const EmptyQueueLink: Story = { render: () => <EmptyWithLink count={3} /> };
 export const EmptyQueueLinkOne: Story = { render: () => <EmptyWithLink count={1} /> };
-export const EmptyQueueLinkDark: Story = { ...dark, render: () => <EmptyWithLink count={3} /> };
-export const EmptyQueueLink320: Story = { ...narrow, render: () => <EmptyWithLink count={12} /> };
+export const EmptyQueueLinkMany: Story = { render: () => <EmptyWithLink count={12} /> };

@@ -70,7 +70,6 @@ export const AddSheetBankConnected: Story = {
 };
 
 export const AddSheetBankReconnect: Story = {
-  parameters: { viewport: { defaultViewport: "flow320" } },
   render: () => (
     <StoryRoute entry="/add">
       <ExampleBar />
@@ -79,16 +78,6 @@ export const AddSheetBankReconnect: Story = {
   ),
 };
 
-export const AddSheetDark: Story = {
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => (
-    <StoryRoute entry="/add">
-      <ExampleBar />
-      <AddForm bank="active" />
-    </StoryRoute>
-  ),
-};
 
 export const InstallAndroid: Story = {
   name: "Android (prompt)",
@@ -135,35 +124,8 @@ export const InstallIpad: Story = {
   ),
 };
 
-export const InstallAndroidDark: Story = {
-  name: "Android (prompt) dark",
-  globals: { theme: "dark" },
-  render: () => (
-    <StoryRoute entry="/">
-      <InstallScreen mode="android-prompt" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
-    </StoryRoute>
-  ),
-};
 
-export const InstallIphoneDark: Story = {
-  name: "iPhone Safari dark",
-  globals: { theme: "dark" },
-  render: () => (
-    <StoryRoute entry="/">
-      <InstallScreen mode="iphone" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
-    </StoryRoute>
-  ),
-};
 
-export const InstallIphoneNarrow: Story = {
-  name: "iPhone 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => (
-    <StoryRoute entry="/">
-      <InstallScreen mode="iphone" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
-    </StoryRoute>
-  ),
-};
 
 export const InvoiceReading: Story = {
   render: () => (

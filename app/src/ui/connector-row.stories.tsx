@@ -46,10 +46,3 @@ export const NoCompany: Story = { args: { title: "עוזר AI", icon: <SparkIcon
 export const LongHint: Story = { args: { hint: longHebrew, onOpen: () => undefined } };
 
 export const States: Story = { render: () => <AllStates /> };
-export const StatesDark: Story = { globals: { theme: "dark" }, render: () => <AllStates /> };
-export const States320: Story = { parameters: { viewport: { defaultViewport: "flow320" } }, render: () => <AllStates /> };
-export const StatesDark320: Story = {
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => <AllStates />,
-};

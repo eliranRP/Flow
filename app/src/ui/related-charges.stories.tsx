@@ -26,8 +26,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ExpenseUp: Story = { name: "Sheet: an expense up 92%" };
-export const ExpenseUpDark: Story = { name: "Sheet: an expense up, dark", globals: { theme: "dark" } };
-export const ExpenseUp320: Story = { name: "Sheet: an expense up, 320", parameters: { viewport: { defaultViewport: "flow320" } } };
 export const ExpenseDown: Story = { name: "Sheet: an expense down", args: { sample: "cheaper" } };
 export const AsUsual: Story = { name: "Sheet: the usual amount", args: { sample: "steady" } };
 export const IncomeDown: Story = { name: "Sheet: income down 20%, this one pending", args: { sample: "rent" }, parameters: { sheetTitle: "שוכר לדוגמה" } };

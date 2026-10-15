@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { List, ListRow } from "./list-row";
-import { at320, dark } from "./screen-stories-support";
+import { at320 } from "./screen-stories-support";
 import { SplitPartsHint } from "./split-parts-hint";
 import { StoryRoute } from "./story-route";
 
@@ -103,16 +103,6 @@ export const CashList: Story = {
   },
 };
 
-export const CashListDark: Story = {
-  ...CashList,
-  name: "Split lines in a cash list, dark",
-  ...dark,
-};
-export const CashList320: Story = {
-  ...CashList,
-  name: "Split lines in a cash list, 320",
-  ...at320,
-};
 
 /** FLOW-425: long names and wide amounts. An amount is never cut: it shows whole or, after "ועוד N", drops. */
 function LongRows() {

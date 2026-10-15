@@ -4,7 +4,7 @@ import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { mailboxCharges, rentCharges } from "../ui/related-charges.sample";
-import { ExampleBar, at320, dark } from "../ui/screen-stories-support";
+import { ExampleBar } from "../ui/screen-stories-support";
 
 /** FLOW-431 (the owner's layout A): the transaction screen with its "חיובים קודמים" section. Invented data. */
 const meta = {
@@ -56,7 +56,5 @@ const openSheet = {
 };
 
 export const TransactionUsualChange: Story = { name: "Transaction, against the usual amount", render: () => <ChargesStory /> };
-export const TransactionUsualChangeDark: Story = { name: "Transaction, against the usual amount, dark", render: () => <ChargesStory />, ...dark };
-export const TransactionUsualChange320: Story = { name: "Transaction, against the usual amount, 320", render: () => <ChargesStory />, ...at320 };
 export const TransactionUsualChangeIncome: Story = { name: "Income, against the usual amount", render: () => <ChargesStory income /> };
 export const TransactionUsualChangeSheet: Story = { name: "Transaction, earlier charges sheet", render: () => <ChargesStory />, ...openSheet };

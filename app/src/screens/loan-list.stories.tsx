@@ -24,19 +24,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dark = { globals: { theme: "dark" } };
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const Grouped: Story = {};
-export const GroupedDark: Story = { ...dark };
 export const ClosedOpen: Story = { args: { closedOpen: true } };
-export const ClosedOpenDark: Story = { args: { closedOpen: true }, ...dark };
-export const ClosedOpen320: Story = { args: { closedOpen: true }, ...at320 };
 /** FLOW-138: a paid-off loan, and a closed one with nothing owed, show only how and when it ended. */
-export const ClosedOpenDark320: Story = {
+export const ClosedOpenPaid: Story = {
   args: { closedOpen: true },
-  ...dark,
-  ...at320,
   play: async ({ canvasElement }) => {
     const paid = within(canvasElement).getByRole("button", { name: /נפרעה/ });
     await expect(paid.getAttribute("aria-label")).not.toMatch(/\$/);
@@ -47,6 +40,5 @@ export const ClosedOpenDark320: Story = {
 };
 /** Every loan closed: the group says הלוואות שנסגרו under the empty state. */
 export const OnlyClosed: Story = { args: { rowSet: "onlyClosed" } };
-export const OnlyClosedDark320: Story = { args: { rowSet: "onlyClosed" }, ...dark, ...at320 };
 /** Without onOpen the rows are static (a viewer still opens the loan page, read-only). */
 export const StaticRows: Story = { args: { onOpen: undefined, closedOpen: true } };

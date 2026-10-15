@@ -92,15 +92,3 @@ function filedByProject() {
 }
 
 export const FiledTodayByProject: Story = { name: "Filed today, by project", render: filedByProject };
-export const FiledTodayByProjectDark: Story = { name: "Filed today, by project (dark)", render: filedByProject, globals: { theme: "dark" } };
-export const FiledTodayByProject320: Story = {
-  name: "Filed today, by project (320)",
-  render: filedByProject,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-export const FiledTodayByProjectDark320: Story = {
-  name: "Filed today, by project (dark, 320)",
-  render: filedByProject,
-  globals: { theme: "dark" },
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};

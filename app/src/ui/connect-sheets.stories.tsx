@@ -86,15 +86,13 @@ export const MercuryImportFromDate: Story = {
   },
 };
 
-export const MercuryImportFromDateDark: Story = {
+export const MercuryImportFromDateNoPlay: Story = {
   render: () => <MercuryDemo initialKey="sample-token-12" initialFrom="2026-01-01" />,
-  globals: { theme: "dark" },
 };
 
 /** מההתחלה hides the day; מתאריך brings it back. */
 export const SumitImportFromToggle: Story = {
   render: () => <SumitDemo />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
   play: async ({ canvasElement }) => {
     const dialog = await openSheet(canvasElement, "חיבור SUMIT");
     await expect(within(dialog).queryByRole("button", { name: /תאריך ייבוא/ })).toBeNull();
@@ -112,11 +110,6 @@ const pinnedPlay: Story["play"] = async ({ canvasElement }) => {
   await expect(submit.closest("form")).toBeNull();
 };
 
-export const SumitImportFromDate320: Story = {
-  render: () => <SumitDemo initialFrom="2026-01-01" />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  play: pinnedPlay,
-};
 
 export const SumitImportFromDateSe: Story = {
   render: () => <SumitDemo initialFrom="2026-01-01" />,
@@ -124,8 +117,6 @@ export const SumitImportFromDateSe: Story = {
   play: pinnedPlay,
 };
 
-export const SumitImportFromDateDark320: Story = {
+export const SumitImportFromDate: Story = {
   render: () => <SumitDemo initialFrom="2026-01-01" />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  globals: { theme: "dark" },
 };

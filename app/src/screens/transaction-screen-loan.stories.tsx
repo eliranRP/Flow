@@ -160,21 +160,11 @@ export const TransactionLoanEditSplit: Story = {
     await waitFor(() => expect(within(editor).getByLabelText("סכום, קרן")).toHaveValue("4,150"));
   },
 };
-export const TransactionLoanEditSplit320: Story = {
-  ...TransactionLoanEditSplit,
-  name: "Loan payment, edit the split, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
 /** FLOW-362: at 375x667 the fees category and "לשמור להלוואה הזו" show above שמירה. */
 export const TransactionLoanEditSplitSe: Story = {
   ...TransactionLoanEditSplit,
   name: "Loan payment, edit the split, 375x667",
   parameters: { viewport: { defaultViewport: "flow375-se" } },
-};
-export const TransactionLoanEditSplitDark: Story = {
-  ...TransactionLoanEditSplit,
-  name: "Loan payment, edit the split, dark",
-  globals: { theme: "dark" },
 };
 
 /** The server's balance check refuses the save: an error toast, and the sheet keeps the values. */
@@ -246,13 +236,7 @@ export const TransactionLoanUsd: Story = {
 
 /** FLOW-115: a long loan name wraps to a second line at 320 instead of losing the name. */
 const LONG_LOAN = "משכנתא לדוגמה על בניין המגורים ברחוב הארוך";
-export const TransactionLoanLongName320: Story = {
-  name: "Loan payment, long loan name, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+export const TransactionLoanLongName: Story = {
+  name: "Loan payment, long loan name",
   render: () => <LoanMatchStory loanName={LONG_LOAN} />,
-};
-export const TransactionLoanLongNameDark320: Story = {
-  ...TransactionLoanLongName320,
-  name: "Loan payment, long loan name, dark 320",
-  globals: { theme: "dark" },
 };

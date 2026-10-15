@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectDetailScreen } from "./project-detail-screen";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY } from "../forecast-sample";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
+import { exampleOnBand } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -41,8 +41,6 @@ export const ProjectExpected: Story = {
     </StoryRoute>
   ),
 };
-export const ProjectExpectedDark: Story = { ...ProjectExpected, name: "Project, expected months, dark", ...dark };
-export const ProjectExpected320: Story = { ...ProjectExpected, name: "Project, expected months, 320", ...at320 };
 export const ProjectExpectedNone: Story = {
   name: "Project, no expected months yet",
   render: () => (
