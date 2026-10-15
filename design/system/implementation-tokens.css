@@ -132,6 +132,7 @@
   --pill-pad-block: 3px;
   --pill-pad-inline: 10px;
   --space-card-inset: 16px;
+  --space-inset-row: 14px;       /* a row inside an inset list (FLOW-363 2d) */
   --space-section: 36px;
 
   /* ---- corner radii ---- */
