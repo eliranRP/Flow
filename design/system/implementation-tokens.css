@@ -126,6 +126,7 @@
   --avatar: 36px;
   --bar-thin: 6px;
   --bar-job: 8px;
+  --bar-sync: 3px;               /* background sync strip line (FLOW-371) */
   --dot: 6px;
   --cents-raise: 5px;            /* list amount: agorot raised above the baseline (Design guide, FLOW-363) */
   --status-gap: 6px;
@@ -221,7 +222,7 @@
   --color-error: #C3302B;
   --color-skeleton: #F3ECFE;
   --color-skeleton-shine: #FAF6FF;
-  --color-skeleton-band: #9565E9;
+  --color-skeleton-band: rgba(255, 255, 255, 0.16);
   --color-skeleton-band-shine: #A57CED;
   --color-knob: #FFFFFF;
   --color-knob-on: #FFFFFF;
@@ -278,9 +279,9 @@
     --color-disabled-bg: #2A2438;
     --color-disabled-text: #7A7290;
     --color-error: #FF8A80;
-    --color-skeleton: #2A2045;
+    --color-skeleton: #251F33;
     --color-skeleton-shine: #33285A;
-    --color-skeleton-band: #9565E9;
+    --color-skeleton-band: rgba(255, 255, 255, 0.16);
     --color-skeleton-band-shine: #A57CED;
     --color-knob: #FFFFFF;
     --color-knob-on: #1E0B45;
@@ -337,9 +338,9 @@
   --color-disabled-bg: #2A2438;
   --color-disabled-text: #7A7290;
   --color-error: #FF8A80;
-  --color-skeleton: #2A2045;
+  --color-skeleton: #251F33;
   --color-skeleton-shine: #33285A;
-  --color-skeleton-band: #9565E9;
+  --color-skeleton-band: rgba(255, 255, 255, 0.16);
   --color-skeleton-band-shine: #A57CED;
   --color-knob: #FFFFFF;
   --color-knob-on: #1E0B45;
