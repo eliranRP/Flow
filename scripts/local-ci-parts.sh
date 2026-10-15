@@ -2,10 +2,11 @@
 # both the default run and the --part slices use, and the slices themselves (FLOW-832):
 #   quick   the pre-push hook: eslint on the changed files, 20 s (the budget is in local-ci-guard.sh)
 #   static  eslint on the changed files and the files that import them, the migration checks, the edge-function
-#           typecheck when supabase/functions changed, the typecheck, the unused-code and CSS checks, the
-#           connector tests on a local run, and the scripts tests when scripts/ changed (on a plain runner,
-#           not in the Playwright image). The connector tests need the MERCURY_FIXTURE_DENYLIST secret, so on
-#           GitHub they and the deny-list check run on main only; the dist builds run on main too.
+#           typecheck when supabase/functions changed, the connector tests on a local run, and the scripts tests
+#           when scripts/ changed (on a plain runner, not in the Playwright image). The connector tests need the
+#           MERCURY_FIXTURE_DENYLIST secret, so on GitHub they and the deny-list check run on main only; the dist
+#           builds run on main too.
+#   types   the typecheck, the unused-code and CSS checks (FLOW-835: its own job, beside static, so the two run at once)
 #   tests   the app unit and Storybook vitest tests the change reaches (--shard i/n passes through to vitest)
 #   db      when supabase/ changed: local Supabase, a fresh database, the flow-mcp smoke, the pgTAP files that
 #           name the change, and the db types check
@@ -154,12 +155,17 @@ slice_static() {
   else
     echo "local-ci: edge-function typecheck skipped: this branch changes no supabase/functions file (main checks them all)."
   fi
-  typecheck_part
   # The connector tests read the MERCURY_FIXTURE_DENYLIST secret, which GitHub's PR runs do not have: CI is set there.
   if [[ -z "${CI:-}" ]]; then pnpm test:connectors; fi
   if grep -q '^scripts/' <<<"$pr_files"; then
     node --test scripts/*.test.mjs
   fi
+}
+
+# FLOW-835: the typecheck and the unused-code and CSS checks run in their own job, beside static, so the
+# two take the time of the slower one rather than their sum.
+slice_types() {
+  typecheck_part
 }
 
 slice_tests() {
@@ -204,9 +210,14 @@ run_part() {
       echo "local-ci: quick check passed; the PR check runs the rest."
       ;;
     static)
-      phase "static: the migration checks, the edge functions when they changed, and the typecheck"
+      phase "static: the migration checks, lint with its importers, and the edge functions when they changed"
       slice_static
       echo "local-ci: static checks passed."
+      ;;
+    types)
+      phase "types: the typecheck, the unused-code and CSS checks"
+      slice_types
+      echo "local-ci: types checks passed."
       ;;
     tests)
       phase "tests: the app unit and Storybook tests this change reaches${shard:+, shard $shard}"

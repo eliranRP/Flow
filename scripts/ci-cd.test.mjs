@@ -11,11 +11,12 @@ const pr = readFileSync(new URL("../.github/workflows/pr.yml", import.meta.url),
 const push = readFileSync(new URL("./cd-push.sh", import.meta.url), "utf8");
 const preflight = readFileSync(new URL("./cd-preflight.sh", import.meta.url), "utf8");
 
-const USES_PIN = /^\s*(?:-\s*)?uses: ([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)@([0-9a-f]{40}) # v\d+\.\d+\.\d+$/;
+const USES_PIN = /^\s*(?:-\s*)?uses: ([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+)@([0-9a-f]{40}) # v\d+\.\d+\.\d+$/;
 const ACTION_SHA = {
   "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
   "actions/setup-node": "820762786026740c76f36085b0efc47a31fe5020",
   "actions/cache": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+  "actions/cache/restore": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
   "pnpm/action-setup": "ea17c68df8912ef543352723c149a84f56e3d413",
   "supabase/setup-cli": "45a513f8c64c0bc8e0e3dfe572b5c95be85f6359",
@@ -900,20 +901,28 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   assert.equal(pr.includes("secrets."), false, "no secret reaches a pull request");
   assert.equal(pr.includes("continue-on-error"), false);
   assert.deepEqual(usesProblems(pr), []);
-  for (const name of ["changes", "static", "tests", "db", "pr"]) {
+  for (const name of ["changes", "static", "types", "tests", "db", "pr"]) {
     assert.match(jobIn(pr, name), /timeout-minutes: \d+\n/, name);
   }
   // Each job that runs the gate checks out its history and fetches main, which the gate compares against.
-  for (const name of ["changes", "static", "tests", "db"]) {
+  for (const name of ["changes", "static", "types", "tests", "db"]) {
     const body = jobIn(pr, name);
     assert.match(body, /uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1\n {8}with:\n {10}fetch-depth: 0\n/, name);
     assert.ok(body.indexOf("actions/checkout") < body.indexOf("git fetch --no-tags origin main"), name);
   }
-  for (const name of ["static", "tests", "db"]) {
+  // FLOW-835: the PR jobs restore main's pnpm store read-only, keyed on pnpm-lock.yaml, and set setup-node's cache off,
+  // so no job waits on a cache save in its post-step. Only ci.yml saves the store.
+  for (const name of ["static", "types", "tests", "db"]) {
     const body = jobIn(pr, name);
     assert.match(body, /uses: pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n {8}with:\n {10}version: 10\.33\.3\n/, name);
-    assert.match(body, /uses: actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0\n {8}with:\n {10}node-version: 22\n {10}cache: pnpm\n/, name);
+    assert.match(body, /uses: actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0\n {8}with:\n {10}node-version: 22\n/, name);
+    assert.equal(body.includes("cache: pnpm"), false, `${name} saves no cache`);
+    assert.ok(body.includes("run: echo \"path=$(pnpm store path --silent)\" >> \"$GITHUB_OUTPUT\"\n"), name);
+    assert.match(body, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: \$\{\{ steps\.pnpm-store\.outputs\.path \}\}\n {10}key: node-cache-Linux-x64-pnpm-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}\n {10}restore-keys: node-cache-Linux-x64-pnpm-\n/, name);
+    assert.ok(body.indexOf("actions/setup-node") < body.indexOf("pnpm store path"), name);
+    assert.ok(body.indexOf("pnpm store path") < body.indexOf("actions/cache/restore"), name);
   }
+  assert.equal(pr.includes("actions/cache@"), false, "PR jobs never save a cache");
   // The static slice and the db slice run deno (the flow-mcp tests, the edge-function check, the edge seed).
   assert.match(jobIn(pr, "static"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.match(jobIn(pr, "db"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
@@ -921,13 +930,16 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
 
   const staticJob = jobIn(pr, "static");
   assert.ok(staticJob.includes("run: bash scripts/local-ci.sh --part static"));
+  // FLOW-835: the typecheck and the unused-code and CSS checks run in their own job, beside static.
+  assert.equal(staticJob.includes("--part types"), false);
+  assert.ok(jobIn(pr, "types").includes("run: bash scripts/local-ci.sh --part types"));
 
-  // Tests: three shards in the Playwright image of the version app/package.json pins, so no browser install.
+  // Tests: six shards in the Playwright image of the version app/package.json pins, so no browser install.
   const tests = jobIn(pr, "tests");
-  assert.match(tests, /shard: \[1, 2, 3\]\n/);
+  assert.match(tests, /shard: \[1, 2, 3, 4, 5, 6\]\n/);
   assert.match(tests, /fail-fast: false\n/);
   assert.ok(tests.includes(`image: mcr.microsoft.com/playwright:v${playwrightVersion}-noble`));
-  assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/3"));
+  assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/6"));
   assert.equal(tests.includes("playwright install"), false);
   // The container runs as root on a checkout the runner owns: the workspace is marked safe before the fetch.
   const containerSteps = tests.slice(tests.indexOf("Mark the workspace safe"));
@@ -946,9 +958,10 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
 
   // The check a merge waits for: every job it needs passed, or db was skipped because the diff does not touch it.
   const aggregate = jobIn(pr, "pr");
-  assert.match(aggregate, /needs: \[changes, static, tests, db\]\n {4}if: always\(\)\n/);
+  assert.match(aggregate, /needs: \[changes, static, types, tests, db\]\n {4}if: always\(\)\n/);
   assert.match(aggregate, /test "\$CHANGES" = success\n/);
   assert.match(aggregate, /test "\$STATIC" = success\n/);
+  assert.match(aggregate, /test "\$TYPES" = success\n/);
   assert.match(aggregate, /test "\$TESTS" = success\n/);
   assert.match(aggregate, /test "\$DB" = success\n/);
   assert.match(aggregate, /test "\$DB" = skipped\n/);
@@ -1001,12 +1014,14 @@ test("the --part slices: quick lints only, static and tests and db run the scope
   // A slice installs only when pnpm-lock.yaml changed since the last install here.
   assert.ok(local.includes('if [[ -n "$slice" && -d node_modules && "$(cat "$cache/installed-lock" 2>/dev/null)" == "$lock_sum" ]]; then'));
 
-  // static: the edge functions only when supabase/functions changed; the typecheck and unused-code checks always.
+  // static: the edge functions only when supabase/functions changed. The typecheck is its own slice (types, FLOW-835).
   const staticSlice = functionBody(parts, "slice_static");
   // The importer walk runs here, so the PR check covers every file a change reaches.
   assert.ok(staticSlice.includes("lint_part"));
   assert.ok(staticSlice.includes("grep -q '^supabase/functions/' <<<\"$pr_files\""));
-  assert.ok(staticSlice.includes("typecheck_part"));
+  assert.equal(staticSlice.includes("typecheck_part"), false);
+  assert.ok(functionBody(parts, "slice_types").includes("typecheck_part"));
+  assert.ok(parts.includes('    types)\n      phase "types:'));
   // The connector tests read the fixture secret, which PR runs lack: the static slice runs them only when CI is unset.
   assert.ok(staticSlice.includes('if [[ -z "${CI:-}" ]]; then pnpm test:connectors; fi'));
   assert.equal(staticSlice.includes("check-deny-list"), false);
