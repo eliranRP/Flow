@@ -7,6 +7,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+const pr = readFileSync(new URL("../.github/workflows/pr.yml", import.meta.url), "utf8");
 const push = readFileSync(new URL("./cd-push.sh", import.meta.url), "utf8");
 const preflight = readFileSync(new URL("./cd-preflight.sh", import.meta.url), "utf8");
 
@@ -126,7 +127,7 @@ function checksumProblems(script) {
 }
 
 test("CI keeps the hosted and reviewer builds apart and skips live writers", () => {
-  // Pull requests are gated by scripts/local-ci.sh. main runs CI in batches, or by hand.
+  // Pull requests are checked by the pr workflow and the pre-push hook. main runs this workflow on every push.
   assert.match(ci, /\non:\n {2}push:\n {4}branches:\n {6}- main\n {2}workflow_dispatch:\n/);
   assert.equal(ci.includes("pull_request:"), false);
   assert.equal(ci.includes("head.repo.full_name"), false);
@@ -215,7 +216,8 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.equal(existsSync(new URL("../.github/workflows/cd.yml", import.meta.url)), false);
   const deploy = job("deploy");
   assert.match(deploy, /needs: \[plan, lint, check, e2e\]/);
-  assert.match(deploy, /if: needs\.plan\.outputs\.run == 'true' && github\.ref == 'refs\/heads\/main'/);
+  assert.match(deploy, /if: needs\.plan\.outputs\.deploy == 'true' && github\.ref == 'refs\/heads\/main'/);
+  assert.equal(deploy.includes("outputs.run"), false);
   assert.match(deploy, /environment: production/);
   assert.match(deploy, /group: cd-production/);
   assert.match(deploy, /cancel-in-progress: false/);
@@ -605,7 +607,9 @@ test("verify_sha256 rejects a download that does not match the pinned checksum",
 });
 
 test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it", () => {
-  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  // The default run's text, then the slices it sources (scripts/local-ci-parts.sh).
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8")
+    + readFileSync(new URL("./local-ci-parts.sh", import.meta.url), "utf8");
   for (const part of [
     "pnpm lint",
     "node scripts/check-migration-order.mjs --base",
@@ -667,15 +671,16 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(local.includes("keeping it without a reset."));
   assert.match(local, /--full\) full=1 ;;/);
   // The scoped vitest runs (unit and storybook) follow scripts/storybook-stories.mjs's relatedRun.
-  assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]] || return 1'));
+  assert.ok(local.includes('| node scripts/storybook-stories.mjs --related-run --base "$pr_fork")" == related ]]\n}'));
+  assert.ok(local.includes('  related_ok || return 1\n'));
   // Lint the changed files and their importers; build only when the change reaches the built app.
   assert.ok(local.includes('scope="$(git diff --name-status "$pr_fork" HEAD | node scripts/gate-scope.mjs --lint)"'));
-  assert.ok(local.includes("xargs -d '\\n' pnpm exec eslint --no-warn-ignored <<<\"$scope\""));
+  assert.ok(local.includes("xargs -d '\\n' pnpm exec eslint --no-warn-ignored \"$@\" <<<\"$scope\""));
   assert.ok(local.includes('-- "${app_inputs[@]}" | node scripts/gate-scope.mjs --build)" == skip ]]'));
   assert.ok(local.includes('pnpm exec tsc --noEmit -p scripts/tsconfig.json --incremental --tsBuildInfoFile "$info/scripts.tsbuildinfo"'));
-  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests "${workers[@]}"'));
+  assert.ok(local.includes('--project "$project" --changed "$base" --passWithNoTests "${args[@]}"'));
   // The jsdom unit tests run on one worker per core; the Storybook browser tests keep vitest's default.
-  assert.ok(local.includes('[[ "$project" != unit ]] || workers=(--maxWorkers="$(nproc)")'));
+  assert.ok(local.includes('[[ "$project" != unit ]] || args+=(--maxWorkers="$(nproc)")'));
   // The same-patch skip holds only when main left the database surface alone since the marked fork;
   // otherwise the gate runs, and a database branch runs every pgTAP file.
   assert.ok(local.includes('mark_green "patch-$patch_id" "$pr_fork"'));
@@ -692,6 +697,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   const hook = readFileSync(new URL("../.githooks/pre-push", import.meta.url), "utf8");
   assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" <\/dev\/null/);
   assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" --full <\/dev\/null/);
+  assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" --part quick <\/dev\/null/);
   const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
   assert.match(install, /git config core\.hooksPath \.githooks\n/);
 });
@@ -704,7 +710,8 @@ test("the gate seeds the edge runtime's npm cache and waits for a local Supabase
   const smokes = local.split("\n").flatMap((line, index, lines) =>
     line.trim() === "bash scripts/mcp-function-smoke.sh" ? [lines[index - 1].trim()] : []);
   assert.deepEqual(smokes, ["edge_ready", "edge_ready"]);
-  assert.match(local, /edge_ready\(\) \{[\s\S]*?bash scripts\/seed-edge-cache\.sh/);
+  const parts = readFileSync(new URL("./local-ci-parts.sh", import.meta.url), "utf8");
+  assert.match(parts, /edge_ready\(\) \{[\s\S]*?bash scripts\/seed-edge-cache\.sh/);
   assert.match(install, /bash scripts\/seed-edge-cache\.sh \|\|/);
   // Caching must not rewrite the functions' deno.lock files, or local-ci refuses the dirty tree.
   assert.match(seed, /deno cache --quiet --no-lock /);
@@ -855,7 +862,7 @@ test("local-ci.sh sources the guard first, and Docker's daemons start outside th
   assert.ok(local.indexOf('source "$(dirname "$0")/local-ci-docker.sh"') > local.indexOf('source "$(dirname "$0")/local-ci-guard.sh"'));
   assert.equal([...(local + docker).matchAll(/\(sudo -n (dockerd|containerd)/g)].length, 0);
   assert.equal([...docker.matchAll(/\(detach sudo -n (dockerd|containerd)/g)].length, 3);
-  assert.match(guard, /declare -A budgets=\(\[storybook\]=\d+ \[storybook-smoke\]=\d+ \[e2e\]=/);
+  assert.match(guard, /declare -A budgets=\(\[quick\]=20 \[storybook\]=\d+ \[storybook-smoke\]=\d+ \[e2e\]=/);
   assert.match(guard, /setsid bash "\$0" "\$@" <&0 &/);
 });
 
@@ -874,4 +881,134 @@ test("the gate runs a changed screen's specs first under a cap of 8, then the pa
   const e2e = local.indexOf('pnpm --filter @flow/app exec playwright test --fully-parallel --workers="$e2e_workers" "${e2e_specs[@]}"');
   assert.ok(e2e > 0 && perf > e2e && perf < local.indexOf('(( e2e_left )) || mark_green "tree-e2e-$head_tree"'));
   assert.ok(local.includes('phase "perf: ${#perf_specs[@]} page-speed specs on the pages this change reaches"'));
+});
+
+// FLOW-832: the function's text, from its header line to the closing brace at column 0.
+function functionBody(text, name) {
+  const start = text.indexOf(`${name}() {`);
+  assert.ok(start >= 0, name);
+  return text.slice(start, text.indexOf("\n}\n", start) + 3);
+}
+
+test("pr.yml checks every push to a PR before its merge: pinned actions, no secrets, and an aggregate that fails on a failed job", () => {
+  assert.match(pr, /\non:\n {2}pull_request:\n {4}branches:\n {6}- main\n {4}types: \[opened, synchronize, reopened, ready_for_review\]\n/);
+  assert.equal(pr.includes("push:"), false);
+  assert.match(pr, /\npermissions:\n {2}contents: read\n/);
+  assert.match(pr, /\nconcurrency:\n {2}group: pr-\$\{\{ github\.event\.pull_request\.number \}\}\n {2}cancel-in-progress: true\n/);
+  assert.equal(pr.includes("secrets."), false, "no secret reaches a pull request");
+  assert.equal(pr.includes("continue-on-error"), false);
+  assert.deepEqual(usesProblems(pr), []);
+  for (const name of ["changes", "static", "tests", "db", "pr"]) {
+    assert.match(jobIn(pr, name), /timeout-minutes: \d+\n/, name);
+  }
+  // Each job that runs the gate checks out its history and fetches main, which the gate compares against.
+  for (const name of ["changes", "static", "tests", "db"]) {
+    const body = jobIn(pr, name);
+    assert.match(body, /uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1\n {8}with:\n {10}fetch-depth: 0\n/, name);
+    assert.ok(body.indexOf("actions/checkout") < body.indexOf("git fetch --no-tags origin main"), name);
+  }
+  for (const name of ["static", "tests", "db"]) {
+    const body = jobIn(pr, name);
+    assert.match(body, /uses: pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n {8}with:\n {10}version: 10\.33\.3\n/, name);
+    assert.match(body, /uses: actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0\n {8}with:\n {10}node-version: 22\n {10}cache: pnpm\n/, name);
+  }
+  // The static slice and the db slice run deno (the flow-mcp tests, the edge-function check, the edge seed).
+  assert.match(jobIn(pr, "static"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
+  assert.match(jobIn(pr, "db"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
+  assert.match(jobIn(pr, "db"), /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3\.0\.1\n {8}with:\n {10}version: 2\.118\.0\n/);
+
+  const staticJob = jobIn(pr, "static");
+  assert.ok(staticJob.includes("run: bash scripts/local-ci.sh --part static"));
+
+  // Tests: three shards in the Playwright image of the version app/package.json pins, so no browser install.
+  const tests = jobIn(pr, "tests");
+  assert.match(tests, /shard: \[1, 2, 3\]\n/);
+  assert.match(tests, /fail-fast: false\n/);
+  assert.ok(tests.includes(`image: mcr.microsoft.com/playwright:v${playwrightVersion}-noble`));
+  assert.ok(tests.includes("run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/3"));
+  assert.equal(tests.includes("playwright install"), false);
+
+  // Database: only when the diff touches supabase/, and Supabase starts without the services the checks don't use.
+  const db = jobIn(pr, "db");
+  assert.match(db, /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.db == 'true'\n/);
+  const excluded = /supabase start -x ([^\n]+)\n/.exec(db)?.[1]?.split(",") ?? [];
+  assert.ok(excluded.length > 0, "supabase start excludes services");
+  for (const kept of ["kong", "postgrest", "gotrue", "edge-runtime", "postgres"]) {
+    assert.equal(excluded.includes(kept), false, kept);
+  }
+  assert.ok(db.includes("run: bash scripts/local-ci.sh --part db"));
+
+  // The check a merge waits for: every job it needs passed, or db was skipped because the diff does not touch it.
+  const aggregate = jobIn(pr, "pr");
+  assert.match(aggregate, /needs: \[changes, static, tests, db\]\n {4}if: always\(\)\n/);
+  assert.match(aggregate, /test "\$CHANGES" = success\n/);
+  assert.match(aggregate, /test "\$STATIC" = success\n/);
+  assert.match(aggregate, /test "\$TESTS" = success\n/);
+  assert.match(aggregate, /test "\$DB" = success\n/);
+  assert.match(aggregate, /test "\$DB" = skipped\n/);
+  assert.equal(aggregate.includes("|| true"), false);
+});
+
+test("main runs the full suite on every push and deploys only when the plan's batch rule says so", () => {
+  assert.match(job("plan"), /\n {4}outputs:\n {6}run: \$\{\{ steps\.plan\.outputs\.run \}\}\n {6}deploy: \$\{\{ steps\.plan\.outputs\.deploy \}\}\n/);
+  const plan = readFileSync(new URL("./ci-deploy-plan.sh", import.meta.url), "utf8");
+  // Every run tests; the deploy flag is the batch rule's answer.
+  assert.ok(plan.includes("printf 'run=true\\ndeploy=%s\\n' \"$1\" >> \"$out\""));
+  assert.match(job("deploy"), /if: needs\.plan\.outputs\.deploy == 'true' && github\.ref == 'refs\/heads\/main'\n/);
+  assert.equal(ci.includes("needs.plan.outputs.deploy"), true);
+});
+
+test("the pre-push hook runs the quick slice, and FLOW_LOCAL_CI picks the default or the full gate", () => {
+  const hook = readFileSync(new URL("../.githooks/pre-push", import.meta.url), "utf8");
+  assert.ok(hook.includes(`  case "\${FLOW_LOCAL_CI:-}" in
+    full) bash "$root/scripts/local-ci.sh" --full </dev/null ;;
+    default) bash "$root/scripts/local-ci.sh" </dev/null ;;
+    *) bash "$root/scripts/local-ci.sh" --part quick </dev/null ;;
+  esac`));
+});
+
+test("the --part slices: quick lints only, static and tests and db run the scoped checks, and no slice marks or stamps", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  const parts = readFileSync(new URL("./local-ci-parts.sh", import.meta.url), "utf8");
+  const guard = readFileSync(new URL("./local-ci-guard.sh", import.meta.url), "utf8");
+  // The options: one slice, --shard only with tests, and never with --full.
+  assert.ok(local.includes('--part) [[ -n "${2:-}" ]] || usage; slice="$2"; shift ;;'));
+  assert.ok(local.includes('--shard) [[ -n "${2:-}" ]] || usage; shard="$2"; shift ;;'));
+  assert.ok(local.includes('[[ "$slice" != tests ]]'));
+  assert.ok(local.includes('if (( full )) && [[ -n "$slice" ]]; then usage; fi'));
+  assert.ok(local.includes('source "$(dirname "$0")/local-ci-parts.sh"\nif [[ -n "$slice" ]]; then\n  run_part\n  exit 0\nfi'));
+
+  // quick: the scoped lint with eslint's cache, nothing else; its whole run has a 20 s budget.
+  const quick = functionBody(parts, "slice_quick");
+  assert.ok(quick.includes('lint_part --cache --cache-strategy content --cache-location "$cache/eslint-cache.json"'));
+  for (const word of ["install", "build", "vitest", "supabase", "docker", "playwright", "migration-ahead"]) {
+    assert.equal(quick.includes(word), false, word);
+  }
+  assert.ok(local.includes('[[ "$slice" != quick ]] || phase "quick: fetch main, migration order and the scoped lint"'));
+  assert.ok(parts.includes('echo "local-ci: quick check passed; the PR check runs the rest."'));
+  assert.match(guard, /\[quick\]=20/);
+  assert.ok(guard.includes('"quick:"*) echo quick ;;'));
+
+  // A slice installs only when pnpm-lock.yaml changed since the last install here.
+  assert.ok(local.includes('if [[ -n "$slice" && -d node_modules && "$(cat "$cache/installed-lock" 2>/dev/null)" == "$lock_sum" ]]; then'));
+
+  // static: the edge functions only when supabase/functions changed; the typecheck and unused-code checks always.
+  const staticSlice = functionBody(parts, "slice_static");
+  assert.ok(staticSlice.includes("grep -q '^supabase/functions/' <<<\"$pr_files\""));
+  assert.ok(staticSlice.includes("typecheck_part"));
+  assert.ok(functionBody(parts, "typecheck_part").includes("node scripts/check-unused-app-code.mjs"));
+
+  // tests: vitest gets the shard; the scripts suite runs once, in the first shard, and only when scripts/ changed.
+  assert.ok(parts.includes('[[ -z "$shard" ]] || args+=(--shard "$shard")'));
+  assert.ok(parts.includes('if grep -q \'^scripts/\' <<<"$pr_files" && [[ -z "$shard" || "$shard" == 1/* ]]; then'));
+
+  // db: only when the diff touches supabase/.
+  const db = functionBody(parts, "slice_db");
+  assert.ok(db.includes("grep -q '^supabase/' <<<\"$pr_files\""));
+  assert.ok(db.includes("bash scripts/mcp-function-smoke.sh"));
+  assert.ok(db.includes("bash scripts/check-db-types.sh"));
+
+  // A slice keeps no marks and writes no stamp: only the default run records a pass.
+  assert.equal(parts.includes("mark_green"), false);
+  assert.equal(parts.includes("flow-local-ci"), false);
 });
