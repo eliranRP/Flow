@@ -112,7 +112,8 @@ describe("Cash history (FLOW-417)", () => {
       name === "cash_years" ? Promise.resolve({ data: years, error: null }) : Promise.resolve({ data: null, error: { message: "boom" } });
     wrap(`/cash/year/${String(lastYear)}`);
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
-    expect(screen.getByLabelText("חזרה לתזרים")).toBeInTheDocument();
+    // The page's Back and the compact bar's (hidden, inert) both carry the label.
+    expect(screen.getAllByLabelText("חזרה לתזרים").length).toBeGreaterThan(0);
   });
 
   it("sends a signed-out read back to Home", async () => {
