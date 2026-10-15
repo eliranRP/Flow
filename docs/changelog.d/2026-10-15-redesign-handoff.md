@@ -1,0 +1,1 @@
+Backlog: docs/design/REDESIGN-HANDOFF.md records where the redesign build stopped on 2026-10-12: FLOW-363 parts 1 and 2a–2c merged, 2d in review (#594), 3a unfinished and saved as a patch with its brief under docs/design/handoff/, and the order, decisions and open owner questions for the rest.

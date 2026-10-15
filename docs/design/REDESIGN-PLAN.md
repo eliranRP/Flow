@@ -1,5 +1,7 @@
 # Redesign plan: components, migration, tests, clean-up
 
+> **Status (2026-10-15):** see [REDESIGN-HANDOFF](REDESIGN-HANDOFF.md) for where the build stopped and what is left.
+
 This plan turns the approved [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) into build work. [REDESIGN-BUILD](REDESIGN-BUILD.md) holds the rules every PR follows; this file says **what** gets built, **in which PR**, and **what each PR deletes**. The task files hold the screen details.
 
 - **Pages on the canvas:**
