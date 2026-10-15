@@ -30,10 +30,13 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The fast-cycle and cleanup rows (F1 to F3, owner 2026-10-15) come first, one at a time. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id |
 | --- | --- |
+| F1 | FLOW-832 |
+| F2 | FLOW-833 |
+| F3 | FLOW-834 |
 | R1 | FLOW-363 |
 | R2 | FLOW-371 |
 | R3 | FLOW-372 |
@@ -340,6 +343,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-445
 - FLOW-446
 - FLOW-447
+- FLOW-448
 
 ## Onboarding, Settings and connectors
 
@@ -409,6 +413,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-829
 - FLOW-830
 - FLOW-831
+- FLOW-832
+- FLOW-833
+- FLOW-834
 
 ## Data hygiene (public repo)
 

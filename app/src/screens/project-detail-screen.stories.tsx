@@ -245,6 +245,21 @@ export const ProjectOneMonth: Story = {
     </StoryRoute>
   ),
 };
+export const ProjectOneMonth320: Story = { ...ProjectOneMonth, name: "Project, one month, 320", ...at320 };
+/** FLOW-444: Back names the project; a long name is cut with an ellipsis. */
+export const ProjectOneMonthLongName: Story = {
+  name: "Project, one month, long project name",
+  render: () => (
+    <StoryRoute entry="/projects/p-a/profit?period=month&at=2026-09" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        section="profit"
+        sample={{ ...periodProject, name: "שיפוץ דירת גן ברחוב הדוגמה הארוך 128", transactions: periodProject.transactions.filter((txn) => txn.doc_date.startsWith("2026-09")) }}
+      />
+    </StoryRoute>
+  ),
+};
+export const ProjectOneMonthLongName320: Story = { ...ProjectOneMonthLongName, name: "Project, one month, long project name, 320", ...at320 };
 /** הכול on a project reads מתחילת הפרויקט (FLOW-411), and the budget shows. */
 export const ProjectFromStart: Story = {
   name: "Project, from the start",

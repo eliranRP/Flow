@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Pull requests have no GitHub CI. This hook runs scripts/local-ci.sh, the same suite, before a push.
-# It skips a branch delete, and a commit that already passed (the stamp local-ci.sh writes).
-# FLOW_LOCAL_CI=full runs the full suite (scripts/local-ci.sh --full) instead of the fast gate.
+# Pull requests have no GitHub CI before the merge, but the pr workflow (.github/workflows/pr.yml) runs the
+# rest of the gate on GitHub as parallel jobs. This hook runs the quick slice of scripts/local-ci.sh (under
+# 20 s, FLOW-832) before a push. It skips a branch delete, and a commit that already passed (the stamp the
+# default run writes).
+# FLOW_LOCAL_CI=default runs the scoped default gate (scripts/local-ci.sh, about 3 to 24 minutes for a UI push)
+# instead; FLOW_LOCAL_CI=full runs the full suite (scripts/local-ci.sh --full).
 # Turn it on once per clone: git config core.hooksPath .githooks
 set -euo pipefail
 
@@ -19,9 +22,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     echo "pre-push: ${local_ref} is not checked out. Check it out and push again, so local CI tests it." >&2
     exit 1
   fi
-  if [[ "${FLOW_LOCAL_CI:-}" == "full" ]]; then
-    bash "$root/scripts/local-ci.sh" --full </dev/null
-  else
-    bash "$root/scripts/local-ci.sh" </dev/null
-  fi
+  case "${FLOW_LOCAL_CI:-}" in
+    full) bash "$root/scripts/local-ci.sh" --full </dev/null ;;
+    default) bash "$root/scripts/local-ci.sh" </dev/null ;;
+    *) bash "$root/scripts/local-ci.sh" --part quick </dev/null ;;
+  esac
 done

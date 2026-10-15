@@ -2,7 +2,7 @@ import { useLayoutEffect, useState, type CSSProperties, type Ref } from "react";
 import { formatAmountText } from "@flow/shared";
 import { lineSplitPartsLabel } from "../line-split-copy";
 import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewPaidView } from "../review-copy";
-import { methodLabel, type TxnMeta } from "../txn-meta";
+import { methodLabel, methodSourceName, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
 import { AlertIcon, CheckIcon, ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
@@ -129,6 +129,8 @@ export function ReviewCard({
   paid,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
+  // FLOW-439: the card's nickname from the bank, or the account the money left from.
+  const methodName = method == null ? null : methodSourceName(meta);
   const memo = meta?.memo ?? null;
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
   const amountText = formatAmountText(shown, currency, {
@@ -203,6 +205,12 @@ export function ReviewCard({
               ) : (
                 <bdi dir="auto">{method.short}</bdi>
               )}
+              {methodName ? (
+                <>
+                  <span className="ui-review-meta-sep" aria-hidden="true">·</span>
+                  <bdi className="ui-review-meta-name" dir="auto">{methodName}</bdi>
+                </>
+              ) : null}
             </p>
           ) : null}
         </div>

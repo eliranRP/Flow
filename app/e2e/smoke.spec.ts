@@ -46,10 +46,10 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
     return { drawer: read(drawer), overlay: read(overlay) };
   });
   expect(motion.drawer?.duration).toBe("0.28s");
-  expect(motion.drawer?.ease).toBe("cubic-bezier(0.2, 0, 0, 1)");
+  expect(motion.drawer?.ease).toBe("cubic-bezier(0.2, 0.8, 0.2, 1)");
   expect(motion.drawer?.transition).toBe("0.28s");
-  expect(motion.overlay?.duration).toBe("0.28s");
-  expect(motion.overlay?.ease).toBe("cubic-bezier(0.2, 0, 0, 1)");
+  expect(motion.overlay?.duration).toBe("0.26s");
+  expect(motion.overlay?.ease).toBe("linear");
   await page.emulateMedia({ reducedMotion: "reduce" });
   const reduced = await page.evaluate(() => {
     const drawer = document.querySelector("[data-vaul-drawer]");

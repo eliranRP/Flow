@@ -9,6 +9,11 @@ type HeaderChrome = {
   backTo?: string;
   action?: ReactNode;
   kicker?: string;
+  /**
+   * FLOW-444: Back's label when Back goes to a page other than the kicker's (a month opened from
+   * "לפי חודש" goes back to that list). The kicker then stays a line, so the page still names its project.
+   */
+  backText?: string;
   /** Replaces the back control. Transaction and Split pass their own icon button. */
   leading?: ReactNode;
   /** Sits on the end of the bar. */
@@ -46,6 +51,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     backTo,
     action,
     kicker,
+    backText,
     leading,
     trailing,
     below,
@@ -56,11 +62,12 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const barOnly = props.barOnly === true;
   const title = props.title;
   // FLOW-334 H2 (decision 0156): with a Back, the kicker names where it goes, so it becomes Back's label.
-  const labelledBack = leading == null && backTo != null && kicker != null && kicker !== "";
-  const start = leading ?? (backTo ? <BackButton fallback={backTo} text={labelledBack ? kicker : undefined} /> : null);
+  const backLabel = backText ?? kicker;
+  const labelledBack = leading == null && backTo != null && backLabel != null && backLabel !== "";
+  const start = leading ?? (backTo ? <BackButton fallback={backTo} text={labelledBack ? backLabel : undefined} /> : null);
   const stacked = props.layout === "stacked"
     || (props.layout == null && !barOnly && start != null && size !== "compact");
-  const kickerLine = kicker && !labelledBack ? <p className="t-hint">{kicker}</p> : null;
+  const kickerLine = kicker && (!labelledBack || backText != null) ? <p className="t-hint">{kicker}</p> : null;
   // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title scrolls off.
   const compact = stacked && leading == null && backTo != null && title != null;
   const titleEnd = useRef<HTMLSpanElement>(null);

@@ -32,10 +32,13 @@ Merge rule since 15:22Z: right before merging, a lane looks at main's latest wor
 
 ## Priority queue
 
-Take tasks in this order. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
+Take tasks in this order. The fast-cycle and cleanup rows (F1 to F3, owner 2026-10-15) come first, one at a time. The approved redesign (R rows, [plan](../design/REDESIGN-PLAN.md)) comes first, for the UI lanes: R1 alone; R2 and R3 once R1 has merged; then the screens, one area batch (R4 to R11) per lane at a time, each after R1, R2 and R3 have merged. Dev lanes skip the R rows and take the first numbered task. On-hold and plan-first items are listed so nobody starts them by mistake. Future features are not in the queue; they wait in [Future features](#future-features).
 
 | # | Id | Title | Type |
 | --- | --- | --- | --- |
+| F1 | [FLOW-832](#flow-832) | Push to checks done in 2 minutes | INFRA |
+| F2 | [FLOW-833](#flow-833) | One story per state: delete the width and Dark copies | CLEANUP |
+| F3 | [FLOW-834](#flow-834) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
 | R1 | [FLOW-363](#flow-363) | Redesign foundation: type scale, colours, motion and shared parts | UI (design approved) |
 | R2 | [FLOW-371](#flow-371) | Redesign: skeletons, empty states and loaders | UI (design approved) |
 | R3 | [FLOW-372](#flow-372) | Redesign: light theme and the מראה setting | UI (design approved) |
@@ -350,6 +353,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-445"></a>[FLOW-445](tasks/FLOW-445.md) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
 | <a id="flow-446"></a>[FLOW-446](tasks/FLOW-446.md) | Redesign: a property's השקעה והלוואות page | UI (design approved) |
 | <a id="flow-447"></a>[FLOW-447](tasks/FLOW-447.md) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
+| <a id="flow-448"></a>[FLOW-448](tasks/FLOW-448.md) | Mark a payment as recurring from the לאישור card | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
@@ -427,6 +431,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-829"></a>[FLOW-829](tasks/FLOW-829.md) | The everyday taps take effect at once | SMALL CYCLE |
 | <a id="flow-830"></a>[FLOW-830](tasks/FLOW-830.md) | A gate on how fast a tap answers | SMALL CYCLE |
 | <a id="flow-831"></a>[FLOW-831](tasks/FLOW-831.md) | The picker keeps the choice until שמירה, then saves in the background | SMALL CYCLE |
+| <a id="flow-832"></a>[FLOW-832](tasks/FLOW-832.md) | Push to checks done in 2 minutes | INFRA |
+| <a id="flow-833"></a>[FLOW-833](tasks/FLOW-833.md) | One story per state: delete the width and Dark copies | CLEANUP |
+| <a id="flow-834"></a>[FLOW-834](tasks/FLOW-834.md) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
 
 ## Data hygiene (public repo)
 
