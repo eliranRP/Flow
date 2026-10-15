@@ -164,6 +164,8 @@ export function ListRow(props: ListRowProps) {
   const softDisabled = props.variant === "button" && props.ariaDisabled === true;
   const rowDisabled = ((props.variant === "button" || props.variant === "danger") && props.disabled === true) || softDisabled;
   const busyRow = props.variant === "button" && props.busy === true;
+  // A tappable row (a link, or a project row with a button) gets the approved press: opacity only, no scale.
+  const tappable = props.href != null || (props.variant === "project" && props.onClick != null);
   // A linked transaction row opens its card, so it carries the chevron unless the caller opts out (FLOW-328).
   const wantsChevron = props.chevron ?? (props.variant === "transaction" && props.href != null);
   const showChevron = wantsChevron && props.variant !== "static" && !rowDisabled && !busyRow;
@@ -271,7 +273,7 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className={cx("ui-row", "ui-hit", layoutClass, toneClass, props.clearHint === true && rowDisabled && "ui-row-clear-hint", props.className)}
+        className={cx("ui-row", "ui-hit", "m-press", layoutClass, toneClass, props.clearHint === true && rowDisabled && "ui-row-clear-hint", props.className)}
         disabled={props.disabled === true}
         aria-disabled={softDisabled || undefined}
         aria-busy={props.busy === true}
@@ -293,7 +295,7 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className={cx("ui-row ui-hit ui-row-danger", layoutClass, props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
+        className={cx("ui-row ui-hit ui-row-danger m-press", layoutClass, props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
         disabled={props.disabled === true || props.busy === true}
         aria-busy={props.busy === true}
         aria-label={described ? rowName(props) : undefined}
@@ -306,7 +308,7 @@ export function ListRow(props: ListRowProps) {
   }
   if (props.variant === "selectable") {
     return (
-      <button type="button" className={cx("ui-row ui-hit", layoutClass)} aria-pressed={props.selected} onClick={props.onSelect}>
+      <button type="button" className={cx("ui-row ui-hit m-press", layoutClass)} aria-pressed={props.selected} onClick={props.onSelect}>
         {body}
       </button>
     );
@@ -318,6 +320,7 @@ export function ListRow(props: ListRowProps) {
       : props.variant === "item" && props.plain === true
         ? "ui-row"
         : "ui-row ui-hit",
+    tappable && "m-press",
     layoutClass,
     toneClass,
     props.setAside === true && "ui-row-set-aside",

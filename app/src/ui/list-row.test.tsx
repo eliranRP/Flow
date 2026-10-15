@@ -561,3 +561,55 @@ describe("ListRow and List layouts (FLOW-363 2d)", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 });
+
+describe("ListRow press (FLOW-363 2d)", () => {
+  it("gives every tappable branch m-press and never m-press-scale", () => {
+    const noop = () => undefined;
+    render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="button" title="כפתור" onClick={noop} />
+          <ListRow variant="danger" title="מחיקה" onClick={noop} />
+          <ListRow variant="selectable" title="בחירה" selected onSelect={noop} />
+          <ListRow variant="item" title="קישור" hint="רמז" href="/a" />
+          <ListRow variant="item" title="חיצוני" href="https://example.com" external />
+          <ListRow variant="transaction" title="תנועה" agorot={-100n} sign="out" source="bank" href="/t/1" />
+          <ListRow variant="project" title="פרויקט" agorot={100n} onClick={noop} />
+        </>
+      </MemoryRouter>,
+    );
+    const tappable: Array<[role: "button" | "link", name: string]> = [
+      ["button", "כפתור"],
+      ["button", "מחיקה"],
+      ["button", "בחירה"],
+      ["link", "קישור"],
+      ["link", "חיצוני"],
+      ["link", "תנועה"],
+      ["button", "פרויקט"],
+    ];
+    for (const [role, name] of tappable) {
+      const row = screen.getByRole(role, { name: new RegExp(name) });
+      expect(row).toHaveClass("m-press");
+      expect(row).not.toHaveClass("m-press-scale");
+    }
+  });
+
+  it("gives no press to a row that is not tappable", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="static" title="סטטי" />
+          <ListRow variant="item" title="רגיל" hint="רמז" />
+          <ListRow variant="transaction" title="בלי קישור" agorot={-100n} sign="out" source="bank" />
+          <ListRow variant="project" title="בלי לחיצה" agorot={100n} />
+        </>
+      </MemoryRouter>,
+    );
+    const rows = container.querySelectorAll(".ui-row");
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(row).not.toHaveClass("m-press");
+      expect(row).not.toHaveClass("m-press-scale");
+    }
+  });
+});
