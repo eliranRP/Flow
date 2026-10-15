@@ -30,7 +30,7 @@ test("the ignored specs are the ones playwright.config.ts leaves out", () => {
 
 test("a screen's copy change runs the specs that open that screen", () => {
   const specs = select("app/src/screens/jev-settings.tsx");
-  assert.ok(specs.includes("jev-settings.spec.ts"));
+  assert.ok(specs.includes("code-field.spec.ts"));
   assert.ok(specs.includes("sheet-stack.spec.ts"));
   assert.ok(!specs.includes("split.spec.ts"));
   assert.ok(!specs.includes("reviewer.spec.ts"));
@@ -65,7 +65,6 @@ test("a screen change ranks the specs that open its route (#504: the project pag
   const specs = routeSpecs(["app/src/screens/project-detail-screen.tsx"], { root, map });
   for (const spec of ["controls.spec.ts", "loan-project.spec.ts", "period-swipe.spec.ts"]) assert.ok(specs.includes(spec), spec);
   assert.ok(specs.every((spec) => !spec.startsWith("controls-sweep-")), "the sweep specs pick their own routes");
-  assert.ok(!specs.includes("jev-settings.spec.ts"));
   // A file that is no route's screen ranks nothing: the cap stays at 6.
   assert.deepEqual(routeSpecs(["app/src/ui/review-card.tsx", "docs/x.md"], { root, map }), []);
 });

@@ -99,10 +99,6 @@
     "jev-review.spec.ts": [
       "screens/jev-review-card.tsx"
     ],
-    "jev-settings.spec.ts": [
-      "screens/connections-screen.tsx",
-      "screens/jev-settings.tsx"
-    ],
     "loan-detail.spec.ts": [
       "screens/loan-detail-screen.tsx",
       "screens/loan-detail-sheets.tsx",
