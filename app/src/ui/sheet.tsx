@@ -67,11 +67,11 @@ export function SheetSurface({
 }) {
   const Title = drawer ? sheetDrawer?.Drawer.Title : undefined;
   const heading = Title ? (
-    <Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2" data-clip-ok="">
+    <Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-sheet ui-sheet-title" data-clip-ok="">
       {title}
     </Title>
   ) : (
-    <h2 className="t-title-2" data-clip-ok="">
+    <h2 className="t-sheet ui-sheet-title" data-clip-ok="">
       {title}
     </h2>
   );

@@ -66,6 +66,16 @@ describe("Sheet", () => {
     expect(closed).toBe(1);
   });
 
+  it("sets the title on the sheet role (20/600), not the name role", () => {
+    render(
+      <Sheet open onOpenChange={() => undefined} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    expect(screen.getByRole("heading", { name: "תקופה" })).toHaveClass("t-sheet");
+    expect(screen.getByRole("heading", { name: "תקופה" })).not.toHaveClass("t-title-2");
+  });
+
   it("sizes the tall sheet with the visual viewport variable", () => {
     expect(tallSheetHeightRule()).toContain("var(--vvh");
   });

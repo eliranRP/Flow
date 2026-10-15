@@ -313,8 +313,10 @@
   flex: 1 1 auto;
   flex-direction: column;
   overflow: hidden;
-  padding: var(--space-2) 0 var(--space-4);
-  padding-top: calc(var(--space-2) + var(--toast-pad, 0px));
+  /* FLOW-363 (3b): the panel's 8px top and this 4px make 12px above the handle (board 10). The
+     panel's 32px bottom is in 08; the surface adds nothing below. */
+  padding: 0;
+  padding-top: calc(var(--space-1) + var(--toast-pad, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
   transition: padding-top var(--motion-fade) var(--ease-standard);
@@ -357,16 +359,8 @@
   padding-bottom: 0;
 }
 
-.ui-sheet-tall .ui-sheet-surface {
-  padding-bottom: 0;
-}
-
 .ui-sheet-tall .ui-sheet-body {
   max-height: none;
-}
-
-.ui-sheet-fit .ui-sheet-surface {
-  padding-bottom: 0;
 }
 
 .ui-sheet-fit .ui-sheet-body {
@@ -376,6 +370,18 @@
 .ui-sheet-foot {
   flex: none;
   padding: var(--space-3) var(--space-side) 0;
+}
+
+/* FLOW-363 (3b): the sheet title is the sheet role (20/600, t-sheet). Its two-line clamp is the
+   rule that 08 keeps for `.ui-sheet-head .t-title-2`; that rule is dead once 08 lands after #607. */
+.ui-sheet-head .ui-sheet-title {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .ui-field {
