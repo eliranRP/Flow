@@ -77,7 +77,8 @@
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
   font-weight: var(--type-line2-weight);
-  pointer-events: auto;  box-shadow: var(--shadow-toast);
+  pointer-events: auto;
+  box-shadow: var(--shadow-toast);
 }
 
 /* FLOW-363 (3c): ביטול is 15/500 with no underline, in a 44px target. */
