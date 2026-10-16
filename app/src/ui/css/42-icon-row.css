@@ -66,3 +66,7 @@
   flex: none;
   color: var(--color-text-muted);
 }
+
+.ui-icon-row-warning :is(.ui-icon-row-hint, .ui-icon-row-icon) {
+  color: var(--color-warning);
+}

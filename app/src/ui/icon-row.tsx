@@ -14,6 +14,10 @@ type CommonProps = {
   hint?: ReactNode;
   /** A small mark after the value, such as the reversal tag. */
   tag?: ReactNode;
+  /** A line that needs a look: its icon and hint take the warning colour. */
+  tone?: "warning";
+  /** Replaces the accessible name "label value" when the row needs its own (a loan split names its title). */
+  name?: string;
   disabled?: boolean;
   /** A save or load is running: the chevron becomes a spinner, and taps do nothing. */
   busy?: boolean;
@@ -51,6 +55,7 @@ export type IconRowProps = OpenProps | ActionProps | StaticProps;
 export function IconRow(props: IconRowProps) {
   const hintId = useId();
   const describedBy = props.hint != null ? hintId : undefined;
+  const toneClass = props.tone === "warning" ? "ui-icon-row-warning" : undefined;
   const body = (
     <>
       <span className="ui-icon-row-icon" aria-hidden="true">{props.icon}</span>
@@ -66,7 +71,7 @@ export function IconRow(props: IconRowProps) {
   );
   if (props.action != null) {
     return (
-      <div className={cx("ui-row", "ui-icon-row", props.className)} aria-describedby={describedBy}>
+      <div className={cx("ui-row", "ui-icon-row", toneClass, props.className)} aria-describedby={describedBy}>
         {body}
         <Button variant="link" disabled={props.disabled} busy={props.busy} onClick={props.action.onClick}>
           {props.action.label}
@@ -75,17 +80,17 @@ export function IconRow(props: IconRowProps) {
     );
   }
   if (props.onClick == null) {
-    return <div className={cx("ui-row", "ui-icon-row", props.className)} aria-describedby={describedBy}>{body}</div>;
+    return <div className={cx("ui-row", "ui-icon-row", toneClass, props.className)} aria-describedby={describedBy}>{body}</div>;
   }
   const onClick = props.onClick;
   return (
     <button
       ref={props.buttonRef}
       type="button"
-      className={cx("ui-row", "ui-hit", "m-press", "ui-icon-row", props.className)}
+      className={cx("ui-row", "ui-hit", "m-press", "ui-icon-row", toneClass, props.className)}
       disabled={props.disabled}
       aria-busy={props.busy === true || undefined}
-      aria-label={`${props.label} ${props.value}`}
+      aria-label={props.name ?? `${props.label} ${props.value}`}
       aria-describedby={describedBy}
       onClick={() => {
         // A busy row stays focusable but ignores taps, so one run cannot start twice.

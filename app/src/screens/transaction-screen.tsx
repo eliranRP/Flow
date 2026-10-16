@@ -19,6 +19,7 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { StatusDot } from "../ui/status-dot";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
+import { IconRow } from "../ui/icon-row";
 import { ChartIcon, CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Toggle } from "../ui/toggle";
@@ -588,11 +589,11 @@ export function TransactionScreen({
             </div>
           ) : null}
         </div>
-        <List>
+        <List layout="inset">
           {holdWrites ? (
-            <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} />
+            <IconRow icon={<ProjectsIcon />} label="פרויקט" value={shownProject} hint={lineSplitHint} />
           ) : (
-            <ListRow variant="button" buttonRef={projectRowRef} eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} chevron onClick={() => {
+            <IconRow icon={<ProjectsIcon />} label="פרויקט" value={shownProject} hint={lineSplitHint} buttonRef={projectRowRef} onClick={() => {
               if (splitRow) {
                 openSplit();
                 return;
@@ -604,9 +605,9 @@ export function TransactionScreen({
           {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
           <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} docDate={txn.doc_date} active={sample == null} readOnly={holdWrites}>
             {holdWrites ? (
-              <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
             ) : (
-              <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
+              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} buttonRef={categoryRowRef} onClick={() => {
                 setChangeStart("category");
                 setChangeSheet(true);
               }} />
