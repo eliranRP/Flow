@@ -67,7 +67,7 @@ describe("supplier names", () => {
     expect(titles.some((node) => node.classList.contains("ui-party"))).toBe(true);
   });
 
-  it("wraps a long customer name on the unpaid list up to two lines", () => {
+  it("keeps a long customer name on one line in the unpaid list (FLOW-367)", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
@@ -81,10 +81,7 @@ describe("supplier names", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    const title = screen.getByText(longName);
-    expect(title.classList.contains("ui-row-title")).toBe(true);
-    wraps(title);
-    expect(getComputedStyle(title).webkitLineClamp).toBe("2");
+    expect(screen.getByText(longName).classList.contains("ui-inv-name")).toBe(true);
   });
 
   it("keeps the review card name to three lines", () => {

@@ -322,9 +322,10 @@
         "/unpaid?preview=1": [
           "screens/unpaid-screen.tsx"
         ],
-        "/e2e/unpaid?preview=1": [
+        "/e2e/invoices": [
           "screens/unpaid-screen.tsx",
-          "dev-routes.tsx#DevUnpaid"
+          "screens/invoice-screen.tsx",
+          "dev-routes.tsx#DevInvoices"
         ],
         "/e2e/missing-bills?preview=1": [
           "screens/missing-bills-screen.tsx",

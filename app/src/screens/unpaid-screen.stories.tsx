@@ -1,40 +1,11 @@
-import type { UnpaidRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
-import { UnpaidScreen } from "./flow-screens";
+import { InvoiceScreen } from "./invoice-screen";
+import { UnpaidScreen } from "./unpaid-screen";
 import { StoryRoute } from "../ui/story-route";
 import { at320, ExampleBar } from "../ui/screen-stories-support";
+import { invoicesSample, invoicesSummary } from "../dev/invoices-sample";
 import { israelToday, shiftDays } from "../ui/date-math";
-
-const sampleUnpaid: UnpaidRow[] = [
-  {
-    id: "u1",
-    description: "הובלה",
-    doc_date: "2026-09-02",
-    project_name: "שיפוץ דירה ת״א",
-    customer_name: "מ.ש. הובלות",
-    open_gross_agorot: 600_000n,
-    open_net_agorot: 508_475n,
-  },
-  {
-    id: "u2",
-    description: "חשמל",
-    doc_date: "2026-09-10",
-    project_name: "וילה רעננה",
-    customer_name: "אבי חשמל",
-    open_gross_agorot: 800_000n,
-    open_net_agorot: 677_966n,
-  },
-  {
-    id: "u3",
-    description: "חומרים",
-    doc_date: "2026-09-14",
-    project_name: "בניין מגורים חולון",
-    customer_name: "חומרי בניין לדוגמה",
-    open_gross_agorot: 940_000n,
-    open_net_agorot: 796_610n,
-  },
-];
+import type { UnpaidInvoice } from "../unpaid";
 
 const meta = {
   title: "Screens/Routes",
@@ -44,44 +15,120 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const rows = invoicesSample();
+const summary = invoicesSummary();
+
+/** FLOW-367: the board's list: the summary card, three invoices oldest first, one bank match. */
 export const UnpaidList: Story = {
   render: () => (
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
-      <UnpaidScreen sample={sampleUnpaid} />
+      <UnpaidScreen sample={rows} summary={summary} />
     </StoryRoute>
   ),
 };
 
-// FLOW-335, FLOW-357: a row opens its invoice's sheet; SUMIT's document link is in the sheet.
-export const UnpaidWithDocument: Story = {
-  name: "Unpaid, document link",
+export const UnpaidList320: Story = {
+  ...at320,
   render: () => (
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
-      <UnpaidScreen sample={sampleUnpaid.map((row, index) => (index === 0 ? { ...row, document_url: "https://pay.sumit.co.il/example/doc-1" } : row))} />
+      <UnpaidScreen sample={rows} summary={summary} />
     </StoryRoute>
   ),
 };
 
-// FLOW-353: a document from today says היום, yesterday אתמול; at 320 the date and the age stay whole.
-export const UnpaidRecent: Story = {
-  name: "Unpaid, today and yesterday",
+/** No invoice is over 30 days: the signal line in the summary card is not drawn. */
+export const UnpaidNoOverdue: Story = {
+  name: "Unpaid, none over 30 days",
   render: () => (
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
       <UnpaidScreen
-        sample={sampleUnpaid.map((row, index) => (index < 2 ? { ...row, doc_date: shiftDays(israelToday(), -index) } : row))}
+        sample={rows.map((row) => ({ ...row, doc_date: shiftDays(israelToday(), -10) }))}
+        summary={summary}
       />
     </StoryRoute>
   ),
 };
 
+/** A marked row waits for the sync: dimmed, with its ביטול line; the other rows keep their mark line. */
+export const UnpaidMarked: Story = {
+  name: "Unpaid, a marked row waits for the sync",
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen
+        sample={rows.map((row) => (row.id === "inv-1047" ? { ...row, marked_paid_at: new Date().toISOString() } : row))}
+        summary={summary}
+      />
+    </StoryRoute>
+  ),
+};
+
+/** A deposit that matches a row shows its match line on the list, and the match card on the page. */
+export const UnpaidMatchOnPage: Story = {
+  name: "Invoice page, bank match found",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1051" tabs>
+      <ExampleBar />
+      <InvoiceScreen sample={rows} summary={summary} invoiceId="inv-1051" />
+    </StoryRoute>
+  ),
+};
+
+export const UnpaidDetailNoMatch: Story = {
+  name: "Invoice page, no match",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1043" tabs>
+      <ExampleBar />
+      <InvoiceScreen sample={rows} summary={summary} invoiceId="inv-1043" />
+    </StoryRoute>
+  ),
+};
+
+export const UnpaidDetailNoMatch320: Story = {
+  ...at320,
+  name: "Invoice page, no match, 320",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1043" tabs>
+      <ExampleBar />
+      <InvoiceScreen sample={rows} summary={summary} invoiceId="inv-1043" />
+    </StoryRoute>
+  ),
+};
+
+/** No PDF link on SUMIT for this invoice: the document row is not drawn. */
+export const UnpaidDetailNoDocument: Story = {
+  name: "Invoice page, no document",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1043" tabs>
+      <ExampleBar />
+      <InvoiceScreen
+        sample={rows.map((row): UnpaidInvoice => (row.id === "inv-1043" ? { ...row, document_url: null } : row))}
+        summary={summary}
+        invoiceId="inv-1043"
+      />
+    </StoryRoute>
+  ),
+};
+
+/** Everything is paid: the summary card and the sort row's list go, the empty state stays. */
 export const UnpaidEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/unpaid?preview=empty" tabs>
+    <StoryRoute entry="/unpaid?state=done" tabs>
       <ExampleBar />
-      <UnpaidScreen />
+      <UnpaidScreen sample={[]} summary={summary} />
+    </StoryRoute>
+  ),
+};
+
+export const UnpaidEmpty320: Story = {
+  ...at320,
+  render: () => (
+    <StoryRoute entry="/unpaid?state=done" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={[]} summary={summary} />
     </StoryRoute>
   ),
 };
@@ -94,48 +141,3 @@ export const UnpaidError: Story = {
     </StoryRoute>
   ),
 };
-
-const unpaidWithMark: UnpaidRow[] = [
-  { ...sampleUnpaid[0], marked_paid_at: "2026-10-06T09:00:00Z", currency: "ILS", direction: "income" } as UnpaidRow,
-  ...sampleUnpaid.slice(1).map((row) => ({ ...row, currency: "ILS", direction: "income" as const, marked_paid_at: null })),
-  { id: "u4", description: "ייעוץ", doc_date: "2026-09-20", project_name: null, customer_name: "לקוח בדולרים לדוגמה", open_gross_agorot: 250_000n, open_net_agorot: 250_000n, currency: "USD", direction: "income", marked_paid_at: null },
-];
-
-export const UnpaidMarked: Story = {
-  name: "Unpaid, a marked row waits for the sync",
-  render: () => (
-    <StoryRoute entry="/unpaid" tabs>
-      <ExampleBar />
-      <UnpaidScreen sample={unpaidWithMark} />
-    </StoryRoute>
-  ),
-};
-
-// FLOW-357 (owner's pick A): one invoice keeps the head to the title; its amount is on the row.
-export const UnpaidOne: Story = {
-  name: "Unpaid, one invoice",
-  render: () => (
-    <StoryRoute entry="/unpaid" tabs>
-      <ExampleBar />
-      <UnpaidScreen sample={sampleUnpaid.slice(1, 2)} />
-    </StoryRoute>
-  ),
-};
-
-// FLOW-357: a tap on a row opens the invoice: its amount, the facts, the SUMIT link and סימון כשולם.
-export const UnpaidSheet: Story = {
-  name: "Unpaid, invoice sheet",
-  render: () => (
-    <StoryRoute entry="/unpaid" tabs>
-      <ExampleBar />
-      <UnpaidScreen sample={sampleUnpaid.map((row, index) => (index === 1 ? { ...row, document_url: "https://pay.sumit.co.il/example/doc-2" } : row))} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: /^אבי חשמל/ }));
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "אבי חשמל" });
-    await waitFor(async () => { await expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"); });
-    await expect(within(dialog).getByRole("button", { name: "סימון כשולם" })).toBeVisible();
-  },
-};
-export const UnpaidSheet320: Story = { ...UnpaidSheet, name: "Unpaid, invoice sheet, 320", ...at320 };
