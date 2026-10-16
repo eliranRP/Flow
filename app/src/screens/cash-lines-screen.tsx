@@ -210,7 +210,7 @@ function CashLinesBody({
       ) : (
         groups.map((group) => (
           <section key={group.key} className="ui-lines-group" aria-label={group.title}>
-            <div className="ui-lines-group-head">
+            <div className={side === "in" ? "ui-lines-group-head ui-lines-group-head-in" : "ui-lines-group-head"}>
               <h2 className="t-section ui-lines-group-title">{group.title}</h2>
               {group.total != null ? <LinesGroupSum total={group.total} side={side} currency={currency} /> : null}
             </div>
