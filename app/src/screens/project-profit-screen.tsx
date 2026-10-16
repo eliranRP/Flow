@@ -81,7 +81,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       loading={<ProfitSkeleton />}
     >
       {row == null ? null : (
-        <div className="ui-pp">
+        <div>
           <p className="ui-pp-figure ui-page-pad">
             <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} />
           </p>
@@ -117,7 +117,7 @@ function SummaryRow({ label, value, strong = false }: { label: string; value: Re
   return (
     <div className={strong ? "ui-pp-row ui-pp-row-strong" : "ui-pp-row"}>
       <span className="ui-pp-label">{label}</span>
-      <span className="ui-pp-value">{value}</span>
+      <span>{value}</span>
     </div>
   );
 }

@@ -2,15 +2,15 @@
 
 .ui-pp-figure {
   margin: 0;
-  padding-top: 8px;
-  line-height: 1.15;
+  padding-top: var(--space-2);
+  line-height: var(--type-total-line);
   direction: ltr;
   text-align: right;
 }
 
 .ui-pp-card {
-  margin: 16px 20px 0;
-  padding: 6px 18px;
+  margin: var(--space-4) var(--space-5) 0;
+  padding: var(--space-2) var(--space-card-inset);
 }
 
 .ui-pp-row {
@@ -18,8 +18,8 @@
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
-  gap: 12px;
-  font-size: 15px;
+  gap: var(--space-3);
+  font-size: var(--type-line2-size);
   color: var(--color-text);
 }
 
@@ -33,8 +33,8 @@
 
 .ui-pp-row-strong {
   min-height: 48px;
-  font-size: 17px;
-  font-weight: 500;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-pp-row-strong .ui-pp-label {
@@ -42,13 +42,13 @@
 }
 
 .ui-pp-note {
-  margin: 10px 20px 0;
-  padding: 0 4px;
-  font-size: 13px;
-  line-height: 1.5;
+  margin: var(--space-3) var(--space-5) 0;
+  padding: 0 var(--space-1);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-pp-months {
-  margin-top: 12px;
-  padding: 0 20px;
+  margin-top: var(--space-3);
+  padding: 0 var(--space-5);
 }

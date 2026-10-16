@@ -223,14 +223,6 @@ const periodProject: NonNullable<ProjectDetailData> = {
   ],
 };
 
-export const ProjectPeriod: Story = {
-  name: "Project, profit page, own period",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/profit" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} section="profit" />
-    </StoryRoute>
-  ),
-};
 /** A month from the "לפי חודש" list. The row still shows: the page lists the whole project (FLOW-337). */
 export const ProjectOneMonth: Story = {
   name: "Project, one month opened from by month",
@@ -253,16 +245,6 @@ export const ProjectOneMonthLongName: Story = {
     </StoryRoute>
   ),
 };
-/** הכול on a project reads מתחילת הפרויקט (FLOW-411), and the budget shows. */
-export const ProjectFromStart: Story = {
-  name: "Project, from the start",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/profit?period=all" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} section="profit" />
-    </StoryRoute>
-  ),
-};
-
 /** FLOW-404. The השקעה card under the categories, with invented figures. */
 export const ProjectInvestment: Story = {
   name: "Project with investment card",
