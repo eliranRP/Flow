@@ -1,4 +1,4 @@
-<a id="flow-915"></a>
+<a id="flow-919"></a>
 # FLOW-919 · Review queue: a server transfer flag, approve as a transfer, and the document thumbnail
 - **Type:** Server + UI · **Status:** ready · **Depends on:** [FLOW-365](FLOW-365.md) · **Related:** [FLOW-370](FLOW-370.md) (the split screen), [FLOW-439](FLOW-439.md) (the card name on the source line) · **Source:** the review-queue redesign (FLOW-365) deferred these two parts of the approved board; the rules are on the design canvas, page "Ready for dev", section "Review queue".
 - **Files:** `packages/shared/src/dashboard.ts` (`reviewRowSchema`), the `list_review` read in `supabase/migrations/` (a new migration), `app/src/ui/review-card.tsx`, `app/src/screens/review-queue.tsx`, `app/src/ui/css/06-review-card.css`, `app/src/ui/review-card.stories.tsx`, `app/src/dev/review-e2e-fixture.ts`, their tests, and `docs/mcp/TOOLS.md` if an MCP tool changes.
