@@ -36,6 +36,12 @@
   padding-block-start: var(--space-1);
 }
 
+/* The board sets the two bar labels on one line, paid at the start and open at the end. */
+.ui-inv-bar-block .ui-parts-legend {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
 .ui-inv-bar-block .t-caption {
   margin: 0;
 }
@@ -129,7 +135,7 @@
 
 .ui-inv-action-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   min-height: 36px;
