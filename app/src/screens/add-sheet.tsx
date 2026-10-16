@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { addTriggerRef } from "../add-trigger";
 import { documentProblem, type AttachedDocument, type EntryKind } from "../add-entry";
+import { SAMPLE_ENTRY_FILLS } from "../add-entry-sample";
 import { documentOf } from "../add-entry-doc";
 import { quickNewPath, quickNewState } from "../open-from-query";
 import { usePreviewSearch } from "../preview";
@@ -56,7 +57,11 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
   const writeGate = useWriteGate("/");
   // FLOW-601: an editor adds projects and loans; connecting a bank is the owner's.
   const ownerOnlyHeld = useHoldOwnerSettings();
-  const [entry, setEntry] = useState<OpenEntry | null>(null);
+  // FLOW-369: the preview's `?entry=` opens the form with the board's values (add-entry-sample.ts).
+  const [params] = useSearchParams();
+  const fillName = params.get("entry");
+  const fill = fillName != null && fillName in SAMPLE_ENTRY_FILLS ? SAMPLE_ENTRY_FILLS[fillName] : null;
+  const [entry, setEntry] = useState<OpenEntry | null>(() => (fill == null ? null : { kind: "cash", document: null }));
   const [pickError, setPickError] = useState<string | null>(null);
   const cameraPicker = useRef<HTMLInputElement>(null);
   const filePicker = useRef<HTMLInputElement>(null);
@@ -108,6 +113,7 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
         kind={entry.kind}
         initialDocument={entry.document}
         fromProjectId={fromProject?.id ?? null}
+        fill={fill}
         onDone={leave}
         onClose={leave}
       />

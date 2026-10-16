@@ -32,6 +32,8 @@ export interface AddEntryViewProps {
   projects: readonly AddEntryItem[];
   categories: readonly AddEntryCategory[];
   draft: EntryDraft;
+  /** The preview's `?entry=newproject` opens the inline new-project row (add-entry-sample.ts). */
+  initialAdding?: "project" | null;
   onDraftChange: (next: EntryDraft) => void;
   document?: AttachedDocument | null;
   match?: BankMatch | null;
@@ -97,7 +99,7 @@ export function AddEntryView(props: AddEntryViewProps) {
   }
   const [addedProjects, setAddedProjects] = useState<AddEntryItem[]>([]);
   const [addedCategories, setAddedCategories] = useState<AddEntryCategory[]>([]);
-  const [adding, setAdding] = useState<null | "project" | "category">(null);
+  const [adding, setAdding] = useState<null | "project" | "category">(props.initialAdding ?? null);
 
   const isIncome = draft.direction === "in";
   const kindWanted = isIncome ? "income" : "expense";

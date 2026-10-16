@@ -10,13 +10,15 @@ import { formatAmount } from "../ui/amount";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
 import { attachDocument, createCategoryNamed, createProjectNamed, saveManualLine, undoAttach, undoManualLine, useReceiptMatch } from "../use-add-entry";
 import { useCompanyCurrency } from "../company-currency";
-import { SAMPLE_CATEGORIES, SAMPLE_CURRENCY, SAMPLE_PROJECTS } from "../add-entry-sample";
+import { SAMPLE_CATEGORIES, SAMPLE_CURRENCY, SAMPLE_PROJECTS, type SampleEntryFill } from "../add-entry-sample";
 import { AddEntryView } from "./add-entry-view";
 
-export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = null, onDone, onClose }: {
+export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = null, fill = null, onDone, onClose }: {
   kind: EntryKind;
   initialDocument?: AttachedDocument | null;
   fromProjectId?: string | null;
+  /** The preview's `?entry=` state (add-entry-sample.ts); null on a real book. */
+  fill?: SampleEntryFill | null;
   onDone: () => void;
   onClose: () => void;
 }) {
@@ -29,7 +31,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   // The preview route has no books: it shows the invented USD company (add-entry-sample.ts).
   const sample = preview !== "off";
   const currency = sample ? SAMPLE_CURRENCY : companyCurrency;
-  const [draft, setDraft] = useState<EntryDraft>(() => emptyDraft(fromProjectId, todayDisplayDate()));
+  const [draft, setDraft] = useState<EntryDraft>(() => ({ ...emptyDraft(fromProjectId, todayDisplayDate()), ...fill?.draft }));
   const [document, setDocument] = useState<AttachedDocument | null>(initialDocument);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +107,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
         projects={projects}
         categories={cats}
         draft={draft}
+        initialAdding={fill?.adding ?? null}
         onDraftChange={setDraft}
         document={document}
         match={match}
