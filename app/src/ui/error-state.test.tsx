@@ -7,7 +7,7 @@ describe("ErrorState", () => {
   it("is one line with the retry (FLOW-371)", () => {
     expectRtl();
     const { rerender } = render(<ErrorState offline onRetry={() => undefined} />);
-    expect(screen.getByText("אין חיבור לאינטרנט.")).toBeInTheDocument();
+    expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
     expectTarget(screen.getByRole("button", { name: "נסו שוב" }));
     expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
     rerender(<ErrorState offline={false} onRetry={() => undefined} />);

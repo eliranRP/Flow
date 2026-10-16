@@ -51,7 +51,7 @@ describe("App", () => {
 
   it("shows the offline error from preview=error, without the ui-band", async () => {
     await renderAt("/?preview=error");
-    expect(screen.getByText("אין חיבור לאינטרנט.")).toBeInTheDocument();
+    expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
     expect(document.querySelector(".ui-band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();

@@ -7,12 +7,12 @@ type ErrorStateProps = {
 
 /**
  * A failure is one line and the retry (FLOW-371, REDESIGN-BUILD: "a failure shows one line with
- * נסו שוב"). Offline names the connection. The retry is the 44px link, not a block of its own.
+ * נסו שוב"). Offline names the connection and says nothing was deleted. The retry is the 44px link, not a block of its own.
  */
 export function ErrorState({ offline, onRetry }: ErrorStateProps) {
   return (
     <div className="ui-failure" role="status">
-      <span>{offline ? "אין חיבור לאינטרנט." : "לא הצלחנו לטעון."}</span>
+      <span>{offline ? "אין חיבור לאינטרנט. שום דבר לא נמחק." : "לא הצלחנו לטעון."}</span>
       <Button
         variant="link"
         onClick={() => {

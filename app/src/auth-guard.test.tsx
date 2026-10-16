@@ -177,7 +177,7 @@ describe("auth guard when Supabase is configured", () => {
     });
     await settle();
     await waitFor(() => {
-      expect(screen.getByText("אין חיבור לאינטרנט.")).toBeInTheDocument();
+      expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
     });
     expect(screen.queryByText("עוד אין נתונים")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "העלאת דוח בנק" })).not.toBeInTheDocument();
