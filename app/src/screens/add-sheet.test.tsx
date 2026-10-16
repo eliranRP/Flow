@@ -98,7 +98,7 @@ describe("+ quick action history", () => {
     expect(window.location.search).not.toContain("new=");
     window.history.back();
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: /הלוואה/ })).not.toBeInTheDocument(); });
-    expect(window.location.pathname).toBe("/settings/loans");
+    expect(window.location.pathname).toBe("/loans");
     view.unmount();
     window.history.replaceState(null, "", "/");
   });

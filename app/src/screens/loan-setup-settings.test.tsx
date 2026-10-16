@@ -179,7 +179,7 @@ describe("LoanSettingsSection", () => {
     const at = (ui: ReactNode) => (
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <ToastProvider>
-          <MemoryRouter initialEntries={["/settings/loans?new=loan"]}>{ui}</MemoryRouter>
+          <MemoryRouter initialEntries={["/loans?new=loan"]}>{ui}</MemoryRouter>
         </ToastProvider>
       </QueryClientProvider>
     );
@@ -588,10 +588,10 @@ describe("FLOW-119 loan project", () => {
     db.projects = [{ id: "p-a", name: "פרויקט א" }];
     const router = createMemoryRouter(
       [
-        { path: "/settings/loans", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} /> },
-        { path: "/settings/loans/:loanId", element: <p>עמוד ההלוואה</p> },
+        { path: "/loans", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} /> },
+        { path: "/loans/:loanId", element: <p>עמוד ההלוואה</p> },
       ],
-      { initialEntries: ["/settings/loans"] },
+      { initialEntries: ["/loans"] },
     );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -602,7 +602,7 @@ describe("FLOW-119 loan project", () => {
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט א$/ }));
-    await waitFor(() => { expect(router.state.location.pathname).toBe("/settings/loans/l-1"); });
+    await waitFor(() => { expect(router.state.location.pathname).toBe("/loans/l-1"); });
   });
 
   it("shows the principal, not נפרעה, for a loan with no balance row yet (FLOW-115)", async () => {

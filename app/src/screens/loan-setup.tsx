@@ -491,7 +491,7 @@ export const LOANS_EMPTY_VIEWER = "כשיתווספו הלוואות הן יופ
 export const LOANS_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואות";
 
 /**
- * The body of `/settings/loans` (FLOW-501): the balances, then הלוואה חדשה.
+ * The body of `/loans` (FLOW-501): the balances, then הלוואה חדשה.
  * A viewer reads the balances as static rows and gets no new-loan row (U10).
  * Open loans come first, then "נסגרו (N)", collapsed (FLOW-106). A row opens the loan's page,
  * where its project now lives (FLOW-106 B moved the FLOW-119 sheet there).
@@ -517,7 +517,7 @@ export function LoanSettingsSection({
   const search = usePreviewSearch();
   const toast = useToast();
   const savedId = useRef<string | null>(null);
-  // The page sits under this list's path: /settings/loans/:id, or /e2e/loans/:id in the dev fixture.
+  // The page sits under this list's path: /loans/:id, or /e2e/loans/:id in the dev fixture.
   const loanHref = (id: string) => `${location.pathname.replace(/\/$/, "")}/${encodeURIComponent(id)}${search}`;
   const [open, setOpenState] = useState(false);
   const [view, setView] = useState<"form" | "project" | "kind">("form");
@@ -604,7 +604,7 @@ export function LoanSettingsSection({
     setSheet(next);
   }
 
-  // FLOW-331: + → הלוואה חדשה lands on /settings/loans with ?new=loan.
+  // FLOW-331: + → הלוואה חדשה lands on /loans with ?new=loan.
   useOpenFromQuery("loan", !holdWrites && currency != null, (sameEntry) => {
     adoptNew.current = sameEntry;
     setLoanSheet(true);

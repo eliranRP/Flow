@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
-import { useLoanBalances, type LoanBalanceRow } from "./loan-match";
+import { useLoanBalances } from "./loan-match";
+import { PREVIEW_LOANS } from "./loans-screen";
 import { useAuth } from "../auth";
 import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { MY_COMPANIES_KEY, useTeamQuery } from "../team-queries";
@@ -22,7 +23,7 @@ import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-st
 import { ThemeSheet } from "./theme-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
-import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
+import { type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
 import { AlertIcon, BellIcon, BuildingIcon, CalendarIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon, ThemeIcon } from "../ui/icons";
@@ -73,11 +74,6 @@ export type SettingsSample = {
   teamCount?: number;
 };
 
-/** FLOW-501. Invented loans for `?preview=1`. */
-const PREVIEW_LOANS: LoanBalanceRow[] = [
-  { id: "preview-loan-1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "preview-alon", projectName: "וילה אלון" },
-  { id: "preview-loan-2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "preview-gefen", projectName: "פרויקט גפן" },
-];
 
 /** One connector as the Settings חיבורים hint counts it (FLOW-501). */
 export type ConnectorTally = { name: string; state: "loading" | "error" | "active" | "off" | "reconnect" };
@@ -453,7 +449,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         {noCompany ? null : (
           <SettingsPageRow
             page="loans"
-            href={`/settings/loans${search}`}
+            href={`/loans${search}`}
             title="הלוואות"
             icon={<LoanIcon />}
             hint={loansRowHint}
@@ -589,65 +585,4 @@ function SettingsPageRow({
   );
 }
 
-/**
- * `/settings/loans` (FLOW-501): the balances and הלוואה חדשה, moved out of
- * Settings. Viewers read the balances (U10). No company goes back to Settings,
- * like Categories. `/settings/loans/:id` is kept for FLOW-110's detail page.
- */
-export function LoansScreen({ sample }: { sample?: SettingsSample } = {}) {
-  const preview = useHomePreview();
-  const [params] = useSearchParams();
-  const previewValue = params.get("preview");
-  const search = usePreviewSearch();
-  const blocked = useBlockedPreview();
-  const dashboard = useDashboardQuery(sample == null);
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
-  const previewNoCompany = sample == null && previewValue === "empty";
-  const sampleNoCompany = sample?.noCompany === true;
-  const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
-  if (previewNoCompany || sampleNoCompany || liveNoCompany) {
-    return <Navigate to={`/settings${search}`} replace />;
-  }
-  if (phase.kind === "loading" || phase.kind === "error") {
-    return (
-      <ScreenState
-        title="הלוואות"
-        kicker="הגדרות"
-        backTo={`/settings${search}`}
-        phase={phase}
-        onRetry={() => { void dashboard.refetch(); }}
-        loading={(
-          <List>
-            <ListRow variant="skeleton" />
-            <ListRow variant="skeleton" />
-          </List>
-        )}
-      />
-    );
-  }
-  const sampled = sample != null || preview !== "off";
-  return (
-    <ViewerScope>
-    <div>
-      <ScreenHeader title="הלוואות" kicker="הגדרות" backTo={`/settings${search}`} />
-      <ViewerNote />
-      <LoanSettingsSection
-        companyId={sampled ? null : (dashboard.data?.company_id ?? null)}
-        companyCurrency={sampled ? (sample?.loanCurrency ?? "ILS") : undefined}
-        blocked={blocked}
-        sample={sample ? (sample.loans ?? []) : preview !== "off" ? PREVIEW_LOANS : undefined}
-        projects={sampled
-          ? { rows: sample?.loanProjects ?? [] }
-          : {
-            rows: (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status, code: project.code })),
-            loading: dashboard.isLoading,
-            error: dashboard.isError,
-            retrying: dashboard.isFetching,
-            onRetry: () => { void dashboard.refetch(); },
-          }}
-      />
-    </div>
-    </ViewerScope>
-  );
-}
 

@@ -36,7 +36,7 @@ describe("TabBar", () => {
     const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     const links = [...nav.querySelectorAll("a")];
     expect(links.map((link) => link.textContent.trim())).toEqual(["בית", "פרויקטים", "הלוואות", "קבועים"]);
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/settings/loans", "/missing-bills"]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/loans", "/missing-bills"]);
     expectTarget(screen.getByRole("link", { name: "הלוואות" }));
   });
 
@@ -74,7 +74,7 @@ describe("TabBar", () => {
     expect(document.querySelector('[aria-current="page"]')).toBeNull();
     unmount();
     render(
-      <MemoryRouter initialEntries={["/settings/loans/loan-1"]}>
+      <MemoryRouter initialEntries={["/loans/loan-1"]}>
         <TabBar />
       </MemoryRouter>,
     );
@@ -123,7 +123,7 @@ describe("tabSection", () => {
     ["/profit", "home"],
     ["/cash/2026-06", "home"],
     ["/projects/villa", "projects"],
-    ["/settings/loans", "loans"],
+    ["/loans", "loans"],
     ["/loans", "loans"],
     ["/missing-bills", "recurring"],
     ["/recurring", "recurring"],

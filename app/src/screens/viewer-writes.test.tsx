@@ -136,7 +136,7 @@ describe("viewer write controls", () => {
     expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
     // FLOW-501: reading is allowed, so both pages stay a tap away.
     expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
-    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/loans");
     // FLOW-504: the viewer reads the company currency and cannot change it.
     expect(screen.getByText("מטבע העסק")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /מטבע העסק/ })).not.toBeInTheDocument();

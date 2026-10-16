@@ -15,7 +15,7 @@ import { readLoanBalances, readProjectNames } from "./loan-reads";
 /**
  * FLOW-106 §3.1. The loans list: open loans, then paid-off and closed loans under a quiet
  * "נסגרו (N)", collapsed. Loans stay alphabetical (the owner dropped reordering, 2026-10-08).
- * A row opens the loan's page (`/settings/loans/:id`).
+ * A row opens the loan's page (`/loans/:id`).
  */
 export type LoanListRow = LoanBalanceRow & {
   /** Missing reads as amortizing. */

@@ -117,7 +117,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
     return row.data == null ? undefined : (row.data.project_id as string | null);
   }
 
-  await page.goto("/settings/loans");
+  await page.goto("/loans");
   await page.getByRole("button", { name: "הלוואה חדשה" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("מלווה").fill(lender);
@@ -136,7 +136,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await page.goto(`/projects/${projectA}`);
   await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toContainText(lender);
 
-  await page.goto("/settings/loans");
+  await page.goto("/loans");
   await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) }).click();
   await expect(page.getByRole("heading", { name: lender })).toBeVisible();
   // FLOW-434: the project row lives on the פרטי הלוואה page.

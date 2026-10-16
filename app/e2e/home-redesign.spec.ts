@@ -9,12 +9,12 @@ test("the four tabs open their screens, and the old paths still land", async ({ 
   await expect(bar.getByRole("link")).toHaveCount(4);
   await expect(bar.getByRole("link", { name: "בית", exact: true })).toHaveAttribute("href", "/?preview=1");
   await expect(bar.getByRole("link", { name: "פרויקטים" })).toHaveAttribute("href", "/projects?preview=1");
-  await expect(bar.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
+  await expect(bar.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/loans?preview=1");
   await expect(bar.getByRole("link", { name: "קבועים" })).toHaveAttribute("href", "/missing-bills?preview=1");
 
   await page.goto("/review?preview=1");
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
-  await page.goto("/settings/loans?preview=1");
+  await page.goto("/loans?preview=1");
   await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
   await page.goto("/missing-bills?preview=1");
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();

@@ -20,6 +20,7 @@ export const screenLoaders = {
   transaction: () => import("./screens/transaction-screen"),
   split: () => import("./screens/split-screen"),
   settings: () => import("./screens/settings-screen"),
+  loans: () => import("./screens/loans-screen"),
   connections: () => import("./screens/connections-screen"),
   notifications: () => import("./screens/notifications-screen"),
   categories: () => import("./screens/categories-screen"),

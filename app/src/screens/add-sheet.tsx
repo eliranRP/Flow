@@ -55,7 +55,7 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
           title="הלוואה חדשה"
           icon={<LoanIcon />}
           chevron
-          onClick={() => { go(quickNewPath("/settings/loans", search, "loan")); }}
+          onClick={() => { go(quickNewPath("/loans", search, "loan")); }}
         />
         {ownerOnlyHeld ? null : (
         <ListRow

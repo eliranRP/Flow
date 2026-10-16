@@ -140,7 +140,7 @@ export function LoanMatchOffer({
             <p className="t-hint">{LOAN_EMPTY_NEXT_STEP}</p>
             <div className="ui-empty-action">
               {/* The link replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
-              <Button variant="pill" icon={<PlusIcon />} to={quickNewPath("/settings/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</Button>
+              <Button variant="pill" icon={<PlusIcon />} to={quickNewPath("/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</Button>
             </div>
           </div>
         ) : (

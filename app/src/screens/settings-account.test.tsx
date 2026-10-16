@@ -95,7 +95,7 @@ describe("settings account", () => {
     }
     expect(screen.queryByRole("heading", { name: "חיבורים" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
-    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/loans");
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "עוד" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עוזר" })).not.toBeInTheDocument();

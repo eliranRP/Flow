@@ -10,7 +10,7 @@ const pages: Array<[string, string]> = [
   ["/settings", "הגדרות"],
   ["/settings/categories", "קטגוריות"],
   ["/settings/connections", "חיבורים"],
-  ["/settings/loans", "הלוואות"],
+  ["/loans", "הלוואות"],
   ["/onboarding", "פרטי העסק"],
   ["/install", "התקנת Flow"],
   ["/transactions/1", "פרטי תנועה"],
@@ -27,6 +27,13 @@ for (const [path, heading] of pages) {
     await expect(page.getByText("37,700")).toHaveCount(0);
   });
 }
+
+test("the old settings loans link lands on the loans tab (FLOW-139)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/settings/loans?preview=1");
+  await expect(page).toHaveURL(/\/loans\?preview=1$/);
+  await expect(page.getByRole("heading", { name: "הלוואות", exact: false }).first()).toBeVisible();
+});
 
 test("add sheet offers the quick actions that work today (FLOW-331)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

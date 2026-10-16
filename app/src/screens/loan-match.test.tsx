@@ -226,7 +226,7 @@ describe("LoanMatchOffer", () => {
     // FLOW-115: the next step, a new loan, as the 44px tint button (FLOW-356).
     expect(screen.getByText("אפשר להוסיף הלוואה חדשה, ואז לשייך אליה את התשלום.")).toBeInTheDocument();
     const next = screen.getByRole("link", { name: "הלוואה חדשה" });
-    expect(next).toHaveAttribute("href", "/settings/loans?new=loan");
+    expect(next).toHaveAttribute("href", "/loans?new=loan");
     expect(next).toHaveClass("ui-btn-pill");
   });
 

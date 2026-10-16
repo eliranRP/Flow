@@ -74,7 +74,7 @@ function inParts(value: ReactNode): ReactNode {
 
 
 /**
- * FLOW-106 B and FLOW-110: `/settings/loans/:loanId`, one loan's page (template A with the tab
+ * FLOW-106 B and FLOW-110: `/loans/:loanId`, one loan's page (template A with the tab
  * bar). The balance with its status, then פרטים, שינויי ריבית, קטגוריות לחלקים and תשלומים;
  * each row opens a small sheet that saves alone, with its own refusal and undo (0075). The
  * owner deletes the loan at the bottom (decision 0142); a viewer reads static rows.

@@ -241,7 +241,7 @@ describe("App", () => {
   it("routes Settings to the Connections and Loans pages under the הגדרות tab (FLOW-501)", async () => {
     const settings = await renderAt("/settings?preview=1");
     expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections?preview=1");
-    expect(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
+    expect(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/loans?preview=1");
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
     settings.unmount();
 
@@ -253,7 +253,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "עזרים" })).toBeInTheDocument();
     connections.unmount();
 
-    await renderAt("/settings/loans?preview=1");
+    await renderAt("/loans?preview=1");
     expect(await screen.findByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
     expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
@@ -266,7 +266,7 @@ describe("App", () => {
   });
 
   it("sends Loans with no company back to Settings", async () => {
-    await renderAt("/settings/loans?preview=empty");
+    await renderAt("/loans?preview=empty");
     expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
   });
 

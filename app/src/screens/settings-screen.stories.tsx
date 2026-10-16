@@ -285,7 +285,7 @@ export const SettingsViewer: Story = {
 export const Loans: Story = {
   name: "Loans",
   render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
+    <StoryRoute entry="/loans" tabs>
       <ExampleBar />
       <LoansScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
     </StoryRoute>
@@ -295,7 +295,7 @@ export const Loans: Story = {
 export const LoansEmpty: Story = {
   name: "Loans, empty",
   render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
+    <StoryRoute entry="/loans" tabs>
       <ExampleBar />
       <LoansScreen sample={{ ...pagesBusiness, loans: [] }} />
     </StoryRoute>
@@ -305,7 +305,7 @@ export const LoansEmpty: Story = {
 export const LoansLoading: Story = {
   name: "Loans, loading",
   render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
+    <StoryRoute entry="/loans" tabs>
       <ExampleBar />
       <LoansScreen sample={{ ...pagesBusiness, loans: "loading" }} />
     </StoryRoute>
@@ -316,7 +316,7 @@ export const LoansLoading: Story = {
 export const LoansError: Story = {
   name: "Loans, error",
   render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
+    <StoryRoute entry="/loans" tabs>
       <ExampleBar />
       <LoansScreen sample={{ ...pagesBusiness, loans: "error" }} />
     </StoryRoute>
@@ -326,7 +326,7 @@ export const LoansError: Story = {
 export const LoansViewer: Story = {
   name: "Loans, viewer",
   render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
+    <StoryRoute entry="/loans" tabs>
       <ExampleBar />
       <ViewerPreview>
         <LoansScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
@@ -338,7 +338,7 @@ export const LoansViewer: Story = {
 export const LoansEmptyViewer: Story = {
   name: "Loans, empty, viewer",
   render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
+    <StoryRoute entry="/loans" tabs>
       <ExampleBar />
       <ViewerPreview>
         <LoansScreen sample={{ ...pagesBusiness, loans: [] }} />

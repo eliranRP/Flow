@@ -368,8 +368,8 @@
         "/settings/connections?preview=1": [
           "screens/connections-screen.tsx"
         ],
-        "/settings/loans?preview=1": [
-          "screens/settings-screen.tsx"
+        "/loans?preview=1": [
+          "screens/loans-screen.tsx"
         ],
         "/onboarding?preview=1": [
           "screens/onboarding-screen.tsx"

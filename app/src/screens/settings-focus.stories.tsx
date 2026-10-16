@@ -140,7 +140,7 @@ export const BackFocus: Story = {
       <Routes>
         <Route path="/settings" element={<SettingsScreen sample={{ ...business, loans: [] }} />} />
         <Route path="/settings/connections" element={<ConnectionsScreen sample={{ ...business, assistant: { state: "empty" } }} />} />
-        <Route path="/settings/loans" element={<LoansScreen sample={{ ...business, loans: [] }} />} />
+        <Route path="/loans" element={<LoansScreen sample={{ ...business, loans: [] }} />} />
       </Routes>
     </StoryRoute>
   ),
