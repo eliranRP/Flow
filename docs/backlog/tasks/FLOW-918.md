@@ -1,4 +1,4 @@
-<a id="flow-915"></a>
+<a id="flow-918"></a>
 # FLOW-918 · Port the deleted SUMIT and Mercury row suites onto the connection pages
 - **Type:** Test · **Status:** ready · **Depends on:** [FLOW-512](FLOW-512.md) · **Source:** Haiku review of PR #650 (round 1), finding 3: four suites were removed with the old row components and not replaced.
 - **Files:** `app/src/screens/connection-page.test.tsx`, `app/src/ui/connector-row.test.tsx`, `app/src/setup/sumit-step.test.tsx` (the FLOW-505 setup cases stay here), new tests next to the connection pages.
