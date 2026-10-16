@@ -132,6 +132,7 @@
   --status-gap: 6px;
   --pill-pad-block: 3px;
   --pill-pad-inline: 10px;
+  --field-btn-pad: 10px;         /* padding-inline of the copy and show/hide pills (FLOW-363 (4)) */
   --space-card-inset: 16px;
   --space-inset-row: 14px;       /* a row inside an inset list (FLOW-363 2d) */
   --space-section: 36px;
@@ -145,12 +146,15 @@
   --radius-band: 28px;
   --radius-fab: 9999px;
   --radius-block: 6px;           /* skeleton blocks, States board (FLOW-371) */
+  --radius-field-btn: 10px;      /* copy and show/hide pills in a field (FLOW-363 (4)) */
 
   /* ---- layout (guide-defined, from design-system.md) ---- */
   --touch-min: 44px;
   --compact-bar-detail: 56px;    /* the compact bar on a detail page (FLOW-363 3a) */
   --control-height: 52px;        /* buttons, text inputs */
   --control-height-sm: 36px;     /* small pill buttons, chips (hit area still 44px) */
+  --field-height: 48px;          /* text, amount, percent, select and code fields (board; buttons stay 52) */
+  --field-copy-width: 64px;      /* the code field's copy hit area, pill inside (FLOW-363 (4)) */
   --search-height: 46px;
   --topbar-height: 52px;
   --fab-size: 48px;
