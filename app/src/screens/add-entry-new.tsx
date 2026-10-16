@@ -39,10 +39,10 @@ export function AddNewEditor({ kind, existing, isIncome = false, onAdd, onCancel
   }
 
   return (
-    <div className="ui-add-new">
-      <div className="ui-add-new-row">
+    <div className="ui-add-create">
+      <div className="ui-add-create-row">
         <input
-          className="ui-add-new-input"
+          className="ui-add-create-input"
           autoFocus
           aria-label={`שם ה${word} החדש`}
           placeholder={placeholder}
@@ -51,10 +51,10 @@ export function AddNewEditor({ kind, existing, isIncome = false, onAdd, onCancel
           onChange={(e) => { setValue(e.target.value); }}
           onKeyDown={(e) => { if (e.key === "Enter") void add(); }}
         />
-        <button type="button" className="ui-add-new-add" disabled={!canAdd} aria-disabled={!canAdd} onClick={() => { void add(); }}>
+        <button type="button" className="ui-add-create-add" disabled={!canAdd} aria-disabled={!canAdd} onClick={() => { void add(); }}>
           הוספה
         </button>
-        <button type="button" className="ui-add-new-cancel" onClick={onCancel}>ביטול</button>
+        <button type="button" className="ui-add-create-cancel" onClick={onCancel}>ביטול</button>
       </div>
       <span className={problem === "duplicate" || failed ? "ui-add-hint ui-add-hint-bad" : "ui-add-hint"}>
         {failed ? `לא הצלחנו לשמור את ה${word}.` : note}

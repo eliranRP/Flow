@@ -27,12 +27,12 @@ export const SAMPLE_CATEGORIES = [
  * the amount, the date and the formats are the board's, the names are invented.
  */
 export interface SampleEntryFill {
-  draft: Partial<EntryDraft>;
+  values: Partial<EntryDraft>;
 }
 
 export const SAMPLE_ENTRY_FILLS: Record<string, SampleEntryFill> = {
-  cash: { draft: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cash", projectId: "sp-3", categoryId: "sc-2" } },
-  cheque: { draft: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cheque", projectId: "sp-3", categoryId: "sc-2" } },
+  cash: { values: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cash", projectId: "sp-3", categoryId: "sc-2" } },
+  cheque: { values: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cheque", projectId: "sp-3", categoryId: "sc-2" } },
 };
 
 /** FLOW-369: `?entry=project` opens the + sheet from this invented project (the board's from-project frame). */
