@@ -69,15 +69,18 @@
   gap: var(--toast-gap);
   inline-size: 100%;
   max-inline-size: var(--content-max);
-  border-radius: var(--radius-button);
-  padding: var(--space-3) var(--space-4);
+  min-block-size: var(--control-height);
+  border-radius: var(--radius-toast);
+  padding: 0 var(--space-4);
   background: var(--color-toast-bg);
   color: var(--color-toast-text);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
   pointer-events: auto;
 }
 
+/* FLOW-363 (3c): ביטול is 15/500 with no underline, in a 44px target. */
 .ui-toast button {
   position: relative;
   margin-inline-start: auto;
@@ -85,8 +88,9 @@
   padding: 0;
   background: transparent;
   color: inherit;
-  font-weight: 600;
-  text-decoration: underline;
+  font-size: var(--type-line2-size);
+  font-weight: 500;
+  text-decoration: none;
 }
 
 /* The label stays its text size. The hit target is at least 44×44, centred on it. */

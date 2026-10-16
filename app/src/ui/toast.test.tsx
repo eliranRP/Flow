@@ -166,7 +166,7 @@ describe("Toast", () => {
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
-  it("keeps an undo action for about five seconds", () => {
+  it("keeps an undo action for three seconds", () => {
     vi.useFakeTimers();
     function Undo() {
       const toast = useToast();
@@ -193,7 +193,7 @@ describe("Toast", () => {
     });
     expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
     act(() => {
-      vi.advanceTimersByTime(2_499);
+      vi.advanceTimersByTime(499);
     });
     expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
     act(() => {
@@ -201,6 +201,36 @@ describe("Toast", () => {
     });
     expect(screen.queryByRole("button", { name: "ביטול" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).not.toHaveTextContent("השיוך נשמר");
+  });
+
+  it("keeps a failure with a retry for five seconds, and a confirmation has no icon", () => {
+    vi.useFakeTimers();
+    function Retry() {
+      const toast = useToast();
+      return (
+        <>
+          <button type="button" onClick={() => { toast.show({ tone: "bad", message: "לא נשמר", action: "ניסיון חוזר", onAction: () => undefined }); }}>כשל</button>
+          <button type="button" onClick={() => { toast.show({ message: "הפריט אושר" }); }}>אישור</button>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Retry />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(document.querySelector(".ui-toast-icon")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "כשל" }));
+    expect(document.querySelector(".ui-toast-icon")).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(4_500);
+    });
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });
 
   it("keeps an info notice out of the error colour", () => {

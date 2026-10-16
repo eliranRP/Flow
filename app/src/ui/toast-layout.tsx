@@ -11,15 +11,14 @@ export type ToastInput = {
   place?: "page" | "tab" | "bar";
 };
 
-/** A plain confirmation stays 4s. A toast with an action (ניסיון חוזר, ביטול) stays 5s. An error, or an info notice without an action, stays 4s. Hover, focus, and a press pause it. Decision 0074. */
-export const OK_MS = 4000;
+/** A confirmation, with or without an undo (ביטול), stays 3s (FLOW-363 3c). An error, or an info notice, stays 4s; with an action (ניסיון חוזר, לפיצול) 5s. Hover, focus, and a press pause it. Decision 0074, amended by 0182. */
+export const OK_MS = 3000;
 const ACTION_MS = 5000;
 const BAD_MS = 4000;
 export const SWIPE_PX = 48;
 
 export function toastMs(input: ToastInput): number {
-  if (input.action && input.onAction) return ACTION_MS;
-  if (input.tone === "bad" || input.tone === "info") return BAD_MS;
+  if (input.tone === "bad" || input.tone === "info") return input.action && input.onAction ? ACTION_MS : BAD_MS;
   return OK_MS;
 }
 
