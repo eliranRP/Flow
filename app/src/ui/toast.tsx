@@ -24,6 +24,11 @@ function cssMs(name: string): number {
   return raw.endsWith("ms") ? value : value * 1000;
 }
 
+function clearTimerRef(ref: { current: number | null }) {
+  if (ref.current != null) window.clearTimeout(ref.current);
+  ref.current = null;
+}
+
 export function useToast(): ToastContextValue {
   const value = useContext(ToastContext);
   if (!value) throw new Error("ToastProvider is missing");
@@ -55,6 +60,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (outTimer.current != null) window.clearTimeout(outTimer.current);
     outTimer.current = null;
   };
+
+  // The out timer clears the toast after its sink. An unmount must cancel it, or it fires after teardown.
+  useEffect(() => {
+    return () => {
+      clearTimerRef(timer);
+      clearTimerRef(outTimer);
+    };
+  }, []);
 
   const clearToast = useCallback(() => {
     outTimer.current = null;

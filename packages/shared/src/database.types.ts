@@ -1568,6 +1568,9 @@ isOneToOne: false
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json
                            },
+"recurring_schedule":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "recurring_this_month":
 { Args: { "p_today"?: string }; Returns: Json
                            },
