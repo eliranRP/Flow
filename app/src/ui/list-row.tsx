@@ -87,6 +87,10 @@ export type ListRowProps =
     currency?: string;
     /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */
     inWord?: string;
+    /** FLOW-366: a circle with the supplier's initials, in place of the source icon. Decorative. */
+    initials?: string;
+    /** FLOW-366: the tag line under the hint (13px): "ממתין לאישור", or the reason a line is out of profit. */
+    tagLine?: ReactNode;
   })
   | StatementRowProps
   | (Common & { variant: "item"; plain?: boolean })
@@ -171,6 +175,9 @@ export function ListRow(props: ListRowProps) {
   const wantsChevron = props.chevron ?? (props.layout !== "flat" && props.variant === "transaction" && props.href != null);
   const showChevron = wantsChevron && props.variant !== "static" && !rowDisabled && !busyRow;
   const toneClass = props.tone === "warning" ? "ui-row-tone-warning" : props.tone === "muted" ? "ui-row-tone-muted" : false;
+  const initialsLead = props.variant === "transaction" && props.initials != null && props.icon == null
+    ? <span className="ui-row-initials" aria-hidden="true">{props.initials}</span>
+    : null;
   const baseIcon =
     props.icon ??
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
@@ -213,7 +220,7 @@ export function ListRow(props: ListRowProps) {
         </span>
       ) : null}
       <CopyMain className="ui-row-main">
-        {icon ? <span className="ui-row-icon">{icon}</span> : null}
+        {initialsLead ?? (icon ? <span className="ui-row-icon">{icon}</span> : null)}
         <CopyText className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
           {props.heading && blockCopy ? (
@@ -237,6 +244,7 @@ export function ListRow(props: ListRowProps) {
               {oneLineHint ? hintParts(hintValue) : hintValue}
             </span>
           ) : null}
+          {props.variant === "transaction" && props.tagLine != null ? <span className="ui-row-tagline">{props.tagLine}</span> : null}
         </CopyText>
       </CopyMain>
       {props.variant === "project" ? props.mark : null}

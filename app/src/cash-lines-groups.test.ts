@@ -1,7 +1,7 @@
 import type { CashCurrencyRow, CashLine } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { cashSummaryRows, notInProfitMinor } from "./cash";
-import { groupLines, lineDayTitle, linesOrder, linesSummary } from "./cash-lines-groups";
+import { groupLines, lineDayTitle, lineInitials, linesOrder, linesSummary } from "./cash-lines-groups";
 
 const TODAY = "2026-10-11";
 
@@ -117,5 +117,22 @@ describe("the page total against Home's row", () => {
     const home = cashSummaryRows("2026-10", [month], "").find((row) => row.id === "out");
     expect(home?.amounts[0]?.minor).toBe(linesSummary(rows, "out").total);
     expect(notInProfitMinor(month)).toBeDefined();
+  });
+});
+
+describe("lineInitials", () => {
+  it("takes the first letter of the first two words", () => {
+    expect(lineInitials("סטודיו גל")).toBe("סג");
+    expect(lineInitials("מים ושות׳")).toBe("מו");
+  });
+
+  it("takes the first two letters of a one-word name, uppercased for Latin", () => {
+    expect(lineInitials("אור")).toBe("או");
+    expect(lineInitials("acme")).toBe("AC");
+  });
+
+  it("is ? with no name", () => {
+    expect(lineInitials(null)).toBe("?");
+    expect(lineInitials("   ")).toBe("?");
   });
 });

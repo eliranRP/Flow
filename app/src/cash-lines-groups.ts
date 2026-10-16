@@ -119,3 +119,15 @@ export function linesSummary(rows: readonly CashLine[], side: CashListSide): { t
   }
   return { total, count: rows.length, pending, notInProfit };
 }
+
+/**
+ * A row's initials circle: the first letter of the first two words of the name, or the first two
+ * letters of a one-word name (uppercased for Latin). "?" when there is no name.
+ */
+export function lineInitials(name: string | null | undefined): string {
+  const words = (name ?? "").trim().split(/\s+/).filter((word) => word !== "");
+  const [first, second] = words;
+  if (first == null) return "?";
+  if (second != null) return `${Array.from(first)[0] ?? ""}${Array.from(second)[0] ?? ""}`.toUpperCase();
+  return Array.from(first).slice(0, 2).join("").toUpperCase();
+}
