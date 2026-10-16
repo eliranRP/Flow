@@ -57,13 +57,14 @@
 }
 
 .ui-home-split-label {
-  font-size: var(--type-body-size);
-  line-height: var(--type-btn-line);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-home-split-sub {
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-home-split-value {
@@ -82,6 +83,7 @@
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
 }
 
 /* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
