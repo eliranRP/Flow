@@ -1,7 +1,7 @@
 import { formatAmountText, type MissingBill, type RecurringChange, type RecurringPace } from "@flow/shared";
 import { abs, partyName } from "./forecast";
 import { searchHref } from "./search";
-import { PACE_LABEL } from "./ui/charge-switches";
+import { PACE_LABEL } from "./ui/pace";
 import { formatDayMonth } from "./ui/date-math";
 
 /**

@@ -31,3 +31,49 @@
   inset-inline: 0;
   border-radius: 0;
 }
+
+/* FLOW-366: a transaction row's initials circle, in place of its source icon (not ui/avatar.tsx, which is FLOW-365's). */
+.ui-row-initials {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--avatar);
+  block-size: var(--avatar);
+  border-radius: 50%;
+  background: var(--color-avatar);
+  color: var(--color-text-secondary);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+}
+
+/* FLOW-366: the tag line under a transaction row's hint, shown only when a tag applies. */
+.ui-row-tagline {
+  display: block;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
+}
+
+.ui-tag-pending {
+  color: var(--color-text-secondary);
+}
+
+.ui-tag-aside {
+  color: var(--color-accent-text);
+}
+
+/* A project row's end side holds the amount, and a muted line under it (FLOW-367: an open invoice's age). */
+.ui-row-end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.ui-row-end-sub {
+  font-size: var(--type-line2-size);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}

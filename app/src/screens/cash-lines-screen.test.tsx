@@ -67,7 +67,7 @@ const lines = {
       kept_out: false,
     },
   ],
-  has_more: true,
+  has_more: false,
 };
 
 function wrap(path: string) {
@@ -106,17 +106,51 @@ describe("Cash lines", () => {
     expect(screen.getByRole("link", { name: /בנק לדוגמה/ })).toHaveAttribute("href", "/transactions/t1");
   });
 
-  it("switches currency in place and loads the next page", async () => {
+  it("switches currency in place", async () => {
     wrap(`/cash/${earlier}/out/ILS`);
     await screen.findByText("בנק לדוגמה");
-    fireEvent.click(screen.getByRole("button", { name: "עוד תנועות" }));
-    await waitFor(() => {
-      expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_offset: number }).p_offset === 40)).toBe(true);
-    });
     fireEvent.click(screen.getByRole("radio", { name: "USD" }));
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_currency: string }).p_currency === "USD")).toBe(true);
     });
+  });
+
+  it("loads every page before it shows the totals and the groups (FLOW-366)", async () => {
+    const page = (id: string) => ({ ...lines.rows[0], transaction_id: id, description: id, supplier_name: id });
+    rpc.impl = (name, args) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") {
+        const offset = (args as { p_offset: number }).p_offset;
+        return Promise.resolve({
+          data: offset === 0 ? { rows: [page("t-first")], has_more: true } : { rows: [page("t-second")], has_more: false },
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/out/ILS`);
+    expect(await screen.findByText("t-second")).toBeInTheDocument();
+    expect(rpc.calls.filter((c) => c.name === "cash_month_lines").map((c) => (c.args as { p_offset: number }).p_offset)).toEqual([0, 200]);
+    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_limit: 200 });
+    expect(screen.queryByRole("button", { name: "עוד תנועות" })).toBeNull();
+  });
+
+  it("flips the side in place and keeps the order chip", async () => {
+    wrap(`/cash/${earlier}/out/ILS?order=amount`);
+    await screen.findByText("בנק לדוגמה");
+    fireEvent.click(screen.getByRole("radio", { name: "נכנס" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_side: string }).p_side === "in")).toBe(true);
+    });
+  });
+
+  it("sets the order from the chips, and groups by project with the largest first", async () => {
+    wrap(`/cash/${earlier}/out/ILS`);
+    await screen.findByText("בנק לדוגמה");
+    expect(screen.getByRole("button", { name: "לפי תאריך" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "לפי פרויקט" }));
+    expect(await screen.findByRole("heading", { name: "בית לדוגמה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "לפי פרויקט" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 
@@ -133,9 +167,56 @@ describe("Cash lines profit leaves out (FLOW-418)", () => {
     expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_side: "not_in_profit", p_currency: "ILS" });
     expect(screen.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
     // Net −₪1,150 less profit −₪400; the month sends no categories, so all of it is the rest.
-    expect(screen.getByText("−₪750")).toBeInTheDocument();
+    expect(document.querySelector(".ui-breakdown-total")?.textContent).toMatch(/^−₪750$/);
     expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
     expect(screen.getByText("−₪1,200")).toBeInTheDocument();
     expect(screen.getByText("+₪450")).toHaveClass("ui-income");
+  });
+});
+
+/** The sum a group head shows (the row amounts repeat the figure, so the head is read on its own). */
+function groupSum(title: string) {
+  const region = screen.getByRole("region", { name: title });
+  return region.querySelector(".ui-lines-group-sum")?.textContent ?? null;
+}
+
+describe("Cash lines groups", () => {
+  // Invented rows: two projects on one side, the larger total first.
+  const group = (id: string, project: string, side: "in" | "out", amount: number) => ({
+    ...lines.rows[0],
+    transaction_id: id,
+    supplier_name: id,
+    project_name: project,
+    side,
+    amount_minor: amount,
+  });
+
+  it("sums each project group, plus on money in and none under יצא, largest group first (decision 0181)", async () => {
+    const inRows = [group("i1", "בית צפון", "in", 300_000), group("i2", "בית צפון", "in", 50_000), group("i3", "בית דרום", "in", 120_000)];
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: inRows, has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/in/ILS?order=project`);
+    await screen.findByText("i1");
+    const headings = screen.getAllByRole("region").map((region) => region.getAttribute("aria-label"));
+    expect(headings).toEqual(["בית צפון", "בית דרום"]);
+    expect(groupSum("בית צפון")).toBe("+₪3,500");
+    expect(groupSum("בית דרום")).toBe("+₪1,200");
+  });
+
+  it("shows the group sum on יצא with no sign, and orders the groups by their totals", async () => {
+    const outRows = [group("o1", "בית צפון", "out", 80_000), group("o2", "בית דרום", "out", 200_000)];
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: outRows, has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/out/ILS?order=project`);
+    await screen.findByText("o1");
+    const headings = screen.getAllByRole("region").map((region) => region.getAttribute("aria-label"));
+    expect(headings).toEqual(["בית דרום", "בית צפון"]);
+    expect(groupSum("בית דרום")).toBe("₪2,000");
   });
 });

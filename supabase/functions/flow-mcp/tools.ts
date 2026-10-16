@@ -220,6 +220,16 @@ export async function callTool(
     return ok({ missing: data });
   }
 
+  // FLOW-514: the first-time setup's suggestions (projects, lenders). Read only.
+  if (name === "get_setup_suggestions") {
+    const result = await rpc("get_setup_suggestions", {});
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(data);
+  }
+
   if (name === "list_team") {
     const result = await rpc("list_team", {});
     const team = result.json;
