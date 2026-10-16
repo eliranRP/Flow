@@ -839,7 +839,7 @@ Output `data`: `basis`, `base_currency`, `this_month` and `first_month` (`YYYY-M
 
 Input: `{ "month": "2026-09", "side": "out" }`.
 
-Output `data`: `rows[]` newest first (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `cash_month_date`, `currency`, `amount_minor`, `side`, `shared`, `source`, `kept_out`, `parts`, `line_minor`) and `has_more`. A loan payment has a row per part; a line split's parts on one side are one row. On a line with a valid split by category, `parts` lists the parts that row counts (`name` is the part's category, `amount_minor` signed like the row's, largest first) and `line_minor` is the whole line's bank amount; both are null on any other row (FLOW-432).
+Output `data`: `rows[]` newest first (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `cash_month_date`, `currency`, `amount_minor`, `side`, `shared`, `source`, `kept_out`, `parts`, `line_minor`, `pending`, `in_pnl`) and `has_more`. `pending` is `true` while the row's transaction has an open review; `in_pnl` is `false` when the row is left out of the P&L (on `not_in_profit`, and for a category kept out of profit). A loan payment has a row per part; a line split's parts on one side are one row. On a line with a valid split by category, `parts` lists the parts that row counts (`name` is the part's category, `amount_minor` signed like the row's, largest first) and `line_minor` is the whole line's bank amount; both are null on any other row (FLOW-432).
 
 ### get_project_cash_months
 
