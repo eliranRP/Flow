@@ -181,7 +181,6 @@ export function StepBusiness({
       <form id="setup-business" className="ui-onb-form" onSubmit={submit}>
         {form.fields}
         <div className="ui-onb-field">
-          <span className="ui-onb-label t-hint">{CURRENCY_LABEL}</span>
           <SegmentedControl
             label={CURRENCY_LABEL}
             value={currency}
@@ -190,7 +189,6 @@ export function StepBusiness({
           />
         </div>
         <div className="ui-onb-field">
-          <span className="ui-onb-label t-hint">{BASIS_LABEL}</span>
           <SegmentedControl
             label={BASIS_LABEL}
             value={basis}
