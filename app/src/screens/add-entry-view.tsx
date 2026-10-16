@@ -101,8 +101,9 @@ export function AddEntryView(props: AddEntryViewProps) {
 
   const isIncome = draft.direction === "in";
   const kindWanted = isIncome ? "income" : "expense";
-  const projectList = [...props.projects, ...addedProjects];
-  const categoryList = [...props.categories, ...addedCategories].filter((c) => c.kind === kindWanted);
+  // A refetch can land before the local add is dropped, so an added item is listed once, by its id.
+  const projectList = [...props.projects, ...addedProjects.filter((a) => !props.projects.some((p) => p.id === a.id))];
+  const categoryList = [...props.categories, ...addedCategories.filter((a) => !props.categories.some((c) => c.id === a.id))].filter((c) => c.kind === kindWanted);
   const categoryNames = orderChips(categoryList.map((c) => c.name), [LAST_CATEGORY]);
   const projectNames = projectList.map((p) => p.name);
   const ready = isEntryReady(draft);

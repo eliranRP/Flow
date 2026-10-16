@@ -60,7 +60,7 @@ begin
   if cid is null then
     raise exception 'no company';
   end if;
-  if p_direction not in ('income', 'expense') then
+  if p_direction is null or p_direction not in ('income', 'expense') then
     raise exception 'direction must be income or expense';
   end if;
   if p_amount_minor is null or p_amount_minor <= 0 or p_amount_minor > 999999999999 then
@@ -83,7 +83,7 @@ begin
   ) then
     raise exception 'category not found';
   end if;
-  if p_method not in ('cash', 'cheque') then
+  if p_method is null or p_method not in ('cash', 'cheque') then
     raise exception 'method must be cash or cheque';
   end if;
   if p_method = 'cheque' and cheque !~ '^[0-9A-Za-z-]{1,20}$' then
@@ -136,7 +136,7 @@ begin
   if char_length(name) < 1 or char_length(name) > 200 or private.name_has_hidden_char(name) then
     raise exception 'document name is invalid';
   end if;
-  if mime not in ('image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf') then
+  if mime is null or mime not in ('image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf') then
     raise exception 'document type is not allowed';
   end if;
   if jsonb_typeof(p_document->'bytes') is distinct from 'number'

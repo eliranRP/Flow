@@ -5,7 +5,7 @@ import { documentProblem, type AttachedDocument, type EntryKind } from "../add-e
 import { SAMPLE_ENTRY_FILLS, SAMPLE_FROM_PROJECT } from "../add-entry-sample";
 import { documentOf } from "../add-entry-doc";
 import { quickNewPath, quickNewState } from "../open-from-query";
-import { usePreviewSearch } from "../preview";
+import { useHomePreview, usePreviewSearch } from "../preview";
 import { readSheetBackground } from "../sheet-background";
 import { useDashboardQuery, useMercuryStatusQuery } from "../use-books";
 import { useHoldOwnerSettings, useWriteGate } from "../use-is-viewer";
@@ -37,8 +37,9 @@ interface OpenEntry {
 export function AddForm({ bank }: { bank?: AddBankState } = {}) {
   const search = usePreviewSearch();
   const [params] = useSearchParams();
-  // FLOW-369: `?entry=project` is the preview's from-project sheet, with an invented project (add-entry-sample.ts).
-  if (params.get("entry") === "project") return <AddSheet bank={bank} fromProject={SAMPLE_FROM_PROJECT} />;
+  // FLOW-369: `?entry=project` is the preview's from-project sheet, with an invented project (add-entry-sample.ts). Only the preview opens it.
+  const sample = useHomePreview() !== "off";
+  if (sample && params.get("entry") === "project") return <AddSheet bank={bank} fromProject={SAMPLE_FROM_PROJECT} />;
   const projectId = new URLSearchParams(search).get("project");
   // The project's name is read only when the sheet opens from one (the books query needs its provider).
   if (projectId == null) return <AddSheet bank={bank} fromProject={null} />;
@@ -63,7 +64,8 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
   // FLOW-369: the preview's `?entry=` opens the form with the board's values (add-entry-sample.ts).
   const [params] = useSearchParams();
   const fillName = params.get("entry");
-  const fill = fillName != null && fillName in SAMPLE_ENTRY_FILLS ? SAMPLE_ENTRY_FILLS[fillName] : null;
+  const sample = useHomePreview() !== "off";
+  const fill = sample && fillName != null && Object.hasOwn(SAMPLE_ENTRY_FILLS, fillName) ? SAMPLE_ENTRY_FILLS[fillName] : null;
   const [entry, setEntry] = useState<OpenEntry | null>(() => (fill == null ? null : { kind: "cash", document: null }));
   const [pickError, setPickError] = useState<string | null>(null);
   const cameraPicker = useRef<HTMLInputElement>(null);
