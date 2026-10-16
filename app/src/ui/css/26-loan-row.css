@@ -73,6 +73,7 @@
   gap: var(--space-3);
   padding: var(--space-card-inset);
   border-radius: var(--radius-card);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-loan-summary-label {
