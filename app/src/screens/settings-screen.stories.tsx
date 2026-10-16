@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
-import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
-import { AssistantSettings } from "./assistant-settings";
 import { LoansScreen, SettingsScreen } from "./flow-screens";
+import { BusinessScreen } from "./business-screen";
 import { NotificationsLockFrame } from "../ui/reference-frames.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
@@ -16,7 +15,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** FLOW-512: the Settings menu with every row, a live-looking business. Invented names only. */
+export const SettingsMain: Story = {
+  name: "Settings, menu",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...pagesBusiness, teamCount: 3, companyCount: 2, categoryCount: 12, setupLeft: 2 }} />
+    </StoryRoute>
+  ),
+};
+
 export const SettingsEmpty: Story = {
+  name: "Settings, no company",
   render: () => (
     <StoryRoute entry="/settings?preview=empty" tabs>
       <ExampleBar />
@@ -34,228 +45,22 @@ export const SettingsEmpty: Story = {
   ),
 };
 
-export const SettingsLongEmail: Story = {
-  name: "Long email",
+export const SettingsSumitBroken: Story = {
+  name: "Settings, SUMIT needs connecting",
   render: () => (
-    <StoryRoute entry="/settings?preview=empty" tabs>
+    <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen
-        sample={{
-          name: null,
-          connected: false,
-          companyId: null,
-          lastError: null,
-          email: "owner.with.a.very.long.mailbox.name@example.com",
-          noCompany: true,
-        }}
-      />
+      <SettingsScreen sample={{ ...pagesBusiness, lastError: "sumit_auth" }} />
     </StoryRoute>
   ),
 };
 
-const renameBusiness = {
-  name: "סטודיו אלפא לעיצוב ובנייה בע״מ",
-  connected: false,
-  companyId: null,
-  lastError: null,
-  email: "owner@example.com",
-};
-
-export const SettingsBusinessRow: Story = {
-  name: "Business row, long name",
+export const SettingsSetupNotDone: Story = {
+  name: "Settings, setup not done",
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={renameBusiness} />
-    </StoryRoute>
-  ),
-};
-
-
-export const SettingsRenameSheet: Story = {
-  name: "Rename sheet",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={renameBusiness} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
-  },
-};
-
-/** FLOW-504: the company currency row under the business name, a dollar company. */
-export const SettingsCurrencyRow: Story = {
-  name: "Company currency row, dollars",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={{ ...renameBusiness, loanCurrency: "USD" }} />
-    </StoryRoute>
-  ),
-};
-
-export const SettingsCurrencyRowViewer: Story = {
-  name: "Company currency row, viewer",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <SettingsScreen sample={{ ...renameBusiness, loanCurrency: "USD" }} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
-};
-
-export const SettingsCurrencySheet: Story = {
-  name: "Company currency sheet",
-  render: SettingsCurrencyRow.render,
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "מטבע העסק: $ דולר" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "מטבע העסק" });
-  },
-};
-
-/** FLOW-103: the company's one date for profit, the תזרים and the agent, under the currency. */
-export const SettingsBasisRow: Story = {
-  name: "Company date row, invoice date",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={{ ...renameBusiness, basis: "invoiced" }} />
-    </StoryRoute>
-  ),
-};
-
-export const SettingsBasisRowViewer: Story = {
-  name: "Company date row, viewer",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <SettingsScreen sample={renameBusiness} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
-};
-
-export const SettingsBasisSheet: Story = {
-  name: "Company date sheet",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={renameBusiness} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "רווח ותזרים לפי" });
-  },
-};
-
-export const SettingsAssistantScope: Story = {
-  name: "Assistant scope",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "חיבור עוזר AI" });
-  },
-};
-
-export const SettingsAssistantSecret: Story = {
-  name: "Assistant secret",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    const body = storyBody(canvasElement);
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
-    const sheet = await body.findByRole("dialog", { name: "חיבור עוזר AI" });
-    await userEvent.click(within(sheet).getByRole("button", { name: "יצירת קוד" }));
-    await body.findByRole("dialog", { name: "הקוד מוכן" });
-  },
-};
-
-export const SettingsAssistantHelp: Story = {
-  name: "Assistant help",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    const body = storyBody(canvasElement);
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
-    const sheet = await body.findByRole("dialog", { name: "חיבור עוזר AI" });
-    await userEvent.click(within(sheet).getByRole("button", { name: "יצירת קוד" }));
-    const ready = await body.findByRole("dialog", { name: "הקוד מוכן" });
-    await userEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
-    await body.findByRole("dialog", { name: "איך מחברים ב־Claude" });
-  },
-};
-
-export const SettingsAssistantUsed: Story = {
-  name: "Assistant used",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <AssistantSettings
-        sample={{ state: "connected", scope: "read_write", id: "mcp-1", lastUsedAt: "2026-09-30T11:05:00.000Z" }}
-      />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "עוזר AI" });
-  },
-};
-
-export const SettingsAssistantUnused: Story = {
-  name: "Assistant unused",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <AssistantSettings sample={{ state: "connected", scope: "read", id: "mcp-1", lastUsedAt: null }} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "עוזר AI" });
-  },
-};
-
-const pagesLoans = [
-  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון" },
-  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן" },
-];
-
-export const SettingsPages: Story = {
-  name: "Settings, connections and loans rows",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
-    </StoryRoute>
-  ),
-};
-
-export const SettingsAttention: Story = {
-  name: "Settings, Mercury needs reconnecting",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={{ ...pagesBusiness, mercuryLastError: "auth", loans: pagesLoans }} />
+      <SettingsScreen sample={{ ...pagesBusiness, setupLeft: 2 }} />
     </StoryRoute>
   ),
 };
@@ -265,7 +70,7 @@ export const SettingsHintsLoading: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...pagesBusiness, sumit: "loading", loans: "loading" }} />
+      <SettingsScreen sample={{ ...pagesBusiness, sumit: "loading" }} />
     </StoryRoute>
   ),
 };
@@ -276,11 +81,87 @@ export const SettingsViewer: Story = {
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
       <ViewerPreview>
-        <SettingsScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
+        <SettingsScreen sample={pagesBusiness} />
       </ViewerPreview>
     </StoryRoute>
   ),
 };
+
+const renameBusiness = {
+  ...pagesBusiness,
+  name: "סטודיו אלפא לעיצוב ובנייה בע״מ",
+  basis: "cash" as const,
+};
+
+/** FLOW-512: the business page (/settings/business) with its rows and the overhead switch. */
+export const BusinessPage: Story = {
+  name: "Business",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <BusinessScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+};
+
+export const BusinessViewer: Story = {
+  name: "Business, viewer",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <BusinessScreen sample={renameBusiness} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const BusinessRenameSheet: Story = {
+  name: "Business, rename sheet",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <BusinessScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
+  },
+};
+
+export const BusinessCurrencySheet: Story = {
+  name: "Business, currency sheet",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <BusinessScreen sample={{ ...renameBusiness, loanCurrency: "USD" }} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "מטבע העסק: $ דולר" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "מטבע העסק" });
+  },
+};
+
+export const BusinessDateSheet: Story = {
+  name: "Business, date sheet",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <BusinessScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "רווח ותזרים לפי" });
+  },
+};
+
+const pagesLoans = [
+  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון" },
+  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן" },
+];
 
 export const Loans: Story = {
   name: "Loans",

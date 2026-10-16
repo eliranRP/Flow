@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { getSupabase } from "../lib/supabase";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { ConnectorRow } from "../ui/connector-row";
-import { ChevronDownIcon, TagIcon } from "../ui/icons";
+import { ChevronDownIcon, SparkIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
@@ -210,7 +210,7 @@ export function JevSettingsCard({
   const row = state.status === "loading" || state.status === "error" ? (
     <ConnectorRow
       title={TITLE}
-      icon={<TagIcon size={24} />}
+      icon={<SparkIcon size={24} />}
       state={state.status}
       retry={{ hint: "שגיאה", label: "ניסיון חוזר: תיוג חכם", busy: retryBusy, retryRef, onRetry }}
     />
@@ -218,7 +218,7 @@ export function JevSettingsCard({
     <Toggle
       label={TITLE}
       hint={jevStatusWord(state)}
-      icon={<TagIcon size={24} />}
+      icon={<SparkIcon size={24} />}
       checked={shownOn}
       busy={busy}
       disabled={readOnly}
