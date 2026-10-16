@@ -81,6 +81,8 @@ describe("payment page: cash and recurring switches (FLOW-415)", () => {
     // The sheet closes with an exit motion; wait for it to leave before the page's switch is queried.
     await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "כל כמה זמן" })).toBeNull(); });
     expect(screen.getByText(/זוהה לבד/).closest(".ui-row-hint")?.textContent).toBe("כל רבעון · בערך ב־4 · זוהה לבד");
+    // The row updates before the sheet's close lands; while the sheet is open, the page behind it is aria-hidden.
+    await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "כל כמה זמן" })).toBeNull(); });
     // The switch still turns the charge off; its own target is apart from the row's.
     expect(screen.getByRole("switch", { name: "חיוב קבוע" })).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
