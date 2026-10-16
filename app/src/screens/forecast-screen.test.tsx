@@ -15,9 +15,21 @@ describe("ForecastScreen", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastSample("positive")} />, { route: "/forecast" });
     // Net 1,200 plus income 9,000 minus charges 6,045 (the small one included): 4,155.
     expect(screen.getAllByText("₪4,155").length).toBeGreaterThan(0);
-    expect(screen.getByText("היום ₪1,200")).toBeTruthy();
+    const today = document.querySelector(".ui-forecast-today bdi");
+    expect(today?.textContent).toBe("₪1,200");
+    expect(today?.getAttribute("dir")).toBe("ltr");
     expect(screen.getByText("צפוי להיכנס")).toBeTruthy();
     expect(screen.getByText("צפוי לצאת")).toBeTruthy();
+  });
+
+  it("keeps each amount LTR, so a minus sits at the start of the figure", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastSample("negative")} />, { route: "/forecast" });
+    const big = document.querySelector(".ui-forecast-big bdi");
+    expect(big?.getAttribute("dir")).toBe("ltr");
+    expect(big?.textContent?.startsWith("₪")).toBe(true);
+    const today = document.querySelector(".ui-forecast-today bdi");
+    expect(today?.getAttribute("dir")).toBe("ltr");
+    expect(today?.textContent?.startsWith("−₪")).toBe(true);
   });
 
   it("opens the change sheet from a row", () => {
