@@ -103,6 +103,8 @@ const taps: Tap[] = [
       // FLOW-367: a row is a link to its invoice page, and the mark sits there, once.
       await page.getByRole("link", { name: new RegExp(escapeRe(unpaidName)) }).first().tap();
       await expect(page).toHaveURL(/\/unpaid\/[^/?]+/);
+      // The list leaves the page as the invoice route paints; until it does, every row has its own mark button.
+      await expect(page.getByRole("list", { name: "חשבוניות פתוחות" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: LABELS.markPaid, exact: true })).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {
