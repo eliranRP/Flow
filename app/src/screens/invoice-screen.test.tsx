@@ -19,10 +19,11 @@ describe("Open invoices (FLOW-367)", () => {
   });
 
   it("shows the over-30-days line for the oldest invoice, and not when none is over 30", () => {
-    renderList(invoicesSample());
-    expect(document.querySelector(".ui-inv-overdue")?.textContent).toContain("פתוחים יותר מ־30 ימים");
+    const first = render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><ToastProvider><UnpaidScreen sample={invoicesSample()} summary={invoicesSummary()} /></ToastProvider></MemoryRouter></QueryClientProvider>);
+    expect(first.container.querySelector(".ui-inv-overdue")?.textContent).toContain("פתוחים יותר מ־30 ימים");
+    first.unmount();
     renderList(invoicesSample().map((row) => ({ ...row, doc_date: "2026-10-01" })));
-    expect(document.querySelectorAll(".ui-inv-overdue")).toHaveLength(1);
+    expect(document.querySelectorAll(".ui-inv-overdue")).toHaveLength(0);
   });
 
   it("offers זה התשלום and לא זה on the page of an invoice with a match", () => {

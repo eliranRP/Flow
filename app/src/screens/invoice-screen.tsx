@@ -12,7 +12,7 @@ import { unpaidDaysOpen, unpaidDocumentUrl, unpaidIsMarked, UNPAID_OVERDUE_DAYS,
 import { UNPAID_MARKED, useUnpaidActions } from "./unpaid-actions";
 
 /** dd/mm/yyyy, the invoice's date in full (the list uses dd/mm). */
-export function unpaidFullDate(iso: string): string {
+function unpaidFullDate(iso: string): string {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 }
 

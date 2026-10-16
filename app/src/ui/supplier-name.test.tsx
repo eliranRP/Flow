@@ -84,6 +84,7 @@ describe("supplier names", () => {
     const title = screen.getByText(longName);
     expect(title.classList.contains("ui-row-title")).toBe(true);
     wraps(title);
+    expect(getComputedStyle(title).webkitLineClamp).toBe("2");
     expect(title.closest(".ui-row-project")).not.toBeNull();
   });
 
