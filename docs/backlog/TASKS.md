@@ -371,6 +371,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-513"></a>[FLOW-513](tasks/FLOW-513.md) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
 | <a id="flow-514"></a>[FLOW-514](tasks/FLOW-514.md) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 
+| Id | Title | Type |
+| --- | --- | --- |
+| <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Port the deleted SUMIT and Mercury row suites onto the connection pages | Test |
+
 ## Multi-company and team
 
 | Id | Title | Type |
