@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
  * Per-screen skeletons (FLOW-371), drawn from the States board presets linesLoading, projectsLoading,
  * loansLoading, recurringLoading, profitLoading and detailLoading. Each block pulses (the shared
  * .ui-skeleton-bar rule) and the whole screen says it is loading in one sr-only line. The caller
- * decides when to show one: ScreenState swaps it in after 300ms.
+ * decides when to show one; each caller waits 300ms first (ScreenState's SkeletonSwap, or DelayedSkeleton).
  */
 
 type BarProps = { w: string; h: number; pill?: boolean; className?: string };
