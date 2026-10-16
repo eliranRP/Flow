@@ -92,7 +92,7 @@ const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
 const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
 const DevProjectProfit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectProfit })));
-const DevProjectMonthProfit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectMonthProfit })));
+const DevProjectMonthProfit = /* @__PURE__ */ lazy(() => import("./dev-routes-profit").then((m) => ({ default: m.DevProjectMonthProfit })));
 const DevProjectMonths = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectMonths })));
 const DevProjects = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjects })));
 const DevReview = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevReview })));
