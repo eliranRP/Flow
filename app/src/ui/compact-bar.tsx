@@ -104,13 +104,14 @@ export function CompactBar({ title, figure, label, backTo, size = "list", shown,
       <div className="ui-compact-bar-row">
         {back}
         {/* The page's h1 is still there; this is its echo. */}
-        <span className="ui-compact-title t-btn" aria-hidden="true" data-clip-ok="">
-          {title}
+        {/* A long title is cut with an ellipsis; the figure after it always shows whole. */}
+        <span className="ui-compact-title t-btn" aria-hidden="true">
+          <span className="ui-compact-title-text" data-clip-ok="">{title}</span>
           {figure != null ? (
-            <>
-              {" · "}
+            <span className="ui-compact-figure">
+              {"\u00a0·\u00a0"}
               <bdi dir="ltr">{figure}</bdi>
-            </>
+            </span>
           ) : null}
         </span>
         {actions != null ? <div className="ui-compact-actions">{actions}</div> : null}
