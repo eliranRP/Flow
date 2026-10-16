@@ -104,7 +104,9 @@ export const ProjectCash: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /^רווח ב/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /השקעה והלוואות/ })).toBeInTheDocument();
+    // FLOW-445: the investment summary card replaces the row once a figure is entered.
+    await expect(canvas.getByRole("heading", { name: "השקעה והלוואות" })).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: "לפרטים" })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
   },
 };
