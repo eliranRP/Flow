@@ -140,9 +140,8 @@ export function ChargeMonthBars({ months }: { months: PartyCharges["months"] }) 
   );
 }
 
-/** The sheet's body: the context, the summary box, then the twelve newest charges with their marks. */
+/** The sheet's body, as the board draws it: the context, the summary box, then the twelve newest charges with their marks. */
 export function PartyChargesBody({ data, search = "", context }: { data: PartyCharges; search?: string; context: string }) {
-  const view = partyChangeView(data);
   const currency = data.party?.currency ?? "ILS";
   const usual = data.typical_amount_minor == null ? null : formatAmountText(absAgorot(data.typical_amount_minor), currency, { detail: true });
   const total = data.charges.reduce((sum, charge) => sum + absAgorot(charge.amount_minor), 0n);
@@ -156,9 +155,6 @@ export function PartyChargesBody({ data, search = "", context }: { data: PartyCh
           <bdi dir="ltr">{formatAmountText(total, currency, { detail: true })}</bdi>
         </span>
       </div>
-      {view == null ? null : <ChangeLine view={view} />}
-      <ChargeMonthBars months={data.months} />
-      <h3 className="ui-charges-head">{chargesTitle(data)}</h3>
       <ChargeRows data={data} charges={data.charges} search={search} typical={data.typical_amount_minor} />
     </div>
   );
