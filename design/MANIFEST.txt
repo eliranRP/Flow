@@ -101,8 +101,6 @@ c8e081dec0d2072c634dd9561f650dcd3faabc49dd71148192fc17e8faad51d6  56114  flow-de
 5812c4cd62e13ad65f1f5ec470f04539a4727cd3979e03b323f9241ca7b2d5e0  77580  flow-design-part1.zip  design/screens/09d-onboarding-light.png
 ccc479b1d685055882e26ddfeef40d7c296c259442e2af79a7baa51018f5f519  74109  flow-design-part1.zip  design/screens/09e-onboarding-dark.png
 e29dfac4b04de6ab784b32554d3ffb25c964e39e157dfaf2835b69175c7a48bb  72091  flow-design-part1.zip  design/screens/09e-onboarding-light.png
-0555dc19eacab27d1ef5abc1fccdf3d73498d68bbad2b3961eba7d850aaff794  70904  flow-design-part1.zip  design/screens/10-transaction-detail-dark.png
-9a16769566d6e51be4826e038ae4d34c5182d2206efa7b709504158d744bcaa2  69083  flow-design-part1.zip  design/screens/10-transaction-detail-light.png
 f2a18819cd778745b444c4348c983bceb91eabd9e20295754eed1c6e62544ca4  114765  flow-design-part1.zip  design/screens/11-split-dark.png
 28aa31619536bff9fcb2ccf1a56fd85c4e1b28ebc3f6a2d7d2498a0857287782  111198  flow-design-part1.zip  design/screens/11-split-light.png
 d72aee688b57c5684b74e495260187e4ec857534053ca09d82c3f05a6cccfdab  93145  flow-design-part1.zip  design/screens/12-unpaid-dark.png

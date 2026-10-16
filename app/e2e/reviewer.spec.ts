@@ -364,10 +364,10 @@ test("a refused split save has no retry", async ({ page }) => {
 test("a split expense saves the category on the tap and keeps it after close", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/split-expense");
-  await expect(page.getByText("ליסינג הדרך בע״מ")).toBeVisible();
+  await expect(page.getByText("ליסינג הדרך בע״מ", { exact: true })).toBeVisible();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await expect(page.getByText("01/07/2026")).toBeVisible();
-  await expect(page.getByText("₪3,200")).toBeVisible();
+  await expect(page.locator(".ui-txn-amount").getByText("₪3,200")).toBeVisible();
   // FLOW-320: the category row opens the category picker, and the pick closes it.
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
@@ -383,7 +383,7 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await page.getByRole("button", { name: /^פיצול/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/split$/);
   await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
-  await expect(page.getByText("ליסינג הדרך")).toBeVisible();
+  await expect(page.getByText("ליסינג הדרך").first()).toBeVisible();
 });
 
 test("a split returns to one project and the project totals follow", async ({ page }) => {

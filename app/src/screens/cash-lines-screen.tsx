@@ -193,12 +193,12 @@ function CashLinesBody({
         compactFigure={figureText}
         panel={side === "kept" ? chips : <>{sideSwitch}{chips}</>}
         below={
-          <>
+          <div className="ui-lines-head">
             {side === "kept" ? null : <div className="ui-page-pad">{sideSwitch}</div>}
             {headBlock}
             {currencies}
             {chips}
-          </>
+          </div>
         }
       />
       {rows.length === 0 && allLoaded ? (

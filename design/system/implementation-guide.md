@@ -1028,7 +1028,7 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 | `08-upload-results-*` | Bank report uploaded: results summary | A (✕ close) |
 | `09a…09e-onboarding-*` | Onboarding: Google sign-in, company details, bank report, projects, install and notifications | C |
 | `09-onboarding-*` | Strip showing all onboarding steps (overview only) | none |
-| `10-transaction-detail-*` | Expense detail with source, links and actions | C |
+| `10-transaction-detail` | Expense detail (HTML source for the confirm sheet's underlay; no PNG is rendered) | C |
 | `11-split-*` | Split between projects | C (✕ close) |
 | `12-unpaid-*` | Unpaid invoices | A |
 | `13-notifications-*` | Push notification content on the lock screen (reference, not an app screen) | none |

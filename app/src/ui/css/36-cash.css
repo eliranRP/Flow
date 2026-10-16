@@ -50,10 +50,30 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's
+   below slot is a row for the breakdown's single control, so the lines page wraps its own. */
+.ui-lines-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ui-lines-head .ui-seg {
+  inline-size: 100%;
+}
+
 /* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text. */
 .ui-lines-chips {
   margin-inline: calc(var(--space-4) * -1);
   padding-inline: var(--space-side);
+}
+
+/* A chip keeps its words: the row scrolls sideways instead of shortening them. */
+.ui-lines-chips > * {
+  flex: none;
+  max-width: none;
 }
 
 /* A group: its head sticks under the top of the screen, or under the compact bar when it shows
