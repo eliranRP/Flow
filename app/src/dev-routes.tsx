@@ -48,6 +48,8 @@ import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { LoanSummaryCard } from "./screens/loan-summary-card";
+import { LOAN_SUMMARY_SAMPLE } from "./dev/loan-summary-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devReviewItems = [
@@ -742,5 +744,14 @@ export function DevTransaction() {
       sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
       sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
     />
+  );
+}
+
+/** FLOW-139. The loans list's summary card alone, for the board proof. */
+export function DevLoanSummary() {
+  return (
+    <div className="ui-page-pad">
+      <LoanSummaryCard summary={LOAN_SUMMARY_SAMPLE} currency="USD" />
+    </div>
   );
 }

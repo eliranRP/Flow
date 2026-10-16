@@ -43,6 +43,8 @@ import {
   type LoanPreview,
 } from "./loan-form";
 import { LoanGroupedList, groupLoans, useLoanList, type LoanListRow } from "./loan-list";
+import { LoanSummaryCard } from "./loan-summary-card";
+import { useLoanSummary } from "./loan-summary-entries";
 import { type LoanProjectField, LoanProjectPicker, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
@@ -567,6 +569,8 @@ export function LoanSettingsSection({
   const currency: LoanCurrency | null = companyCurrency
     ?? query.data
     ?? (query.isFetched || companyId == null ? "ILS" : null);
+  // FLOW-139: the summary card reads each loan's outlook, the same figures the loan page shows.
+  const summary = useLoanSummary(sample == null ? companyId : null, currency);
   const save = useWrite<Omit<LoanInsert, "company_id">>({
     failure: (error) => {
       const code = (error as { code?: string }).code;
@@ -668,6 +672,7 @@ export function LoanSettingsSection({
               )}
             />
           ) : null}
+          {summary != null && summary.openCount > 0 && currency != null ? <LoanSummaryCard summary={summary} currency={currency} /> : null}
           {/* A viewer reads the loan's page too, as static rows. */}
           <LoanGroupedList
             rows={rows}
