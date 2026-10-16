@@ -243,7 +243,12 @@ export async function callTool(
     const result = await rpc("list_unpaid", {});
     const rows = result.json;
     if (result.status >= 400 || !Array.isArray(rows)) return fail("refused", READ_REFUSED);
-    return ok(unpaidReport(rows));
+    // FLOW-367: the bar's totals and the sync time, one read beside the rows.
+    const overview = await rpc("unpaid_overview", {});
+    if (overview.status >= 400 || overview.json == null || typeof overview.json !== "object") {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(unpaidReport(rows, overview.json as Record<string, unknown>));
   }
 
   if (name === "get_expected_months") {

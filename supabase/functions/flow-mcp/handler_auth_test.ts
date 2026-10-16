@@ -174,6 +174,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "set_line_pnl",
     "set_lines_pnl",
     "set_invoice_paid",
+    "link_invoice_payment",
+    "dismiss_invoice_match",
     "detach_loan_payment",
     "delete_loan",
     "reorder_loans",
