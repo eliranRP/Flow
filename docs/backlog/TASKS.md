@@ -223,6 +223,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
 | <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
 | <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
+| <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
 
 ## Transactions and app UX
 
