@@ -203,6 +203,39 @@ slice_db() {
   bash scripts/check-db-types.sh
 }
 
+# CI v2: the PR's local check, run in the background after a push. It runs the static, types and tests slices
+# at the same time, then writes the stamp for this exact commit to .git/flow-ci-stamp.md. CI_STAMP_PR=<number>
+# also posts the stamp as a comment on that PR. The e2e, clip-check and board-proof slices join it later.
+slice_ready() {
+  local dir name phases stamp
+  dir="$(mktemp -d)"
+  phases="$dir/phases.txt"
+  for name in static types tests; do
+    (
+      t0="$(date +%s)"
+      if ( set -euo pipefail; "slice_$name" ) >"$dir/$name.log" 2>&1; then r=pass; else r=fail; fi
+      echo "$name $r $(( $(date +%s) - t0 ))" >>"$phases"
+    ) &
+  done
+  wait
+  sort -o "$phases" "$phases"
+  stamp="$(git rev-parse --git-dir)/flow-ci-stamp.md"
+  node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp"
+  cat "$stamp"
+  if [[ -n "${CI_STAMP_PR:-}" ]]; then
+    gh pr comment "$CI_STAMP_PR" --body-file "$stamp"
+  fi
+  if grep -q ' fail ' "$phases"; then
+    for name in static types tests; do
+      if grep -q "^$name fail " "$phases"; then
+        echo "---- local-ci: $name failed ----"
+        cat "$dir/$name.log"
+      fi
+    done
+    exit 1
+  fi
+}
+
 # Runs the slice named by $slice, then exits from the caller. A failing check fails the run (set -e).
 run_part() {
   mode="part $slice"
@@ -225,6 +258,11 @@ run_part() {
       phase "tests: the app unit and Storybook tests this change reaches${shard:+, shard $shard}"
       slice_tests
       echo "local-ci: tests passed${shard:+ for shard $shard}."
+      ;;
+    ready)
+      phase "ready: static, types and tests at the same time, then the stamp"
+      slice_ready
+      echo "local-ci: ready passed; the stamp for $head is in .git/flow-ci-stamp.md."
       ;;
     db)
       phase "db: local Supabase, a fresh database, the flow-mcp smoke, pgTAP and the db types"
