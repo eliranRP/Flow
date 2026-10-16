@@ -24,8 +24,9 @@ create temp table ibm (label text primary key, id uuid);
 grant all on ibm to authenticated, service_role;
 insert into ibm (label, id) select 'co', id from public.companies where name = 'Example Match LLC';
 insert into ibm (label, id) select 'other_co', id from public.companies where name = 'Example Elsewhere LLC';
--- A viewer is only allowed on a demo company (private.company_viewers_guard), so the flag is
--- on for the insert and off again for the rest of the test.
+-- A viewer is only allowed on a demo company (private.company_viewers_guard), and reads through
+-- the viewer path only while the company is demo. The flag is on for the viewer insert and for
+-- the viewer section further down, and off everywhere else.
 update public.companies set is_demo = true where id = (select id from ibm where label = 'co');
 insert into public.company_viewers (user_id, company_id)
 select tests.get_supabase_uid('ibm_viewer'), id from ibm where label = 'co';
@@ -211,6 +212,7 @@ select public.set_invoice_paid(pg_temp.txn('t_inv_c'), false);
 -- 3. Viewers and other companies are refused, with a positive control.
 select tests.clear_authentication();
 reset role;
+update public.companies set is_demo = true where id = (select id from ibm where label = 'co');
 select tests.authenticate_as('ibm_viewer');
 select throws_ok(
   format('select public.link_invoice_payment(%L::uuid, %L::uuid)', pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_4')),
@@ -221,6 +223,7 @@ select throws_ok(
   '42501', 'forbidden', 'a viewer cannot dismiss'
 );
 select is(jsonb_array_length(public.list_unpaid()), 3, 'a viewer reads the same list');
+update public.companies set is_demo = false where id = (select id from ibm where label = 'co');
 select tests.clear_authentication();
 reset role;
 select tests.authenticate_as('ibm_other');
