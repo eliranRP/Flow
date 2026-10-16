@@ -68,6 +68,33 @@
   background: var(--color-bg);
 }
 
+/* FLOW-364: Home's bar, in the colour band: the earlier arrow, the centre button, the later arrow. */
+.ui-compact-bar-band {
+  border-bottom: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  background: var(--color-band);
+  color: var(--color-on-band);
+  box-shadow: var(--shadow-pill);
+  transition: background-color var(--motion-bar) var(--ease-standard);
+}
+
+.ui-compact-bar-band-past {
+  background: var(--color-band-past);
+}
+
+.ui-compact-bar-band-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-2);
+}
+
+.ui-compact-bar-band-row > .ui-compact-bar-centre {
+  flex: 1;
+  min-inline-size: 0;
+}
+
 .ui-compact-bar-gone {
   visibility: hidden;
   transform: translateY(-110%);
