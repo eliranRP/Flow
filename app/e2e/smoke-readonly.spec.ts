@@ -208,7 +208,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);
   if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveCount(0);
-  await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
+  await expect(page.getByText("לא הצלחנו לטעון.")).toHaveCount(0);
 
   const projectResponses = await openList(page, "/projects", ["get_dashboard"], watched.inflight);
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);
@@ -228,7 +228,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   }
   await expect(page.getByRole("button", { name: "פרויקט חדש" })).toHaveCount(0);
   await expect(page.getByText("ואפשר גם לפתוח אחד כאן")).toHaveCount(0);
-  await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
+  await expect(page.getByText("לא הצלחנו לטעון.")).toHaveCount(0);
 
   const reviewResponses = await openList(page, "/review", ["list_review"], watched.inflight);
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);
@@ -250,7 +250,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   await expect(page.getByRole("button", { name: "אישור" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "שינוי" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "דלג" })).toHaveCount(0);
-  await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
+  await expect(page.getByText("לא הצלחנו לטעון.")).toHaveCount(0);
 
   const consoleBeforeSettings = watched.consoleErrors.length;
   const statusCall = waitStatus(page);
@@ -278,7 +278,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const sumitRow = page.locator(".ui-row", { hasText: "SUMIT" }).first();
   await expect(sumitRow.getByText(sumitWord, { exact: true })).toBeVisible();
   await expect(page.getByText("צפייה בלבד · שינויים נעשים על ידי בעל העסק")).toBeVisible();
-  await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
+  await expect(page.getByText("לא הצלחנו לטעון.")).toHaveCount(0);
   const settingsErrors = watched.consoleErrors.slice(consoleBeforeSettings);
   expect(settingsErrors, settingsErrors.join("\n")).toEqual([]);
   const corsFailures = watched.edgeResponses.flatMap((response) => {
