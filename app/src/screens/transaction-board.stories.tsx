@@ -84,3 +84,29 @@ export const Manual: Story = {
     />
   ),
 };
+
+/** The board's Split state: the expense is shared across two projects, so the split row shows both shares. */
+export const Split: Story = {
+  render: () => (
+    <BoardTransactionStory
+      sample={{
+        ...boardTxn,
+        project_id: null,
+        project_name: null,
+        allocations: [
+          { project_id: "p1", project_name: "פרויקט לדוגמה", share_bp: 6000, amount_net: -77_070n },
+          { project_id: "p2", project_name: "וילה רעננה", share_bp: 4000, amount_net: -51_380n },
+        ],
+      }}
+    />
+  ),
+};
+
+/** The board's Scrolled state: past the header, the top bar carries the title and the back button. */
+export const Scrolled: Story = {
+  render: () => <BoardTransactionStory sample={boardTxn} />,
+  play: async () => {
+    window.scrollTo(0, 400);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  },
+};

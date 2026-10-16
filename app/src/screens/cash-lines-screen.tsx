@@ -194,7 +194,7 @@ function CashLinesBody({
         panel={side === "kept" ? chips : <>{sideSwitch}{chips}</>}
         below={
           <div className="ui-lines-head">
-            {side === "kept" ? null : <div className="ui-page-pad">{sideSwitch}</div>}
+            {side === "kept" ? null : sideSwitch}
             {headBlock}
             {currencies}
             {chips}

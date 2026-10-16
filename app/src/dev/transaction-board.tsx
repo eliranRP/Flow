@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { type TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "../screens/transaction-screen";
-import { mailboxCharges } from "../ui/related-charges.sample";
+import { mailboxCharges, steadyCharges } from "../ui/related-charges.sample";
 
 const BOARD_TXN: NonNullable<TransactionDetail> = {
   id: "t-board",
@@ -35,6 +35,39 @@ export function DevTransactionBoard() {
         sample={BOARD_TXN}
         sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      />
+    );
+  }
+  if (params.get("board") === "loan") {
+    return (
+      <TransactionScreen
+        sample={{
+          ...BOARD_TXN,
+          id: "t-loan",
+          description: "Rocket Mortgage",
+          supplier_name: "Rocket Mortgage",
+          project_name: "Maple Ave • דופלקס להשכרה",
+          category_name: "תשלומי הלוואה",
+          amount_gross: -395700n,
+          amount_net: -395700n,
+          review_status: "approved",
+          review_id: null,
+          paid: true,
+        }}
+        sampleProjects={[{ id: "p1", name: "Maple Ave • דופלקס להשכרה" }]}
+        sampleCategories={[{ id: "c1", name: "תשלומי הלוואה" }]}
+        sampleRecurring={{
+          transaction_id: "t-loan",
+          party: { direction: "expense", id: "s-loan", name: "Rocket Mortgage", currency: "USD" },
+          recurring: true,
+          override: null,
+          detected: true,
+          typical_day: 7,
+          typical_amount_minor: 395700n,
+          pace: "month",
+          detected_pace: "month",
+        }}
+        sampleCharges={steadyCharges}
       />
     );
   }

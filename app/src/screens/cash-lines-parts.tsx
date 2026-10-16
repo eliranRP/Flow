@@ -107,13 +107,13 @@ export function CashLinesMore({ busy, onMore }: { busy: boolean; onMore: () => v
 export function LinesTotal({ side, currency, total }: { side: CashListSide; currency: string; total: bigint | null }) {
   if (total == null) {
     return (
-      <p className="ui-breakdown-total ui-page-pad">
+      <p className="ui-breakdown-total">
         <Skeleton width="md" />
       </p>
     );
   }
   return (
-    <p className="ui-breakdown-total ui-page-pad">
+    <p className="ui-breakdown-total">
       <span className="ui-breakdown-total-line">
         <Amount agorot={total} currency={currency} size="display" income={side === "in"} />
       </span>
@@ -132,5 +132,5 @@ export function LinesCount({
   const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
   if (summary.pending > 0) parts.push(`${String(summary.pending)} ממתינות לאישור`);
   if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
-  return <p className="t-line2 ui-lines-count ui-page-pad">{parts.join(" · ")}</p>;
+  return <p className="t-line2 ui-lines-count">{parts.join(" · ")}</p>;
 }
