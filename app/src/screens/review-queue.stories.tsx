@@ -24,7 +24,7 @@ const tall = { parameters: { viewport: { defaultViewport: "flow393" } } };
 /** FLOW-327: the card with its bar pinned on the tab bar. */
 function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: ReviewRow; viewer?: boolean }) {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={1} viewer={viewer}>
+    <StoryRoute entry="/review" tabs viewer={viewer}>
       <ReviewQueue rows={[row]} search="" sample />
     </StoryRoute>
   );
@@ -43,7 +43,7 @@ export const ReviewBarViewer375: Story = { ...se, render: () => <ReviewQueueStor
 /** FLOW-327 r1: a project's queue has Back; its header stays on one line so the bar clears the tab bar. */
 function ReviewFilteredBarStory({ row }: { row: ReviewRow }) {
   return (
-    <StoryRoute entry="/review?project=a" tabs reviewCount={4}>
+    <StoryRoute entry="/review?project=a" tabs>
       <ReviewQueue rows={[row]} search="?project=a" sample backTo="/projects/a" homeTo="/projects/a" homeLabel="חזרה לפרויקט" />
     </StoryRoute>
   );
@@ -74,7 +74,7 @@ const loudSpike: ReviewFlagsData = {
 function ReviewQueueFlagStory({ banner = false }: { banner?: boolean }) {
   const row = banner ? sampleReview : flagRow;
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4}>
+    <StoryRoute entry="/review" tabs>
       <SeedFlags ids={[row.transaction_id]} flags={{ [row.transaction_id]: loudSpike[flagRow.transaction_id] ?? [] }} />
       <ReviewQueue rows={[row]} search="" sample />
     </StoryRoute>
@@ -120,7 +120,7 @@ const loudDuplicate: ReviewFlagsData = {
 };
 function ReviewJevFitStory({ jev = jevFilled, flags = quietSpike }: { jev?: JevQueueData; flags?: ReviewFlagsData }) {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4}>
+    <StoryRoute entry="/review" tabs>
       <SeedFlags ids={[jevRow.transaction_id]} flags={flags} />
       <ReviewQueue rows={[jevRow]} search="" sample sampleJev={jev} />
     </StoryRoute>
@@ -135,7 +135,7 @@ const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id
 function ReviewQueueSkipStory() {
   const [rows, setRows] = useState(skipRows);
   return (
-    <StoryRoute entry="/review" tabs reviewCount={rows.length}>
+    <StoryRoute entry="/review" tabs>
       <ReviewQueue
         rows={rows}
         search=""
@@ -167,7 +167,7 @@ const shortPhone = { parameters: { viewport: { defaultViewport: "flow320-short" 
 const fitRow: ReviewRow = { ...jevRow, supplier_name: "חומרי בניין ואינסטלציה לדוגמה בע״מ" };
 function ReviewFitStory() {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4}>
+    <StoryRoute entry="/review" tabs>
       <ReviewQueue rows={[fitRow]} search="" sample sampleJev={jevSuggested} />
     </StoryRoute>
   );
@@ -181,7 +181,7 @@ const countRows: ReviewRow[] = Array.from({ length: 12 }, (_, n) => ({
 function ReviewCounterStory() {
   const [rows, setRows] = useState(countRows);
   return (
-    <StoryRoute entry="/review" tabs reviewCount={rows.length}>
+    <StoryRoute entry="/review" tabs>
       <ReviewQueue
         rows={rows}
         search=""
@@ -224,7 +224,7 @@ const skippedSample: SkippedReviewRow[] = [
 ];
 function ReviewAllSkippedStory({ rows, skipped }: { rows: ReviewRow[]; skipped: SkippedReviewRow[] }) {
   return (
-    <StoryRoute entry="/review/all" tabs reviewCount={rows.length}>
+    <StoryRoute entry="/review/all" tabs>
       <SeedSkipped rows={skipped} />
       <ReviewAllList backTo="/review" search="" rows={rows} />
     </StoryRoute>

@@ -207,7 +207,7 @@ describe("auth guard when Supabase is configured", () => {
       emit("SIGNED_IN", session);
     });
     await settle();
-    await headingShows("כאן יופיע התזרים של העסק");
+    await headingShows("חברו את הבנק");
     expect(screen.queryByRole("heading", { name: "לאישור" })).not.toBeInTheDocument();
   });
 });

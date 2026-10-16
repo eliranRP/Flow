@@ -73,7 +73,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
           <Toast action="ביטול" onAction={() => undefined}>{toast}</Toast>
         </div>
       ) : null}
-      <TabBar reviewCount={4} />
+      <TabBar />
     </div>
   );
 }

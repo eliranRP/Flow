@@ -9,7 +9,6 @@ import { TabBar } from "./tab-bar";
 export function StoryRoute({
   entry,
   tabs = false,
-  reviewCount = 0,
   viewer = false,
   state,
   children,
@@ -18,7 +17,6 @@ export function StoryRoute({
   /** Location state, such as the list a transaction card was opened from. */
   state?: unknown;
   tabs?: boolean;
-  reviewCount?: number;
   /** Hides write controls the way a viewer session does. */
   viewer?: boolean;
   children: ReactNode;
@@ -39,7 +37,7 @@ export function StoryRoute({
               <div className={tabs ? "below-tabbar flex min-h-0 min-w-0 flex-1 flex-col" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
                 {viewer ? <ViewerPreview>{children}</ViewerPreview> : children}
               </div>
-              {tabs ? <TabBar reviewCount={reviewCount} allowAdd={!viewer} /> : null}
+              {tabs ? <TabBar /> : null}
             </div>
           </BooksProvider>
         </SessionProviders>

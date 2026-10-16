@@ -1,6 +1,7 @@
 import type { Dashboard } from "@flow/shared";
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
+import { cashMonthKey } from "../cash";
 import { defaultPeriod } from "../period";
 import { attentionRows, CashHome, HomeBooks } from "../screens/HomeScreen";
 import { CompanySwitcher } from "../screens/company-switcher";
@@ -100,10 +101,13 @@ export function DevCompany() {
       <SampleTeam key={state} options={options}>
         <CashHome
           data={sampleCashMonths()}
+          monthKey={cashMonthKey(sampleCashMonths().months[0]?.month ?? "")}
+          currentKey={cashMonthKey(sampleCashMonths().months[0]?.month ?? "")}
           previewing={false}
           search=""
           attention={attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, missingCount: 0, search: "" })}
           company={<CompanySwitcher />}
+          onStepMonth={() => undefined}
         />
       </SampleTeam>
     );

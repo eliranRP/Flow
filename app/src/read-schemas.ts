@@ -7,6 +7,7 @@ export {
   breakdownSchema,
   cashLinesSchema,
   cashMonthsSchema,
+  cashToDaySchema,
   cashYearsSchema,
   categoryRowSchema,
   dashboardSchema,

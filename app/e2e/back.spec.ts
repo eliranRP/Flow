@@ -118,12 +118,12 @@ test("the assistant sheet closes on browser back and on its own close", async ({
 
 test("the add sheet closes back to the screen that opened it", async ({ page }) => {
   await page.goto("/?preview=1");
-  await page.getByRole("link", { name: "הוספה" }).click();
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await page.getByRole("link", { name: "הוספה" }).click();
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
