@@ -190,6 +190,10 @@
   --band-pad-bottom: var(--radius-band);
   --band-label-gap: 2px;
   --tab-slot: 64px;
+  --size-seg: 40px;
+  --radius-seg-btn: 10px;
+  --radius-toast: 14px;
+  --swipe-action: 120px;
   --tab-icon-gap: 3px;
   --empty-icon: 64px;
   --empty-line: 300px;

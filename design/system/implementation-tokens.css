@@ -184,8 +184,9 @@
   --motion-spin: 800ms;
   --rise-page: 8px;
   --rise-push: 24px;
+  --rise-toast: 12px;
   --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */
-  --toast-duration: 2500ms; /* unchanged here; FLOW-363 (3/4) moves the toast */
+  --toast-duration: 3000ms;
   --toast-duration-error: 4000ms;
 
   /* ---- colour: light (default) ---- */
@@ -383,6 +384,7 @@
     --motion-spin: 0ms;
     --rise-page: 0px;
     --rise-push: 0px;
+    --rise-toast: 0px;
     --dur-shimmer: 0ms;
   }
 }

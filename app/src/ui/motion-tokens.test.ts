@@ -54,6 +54,7 @@ describe("motion tokens in implementation-tokens.css", () => {
   it("sets the rise distances to 0px and the shimmer to 0ms under reduced motion", () => {
     expect(reducedTokens.get("--rise-page")).toBe("0px");
     expect(reducedTokens.get("--rise-push")).toBe("0px");
+    expect(reducedTokens.get("--rise-toast")).toBe("0px");
     expect(reducedTokens.get("--dur-shimmer")).toBe("0ms");
   });
 
@@ -80,8 +81,9 @@ describe("motion tokens in implementation-tokens.css", () => {
       "--motion-spin": "800ms",
       "--rise-page": "8px",
       "--rise-push": "24px",
+      "--rise-toast": "12px",
       "--dur-shimmer": "1400ms",
-      "--toast-duration": "2500ms",
+      "--toast-duration": "3000ms",
       "--toast-duration-error": "4000ms",
     };
     for (const [name, value] of Object.entries(expected)) {

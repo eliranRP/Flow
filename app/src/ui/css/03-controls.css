@@ -2,8 +2,8 @@
   display: flex;
   max-width: 100%;
   min-width: 0;
-  gap: var(--seg-gap);
-  padding: var(--seg-gap);
+  gap: var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-segment);
   background: var(--color-tint);
 }
