@@ -29,46 +29,31 @@ import { preloadScreens, preloadSheet, screenLoaders } from "./screen-loaders";
 import { ScreenSuspense } from "./screen-suspense";
 import { PrefetchProjects } from "./prefetch";
 import { SignInScreen } from "./screens/SignInScreen";
+import { AddForm, AddRoute } from "./routes/add";
+import { LoanRoutes } from "./routes/loans";
+import { ProjectRoutes } from "./routes/projects";
+import { SearchRoute } from "./routes/search";
+import { SetupRoutes } from "./routes/setup";
+import { SettingsRoutes } from "./routes/settings";
+import { UnpaidRoute } from "./routes/unpaid";
 
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
-const AddForm = lazy(() => screenLoaders.addForm().then((m) => ({ default: m.AddForm })));
-const OnboardingScreen = lazy(() => screenLoaders.onboarding().then((m) => ({ default: m.OnboardingScreen })));
-const ProjectsScreen = lazy(() => screenLoaders.projects().then((m) => ({ default: m.ProjectsScreen })));
-const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) => ({ default: m.ProjectDetailScreen })));
-const ProjectCashMonthScreen = lazy(() => screenLoaders.projectCash().then((m) => ({ default: m.ProjectCashMonthScreen })));
-const ProjectCashLinesScreen = lazy(() => screenLoaders.projectCash().then((m) => ({ default: m.ProjectCashLinesScreen })));
-const ProjectCashHistoryScreen = lazy(() => screenLoaders.projectCashHistory().then((m) => ({ default: m.ProjectCashHistoryScreen })));
-const ProjectCashYearScreen = lazy(() => screenLoaders.projectCashHistory().then((m) => ({ default: m.ProjectCashYearScreen })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
-const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
-const UnpaidScreen = lazy(() => screenLoaders.unpaid().then((m) => ({ default: m.UnpaidScreen })));
 const TransactionScreen = lazy(() => screenLoaders.transaction().then((m) => ({ default: m.TransactionScreen })));
 const SplitScreen = lazy(() => screenLoaders.split().then((m) => ({ default: m.SplitScreen })));
-const SettingsScreen = lazy(() => screenLoaders.settings().then((m) => ({ default: m.SettingsScreen })));
-const LoansScreen = lazy(() => screenLoaders.settings().then((m) => ({ default: m.LoansScreen })));
-const ConnectionsScreen = lazy(() => screenLoaders.connections().then((m) => ({ default: m.ConnectionsScreen })));
-const NotificationsScreen = lazy(() => screenLoaders.notifications().then((m) => ({ default: m.NotificationsScreen })));
-const CategoriesScreen = lazy(() => screenLoaders.categories().then((m) => ({ default: m.CategoriesScreen })));
 const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
 const CashLinesScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashLinesScreen })));
 const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
-const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => ({ default: m.ProfitMonthsScreen })));
-const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
-const SearchScreen = lazy(() => screenLoaders.search().then((m) => ({ default: m.SearchScreen })));
 const MissingBillsScreen = lazy(() => screenLoaders.missingBills().then((m) => ({ default: m.MissingBillsScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
-const LoanDetailScreen = lazy(() => screenLoaders.loanDetail().then((m) => ({ default: m.LoanDetailScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
 const InstallScreen = lazy(() => screenLoaders.install().then((m) => ({ default: m.InstallScreen })));
-const TeamScreen = lazy(() => screenLoaders.team().then((m) => ({ default: m.TeamScreen })));
 const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default: m.InvitesScreen })));
-const SetupIndex = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupIndex })));
-const SetupStepScreen = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupStepScreen })));
 
 /**
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops
@@ -269,11 +254,9 @@ function AppRoutes() {
             ) : null}
             <Route element={<RequireAuth />}>
               <Route element={<FullScreen />}>
-                <Route path="onboarding" element={<OnboardingScreen />} />
+                {SetupRoutes()}
                 <Route path="invites" element={<InvitesScreen />} />
-                <Route path="setup" element={<SetupIndex />} />
-                <Route path="setup/:step" element={<SetupStepScreen />} />
-                <Route path="search" element={<SearchScreen />} />
+                {SearchRoute()}
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />
                 <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
                 <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
@@ -282,7 +265,7 @@ function AppRoutes() {
               <Route element={<Shell />}>
                 <Route element={<HomeWithSheet />}>
                   <Route index element={null} />
-                  <Route path="add" element={<AddForm />} />
+                  {AddRoute()}
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
                 <Route path="profit" element={<ProfitScreen />} />
@@ -291,24 +274,7 @@ function AppRoutes() {
                 <Route path="cash/year/:year" element={<CashYearScreen />} />
                 <Route path="cash/:month" element={<CashMonthScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
-                <Route path="projects" element={<ProjectsScreen />} />
-                {/* FLOW-406 (proj-b-2): a project group's page. */}
-                <Route path="projects/groups/:groupId" element={<ProjectGroupScreen />} />
-                <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
-                <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
-                {/* FLOW-340 C: the screens the project page's rows open. */}
-                {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
-                <Route path="projects/:projectId/profit" element={<ProjectDetailScreen section="profit" />} />
-                {/* The project page's "לכל החודשים": its years, a year its months (Home's FLOW-417). */}
-                <Route path="projects/:projectId/cash/history" element={<ProjectCashHistoryScreen />} />
-                <Route path="projects/:projectId/cash/year/:year" element={<ProjectCashYearScreen />} />
-                <Route path="projects/:projectId/cash/:month" element={<ProjectCashMonthScreen />} />
-                <Route path="projects/:projectId/cash/:month/:side/:currency" element={<ProjectCashLinesScreen />} />
-                <Route path="projects/:projectId/expenses" element={<ProjectDetailScreen section="expenses" />} />
-                <Route path="projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
-                <Route path="projects/:projectId/loans" element={<ProjectDetailScreen section="loans" />} />
-                <Route path="projects/:projectId/transactions" element={<ProjectDetailScreen section="transactions" />} />
-                <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
+                {ProjectRoutes()}
                 {/* FLOW-334: on the dev server ?preview=1 shows sample figures here; a build keeps the screen. */}
                 <Route path="flow/:direction" element={import.meta.env.DEV ? <DevBreakdownGate /> : <BreakdownScreen />} />
                 <Route path="flow/:direction/excluded/:currency" element={import.meta.env.DEV ? <DevBreakdownLinesGate excluded /> : <BreakdownLinesScreen excluded />} />
@@ -319,22 +285,10 @@ function AppRoutes() {
                   <Route path="review/change" element={<ChangeForm />} />
                 </Route>
                 <Route path="review/filed" element={<FiledTodayScreen />} />
-                <Route path="unpaid" element={<UnpaidScreen />} />
+                {UnpaidRoute()}
                 <Route path="missing-bills" element={<MissingBillsScreen />} />
-                {/* FLOW-322 removed the placeholder; FLOW-502's real page is under Settings, so an old link lands there. */}
-                <Route path="notifications" element={<Navigate to="/settings/notifications" replace />} />
-                <Route path="settings" element={<SettingsScreen />} />
-                <Route path="settings/categories" element={<CategoriesScreen />} />
-                <Route path="settings/categories/:parentId" element={<CategoriesScreen />} />
-                <Route path="settings/connections" element={<ConnectionsScreen />} />
-                <Route path="settings/loans" element={<LoansScreen />} />
-                <Route path="settings/notifications" element={<NotificationsScreen />} />
-                <Route path="settings/team" element={<TeamScreen />} />
-                {/* FLOW-106 B / FLOW-110: one loan's page. */}
-                <Route path="settings/loans/:loanId" element={<LoanDetailScreen />} />
-                <Route path="settings/loans/:loanId/details" element={<LoanDetailScreen view="details" />} />
-                <Route path="settings/loans/:loanId/future" element={<LoanDetailScreen view="future" />} />
-                <Route path="settings/loans/:loanId/future/:period" element={<LoanDetailScreen view="period" />} />
+                {SettingsRoutes()}
+                {LoanRoutes()}
               </Route>
             </Route>
         </Routes>
