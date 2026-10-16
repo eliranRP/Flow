@@ -18,7 +18,7 @@ const SUM = (
   <span className="ui-month-line">
     <span>
       <span className="sr-only">, הכנסות </span>
-      <bdi dir="ltr" className="ui-num ui-income">+₪1,250<span className="ui-num-cents">.00</span></bdi>
+      <bdi dir="ltr" className="ui-num ui-income">+₪1,250<span className="ui-num-cents">.50</span></bdi>
     </span>
   </span>
 );
