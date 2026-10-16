@@ -65,3 +65,67 @@
 .ui-loan-parts-retry {
   margin-block-start: var(--space-2);
 }
+
+/* FLOW-139: the loans list's summary card and its parts bar. */
+.ui-loan-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-card-inset);
+  border-radius: var(--radius-card);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-loan-summary-label {
+  margin: 0;
+  font-size: var(--type-meta-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-summary-total {
+  font-size: var(--type-total-size);
+  font-weight: var(--type-total-weight);
+  line-height: var(--type-total-line);
+}
+
+.ui-loan-summary-monthly {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-block-start: var(--space-2);
+  border-block-start: var(--stroke-hairline) solid var(--color-line);
+}
+
+.ui-loan-summary-caption {
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+  color: var(--color-text-muted);
+}
+
+/* FLOW-139: the card's legend rows sit 30px apart, with no gap of their own. */
+.ui-loan-summary .ui-parts-legend {
+  gap: 0;
+}
+
+.ui-loan-summary .ui-parts-legend-item {
+  min-height: var(--loan-legend-pitch);
+}
+
+/* FLOW-139: the card's escrow part is the board's lavender tint in light (#DAD3E6, the outline token) and the track tone in dark. */
+.ui-loan-summary .ui-parts-part[data-tone="muted"],
+.ui-loan-summary .ui-parts-dot[data-tone="muted"] {
+  background: var(--color-track);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-part[data-tone="muted"],
+  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
+    background: var(--color-outline-secondary);
+  }
+}
+
+:root[data-theme="light"] .ui-loan-summary .ui-parts-part[data-tone="muted"],
+:root[data-theme="light"] .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
+  background: var(--color-outline-secondary);
+}

@@ -1,0 +1,1 @@
+Loans: the loans list opens with a summary card. It shows the debt today, this month's parts (principal, interest, escrow), and the next payment with the next twelve months. The figures come from each loan's own payment schedule, in the company's currency.

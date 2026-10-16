@@ -564,3 +564,12 @@ export function MailIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <Svg stroke={1.8} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 14" />
+    </Svg>
+  );
+}

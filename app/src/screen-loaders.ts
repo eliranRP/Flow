@@ -17,6 +17,7 @@ export const screenLoaders = {
   filedToday: () => import("./screens/filed-today-screen"),
   projectCategory: () => import("./screens/project-category-screen"),
   unpaid: () => import("./screens/unpaid-screen"),
+  invoice: () => import("./screens/invoice-screen"),
   transaction: () => import("./screens/transaction-screen"),
   split: () => import("./screens/split-screen"),
   settings: () => import("./screens/settings-screen"),
