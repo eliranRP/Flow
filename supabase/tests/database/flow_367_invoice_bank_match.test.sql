@@ -223,9 +223,9 @@ select throws_ok(
   '42501', 'forbidden', 'a viewer cannot dismiss'
 );
 select is(jsonb_array_length(public.list_unpaid()), 3, 'a viewer reads the same list');
-update public.companies set is_demo = false where id = (select id from ibm where label = 'co');
 select tests.clear_authentication();
 reset role;
+update public.companies set is_demo = false where id = (select id from ibm where label = 'co');
 select tests.authenticate_as('ibm_other');
 select throws_ok(
   format('select public.link_invoice_payment(%L::uuid, %L::uuid)', pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_4')),
