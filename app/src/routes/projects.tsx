@@ -10,6 +10,7 @@ const ProjectCashHistoryScreen = lazy(() => screenLoaders.projectCashHistory().t
 const ProjectCashYearScreen = lazy(() => screenLoaders.projectCashHistory().then((m) => ({ default: m.ProjectCashYearScreen })));
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => ({ default: m.ProfitMonthsScreen })));
+const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
 
 /** The projects tab: the list, a group, and a project's pages (its cash, profit, expenses, loans, transactions). */
@@ -23,7 +24,8 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/months" element={<ProfitMonthsScreen />} />
       {/* FLOW-340 C: the screens the project page's rows open. */}
       {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
-      <Route path="projects/:projectId/profit" element={<ProjectDetailScreen section="profit" />} />
+      <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
+      <Route path="projects/:projectId/profit/:month" element={<ProjectDetailScreen section="profit" />} />
       {/* The project page's "לכל החודשים": its years, a year its months (Home's FLOW-417). */}
       <Route path="projects/:projectId/cash/history" element={<ProjectCashHistoryScreen />} />
       <Route path="projects/:projectId/cash/year/:year" element={<ProjectCashYearScreen />} />

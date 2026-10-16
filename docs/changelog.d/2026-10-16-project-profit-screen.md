@@ -1,0 +1,1 @@
+The project's profit page follows the board: the profit since the project's first month, a card with income, counted expenses, the project's share of general expenses and the profit after them, and one row per month, newest first. A month row still opens the month's profit page.
