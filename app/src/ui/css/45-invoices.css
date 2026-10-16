@@ -1,0 +1,344 @@
+/* FLOW-367: the open invoices list, its summary card and the invoice page. Every colour is a token. */
+
+.ui-inv-page,
+.ui-inv-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+}
+
+/* Summary card: the total to collect, the paid and open bar, and the over-30-days line. */
+.ui-inv-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+}
+
+.ui-inv-summary > .t-label,
+.ui-inv-summary > .t-hint {
+  margin: 0;
+}
+
+.ui-inv-total {
+  margin: 0;
+  font-size: var(--type-total-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-total-line);
+  color: var(--color-income);
+}
+
+.ui-inv-bar-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-start: var(--space-1);
+}
+
+/* The board sets the two bar labels on one line, paid at the start and open at the end. */
+.ui-inv-bar-block .ui-parts-legend {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.ui-inv-bar-block .t-caption {
+  margin: 0;
+}
+
+.ui-inv-overdue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-inv-overdue bdi {
+  font-weight: var(--type-chip-weight);
+}
+
+.ui-inv-dot {
+  display: inline-block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.ui-inv-dot[data-tone="signal"] {
+  background: var(--color-signal-soft);
+}
+
+/* The sort row and the refresh text button. */
+.ui-inv-sortrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 36px;
+}
+
+.ui-inv-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
+  cursor: pointer;
+}
+
+.ui-inv-refresh:disabled {
+  cursor: default;
+}
+
+/* The list: one card per invoice, oldest first. */
+.ui-inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-inv-item {
+  padding: 0;
+}
+
+
+
+
+
+.ui-inv-age {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.ui-inv-age[data-over="true"] {
+  color: var(--color-signal-soft);
+}
+
+.ui-inv-marked {
+  opacity: 0.6;
+}
+
+.ui-inv-action-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 36px;
+  margin-inline-start: calc(var(--space-10) + var(--space-3));
+}
+
+.ui-inv-text-action,
+.ui-inv-match-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-chip-weight);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* The invoice page. */
+.ui-inv-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ui-inv-head > * {
+  margin: 0;
+}
+
+.ui-inv-chip {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-field-btn);
+  font-size: var(--type-micro-size);
+  font-weight: var(--type-chip-weight);
+  color: var(--color-text-secondary);
+}
+
+.ui-inv-chip[data-over="true"] {
+  color: var(--color-signal-soft);
+}
+
+.ui-inv-chip[data-marked="true"] {
+  background: var(--color-raised);
+}
+
+.ui-inv-customer {
+  font-size: var(--type-name-size);
+  font-weight: var(--type-name-weight);
+  line-height: var(--type-card-line);
+}
+
+.ui-inv-match {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1.5px solid var(--color-tint-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-inv-match-title {
+  margin: 0;
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
+}
+
+.ui-inv-match-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-inv-match-amount {
+  font-size: var(--type-body-size);
+}
+
+.ui-inv-match-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  text-align: end;
+}
+
+.ui-inv-raw {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--type-micro-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-inv-match-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ui-inv-match-yes {
+  flex: 2;
+  min-height: 48px;
+  border-radius: var(--radius-sheet);
+}
+
+.ui-inv-match-no {
+  flex: 1;
+  min-height: 48px;
+  border: 1.5px solid var(--color-tint-strong);
+  border-radius: var(--radius-sheet);
+  background: transparent;
+}
+
+.ui-inv-facts {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-inv-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 56px;
+  padding: var(--space-3) var(--space-inset-row);
+}
+
+.ui-inv-fact + .ui-inv-fact {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-inv-fact-value {
+  font-weight: var(--type-chip-weight);
+}
+
+.ui-inv-fact-value[data-over="true"] {
+  color: var(--color-signal-soft);
+}
+
+.ui-inv-fact-note {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-inv-doc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 76px;
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-inv-doc-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-inv-thumb {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 44px;
+  height: 56px;
+  padding: 0 var(--space-2);
+  box-sizing: border-box;
+  border-radius: var(--radius-field-btn);
+  background: var(--color-raised);
+}
+
+.ui-inv-thumb > span {
+  display: block;
+  height: 2px;
+  border-radius: var(--radius-block);
+  background: var(--color-line);
+}
+
+.ui-inv-thumb > span:first-child {
+  width: 60%;
+  background: var(--color-text-muted);
+}
+
+.ui-inv-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-inv-mark-note {
+  margin: 0;
+  max-width: 300px;
+  text-align: center;
+  line-height: var(--type-body-line);
+}

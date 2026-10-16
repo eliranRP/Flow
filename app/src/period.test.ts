@@ -122,7 +122,7 @@ describe("period in the URL", () => {
 describe("dates", () => {
   it("keeps the year when the row is outside the current year", () => {
     expect(formatDayMonth("2026-09-21", new Date("2026-09-28T12:00:00Z"))).toBe("21/09");
-    expect(formatDayMonth("2025-03-01", new Date("2026-09-28T12:00:00Z"))).toBe("01/03/2025");
+    expect(formatDayMonth("2025-03-01", new Date("2026-09-28T12:00:00Z"))).toBe("01/03/25");
   });
 
   it("uses the singular day label for a one-day range", () => {

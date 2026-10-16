@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { KeptOutIcon } from "./icons";
 
 /**
@@ -16,4 +17,19 @@ export function KeptOutTag({ label }: { label: string }) {
 /** The row icon for a line's source: Mercury is a bank line; SUMIT, manual and photo lines are documents. */
 export function rowSource(source: string | null | undefined): "bank" | "invoice" {
   return source === "mercury" ? "bank" : "invoice";
+}
+
+/**
+ * FLOW-366: a row's tag line. "ממתין לאישור" while the line has an open review; "<reason> · לא נספר ברווח"
+ * when the line is out of profit. Both join with " · ", pending first. Null when neither applies.
+ */
+export function lineTagText({ pending, inPnl, reason }: { pending: boolean; inPnl: boolean; reason: string | null }): ReactNode {
+  if (!pending && inPnl) return null;
+  return (
+    <>
+      {pending ? <span className="ui-tag-pending">ממתין לאישור</span> : null}
+      {pending && !inPnl ? " · " : null}
+      {inPnl ? null : <span className="ui-tag-aside">{[reason, "לא נספר ברווח"].filter((part) => part != null && part !== "").join(" · ")}</span>}
+    </>
+  );
 }

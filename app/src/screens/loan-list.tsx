@@ -8,6 +8,7 @@ import { List, ListRow } from "../ui/list-row";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError } from "../use-write";
 import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
+import { LOAN_DETAIL_COLUMNS, type LoanDetailDbRow } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
 import type { LoanBalanceRow } from "./loan-match";
 import { readLoanBalances, readProjectNames } from "./loan-reads";
@@ -159,39 +160,51 @@ export function LoanGroupedList({
   );
 }
 
+/** The loans of a company: the list's rows (alphabetical) and each loan's full detail for the summary card. */
+export type LoanListData = {
+  rows: LoanListRow[];
+  /** Each loan's row and its balance, mapped to a LoanDetail by the summary card. */
+  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null }>;
+};
+
+/** One read, shared by the list and the summary card through the same query key. */
+export async function readLoanList(companyId: string | null): Promise<LoanListData> {
+  const supabase = getSupabase();
+  if (!supabase || companyId == null) return { rows: [], loans: [] };
+  const loans = await supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("company_id", companyId).order("name");
+  assertNoError(loans);
+  const byLoan = await readLoanBalances(supabase, companyId);
+  const projectNames = await readProjectNames(supabase, loans.data ?? []);
+  const rows = sortLoans((loans.data ?? []).map((loan) => {
+    const balance = byLoan.get(loan.id);
+    return {
+      id: loan.id,
+      name: loan.name,
+      currency: balance?.currency ?? loan.currency,
+      // A balance row missing from the read: nothing counted against it, so the principal is left.
+      balanceMinor: BigInt(balance?.balance_minor ?? loan.principal_minor),
+      flaggedParts: balance?.flagged_parts ?? 0,
+      projectId: loan.project_id,
+      projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),
+      kind: loan.kind,
+      status: loan.status,
+      closedOn: loan.closed_on,
+    };
+  }));
+  const detailRows = (loans.data ?? []).map((row) => {
+    const balance = byLoan.get(row.id);
+    return { row, balance: balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? row.principal_minor), flaggedParts: balance.flagged_parts ?? 0 } };
+  });
+  return { rows, loans: detailRows };
+}
+
 /** The loans with their balances, kind and status, alphabetical. */
 export function useLoanList(companyId: string | null) {
   return useQuery({
     queryKey: ["loans", companyId, "list"],
     enabled: companyId != null,
     retry: false,
-    queryFn: async (): Promise<LoanListRow[]> => {
-      const supabase = getSupabase();
-      if (!supabase || companyId == null) return [];
-      const loans = await supabase
-        .from("loans")
-        .select("id, name, currency, project_id, kind, status, closed_on, principal_minor")
-        .eq("company_id", companyId)
-        .order("name");
-      assertNoError(loans);
-      const byLoan = await readLoanBalances(supabase, companyId);
-      const projectNames = await readProjectNames(supabase, loans.data ?? []);
-      return sortLoans((loans.data ?? []).map((loan) => {
-        const balance = byLoan.get(loan.id);
-        return {
-          id: loan.id,
-          name: loan.name,
-          currency: balance?.currency ?? loan.currency,
-          // A balance row missing from the read: nothing counted against it, so the principal is left.
-          balanceMinor: BigInt(balance?.balance_minor ?? loan.principal_minor),
-          flaggedParts: balance?.flagged_parts ?? 0,
-          projectId: loan.project_id,
-          projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),
-          kind: loan.kind,
-          status: loan.status,
-          closedOn: loan.closed_on,
-        };
-      }));
-    },
+    queryFn: () => readLoanList(companyId),
+    select: (data) => data.rows,
   });
 }
