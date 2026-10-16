@@ -22,6 +22,7 @@ export {
   recurringThisMonthSchema,
   projectCategorySchema,
   projectDetailSchema,
+  projectsCashMonthSchema,
   projectWaitingSchema,
   reviewRowSchema,
   searchPageSchema,
