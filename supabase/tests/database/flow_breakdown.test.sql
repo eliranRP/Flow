@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(63);
+select plan(64);
 
 do $users$
 begin
