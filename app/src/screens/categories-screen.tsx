@@ -12,8 +12,7 @@ import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
-import { ChevronDownIcon, KeptOutIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
-import { KeptOutTag } from "../ui/line-marks";
+import { ChevronDownIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -23,7 +22,7 @@ import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
-import { CategoryMenuSheet } from "./category-sheet";
+import { CategoryMenuSheet, countsAsRehab } from "./category-sheet";
 import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns, type LoanLine } from "./category-loan-use";
 import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
@@ -55,6 +54,16 @@ function rowLines(category: ListedCategory, parent: boolean): number | undefined
 
 function countLine(count: number): string {
   return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
+}
+
+/** FLOW-513 (board SettingsCategories): the row's meta line, lines then sub-categories then the P&L word. */
+function categoryMeta(category: ListedCategory, lines: number | undefined, subCount: number | undefined): string | undefined {
+  const parts: string[] = [];
+  if (lines != null) parts.push(countLine(lines));
+  if (subCount != null) parts.push(`${String(subCount)} תתי־קטגוריות`);
+  if (category.excluded_from_pnl === true) parts.push("לא נספרת ברווח");
+  else if (countsAsRehab(category)) parts.push("נספרת בשיפוץ");
+  return parts.length === 0 ? undefined : parts.join(" • ");
 }
 
 /**
@@ -93,12 +102,9 @@ function CategoryLine({
       href={href}
       title={category.name}
       muted={muted}
-      chevron={subCount != null}
-      // FLOW-356: one count column. A parent counts its own and its sub-categories' lines, and every
-      // row keeps the chevron's space, so the counts line up.
-      chevronSpace
-      meta={lines == null ? undefined : countLine(lines)}
-      tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
+      icon={<TagIcon />}
+      chevron={href != null}
+      meta={categoryMeta(category, lines, subCount)}
       action={onMenu == null ? undefined : (
         <IconButton
           label={`עוד, ${category.name}`}
@@ -255,7 +261,6 @@ export function CategoriesScreen({
   const shown = scope.filter((category) => category.kind === kind && !category.hidden);
   const hiddenRows = scope.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
-  const anyKeptOut = scope.some((category) => category.kind === kind && category.excluded_from_pnl === true);
   // Follow the refetched row, so the rehab switch shows the saved value while the sheet stays open.
   const menuRow = menu ? rows.find((row) => row.id === menu.id) ?? menu : null;
   // FLOW-106 §3.5: a category a loan names for interest, escrow or principal is locked like the keyed ones.
@@ -287,7 +292,7 @@ export function CategoriesScreen({
   }
   return (
     <div>
-      <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={lines == null ? undefined : countLine(lines)} />
+      <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={parent == null ? "איך התנועות מתחלקות ומה נספר ברווח" : lines == null ? undefined : countLine(lines)} />
       {parent != null ? null : (
       <div className="ui-page-pad ui-cat-seg">
         <SegmentedControl
@@ -376,12 +381,6 @@ export function CategoriesScreen({
             </List>
           ) : null}
         </div>
-      ) : null}
-      {anyKeptOut ? (
-        <p className="t-hint ui-page-pad ui-cat-legend">
-          <KeptOutIcon size={14} />
-          {KEPT_OUT}
-        </p>
       ) : null}
       <CategoryMenuSheet
         category={menuRow}

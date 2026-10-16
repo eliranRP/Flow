@@ -60,16 +60,14 @@ beforeEach(() => {
 });
 
 describe("categories kept out of the P&L", () => {
-  it("marks kept-out rows and shows the legend", async () => {
+  it("says in each kept-out row's meta line that it is kept out", async () => {
     renderScreen(<CategoriesScreen />);
     await screen.findByText("חומרים");
-    expect(screen.getAllByRole("img", { name: "לא נספר ברווח" })).toHaveLength(2);
+    expect(screen.getAllByText(/לא נספרת ברווח$/)).toHaveLength(2);
     expect(screen.getByText("פיקדונות").className).not.toContain("ui-row-title-muted");
-    expect(screen.getByText("לא נספר ברווח", { selector: "p" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
-    expect(screen.queryByRole("img", { name: "לא נספר ברווח" })).not.toBeInTheDocument();
-    expect(screen.queryByText("לא נספר ברווח", { selector: "p" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/לא נספרת ברווח$/)).not.toBeInTheDocument();
   });
 
   it("keeps a category out on tap, and ביטול puts it back", async () => {
@@ -185,7 +183,7 @@ describe("categories kept out of the P&L", () => {
         />
       </ViewerPreview>,
     );
-    expect(screen.getByRole("img", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    expect(screen.getByText(/לא נספרת ברווח$/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /עוד, פיקדונות/ })).not.toBeInTheDocument();
   });
 });

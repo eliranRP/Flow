@@ -219,14 +219,6 @@
   color: var(--color-text-muted);
 }
 
-.ui-cat-legend {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-  color: var(--color-text-muted);
-}
-
 .ui-cat-fixed {
   display: flex;
   align-items: center;
