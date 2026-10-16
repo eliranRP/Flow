@@ -351,7 +351,7 @@ for (const viewport of viewports) {
     await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
     const samples = await readFrames(page);
     const settled = await readSettled(page);
-    expect(settled.pad).toBeGreaterThan(GAP + 1);
+    expect(settled.pad).toBeGreaterThan(BASE_PAD + 1);
     assertFade(samples);
     const shown = samples.findIndex((sample) => sample.opacity > 0.02);
     expect(shown).toBeGreaterThan(0);
