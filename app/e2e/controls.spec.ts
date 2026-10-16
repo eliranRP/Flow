@@ -46,7 +46,7 @@ test("undo on the approve toast brings the card back", async ({ page }) => {
   await page.goto("/e2e/review");
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
-  await expect(page.getByText("2 מתוך 2")).toBeVisible();
+  await expect(page.getByText("1 מתוך 1")).toBeVisible();
   await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
 });
@@ -56,7 +56,7 @@ test("a near-miss on ביטול undoes the card instead of dismissing the toast"
   await page.goto("/e2e/review");
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
-  await expect(page.getByText("2 מתוך 2")).toBeVisible();
+  await expect(page.getByText("1 מתוך 1")).toBeVisible();
   const action = page.locator(".ui-toast button", { hasText: "ביטול" });
   await expect(action).toBeVisible();
   const box = await action.boundingBox();

@@ -137,7 +137,7 @@ export function DevSplit() {
   );
 }
 
-/** A local queue so the skip toast can be tested without writing a review row. */
+/** A local queue for the review card, so approve and skip can be tried without writing a review row. */
 export function DevReview() {
   const toast = useToast();
   const [items, setItems] = useState(devReviewItems);

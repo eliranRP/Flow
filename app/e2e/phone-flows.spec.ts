@@ -61,7 +61,7 @@ for (const width of [390, 320]) {
 
     test("Review: אישור, then ביטול on the toast", async ({ page }) => {
       await open(page, "/e2e/review", page.getByText("1 מתוך 2"));
-      await step("approve", () => page.getByRole("button", { name: "אישור" }).tap(), page.getByText("2 מתוך 2"));
+      await step("approve", () => page.getByRole("button", { name: "אישור" }).tap(), page.getByText("1 מתוך 1"));
       await step("undo", () => page.locator(".ui-toast button", { hasText: "ביטול" }).tap(), page.getByText("1 מתוך 2"));
     });
 
