@@ -24,8 +24,12 @@ create temp table ibm (label text primary key, id uuid);
 grant all on ibm to authenticated, service_role;
 insert into ibm (label, id) select 'co', id from public.companies where name = 'Example Match LLC';
 insert into ibm (label, id) select 'other_co', id from public.companies where name = 'Example Elsewhere LLC';
+-- A viewer is only allowed on a demo company (private.company_viewers_guard), so the flag is
+-- on for the insert and off again for the rest of the test.
+update public.companies set is_demo = true where id = (select id from ibm where label = 'co');
 insert into public.company_viewers (user_id, company_id)
 select tests.get_supabase_uid('ibm_viewer'), id from ibm where label = 'co';
+update public.companies set is_demo = false where id = (select id from ibm where label = 'co');
 
 insert into public.customers (company_id, name)
 values
