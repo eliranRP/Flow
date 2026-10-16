@@ -183,15 +183,16 @@
 }
 
 .ui-search-recent-icon,
-.ui-search-check-chevron svg,
-.ui-search-project-chevron svg {
-  transform: scaleX(-1);
-}
-
 .ui-search-check-chevron {
   display: inline-flex;
   flex: none;
   color: var(--color-text-muted);
+}
+
+/* The check chevrons point the other way from the RTL flip. The clock face stays as drawn. */
+.ui-search-check-chevron svg,
+.ui-search-project-chevron svg {
+  transform: scaleX(-1);
 }
 
 .ui-search-check {
