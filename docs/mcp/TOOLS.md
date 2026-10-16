@@ -559,7 +559,7 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 
 ### get_recurring_schedule
 
-`recurring_schedule`, no arguments (FLOW-447, [0175](../decisions/0175-recurring-pace-dismissals.md)). Read tool. Output `data.schedule[]`: every recurring supplier and customer of the company with its `state` this month: `arrived` (seen), `late` (past its expected day, as `get_missing_bills`), `soon` (due this month) or `later` (its next month is after this one). Each row has `direction`, `party_id`, `party_name`, `currency`, `typical_amount_minor` (expenses negative), `amount_minor` (only when arrived), `typical_day`, `pace`, `next_due_month` (YYYY-MM), `expected_by`, `project_id`/`project_name` and `category_id`/`category_name`. Read only; nothing is left out for dismissals.
+`recurring_schedule`, no arguments (FLOW-447, [0175](../decisions/0175-recurring-pace-dismissals.md)). Read tool. Output `data.schedule[]`: every recurring supplier and customer of the company with its `state` this month: `arrived` (seen), `late` (past its expected day, as `get_missing_bills`), `soon` (due this month) or `later` (its next month is after this one). Each row has `direction`, `party_id`, `state`, `party_name`, `currency`, `typical_amount_minor` (expenses negative), `amount_minor` (only when arrived), `typical_day`, `pace`, `next_due_month` (YYYY-MM), `expected_by`, `project_id`/`project_name` and `category_id`/`category_name`. Read only; nothing is left out for dismissals.
 
 ### get_line_recurring
 

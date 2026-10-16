@@ -71,9 +71,8 @@ select is(pg_temp.row_for('later') ->> 'state', 'later', 'a party whose next mon
 select is(pg_temp.row_for('later') ->> 'pace', '2months', 'the pace comes from recurring_parties');
 select is(pg_temp.row_for('late') ->> 'next_due_month', '2026-10', 'the next due month is this month for a late party');
 select is(
-  (select count(*)::integer from jsonb_array_elements(public.recurring_schedule('2026-10-20')) e
-   where e ->> 'state' = 'arrived' and (e ->> 'party_id')::uuid = pg_temp.id('arrived')),
-  1,
+  (select count(distinct e ->> 'party_id')::integer from jsonb_array_elements(public.recurring_schedule('2026-10-20')) e),
+  jsonb_array_length(public.recurring_schedule('2026-10-20')),
   'each party appears once'
 );
 
