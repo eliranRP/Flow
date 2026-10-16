@@ -85,7 +85,7 @@ export const RowsSingular: Story = {
 // FLOW-403. The third row: late recurring bills, a count with no total.
 const missingRow: BannerRow = {
   id: "missing",
-  to: "/missing-bills",
+  to: "/recurring",
   icon: <CalendarIcon size={24} stroke={1.9} />,
   title: <><bdi dir="ltr">2</bdi> חשבונות לא הגיעו</>,
 };

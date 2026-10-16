@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
+import { RecurringSkeleton } from "../ui/screen-skeletons";
 
 /** The Israel calendar day as YYYY-MM-DD, the day the server counts lateness from. */
 function israelToday(now: Date): string {
@@ -23,7 +24,7 @@ export function RecurringScreen({ now = new Date(), sample }: { now?: Date; samp
   const query = useRecurringScheduleQuery(sample == null);
   const rows = sample ?? query.data;
   const view = useMemo(() => (rows == null ? null : recurringView(rows, israelToday(now))), [rows, now]);
-  if (view == null) return null;
+  if (view == null) return sample == null ? <RecurringSkeleton /> : null;
   return <RecurringList {...view} />;
 }
 

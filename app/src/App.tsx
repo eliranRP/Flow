@@ -47,7 +47,6 @@ const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ 
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
-const MissingBillsScreen = lazy(() => screenLoaders.missingBills().then((m) => ({ default: m.MissingBillsScreen })));
 const RecurringScreen = lazy(() => import("./screens/recurring-screen").then((m) => ({ default: m.RecurringScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
@@ -82,7 +81,6 @@ const DevCashYear = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ defaul
 const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
-const DevMissingBills = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevMissingBills })));
 const DevRecurring = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevRecurring })));
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
@@ -221,7 +219,6 @@ function AppRoutes() {
                   <Route path="/e2e/cash-history" element={<DevCashHistory />} />
                   <Route path="/e2e/cash-year" element={<DevCashYear />} />
                   <Route path="/e2e/unpaid" element={<DevUnpaid />} />
-                  <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
                   <Route path="/e2e/recurring" element={<DevRecurring />} />
                 </Route>
                 <Route element={<DevShell section="projects" />}>
@@ -293,7 +290,7 @@ function AppRoutes() {
                 </Route>
                 <Route path="review/filed" element={<FiledTodayScreen />} />
                 {UnpaidRoute()}
-                <Route path="missing-bills" element={<MissingBillsScreen />} />
+                <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}
@@ -478,4 +475,10 @@ function AuthCallback() {
   }, [navigate]);
 
   return <AuthCallbackView message={message} />;
+}
+
+/** FLOW-447: the old missing-bills address (Home's rows link to it) opens קבועים, keeping its query and hash. */
+function RecurringRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: "/recurring", search, hash }} replace />;
 }
