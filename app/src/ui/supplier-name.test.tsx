@@ -83,6 +83,7 @@ describe("supplier names", () => {
     );
     const title = screen.getByText(longName);
     expect(title.classList.contains("ui-row-title")).toBe(true);
+    wraps(title);
     expect(title.closest(".ui-row-project")).not.toBeNull();
   });
 

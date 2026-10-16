@@ -14,10 +14,10 @@ import { useHeldOrder } from "../list-hold";
 
 /** FLOW-330, FLOW-367. The row's line while a mark waits for the next SUMIT sync. */
 export const UNPAID_MARKED = "סומן כשולם · ממתין לסנכרון";
-export const UNPAID_MARK_DONE = "סומן כשולם";
-export const UNPAID_CLEAR_DONE = "הסימון בוטל.";
-export const UNPAID_LINKED = "החשבונית חוברה לתשלום ויצאה מהרשימה";
-export const UNPAID_DISMISSED = "נסמן ידנית, או נחכה לתשלום אחר";
+const UNPAID_MARK_DONE = "סומן כשולם";
+const UNPAID_CLEAR_DONE = "הסימון בוטל.";
+const UNPAID_LINKED = "החשבונית חוברה לתשלום ויצאה מהרשימה";
+const UNPAID_DISMISSED = "נסמן ידנית, או נחכה לתשלום אחר";
 
 type LocalState = { marked: string | null; gone: boolean; match: boolean };
 

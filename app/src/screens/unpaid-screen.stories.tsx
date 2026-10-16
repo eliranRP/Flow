@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { InvoiceScreen } from "./invoice-screen";
 import { UnpaidScreen } from "./unpaid-screen";
 import { StoryRoute } from "../ui/story-route";
-import { at320, ExampleBar } from "../ui/screen-stories-support";
+import { ExampleBar } from "../ui/screen-stories-support";
 import { invoicesSample, invoicesSummary } from "../dev/invoices-sample";
 import { israelToday, shiftDays } from "../ui/date-math";
 import type { UnpaidInvoice } from "../unpaid";
@@ -20,16 +20,6 @@ const summary = invoicesSummary();
 
 /** FLOW-367: the board's list: the summary card, three invoices oldest first, one bank match. */
 export const UnpaidList: Story = {
-  render: () => (
-    <StoryRoute entry="/unpaid" tabs>
-      <ExampleBar />
-      <UnpaidScreen sample={rows} summary={summary} />
-    </StoryRoute>
-  ),
-};
-
-export const UnpaidList320: Story = {
-  ...at320,
   render: () => (
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
@@ -59,7 +49,7 @@ export const UnpaidMarked: Story = {
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
       <UnpaidScreen
-        sample={rows.map((row) => (row.id === "inv-1047" ? { ...row, marked_paid_at: new Date().toISOString() } : row))}
+        sample={rows.map((row) => (row.id === "inv-1047" ? { ...row, marked_paid_at: "2026-10-16T09:00:00Z" } : row))}
         summary={summary}
       />
     </StoryRoute>
@@ -87,17 +77,6 @@ export const UnpaidDetailNoMatch: Story = {
   ),
 };
 
-export const UnpaidDetailNoMatch320: Story = {
-  ...at320,
-  name: "Invoice page, no match, 320",
-  render: () => (
-    <StoryRoute entry="/unpaid/inv-1043" tabs>
-      <ExampleBar />
-      <InvoiceScreen sample={rows} summary={summary} invoiceId="inv-1043" />
-    </StoryRoute>
-  ),
-};
-
 /** No PDF link on SUMIT for this invoice: the document row is not drawn. */
 export const UnpaidDetailNoDocument: Story = {
   name: "Invoice page, no document",
@@ -115,16 +94,6 @@ export const UnpaidDetailNoDocument: Story = {
 
 /** Everything is paid: the summary card and the sort row's list go, the empty state stays. */
 export const UnpaidEmpty: Story = {
-  render: () => (
-    <StoryRoute entry="/unpaid?state=done" tabs>
-      <ExampleBar />
-      <UnpaidScreen sample={[]} summary={summary} />
-    </StoryRoute>
-  ),
-};
-
-export const UnpaidEmpty320: Story = {
-  ...at320,
   render: () => (
     <StoryRoute entry="/unpaid?state=done" tabs>
       <ExampleBar />

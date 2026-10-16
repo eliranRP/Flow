@@ -24,12 +24,12 @@ function syncedAgo(iso: string, now = Date.now()): string {
 }
 
 /** The month name for "מאז 1 ב…" (Hebrew, Israel time). */
-export function unpaidMonthName(iso: string): string {
+function unpaidMonthName(iso: string): string {
   return new Intl.DateTimeFormat("he-IL", { month: "long", timeZone: "Asia/Jerusalem" }).format(new Date(`${iso}T12:00:00Z`));
 }
 
 /** The bank match line of a row (FLOW-367): the amount and date of the deposit, then the invoice page. */
-export function unpaidMatchText(invoice: UnpaidInvoice): string | null {
+function unpaidMatchText(invoice: UnpaidInvoice): string | null {
   const match = invoice.match;
   if (match == null) return null;
   const amount = formatAmountText(match.amount_agorot, invoice.currency ?? "ILS");
@@ -152,7 +152,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
                       <span className="t-hint text-text-secondary">{UNPAID_MARKED}</span>
                       {holdWrites ? null : <button type="button" className="ui-inv-text-action" onClick={() => { actions.setPaid(row.id, false); }}>ביטול</button>}
                     </div>
-                  ) : matchText != null && row.match != null ? (
+                  ) : matchText != null ? (
                     <div className="ui-inv-action-line">
                       <Link to={detailTo} className="ui-inv-match-link">{matchText}</Link>
                     </div>

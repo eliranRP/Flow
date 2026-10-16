@@ -11,7 +11,7 @@ import { ToastProvider } from "../ui/toast";
 // FLOW-367: the fixture's list adds up to the open total, the bank match is on the page, and the
 // over-30-days line is there only when an invoice is over 30 days.
 describe("Open invoices (FLOW-367)", () => {
-  it("adds the open rows up to the summary's total", () => {
+  it("the fixture's three open rows add up to the 21,300 USD total", () => {
     const rows = invoicesSample();
     const total = unpaidTotals(rows).find((item) => item.currency === "USD");
     expect(total?.minor).toBe(2_130_000n);
@@ -40,7 +40,7 @@ describe("Open invoices (FLOW-367)", () => {
     expect(screen.getByRole("button", { name: "סימון כשולם" })).toBeInTheDocument();
   });
 
-  it("shows no mark or match card on a paid invoice's page, but the ביטול", () => {
+  it("marks an unpaid invoice with no match from its page, and ביטול shows, with no match card", () => {
     renderPage("inv-1043");
     fireEvent.click(screen.getByRole("button", { name: "סימון כשולם" }));
     expect(screen.getByRole("button", { name: "ביטול הסימון" })).toBeInTheDocument();
