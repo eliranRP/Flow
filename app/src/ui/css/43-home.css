@@ -1,0 +1,218 @@
+/* FLOW-364: Home's split card, its attention box and the month drawer. */
+
+.ui-home-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-home-split-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-home-split-bar {
+  display: flex;
+  block-size: var(--split-bar);
+  gap: var(--band-label-gap);
+  border-radius: var(--radius-block);
+  overflow: hidden;
+}
+
+.ui-home-split-kept,
+.ui-home-split-profit {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  transition: flex-grow var(--motion-width) var(--ease-standard);
+}
+
+.ui-home-split-kept {
+  background: var(--color-accent);
+}
+
+.ui-home-split-profit {
+  background: var(--color-text-muted);
+}
+
+.ui-home-split-profit.ui-home-split-loss {
+  background: var(--color-bad);
+}
+
+.ui-home-split-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.ui-home-split-swatch {
+  flex: none;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: var(--radius-block);
+  background: var(--color-accent);
+}
+
+.ui-home-split-swatch-none {
+  background: var(--color-text-muted);
+}
+
+.ui-home-split-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-home-split-label {
+  font-size: var(--type-body-size);
+}
+
+.ui-home-split-sub {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
+.ui-home-split-value {
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-home-split-value.ui-home-split-loss {
+  color: var(--color-bad);
+}
+
+.ui-home-split-note {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-home-attention {
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  padding: var(--space-3) 0 var(--space-1);
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-home-attention-title {
+  margin: 0 var(--space-5) var(--space-1);
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-month-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-month-drawer-years {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.ui-month-drawer-step {
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border-radius: 50%;
+  background: var(--color-raised);
+  color: var(--color-text);
+}
+
+.ui-month-drawer-step-off {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ui-month-drawer-year {
+  min-inline-size: var(--year-label-min);
+  margin: 0;
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+  text-align: center;
+}
+
+.ui-month-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ui-month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-block-size: var(--month-cell-min);
+  padding: var(--space-2) var(--pill-pad-inline);
+  border: 2px solid transparent;
+  border-radius: var(--radius-month-cell);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.ui-month-cell:disabled {
+  cursor: default;
+}
+
+.ui-month-cell-name {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-month-cell-amount {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+}
+
+.ui-month-cell-selected {
+  border-color: var(--color-accent);
+  background: var(--color-tint-strong);
+}
+
+.ui-month-cell-selected .ui-month-cell-name {
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-month-cell-future {
+  border: 2px dashed var(--color-line);
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
+.ui-month-cell-future .ui-month-cell-amount {
+  color: var(--color-disabled-text);
+}
+
+.ui-month-cell-before {
+  color: var(--color-disabled-text);
+}
+
+.ui-month-drawer-foot {
+  margin: 0;
+  text-align: center;
+}

@@ -54,7 +54,7 @@ function AmountChangePill({
           <bdi dir="ltr">{text}</bdi>
         </span>
       </span>
-      <span className="t-label text-on-band-secondary">{comparison}</span>
+      {comparison === "" ? null : <span className="t-label text-on-band-secondary">{comparison}</span>}
     </span>
   );
 }

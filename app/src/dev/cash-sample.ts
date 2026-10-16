@@ -1,4 +1,4 @@
-import type { CashCurrencyRow, CashLine, CashMonths, CashYears } from "@flow/shared";
+import type { CashCurrencyRow, CashLine, CashMonths, CashToDay, CashYears } from "@flow/shared";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
 
@@ -127,4 +127,9 @@ export function sampleCashYearMonths(now = new Date()): NonNullable<CashMonths> 
       return { month: `${String(year)}-${month}-01`, by_currency: [row(1_500_000n + net, 1_500_000n, net / 2n)] };
     }),
   };
+}
+
+/** FLOW-364: the previous month up to today's day, as cash_month_to_day returns it (invented figures). */
+export function sampleCashToDay(): CashToDay {
+  return [{ currency: "ILS", in_minor: 1_420_000n, out_minor: 1_310_000n }];
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
@@ -21,7 +21,7 @@ import { useToast } from "./ui/toast";
 import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -316,10 +316,17 @@ export function DevHome() {
  */
 export function DevCash() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const data = sampleCashMonths();
+  const currentKey = cashMonthKey(data.months[0]?.month ?? "");
+  // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
+  const monthKey = params.get("month") === "past" ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
   return (
     <CashHome
       data={data}
+      monthKey={monthKey}
+      currentKey={currentKey}
+      firstKey={cashMonthKey(data.months.at(-1)?.month ?? currentKey)}
       previewing={params.get("preview") != null}
       search="?preview=1"
       attention={params.get("box") === "none" ? [] : attentionRows({
@@ -332,7 +339,12 @@ export function DevCash() {
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
-      recurringTo="/e2e/missing-bills?preview=1"
+      sameDay={sampleCashToDay()}
+      forecast={-6_810_000n}
+      onStepMonth={(key) => {
+        void navigate(`/e2e/cash?month=${key}`, { replace: true });
+      }}
+      initialDrawerOpen={params.get("drawer") === "1"}
     />
   );
 }

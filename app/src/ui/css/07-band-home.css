@@ -358,3 +358,178 @@ html[data-kb="open"] .ui-sheet-body {
   flex: none;
   stroke-width: 2.5;
 }
+
+/* FLOW-364: Home's band. Row 1 holds the company and the actions; the month pill, the figures and the forecast follow. */
+.ui-band-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--band-label-gap);
+}
+
+.ui-band-action {
+  color: var(--color-on-band);
+}
+
+.ui-band-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--avatar-size);
+  block-size: var(--avatar-size);
+  border-radius: var(--radius-button);
+  background: var(--band-avatar);
+}
+
+/* A past month's way back: the pill in the band's white, the darker band's colour. */
+.ui-band-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  block-size: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-button);
+  background: var(--color-band-pill);
+  color: var(--color-band-past);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-btn-2-weight);
+  text-decoration: none;
+}
+
+.ui-band-month-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--label-gap);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-on-band);
+  font: inherit;
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  cursor: pointer;
+}
+
+.ui-band-title {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-small-weight);
+}
+
+.ui-home-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-inline: var(--space-1);
+}
+
+.ui-band-net {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-band-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--band-label-gap);
+  padding-top: var(--space-2);
+}
+
+.ui-band-row-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 36px;
+  color: var(--color-on-band);
+  font-size: var(--type-body-size);
+  text-decoration: none;
+}
+
+.ui-band-row-label {
+  inline-size: var(--touch-min);
+}
+
+.ui-band-row-amount {
+  flex: 1;
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-band-caption {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-small-size);
+  line-height: var(--type-small-line);
+  font-weight: var(--type-small-weight);
+}
+
+/* The figures enter from the side the month came from (RTL: an earlier month from the right). */
+.ui-band-month-in-earlier {
+  animation: m-band-in-earlier var(--motion-bar) var(--ease-enter);
+}
+
+.ui-band-month-in-later {
+  animation: m-band-in-later var(--motion-bar) var(--ease-enter);
+}
+
+@keyframes m-band-in-earlier {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes m-band-in-later {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-band-month-in-earlier,
+  .ui-band-month-in-later {
+    animation: none;
+  }
+}
+
+.ui-home-forecast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--row-pad);
+  border-radius: var(--radius-band-row);
+  background: var(--band-row);
+  color: var(--color-on-band);
+}
+
+.ui-home-forecast-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-home-forecast-title {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-home-forecast-sub {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-small-size);
+  line-height: var(--type-small-line);
+  font-weight: var(--type-small-weight);
+}
+
+.ui-home-forecast-value {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-2-weight);
+}
