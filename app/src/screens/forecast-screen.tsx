@@ -1,5 +1,5 @@
 import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/shared";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, priorPatch, useMonthForecastQuery, useResetForecastMonth, useSetForecastItem } from "../forecast-month";
