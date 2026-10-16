@@ -72,7 +72,6 @@ const DevConnections = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ def
 const DevExpense = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevExpense })));
 const DevFiled = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevFiled })));
 const DevHome = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevHome })));
-const DevHomeSplit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevHomeSplit })));
 const DevCash = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCash })));
 const DevCashEmpty = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashEmpty })));
 const DevCashMonth = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashMonth })));
@@ -213,7 +212,6 @@ function AppRoutes() {
                 </Route>
                 <Route element={<DevShell section="home" />}>
                   <Route path="/e2e/home" element={<DevHome />} />
-                  <Route path="/e2e/home-split" element={<DevHomeSplit />} />
                   <Route path="/e2e/cash" element={<DevCash />} />
                   <Route path="/e2e/cash-empty" element={<DevCashEmpty />} />
                   <Route path="/e2e/cash-month" element={<DevCashMonth />} />
