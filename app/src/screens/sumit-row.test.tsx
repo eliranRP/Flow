@@ -459,7 +459,7 @@ describe("SUMIT status row", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderSettings();
-    expect(await screen.findByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
+    expect(await screen.findByText("לא הצלחנו לטעון.")).toBeInTheDocument();
     expect(screen.queryByText("שגיאה")).not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toBeInTheDocument();

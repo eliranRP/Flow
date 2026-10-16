@@ -116,19 +116,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 describe("rejected reads", () => {
   it("does not call an empty projects list a successful empty state", async () => {
     renderAt("/projects");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("עוד אין פרויקטים")).not.toBeInTheDocument();
   });
 
   it("does not call a failed unpaid load all paid", async () => {
     renderAt("/unpaid");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("הכל שולם")).not.toBeInTheDocument();
   });
 
   it("does not call a failed project load not found", async () => {
     renderAt("/projects/abc");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("הפרויקט לא נמצא.")).not.toBeInTheDocument();
   });
 
@@ -156,7 +156,7 @@ describe("rejected reads", () => {
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await Promise.resolve(); });
     expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument();
     forgetProjectReads();
     resetShownCompanyForTests();
   });
@@ -183,25 +183,25 @@ describe("rejected reads", () => {
 
   it("does not call a failed transaction load not found", async () => {
     renderAt("/transactions/abc");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("התנועה לא נמצאה.")).not.toBeInTheDocument();
   });
 
   it("does not call a failed review load an empty queue", async () => {
     renderAt("/review");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("הכל מאושר")).not.toBeInTheDocument();
   });
 
   it("does not call a failed categories load an empty list", async () => {
     renderAt("/settings/categories");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("אין עדיין קטגוריות")).not.toBeInTheDocument();
   });
 
   it("does not call a failed settings load a business with no company", async () => {
     renderAt("/settings");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
   });
 
@@ -245,14 +245,14 @@ describe("rejected reads", () => {
       return Promise.resolve({ data: null, error: { message: "db down" } });
     };
     renderAt("/");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("הכל שולם")).not.toBeInTheDocument();
     expect(screen.getByText("נכנס")).toBeInTheDocument();
   });
 
   it("shows the split form error instead of an empty project list when projects fail", async () => {
     renderAt("/transactions/abc/split");
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("אין פרויקטים לפיצול")).not.toBeInTheDocument();
   });
 });

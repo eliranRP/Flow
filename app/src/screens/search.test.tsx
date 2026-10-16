@@ -205,12 +205,12 @@ describe("Search screen (FLOW-323)", () => {
     expect(await screen.findByText("עוד אין תנועות")).toBeInTheDocument();
   });
 
-  it("shows a failed read with ניסיון חוזר, which reads again", async () => {
+  it("shows a failed read with נסו שוב, which reads again", async () => {
     rpc.impl = (name) => (name === "search_transactions"
       ? Promise.resolve({ data: null, error: { message: "boom" } })
       : Promise.resolve({ data: name === "get_dashboard" ? dashboard : [], error: null }));
     wrap("/search");
-    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    const retry = await screen.findByRole("button", { name: "נסו שוב" });
     const before = searchCalls().length;
     rpc.impl = (name) => Promise.resolve({ data: name === "search_transactions" ? page : name === "get_dashboard" ? dashboard : [], error: null });
     fireEvent.click(retry);

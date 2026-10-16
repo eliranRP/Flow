@@ -111,7 +111,7 @@ describe("Cash history (FLOW-417)", () => {
     rpc.impl = (name) =>
       name === "cash_years" ? Promise.resolve({ data: years, error: null }) : Promise.resolve({ data: null, error: { message: "boom" } });
     wrap(`/cash/year/${String(lastYear)}`);
-    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.getByLabelText("חזרה לתזרים")).toBeInTheDocument();
   });
 
