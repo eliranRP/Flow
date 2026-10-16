@@ -90,7 +90,8 @@ Light and dark values are both drawn from the Design canvas (the Light theme pag
 | `text-secondary` | `#5B536E` | `#B1A8C4` | Labels and secondary lines |
 | `text-muted` | `#746C88` | `#978EAB` | Hints, dates, placeholders |
 | `line` | `#E7E2F0` | `#2E2740` | Hairlines |
-| `line-strong` | `#DAD3E6` | `#3A3350` | Strong hairline: the secondary button outline, a switch off, the dashed add row (new; the board uses it, no screen does yet) |
+| `line-strong` | `#DAD3E6` | `#3A3350` | Strong hairline: a switch off, the dashed add row (new; the board uses it, no screen does yet) |
+| `outline-secondary` | `#DAD3E6` | `#382A5E` (= `tint-strong`) | Secondary button border (new). Dark aliases `tint-strong` |
 | `tint-strong` | `#D9CBF6` | `#382A5E` | Selected outline and selected row fill (new) |
 | `pill-helps` | `#4A4458` | `#4A4458` | Band change pill when the change helps (new) |
 | `pill-hurts` | `#C3302B` | `#C3302B` | Band change pill when the change hurts (new) |
@@ -198,7 +199,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 
 | Component | States | Rule |
 |---|---|---|
-| Button | primary: 52px pill, 17/500, accent fill. secondary: 52px outline, 1.5px `tint-strong` border, 16/500, text colour. link: 44px text, 15/400, `accent-text`, optional chevron after the label (points left in RTL). danger-link: as link, in `signal`. Default, pressed, disabled, busy | One primary per screen. Press is opacity .72 and, for primary and secondary, scale .985, over 120ms, with no colour flash. Old ghost, pill and destructive variants stay until their screens move (R11). Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
+| Button | primary: 52px pill, 17/500, accent fill. secondary: 52px outline, 1.5px `outline-secondary` border, 16/500, text colour. link: 44px text, 15/400, `accent-text`, optional chevron after the label (points left in RTL). danger-link: as link, in `signal`. Default, pressed, disabled, busy | One primary per screen. Press is opacity .72 and, for primary and secondary, scale .985, over 120ms, with no colour flash. Old ghost, pill and destructive variants stay until their screens move (R11). Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
 | IconButton | 44px icon target. Default, pressed (opacity .72), disabled, on-band | Press is opacity only |
 | + button | 48px circle. Default, pressed | Opens Add. Sits in the tab bar |
 | Screen header (`ScreenHeader`) | stacked (default with Back or a leading control), compact, `layout="inline"`; compact bar shown | With Back or a leading control, Back sits alone on the bar and the title and subtitle stack under it on the start side (FLOW-326). With a kicker, the kicker is Back's label ("‹ הגדרות", `label` in `accent-text`, cut at about 16 characters) and there is no kicker line ([0156](../decisions/0156-labelled-back-and-compact-bar.md)). When Back goes to a page other than the kicker's (a project month opened from "לפי חודש"), `backText` labels Back with that page ("‹ לפי חודש") and the kicker stays as a `t-hint` line above the title (FLOW-444). On a stacked page with Back, a compact bar pins to the top once the large title scrolls off: 44px on a list page, 56px on a detail page (`--compact-bar-detail`), over a `line` hairline on the page background. Back is labelled with the kicker when there is one; the title is the `btn` role (17/500), one line, centred; an optional figure follows it as " · " in an LTR run. It slides in and out in 240ms (at once under reduced motion). Month heads pin under it. A compact title (the transaction) and `layout="inline"` stay on the bar and get no compact bar. FLOW-326, FLOW-334 |

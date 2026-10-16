@@ -80,6 +80,7 @@ describe("light values from the Design guide's Light theme table", () => {
     "--color-track": "#E7E2F0",
     "--color-line": "#E7E2F0",
     "--color-line-strong": "#DAD3E6",
+    "--color-outline-secondary": "#DAD3E6",
     "--color-tint-strong": "#D9CBF6",
     "--color-text": "#1D1728",
     "--color-text-secondary": "#5B536E",

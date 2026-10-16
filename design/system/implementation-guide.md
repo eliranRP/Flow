@@ -71,7 +71,8 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `tint` | #EEE6FD | #2A2045 | The one fill colour: pending card, pills, secondary button, skeletons |
 | `tint-strong` / `tint-pressed` | #D9CBF6 / #E7DAFD | #382A5E | tint-strong: the selected outline and row fill (the board); tint-pressed: the pressed state of tinted things |
 | `line` | #E7E2F0 | #2E2740 | 1px hairlines between rows, card and input borders |
-| `line-strong` | #DAD3E6 | #3A3350 | Strong hairline: the secondary button outline, a switch off, the dashed add row (new; the board uses it, no screen does yet) |
+| `line-strong` | #DAD3E6 | #3A3350 | Strong hairline: a switch off, the dashed add row (new; the board uses it, no screen does yet) |
+| `outline-secondary` | #DAD3E6 | #382A5E (= tint-strong) | Secondary button border (new) |
 | `control-off` | #8F86A3 | #736A8C | Switch track when off, unchecked checkbox border, sheet grab handle (≥ 3:1) |
 | `control-border` | #8F86A3 | #736A8C | Borders of inputs, search fields, outlined chips, radio circles (≥ 3:1) |
 | `gsi-bg` / `gsi-border` / `gsi-text` | #FFFFFF / #747775 / #1F1F1F | same | The "המשך עם Google" button only (§7.24). Fixed by Google branding, identical in both modes. Stroke 4.5:1 (light) / 4.1:1 (dark) on the page |
