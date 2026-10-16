@@ -58,6 +58,7 @@
 
 .ui-home-split-label {
   font-size: var(--type-body-size);
+  line-height: var(--type-btn-line);
 }
 
 .ui-home-split-sub {
