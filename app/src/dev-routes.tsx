@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { invoicesSample, invoicesSummary } from "./dev/invoices-sample";
 import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
@@ -39,6 +40,7 @@ import {
   SettingsScreen,
   SplitScreen,
   TransactionScreen,
+  InvoiceScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
@@ -474,35 +476,18 @@ export function DevCategories() {
   );
 }
 
-/** `?marked=1` adds a row already marked paid, waiting for the sync (review-cycle fixture, FLOW-335). */
-export function DevUnpaid() {
+/**
+ * FLOW-367 proof route: the list with the board's fixture (`?state=done` has no invoice), or one
+ * invoice's page with `?invoice=<id>`. Stories and proofs use the same fixture.
+ */
+export function DevInvoices() {
   const [params] = useSearchParams();
-  const marked = params.get("marked") === "1";
-  // FLOW-335: `?doc=1` gives the first row SUMIT's document link (an invented path).
-  const doc = params.get("doc") === "1" ? { document_url: "https://pay.sumit.co.il/example/doc-1" } : {};
-  return (
-    <UnpaidScreen
-      sample={[{
-        id: "u1",
-        description: "חשבונית פתוחה",
-        doc_date: "2026-09-01",
-        customer_name: "לקוח לדוגמה",
-        project_name: "שיפוץ הרצל 12",
-        open_gross_agorot: 50_000n,
-        open_net_agorot: 40_000n,
-        ...doc,
-      }, ...(marked ? [{
-        id: "u2",
-        description: "חשבונית שסומנה",
-        doc_date: "2026-08-20",
-        customer_name: "לקוח שני לדוגמה",
-        project_name: null,
-        open_gross_agorot: 120_000n,
-        open_net_agorot: 100_000n,
-        marked_paid_at: "2026-10-06T09:00:00Z",
-      }] : [])]}
-    />
-  );
+  const state = params.get("state");
+  const invoice = params.get("invoice");
+  const rows = useMemo(() => invoicesSample(state), [state]);
+  const summary = useMemo(() => invoicesSummary(), []);
+  if (invoice != null) return <InvoiceScreen sample={rows} summary={summary} invoiceId={invoice} />;
+  return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
 /** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */

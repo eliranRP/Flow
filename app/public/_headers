@@ -44,6 +44,8 @@
   Content-Type: text/html; charset=utf-8
 /unpaid
   Content-Type: text/html; charset=utf-8
+/unpaid/:invoiceId
+  Content-Type: text/html; charset=utf-8
 /missing-bills
   Content-Type: text/html; charset=utf-8
 /notifications
