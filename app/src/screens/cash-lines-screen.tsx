@@ -122,7 +122,10 @@ function CashLinesBody({
   const isCurrent = (sample != null || monthData.recent) && data != null && data.months[0] != null && cashMonthKey(data.months[0].month) === monthKey;
   const back = isCurrent ? `/${search}` : cashMonthPath(monthKey, search);
   const isThisMonth = monthKey === israelToday().slice(0, 7);
-  const subtitle = `${cashMonthName(monthKey)}${isThisMonth ? " · עד היום" : ""}`;
+  // The board draws the month with its year, even in the current year ("אוקטובר 2026 • עד היום").
+  const monthName = cashMonthName(monthKey);
+  const monthTitle = /\d{4}$/.test(monthName) ? monthName : `${monthName} ${monthKey.slice(0, 4)}`;
+  const subtitle = `${monthTitle}${isThisMonth ? " • עד היום" : ""}`;
 
   if (phase.kind !== "ready") {
     return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void lines.refetch(); }} loading={<LinesSkeleton />} />;
@@ -188,6 +191,7 @@ function CashLinesBody({
         layout="stacked"
         title={title}
         backTo={back}
+        backText={isCurrent ? "בית" : undefined}
         kicker={kicker}
         subtitle={subtitle}
         compactFigure={figureText}
