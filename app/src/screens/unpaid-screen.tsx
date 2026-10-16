@@ -32,7 +32,7 @@ function unpaidMonthName(iso: string): string {
 function unpaidMatchText(invoice: UnpaidInvoice): string | null {
   const match = invoice.match;
   if (match == null) return null;
-  const amount = formatAmountText(match.amount_agorot, invoice.currency ?? "ILS");
+  const amount = formatAmountText(match.amount_minor, invoice.currency ?? "ILS");
   return `✦ נמצא תשלום תואם בבנק · ${amount} · ${formatDayMonth(match.date)}`;
 }
 

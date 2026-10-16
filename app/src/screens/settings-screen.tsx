@@ -1,40 +1,43 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
-import { useLoanBalances, type LoanBalanceRow } from "./loan-match";
 import { useAuth } from "../auth";
-import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
-import { MY_COMPANIES_KEY, useTeamQuery } from "../team-queries";
+import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { MY_COMPANIES_KEY, useMyCompaniesQuery, useTeamQuery } from "../team-queries";
+import { ROLE_LABEL } from "../team-api";
+import type { BasisChoice } from "../ui/company-choices";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { isStandalone } from "../ui/install-prompt";
-import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
-import { assertNoError, useWrite } from "../use-write";
+import { useCategoriesQuery, useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
+import { useWrite } from "../use-write";
 import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
-import { RenameCompanySheet } from "./rename-company";
-import { CompanyCurrencySheet } from "./company-currency-sheet";
-import { CompanyBasisSheet } from "./company-basis-sheet";
-import { useCompanyCurrencyQuery } from "../company-currency";
-import { basisChoiceLabel, BASIS_TITLE, currencyChoiceLabel, type BasisChoice } from "../ui/company-choices";
-import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
-import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
-import { ThemeSheet } from "./theme-sheet";
+import { CompanySheet } from "./company-switcher";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
+import { type LoanBalanceRow } from "./loan-match";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BellIcon, BuildingIcon, CalendarIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon, ThemeIcon } from "../ui/icons";
-import { SectionHead } from "../ui/layout";
+import { BellIcon, BuildingIcon, DownloadIcon, PeopleIcon, PlugIcon, SparkIcon, TagIcon, ThemeIcon, TransferIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { Toggle } from "../ui/toggle";
+import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
-import { useBlockedPreview } from "./screen-shared";
 import { NO_PREFS, pushConfigured, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
 import { notificationsHint } from "./notifications-screen";
+import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
+import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
+import { ThemeSheet } from "./theme-sheet";
+import { useBlockedPreview } from "./screen-shared";
+
+/** FLOW-501. Invented loans for `?preview=1`. */
+const PREVIEW_LOANS: LoanBalanceRow[] = [
+  { id: "preview-loan-1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "preview-alon", projectName: "וילה אלון" },
+  { id: "preview-loan-2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "preview-gefen", projectName: "פרויקט גפן" },
+];
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -47,6 +50,8 @@ export type SettingsSample = {
   lastError: string | null;
   nextAttemptAt?: string | null;
   email?: string | null;
+  /** The role word under the email line: owner, editor or viewer. A sample defaults to owner. */
+  role?: "owner" | "editor" | "viewer";
   /** Shown in the connected sheet when present. A missing time is omitted. */
   lastSyncAt?: string | null;
   /** Live `company_id` is null. Preview passes this because a sample skips the dashboard. */
@@ -61,25 +66,25 @@ export type SettingsSample = {
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */
   loanCurrency?: LoanCurrency;
-  /** FLOW-103. Preview only; live settings read the company's basis from the dashboard. */
-  basis?: BasisChoice;
   /** FLOW-119. Projects for the loan's project picker. */
   loanProjects?: LoanProjectChoice[];
-  /** FLOW-501. The Loans page and the Settings הלוואות hint. */
+  /** FLOW-501. The Loans page. */
   loans?: LoanRowsSample;
-  /** FLOW-502. The Settings התראות hint. */
+  /** FLOW-502. The התראות row's count. */
   notifications?: NotificationPrefs;
   /** FLOW-601. The צוות row's count; left out, a sample has no צוות row. */
   teamCount?: number;
+  /** The visible categories, for the קטגוריות row. */
+  categoryCount?: number;
+  /** The businesses the person belongs to, for the החלפת עסק row. */
+  companyCount?: number;
+  /** FLOW-103. The company's profit basis, for the העסק page's row (a sample or preview). */
+  basis?: BasisChoice;
+  /** Setup steps still to do (the הגדרה ראשונה row shows only while any is left). */
+  setupLeft?: number;
 };
 
-/** FLOW-501. Invented loans for `?preview=1`. */
-const PREVIEW_LOANS: LoanBalanceRow[] = [
-  { id: "preview-loan-1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "preview-alon", projectName: "וילה אלון" },
-  { id: "preview-loan-2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "preview-gefen", projectName: "פרויקט גפן" },
-];
-
-/** One connector as the Settings חיבורים hint counts it (FLOW-501). */
+/** One connector as the Settings חיבורים row counts it (FLOW-501). */
 export type ConnectorTally = { name: string; state: "loading" | "error" | "active" | "off" | "reconnect" };
 
 export type ConnectionsHint =
@@ -89,24 +94,16 @@ export type ConnectionsHint =
   | { kind: "count"; active: number; total: number };
 
 /**
- * The Settings חיבורים hint: "N מתוך M פעילים", or the one connector that needs
- * reconnecting, or how many do. Loading and a failed read win, so the count is
- * never a guess. The retry lives on the page.
+ * The Settings חיבורים row: "N פעילים", or the connector that needs connecting ("SUMIT צריך חיבור"),
+ * or how many do. Loading and a failed read win, so the count is never a guess.
  */
 export function connectionsHint(list: readonly ConnectorTally[]): ConnectionsHint {
   if (list.some((item) => item.state === "loading")) return { kind: "loading" };
   if (list.some((item) => item.state === "error")) return { kind: "error" };
   const broken = list.filter((item) => item.state === "reconnect");
-  if (broken.length === 1) return { kind: "attention", text: `${broken[0]?.name ?? ""}: צריך לחבר מחדש` };
-  if (broken.length > 1) return { kind: "attention", text: `${String(broken.length)} חיבורים צריכים חיבור מחדש` };
+  if (broken.length === 1) return { kind: "attention", text: `${broken[0]?.name ?? ""} צריך חיבור` };
+  if (broken.length > 1) return { kind: "attention", text: `${String(broken.length)} צריכים חיבור` };
   return { kind: "count", active: list.filter((item) => item.state === "active").length, total: list.length };
-}
-
-/** The Settings הלוואות hint: the count, never a total (mixed currencies have none). */
-export function loansCountHint(count: number): ReactNode {
-  if (count === 0) return "אין הלוואות עדיין";
-  if (count === 1) return "הלוואה אחת";
-  return <><bdi className="ui-num" dir="ltr">{String(count)}</bdi> הלוואות</>;
 }
 
 function queryTally(
@@ -130,19 +127,24 @@ function assistantTally(sample: AssistantSample): ConnectorTally["state"] {
 /** The page Back returns to, so Settings can put focus back on its row. */
 let settingsOpened: SettingsPage | null = null;
 
-type SettingsPage = "connections" | "loans" | "notifications" | "team";
+type SettingsPage = "business" | "connections" | "team" | "notifications" | "categories";
 
 /**
- * `/settings` (0082, amended by 0116): the account rows, then one quiet group
- * with חיבורים and הלוואות, then תצוגה and עוד. An old `?sheet=` link moves to
- * the Connections page with its query, so the sheet still opens there.
+ * `/settings` (0082, FLOW-512): the menu. Card 1 is the business's pages (העסק, חיבורים, צוות,
+ * התראות, קטגוריות), each with its value at the end. Card 2 is the appearance, the business
+ * switch and the install row, then the sign-out text and the version. An old `?sheet=` link moves
+ * to the connections page, so the sheet still opens there.
  */
 export function SettingsScreen(props: { sample?: SettingsSample } = {}) {
   const [params] = useSearchParams();
   const location = useLocation();
   const sheet = params.get("sheet");
   if (sheet === "sumit" || sheet === "mercury" || sheet === "assistant" || sheet === "jev") {
-    return <Navigate to={{ pathname: "/settings/connections", search: location.search }} replace state={location.state as unknown} />;
+    const target = sheet === "sumit" || sheet === "mercury" ? `/settings/connections/${sheet}` : "/settings/connections";
+    const next = new URLSearchParams(params);
+    next.delete("sheet");
+    const search = next.toString();
+    return <Navigate to={{ pathname: target, search: search === "" ? "" : `?${search}` }} replace state={location.state as unknown} />;
   }
   return <SettingsHome sample={props.sample} />;
 }
@@ -156,10 +158,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const navigate = useNavigate();
   const navigationType = useNavigationType();
   const { session } = useAuth();
-  const holdWrites = useHoldWrites();
+  const role = useCompanyRole();
   // FLOW-601: the business name, its currency, connectors, setup and the team are the owner's.
   const holdOwner = useHoldOwnerSettings();
-  const blocked = useBlockedPreview();
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
@@ -178,33 +179,23 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const jevOn = jev.data != null && jevSwitchOn({ ...jev.data, status: "ready" });
   const jevKeyMissing = useJevKeyStatusQuery(liveCompany && jevOn).data === "missing";
   const assistant = useAssistantStatusQuery(liveCompany);
-  const loans = useLoanBalances(liveCompanyId);
+  const categories = useCategoriesQuery(liveCompany);
+  const companies = useMyCompaniesQuery(sample == null);
   // FLOW-502: a build without the VAPID key has no התראות row and reads nothing.
   const pushShown = sample != null || pushConfigured();
   const notificationsQuery = useNotificationPrefsQuery(sample == null && preview === "off" && pushShown);
-  const [renameOpen, setRenameOpen] = useState(false);
-  const businessRowRef = useRef<HTMLButtonElement>(null);
-  const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
-  const [currencyOpen, setCurrencyOpen] = useState(false);
-  const currencyRowRef = useRef<HTMLButtonElement>(null);
-  const currencyQuery = useCompanyCurrencyQuery(liveCompany);
-  const [basisOpen, setBasisOpen] = useState(false);
-  const basisRowRef = useRef<HTMLButtonElement>(null);
-  // FLOW-372: the appearance is this phone's, saved per device (Settings › מראה).
-  const [theme, setTheme] = useState<ThemeChoice>(readThemeChoice);
   const [themeOpen, setThemeOpen] = useState(false);
   const themeRowRef = useRef<HTMLButtonElement>(null);
+  // FLOW-372: the appearance is this phone's, saved per device (Settings › מראה).
+  const [theme, setTheme] = useState<ThemeChoice>(readThemeChoice);
   const pickTheme = (next: ThemeChoice) => {
     writeThemeChoice(next);
     setTheme(next);
   };
   const themeHint = themeChoiceLabel(theme);
-  const [overheadOn, setOverheadOn] = useState(false);
-  const wantedOverhead = useRef(false);
-  useEffect(() => {
-    if (sample) return;
-    if (dashboard.data) setOverheadOn(dashboard.data.after_overhead === true);
-  }, [sample, dashboard.data]);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const setCompanySheet = useSheetHistory("company", companyOpen, setCompanyOpen);
+  const companyRowRef = useRef<HTMLButtonElement>(null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
   // Back from a page puts focus on the row that opened it. A fresh visit does not.
   // Read once per mount: StrictMode reruns the effect after the title has taken focus.
@@ -217,15 +208,6 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     const row = document.querySelector<HTMLElement>(`[data-settings-page="${openedPage}"] a`);
     row?.focus({ preventScroll: true });
   }, [phase.kind, navigationType, openedPage]);
-  const saveOverhead = useWrite({
-    failure: "לא הצלחנו לשמור את התצוגה.",
-    keys: ["dashboard", "project"],
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("set_after_overhead", { p_on: wantedOverhead.current }));
-    },
-  });
   const signOut = useWrite({
     failure: "לא הצלחנו לצאת.",
     keys: [],
@@ -256,18 +238,14 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
   const previewSample = sample == null && preview !== "off" && previewValue !== "empty";
   const businessName = sample ? sample.name : previewSample ? previewAccountName : dashboard.data?.name;
-  // A sample or preview has no stored currency to read; it shows the sample's.
-  const currencyReady = !live || currencyQuery.isSuccess;
-  const currencyFailed = live && currencyQuery.isError;
-  const companyCurrency = live ? (currencyQuery.data ?? "ILS") : (sample?.loanCurrency ?? "ILS");
-  const currencyHint = currencyChoiceLabel(companyCurrency);
-  // FLOW-103: the dashboard echoes the company's basis (0170); a sample or preview shows its own.
-  const companyBasis: BasisChoice = live ? (dashboard.data?.basis ?? "cash") : (sample?.basis ?? "cash");
-  const basisHint = basisChoiceLabel(companyBasis);
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const namedBusiness = (businessName ?? "").trim();
   const showInstall = !isStandalone();
   const showSignOut = preview === "off" || previewValue === "empty";
+  // The role word under the email line (board: "owner@example.com · בעלים").
+  const liveRole = role === "owner" || role === "editor" || role === "viewer" ? ROLE_LABEL[role] : null;
+  const roleWord = sample ? ROLE_LABEL[sample.role ?? "owner"] : previewSample ? ROLE_LABEL.owner : liveRole;
+  const subtitle = [email, roleWord].filter((part) => part != null && part !== "").join(" · ");
 
   const tallies: ConnectorTally[] = sample
     ? [
@@ -278,13 +256,13 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         if (state.status === "loading" || state.status === "error") return state.status;
         return jevSwitchOn(state) && !jevLocked(state) ? "active" : "off";
       })() },
-      { name: "עוזר AI", state: assistantTally(sample.assistant ?? { state: "empty" }) },
+      { name: "AI", state: assistantTally(sample.assistant ?? { state: "empty" }) },
     ]
     : [
       queryTally("SUMIT", sumit, () => (sumit.data?.last_error === "sumit_auth" ? "reconnect" : sumit.data?.connected === true ? "active" : "off")),
       queryTally("Mercury", mercury, () => (mercury.data?.last_error === "auth" ? "reconnect" : mercury.data?.connected === true ? "active" : "off")),
       queryTally("תיוג חכם", jev, () => (jevOn && !jevKeyMissing ? "active" : "off")),
-      queryTally("עוזר AI", assistant, () => {
+      queryTally("AI", assistant, () => {
         const state = assistant.data?.state;
         return state === "connected" ? "active" : state === "expired" ? "reconnect" : "off";
       }),
@@ -293,18 +271,17 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const hint = connectionsHint(holdOwner
     ? tallies.map((item) => (item.state === "reconnect" ? { ...item, state: "off" as const } : item))
     : tallies);
-  const connectionsRowHint: ReactNode = noCompany
+  const connectionsValue: ReactNode = noCompany
     ? "אין עסק עדיין"
     : hint.kind === "loading"
       ? <Skeleton width="sm" />
       : hint.kind === "error"
         ? "לא הצלחנו לטעון"
         : hint.kind === "attention"
-          ? hint.text
-          : <><bdi className="ui-num" dir="ltr">{String(hint.active)}</bdi> מתוך <bdi className="ui-num" dir="ltr">{String(hint.total)}</bdi> פעילים</>;
-  const connectionsWarning = !noCompany && hint.kind === "attention";
+          ? <span className="ui-row-value-signal">{hint.text}</span>
+          : <><bdi className="ui-num" dir="ltr">{String(hint.active)}</bdi> פעילים</>;
 
-  // FLOW-601 (mockup a-1-settings): the owner's צוות row, with how many people are on the team.
+  // FLOW-601: the owner's צוות row, with how many people are on the team.
   // Undefined hides the row; null shows it without a count (still loading, or the read failed).
   const teamCount: number | null | undefined = holdOwner
     ? undefined
@@ -313,229 +290,118 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
       : live && liveCompany
         ? (team.data?.members.length ?? null)
         : undefined;
-  const loanSample: LoanRowsSample | undefined = sample
-    ? (sample.loans ?? [])
-    : preview !== "off"
-      ? (previewValue === "empty" ? [] : PREVIEW_LOANS)
-      : undefined;
-  const loansLoading = loanSample === "loading" || (loanSample == null && (loans.isLoading || (dashboard.isFetching && signedInCompanyId == null)));
-  const loansFailed = loanSample === "error" || (loanSample == null && loans.isError);
-  const loanCount = Array.isArray(loanSample) ? loanSample.length : (loans.data ?? []).length;
   // FLOW-502: per user, so it shows without a company too. A preview reads the sample, never the server.
   const notificationsSample = sample ? (sample.notifications ?? NO_PREFS) : preview !== "off" ? NO_PREFS : undefined;
   const notificationsData = notificationsSample ?? notificationsQuery.data;
   const notificationsLoading = notificationsSample == null && notificationsQuery.isPending;
-  const notificationsRowHint: ReactNode = notificationsLoading
-    ? <Skeleton width="sm" />
-    : notificationsData != null
-      ? notificationsHint(notificationsData)
-      : null;
-  const loansRowHint: ReactNode = loansLoading
-    ? <Skeleton width="sm" />
-    : loansFailed
-      ? "לא הצלחנו לטעון"
-      : loansCountHint(loanCount);
+  const categoryCount = sample ? sample.categoryCount : live && liveCompany ? (categories.data?.filter((row) => !row.hidden).length ?? null) : undefined;
+  const categoriesLoading = sample == null && liveCompany && categories.isPending;
+  const companyCount = sample ? sample.companyCount : companies.data?.companies.length;
+  const setupLeft = setupEntry != null ? Math.max(0, 5 - setupEntry.done) : null;
 
   return (
     <ViewerScope>
     <div>
-      <ScreenHeader title="הגדרות" />
+      <ScreenHeader title="הגדרות" backTo="/" backText="בית" subtitle={subtitle} />
       <ViewerNote />
-      {noCompany ? (
-        email !== "" ? (
-          <List>
-            <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} />
-          </List>
-        ) : null
-      ) : namedBusiness !== "" ? (
-        <List>
-          {holdOwner ? (
-            <ListRow variant="static" title={namedBusiness} icon={<BuildingIcon />} />
-          ) : (
-            <ListRow
-              variant="button"
-              title={namedBusiness}
-              label={`שם העסק: ${namedBusiness}`}
+      {noCompany ? null : (
+        <List layout="inset">
+          {namedBusiness !== "" ? (
+            <SettingsPageRow
+              page="business"
+              href={`/settings/business${search}`}
+              title="העסק"
               icon={<BuildingIcon />}
-              chevron
-              buttonRef={businessRowRef}
-              onClick={() => { setRenameSheet(true); }}
+              value={namedBusiness}
             />
-          )}
-          {/* FLOW-504: a change waits for the stored currency, so undo never writes a guess. */}
-          {currencyReady && !holdOwner ? (
-            <ListRow
-              variant="button"
-              title="מטבע העסק"
-              hint={currencyHint}
-              label={`מטבע העסק: ${currencyHint}`}
-              icon={<CoinIcon />}
-              chevron
-              buttonRef={currencyRowRef}
-              onClick={() => { setCurrencyOpen(true); }}
-            />
-          ) : (
-            <ListRow
-              variant="static"
-              title="מטבע העסק"
-              hint={currencyFailed ? "לא הצלחנו לטעון" : currencyHint}
-              skelHint={!currencyReady && !currencyFailed}
-              icon={<CoinIcon />}
-            />
-          )}
-          {/* FLOW-103: only the owner changes the company's date; others see it without a chevron. */}
-          {holdOwner ? (
-            <ListRow variant="static" title={BASIS_TITLE} hint={basisHint} icon={<CalendarIcon />} />
-          ) : (
-            <ListRow
-              variant="button"
-              title={BASIS_TITLE}
-              hint={basisHint}
-              label={`${BASIS_TITLE}: ${basisHint}`}
-              icon={<CalendarIcon />}
-              chevron
-              buttonRef={basisRowRef}
-              onClick={() => { setBasisOpen(true); }}
-            />
-          )}
-          {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
+          ) : null}
+          <SettingsPageRow
+            page="connections"
+            href={`/settings/connections${search}`}
+            title="חיבורים"
+            icon={<PlugIcon />}
+            value={connectionsValue}
+            skeleton={hint.kind === "loading"}
+          />
           {teamCount !== undefined ? (
             <SettingsPageRow
               page="team"
-              href="/settings/team"
+              href={`/settings/team${search}`}
               title="צוות"
               icon={<PeopleIcon />}
-              meta={teamCount == null ? undefined : <bdi className="ui-num" dir="ltr">{String(teamCount)}</bdi>}
-              label={teamCount == null ? undefined : `צוות: ${String(teamCount)}`}
+              value={teamCount == null ? undefined : <bdi className="ui-num" dir="ltr">{String(teamCount)}</bdi>}
             />
           ) : null}
-        </List>
-      ) : null}
-      {!noCompany && !holdOwner && namedBusiness !== "" && currencyReady ? (
-        <CompanyCurrencySheet
-          open={currencyOpen}
-          onOpenChange={setCurrencyOpen}
-          currency={companyCurrency}
-          blocked={() => blocked(sample != null ? "empty" : undefined)}
-          returnFocusRef={currencyRowRef}
-        />
-      ) : null}
-      {!noCompany && !holdOwner && namedBusiness !== "" ? (
-        <CompanyBasisSheet
-          open={basisOpen}
-          onOpenChange={setBasisOpen}
-          basis={companyBasis}
-          blocked={() => blocked(sample != null ? "empty" : undefined)}
-          returnFocusRef={basisRowRef}
-        />
-      ) : null}
-      <ThemeSheet open={themeOpen} onOpenChange={setThemeOpen} value={theme} onChange={pickTheme} returnFocusRef={themeRowRef} />
-      {!noCompany && !holdOwner && namedBusiness !== "" ? (
-        <RenameCompanySheet
-          open={renameOpen}
-          onOpenChange={(next) => { setRenameSheet(next); }}
-          companyId={sample || previewSample ? null : dashboard.data?.company_id ?? null}
-          currentName={namedBusiness}
-          blocked={() => blocked(sample != null ? "empty" : undefined)}
-          returnFocusRef={businessRowRef}
-        />
-      ) : null}
-      <List>
-        <SettingsPageRow
-          page="connections"
-          href={`/settings/connections${search}`}
-          title="חיבורים"
-          icon={connectionsWarning ? <AlertIcon size={24} /> : <PlugIcon />}
-          hint={connectionsRowHint}
-          skeleton={!noCompany && hint.kind === "loading"}
-          warning={connectionsWarning}
-        />
-        {noCompany ? null : (
-          <SettingsPageRow
-            page="loans"
-            href={`/settings/loans${search}`}
-            title="הלוואות"
-            icon={<LoanIcon />}
-            hint={loansRowHint}
-            skeleton={loansLoading}
-          />
-        )}
-        {pushShown ? (
-          <SettingsPageRow
-            page="notifications"
-            href={`/settings/notifications${search}`}
-            title="התראות"
-            icon={<BellIcon />}
-            hint={notificationsRowHint}
-            skeleton={notificationsLoading}
-          />
-        ) : null}
-      </List>
-      {noCompany ? null : (
-        <>
-          <SectionHead title="תצוגה" />
-          <List>
-            <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" icon={<TagIcon />} chevron />
-            <Toggle
-              label="רווח אחרי הוצאות כלליות"
-              hint="חלק מההוצאות הכלליות נכנס לכל פרויקט"
-              icon={<SplitIcon />}
-              checked={overheadOn}
-              disabled={holdWrites}
-              onChange={(checked) => {
-                if (holdWrites) return;
-                if (sample) {
-                  setOverheadOn(checked);
-                  return;
-                }
-                if (blocked()) return;
-                const previous = overheadOn;
-                setOverheadOn(checked);
-                wantedOverhead.current = checked;
-                saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
-              }}
+          {pushShown ? (
+            <SettingsPageRow
+              page="notifications"
+              href={`/settings/notifications${search}`}
+              title="התראות"
+              icon={<BellIcon />}
+              value={notificationsData != null ? notificationsHint(notificationsData) : undefined}
+              skeleton={notificationsLoading}
             />
-          </List>
-        </>
-      )}
-      {/* FLOW-372: the card (and its theme row, before the install row) shows on every state. The board's card has no heading, so the "עוד" heading keeps its own condition. */}
-      {showInstall || showSignOut || (setupEntry != null && !holdOwner) ? <SectionHead title="עוד" /> : null}
-      <List>
-        {setupEntry && !holdOwner ? (
-          <ListRow
-            variant="item"
-            href={setupEntry.href}
-            title="הגדרה ראשונה"
-            hint={<><bdi className="ui-num" dir="ltr">{String(setupEntry.done)}</bdi> מתוך <bdi className="ui-num" dir="ltr">5</bdi></>}
-            describeHint
-            chevron
+          ) : null}
+          <SettingsPageRow
+            page="categories"
+            href={`/settings/categories${search}`}
+            title="קטגוריות"
+            icon={<TagIcon />}
+            value={categoriesLoading ? undefined : categoryCount == null ? undefined : <bdi className="ui-num" dir="ltr">{String(categoryCount)}</bdi>}
+            skeleton={categoriesLoading}
           />
-        ) : null}
+        </List>
+      )}
+      <ThemeSheet open={themeOpen} onOpenChange={setThemeOpen} value={theme} onChange={pickTheme} returnFocusRef={themeRowRef} />
+      <CompanySheet
+        open={companyOpen}
+        onOpenChange={setCompanySheet}
+        onLeave={() => { setCompanyOpen(false); }}
+        returnFocusRef={companyRowRef}
+      />
+      <List layout="inset">
         <ListRow
           variant="button"
           title={THEME_TITLE}
-          hint={themeHint}
+          value={themeHint}
           label={`${THEME_TITLE}: ${themeHint}`}
           icon={<ThemeIcon />}
           chevron
           buttonRef={themeRowRef}
           onClick={() => { setThemeOpen(true); }}
         />
-        {showInstall ? (
-          <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
-        ) : null}
-        {showSignOut ? (
+        {noCompany || companyCount == null ? null : (
           <ListRow
-            variant="danger"
-            title="התנתקות"
-            icon={<LogoutIcon />}
-            busy={signOut.isPending}
-            onClick={() => {
-              signOut.mutate();
-            }}
+            variant="button"
+            title="החלפת עסק"
+            value={<><bdi className="ui-num" dir="ltr">{String(companyCount)}</bdi> עסקים</>}
+            icon={<TransferIcon />}
+            chevron
+            buttonRef={companyRowRef}
+            onClick={() => { setCompanySheet(true); }}
+          />
+        )}
+        {showInstall ? (
+          <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" icon={<DownloadIcon />} chevron />
+        ) : null}
+        {setupEntry && !holdOwner ? (
+          <ListRow
+            variant="item"
+            href={setupEntry.href}
+            title="הגדרה ראשונה"
+            icon={<SparkIcon />}
+            value={setupLeft == null ? undefined : `${String(setupLeft)} להשלמה`}
+            chevron
           />
         ) : null}
       </List>
+      {showSignOut ? (
+        <div className="ui-settings-signout">
+          <Button variant="danger-link" busy={signOut.isPending} onClick={() => { signOut.mutate(); }}>
+            התנתקות
+          </Button>
+        </div>
+      ) : null}
       <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
     </ViewerScope>
@@ -548,22 +414,15 @@ function SettingsPageRow({
   href,
   title,
   icon,
-  hint,
-  meta,
-  label,
+  value,
   skeleton = false,
-  warning = false,
 }: {
   page: SettingsPage;
   href: string;
   title: string;
   icon: ReactNode;
-  hint?: ReactNode;
-  /** At the row's end, before the chevron: the צוות count (FLOW-601). */
-  meta?: ReactNode;
-  label?: string;
+  value?: ReactNode;
   skeleton?: boolean;
-  warning?: boolean;
 }) {
   return (
     <span
@@ -576,13 +435,7 @@ function SettingsPageRow({
         href={href}
         title={title}
         icon={icon}
-        hint={hint}
-        meta={meta}
-        label={label}
-        skelHint={skeleton}
-        describeHint={!skeleton && hint != null}
-        wrapHint
-        tone={warning ? "warning" : undefined}
+        value={skeleton ? <Skeleton width="sm" /> : value}
         chevron
       />
     </span>

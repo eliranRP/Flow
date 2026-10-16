@@ -56,19 +56,18 @@ test("a swipe that starts away from the edge, or turns vertical, stays", async (
   await expect(page.getByRole("heading", { name: "הוצאה לבדיקה" })).toBeVisible();
 });
 
-test("a tab root has no Back, so the swipe does nothing", async ({ page }) => {
+test("the Settings menu's Back goes to Home", async ({ page }) => {
   await page.goto("/settings?preview=1");
   await expect(page.getByRole("heading", { name: "הגדרות" })).toBeVisible();
-  await edgeSwipe(page, 180);
-  await expect(page).toHaveURL(/\/settings\?preview=1$/);
+  await expect(page.getByRole("link", { name: "בית", exact: true }).first()).toHaveAttribute("href", /^\/(\?preview=1)?$/);
 });
 
 test("an open sheet keeps the touch", async ({ page }) => {
-  await page.goto("/settings/connections?preview=1");
-  await page.getByRole("button", { name: "SUMIT" }).click();
-  const sheet = page.getByRole("dialog", { name: "חיבור SUMIT" });
+  await page.goto("/settings?preview=1");
+  await page.getByRole("button", { name: /^מראה/ }).click();
+  const sheet = page.getByRole("dialog");
   await expect(sheet).toBeVisible();
   await edgeSwipe(page, 180);
   await expect(sheet).toBeVisible();
-  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
+  await expect(page).toHaveURL(/\/settings\?preview=1$/);
 });

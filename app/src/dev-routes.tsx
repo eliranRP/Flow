@@ -56,6 +56,9 @@ import {
   InvoiceScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
+import { AiConnectionPage } from "./screens/assistant-settings";
+import { BusinessScreen } from "./screens/business-screen";
+import { SumitConnectionRoute } from "./screens/connection-pages";
 import { ProfitMonthsScreen } from "./screens/profit-months";
 import { ProjectProfitScreen } from "./screens/project-profit-screen";
 import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
@@ -416,6 +419,23 @@ export function DevConnections() {
   return <ConnectionsScreen sample={useDevSettingsSample()} sampleSecret={devAssistantSecret} />;
 }
 
+/** The SUMIT page on the dev fixture: connected, or `?state=problem` for a key that stopped working. */
+export function DevSumitConnection() {
+  const [params] = useSearchParams();
+  const problem = params.get("state") === "problem";
+  return <SumitConnectionRoute sample={problem ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
+}
+
+/** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
+export function DevBusiness() {
+  return <BusinessScreen sample={useDevSettingsSample()} />;
+}
+
+/** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. */
+export function DevAiConnection() {
+  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} />;
+}
+
 /** FLOW-106 B: the list reads the dev loan store, so a status change or a delete on a loan's page shows here. `?loans=none` is empty. */
 export function DevLoans() {
   const [params] = useSearchParams();
@@ -458,14 +478,21 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
     : emailParam === "long"
       ? "owner.with.a.very.long.mailbox.name@example.com"
       : "owner@example.com";
+  // FLOW-512 proof: ?board=1 gives the Settings board's own numbers (an invented business name).
+  const board = params.get("board") === "1" && !noCompany;
   return {
-        name: noCompany ? null : "בדיקה",
+        name: noCompany ? null : board ? "Cedar Lane Homes" : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
-        lastError: mode === "auth" ? "sumit_auth" : null,
+        lastError: board ? "sumit_auth" : mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
-        teamCount: teamParam == null || noCompany ? undefined : Number(teamParam),
+        teamCount: board ? 2 : teamParam == null || noCompany ? undefined : Number(teamParam),
+        companyCount: board ? 2 : undefined,
+        categoryCount: board ? 12 : undefined,
+        notifications: board
+          ? { new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }
+          : undefined,
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"

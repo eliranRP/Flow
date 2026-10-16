@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { Route, Routes, useNavigate } from "react-router-dom";
-import { ConnectionsScreen, LoansScreen, SettingsScreen } from "./flow-screens";
+import { AiConnectionPage } from "./assistant-settings";
+import { BusinessScreen } from "./business-screen";
+import { ConnectionDetailPage } from "./connection-pages";
+import { ConnectionsScreen, SettingsScreen } from "./flow-screens";
+import { RENAME_TOO_SHORT } from "./rename-company";
 import { StoryRoute } from "../ui/story-route";
 
 const meta = {
@@ -25,72 +29,43 @@ function bodyOf(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
-/** ✕ and Escape on a Connections sheet return focus to the control that opened it (FLOW-501 moved them here). */
-export const ReturnFocus: Story = {
+/** Escape on the AI page's confirm sheet returns to the ניתוק button that opened it (FLOW-512). */
+export const ConfirmFocus: Story = {
+  name: "AI disconnect, Escape returns focus",
   render: () => (
-    <StoryRoute entry="/settings/connections">
-      <ConnectionsScreen
-        sample={{
-          ...business,
-          connected: false,
-          companyId: null,
-          assistant: { state: "empty" },
-        }}
-      />
+    <StoryRoute entry="/settings/connections/ai">
+      <AiConnectionPage sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = bodyOf(canvasElement);
-
-    const assistant = canvas.getByRole("button", { name: "עוזר AI" });
-    await userEvent.click(assistant);
-    const connect = await body.findByRole("dialog", { name: "חיבור עוזר AI" });
-    await userEvent.click(within(connect).getByRole("button", { name: "סגירה" }));
-    await waitFor(() => expect(connect).not.toBeInTheDocument());
-    await waitFor(() => expect(assistant).toHaveFocus());
-
-    await userEvent.click(assistant);
-    const again = await body.findByRole("dialog", { name: "חיבור עוזר AI" });
+    const disconnect = canvas.getByRole("button", { name: "ניתוק" });
+    await userEvent.click(disconnect);
+    const confirm = await body.findByRole("dialog", { name: "לנתק את העוזר?" });
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(again).not.toBeInTheDocument());
-    await waitFor(() => expect(assistant).toHaveFocus());
-
-    const sumit = canvas.getByRole("button", { name: "SUMIT" });
-    await userEvent.click(sumit);
-    const sumitSheet = await body.findByRole("dialog", { name: "חיבור SUMIT" });
-    await userEvent.click(within(sumitSheet).getByRole("button", { name: "סגירה" }));
-    await waitFor(() => expect(sumitSheet).not.toBeInTheDocument());
-    await waitFor(() => expect(sumit).toHaveFocus());
+    await waitFor(() => expect(confirm).not.toBeInTheDocument());
+    await waitFor(() => expect(disconnect).toHaveFocus());
   },
 };
 
-/** Escape on the confirm sheet returns to the ניתוק row that opened it. */
-export const ConfirmFocus: Story = {
+/** The SUMIT page's ניתוק confirm: closing it puts focus back on the button. */
+export const SumitDisconnectFocus: Story = {
+  name: "SUMIT disconnect, close returns focus",
   render: () => (
-    <StoryRoute entry="/settings/connections">
-      <ConnectionsScreen
-        sample={{
-          ...business,
-          assistant: { state: "connected", scope: "read_write", id: "mcp-1" },
-        }}
-      />
+    <StoryRoute entry="/settings/connections/sumit">
+      <ConnectionDetailPage provider="sumit" sample={{ state: "connected", companyId: "1234567", lastSync: "היום, 06:05" }} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = bodyOf(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "עוזר AI" }));
-    const details = await body.findByRole("dialog", { name: "עוזר AI" });
-    const disconnect = within(details).getByRole("button", { name: "ניתוק" });
+    const disconnect = canvas.getByRole("button", { name: "ניתוק" });
     await userEvent.click(disconnect);
-    const confirm = await body.findByRole("dialog", { name: "לנתק את העוזר?" });
+    const confirm = await body.findByRole("dialog", { name: "לנתק את SUMIT?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "סגירה" }));
     await waitFor(() => expect(confirm).not.toBeInTheDocument());
     await waitFor(() => expect(disconnect).toHaveFocus());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(details).not.toBeInTheDocument());
-    await waitFor(() => expect(canvas.getByRole("button", { name: "עוזר AI" })).toHaveFocus());
   },
 };
 
@@ -106,19 +81,19 @@ const renameBusiness = {
 export const RenameTooShort: Story = {
   name: "Rename sheet, name too short",
   render: () => (
-    <StoryRoute entry="/settings">
-      <SettingsScreen sample={renameBusiness} />
+    <StoryRoute entry="/settings/business">
+      <BusinessScreen sample={renameBusiness} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
     const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: "שם העסק" });
-    const field = within(sheet).getByLabelText("שם");
+    const field = within(sheet).getByLabelText("השם כפי שיופיע");
     await userEvent.clear(field);
     await userEvent.type(field, "א");
     await userEvent.tab();
     await expect(field).toHaveAttribute("aria-invalid", "true");
-    await within(sheet).findByText("שם קצר מדי – לפחות 2 תווים");
+    await within(sheet).findByText(RENAME_TOO_SHORT);
   },
 };
 
@@ -131,28 +106,28 @@ function BackLink() {
   );
 }
 
-/** FLOW-501. Back from the Connections and Loans pages puts focus on the Settings row that opened them. */
+/** FLOW-501, FLOW-512. Back from the Connections and business pages puts focus on the Settings row that opened them. */
 export const BackFocus: Story = {
   name: "Back returns focus to the Settings row",
   render: () => (
     <StoryRoute entry="/settings">
       <BackLink />
       <Routes>
-        <Route path="/settings" element={<SettingsScreen sample={{ ...business, loans: [] }} />} />
+        <Route path="/settings" element={<SettingsScreen sample={business} />} />
         <Route path="/settings/connections" element={<ConnectionsScreen sample={{ ...business, assistant: { state: "empty" } }} />} />
-        <Route path="/settings/loans" element={<LoansScreen sample={{ ...business, loans: [] }} />} />
+        <Route path="/settings/business" element={<BusinessScreen sample={business} />} />
       </Routes>
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("link", { name: "חיבורים" }));
+    await userEvent.click(canvas.getByRole("link", { name: /^חיבורים/ }));
     await canvas.findByRole("heading", { name: "חיבורים" });
     await userEvent.click(canvas.getByRole("button", { name: "חזרה בדפדפן" }));
-    await waitFor(() => expect(canvas.getByRole("link", { name: "חיבורים" })).toHaveFocus());
-    await userEvent.click(canvas.getByRole("link", { name: "הלוואות" }));
-    await canvas.findByRole("heading", { name: "הלוואות" });
+    await waitFor(() => expect(canvas.getByRole("link", { name: /^חיבורים/ })).toHaveFocus());
+    await userEvent.click(canvas.getByRole("link", { name: /^העסק/ }));
+    await canvas.findByRole("heading", { name: "העסק" });
     await userEvent.click(canvas.getByRole("button", { name: "חזרה בדפדפן" }));
-    await waitFor(() => expect(canvas.getByRole("link", { name: "הלוואות" })).toHaveFocus());
+    await waitFor(() => expect(canvas.getByRole("link", { name: /^העסק/ })).toHaveFocus());
   },
 };

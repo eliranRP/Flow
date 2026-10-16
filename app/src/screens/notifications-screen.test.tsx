@@ -35,9 +35,9 @@ describe("push prefs", () => {
     expect(screen.getByText("settings home")).toBeInTheDocument();
   });
 
-  it("names the switches that are on in the Settings hint, or כבוי", () => {
-    expect(notificationsHint(NO_PREFS)).toBe("כבוי");
-    expect(notificationsHint({ ...NO_PREFS, evening_reminder: true, weekly_summary: true })).toBe("תזכורת ערב · סיכום שבועי");
+  it("names the count of switches on in the Settings hint, or כבויות", () => {
+    expect(notificationsHint(NO_PREFS)).toBe("כבויות");
+    expect(notificationsHint({ ...NO_PREFS, evening_reminder: true, weekly_summary: true })).toBe("2 פעילות");
   });
 });
 

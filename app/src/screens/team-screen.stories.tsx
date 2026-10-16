@@ -41,8 +41,8 @@ export const Invite: Story = {
   name: "Invite sheet (invite-1)",
   render: page({ delayMs: 600 }),
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "הזמנה" }));
-    await body(canvasElement).findByRole("dialog", { name: "הזמנה" });
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "הזמנה לצוות" }));
+    await body(canvasElement).findByRole("dialog", { name: "הזמנה לצוות" });
   },
 };
 
@@ -50,8 +50,8 @@ export const InviteAlreadyMember: Story = {
   name: "Invite sheet, already a member",
   render: page(),
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "הזמנה" }));
-    const dialog = await body(canvasElement).findByRole("dialog", { name: "הזמנה" });
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "הזמנה לצוות" }));
+    const dialog = await body(canvasElement).findByRole("dialog", { name: "הזמנה לצוות" });
     await userEvent.type(within(dialog).getByLabelText("אימייל"), "yossi@example.com");
     await userEvent.click(within(dialog).getByRole("button", { name: "שליחת הזמנה" }));
     await within(dialog).findByText("כבר בצוות.");
@@ -82,7 +82,7 @@ export const PendingSheet: Story = {
   name: "Pending invite sheet",
   render: page({ pendingInvite: true }),
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "noa@example.com, הוזמנה · צופה" }));
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "noa@example.com, הוזמן · ממתין" }));
     await body(canvasElement).findByRole("dialog", { name: "noa@example.com" });
   },
 };

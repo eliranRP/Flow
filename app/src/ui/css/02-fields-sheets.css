@@ -487,23 +487,6 @@
   border-color: var(--color-accent);
 }
 
-.ui-assistant-step {
-  min-block-size: 22rem;
-}
-
-.ui-assistant-status {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.ui-assistant-header {
-  display: inline-block;
-  max-inline-size: 100%;
-  overflow-x: auto;
-  vertical-align: bottom;
-}
-
 .ui-field-control {
   width: 100%;
   max-width: 100%;
