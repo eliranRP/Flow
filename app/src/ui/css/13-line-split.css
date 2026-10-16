@@ -142,7 +142,7 @@
    amount field beside it, so the two read as one row. */
 .ui-lsplit-entry .ui-seg-input {
   box-sizing: border-box;
-  block-size: var(--control-height);
+  block-size: var(--field-height);
   min-block-size: var(--touch-min);
 }
 

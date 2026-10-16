@@ -5,7 +5,7 @@ import { Skeleton } from "../ui/skeleton";
 import { LoanReadError } from "./loan-match";
 
 export const NO_PROJECT = "ללא פרויקט";
-/** More projects than this get a search field (guide §7.12). */
+/** More projects than this get a search field (guide §7.13). */
 const PROJECT_SEARCH_FROM = 8;
 const projectSkeleton = ["a", "b", "c", "d"] as const;
 

@@ -22,7 +22,7 @@ describe("CodeField", () => {
     expect(onCopy).not.toHaveBeenCalled();
   });
 
-  it("names the copy control for the field and keeps the icon as the visible control", () => {
+  it("names the copy control for the field and shows its text as the visible control", () => {
     const onCopy = vi.fn();
     render(
       <CodeField
@@ -37,6 +37,7 @@ describe("CodeField", () => {
     const button = screen.getByRole("button", { name: "העתקה: קוד" });
     expect(button).toHaveAttribute("aria-label", "העתקה: קוד");
     expect(button).not.toHaveTextContent("העתקה: קוד");
+    expect(button).toHaveTextContent("העתקה");
     expect(button.querySelector("input")).toBeNull();
     fireEvent.click(button);
     expect(onCopy).toHaveBeenCalledTimes(1);

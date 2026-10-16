@@ -27,6 +27,6 @@ A separate band colour in dark mode. Shipping screens from the superseded explor
 
 ## Consequences
 
-Build from this package. Boards: ds-1 to ds-3 (retired; see the Design canvas), [ds-4 light](../../design/system/ds-4-controls-light.png), [ds-4 dark](../../design/system/ds-4-controls-dark.png), [ds-5 light](../../design/system/ds-5-content-light.png), [ds-5 dark](../../design/system/ds-5-content-dark.png), [ds-6 light](../../design/system/ds-6-band-light.png), [ds-6 dark](../../design/system/ds-6-band-dark.png), [ds-7 light](../../design/system/ds-7-empty-loading-light.png), [ds-7 dark](../../design/system/ds-7-empty-loading-dark.png), [ds-8 light](../../design/system/ds-8-pickers-sheets-light.png), [ds-8 dark](../../design/system/ds-8-pickers-sheets-dark.png).
+Build from this package. Boards: ds-1 to ds-3 (retired; see the Design canvas), ds-4 to ds-6 (retired; see the Design canvas), [ds-7 light](../../design/system/ds-7-empty-loading-light.png), [ds-7 dark](../../design/system/ds-7-empty-loading-dark.png), [ds-8 light](../../design/system/ds-8-pickers-sheets-light.png), [ds-8 dark](../../design/system/ds-8-pickers-sheets-dark.png).
 
 How a screen is implemented is [0025](0025-implementation-guide-is-mandatory.md). The logo is [0031](0031-logo.md).

@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { CodeField } from "./code-field";
+import { forceReducedMotion } from "./reduced-motion";
 import { padded } from "./story-support";
 
 const meta = {
   title: "Components/CodeField",
   component: CodeField,
+  tags: ["autodocs"],
   decorators: [padded],
 } satisfies Meta<typeof CodeField>;
 
@@ -51,3 +53,5 @@ export const Short: Story = { args: shortArgs };
 export const Long: Story = { args: longArgs };
 export const Failed: Story = { args: failedArgs };
 export const Empty: Story = { args: emptyArgs };
+/** The copy button presses with opacity; under reduced motion it changes at once. */
+export const ReducedMotion: Story = { args: shortArgs, decorators: [forceReducedMotion] };

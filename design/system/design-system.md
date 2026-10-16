@@ -1,7 +1,7 @@
 # Flow design system (v1 · for review)
 
 Approved direction: **V1 Violet with the coloured top band** (ui5-v1-color). Hebrew, right-to-left, mobile-first PWA.
-Tokens live in `implementation-tokens.css`, which is edited by hand (no generator; [0181](../../docs/decisions/0181-redesign-foundation.md)). The Design canvas is the design reference, and the boards `ds-4` to `ds-8` (light and dark) still apply until their screens are rebuilt. Every text colour passes WCAG AA (4.5:1). Check any new pairing against it.
+Tokens live in `implementation-tokens.css`, which is edited by hand (no generator; [0181](../../docs/decisions/0181-redesign-foundation.md)). The Design canvas is the design reference, and the boards `ds-7` and `ds-8` (light and dark) still apply until their screens are rebuilt. Every text colour passes WCAG AA (4.5:1). Check any new pairing against it.
 
 ## Principles
 - Calm and airy: white page, lots of space, few numbers per screen, detail on inner screens.

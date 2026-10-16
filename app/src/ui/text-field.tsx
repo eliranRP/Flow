@@ -24,6 +24,7 @@ export function TextField({
   autoCapitalize,
   spellCheck,
   numeric = false,
+  readOnly = false,
   onPointerDown,
   ...rest
 }: TextFieldProps) {
@@ -32,7 +33,7 @@ export function TextField({
   const fieldName = flowControlName("flow-text", generated, typeof name === "string" ? name : fieldId);
   const errorId = `${fieldId}-error`;
   return (
-    <div className={cx("ui-field", error && "ui-field-error")}>
+    <div className={cx("ui-field", error && "ui-field-error", readOnly && "ui-field-readonly")}>
       <label className="ui-field-label" htmlFor={fieldId}>
         {label}
       </label>
@@ -44,6 +45,7 @@ export function TextField({
         autoCorrect={autoCorrect ?? "off"}
         autoCapitalize={autoCapitalize ?? "none"}
         spellCheck={spellCheck ?? false}
+        readOnly={readOnly}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         {...rest}

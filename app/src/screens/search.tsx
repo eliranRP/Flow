@@ -290,6 +290,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
             placeholder="חיפוש ספק, לקוח או תיאור"
             inputRef={inputRef}
             maxLength={SEARCH_MAX_LENGTH}
+            busy={query.isFetching}
           />
         </div>
       </div>

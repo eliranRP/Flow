@@ -3,9 +3,9 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { SearchField } from "./search-field";
 import { padded } from "./story-support";
 
-function Demo({ value, autoFocus = false }: { value: string; autoFocus?: boolean }) {
+function Demo({ value, autoFocus = false, busy = false, disabled = false }: { value: string; autoFocus?: boolean; busy?: boolean; disabled?: boolean }) {
   const [text, setText] = useState(value);
-  return <SearchField label="חיפוש פרויקט" value={text} onChange={setText} autoFocus={autoFocus} />;
+  return <SearchField label="חיפוש פרויקט" value={text} onChange={setText} autoFocus={autoFocus} busy={busy} disabled={disabled} />;
 }
 
 const meta = {
@@ -31,4 +31,13 @@ export const Focus: Story = {
   tags: ["clip-no-text"],
   args: { label: "חיפוש פרויקט", value: "", onChange: () => undefined },
   render: () => <Demo value="" autoFocus />,
+};
+/** Results are loading: a spinner at the end, the clear button hidden, and the box is aria-busy. */
+export const Busy: Story = {
+  args: { label: "חיפוש פרויקט", value: "הרצל", onChange: () => undefined, busy: true },
+  render: () => <Demo value="הרצל" busy />,
+};
+export const Disabled: Story = {
+  args: { label: "חיפוש פרויקט", value: "הרצל", onChange: () => undefined, disabled: true },
+  render: () => <Demo value="הרצל" disabled />,
 };

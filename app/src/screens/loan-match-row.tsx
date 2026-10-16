@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { allocateLoanSplitWithFees, type LoanSplitPart, type TransactionLoanSplit } from "@flow/shared";
 import { parseShekelInput } from "@flow/shared";
 import { AlertIcon, BankIcon } from "../ui/icons";
-import { ListRow } from "../ui/list-row";
+import { IconRow } from "../ui/icon-row";
 import { LoanPartsSheet, loanPartsCount, loanPaymentTitle, type LoanPartField } from "../ui/loan-parts-sheet";
 import { useSheetHistory } from "../ui/back";
 import { useToast } from "../ui/toast";
@@ -204,12 +204,13 @@ export function LoanCategoryRow({
   const title = loanPaymentTitle(sheetSplit.loan_name);
   const count = loanPartsCount(sheetSplit.parts.length);
   const rowProps = {
-    eyebrow: "קטגוריה",
-    title,
+    label: "קטגוריה",
+    value: title,
     hint: reviewWaits ? "ממתין לבדיקה" : count,
     icon: reviewWaits ? <AlertIcon /> : <BankIcon />,
     tone: reviewWaits ? ("warning" as const) : undefined,
   };
+  const rowName = `${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`;
   const editing = shown ?? sheetSplit;
   if (readOnly) {
     if (split == null) return <>{children}</>;
@@ -218,7 +219,7 @@ export function LoanCategoryRow({
     const viewTotal = editing.parts.reduce((sum, part) => sum + part.amount_minor, 0n);
     return (
       <>
-        <ListRow variant="button" {...rowProps} className="ui-list-wrap-title" chevron buttonRef={rowRef} label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`} onClick={() => { setShown(split); setSheet(true); }} />
+        <IconRow {...rowProps} buttonRef={rowRef} name={rowName} onClick={() => { setShown(split); setSheet(true); }} />
         <LoanPartsSheet
           readOnly
           open={open}
@@ -279,13 +280,11 @@ export function LoanCategoryRow({
   return (
     <>
       {split == null ? children : (
-        <ListRow
-          variant="button"
+        <IconRow
           {...rowProps}
-          className={`${LOAN_ROW_CLASS_NAME} ui-list-wrap-title`}
-          chevron
+          className={LOAN_ROW_CLASS_NAME}
           buttonRef={rowRef}
-          label={`${title}, ${reviewWaits ? "ממתין לבדיקה" : count}, פיצול`}
+          name={rowName}
           onClick={openSheet}
         />
       )}

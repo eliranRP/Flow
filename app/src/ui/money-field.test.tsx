@@ -71,4 +71,53 @@ describe("MoneyField", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(screen.getByText("1200000")).toBeInTheDocument();
   });
+
+  it("keeps the percent digits, at most two decimal places, and an empty value", () => {
+    function Field({ start = "" }: { start?: string }) {
+      const [share, setShare] = useState(start);
+      return <PercentField label="אחוז, חולון" value={share} onValueChange={setShare} />;
+    }
+    const { unmount } = render(<Field start="9" />);
+    const input = screen.getByRole("textbox", { name: "אחוז, חולון" });
+    fireEvent.change(input, { target: { value: "12.349x" } });
+    expect(input).toHaveValue("12.3");
+    fireEvent.change(input, { target: { value: "8" } });
+    expect(input).toHaveValue("8");
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input).toHaveValue("");
+    fireEvent.change(input, { target: { value: "100" } });
+    expect(input).toHaveValue("100");
+    expect(input).toHaveAttribute("inputmode", "decimal");
+    expect(input).toHaveAttribute("autocomplete", "off");
+    expect(input.getAttribute("name") ?? "").toMatch(/^split-pct-/);
+    expect(input.id).toMatch(/^split-pct-/);
+    expect(input).toHaveAttribute("enterkeyhint", "next");
+    unmount();
+
+    render(<Field />);
+    expect(screen.getByRole("textbox", { name: "אחוז, חולון" })).toHaveValue("");
+  });
+
+  it("keeps zero, one decimal and a full share as typed", () => {
+    function Field({ start }: { start: string }) {
+      const [share, setShare] = useState(start);
+      return <PercentField label="אחוז" value={share} onValueChange={setShare} />;
+    }
+    for (const value of ["0", "33.3", "100"]) {
+      const { unmount } = render(<Field start={value} />);
+      expect(screen.getByRole("textbox", { name: "אחוז" })).toHaveValue(value);
+      unmount();
+    }
+  });
+
+  it("keeps three decimals for a loan rate", () => {
+    function Rate() {
+      const [rate, setRate] = useState("");
+      return <PercentField label="ריבית שנתית" value={rate} decimals={3} onValueChange={setRate} />;
+    }
+    render(<Rate />);
+    const input = screen.getByRole("textbox", { name: "ריבית שנתית" });
+    fireEvent.change(input, { target: { value: "6.1259" } });
+    expect(input).toHaveValue("6.125");
+  });
 });
