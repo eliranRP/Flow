@@ -211,7 +211,8 @@
 }
 
 .ui-add-chip-new {
-  min-block-size: var(--touch-min);
+  block-size: var(--size-chip);
+  min-block-size: var(--size-chip);
   padding-inline: var(--space-3);
   border: 1px dashed var(--color-accent-text);
   border-radius: var(--radius-chip);
