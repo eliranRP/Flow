@@ -232,8 +232,8 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
         <MissingBillList rows={missingBillViews(SAMPLE_MISSING_BILLS, "", now)} onHide={vi.fn()} peek />
       </MemoryRouter>,
     );
-    expect(document.querySelectorAll(".ui-sremove[data-peek]").length).toBeLessThanOrEqual(1);
-    expect(document.querySelectorAll(".ui-sremove-under")[0]?.textContent).toBe("סגירה");
+    expect(document.querySelectorAll(".ui-swipe-row[data-peek]").length).toBeLessThanOrEqual(1);
+    expect(document.querySelectorAll(".ui-swipe-row-under")[0]?.textContent).toBe("סגירה");
   });
 });
 

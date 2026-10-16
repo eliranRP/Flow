@@ -49,7 +49,7 @@ function SetupHomeReady({
     toasted.current = true;
     const at = new Date().toISOString();
     update((current) => withPatch(current, { completed_toast_at: at }));
-    toast.show({ message: COMPLETED_TOAST, place: "tab" });
+    toast.show({ message: COMPLETED_TOAST });
   }, [viewer.viewer, store, facts, toast, update]);
 
   if (!showCard) return null;
@@ -62,7 +62,6 @@ function SetupHomeReady({
         update((current) => withPatch(current, { card_dismissed_at: at }));
         toast.show({
           message: DISMISS_TOAST,
-          place: "tab",
           action: "ביטול",
           onAction: () => {
             update((current) => withPatch(current, { card_dismissed_at: null }));

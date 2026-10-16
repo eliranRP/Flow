@@ -23,6 +23,8 @@ type HeaderChrome = {
   titleAside?: ReactNode;
   /** The figure after the title on the compact bar, e.g. an Amount (FLOW-363 3a). */
   compactFigure?: ReactNode;
+  /** A row under the compact bar, e.g. the organize chips (FLOW-363 3c). The bar then shows once it scrolls off. */
+  panel?: ReactNode;
   /** Compact is the t-title-3 used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
@@ -58,6 +60,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     below,
     titleAside,
     compactFigure,
+    panel,
     size = "default",
     subtitleClassName,
   } = props;
@@ -95,9 +98,10 @@ export function ScreenHeader(props: ScreenHeaderProps) {
           <FocusTitle className="t-title">{title}</FocusTitle>
         )
       ) : null}
-      {compact ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
+      {compact && panel == null ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
       {below != null ? <div className="ui-page-below">{below}</div> : null}
+      {compact && panel != null ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {compact ? (
         <CompactBar
           title={title}
@@ -105,6 +109,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
           label={labelledBack ? kicker : undefined}
           figure={compactFigure}
           shown={past}
+          panel={panel}
         />
       ) : null}
     </header>

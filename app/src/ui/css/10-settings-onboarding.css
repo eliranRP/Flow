@@ -54,8 +54,10 @@
   flex: none;
   border-radius: var(--radius-chip);
   background: var(--color-control-border);
+  transition: background-color var(--motion-press) var(--ease-linear);
 }
 
+/* FLOW-363 (3c): the knob moves by transform from the start side to the end side (left in RTL). */
 .ui-switch i {
   position: absolute;
   top: var(--switch-inset);
@@ -64,7 +66,7 @@
   height: var(--switch-knob);
   border-radius: var(--radius-chip);
   background: var(--color-knob);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .ui-switch-row input {
@@ -90,9 +92,11 @@
 }
 
 .ui-switch-row input:checked + .ui-switch i {
-  inset-inline-start: auto;
-  inset-inline-end: var(--switch-inset);
-  background: var(--color-knob-on);
+  transform: translateX(calc(var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset)));
+}
+
+.ui-switch-row:dir(rtl) input:checked + .ui-switch i {
+  transform: translateX(calc(-1 * (var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset))));
 }
 
 .ui-switch-copy .t-hint {
@@ -156,7 +160,7 @@
 }
 
 .ui-switch-row:active:not(:has(input:disabled, input[aria-disabled="true"])) .ui-switch {
-  background: var(--color-tint-pressed);
+  opacity: .72;
 }
 
 /* The Jev switch uses the same row box as SUMIT: 14px pad, body title, hint line, one border. */

@@ -1,9 +1,9 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { placeToast, safeTopPx, toastMinBlock, ToastProvider, useToast } from "./toast";
+import { placeToast, safeTopPx, ToastProvider, useToast } from "./toast";
 
-function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" | "bad" | "info"; message?: string; place?: "page" | "tab" }) {
+function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" | "bad" | "info"; message?: string; place?: "page" | "bar" }) {
   const toast = useToast();
   return (
     <button
@@ -99,13 +99,13 @@ describe("Toast", () => {
     });
     expect(screen.getByRole("status")).toBeInTheDocument();
     act(() => {
-      vi.advanceTimersByTime(1_500);
+      vi.advanceTimersByTime(1_660);
     });
     expect(screen.getByRole("status")).not.toHaveTextContent("לא נשמר");
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
-  it("dismisses on tap and on a swipe, and does not cover the page", () => {
+  it("dismisses on tap and on a swipe, and does not cover the page", async () => {
     render(
       <ToastProvider>
         <Probe />
@@ -119,19 +119,19 @@ describe("Toast", () => {
     expect(getComputedStyle(status.parentElement ?? status).pointerEvents).toBe("none");
     expect(getComputedStyle(status).pointerEvents).toBe("auto");
     fireEvent.click(status);
+    await waitFor(() => { expect(document.querySelector(".ui-toast")).toBeNull(); });
     expect(screen.getByRole("status")).not.toHaveTextContent("הפריט אושר");
-    expect(document.querySelector(".ui-toast")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
     const again = screen.getByRole("status");
     fireEvent.pointerDown(again, { clientX: 20, clientY: 20, pointerType: "touch" });
     fireEvent.pointerUp(again, { clientX: 120, clientY: 20, pointerType: "touch" });
+    await waitFor(() => { expect(document.querySelector(".ui-toast")).toBeNull(); });
     expect(screen.getByRole("status")).not.toHaveTextContent("הפריט אושר");
-    expect(document.querySelector(".ui-toast")).toBeNull();
     expect(screen.getByRole("button", { name: "דלג" })).toBeEnabled();
   });
 
-  it("runs a toast action once when the tap is repeated before the toast closes", () => {
+  it("runs a toast action once when the tap is repeated before the toast closes", async () => {
     let calls = 0;
     function ActionProbe() {
       const toast = useToast();
@@ -162,11 +162,11 @@ describe("Toast", () => {
     fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(calls).toBe(1);
+    await waitFor(() => { expect(document.querySelector(".ui-toast")).toBeNull(); });
     expect(screen.getByRole("status")).not.toHaveTextContent("לא נשמר");
-    expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
-  it("keeps an undo action for about five seconds", () => {
+  it("keeps an undo action for three seconds", () => {
     vi.useFakeTimers();
     function Undo() {
       const toast = useToast();
@@ -193,14 +193,44 @@ describe("Toast", () => {
     });
     expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
     act(() => {
-      vi.advanceTimersByTime(2_499);
+      vi.advanceTimersByTime(499);
     });
     expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
     act(() => {
-      vi.advanceTimersByTime(20);
+      vi.advanceTimersByTime(200);
     });
     expect(screen.queryByRole("button", { name: "ביטול" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).not.toHaveTextContent("השיוך נשמר");
+  });
+
+  it("keeps a failure with a retry for five seconds, and a confirmation has no icon", () => {
+    vi.useFakeTimers();
+    function Retry() {
+      const toast = useToast();
+      return (
+        <>
+          <button type="button" onClick={() => { toast.show({ tone: "bad", message: "לא נשמר", action: "ניסיון חוזר", onAction: () => undefined }); }}>כשל</button>
+          <button type="button" onClick={() => { toast.show({ message: "הפריט אושר" }); }}>אישור</button>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Retry />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(document.querySelector(".ui-toast-icon")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "כשל" }));
+    expect(document.querySelector(".ui-toast-icon")).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(4_500);
+    });
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });
 
   it("keeps an info notice out of the error colour", () => {
@@ -226,7 +256,7 @@ describe("Toast", () => {
     expect(parts).toEqual(["צפייה בלבד", " · שינויים נעשים על ידי בעל העסק"]);
   });
 
-  it("keeps a confirmation under the header after the sheet closes", async () => {
+  it("keeps a confirmation above the tab bar while the sheet is open and after it closes", async () => {
     const innerHeight = window.innerHeight;
     const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
     if (!rect?.value) throw new Error("getBoundingClientRect is missing");
@@ -254,6 +284,7 @@ describe("Toast", () => {
       return original.call(this);
     };
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    document.documentElement.style.setProperty("--space-4", "16px");
     function Show() {
       const toast = useToast();
       const [open, setOpen] = useState(true);
@@ -283,23 +314,68 @@ describe("Toast", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
       const host = document.querySelector(".ui-toast-host");
-      expect(host).toHaveStyle({ top: "163px" });
+      expect(host).toHaveStyle({ top: "720px" });
       const sheet = document.querySelector("[data-vaul-drawer]");
       expect(sheet).not.toBeNull();
       await act(async () => {
         sheet?.setAttribute("data-state", "closed");
         await Promise.resolve();
       });
-      expect(host).toHaveStyle({ top: "163px" });
+      expect(host).toHaveStyle({ top: "720px" });
       fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
       await act(async () => {
         await Promise.resolve();
       });
       expect(document.querySelector("[data-vaul-drawer]")).toBeNull();
-      expect(document.querySelector(".ui-toast-host")).toHaveStyle({ top: "163px" });
+      expect(document.querySelector(".ui-toast-host")).toHaveStyle({ top: "720px" });
     } finally {
+      document.documentElement.style.removeProperty("--space-4");
       Element.prototype.getBoundingClientRect = original;
       Object.defineProperty(window, "innerHeight", { configurable: true, value: innerHeight });
+    }
+  });
+});
+
+describe("Toast leaving (FLOW-363 3c)", () => {
+  it("clears a leaving toast at once when its out token reads 0", () => {
+    document.documentElement.style.setProperty("--motion-toast-out", "0ms");
+    try {
+      render(
+        <ToastProvider>
+          <Probe message="הפריט אושר" />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+      const status = screen.getByRole("status");
+      fireEvent.click(status);
+      expect(document.querySelector(".ui-toast")).toBeNull();
+    } finally {
+      document.documentElement.style.removeProperty("--motion-toast-out");
+    }
+  });
+
+  it("keeps the leaving toast on screen for the sink, and a new toast replaces it", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ToastProvider>
+          <Probe message="הפריט אושר" />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+      act(() => {
+        vi.advanceTimersByTime(3_000);
+      });
+      expect(document.querySelector(".ui-toast-host")).toHaveAttribute("data-phase", "out");
+      expect(document.querySelector(".ui-toast")).not.toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+      expect(document.querySelector(".ui-toast-host")).not.toHaveAttribute("data-phase", "out");
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(screen.getByRole("status")).toHaveTextContent("הפריט אושר");
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
@@ -326,11 +402,11 @@ describe("placeToast", () => {
     };
   }
 
-  it("sits a confirmation above the tab bar when Home asks for that place", () => {
+  it("sits a confirmation above the tab bar, with the screen sides", () => {
     const bar = document.createElement("nav");
     bar.className = "ui-tabbar";
     const host = document.createElement("div");
-    host.dataset.place = "tab";
+    host.dataset.place = "page";
     const toast = document.createElement("div");
     toast.className = "ui-toast";
     host.appendChild(toast);
@@ -376,7 +452,7 @@ describe("placeToast", () => {
     host.remove();
   });
 
-  it("keeps a page toast under the header while a sheet is open", () => {
+  it("keeps a page toast above the floor while a sheet is open", () => {
     const page = document.createElement("header");
     page.className = "ui-page";
     const bar = document.createElement("nav");
@@ -392,6 +468,7 @@ describe("placeToast", () => {
     toast.className = "ui-toast";
     host.appendChild(toast);
     document.body.append(page, bar, sheet, host);
+    document.documentElement.style.setProperty("--space-4", "16px");
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
     page.getBoundingClientRect = () => box(155, 40);
     bar.getBoundingClientRect = () => box(844, 60);
@@ -399,58 +476,13 @@ describe("placeToast", () => {
     choice.getBoundingClientRect = () => box(200, 40);
     toast.getBoundingClientRect = () => box(48, 48);
     placeToast(host);
-    expect(host.style.top).toBe("163px");
-    expect(Number.parseFloat(host.style.top) + 48).toBeLessThan(364);
+    // Above the tab bar's top (784) less the 16px gap and the 48px toast, not under the header.
+    expect(host.style.top).toBe("720px");
+    expect(host.style.paddingInline).toBe("var(--space-4)");
+    document.documentElement.style.removeProperty("--space-4");
     page.remove();
     bar.remove();
     sheet.remove();
-    host.remove();
-  });
-
-  it("does not clip the toast when the free gap is shorter than two lines", () => {
-    const header = document.createElement("header");
-    header.className = "ui-page";
-    const first = document.createElement("button");
-    const second = document.createElement("button");
-    const host = document.createElement("div");
-    const toast = document.createElement("div");
-    toast.className = "ui-toast";
-    host.appendChild(toast);
-    document.body.append(header, first, second, host);
-    Object.defineProperty(window, "innerHeight", { configurable: true, value: 200 });
-    header.getBoundingClientRect = () => box(20, 20);
-    first.getBoundingClientRect = () => box(80, 40);
-    second.getBoundingClientRect = () => box(160, 40);
-    toast.getBoundingClientRect = () => box(48, 48);
-    placeToast(host);
-    expect(toast.style.overflow).not.toBe("hidden");
-    expect(toast.style.maxHeight).toBe("");
-    header.remove();
-    first.remove();
-    second.remove();
-    host.remove();
-  });
-
-  it("shrinks a tall toast only down to two lines", () => {
-    const header = document.createElement("header");
-    header.className = "ui-page";
-    const button = document.createElement("button");
-    const host = document.createElement("div");
-    const toast = document.createElement("div");
-    toast.className = "ui-toast";
-    host.appendChild(toast);
-    document.body.append(header, button, host);
-    Object.defineProperty(window, "innerHeight", { configurable: true, value: 220 });
-    header.getBoundingClientRect = () => box(0, 20);
-    button.getBoundingClientRect = () => box(140, 40);
-    toast.getBoundingClientRect = () => box(0, 160);
-    placeToast(host);
-    const cap = Number.parseFloat(toast.style.maxHeight);
-    expect(toast.style.overflow).toBe("hidden");
-    expect(cap).toBeGreaterThanOrEqual(toastMinBlock());
-    expect(cap).toBeLessThan(160);
-    header.remove();
-    button.remove();
     host.remove();
   });
 
@@ -485,7 +517,7 @@ describe("placeToast", () => {
     });
     expect(screen.getByRole("status")).toHaveTextContent("עלות משותפת מפוצלת במסך הפיצול.");
     act(() => {
-      vi.advanceTimersByTime(1_000);
+      vi.advanceTimersByTime(1_200);
     });
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
@@ -672,13 +704,13 @@ describe("placeToast", () => {
     expect(surface.dataset.toastPad).toBe(String(pad));
     expect(host.style.top).toBe("55px");
 
-    toast.getBoundingClientRect = () => box(toastMinBlock() + 8, toastMinBlock() + 8);
+    toast.getBoundingClientRect = () => box(77, 77);
     placeToast(host);
     expect(toast.style.maxHeight).toBe("");
     expect(toast.style.overflow).not.toBe("hidden");
     expect(Number.parseFloat(host.style.top)).toBe(55);
     const grown = Number.parseFloat(surface.dataset.toastPad ?? "");
-    expect(closeTop + grown).toBeGreaterThanOrEqual(55 + toastMinBlock() + 8);
+    expect(closeTop + grown).toBeGreaterThanOrEqual(55 + 77);
     placeToast(host);
     expect(surface.dataset.toastPad).toBe(String(grown));
     sheet.remove();
@@ -769,61 +801,24 @@ describe("placeToast", () => {
     host.remove();
   });
 
-  it("moves below a control it would cover", () => {
-    const header = document.createElement("header");
-    header.className = "ui-page";
-    const button = document.createElement("button");
-    button.textContent = "אישור";
+  it("sits a confirmation above the pinned bar when one shows", () => {
+    const floor = document.createElement("div");
+    floor.dataset.toastFloor = "";
     const host = document.createElement("div");
+    host.dataset.place = "page";
     const toast = document.createElement("div");
     toast.className = "ui-toast";
     host.appendChild(toast);
-    document.body.append(header, button, host);
-    Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
-    header.getBoundingClientRect = () => box(40, 40);
-    button.getBoundingClientRect = () => box(90, 40);
+    document.body.append(floor, host);
+    document.documentElement.style.setProperty("--space-4", "16px");
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    floor.getBoundingClientRect = () => box(640, 120);
     toast.getBoundingClientRect = () => box(48, 48);
     placeToast(host);
-    expect(host.style.top).toBe("98px");
-    header.remove();
-    button.remove();
-    host.remove();
-  });
-
-  it("sits under the header when the only other slot covers the tab bar", () => {
-    const header = document.createElement("header");
-    header.className = "ui-page";
-    const link = document.createElement("a");
-    link.href = "/review/all";
-    const line = document.createElement("button");
-    const approve = document.createElement("button");
-    const bar = document.createElement("nav");
-    bar.className = "ui-tabbar";
-    const tab = document.createElement("a");
-    tab.href = "/review";
-    bar.appendChild(tab);
-    const host = document.createElement("div");
-    const toast = document.createElement("div");
-    toast.className = "ui-toast";
-    host.appendChild(toast);
-    document.body.append(header, link, line, approve, bar, host);
-    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
-    header.getBoundingClientRect = () => box(56, 56);
-    link.getBoundingClientRect = () => box(112, 44);
-    line.getBoundingClientRect = () => box(680, 560);
-    approve.getBoundingClientRect = () => box(731, 44);
-    bar.getBoundingClientRect = () => box(844, 60);
-    tab.getBoundingClientRect = () => box(828, 44);
-    toast.getBoundingClientRect = () => box(46, 46);
-    placeToast(host);
-    const top = Number.parseFloat(host.style.top);
-    expect(top + 46).toBeLessThanOrEqual(784);
-    expect(top).toBeLessThan(120);
-    header.remove();
-    link.remove();
-    line.remove();
-    approve.remove();
-    bar.remove();
+    // The bar's top is 520; the 16px gap and the 48px toast sit it at 456.
+    expect(host.style.top).toBe("456px");
+    document.documentElement.style.removeProperty("--space-4");
+    floor.remove();
     host.remove();
   });
 });

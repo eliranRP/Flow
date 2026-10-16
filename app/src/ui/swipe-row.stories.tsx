@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { CloseIcon } from "./icons";
 import { IconButton } from "./icon-button";
-import { SwipeRemove } from "./swipe-remove";
+import { SwipeRow } from "./swipe-row";
 
 /**
  * FLOW-325 (plan §10): on a touch screen, a split part swiped toward the start side (right) is
@@ -21,7 +21,7 @@ function Demo() {
   return (
     <div className="ui-split-card ui-lsplit-card">
       {parts.map((part) => (
-        <SwipeRemove key={part.key} onRemove={() => { remove(part.key); }}>
+        <SwipeRow key={part.key} onRemove={() => { remove(part.key); }}>
           <div className="ui-lsplit-part">
             <div className="ui-lsplit-text">
               <span className="ui-lsplit-pick">
@@ -33,29 +33,27 @@ function Demo() {
               </IconButton>
             </div>
           </div>
-        </SwipeRemove>
+        </SwipeRow>
       ))}
     </div>
   );
 }
 
 const meta = {
-  title: "Components/SwipeRemove",
+  title: "Components/SwipeRow",
   component: Demo,
 } satisfies Meta<typeof Demo>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
 /** At rest: the parts with their ✕; the "הסרה" mark under each row stays hidden. */
 export const Parts: Story = {
   play: async ({ canvasElement }) => {
-    const frame = canvasElement.querySelector<HTMLElement>(".ui-sremove");
+    const frame = canvasElement.querySelector<HTMLElement>(".ui-swipe-row");
     await expect(frame).not.toBeNull();
     await expect(getComputedStyle(frame as HTMLElement).touchAction).toBe("pan-y pinch-zoom");
-    const under = canvasElement.querySelector<HTMLElement>(".ui-sremove-under");
+    const under = canvasElement.querySelector<HTMLElement>(".ui-swipe-row-under");
     await expect(getComputedStyle(under as HTMLElement).visibility).toBe("hidden");
     await expect(within(canvasElement).getByRole("button", { name: "הסרת החלק חשמל" })).toBeVisible();
   },
@@ -64,13 +62,30 @@ export const Parts: Story = {
 /** Mid-swipe: the first part has moved 120px toward the start side over "הסרה". */
 export const Dragging: Story = {
   play: async ({ canvasElement }) => {
-    const frame = canvasElement.querySelector<HTMLElement>(".ui-sremove");
-    const row = frame?.querySelector<HTMLElement>(".ui-sremove-row");
+    const frame = canvasElement.querySelector<HTMLElement>(".ui-swipe-row");
+    const row = frame?.querySelector<HTMLElement>(".ui-swipe-row-body");
     if (!frame || !row) throw new Error("no part");
     frame.setAttribute("data-drag", "");
     row.style.transform = "translateX(120px)";
-    const mark = frame.querySelector<HTMLElement>(".ui-sremove-under");
+    const mark = frame.querySelector<HTMLElement>(".ui-swipe-row-under");
     await expect(getComputedStyle(mark as HTMLElement).visibility).toBe("visible");
   },
 };
-export const Dragging320: Story = { ...Dragging, name: "Dragging, 320", ...at320 };
+/** Open: the row rests over its action, which names the change: "התעלמות מההתראה". */
+export const Revealed: Story = {
+  render: () => (
+    <div className="ui-split-card ui-lsplit-card">
+      <SwipeRow onRemove={() => undefined} reveal={{ label: "התעלמות מההתראה", onAct: () => undefined }}>
+        <div className="ui-lsplit-part">
+          <span className="ui-lsplit-name">ביטוח רכב</span>
+        </div>
+      </SwipeRow>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const frame = canvasElement.querySelector<HTMLElement>(".ui-swipe-row");
+    if (!frame) throw new Error("no swipe row");
+    frame.setAttribute("data-open", "");
+    await expect(within(canvasElement).getByRole("button", { name: "התעלמות מההתראה" })).toBeVisible();
+  },
+};

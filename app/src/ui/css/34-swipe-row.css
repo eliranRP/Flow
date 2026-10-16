@@ -1,0 +1,93 @@
+/*
+  FLOW-325 (plan §10): a split part swiped toward the start side is removed (swipe-row.tsx).
+  The row slides over a neutral "הסרה" that waits under it on the end side: dropping a part before
+  the editor saves deletes nothing, so red and the bin stay for real deletes. The card clips both.
+  The vertical scroll and pinch-zoom stay with the browser.
+
+  FLOW-363 (3c): the under layer is the tint with accent text in both modes. With `reveal`, the
+  row rests open over its action, `--swipe-action` wide, and slides back on a close.
+*/
+.ui-swipe-row {
+  position: relative;
+}
+
+.ui-swipe-row[data-on] {
+  touch-action: pan-y pinch-zoom;
+}
+
+.ui-swipe-row-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-input);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
+  /* Hidden at rest; after a release it stays shown until the row has slid back over it. */
+  visibility: hidden;
+  transition: visibility 0s linear var(--motion-fast);
+}
+
+.ui-swipe-row[data-drag] .ui-swipe-row-under,
+.ui-swipe-row[data-open] .ui-swipe-row-under,
+.ui-swipe-row[data-peek] .ui-swipe-row-under {
+  visibility: visible;
+  transition: none;
+}
+
+/* The revealed action takes the whole reveal, so its name wraps in two balanced lines. */
+.ui-swipe-row-action {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: var(--swipe-action);
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  text-wrap: balance;
+  cursor: pointer;
+}
+
+.ui-swipe-row-body {
+  position: relative;
+  background: var(--color-surface);
+  transition: transform var(--motion-bar) var(--ease-enter);
+}
+
+.ui-swipe-row[data-drag]:not([data-leaving]) .ui-swipe-row-body {
+  transition: none;
+}
+
+.ui-swipe-row[data-open] .ui-swipe-row-body:dir(rtl) {
+  transform: translateX(var(--swipe-action));
+}
+
+.ui-swipe-row[data-open] .ui-swipe-row-body:dir(ltr) {
+  transform: translateX(calc(-1 * var(--swipe-action)));
+}
+
+/* FLOW-913: a one-time peek. The row slides toward the start side and back, showing the word under it. */
+.ui-swipe-row[data-peek] .ui-swipe-row-body {
+  animation: ui-swipe-row-peek 900ms var(--ease-standard) 400ms both;
+}
+
+@keyframes ui-swipe-row-peek {
+  0%,
+  100% {
+    transform: none;
+  }
+
+  40%,
+  60% {
+    transform: translateX(var(--swipe-row-peek, 72px));
+  }
+}

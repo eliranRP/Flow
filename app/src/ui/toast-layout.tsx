@@ -7,22 +7,20 @@ export type ToastInput = {
   tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
-  /** Sit under the page header even while a sheet is open. A card-line pick closes that sheet. */
-  /** `tab` sits above the Home tab bar. A confirmation does not move it under the band. */
+  /** `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). */
   /** `bar` sits just above the screen's pinned action bar (decision 0137). A confirmation stays there too. */
-  place?: "page" | "tab" | "bar";
+  place?: "page" | "bar";
 };
 
-/** A plain confirmation stays 4s. A toast with an action (ניסיון חוזר, ביטול) stays 5s. An error, or an info notice without an action, stays 4s. Hover, focus, and a press pause it. Decision 0074. */
-export const OK_MS = 4000;
+/** A confirmation, with or without an undo (ביטול), stays 3s. An error or info notice stays 4s, and 5s with an action (ניסיון חוזר, 0180). Hover, focus, and a press pause it. Decisions 0074 and 0182. */
+export const OK_MS = 3000;
 const ACTION_MS = 5000;
 const BAD_MS = 4000;
 export const SWIPE_PX = 48;
 
 export function toastMs(input: ToastInput): number {
   if (input.durationMs) return input.durationMs;
-  if (input.action && input.onAction) return ACTION_MS;
-  if (input.tone === "bad" || input.tone === "info") return BAD_MS;
+  if (input.tone === "bad" || input.tone === "info") return input.action && input.onAction ? ACTION_MS : BAD_MS;
   return OK_MS;
 }
 
@@ -45,54 +43,40 @@ function lengthPx(raw: string): number | null {
 
 /** The top safe area in pixels. `env()` stays unresolved on the custom property, so a probe reads the used length. */
 export function safeTopPx(): number {
-  const declared = lengthPx(getComputedStyle(document.documentElement).getPropertyValue("--safe-top"));
+  return safeAreaPx("--safe-top");
+}
+
+/** The bottom safe area in pixels: the home indicator. */
+export function safeBottomPx(): number {
+  return safeAreaPx("--safe-bottom");
+}
+
+function safeAreaPx(name: string): number {
+  const declared = lengthPx(getComputedStyle(document.documentElement).getPropertyValue(name));
   if (declared != null) return declared;
   const probe = document.createElement("div");
   probe.style.position = "absolute";
   probe.style.visibility = "hidden";
   probe.style.pointerEvents = "none";
-  probe.style.blockSize = "var(--safe-top)";
+  probe.style.blockSize = `var(${name})`;
   document.body.appendChild(probe);
   const height = probe.getBoundingClientRect().height;
   probe.remove();
   return Number.isFinite(height) ? height : 0;
 }
 
-function tokenPx(name: string, fallback: number): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  if (raw.endsWith("rem")) {
-    const root = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const parsed = Number.parseFloat(raw);
-    return Number.isFinite(parsed) ? parsed * root : fallback;
-  }
-  const value = Number.parseFloat(raw);
-  return Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-/** Two lines of the toast, plus its padding, so a shrink cannot hide the words or ביטול. */
-export function toastMinBlock(): number {
-  const pad = tokenPx("--space-3", 12);
-  const size = tokenPx("--type-label-size", 15);
-  const line = tokenPx("--type-label-line", 1.5);
-  return pad * 2 + size * line * 2;
-}
-
-/** The open sheet, or the page header, and the spacing tokens that sit the toast under it. A page toast ignores the sheet. */
-export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
-  const page = layer?.dataset.place === "page" || layer?.dataset.place === "tab" || layer?.dataset.place === "bar";
-  const sheet = page ? null : document.querySelector("[data-vaul-drawer][data-state='open']");
-  const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
-    ?? document.querySelector("header.ui-page, header.ui-band");
-  return { sheet, anchor, gap: cssPx("--space-2"), inset: cssPx("--space-4") };
+/** The open sheet, if any. A page or bar toast sits on the page, not on a sheet. */
+export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null } {
+  const onPage = layer?.dataset.place === "page" || layer?.dataset.place === "bar";
+  return { sheet: onPage ? null : document.querySelector("[data-vaul-drawer][data-state='open']") };
 }
 
 type ToastBox = { top: number; bottom: number };
 
-function toastControls(layer: HTMLElement, sheet: Element | null, ignoreDrawers = false): ToastBox[] {
+function toastControls(layer: HTMLElement, sheet: Element | null): ToastBox[] {
   const boxes: ToastBox[] = [];
   for (const control of document.querySelectorAll("button, a[href], input, textarea, select")) {
     if (!(control instanceof HTMLElement) || layer.contains(control)) continue;
-    if (ignoreDrawers && control.closest("[data-vaul-drawer]")) continue;
     if (sheet instanceof Element && !sheet.contains(control)) continue;
     const rect = control.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
@@ -127,13 +111,6 @@ export function toastFloor(): ToastBox | null {
 function toastHits(top: number, height: number, boxes: ToastBox[]): boolean {
   const bottom = top + height;
   return boxes.some((box) => box.top < bottom && box.bottom > top);
-}
-
-/** A toast that crosses the sheet's top edge covers the rounded corner and the grab area. */
-function straddlesSheet(top: number, height: number, sheetTop: number | null): boolean {
-  if (sheetTop == null) return false;
-  const bottom = top + height;
-  return top < sheetTop - 0.5 && bottom > sheetTop + 0.5;
 }
 
 function coversPageHeader(top: number, height: number, header: Element | null, sheet: Element | null): boolean {
@@ -253,17 +230,18 @@ function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap
   pinSheetScroll(surface);
 }
 
-/** Sit just under the page header, or just above an open sheet, clear of every control. A toast that cannot fit in the gap keeps its full height `--space-2` below the safe area. It may cover the grabber and the empty top of the sheet. It never covers a header control or any other control: only then does the sheet content pad down, once. The text is never clipped. Decision 0075. */
+/**
+ * Decision 0182: a toast sits above the floor, the top of the pinned bar or the tab bar, else the
+ * screen's bottom above the home indicator. Over an open sheet a non-confirmation keeps its place
+ * above the sheet (0074 §6), and pads the sheet only when a control would be covered. The text is
+ * never clipped (0075). A bar toast sits above the screen's action bar (0137).
+ */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
-  if (toast instanceof HTMLElement) {
-    toast.style.maxHeight = "";
-    toast.style.overflow = "";
-  }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
   if (layer.dataset.place === "bar") {
     // Decision 0137: just above the bar, near the thumb. It may cover the bottom of the
-    // scrolling card, never the bar. No control-collision pass, the same as `tab`.
+    // scrolling card, never the bar.
     const gap = cssPx("--space-2");
     layer.style.paddingInline = "var(--space-card-inset)";
     const safe = safeTopPx();
@@ -275,29 +253,15 @@ export function placeToast(layer: HTMLElement): void {
     layer.style.top = `${String(top)}px`;
     return;
   }
-  if (layer.dataset.place === "tab") {
-    const gap = cssPx("--space-4");
-    layer.style.paddingInline = "var(--space-4)";
-    const safe = safeTopPx();
-    const bar = tabBarObstacle();
-    const top = bar && height > 0
-      ? Math.max(safe, bar.top - gap - height)
-      : Math.max(safe, window.innerHeight - gap - height);
-    layer.style.top = `${String(top)}px`;
-    return;
-  }
-  layer.style.paddingInline = "";
-  const { sheet, anchor, gap, inset } = toastAnchor(layer);
+  const { sheet } = toastAnchor(layer);
   const safe = safeTopPx();
-  const ignoreDrawers = layer.dataset.place === "page";
-  const measured = anchor instanceof HTMLElement
-    ? anchor.getBoundingClientRect().bottom + gap
-    : safe + inset;
-  const floor = window.innerHeight - gap;
-  const boxes = toastControls(layer, sheet, ignoreDrawers);
-  const sheetTop = sheet instanceof HTMLElement ? restingSheetTop(sheet) : null;
-  const pageHeader = document.querySelector("header.ui-page, header.ui-band");
-  if (sheet instanceof HTMLElement && sheetTop != null && height > 0) {
+  if (sheet instanceof HTMLElement && height > 0) {
+    const gap = cssPx("--space-2");
+    layer.style.paddingInline = "";
+    const floor = window.innerHeight - gap;
+    const boxes = toastControls(layer, sheet);
+    const sheetTop = restingSheetTop(sheet);
+    const pageHeader = document.querySelector("header.ui-page, header.ui-band");
     const minTop = Math.max(safe, 0) + gap;
     const above = sheetTop - gap - height;
     if (
@@ -314,69 +278,14 @@ export function placeToast(layer: HTMLElement): void {
     // than --space-2 to the screen edge. Keep the full height --space-2 below
     // the safe area. It may cover the grabber and the empty header. A control
     // pads down once.
-    const top = minTop;
-    layer.style.top = `${String(top)}px`;
-    padSheetUnderToast(sheet, top, height, gap);
+    layer.style.top = `${String(minTop)}px`;
+    padSheetUnderToast(sheet, minTop, height, gap);
     return;
   }
-  const bar = tabBarObstacle();
-  if (bar && height > 0) {
-    const limit = bar.top;
-    let top = measured;
-    for (let step = 0; step < boxes.length + 1; step += 1) {
-      if (top < safe) top = safe;
-      if (top + height > limit) {
-        top = Math.max(safe, measured);
-        break;
-      }
-      const hit = boxes.find((box) => box.top < top + height && box.bottom > top);
-      if (!hit) break;
-      const next = hit.bottom + gap;
-      if (next + height > limit) {
-        top = Math.max(safe, measured);
-        break;
-      }
-      top = next;
-    }
-    layer.style.top = `${String(top)}px`;
-    return;
-  }
-  const candidates = [measured];
-  for (const box of boxes) candidates.push(box.top - gap - height);
-  for (const box of boxes) candidates.push(box.bottom + gap);
-  candidates.push(safe);
-  if (height > 0) {
-    for (const top of candidates) {
-      if (top < safe || top + height > floor) continue;
-      if (toastHits(top, height, boxes)) continue;
-      if (straddlesSheet(top, height, sheetTop)) continue;
-      if (coversPageHeader(top, height, pageHeader, sheet)) continue;
-      layer.style.top = `${String(top)}px`;
-      return;
-    }
-  }
-  const edges = [safe, floor];
-  for (const box of boxes) edges.push(box.top, box.bottom);
-  edges.sort((left, right) => left - right);
-  let bestTop = safe;
-  let bestRoom = 0;
-  for (let index = 0; index < edges.length - 1; index += 1) {
-    const start = Math.max(edges[index] ?? safe, safe);
-    const end = Math.min(edges[index + 1] ?? floor, floor);
-    if (boxes.some((box) => start < box.bottom && end > box.top)) continue;
-    const room = end - start;
-    if (room > bestRoom) {
-      bestRoom = room;
-      bestTop = start;
-    }
-  }
-  const minBlock = toastMinBlock();
-  if (toast instanceof HTMLElement && height > bestRoom) {
-    const cap = Math.max(bestRoom, minBlock);
-    if (cap < height) {
-      toast.style.maxHeight = `${String(cap)}px`;
-      toast.style.overflow = "hidden";
-    }
-  }
-  layer.style.top = `${String(Math.max(safe, bestTop))}px`;
+  // Above the floor: the top of the pinned bar or the tab bar, else the screen's bottom.
+  const gap = cssPx("--space-4");
+  layer.style.paddingInline = "var(--space-4)";
+  const floor = toastFloor();
+  const limit = floor ? floor.top : window.innerHeight - safeBottomPx();
+  layer.style.top = `${String(Math.max(safe, limit - gap - height))}px`;
 }

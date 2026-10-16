@@ -283,12 +283,17 @@
 }
 
 .ui-toast-host[data-phase="fade"] .ui-toast {
-  opacity: 1;
-  transition: opacity var(--motion-fade) var(--ease-standard);
+  animation: m-toast-fade var(--motion-fade) var(--ease-linear) both, m-toast-rise var(--motion-fade) var(--ease-enter) both;
 }
 
 .ui-toast-host[data-phase="in"] .ui-toast {
   opacity: 1;
+}
+
+/* A leaving toast sinks and fades, and takes no taps while it goes. */
+.ui-toast-host[data-phase="out"] .ui-toast {
+  pointer-events: none;
+  animation: m-toast-fade-out var(--motion-toast-out) var(--ease-linear) forwards, m-toast-sink var(--motion-toast-out) var(--ease-exit) forwards;
 }
 
 .ui-toast-live {

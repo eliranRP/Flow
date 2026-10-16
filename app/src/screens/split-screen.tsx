@@ -29,7 +29,7 @@ import { CloseIcon, PlusIcon, ProjectsIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { SwipeRemove } from "../ui/swipe-remove";
+import { SwipeRow } from "../ui/swipe-row";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { Amount, LINE_SPLIT_MAX_PARTS, money, Percent, SplitRemoveButton, SplitRestAmount, SplitSums, SplitUnitToggle } from "./line-split-parts";
@@ -428,7 +428,7 @@ function ProjectSplitEditor({
                 : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor }) : undefined;
               const fieldError = issue === "percent over" ? "עד 100%" : undefined;
               return (
-                <SwipeRemove key={part.key} disabled={busy} onRemove={() => { removePart(part.key); }}>
+                <SwipeRow key={part.key} disabled={busy} onRemove={() => { removePart(part.key); }}>
                   <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
                     <div className="ui-lsplit-text">
                       <button
@@ -503,7 +503,7 @@ function ProjectSplitEditor({
                     </div>
                     {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
                   </div>
-                </SwipeRemove>
+                </SwipeRow>
               );
             })}
             <button
