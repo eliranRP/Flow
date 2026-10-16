@@ -321,14 +321,14 @@ export function monthForecastBoardSample(): MonthForecastSampleShape {
         months_seen: 6,
         seen_this_month: false,
       })),
-      { direction: "income" as const, party_id: "maple", name: "Maple Ave, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false },
+      { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false },
     ],
   };
   const unpaid = [
-    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-09-22", project_name: null, customer_name: "Henderson", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
-    { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Ridgeview HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
-    { id: "bill-118", description: "Bill RD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Rivera Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
-    { id: "bill-hd", description: "Monthly bill", doc_date: "2026-09-25", project_name: null, customer_name: "Home Depot Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
+    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-09-22", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
+    { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
+    { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
+    { id: "bill-hd", description: "Monthly bill", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
   ];
   const build = buildMonthForecast({
     base: "USD",
