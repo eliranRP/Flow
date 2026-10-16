@@ -34,7 +34,9 @@ describe("ScreenHeader", () => {
       </MemoryRouter>,
     );
     const title = screen.getByRole("heading", { name: "פיצול בין פרויקטים" });
-    expect(title).toHaveClass("t-title-1");
+    // FLOW-363 3a: the stacked title is 32/600, the `t-title` role.
+    expect(title).toHaveClass("t-title");
+    expect(title).not.toHaveClass("t-title-1");
     expect(title.closest("header")).toHaveClass("ui-page-stacked");
     expect(screen.getByText("מלט")).toHaveClass("ui-split-context");
     expect(screen.getByText("מלט")).toHaveClass("text-text-secondary");
@@ -56,7 +58,10 @@ describe("ScreenHeader", () => {
     expect(back).toHaveTextContent("הגדרות");
     expect(bar).not.toContainElement(title);
     expect(header?.querySelector("p.t-hint")).toBeNull();
-    const order = Array.from(header?.children ?? []).map((node) => node.textContent);
+    // The compact bar is mounted at the end, hidden; the page's own order is what is checked.
+    const order = Array.from(header?.children ?? [])
+      .filter((node) => !node.classList.contains("ui-compact-bar"))
+      .map((node) => node.textContent);
     expect(order).toEqual(["הגדרות", "קטגוריות", "", "שורה"]);
   });
 
@@ -150,17 +155,27 @@ describe("ScreenHeader", () => {
           </Routes>
         </MemoryRouter>,
       );
-      expect(container.querySelector(".ui-compact-bar")).toBeNull();
+      // The bar stays mounted and hidden until the title scrolls off.
+      const bar = container.querySelector(".ui-compact-bar") as HTMLElement;
+      expect(bar).toHaveAttribute("aria-hidden", "true");
+      expect(bar).toHaveAttribute("inert");
+      expect(document.documentElement).not.toHaveAttribute("data-compact-bar");
       scrolled(true);
-      const bar = container.querySelector(".ui-compact-bar");
-      expect(bar).not.toBeNull();
+      expect(bar).toHaveClass("m-bar-in");
+      expect(bar).toHaveAttribute("aria-hidden", "false");
+      expect(bar).not.toHaveAttribute("inert");
       expect(bar).toHaveTextContent("שויכו היום");
-      expect(document.documentElement).toHaveAttribute("data-compact-bar");
+      expect(document.documentElement).toHaveAttribute("data-compact-bar", "list");
       // The page's h1 is still the only heading.
       expect(screen.getAllByRole("heading")).toHaveLength(1);
       scrolled(false);
-      expect(container.querySelector(".ui-compact-bar")).toBeNull();
+      expect(bar).toHaveClass("m-bar-out");
+      expect(bar).toHaveAttribute("aria-hidden", "true");
       expect(document.documentElement).not.toHaveAttribute("data-compact-bar");
+      act(() => {
+        fireEvent.animationEnd(bar);
+      });
+      expect(bar).toHaveClass("ui-compact-bar-gone");
       scrolled(true);
       const backs = screen.getAllByRole("button", { name: "חזרה" });
       expect(backs).toHaveLength(2);

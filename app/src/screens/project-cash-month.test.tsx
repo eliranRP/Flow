@@ -48,7 +48,8 @@ describe("Project month page (FLOW-422)", () => {
   it("steps months like Home's, only within the months the project's read holds", () => {
     wrap(shiftMonthKey(current, -2));
     // Back names the project it returns to (design lead).
-    expect(screen.getByText("בית לדוגמה")).toBeInTheDocument();
+    // By role: the compact bar's Back is aria-hidden until it shows, so only the page's Back counts.
+    expect(screen.getByRole("button", { name: /בית לדוגמה/ })).toBeInTheDocument();
     // The oldest month keeps the earlier step's empty slot; its later step opens the next month in place.
     expect(screen.getAllByRole("button", { name: /^תזרים / })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: /^תזרים / }));

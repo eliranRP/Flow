@@ -41,7 +41,7 @@ export function Hero({ label, agorot, currency = "ILS", figures, explanation, pi
           <>
             <p className="ui-band-label t-label">{label}</p>
             {pill ? <div className="ui-hero-pill">{pill}</div> : null}
-            <h1 className="ui-hero-figure">
+            <h1 className="ui-hero-figure ui-band-fade">
               {rows.map((row) => (
                 <span key={row.currency} className={multi ? "ui-hero-figure-line" : undefined}>
                   <Amount
