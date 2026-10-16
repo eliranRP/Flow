@@ -138,5 +138,7 @@ export type {
   CashTotalRow,
   CashYears,
 } from "./cash.ts";
+export { projectsCashMonthSchema } from "./projects-cash.ts";
+export type { ProjectCashCurrencyRow, ProjectCashRow, ProjectsCashMonth } from "./projects-cash.ts";
 export { partyChargesSchema } from "./party-charges.ts";
 export type { PartyCharges } from "./party-charges.ts";
