@@ -3,7 +3,7 @@
 import { runInThisContext } from "node:vm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import indexHtml from "../index.html?raw";
-import { applyThemeChoice, readThemeChoice, type ThemeChoice } from "./theme-store";
+import { applyThemeChoice, readThemeChoice, type ThemeChoice, writeThemeChoice } from "./theme-store";
 
 const inlineScript = /<script>([\s\S]*?)<\/script>/.exec(indexHtml)?.[1] ?? "";
 
@@ -65,6 +65,24 @@ describe("readThemeChoice", () => {
       throw new Error("blocked");
     });
     expect(readThemeChoice()).toBe("system");
+  });
+});
+
+describe("writeThemeChoice (Settings › מראה)", () => {
+  it.each<ThemeChoice>(["light", "dark", "system"])("saves %s under flow.theme and applies it at once", (choice) => {
+    document.documentElement.setAttribute("data-theme", choice === "light" ? "dark" : "light");
+    writeThemeChoice(choice);
+    expect(localStorage.getItem("flow.theme")).toBe(choice);
+    expect(readThemeChoice()).toBe(choice);
+    expect(dataTheme()).toBe(choice === "system" ? null : choice);
+  });
+
+  it("applies the choice even when storage is blocked, without throwing", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    expect(() => { writeThemeChoice("dark"); }).not.toThrow();
+    expect(dataTheme()).toBe("dark");
   });
 });
 

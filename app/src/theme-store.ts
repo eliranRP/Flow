@@ -29,3 +29,13 @@ export function applyThemeChoice(choice: ThemeChoice): void {
   if (choice === "system") root.removeAttribute("data-theme");
   else root.setAttribute("data-theme", choice);
 }
+
+/** Saves the choice for this device and applies it at once (Settings › מראה). Blocked storage still applies it. */
+export function writeThemeChoice(choice: ThemeChoice): void {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, choice);
+  } catch {
+    // Storage is blocked: the choice still applies for this visit.
+  }
+  applyThemeChoice(choice);
+}

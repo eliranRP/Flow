@@ -527,6 +527,16 @@ export function NoteIcon(props: IconProps) {
   );
 }
 
+/** FLOW-372. The מראה row in Settings: a disc, half filled, as on the board. */
+export function ThemeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
 /** FLOW-504. The company currency row in Settings. */
 export function CoinIcon(props: IconProps) {
   return (

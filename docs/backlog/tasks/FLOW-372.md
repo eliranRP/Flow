@@ -17,11 +17,11 @@
 
 **Settings › מראה**
 
-_Not started in #611: step 4 waits for PR #609 to merge to main. The store and the pre-paint script are in (see the design log)._
-- [ ] A row "מראה" in Settings' second card, before החלפת עסק, with an icon and the current value (לפי המכשיר / בהיר / כהה).
-- [ ] It opens a sheet "מראה" · "רק בטלפון הזה" with three radio rows: לפי המכשיר ("עובר בין בהיר לכהה יחד עם הטלפון"), בהיר ("רקע לבן, נוח באור יום"), כהה ("רקע כהה, נוח בערב ובחושך").
-- [ ] Default for a new device: לפי המכשיר (no `data-theme`, follows `prefers-color-scheme`). בהיר and כהה set `data-theme`. Saved per device (local storage), not per business; applied before first paint so a reload never flashes the other theme.
-  - #611 has the default, the read and the pre-paint apply. The write waits for the Settings sheet (the unused-code check fails on a writer nothing calls).
-- [ ] The change applies at once, closes the sheet and shows the undo toast (3s). The status-bar colour (`ThemeColor`) follows.
+_Done in #611, after #609 merged (87cbb184). See the design log for the placement and the sheet subtitle._
+- [x] A row "מראה" in Settings' second card, with an icon and the current value (לפי המכשיר / בהיר / כהה). The app has no החלפת עסק row, so the row sits before the install row, the card's next row on the board.
+- [x] It opens a sheet "מראה" · "רק בטלפון הזה" with three radio rows: לפי המכשיר ("עובר בין בהיר לכהה יחד עם הטלפון"), בהיר ("רקע לבן, נוח באור יום"), כהה ("רקע כהה, נוח בערב ובחושך").
+- [x] Default for a new device: לפי המכשיר (no `data-theme`, follows `prefers-color-scheme`). בהיר and כהה set `data-theme`. Saved per device (local storage), not per business; applied before first paint so a reload never flashes the other theme.
+  - The write is `writeThemeChoice` in `theme-store.ts`, called by the Settings sheet.
+- [x] The change applies at once, closes the sheet and shows the undo toast (3s). The status-bar colour (`ThemeColor`) follows.
 - **MCP:** none (a device setting).
 - **Acceptance:** stories of every redesign screen in both themes come from tokens only (a test fails on a raw hex in screen CSS); a test that each choice sets or clears `data-theme`, survives a reload with no flash, and that undo restores the previous choice; contrast check of the light text and accent tokens (AA); design review of the light boards against the approved canvas.
