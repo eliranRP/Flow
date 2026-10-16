@@ -82,7 +82,7 @@ export const PendingSheet: Story = {
   name: "Pending invite sheet",
   render: page({ pendingInvite: true }),
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "noa@example.com, הוזמנה · צופה" }));
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "noa@example.com, הוזמן · ממתין" }));
     await body(canvasElement).findByRole("dialog", { name: "noa@example.com" });
   },
 };
