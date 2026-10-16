@@ -18,7 +18,7 @@ begin;
 
 set local lock_timeout = '5s';
 
-create function pg_temp.anchor_count(p_def text, p_anchor text)
+create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer
 language sql
 immutable
