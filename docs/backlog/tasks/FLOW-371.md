@@ -5,7 +5,8 @@
 
 **Skeleton (first load)**
 - [x] The real header, title and bottom bar, plus blocks shaped like the rows and cards to come: #251F33 on the background, rgba(255,255,255,.16) on the band. The blocks pulse together (opacity 1 → .55, 1.2s).
-- [x] Shown only after 300ms of waiting; then a 200ms crossfade to the content, followed by the page-enter motion (FLOW-363).
+- [x] Shown only after 300ms of waiting; then a 200ms crossfade to the content.
+- [ ] The page-enter motion (FLOW-363) after that crossfade is not in this PR. It lands with Home (FLOW-364, plan §2.1).
 - [x] Designed: Home, month lines, Projects, Loans, קבועים, Profit, transaction page. Every other screen reuses the closest one.
 
 **Empty state**
