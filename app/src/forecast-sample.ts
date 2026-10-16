@@ -297,14 +297,19 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
  * the six small charges, which total less than the board's (each one is under the 100 units rule).
  */
 export function monthForecastBoardSample(): MonthForecastSampleShape {
-  const today = "2026-10-16";
+  const today = "2026-10-11";
   const small = [
-    ["Streaming", 9100],
-    ["Cloud storage", 8900],
-    ["Phone line", 9000],
+    ["Streaming", 8700],
+    ["Cloud storage", 8700],
+    ["Phone line", 8700],
     ["Domain", 8700],
-    ["Password manager", 9200],
-    ["Accounting app", 9100],
+    ["Password manager", 8700],
+    ["Accounting app", 8700],
+    ["Backup drive", 8700],
+    ["Video calls", 8700],
+    ["Design fonts", 8700],
+    ["Mail tool", 8700],
+    ["Scanner plan", 9200],
   ] as const;
   const expected = {
     today,
