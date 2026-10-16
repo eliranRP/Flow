@@ -25,3 +25,11 @@
 - [ ] From the FLOW-363 (2c) pixel review: on an income transaction, the earlier-payment rows under "תקבולים קודמים" draw "₪5,000" neutral with no "+"; income rows get "+" and green like every other income figure (decision 0181).
 - **Acceptance:** stories of the lines in each of the 4 orders, scrolled with the compact panel, and the transaction page pending, not in profit, and recurring with a +27% change, plus both sheets, at 320 and 393 with invented lines that add up to the summary; a sample test that the listed rows add up to the summary and to Home's row; a unit test that the change colour follows "hurts" for expense and income; an e2e that a row opens the page and Back returns to the same scroll; design review against the boards.
 - **Design spec:** the counted-in row and sheet are written down in [implementation-guide §7.10](../../../design/system/implementation-guide.md) (FLOW-363 (4)). The code is built here, for the transaction line.
+
+**Lines follow-up (proofs still over 3%, text-masked dark; measured in PR #686)**
+- [x] LinesIn at 2.4% (the chip row, the group head gap, scoped to the נכנס view by `ui-lines-group-head-in`).
+- [ ] LinesRecurring 5.7% (`/e2e/txn?board=recurring`): the recurring row and its pace line.
+- [ ] LinesFreq 6.6% (`/e2e/txn?board=recurring&sheet=pace`): the pace sheet rows.
+- [ ] LinesAll 7.5% (`/e2e/txn?board=recurring&sheet=all`): the all-charges sheet rows.
+- [ ] LinesDetailLoan 5.7% (`/e2e/txn?board=loan`): the loan detail card.
+- [ ] Lines dark stays a named exception at 3.7% (it was 3.8% in #648); the light frame is 2.7%.

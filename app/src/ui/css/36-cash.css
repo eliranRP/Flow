@@ -116,8 +116,13 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-5) 0 0;
+  padding: var(--space-5) 0 var(--space-2);
   background: var(--color-bg);
+}
+
+/* The נכנס view's group heads draw their rows right under the head, with no gap under it (board LinesIn). */
+.ui-lines-group-head-in {
+  padding-block-end: 0;
 }
 
 .ui-lines-group-title {
