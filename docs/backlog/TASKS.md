@@ -315,7 +315,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-370"></a>[FLOW-370](tasks/FLOW-370.md) | Redesign: one split screen for projects and categories | UI (design approved) |
 | <a id="flow-916"></a>[FLOW-916](tasks/FLOW-916.md) | Lines detail: receipt thumbnail row once a receipt image path exists | UI (follow-up) |
 | <a id="flow-917"></a>[FLOW-917](tasks/FLOW-917.md) | Add (+) sheet: camera, receipt reading and the supplier suggestion | UI (design approved) |
-| <a id="flow-918"></a>[FLOW-918](tasks/FLOW-918.md) | FLOW-369 follow-up: AddProject and AddSheet proofs under 3% | UI (design approved) |
+| <a id="flow-919"></a>[FLOW-919](tasks/FLOW-919.md) | FLOW-369 follow-up: AddProject and AddSheet proofs under 3% | UI (design approved) |
 
 ## Projects and reports
 
