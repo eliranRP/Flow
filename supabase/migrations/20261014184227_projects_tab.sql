@@ -150,6 +150,9 @@ begin
   if snapshot is null then
     raise exception 'project not found';
   end if;
+  if exists (select 1 from public.companies c where c.id = cid and c.overhead_project_id = p_id) then
+    raise exception 'the overhead project cannot be deleted' using errcode = '23514';
+  end if;
   if not private.project_is_empty(cid, p_id) then
     raise exception 'in use';
   end if;
@@ -657,6 +660,10 @@ begin
     when others then
       if sqlerrm = 'project not found' then
         response := private.mcp_error('not_found', 'not found');
+      elsif sqlstate = '23514' then
+        response := private.mcp_error('validation', sqlerrm);
+      elsif sqlerrm = 'in use' then
+        response := private.mcp_error('refused', 'in use');
       else
         response := private.mcp_refused(sqlerrm);
       end if;
@@ -767,7 +774,9 @@ begin
         end;
       end if;
     elsif p_kind = 'project_delete' then
-      if exists (select 1 from public.projects p where p.id = p_id) then
+      if exists (select 1 from public.projects p where p.id = p_id and p.company_id = private.current_company_id())
+        or (rec.prior->'row'->>'company_id')::uuid is distinct from private.current_company_id()
+      then
         response := private.mcp_error('conflict', 'conflict');
       else
         begin

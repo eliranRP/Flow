@@ -320,7 +320,7 @@ A project, category or loan name (`create_project`, `update_project`, `delete_pr
 { "idempotency_key": "proj-1", "name": "Site Alpha", "status": "active", "type": "flip", "budget_minor": 500000 }
 ```
 
-`status` is optional (`active` or `finished`). `type` is optional free text, up to 40 characters with the name's character rule (FLOW-445; decision [0176](../decisions/0176-project-opens-on-cash.md)). `budget_minor` is optional whole minor units of the company currency; the project page warns when its expenses pass it. Output `data`: `{ "id", "undo_kind": "project" }`.
+`status` is optional (`active` or `finished`). `type` is optional free text, up to 40 characters with the name's character rule (FLOW-445; decision [0176](../decisions/0176-project-opens-on-cash.md)). `budget_minor` is optional whole minor units of the company currency, or `null` for no budget; the project page warns when its expenses pass it. Output `data`: `{ "id", "undo_kind": "project" }`.
 
 ### update_project
 

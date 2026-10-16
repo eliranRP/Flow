@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(43);
+select plan(46);
 
 do $users$
 begin
@@ -213,6 +213,15 @@ select throws_ok(
   $$select public.delete_project(pg_temp.id('lark'))$$,
   'P0001', 'in use', 'a project with a line is in use'
 );
+select throws_ok(
+  $$select public.delete_project(pg_temp.id('office'))$$,
+  '23514', 'the overhead project cannot be deleted', 'the company overhead project is refused'
+);
+select is(
+  (select overhead_project_id from public.companies where id = pg_temp.id('co')),
+  pg_temp.id('office'),
+  'the overhead project stays set after a refused delete'
+);
 insert into pt_out (label, body)
 select 'fenwick_gone', public.delete_project(pg_temp.id('fenwick'));
 select is(
@@ -334,6 +343,11 @@ select is(
   public.mcp_delete_project('pt-d-1', pg_temp.id('lark'))->'error'->>'message',
   'in use',
   'delete_project is refused while a project is in use'
+);
+select is(
+  public.mcp_delete_project('pt-d-3', pg_temp.id('office'))->'error'->>'code',
+  'validation',
+  'the MCP delete refuses the company overhead project as a validation error'
 );
 insert into pt_out (label, body)
 values ('del', public.mcp_delete_project('pt-d-2', pg_temp.id('quarry')));
