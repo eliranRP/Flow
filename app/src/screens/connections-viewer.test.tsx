@@ -43,7 +43,6 @@ describe("connector rows for a viewer (FLOW-507)", () => {
   it("names the read-only words", () => {
     expect(connectorWord("reconnect")).toBe("צריך לחבר מחדש");
     expect(connectorWord("reconnect", true)).toBe("לא מחובר");
-    expect(connectorWord("reconnect", true, true)).toBe("לא מחובר כרגע");
-    expect(connectorWord("connected", true, true)).toBe("מחובר");
+    expect(connectorWord("connected", true)).toBe("מחובר");
   });
 });

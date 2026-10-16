@@ -142,6 +142,7 @@
   --radius-input: 12px;
   --radius-button: 9999px;
   --radius-card: 20px;
+  --radius-card-tight: 16px;     /* connection and AI pages (implementation-guide §7.14, FLOW-512) */
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
@@ -213,6 +214,7 @@
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
+  --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
   --color-text-muted: #746C88;
@@ -272,6 +274,7 @@
     --color-line: #2E2740;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
+    --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
     --color-text-muted: #978EAB;
@@ -335,6 +338,7 @@
   --color-line: #2E2740;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
+  --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
   --color-text-muted: #978EAB;

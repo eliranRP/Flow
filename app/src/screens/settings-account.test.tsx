@@ -1,19 +1,14 @@
-import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
+import { type Session } from "@supabase/supabase-js";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
 
-/** FLOW-501 moved the connector rows to their own page. These account tests read both. */
-function SettingsAndConnections(props: Parameters<typeof ConnectionsScreen>[0]) {
-  return (
-    <>
-      <SettingsScreen sample={props?.sample} />
-      <ConnectionsScreen {...props} />
-    </>
-  );
+/** FLOW-512: the menu. The account email is no longer a Settings row; the business page holds the name. */
+function SettingsAndConnections(props: Parameters<typeof SettingsScreen>[0]) {
+  return <SettingsScreen sample={props?.sample} />;
 }
 
 const rpc = vi.hoisted(() => ({
@@ -67,7 +62,7 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 describe("settings account", () => {
-  it("shows the business row and a separate Google email row", () => {
+  it("shows the menu rows, with no account email row", () => {
     renderWithProviders(
       <SettingsScreen
         sample={{
@@ -79,26 +74,12 @@ describe("settings account", () => {
         }}
       />,
     );
-    const business = screen.getByText("אלפא").closest(".ui-row");
-    const account = screen.getByText("owner@example.com").closest(".ui-row");
-    expect(business).not.toBeNull();
-    expect(account).not.toBe(business);
-    expect(business?.querySelector("path[fill='#4285F4']")).toBeNull();
-    expect(account?.querySelector("path[fill='#4285F4']")).not.toBeNull();
-    expect(account?.querySelector(".ui-row-hint")).toBeNull();
-    expect(screen.queryByText("עוסק מורשה")).not.toBeInTheDocument();
-    expect(screen.queryByText("עוסק פטור")).not.toBeInTheDocument();
-    expect(screen.queryByText("חשבון Google")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "פרויקטים" })).not.toBeInTheDocument();
-    for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
-      expect(screen.queryByRole("switch", { name })).not.toBeInTheDocument();
-    }
-    expect(screen.queryByRole("heading", { name: "חיבורים" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
-    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
-    expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "עוד" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "עוזר" })).not.toBeInTheDocument();
+    expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^העסק/ })).toHaveAttribute("href", "/settings/business");
+    expect(screen.getByRole("link", { name: /^חיבורים/ })).toHaveAttribute("href", "/settings/connections");
+    expect(screen.queryByRole("link", { name: /^הלוואות/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).not.toBeInTheDocument();
     expect(screen.getByText("Flow 0.1")).toBeInTheDocument();
     expect(screen.queryByText("Flow · POC 0.1")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
@@ -106,17 +87,9 @@ describe("settings account", () => {
     const themeRow = screen.getByRole("button", { name: "מראה: לפי המכשיר" });
     expect(themeRow.compareDocumentPosition(screen.getByRole("link", { name: /התקנה למסך הבית/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
-    const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
-    expect(document.getElementById(overhead.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חלק מההוצאות הכלליות נכנס לכל פרויקט");
-    // FLOW-326: the switch is a grouped row with the icon in the same slot as קטגוריות.
-    const overheadRow = overhead.closest("label");
-    expect(overheadRow).toHaveClass("ui-row");
-    expect(overheadRow?.querySelector(".ui-row-icon svg")).not.toBeNull();
-    expect(overheadRow?.closest(".ui-project-list")).toContainElement(screen.getByRole("link", { name: /קטגוריות/ }));
-    expect(screen.getByText("חלק מההוצאות הכלליות נכנס לכל פרויקט")).toBeInTheDocument();
   });
 
-  it("shows a static email row when there is no company", async () => {
+  it("shows only the account actions with no company, and no business rows", async () => {
     auth.signOuts = 0;
     const { unmount } = renderWithProviders(
       <SettingsAndConnections
@@ -130,49 +103,11 @@ describe("settings account", () => {
         }}
       />,
     );
-    const email = screen.getByText("owner@example.com");
-    expect(email.tagName).toBe("BDI");
-    expect(email).toHaveAttribute("dir", "ltr");
-    expect(email.closest(".ui-row-title")).toHaveAttribute("dir", "ltr");
-    expect(email.closest(".ui-row")?.tagName).toBe("DIV");
-    expect(email.closest("button")).toBeNull();
-    expect(screen.queryByRole("button", { name: "owner@example.com" })).not.toBeInTheDocument();
-    expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^העסק/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^חיבורים/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).not.toBeInTheDocument();
-    const sumit = screen.getByRole("button", { name: "SUMIT" });
-    expect(sumit).toBeEnabled();
-    expect(document.getElementById(sumit.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
-    const assistant = screen.getByRole("button", { name: "עוזר AI" });
-    expect(assistant).toHaveAttribute("aria-disabled", "true");
-    expect(assistant).not.toHaveAttribute("disabled");
-    assistant.focus();
-    expect(assistant).toHaveFocus();
-    expect(assistant).toHaveClass("ui-row-clear-hint");
-    expect(document.getElementById(assistant.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
-    fireEvent.click(assistant);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(email.closest(".ui-row")?.querySelector("path[fill='#4285F4']")).not.toBeNull();
-    const calls: string[] = [];
-    edge.invoke = (name) => {
-      calls.push(name);
-      return Promise.resolve({ data: null, error: null });
-    };
-    fireEvent.click(sumit);
-    const sumitSheet = screen.getByRole("dialog", { name: "חיבור SUMIT" });
-    expect(within(sumitSheet).queryByLabelText("מספר חברה")).not.toBeInTheDocument();
-    expect(within(sumitSheet).queryByLabelText("מפתח API")).not.toBeInTheDocument();
-    expect(within(sumitSheet).queryByRole("button", { name: "חיבור" })).not.toBeInTheDocument();
-    expect(sumitSheet).toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
-    expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dsumit");
-    expect(calls.some((name) => name.includes("sumit-connect"))).toBe(false);
-    fireEvent.keyDown(sumitSheet, { key: "Escape" });
-    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
-    fireEvent.click(screen.getByRole("button", { name: /Mercury/ }));
-    const mercurySheet = screen.getByRole("dialog", { name: "חיבור Mercury" });
-    expect(mercurySheet).toHaveTextContent("כדי לחבר את Mercury צריך עסק.");
-    // Back from the business details opens the Mercury sheet again, not SUMIT's.
-    expect(within(mercurySheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dmercury");
+    expect(screen.getByRole("button", { name: /מראה/ })).toBeInTheDocument();
     unmount();
 
     renderWithProviders(
@@ -189,11 +124,8 @@ describe("settings account", () => {
       { route: "/settings?preview=empty" },
     );
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
-    expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "התנתקות" }));
     await waitFor(() => { expect(auth.signOuts).toBe(1); });
-    expect(screen.queryByText("במצב תצוגה זה לא נשמר.")).not.toBeInTheDocument();
   });
 
   it("treats a live dashboard with a null company id as no company", async () => {
@@ -225,12 +157,6 @@ describe("settings account", () => {
           error: null,
         });
       }
-      if (name === "sumit_status") {
-        return Promise.resolve({
-          data: { connected: false, sumit_company_id: null, last_sync_at: null, last_error: null },
-          error: null,
-        });
-      }
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
@@ -245,83 +171,11 @@ describe("settings account", () => {
         handler("INITIAL_SESSION", { user: { email: "owner@example.com" } } as Session);
       }
     });
-    const email = await screen.findByText("owner@example.com");
-    expect(email.closest("button")).toBeNull();
-    expect(email.closest(".ui-row")?.tagName).toBe("DIV");
-    expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /מראה/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^העסק/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^חיבורים/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).not.toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "set_after_overhead")).toBe(false);
-    const sumit = screen.getByRole("button", { name: "SUMIT" });
-    expect(sumit).toBeEnabled();
-    expect(sumit).toHaveTextContent("לא מחובר");
-    const assistant = screen.getByRole("button", { name: "עוזר AI" });
-    expect(assistant).toHaveAttribute("aria-disabled", "true");
-    expect(assistant).not.toHaveAttribute("disabled");
-    assistant.focus();
-    expect(assistant).toHaveFocus();
-    expect(assistant).toHaveTextContent("אין עסק עדיין");
-    fireEvent.click(assistant);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("keeps ניתוק inside the SUMIT sheet", () => {
-    renderWithProviders(
-      <ConnectionsScreen
-        sample={{
-          name: "אלפא",
-          connected: true,
-          companyId: 1001,
-          lastError: null,
-          email: "owner@example.com",
-          assistant: { state: "connected", scope: "read", id: "mcp-1" },
-        }}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-    const sumit = screen.getByRole("dialog", { name: "SUMIT" });
-    fireEvent.click(within(sumit).getByRole("button", { name: "ניתוק" }));
-    expect(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).toBeInTheDocument();
-  });
-
-  it("closes the SUMIT sheet when ניתוק succeeds", async () => {
-    rpc.calls.length = 0;
-    rpc.impl = () => Promise.resolve({ data: null, error: null });
-    let layer: string | null = "unset";
-    function Layer() {
-      const location = useLocation();
-      const state: unknown = location.state;
-      if (typeof state !== "object" || state === null || !("flowLayer" in state)) {
-        layer = null;
-        return null;
-      }
-      layer = typeof state.flowLayer === "string" ? state.flowLayer : null;
-      return null;
-    }
-    renderWithProviders(
-      <>
-        <Layer />
-        <ConnectionsScreen
-          sample={{
-            name: "אלפא",
-            connected: true,
-            companyId: 1001,
-            lastError: null,
-            email: "owner@example.com",
-          }}
-        />
-      </>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-    await waitFor(() => { expect(layer).toBe("sumit-status"); });
-    fireEvent.click(within(screen.getByRole("dialog", { name: "SUMIT" })).getByRole("button", { name: "ניתוק" }));
-    await waitFor(() => { expect(layer).toBe("sumit-disconnect"); });
-    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
-    await waitFor(() => { expect(layer).toBeNull(); });
-    expect(rpc.calls.some((call) => call.name === "disconnect_sumit")).toBe(true);
   });
 
   it("keeps other previews on their sample and hides sign-out", () => {
@@ -337,22 +191,12 @@ describe("settings account", () => {
         handler("INITIAL_SESSION", { user: { email: "real-owner@example.com" } } as Session);
       }
     });
-    expect(screen.getByText("בית הספר אלון")).toBeInTheDocument();
-    const account = screen.getByText("owner@example.com");
-    expect(account.closest("button")).toBeNull();
+    expect(screen.getByRole("link", { name: /^העסק/ })).toHaveTextContent("בית הספר אלון");
     expect(screen.queryByText("real-owner@example.com")).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: (name) => name.trim() === "" })).not.toBeInTheDocument();
-    const sumit = screen.getByRole("button", { name: "SUMIT" });
-    expect(document.getElementById(sumit.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
-    expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "התנתקות" })).not.toBeInTheDocument();
-    fireEvent.click(sumit);
-    const connect = screen.getByRole("dialog", { name: "חיבור SUMIT" });
-    expect(within(connect).getByLabelText("מספר חברה")).toBeInTheDocument();
-    expect(connect).not.toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
   });
 
-  it("omits the account row when the live business name is empty", async () => {
+  it("omits the business row when the live business name is empty", async () => {
     auth.handlers.length = 0;
     rpc.impl = (name) => {
       if (name === "get_dashboard") {
@@ -380,12 +224,6 @@ describe("settings account", () => {
           error: null,
         });
       }
-      if (name === "sumit_status") {
-        return Promise.resolve({
-          data: { connected: false, sumit_company_id: null, last_sync_at: null, last_error: null },
-          error: null,
-        });
-      }
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
@@ -400,101 +238,9 @@ describe("settings account", () => {
         handler("INITIAL_SESSION", { user: { email: "owner@example.com" } } as Session);
       }
     });
-    expect(await screen.findByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
-    const sumit = screen.getByRole("button", { name: "SUMIT" });
-    expect(document.getElementById(sumit.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
+    expect(await screen.findByRole("button", { name: /מראה/ })).toBeInTheDocument();
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
-    expect(screen.queryByText("בית הספר אלון")).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: (name) => name.trim() === "" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("group")).not.toBeInTheDocument();
-  });
-
-  function cssPx(value: string): number {
-    const root = getComputedStyle(document.documentElement);
-    // A token may alias another (FLOW-363: the old type names point at the new roles), so follow the chain.
-    let resolved = value.trim();
-    for (let depth = 0; depth < 5; depth += 1) {
-      const named = /^var\((--[^),\s]+)\)$/.exec(resolved);
-      if (named?.[1] == null) break;
-      resolved = root.getPropertyValue(named[1]).trim();
-    }
-    if (resolved.endsWith("rem")) return Number.parseFloat(resolved) * 16;
-    if (resolved.endsWith("px")) return Number.parseFloat(resolved);
-    return Number.parseFloat(resolved);
-  }
-
-  function declared(selector: string, property: string): string {
-    for (const sheet of document.styleSheets) {
-      let rules: CSSRuleList;
-      try {
-        rules = sheet.cssRules;
-      } catch {
-        continue;
-      }
-      for (const rule of rules) {
-        if (!(rule instanceof CSSStyleRule)) continue;
-        const matches = rule.selectorText.split(",").some((part) => part.trim() === selector);
-        if (!matches) continue;
-        const value = rule.style.getPropertyValue(property);
-        if (value) return value;
-      }
-    }
-    throw new Error(`missing ${selector} ${property}`);
-  }
-
-  function lineBox(selector: string): number {
-    const size = cssPx(declared(selector, "font-size"));
-    const line = declared(selector, "line-height");
-    const raw = line.trim().endsWith("px") ? cssPx(line) : cssPx(line) * size;
-    return Math.round(raw);
-  }
-
-  /** jsdom leaves custom properties unresolved, so the height comes from the rules. */
-  function rowHeight(hasHint: boolean): number {
-    const pad = cssPx(declared(".ui-row", "padding-block"));
-    const border = Number.parseFloat(declared(".ui-row", "border-bottom"));
-    const min = cssPx(declared(".ui-row", "min-height"));
-    const content = lineBox(".ui-row-title") + (hasHint ? lineBox(".ui-row-hint") : 0) + pad * 2 + border;
-    return declared(".ui-row", "box-sizing") === "border-box" ? Math.max(content, min) : content;
-  }
-
-  it("uses the single-line height for the account rows, with or without a company", () => {
-    document.documentElement.style.setProperty("--row-pad", "14px");
-    const { unmount } = renderWithProviders(
-      <SettingsScreen
-        sample={{
-          name: null,
-          connected: false,
-          companyId: null,
-          lastError: null,
-          email: "owner@example.com",
-          noCompany: true,
-        }}
-      />,
-    );
-    const single = screen.getByText("owner@example.com").closest(".ui-row");
-    expect(single).not.toBeNull();
-    expect(single?.querySelector(".ui-row-hint")).toBeNull();
-    expect(getComputedStyle(single as Element).boxSizing).toBe("border-box");
-    expect(rowHeight(false)).toBe(53);
-    unmount();
-
-    renderWithProviders(
-      <SettingsScreen
-        sample={{
-          name: "אלפא",
-          connected: false,
-          companyId: null,
-          lastError: null,
-          email: "owner@example.com",
-        }}
-      />,
-    );
-    const paired = screen.getByText("owner@example.com").closest(".ui-row");
-    expect(paired?.querySelector(".ui-row-hint")).toBeNull();
-    expect(screen.getByText("אלפא").closest(".ui-row")?.querySelector(".ui-row-hint")).toBeNull();
-    expect(rowHeight(false)).toBe(53);
-    document.documentElement.style.removeProperty("--row-pad");
+    expect(screen.queryByRole("link", { name: /^העסק/ })).not.toBeInTheDocument();
   });
 
   it("sends categories with no company back to settings", () => {
@@ -520,148 +266,5 @@ describe("settings account", () => {
     );
     expect(screen.getByRole("heading", { name: "קטגוריות" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "הגדרות" })).not.toBeInTheDocument();
-  });
-
-  it("asks to check the id and the key when connect rejects the key", async () => {
-    edge.invoke = () => Promise.resolve({
-      data: null,
-      error: new FunctionsHttpError({ json: () => Promise.resolve({ error: "sumit_auth" }) }),
-    });
-    renderWithProviders(
-      <ConnectionsScreen
-        sample={{
-          name: "אלפא",
-          connected: false,
-          companyId: null,
-          lastError: null,
-        }}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
-    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "secret-key" } });
-    fireEvent.click(screen.getByRole("button", { name: /^חיבור$/ }));
-    expect(await screen.findByText("החיבור נכשל. בדקו את המזהה ואת המפתח.")).toBeInTheDocument();
-  });
-
-  it("asks to retry when connect fails before SUMIT answers", async () => {
-    edge.invoke = () => Promise.resolve({
-      data: null,
-      error: new Error("Failed to fetch"),
-    });
-    renderWithProviders(
-      <ConnectionsScreen
-        sample={{
-          name: "אלפא",
-          connected: false,
-          companyId: null,
-          lastError: null,
-        }}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
-    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "secret-key" } });
-    fireEvent.click(screen.getByRole("button", { name: /^חיבור$/ }));
-    expect(await screen.findByText("לא הצלחנו להתחבר. נסו שוב.")).toBeInTheDocument();
-    expect(screen.queryByText(/בדקו/)).not.toBeInTheDocument();
-  });
-
-  it("disables refresh until the retry time and asks to reconnect after a bad key", () => {
-    const later = new Date(Date.now() + 60 * 60_000).toISOString();
-    const { unmount } = renderWithProviders(
-      <ConnectionsScreen
-        sample={{
-          name: "אלפא",
-          connected: true,
-          companyId: 1001,
-          lastError: "sumit_rejected",
-          nextAttemptAt: later,
-        }}
-      />,
-    );
-    const row = screen.getByRole("button", { name: "SUMIT" });
-    expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר");
-    expect(row).not.toHaveTextContent("לא זמין");
-    expect(screen.queryByRole("button", { name: /רענון עכשיו/ })).not.toBeInTheDocument();
-    fireEvent.click(row);
-    const sheet = screen.getByRole("dialog", { name: "SUMIT" });
-    const heldButton = within(sheet).getByRole("button", { name: /רענון עכשיו/ });
-    expect(heldButton).toBeDisabled();
-    expect(heldButton).toHaveClass("ui-row-clear-hint");
-    expect(heldButton.querySelector(".ui-row-chevron")).toBeNull();
-    expect(getComputedStyle(heldButton).opacity).toBe("1");
-    expect(getComputedStyle(heldButton.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
-    expect(getComputedStyle(heldButton.querySelector(".ui-row-icon") as Element).opacity).toBe("0.45");
-    expect(within(sheet).getByText("הרענון נכשל")).toBeInTheDocument();
-    expect(within(sheet).queryByText(/נסו שוב/)).not.toBeInTheDocument();
-    expect(within(sheet).queryByText("החיבור נכשל")).not.toBeInTheDocument();
-    expect(screen.queryByText(/נבדוק שוב מאוחר יותר/)).toBeNull();
-    const hint = within(sheet).getByText(/אפשר לנסות שוב/);
-    expect(hint.closest("button")).toBe(heldButton);
-    expect(hint.querySelector("bdi")).toHaveAttribute("dir", "ltr");
-    expect(getComputedStyle(hint).opacity).toBe("1");
-    const described = document.getElementById(row.getAttribute("aria-describedby") ?? "");
-    expect(getComputedStyle(hint).color).toBe(getComputedStyle(described as Element).color);
-    unmount();
-
-    vi.useFakeTimers();
-    try {
-      const soon = new Date(Date.now() + 5_000).toISOString();
-      const held = renderWithProviders(
-        <ConnectionsScreen
-          sample={{
-            name: "אלפא",
-            connected: true,
-            companyId: 1001,
-            lastError: "sumit_rejected",
-            nextAttemptAt: soon,
-          }}
-        />,
-      );
-      fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-      expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
-      act(() => { vi.advanceTimersByTime(5_100); });
-      const released = screen.getByRole("button", { name: /רענון עכשיו/ });
-      expect(released).toBeEnabled();
-      expect(released.querySelector(".ui-row-chevron")).not.toBeNull();
-      held.unmount();
-    } finally {
-      vi.useRealTimers();
-    }
-
-    renderWithProviders(
-      <ConnectionsScreen
-        sample={{
-          name: "אלפא",
-          connected: true,
-          companyId: 1001,
-          lastError: "sumit_auth",
-          nextAttemptAt: null,
-        }}
-      />,
-    );
-    const reconnect = screen.getByRole("button", { name: "SUMIT" });
-    expect(reconnect).toHaveClass("ui-row-tone-warning");
-    expect(document.getElementById(reconnect.getAttribute("aria-describedby") ?? "")).toHaveTextContent("צריך לחבר מחדש");
-    expect(screen.queryByText("החיבור ל־SUMIT נכשל.")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /רענון עכשיו/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
-    expect(screen.getAllByText(/מחדש/)).toHaveLength(1);
-    fireEvent.click(reconnect);
-    const authSheet = screen.getByRole("dialog", { name: "SUMIT" });
-    const sheetText = authSheet.textContent;
-    const reasonAt = sheetText.indexOf("המזהה או המפתח לא התקבלו");
-    const companyAt = sheetText.indexOf("מספר חברה");
-    const reconnectAt = sheetText.indexOf("חיבור מחדש");
-    const disconnectAt = sheetText.indexOf("ניתוק");
-    expect(reasonAt).toBeGreaterThanOrEqual(0);
-    expect(reasonAt).toBeLessThan(companyAt);
-    expect(companyAt).toBeLessThan(disconnectAt);
-    expect(reconnectAt).toBeGreaterThan(companyAt);
-    // FLOW-350: חיבור מחדש is pinned in the sheet's foot; ניתוק stays in the body under the fields.
-    expect(within(authSheet).getByRole("button", { name: "חיבור מחדש" }).closest(".ui-sheet-foot")).not.toBeNull();
-    expect(within(authSheet).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
-    expect(within(authSheet).queryByText("החיבור ל־SUMIT נכשל.")).not.toBeInTheDocument();
   });
 });

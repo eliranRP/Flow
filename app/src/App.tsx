@@ -48,6 +48,10 @@ const SplitScreen = lazy(() => screenLoaders.split().then((m) => ({ default: m.S
 const SettingsScreen = lazy(() => screenLoaders.settings().then((m) => ({ default: m.SettingsScreen })));
 const LoansScreen = lazy(() => screenLoaders.settings().then((m) => ({ default: m.LoansScreen })));
 const ConnectionsScreen = lazy(() => screenLoaders.connections().then((m) => ({ default: m.ConnectionsScreen })));
+const BusinessScreen = lazy(() => screenLoaders.business().then((m) => ({ default: m.BusinessScreen })));
+const SumitConnectionRoute = lazy(() => screenLoaders.connectionPages().then((m) => ({ default: m.SumitConnectionRoute })));
+const MercuryConnectionRoute = lazy(() => screenLoaders.connectionPages().then((m) => ({ default: m.MercuryConnectionRoute })));
+const AiConnectionPage = lazy(() => screenLoaders.assistant().then((m) => ({ default: m.AiConnectionPage })));
 const NotificationsScreen = lazy(() => screenLoaders.notifications().then((m) => ({ default: m.NotificationsScreen })));
 const CategoriesScreen = lazy(() => screenLoaders.categories().then((m) => ({ default: m.CategoriesScreen })));
 const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
@@ -327,6 +331,10 @@ function AppRoutes() {
                 <Route path="settings/categories" element={<CategoriesScreen />} />
                 <Route path="settings/categories/:parentId" element={<CategoriesScreen />} />
                 <Route path="settings/connections" element={<ConnectionsScreen />} />
+                <Route path="settings/connections/sumit" element={<SumitConnectionRoute />} />
+                <Route path="settings/connections/mercury" element={<MercuryConnectionRoute />} />
+                <Route path="settings/connections/ai" element={<AiConnectionPage />} />
+                <Route path="settings/business" element={<BusinessScreen />} />
                 <Route path="settings/loans" element={<LoansScreen />} />
                 <Route path="settings/notifications" element={<NotificationsScreen />} />
                 <Route path="settings/team" element={<TeamScreen />} />

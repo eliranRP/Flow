@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { PACE_COPY } from "./charge-switches";
 import { ChoiceSheet, type ChoiceSheetCopy } from "./choice-sheet";
-import { BASIS_COPY, BASIS_SHEET_NOTE, CURRENCY_COPY, CURRENCY_SHEET_NOTE } from "./company-choices";
+import { BASIS_COPY, BASIS_SHEET_SUBTITLE, CURRENCY_COPY } from "./company-choices";
 
 /** Renders a choice sheet open. `setSaving` changes the save in flight, as a parent would. */
 function renderSheet<T extends string>(copy: ChoiceSheetCopy<T>, value: string, saving: T | null = null) {
@@ -19,26 +19,26 @@ function renderSheet<T extends string>(copy: ChoiceSheetCopy<T>, value: string, 
 }
 
 describe("ChoiceSheet", () => {
-  it("marks the stored currency and shows its note", () => {
+  it("marks the stored currency and shows its description", () => {
     renderSheet(CURRENCY_COPY, "USD");
-    expect(screen.getByRole("radio", { name: "$ דולר" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: "₪ שקל" })).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByText(CURRENCY_SHEET_NOTE)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "דולר · $" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "שקל · ₪" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("שורות בשקל מומרות לפי שער היום")).toBeInTheDocument();
   });
 
   it("applies another choice on tap and only closes on the current one", () => {
     const { onPick, onOpenChange } = renderSheet(CURRENCY_COPY, "ILS");
-    fireEvent.click(screen.getByRole("radio", { name: "₪ שקל" }));
+    fireEvent.click(screen.getByRole("radio", { name: "שקל · ₪" }));
     expect(onPick).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    fireEvent.click(screen.getByRole("radio", { name: "$ דולר" }));
+    fireEvent.click(screen.getByRole("radio", { name: "דולר · $" }));
     expect(onPick).toHaveBeenCalledWith("USD", expect.any(Function));
   });
 
   it("spins the saving row and holds the other rows", () => {
     const { onPick } = renderSheet(CURRENCY_COPY, "ILS", "USD");
-    expect(screen.getByRole("radio", { name: "$ דולר" })).toHaveAttribute("aria-busy", "true");
-    const other = screen.getByRole("radio", { name: "₪ שקל" });
+    expect(screen.getByRole("radio", { name: "דולר · $" })).toHaveAttribute("aria-busy", "true");
+    const other = screen.getByRole("radio", { name: "שקל · ₪" });
     expect(other).toBeDisabled();
     fireEvent.click(other);
     expect(onPick).not.toHaveBeenCalled();
@@ -52,7 +52,7 @@ describe("ChoiceSheet", () => {
       await Promise.resolve();
     });
     expect(onOpenChange).not.toHaveBeenCalled();
-    expect(screen.getByRole("radio", { name: "₪ שקל" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("radio", { name: "שקל · ₪" })).toHaveAttribute("aria-checked", "false");
     setSaving(null);
     await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
     await act(async () => { await Promise.resolve(); });
@@ -61,7 +61,7 @@ describe("ChoiceSheet", () => {
 
   it("closes once when a dismiss and the success close both land during the save", async () => {
     const { onPick, onOpenChange, setSaving } = renderSheet(CURRENCY_COPY, "ILS");
-    fireEvent.click(screen.getByRole("radio", { name: "$ דולר" }));
+    fireEvent.click(screen.getByRole("radio", { name: "דולר · $" }));
     const close = onPick.mock.calls[0]?.[1] as () => void;
     setSaving("USD");
     fireEvent.keyDown(document, { key: "Escape" });
@@ -78,8 +78,8 @@ describe("ChoiceSheet", () => {
   it("shows each basis's description", () => {
     renderSheet(BASIS_COPY, "invoiced");
     expect(screen.getByRole("radio", { name: /^תאריך חשבונית/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("כשהכסף יצא או נכנס בבנק")).toBeInTheDocument();
-    expect(screen.getByText(BASIS_SHEET_NOTE)).toBeInTheDocument();
+    expect(screen.getByText("נספר לפי תאריך המסמך, גם אם עוד לא שולם.")).toBeInTheDocument();
+    expect(screen.getByText(BASIS_SHEET_SUBTITLE)).toBeInTheDocument();
   });
 
   it("lists the paces shortest first, with the stored one checked", () => {

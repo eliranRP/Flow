@@ -3,7 +3,6 @@ import { Navigate } from "react-router-dom";
 import { screenPhase } from "../query-phase";
 import { ROLE_LABEL, memberName, type Team, type TeamInvite, type TeamMember } from "../team-api";
 import { useMyCompaniesQuery, useTeamQuery } from "../team-queries";
-import { ActionBar } from "../ui/action-bar";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
@@ -22,10 +21,8 @@ function ordered(members: readonly TeamMember[]): TeamMember[] {
   return [...members].sort((a, b) => Number(b.role === "owner") - Number(a.role === "owner"));
 }
 
-/** "הוזמנה · צופה" under a pending invite (mockup invite-2). */
-export function inviteHint(invite: Pick<TeamInvite, "role">): string {
-  return `הוזמנה · ${ROLE_LABEL[invite.role]}`;
-}
+/** The pending invite's word at the row's end (FLOW-512, the board's). */
+export const PENDING_WORD = "הוזמן · ממתין";
 
 /**
  * `/settings/team` (FLOW-601, mockups a-1 and invite-2): one row per person with the role under
@@ -55,10 +52,11 @@ export function TeamScreen() {
       />
     );
   }
-  return <TeamList team={team.data} />;
+  const active = companies.data?.companies.find((company) => company.id === companies.data?.active_id);
+  return <TeamList team={team.data} business={active?.name} />;
 }
 
-export function TeamList({ team }: { team: Team }) {
+export function TeamList({ team, business }: { team: Team; business?: string }) {
   const manage = team.can_manage;
   const opener = useRef<HTMLElement | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -81,17 +79,17 @@ export function TeamList({ team }: { team: Team }) {
   };
   return (
     <div className={manage ? "ui-team-page" : undefined}>
-      <ScreenHeader title={TITLE} kicker="הגדרות" backTo={BACK} />
+      <ScreenHeader title={TITLE} subtitle={business ? `מי רואה את הספרים של ${business}` : undefined} backTo={BACK} />
       <List>
         {members.map((row) => {
           const name = memberName(row);
-          const hint = ROLE_LABEL[row.role];
+          const role = ROLE_LABEL[row.role];
           const opens = manage && row.role !== "owner" && !row.you;
           return (
             <PersonRow
               key={row.user_id}
               name={name}
-              hint={hint}
+              value={row.you ? "את/ה" : role}
               onOpen={opens ? () => { remember(); setMemberId(row.user_id); } : undefined}
             />
           );
@@ -100,7 +98,7 @@ export function TeamList({ team }: { team: Team }) {
           <PersonRow
             key={row.id}
             name={row.email}
-            hint={inviteHint(row)}
+            value={PENDING_WORD}
             invite
             onOpen={() => { remember(); setInviteId(row.id); }}
           />
@@ -115,11 +113,11 @@ export function TeamList({ team }: { team: Team }) {
       ) : null}
       {manage ? (
         <>
-          <ActionBar>
+          <div className="ui-team-invite">
             <Button full buttonRef={inviteButton} onClick={() => { setInviteSheet(true); }}>
-              הזמנה
+              הזמנה לצוות
             </Button>
-          </ActionBar>
+          </div>
           <InviteSheet
             open={inviteOpen}
             onOpenChange={setInviteSheet}
