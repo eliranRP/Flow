@@ -460,51 +460,51 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
     for (const story of stories) {
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
       await page.locator("#storybook-root").waitFor({ state: "attached" });
-      // The story renders after #storybook-root attaches, so retry the measure until the band has its hero.
-      let problems: string[] = [];
-      await expect(async () => {
-        problems = await page.evaluate(() => {
-          const band = document.querySelector(".ui-band");
-          if (!(band instanceof HTMLElement)) return [];
-          const hero = band.querySelector(".ui-band-hero");
-          if (!(hero instanceof HTMLElement)) return [`${location.pathname} band has no hero`];
-          const heroBox = hero.getBoundingClientRect();
-          const style = getComputedStyle(hero);
-          const content = {
-            left: heroBox.left + (Number.parseFloat(style.paddingLeft) || 0),
-            right: heroBox.right - (Number.parseFloat(style.paddingRight) || 0),
-            top: heroBox.top + (Number.parseFloat(style.paddingTop) || 0),
-            bottom: heroBox.bottom - (Number.parseFloat(style.paddingBottom) || 0),
-          };
-          const bars = [...band.querySelectorAll(".ui-skeleton-bar, .ui-skeleton-bar-band")]
-            .filter((node): node is HTMLElement => node instanceof HTMLElement)
-            .map((node) => node.getBoundingClientRect())
-            .filter((box) => box.width > 1 && box.height > 1);
-          const found: string[] = [];
-          bars.forEach((box, index) => {
-            if (box.left < content.left - 0.5 || box.right > content.right + 0.5 || box.top < content.top - 0.5 || box.bottom > content.bottom + 0.5) {
-              found.push(`bar ${String(index)} is outside the band content`);
-            }
-            for (let other = index + 1; other < bars.length; other += 1) {
-              const next = bars[other];
-              if (!next) continue;
-              const near = 0.5;
-              const hits = box.left < next.right + near && box.right > next.left - near && box.top < next.bottom + near && box.bottom > next.top - near;
-              if (hits) found.push(`bar ${String(index)} intersects bar ${String(other)}`);
-            }
-          });
-          const label = band.querySelector(".ui-preview-banner");
-          if (label instanceof HTMLElement && bars.length > 0) {
-            const range = document.createRange();
-            range.selectNodeContents(label);
-            const textBox = range.getBoundingClientRect();
-            const lowest = Math.max(...bars.map((box) => box.bottom));
-            if (textBox.top < lowest + 8) found.push("preview label is jammed against the bars");
+      // The band can attach before its hero renders; wait for the hero so the measure never reads a half-drawn band.
+      await page.waitForFunction(() => {
+        const band = document.querySelector(".ui-band");
+        return !band || band.querySelector(".ui-band-hero") !== null;
+      });
+      const problems = await page.evaluate(() => {
+        const band = document.querySelector(".ui-band");
+        if (!(band instanceof HTMLElement)) return [];
+        const hero = band.querySelector(".ui-band-hero");
+        if (!(hero instanceof HTMLElement)) return [`${location.pathname} band has no hero`];
+        const heroBox = hero.getBoundingClientRect();
+        const style = getComputedStyle(hero);
+        const content = {
+          left: heroBox.left + (Number.parseFloat(style.paddingLeft) || 0),
+          right: heroBox.right - (Number.parseFloat(style.paddingRight) || 0),
+          top: heroBox.top + (Number.parseFloat(style.paddingTop) || 0),
+          bottom: heroBox.bottom - (Number.parseFloat(style.paddingBottom) || 0),
+        };
+        const bars = [...band.querySelectorAll(".ui-skeleton-bar, .ui-skeleton-bar-band")]
+          .filter((node): node is HTMLElement => node instanceof HTMLElement)
+          .map((node) => node.getBoundingClientRect())
+          .filter((box) => box.width > 1 && box.height > 1);
+        const found: string[] = [];
+        bars.forEach((box, index) => {
+          if (box.left < content.left - 0.5 || box.right > content.right + 0.5 || box.top < content.top - 0.5 || box.bottom > content.bottom + 0.5) {
+            found.push(`bar ${String(index)} is outside the band content`);
           }
-          return found;
+          for (let other = index + 1; other < bars.length; other += 1) {
+            const next = bars[other];
+            if (!next) continue;
+            const near = 0.5;
+            const hits = box.left < next.right + near && box.right > next.left - near && box.top < next.bottom + near && box.bottom > next.top - near;
+            if (hits) found.push(`bar ${String(index)} intersects bar ${String(other)}`);
+          }
         });
-        expect(problems, `${story.name} at ${String(viewport.width)}`).toEqual([]);
-      }).toPass();
+        const label = band.querySelector(".ui-preview-banner");
+        if (label instanceof HTMLElement && bars.length > 0) {
+          const range = document.createRange();
+          range.selectNodeContents(label);
+          const textBox = range.getBoundingClientRect();
+          const lowest = Math.max(...bars.map((box) => box.bottom));
+          if (textBox.top < lowest + 8) found.push("preview label is jammed against the bars");
+        }
+        return found;
+      });
       for (const problem of problems) failures.push(`${String(viewport.width)} ${story.name}: ${problem}`);
     }
   }
