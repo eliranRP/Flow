@@ -407,8 +407,8 @@
 .ui-connection-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 12px 16px 28px;
+  gap: var(--space-inset-row);
+  padding: var(--space-3) var(--space-4) calc(var(--space-6) + var(--space-1));
 }
 
 .ui-settings-card {
