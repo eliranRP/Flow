@@ -67,7 +67,7 @@ describe("ProgressBar", () => {
     expect(steps.map((step) => step.getAttribute("data-state"))).toEqual(["done", "doing", "todo"]);
     expect(steps[1]).toHaveAttribute("aria-current", "step");
     expect(document.querySelector(".ui-job-bar")).not.toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "המשך ברקע" }));
+    fireEvent.click(screen.getByRole("button", { name: "המשך לבית בינתיים" }));
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
 });

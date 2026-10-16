@@ -48,7 +48,7 @@ export function ProgressBar(props: ProgressBarProps) {
   return <ValueBar {...props} />;
 }
 
-function JobBar({ value, max, label, count, steps, onLeave, leaveLabel = "המשך ברקע" }: JobBarProps) {
+function JobBar({ value, max, label, count, steps, onLeave, leaveLabel = "המשך לבית בינתיים" }: JobBarProps) {
   const safeMax = max <= 0 ? 1 : max;
   const ratio = Math.min(1, Math.max(0, value / safeMax));
   return (
