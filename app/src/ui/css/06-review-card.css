@@ -433,8 +433,12 @@
   }
 
   .ui-review-field {
-    min-block-size: 48px;
-    padding-block: var(--space-1);
+    min-block-size: var(--touch-min);
+    padding-block: 0;
+  }
+
+  .ui-review-panel {
+    margin-block-start: var(--space-2);
   }
 
   .ui-review-queue .ui-review-segments {
