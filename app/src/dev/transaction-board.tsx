@@ -20,7 +20,7 @@ const BOARD_BANK_LINE: TxnMeta = {
 
 const BOARD_TXN: NonNullable<TransactionDetail> = {
   id: "t-board",
-  description: "ספק לדוגמה",
+  description: "Hardwood Depot",
   direction: "expense",
   doc_date: "2026-10-08",
   amount_gross: -128450n,
@@ -29,10 +29,10 @@ const BOARD_TXN: NonNullable<TransactionDetail> = {
   vat_status: "source",
   source: "sumit",
   project_id: "p1",
-  project_name: "פרויקט לדוגמה",
+  project_name: "Elmwood • flip",
   category_id: "c1",
   category_name: "חומרים",
-  supplier_name: "ספק לדוגמה",
+  supplier_name: "Hardwood Depot",
   customer_name: null,
   currency: "USD",
   paid: false,
@@ -48,7 +48,7 @@ export function DevTransactionBoard() {
     return (
       <TransactionScreen
         sample={BOARD_TXN}
-        sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה" }]}
+        sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
         sampleMeta={BOARD_BANK_LINE}
         sampleFrom={BOARD_FROM}
@@ -96,11 +96,11 @@ export function DevTransactionBoard() {
     return (
       <TransactionScreen
         sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11" }}
-        sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה" }]}
+        sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
         sampleRecurring={{
           transaction_id: "t-board",
-          party: { direction: "expense", id: "s-sample", name: "ספק לדוגמה", currency: "USD" },
+          party: { direction: "expense", id: "s-sample", name: "Hardwood Depot", currency: "USD" },
           recurring: true,
           override: null,
           detected: true,
@@ -128,7 +128,7 @@ export function DevTransactionBoard() {
         vat_status: "assumed",
         source: "manual",
         project_id: "p1",
-        project_name: "שיפוץ הרצל 12",
+        project_name: "Maple St",
         category_id: "c1",
         category_name: "חומרים",
         supplier_name: "ספק",
@@ -137,7 +137,7 @@ export function DevTransactionBoard() {
         open_gross_agorot: null,
         allocations: [],
       }}
-      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
+      sampleProjects={[{ id: "p1", name: "Maple St" }, { id: "p2", name: "Pine Ridge" }]}
       sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
     />
   );

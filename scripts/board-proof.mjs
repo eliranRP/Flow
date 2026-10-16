@@ -100,8 +100,6 @@ export function proofPlan(frames, only, boards, out) {
   const plan = [];
   for (const frame of picked) {
     for (const theme of THEME_NAMES) {
-      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
-      if (!existsSync(path.join(boards, boardFileName(frame, theme)))) continue;
       plan.push({
         frame,
         theme,
@@ -201,6 +199,8 @@ async function main(argv) {
   const summary = /** @type {Record<string, Record<string, number>>} */ ({});
   try {
     for (const shot of plan) {
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
+      if (!existsSync(shot.board)) continue;
       const context = await browser.newContext({
         viewport: { width: PROOF_WIDTH, height: PROOF_HEIGHT },
         deviceScaleFactor: PROOF_DPR,

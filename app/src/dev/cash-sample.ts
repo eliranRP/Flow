@@ -246,30 +246,30 @@ export function sampleBoardCashMonths(now = new Date()): NonNullable<CashMonths>
 
 /** The board's lines: [days back, supplier, project, category, minor, pending, in P&L]. */
 const BOARD_OUT: Array<[number, string, string | null, string, bigint, boolean, boolean]> = [
-  [0, "חברת ביטוח לדוגמה", "שיפוץ הרצל 12", "ביטוח", 124_000n, true, true],
-  [1, "ספק מים לדוגמה", "שיפוץ הרצל 12", "אחר", 8_640n, true, true],
-  [1, "חנות חומרים לדוגמה", null, "חומרים", 41_218n, true, true],
-  [2, "אינסטלציה לדוגמה", "וילה רעננה", "שירותים", 240_000n, true, true],
-  [3, "קבלן לדוגמה", "בניין הדקל", "שיפוץ", 320_000n, false, true],
-  [4, "חשמלאי לדוגמה", "שיפוץ הרצל 12", "חשמל", 96_000n, false, true],
-  [5, "ספק צבע לדוגמה", "וילה רעננה", "חומרים", 78_500n, true, true],
-  [6, "שירות ניקיון לדוגמה", "בניין הדקל", "שירותים", 45_000n, false, true],
-  [7, "ספק ציוד לדוגמה", "בניין הדקל", "ציוד לעסק", 900_000n, false, false],
-  [8, "ספק ריצוף לדוגמה", "שיפוץ הרצל 12", "חומרים", 220_000n, false, true],
-  [9, "מעלית לדוגמה", "בניין הדקל", "שיפוץ והשבחה", 475_700n, false, false],
-  [10, "שכר עבודה לדוגמה", "וילה רעננה", "שכר", 90_000n, false, true],
-  [12, "מסעדה לדוגמה", null, "אחר", 12_500n, false, true],
-  [14, "תוכנה לדוגמה", null, "תוכנות ומנויים", 2_990n, false, true],
-  [15, "ספק גז לדוגמה", "וילה רעננה", "חשמל", 18_990n, false, true],
+  [0, "Redfield", "Maple St", "ביטוח", 124_000n, true, true],
+  [1, "Bayside Water Works", "Maple St", "אחר", 8_640n, true, true],
+  [1, "Harlow's", null, "חומרים", 41_218n, true, true],
+  [2, "Pike Plumbing LLC", "Pine Ridge", "שירותים", 240_000n, true, true],
+  [3, "Norvell Builders", "Birch Court", "שיפוץ", 320_000n, false, true],
+  [4, "Kestrel Electric", "Maple St", "חשמל", 96_000n, false, true],
+  [5, "Lantern Paint Co", "Pine Ridge", "חומרים", 78_500n, true, true],
+  [6, "Clearwater Clean", "Birch Court", "שירותים", 45_000n, false, true],
+  [7, "Summit Equipment", "Birch Court", "ציוד לעסק", 900_000n, false, false],
+  [8, "Tilecraft Supply", "Maple St", "חומרים", 220_000n, false, true],
+  [9, "Vertex Lifts", "Birch Court", "שיפוץ והשבחה", 475_700n, false, false],
+  [10, "Payroll Partners", "Pine Ridge", "שכר", 90_000n, false, true],
+  [12, "Harbor Bistro", null, "אחר", 12_500n, false, true],
+  [14, "Cloudline Software", null, "תוכנות ומנויים", 2_990n, false, true],
+  [15, "Flameline Gas", "Pine Ridge", "חשמל", 18_990n, false, true],
 ];
 
 /** The board's income lines: a tenant's rent, and the lines that make up the day totals. */
 const BOARD_IN: Array<[number, string, string | null, string, bigint, boolean]> = [
-  [2, "שוכר לדוגמה א", "בניין הדקל", "שכר דירה", 185_000n, true],
-  [6, "שוכר לדוגמה ב", "וילה רעננה", "שכר דירה", 172_500n, false],
-  [8, "שוכרת לדוגמה", "שיפוץ הרצל 12", "שכר דירה", 215_000n, false],
-  [9, "שוכר לדוגמה ג", "בניין הדקל", "שכר דירה", 260_000n, false],
-  [9, "לקוח לדוגמה", null, "הכנסה מלקוחות", 155_200n, false],
+  [2, "R. Delgado", "Birch Court", "שכר דירה", 185_000n, true],
+  [6, "T. Lindqvist", "Pine Ridge", "שכר דירה", 172_500n, false],
+  [8, "S. Whitfield", "Maple St", "שכר דירה", 215_000n, false],
+  [9, "Moreno Co", "Birch Court", "שכר דירה", 260_000n, false],
+  [9, "Harborline Ltd", null, "הכנסה מלקוחות", 155_200n, false],
 ];
 
 function isoDaysBack(now: Date, back: number): string {
