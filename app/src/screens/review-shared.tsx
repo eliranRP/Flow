@@ -113,13 +113,6 @@ export function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boo
   return { index: index + 1, total: rows.length };
 }
 
-/** "project · category" for the statement row's ✦ line: what the card shows (U11). FLOW-305. */
-export function statementSuggestion(row: ReviewRow): string | null {
-  const suggestion = reviewSuggestion(row);
-  if (suggestion == null) return null;
-  return [suggestion.project, suggestion.category].filter((part) => part != null).join(" · ");
-}
-
 /** `jev` marks the fields whose shown value is Jev's fill, so the card says הצעת Jev there. */
 export function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShown) {
   const split = reviewIsSplit(row);

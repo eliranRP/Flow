@@ -22,7 +22,7 @@ export { IconButton } from "./icon-button";
 export { List, ListRow } from "./list-row";
 export type { ListRowProps, StatementRowProps } from "./list-row";
 export { Avatar } from "./avatar";
-export { docKindShort, statementMethodOf, statementRowLabel } from "./statement";
+export { docKindShort, statementRowLabel } from "./statement";
 export type { StatementMethod, StatementSource } from "./statement";
 export { DelayedSkeleton, ListSkeleton, Skeleton } from "./skeleton";
 export { SyncStrip } from "./sync-strip";
