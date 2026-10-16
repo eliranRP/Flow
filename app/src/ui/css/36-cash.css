@@ -83,9 +83,8 @@
   background: var(--color-surface);
 }
 
-/* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text. */
-/* The order chips: one sideways row. The organize row's component is gone (FLOW-368), so the row
-   is plain flex here; a chip keeps its words and the row scrolls instead. */
+/* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text.
+   The organize row's component is gone (FLOW-368), so the row is plain flex here. */
 .ui-lines-chips {
   display: flex;
   gap: var(--space-2);
