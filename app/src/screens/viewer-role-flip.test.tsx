@@ -126,7 +126,8 @@ describe("inner write gates after the role changes", () => {
       expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeDisabled();
       fireEvent.submit(formIn(dialog));
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(rpc).not.toHaveBeenCalled();
+      // The list reads projects_cash_month through rpc too; only a write is refused.
+      expect(rpc).not.toHaveBeenCalledWith("upsert_project", expect.anything());
     });
   });
 

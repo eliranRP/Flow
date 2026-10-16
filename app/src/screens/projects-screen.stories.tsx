@@ -73,7 +73,7 @@ export const ProjectsSearch: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsSearch} initialQuery="תמר" />
+      <ProjectsScreen sample={projectsSearch} />
     </StoryRoute>
   ),
 };
@@ -85,7 +85,7 @@ export const ProjectsMiss: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsSearch} initialQuery="חשמל" />
+      <ProjectsScreen sample={projectsSearch} />
     </StoryRoute>
   ),
 };
@@ -135,7 +135,7 @@ export const ProjectsGroupedSearch: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsGrouped} initialQuery="דירה 2" />
+      <ProjectsScreen sample={projectsGrouped} />
     </StoryRoute>
   ),
 };
