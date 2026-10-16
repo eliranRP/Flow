@@ -270,6 +270,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"forecast_overrides": {
+                  Row: {
+                    "amount_minor": number | null,"company_id": string,"created_at": string,"due_on": string | null,"id": string,"item_key": string,"month": string,"moved_out": boolean,"updated_at": string
+                  }
+                  Insert: {
+                    "amount_minor"?: number | null,"company_id": string,"created_at"?: string,"due_on"?: string | null,"id"?: string,"item_key": string,"month": string,"moved_out"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "amount_minor"?: number | null,"company_id"?: string,"created_at"?: string,"due_on"?: string | null,"id"?: string,"item_key"?: string,"month"?: string,"moved_out"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "forecast_overrides_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invoice_paid_marks": {
                   Row: {
                     "company_id": string,"marked_at": string,"marked_by": string | null,"transaction_id": string
@@ -604,25 +623,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "suppliers"
       referencedColumns: ["company_id","id"]
-    }
-                  ]
-                },"forecast_overrides": {
-                  Row: {
-                    "amount_minor": number | null,"company_id": string,"created_at": string,"due_on": string | null,"id": string,"item_key": string,"month": string,"moved_out": boolean,"updated_at": string
-                  }
-                  Insert: {
-                    "amount_minor"?: number | null,"company_id": string,"created_at"?: string,"due_on"?: string | null,"id"?: string,"item_key": string,"month": string,"moved_out"?: boolean,"updated_at"?: string
-                  }
-                  Update: {
-                    "amount_minor"?: number | null,"company_id"?: string,"created_at"?: string,"due_on"?: string | null,"id"?: string,"item_key"?: string,"month"?: string,"moved_out"?: boolean,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "forecast_overrides_company_id_fkey"
-      columns: ["company_id"]
-isOneToOne: false
-      referencedRelation: "companies"
-      referencedColumns: ["id"]
     }
                   ]
                 },"project_groups": {
@@ -1372,6 +1372,9 @@ isOneToOne: false
 "mcp_reorder_loans":
 { Args: { "p_idempotency_key": string,"p_loan_ids": (string)[] }; Returns: Json
                            },
+"mcp_reset_forecast":
+{ Args: { "p_idempotency_key": string,"p_month": string }; Returns: Json
+                           },
 "mcp_review_anomalies":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -1398,6 +1401,9 @@ isOneToOne: false
                            },
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_set_forecast_item":
+{ Args: { "p_idempotency_key": string,"p_item_key": string,"p_month": string,"p_patch": Json }; Returns: Json
                            },
 "mcp_set_index_rate":
 { Args: { "p_annual_rate_ppm": number,"p_effective_date": string,"p_idempotency_key": string,"p_rate_index": string }; Returns: Json
