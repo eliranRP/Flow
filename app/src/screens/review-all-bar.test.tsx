@@ -91,7 +91,7 @@ function renderWithLine(path: string, options?: { viewer?: boolean }) {
 }
 
 describe("the pinned review bar (FLOW-327)", () => {
-  it("puts אישור, שינוי and דלג in one bar above the tab bar, and the skip toast above it", async () => {
+  it("puts אישור, שינוי and דלג in one bar above the tab bar, and דלג sends the card to the end", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
       return Promise.resolve({ data: null, error: null });
@@ -104,14 +104,11 @@ describe("the pinned review bar (FLOW-327)", () => {
     expect(within(bar as HTMLElement).getByRole("link", { name: "שינוי" })).toBeInTheDocument();
     const skip = within(bar as HTMLElement).getByRole("button", { name: "דלג" });
     expect(document.querySelector(".ui-review-queue")).toHaveAttribute("data-bar");
-    expect(screen.getByText("פריט")).toHaveClass("sr-only");
+    expect(screen.getByText(/^פריט /)).toBeInTheDocument();
     fireEvent.click(skip);
-    await waitFor(() => {
-      expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
-    });
-    const toast = await screen.findByText("דילגנו על הפריט");
-    expect(toast.closest(".ui-toast-host")).toHaveAttribute("data-place", "bar");
-    expect(within(toast.closest(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    // FLOW-365: דלג moves the card to the end of the queue on this device; nothing is written.
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
   });
 
   it("keeps focus on the bar's first button when the next card is a split_mismatch (FLOW-327 r1)", async () => {
@@ -183,8 +180,8 @@ describe("the pinned review bar (FLOW-327)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
-    const pick = await screen.findByRole("button", { name: "בחירת פרויקט" });
-    expect(pick).toBeEnabled();
+    const pick = await screen.findByRole("button", { name: "אישור" });
+    expect(pick).toBeDisabled();
     const hint = screen.getByText("בחרו פרויקט וקטגוריה");
     expect(pick).toHaveAttribute("aria-describedby", hint.id);
     expect(hint.closest(".ui-review")).not.toBeNull();
@@ -196,7 +193,7 @@ describe("the pinned review bar (FLOW-327)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
-    const pick = await screen.findByRole("button", { name: "בחירת פרויקט" });
+    const pick = await screen.findByRole("button", { name: "אישור" });
     expect(pick).not.toHaveAttribute("aria-describedby");
     expect(screen.queryByText("בחרו פרויקט וקטגוריה")).toBeNull();
   });
@@ -259,5 +256,56 @@ describe("the pinned review bar (FLOW-327)", () => {
     });
     expect(document.querySelector(".ui-review-flag, .ui-review-flag-quiet")).toBeNull();
     expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+});
+
+describe("the review queue acceptance (FLOW-365)", () => {
+  it("אישור stays disabled without a project, and the category alone does not enable it", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+  });
+
+  it("approving a split card saves every part through one call, and creates no vendor rule", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({ data: [reviewRow("r1", "ציוד משותף לדוגמה", null, { pnl_role: "shared", share_count: 3, reason: null, category_id: "c1", project_name: null })], error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_split_review")).toBe(true);
+    });
+    // The one call carries the card and its category; the server saves every part and the rest.
+    expect(rpc.calls.find((call) => call.name === "approve_split_review")?.args).toEqual({ p_id: "r1", p_category_id: "c1" });
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+    expect(rpc.calls.some((call) => call.name === "resolve_review" && (call.args as { p_remember?: boolean } | undefined)?.p_remember === true)).toBe(false);
+    // No vendor or supplier rule is written from a split approve.
+    expect(rpc.calls.some((call) => /rule|vendor|supplier/i.test(call.name))).toBe(false);
+  });
+
+  it("the approve toast's ביטול puts the item back on the card", async () => {
+    const open = new Set(["r1", "r2"]);
+    const rows = [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")];
+    rpc.impl = (name, args) => {
+      const id = (args as { p_id?: string } | undefined)?.p_id ?? "";
+      if (name === "list_review") return Promise.resolve({ data: rows.filter((row) => open.has(row.id)), error: null });
+      if (name === "approve_review_item") { open.delete(id); return Promise.resolve({ data: { ok: true }, error: null }); }
+      if (name === "reopen_review") { open.add(id); return Promise.resolve({ data: { ok: true }, error: null }); }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    fireEvent.click(within(document.querySelector(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "reopen_review")).toBe(true);
   });
 });

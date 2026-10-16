@@ -118,7 +118,7 @@ function reviewRow(id: string, supplier: string, projectId: string | null, extra
 
 function showsPlace(text: string) {
   expect(screen.getByText((_content, element) => {
-    return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === text;
+    return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === `פריט ${text}`;
   })).toBeInTheDocument();
 }
 
@@ -176,7 +176,7 @@ describe("review list paths", () => {
 });
 
 describe("review queue list", () => {
-  it("puts הצגת הכול on the start side of the counter line, before the bar and above the filed banner", async () => {
+  it("puts הצגת הכול in the header and the auto count on the counter line (FLOW-365)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -191,12 +191,12 @@ describe("review queue list", () => {
     expect(link).toHaveAttribute("href", "/review/all");
     // FLOW-601: the meter waits for the role (list_my_companies), so it can land after the link.
     const meter = await screen.findByRole("meter", { name: "התקדמות התור" });
-    const banner = await screen.findByText(/שויכו אוטומטית היום/);
+    const auto = await screen.findByText(/אושרו אוטומטית היום/);
     const card = screen.getByRole("heading", { name: "מחסן הנמל" });
     expect(link.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(link.parentElement).toHaveClass("ui-review-meter");
-    expect(link.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(link.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // FLOW-365: the counter line ("פריט i מתוך n" and the auto count) sits above the visit bar, then the card.
+    expect(auto.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(meter.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("lists every open item, opens that card, and returns to the list", async () => {
@@ -213,10 +213,10 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     const first = await screen.findByRole("link", { name: /מחסן הנמל/ });
     const second = screen.getByRole("link", { name: /עגורני החוף/ });
-    // FLOW-305: the date moved from each row into one quiet day head above the rows.
-    expect(screen.getAllByRole("heading", { level: 3, name: /29\/09/ })).toHaveLength(1);
-    expect(first).toHaveTextContent("100");
-    expect(first).toHaveTextContent("✦ הרצל · חומרים");
+    // FLOW-365: no day heads; each row carries its date and source on the meta line, and no Jev marks.
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+    expect(first).toHaveTextContent("חשבונית");
+    expect(first).not.toHaveTextContent("✦");
     fireEvent.click(second);
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeInTheDocument();
@@ -247,7 +247,7 @@ describe("review queue list", () => {
     // header stays on one line so the pinned bar clears the tab bar at 375x667.
     expect(screen.queryByRole("link", { name: "הצגת הכול" })).toBeNull();
     const title = screen.getByRole("heading", { name: "לאישור" });
-    expect(title.closest("header")).not.toHaveClass("ui-page-stacked");
+    expect(title.closest("header")).toHaveClass("ui-page-stacked");
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
@@ -285,7 +285,7 @@ describe("review queue list", () => {
     renderAt("/review?project=p1");
     const link = await screen.findByRole("link", { name: "הצגת הכול" });
     expect(link).toHaveAttribute("href", "/review/all?project=p1");
-    expect(screen.getByRole("heading", { name: "לאישור" }).closest("header")).not.toHaveClass("ui-page-stacked");
+    expect(screen.getByRole("heading", { name: "לאישור" }).closest("header")).toHaveClass("ui-page-stacked");
     fireEvent.click(link);
     expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /עגורני החוף/ })).not.toBeInTheDocument();
@@ -314,11 +314,11 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "בחירת פרויקט" }, { timeout: 2500 }));
+    // The no-suggestion project row carries the current copy; the picker opens from it.
+    fireEvent.click(await screen.findByRole("button", { name: "פרויקט: אין הצעה · הקישו לבחירה" }, { timeout: 2500 }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    // FLOW-365: a pick saves that one field and returns to the card; there is no שמירה.
+    fireEvent.click(await screen.findByRole("radio", { name: "הרצל" }, { timeout: 2500 }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -327,10 +327,11 @@ describe("review queue list", () => {
       p_action: "changed",
       p_resolve: false,
       p_project_id: "p1",
+      p_remember: true,
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "בחירת קטגוריה" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
   });
 
@@ -885,7 +886,7 @@ describe("review amounts keep their currency", () => {
         backTo="/review"
       />,
     );
-    expect(screen.getByText("+$100")).toHaveClass("ui-income");
+    expect(screen.getByText("+$100")).toHaveClass("ui-review-all-in");
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });
