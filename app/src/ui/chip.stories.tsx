@@ -29,7 +29,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Suggested: Story = { args: { kind: "suggested", children: "חומרים" } };
 export const ChoiceOff: Story = { args: { kind: "choice", children: "עבודה" }, render: () => <Choice /> };
-export const Selected: Story = { args: { kind: "selected", pressed: true, children: "נבחר" } };
+export const Selected: Story = { args: { kind: "choice", pressed: true, children: "נבחר" } };
 export const Disabled: Story = { args: { kind: "disabled", children: "לא זמין" } };
 export const LongHebrew: Story = { args: { kind: "choice", children: longHebrew } };
 export const All: Story = {
@@ -38,7 +38,7 @@ export const All: Story = {
     <Stack>
       <Chip kind="suggested">הצעה</Chip>
       <Chip kind="choice">בחירה</Chip>
-      <Chip kind="selected" pressed>נבחר</Chip>
+      <Chip kind="choice" pressed>נבחר</Chip>
       <Chip kind="disabled">כבוי</Chip>
     </Stack>
   ),

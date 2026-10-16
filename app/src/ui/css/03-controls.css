@@ -72,19 +72,23 @@
   gap: var(--space-1);
   padding-inline: var(--field-pad);
   border-radius: var(--radius-chip);
-  border: 1px solid transparent;
-  font-size: var(--type-label-size);
-  font-weight: var(--type-body-weight);
+  border: var(--stroke-strong) solid var(--color-tint-strong);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), opacity var(--motion-press) var(--ease-linear);
 }
 
-.ui-chip-mark,
 .ui-chip-spark,
 .ui-period-chevron {
   flex: none;
 }
 
+/* FLOW-363 (3c): a press fades the chip; a selected chip is the tint-strong fill with an accent border, no tick. */
 .ui-chip:active:not(:disabled) {
-  background: var(--color-tint-pressed);
+  opacity: .72;
 }
 
 .ui-chip-suggested {
@@ -97,14 +101,15 @@
 }
 
 .ui-chip-choice {
-  background: var(--color-surface);
-  border-color: var(--color-control-border);
+  background: transparent;
+  border-color: var(--color-tint-strong);
   color: var(--color-text);
 }
 
-.ui-chip-selected {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+.ui-chip[aria-pressed="true"] {
+  background: var(--color-tint-strong);
+  border-color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .ui-chip-disabled {

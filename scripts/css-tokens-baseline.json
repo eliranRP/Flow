@@ -70,7 +70,7 @@
   "app/src/ui/css/30-prompt-card.css": {
     "font-weight": 1
   },
-  "app/src/ui/css/31-chip-scroller.css": {
+  "app/src/ui/css/31-organize-chips.css": {
     "color": 5
   },
   "app/src/ui/css/33-loan-split-editor.css": {

@@ -4,7 +4,7 @@ import { Chip } from "./chip";
 import { expectRtl, expectTarget, expectThemePaint } from "./test-support";
 
 describe("Chip", () => {
-  it("covers suggested, choice, selected, and disabled", () => {
+  it("covers suggested, choice, pressed, and disabled", () => {
     expectRtl();
     render(
       <>
@@ -19,6 +19,8 @@ describe("Chip", () => {
     const choice = screen.getByRole("button", { name: "חומרים" });
     expectTarget(choice);
     expectThemePaint(choice, "color");
+    expect(choice.querySelector(".ui-chip-mark")).toBeNull();
+    expect(screen.getByRole("button", { name: "עבודה" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "מוסתר" })).toBeDisabled();
   });
 });

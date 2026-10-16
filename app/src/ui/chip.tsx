@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx";
 
-export type ChipKind = "suggested" | "choice" | "selected" | "disabled";
+export type ChipKind = "suggested" | "choice" | "disabled";
 
 type ChipProps = {
   kind?: ChipKind;
@@ -12,23 +12,21 @@ type ChipProps = {
 };
 
 export function Chip({ kind = "choice", pressed = false, children, onClick, className }: ChipProps) {
-  const resolved = pressed ? "selected" : kind;
   const label = typeof children === "string" ? children : undefined;
   return (
     <button
       type="button"
-      className={cx("ui-chip", `ui-chip-${resolved}`, className)}
+      className={cx("ui-chip", `ui-chip-${kind}`, className)}
       aria-pressed={pressed}
       aria-label={label}
       disabled={kind === "disabled"}
       onClick={onClick}
     >
-      {resolved === "suggested" ? (
+      {kind === "suggested" ? (
         <span className="ui-chip-spark" aria-hidden="true">
           ✦
         </span>
       ) : null}
-      {resolved === "selected" ? <span className="ui-chip-mark" aria-hidden="true">✓</span> : null}
       <span className="ui-chip-label" data-clip-ok="">{children}</span>
     </button>
   );

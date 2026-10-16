@@ -33,7 +33,7 @@ import { ErrorState } from "../ui/error-state";
 import { DocumentIcon, SearchIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
-import { ChipScroller } from "../ui/chip-scroller";
+import { OrganizeChips } from "../ui/organize-chips";
 import { PresetPeriodSheet } from "../ui/period-picker";
 import { RadioRow } from "../ui/radio-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -349,7 +349,7 @@ function SearchChips({
   return (
     <>
       {/* FLOW-347: תקופה first, so it is never the cut chip; the row's end fades while more wait. */}
-      <ChipScroller className="ui-search-chips" label="סינון" scrollerRef={chipsRef}>
+      <OrganizeChips className="ui-search-chips" label="סינון" scrollerRef={chipsRef}>
         <Chip pressed={period.kind !== "all"} onClick={() => { setPeriodOpen(true); }}>
           {period.kind === "all" ? "תקופה" : periodPillLabel(period)}
         </Chip>
@@ -362,7 +362,7 @@ function SearchChips({
           {filters.category != null ? categoryLabel ?? "קטגוריה" : "קטגוריה"}
         </Chip>
         <Chip pressed={filters.review} onClick={() => { onChange({ review: !filters.review }); }}>לאישור</Chip>
-      </ChipScroller>
+      </OrganizeChips>
       <Sheet open={projectOpen} onOpenChange={setProjectSheet} title="פרויקט">
         <div role="radiogroup" aria-label="פרויקט">
           <RadioRow label="כל הפרויקטים" selected={filters.project == null} onSelect={() => { onChange({ project: null }); setProjectSheet(false); }} />
