@@ -130,7 +130,7 @@ function safeTop(): number {
 }
 
 /** True once the mark has scrolled up under the compact bar. */
-function useScrolledPast(mark: RefObject<HTMLElement | null>, enabled: boolean): boolean {
+export function useScrolledPast(mark: RefObject<HTMLElement | null>, enabled: boolean): boolean {
   const [past, setPast] = useState(false);
   useEffect(() => {
     const node = enabled ? mark.current : null;

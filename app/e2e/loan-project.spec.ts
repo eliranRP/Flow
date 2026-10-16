@@ -66,7 +66,7 @@ test("the new-loan picker swaps in place, and Escape goes back to the form", asy
   await expect(sheet.getByRole("heading", { name: "הלוואה" })).toBeVisible();
   await sheet.getByLabel("מלווה").fill("הלוואת דוגמה");
   await sheet.getByRole("button", { name: "פרויקט ללא פרויקט" }).click();
-  await expect(sheet.getByRole("heading", { name: "פרויקט חדש" })).toBeVisible();
+  await expect(sheet.getByRole("heading", { name: "פרויקט" })).toBeVisible();
   await expect(sheet.getByRole("radio", { name: "ללא פרויקט" })).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
   await expect(sheet.getByRole("heading", { name: "הלוואה" })).toBeVisible();

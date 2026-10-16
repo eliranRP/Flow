@@ -15,6 +15,8 @@ import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
+import { CompactBar } from "../ui/compact-bar";
+import { useScrolledPast } from "../ui/screen-header";
 import { formatAmount } from "../ui/amount";
 import { PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
@@ -104,6 +106,8 @@ function ProjectsBody({
   onNew: () => void;
 }) {
   const base = month.base_currency;
+  const titleEnd = useRef<HTMLSpanElement>(null);
+  const past = useScrolledPast(titleEnd, true);
   const active = orderActiveProjects(month.projects, base);
   const overhead = overheadRow(month);
   const finished = month.projects.filter((row) => row.status === "finished" && !row.is_overhead);
@@ -119,6 +123,7 @@ function ProjectsBody({
         </IconButton>
       </div>
       <h1 className="ui-page-pad ui-projects-title">פרויקטים</h1>
+      <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
       {month.unassigned.count > 0 ? (
         <div className="ui-page-pad ui-projects-unassigned">
           <TextLink to="/review" tone="accent">
@@ -164,6 +169,21 @@ function ProjectsBody({
           ) : null}
         </>
       ) : null}
+      <CompactBar
+        title="פרויקטים"
+        size="detail"
+        shown={past}
+        actions={(
+          <>
+            <IconButton label="פרויקט חדש" onClick={onNew}>
+              <PlusIcon />
+            </IconButton>
+            <IconButton to="/search" label="חיפוש">
+              <SearchIcon />
+            </IconButton>
+          </>
+        )}
+      />
     </>
   );
 }

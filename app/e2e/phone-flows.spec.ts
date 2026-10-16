@@ -54,7 +54,7 @@ for (const width of [390, 320]) {
       await open(page, "/e2e/home?preview=1", page.getByRole("navigation", { name: "ניווט ראשי" }));
       const project = page.locator(".ui-project-list").getByRole("link").first();
       // The Home fixture links to the preview project page, which has its own sample title.
-      await step("open the project", () => project.tap(), page.getByRole("heading", { name: "פרויקט חדש", exact: true }));
+      await step("open the project", () => project.tap(), page.getByRole("heading", { name: "פרויקט", exact: true }));
       await expect(page).toHaveURL(/\/projects\/p1\?preview=1$/);
       await step("Back to Home", () => page.getByRole("button", { name: "חזרה" }).tap(), project);
     });
