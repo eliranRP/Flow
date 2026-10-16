@@ -145,10 +145,16 @@ export function sweepControls(spec: string): void {
         if (control.name.includes("המשך עם Google")) continue;
         if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
         if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
+          // A sheet-on-load route draws Home's band under its scrim, so the band's + links here (FLOW-364).
+          if (sheetOnLoad.has(url)) {
+            skipped += 1;
+            continue;
+          }
           failures.push(`${control.name || control.tag} links to the current page`);
           continue;
         }
-        if (control.tag === "a" && control.current === "page" && sameUrl(control.href, here)) continue;
+        // The active tab scrolls the page to the top and does not move (FLOW-364, tab-bar.tsx).
+        if (control.tag === "a" && control.current === "page") continue;
         const field = (control.tag === "input" || control.tag === "textarea") && control.type !== "checkbox" && control.type !== "radio";
         if (!field && control.checked === "true") continue;
         await gotoSettled(page, url);

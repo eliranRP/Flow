@@ -2,7 +2,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { reducedMotion } from "./period-swipe";
-import { BankIcon, HomeIcon, ProjectsIcon, RepeatIcon } from "./icons";
+import { BankColumnsIcon, HomeIcon, ProjectsIcon, RepeatIcon } from "./icons";
 
 const slot = "ui-tab-slot";
 
@@ -41,7 +41,7 @@ function TabFace({ icon, label }: { icon: ReactNode; label: string }) {
 const tabs: { section: TabSection; label: string; path: string; icon: ReactNode }[] = [
   { section: "home", label: "בית", path: "/", icon: <HomeIcon size={24} stroke={2} /> },
   { section: "projects", label: "פרויקטים", path: "/projects", icon: <ProjectsIcon size={24} stroke={2} /> },
-  { section: "loans", label: "הלוואות", path: "/settings/loans", icon: <BankIcon size={24} stroke={2} /> },
+  { section: "loans", label: "הלוואות", path: "/settings/loans", icon: <BankColumnsIcon size={24} stroke={2} /> },
   { section: "recurring", label: "קבועים", path: "/missing-bills", icon: <RepeatIcon size={24} stroke={2} /> },
 ];
 

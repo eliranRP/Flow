@@ -138,7 +138,7 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
 
 test("home connects, filters the period, and opens a project", async ({ page }) => {
   await page.goto("/?preview=1");
-  await page.getByRole("link", { name: "חיבור בנק או SUMIT" }).click();
+  await page.getByRole("link", { name: "חיבור Mercury" }).click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");
@@ -191,7 +191,7 @@ test("a preview load error returns to the empty preview", async ({ page }) => {
   await page.goto("/?preview=error");
   await page.getByRole("button", { name: "נסו שוב" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "חברו את הבנק" })).toBeVisible();
   await page.goto("/unpaid?preview=error");
   await page.getByRole("button", { name: "נסו שוב" }).click();
   await expect(page).toHaveURL(/\/unpaid\?preview=1$/);

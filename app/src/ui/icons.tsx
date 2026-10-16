@@ -162,6 +162,17 @@ export function BankIcon(props: IconProps) {
   );
 }
 
+/** FLOW-364 (board): the tab bar's הלוואות icon, a pediment on four columns over a base. */
+export function BankColumnsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 9l9-6 9 6" />
+      <path d="M6 10.5v7.5M10 10.5v7.5M14 10.5v7.5M18 10.5v7.5" />
+      <path d="M3 20.5h18" />
+    </Svg>
+  );
+}
+
 export function ChevronIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg size={size} stroke={2}>

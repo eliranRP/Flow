@@ -22,7 +22,7 @@ import { useToast } from "./ui/toast";
 import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -318,10 +318,13 @@ export function DevHome() {
 export function DevCash() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const data = sampleCashMonths();
+  // FLOW-364: `?state=usd-loss` is the board's negative month in dollars (its past frame with `?month=past`).
+  const usdLoss = params.get("state") === "usd-loss";
+  const past = params.get("month") === "past";
+  const data = usdLoss ? sampleCashUsdLoss(past) : sampleCashMonths();
   const currentKey = cashMonthKey(data.months[0]?.month ?? "");
   // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
-  const monthKey = params.get("month") === "past" ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
+  const monthKey = past ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
   return (
     <CashHome
       data={data}
@@ -340,9 +343,9 @@ export function DevCash() {
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
-      sameDay={sampleCashToDay()}
-      forecast={-6_810_000n}
-      company={<BandCompany name="Acme Test Co" onOpen={() => undefined} />}
+      sameDay={usdLoss ? (past ? null : sampleCashUsdToDay()) : sampleCashToDay()}
+      forecast={usdLoss ? -570_000n : -6_810_000n}
+      company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
       onStepMonth={(key) => {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}

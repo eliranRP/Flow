@@ -133,3 +133,52 @@ export function sampleCashYearMonths(now = new Date()): NonNullable<CashMonths> 
 export function sampleCashToDay(): CashToDay {
   return [{ currency: "ILS", in_minor: 1_420_000n, out_minor: 1_310_000n }];
 }
+
+/**
+ * FLOW-364 (board): a negative month in dollars, the board's shape. Money out is above money in,
+ * the split card reads the minus with an investment row and a negative profit row, and the
+ * forecast is negative. `past` gives the darker frame's month (`?month=past`), whose own figures
+ * and the month before it are the board's September. Invented round figures, in cents.
+ */
+function usdRow(inMinor: bigint, outMinor: bigint, profit: bigint, kept: CashCurrencyRow["not_in_profit_categories"] = []): CashCurrencyRow {
+  return {
+    currency: "USD",
+    in_minor: inMinor,
+    out_minor: outMinor,
+    net_minor: inMinor - outMinor,
+    profit_minor: profit,
+    excluded_count: 0,
+    excluded_in_minor: 0n,
+    excluded_out_minor: 0n,
+    not_in_profit_categories: kept,
+  };
+}
+
+export function sampleCashUsdLoss(past = false, now = new Date()): NonNullable<CashMonths> {
+  const current = israelToday(now).slice(0, 7);
+  const month = (back: number) => `${shiftMonthKey(current, -back)}-01`;
+  const investment = (amount: bigint) => [{ name: "השקעה", amount_minor: amount }];
+  const months = past
+    ? [
+        usdRow(2_480_000n, 4_200_000n, -340_000n, investment(-1_380_000n)),
+        usdRow(6_145_000n, 23_877_000n, -2_472_000n, investment(-15_260_000n)),
+        usdRow(2_000_000n, 1_900_000n, 100_000n),
+        usdRow(1_700_000n, 1_520_000n, 180_000n),
+      ]
+    : [
+        usdRow(2_480_000n, 4_200_000n, -340_000n, investment(-1_380_000n)),
+        usdRow(1_824_000n, 2_062_800n, -238_800n),
+        usdRow(1_720_000n, 1_480_000n, 240_000n),
+        usdRow(1_700_000n, 1_520_000n, 180_000n),
+      ];
+  return {
+    basis: "paid",
+    base_currency: "USD",
+    months: months.map((by, index) => ({ month: month(index), by_currency: [by] })),
+  };
+}
+
+/** The current month's previous month up to today's day, in dollars, for the change pills. */
+export function sampleCashUsdToDay(): CashToDay {
+  return [{ currency: "USD", in_minor: 1_824_000n, out_minor: 2_062_800n }];
+}

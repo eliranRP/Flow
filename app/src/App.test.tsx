@@ -33,15 +33,16 @@ async function renderAt(path: string) {
 describe("App", () => {
   it("shows the first-run Home in preview, without a fake profit", async () => {
     await renderAt("/?preview=1");
-    expect(screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חברו את הבנק" })).toBeInTheDocument();
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
-    expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("התזרים יופיע כאן אחרי חיבור בנק או SUMIT.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
+    expect(screen.getByText("חברו את הבנק")).toBeInTheDocument();
+    expect(screen.getByText("עוד אין תנועות. הן יגיעו מהבנק.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חיבור Mercury" })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
-    expect(screen.queryByText("₪0")).not.toBeInTheDocument();
+    // The band reads the month's zero figure, as on the board (FLOW-364).
+    expect(screen.getByText("₪0")).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     const tabs = within(nav)
       .getAllByRole("link")
@@ -98,7 +99,7 @@ describe("App", () => {
     }
     expect(screen.queryByText(/צילום חשבונית/)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק", hidden: true }),
+      screen.getByRole("heading", { name: "חברו את הבנק", hidden: true }),
     ).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "ניווט ראשי", hidden: true })).toBeInTheDocument();
     await waitFor(() => {
@@ -145,7 +146,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חברו את הבנק" })).toBeInTheDocument();
     await waitFor(() => {
       expect(document.activeElement).toHaveAttribute("aria-label", "הוספה");
     });
@@ -155,15 +156,15 @@ describe("App", () => {
     await renderAt("/?preview=1");
     fireEvent.click(screen.getByRole("link", { name: "הוספה" }));
     expect(await screen.findByRole("dialog", { name: "הוספה" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק", hidden: true })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חברו את הבנק", hidden: true })).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "כאן יופיע התזרים של העסק" }),
+      screen.queryByRole("heading", { name: "חברו את הבנק" }),
     ).not.toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חברו את הבנק" })).toBeInTheDocument();
   });
 
   it("opens the review change sheet over the review ui-page", async () => {
@@ -246,7 +247,6 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Mercury" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "ספרים ובנק" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "עזרים" })).toBeInTheDocument();
-    const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     connections.unmount();
 
     await renderAt("/settings/loans?preview=1");

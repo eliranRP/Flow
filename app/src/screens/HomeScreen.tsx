@@ -24,7 +24,7 @@ import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath, forecastMinor } from "../home-month";
-import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, monthName, useCompactShown, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
+import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, useCompactShown, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { MonthDrawer } from "./month-drawer";
 import { BackButton } from "../ui/back";
 import { BannerRows, type BannerRow } from "../ui/banner";
@@ -33,7 +33,7 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
-import { ChartIcon, TransferIcon } from "../ui/icons";
+import { BankIcon, ChartIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
@@ -43,7 +43,7 @@ import { SearchEntry } from "../ui/search-entry";
 import { CashHomeSkeleton, HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
-import { emptyHomeLabel, emptyProfitLabel } from "../home-label";
+import { emptyProfitLabel } from "../home-label";
 import { breakdownPath } from "../breakdown";
 import { comparisonWords, heroProfitLabel, periodPhrase, windowLabel, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
@@ -89,28 +89,63 @@ function useBandMark(failed: boolean, showBooks: boolean) {
 function NoBooksYet({ previewing, example, search, companyName, view }: { previewing: boolean; example?: ReactNode; search: string; companyName?: string | null; view: "cash" | "profit" }) {
   // FLOW-601: connecting a bank or SUMIT is the owner's.
   const holdWrites = useHoldOwnerSettings();
+  const leading = previewing ? undefined : <CompanySwitcher fallbackName={companyName} />;
+  if (view === "profit") {
+    return (
+      <div className="flex min-h-full min-w-0 flex-1 flex-col">
+        <TopBand preview={previewing} example={example} wordmark={false} leading={leading}>
+          <Hero label={emptyProfitLabel} />
+        </TopBand>
+        <EmptyState
+          icon={<ChartIcon />}
+          title="עוד אין נתונים"
+          body="הרווח יופיע כאן אחרי חיבור בנק או SUMIT."
+          action={holdWrites ? undefined : (
+            // FLOW-328: a bank or SUMIT both start the books, so the action opens the connections page.
+            <Button variant="pill" to={`/settings/connections${search}`}>
+              חיבור בנק או SUMIT
+            </Button>
+          )}
+        />
+        <SetupHomeSlot emptyHome />
+      </div>
+    );
+  }
+  // FLOW-364 (board, StatesHomeEmpty): the band with the month and a zero figure, then the bank card and what will show here.
+  const currentKey = israelToday().slice(0, 7);
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <TopBand
         preview={previewing}
         example={example}
         wordmark={false}
-        leading={previewing ? undefined : <CompanySwitcher fallbackName={companyName} />}
-        trailing={view === "cash" ? <HomeBandActions isPast={false} currentName="" search={search} /> : undefined}
+        leading={leading}
+        trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
       >
-        <Hero label={view === "cash" ? emptyHomeLabel : emptyProfitLabel} />
+        <div className="ui-band-body">
+          <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
+          <Hero label={`תזרים ${monthName(currentKey)}`} agorot={0n} explanation="עוד אין תנועות. הן יגיעו מהבנק." />
+        </div>
       </TopBand>
-      <EmptyState
-        icon={view === "cash" ? <TransferIcon /> : <ChartIcon />}
-        title="עוד אין נתונים"
-        body={view === "cash" ? "התזרים יופיע כאן אחרי חיבור בנק או SUMIT." : "הרווח יופיע כאן אחרי חיבור בנק או SUMIT."}
-        action={holdWrites ? undefined : (
-          // FLOW-328: a bank or SUMIT both start the books, so the action opens the connections page.
-          <Button variant="pill" to={`/settings/connections${search}`}>
-            חיבור בנק או SUMIT
-          </Button>
+      <section className="ui-home-empty-card" dir="rtl" aria-labelledby="home-empty-title">
+        <span className="ui-home-empty-icon" aria-hidden="true"><BankIcon size={24} /></span>
+        <h2 id="home-empty-title" className="ui-home-empty-title">חברו את הבנק</h2>
+        <p className="ui-home-empty-body">Flow מביא את התנועות מ־Mercury, ממיין אותן לפי פרויקט ומחשב את הרווח. לוקח דקה.</p>
+        {/* FLOW-328 / FLOW-601: a bank starts the books, so the action opens the connections page; the owner's only. */}
+        {holdWrites ? null : (
+          <>
+            <Button full to={`/settings/connections${search}`}>חיבור Mercury</Button>
+            <p className="ui-home-empty-link-row"><TextLink to={`/add${search}`}>בינתיים, הוספה ידנית</TextLink></p>
+          </>
         )}
-      />
+      </section>
+      <section className="ui-home-empty-what" dir="rtl" aria-labelledby="home-empty-what-title">
+        <h2 id="home-empty-what-title" className="ui-home-empty-what-title">מה יופיע כאן</h2>
+        <ul className="ui-home-empty-list">
+          <li>כמה נכנס וכמה יצא החודש, מול החודש הקודם</li>
+          <li>שורות שמחכות לאישור שלכם</li>
+        </ul>
+      </section>
       <SetupHomeSlot emptyHome />
     </div>
   );

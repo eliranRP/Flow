@@ -261,7 +261,7 @@ describe("viewer gates", () => {
     }],
     ["V22", "empty home hides connect", () => {
       viewer(<HomeScreen />, "/?preview=1");
-      expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
+      expect(screen.getByText("חברו את הבנק")).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "חיבור SUMIT" })).not.toBeInTheDocument();
     }],
     ["V23", "empty projects drop the invitation", () => {

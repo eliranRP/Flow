@@ -267,7 +267,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await page.goto("/onboarding");
   await page.getByLabel("שם העסק").fill("Flow Test");
   await page.getByRole("button", { name: "המשך" }).click();
-  await expect(page.getByText("עוד אין נתונים")).toBeVisible();
+  await expect(page.getByText("חברו את הבנק")).toBeVisible();
 
   const operationsBefore = operationsUsed(await sumit("/website/companies/listquotas/", {}));
 

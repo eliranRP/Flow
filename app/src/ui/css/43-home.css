@@ -232,7 +232,102 @@
   color: var(--color-disabled-text);
 }
 
+
 .ui-month-drawer-foot {
+  margin: 0;
+  text-align: center;
+}
+
+/* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
+.ui-band-month-static {
+  margin: 0;
+  padding-block: var(--space-3);
+  border-radius: var(--touch-min);
+  background: var(--band-track);
+  color: var(--color-on-band);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+  text-align: center;
+}
+
+.ui-home-empty-card {
+  display: flex;
+  direction: rtl;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-side) 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: start;
+}
+
+.ui-home-empty-icon {
+  display: grid;
+  place-items: center;
+  align-self: flex-start;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  background: var(--color-tint-strong);
+  color: var(--color-accent);
+}
+
+.ui-home-empty-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  text-align: start;
+}
+
+.ui-home-empty-body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  text-align: start;
+}
+
+.ui-home-empty-what {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-side) 0;
+}
+
+.ui-home-empty-what-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  text-align: start;
+}
+
+.ui-home-empty-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  text-align: start;
+}
+
+.ui-home-empty-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-home-empty-list li::before {
+  content: "";
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--color-line);
+}
+
+.ui-home-empty-link-row {
   margin: 0;
   text-align: center;
 }
