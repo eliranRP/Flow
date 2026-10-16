@@ -68,12 +68,11 @@ import {
   undoJevPrefillSchema,
   undoSchema,
   updateProjectSchema,
-  setForecastItemSchema,
-  resetForecastSchema,
   WRITE_TOOL_NAMES,
 } from "./tools_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
 import { syncBank } from "./tools_sync.ts";
+import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 
 export async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],
