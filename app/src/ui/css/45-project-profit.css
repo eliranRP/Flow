@@ -104,3 +104,12 @@
   margin-top: var(--space-1);
   font-size: var(--type-hint-size);
 }
+
+/* The month page's groups sit closer than the shared month lines (the board's spacing). */
+.ui-pm-month .ui-lines-group {
+  padding: 0 var(--space-side) var(--space-1);
+}
+
+.ui-pm-month .ui-lines-group-head {
+  padding: var(--space-4) 0 var(--space-1);
+}

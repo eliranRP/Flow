@@ -91,7 +91,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
       loading={<ProfitSkeleton />}
     >
       {figures == null ? null : (
-        <div>
+        <div className="ui-pm-month">
           <p className="ui-pp-figure ui-page-pad">
             <Amount agorot={figures.profit_minor} currency={currency} size="display" loss={figures.profit_minor < 0n} />
           </p>
