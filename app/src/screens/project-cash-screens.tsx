@@ -1,6 +1,6 @@
 import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } from "@flow/shared";
 import { useRef, type ReactNode } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   cashMonthKey,
   cashSideLabel,
@@ -120,6 +120,10 @@ export function ProjectCashOverview({
   const titleEnd = useRef<HTMLSpanElement>(null);
   const past = useScrolledPast(titleEnd, true);
   const first = rows[0];
+  // FLOW-445: נכנס and יצא sit in the band on one line; the month's profit and the rest stay in the list.
+  const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);
+  const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
+  const listRows = summaryRows.filter((row) => !bandRows.includes(row));
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -143,6 +147,18 @@ export function ProjectCashOverview({
               ))}
             </div>
           )}
+          {bandRows.length === 0 ? null : (
+            <div className="ui-project-band-pair">
+              {bandRows.map((row) => (
+                <Link key={row.id} to={row.href ?? "#"} className="ui-band-row-link m-press" aria-label={row.name}>
+                  <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : row.id === "out" ? "יצא" : "רווח"}</span>
+                  <span className="ui-band-row-amount">
+                    {row.amounts[0] == null ? null : <Amount agorot={row.amounts[0].minor} currency={row.amounts[0].currency} size="list" loss={row.id === "profit" && row.amounts[0].minor < 0n} />}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
           <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
         </BandHero>
       </TopBand>
@@ -156,7 +172,7 @@ export function ProjectCashOverview({
         actions={menu}
       />
       {data == null ? <ListSkeleton /> : null}
-      {key == null ? null : <CashRows rows={projectCashSummaryRows(project.id, key, rows, search, now)} />}
+      {listRows.length === 0 ? null : <CashRows rows={listRows} />}
       {budget ? <div className="ui-page-pad">{budget}</div> : null}
       {summaryFigures == null ? null : (
         <div className="ui-page-pad">

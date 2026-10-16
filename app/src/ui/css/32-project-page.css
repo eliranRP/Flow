@@ -185,3 +185,11 @@
 .ui-investment-dot-loan {
   background: var(--color-track-strong);
 }
+
+/* FLOW-445: the project band's נכנס and יצא, one line under the month's figure (the board's band). */
+.ui-project-band-pair {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-3);
+}
