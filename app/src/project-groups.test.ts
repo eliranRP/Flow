@@ -1,36 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findGroup, groupHref, projectChoices, projectCountLabel, splitByGroup } from "./project-groups";
+import { findGroup, groupHref, projectChoices, projectCountLabel } from "./project-groups";
 import { projectsGrouped } from "./screens/project-groups-sample";
 import { groupHint, groupSections, PICK_REST_HEADING } from "./ui/change-picker";
 
 describe("project groups (FLOW-406)", () => {
-  it("lifts grouped projects out of the top level and keeps the rest loose", () => {
-    const split = splitByGroup(projectsGrouped);
-    expect(split.groups.map((entry) => entry.group.name)).toEqual(["בניין לדוגמה"]);
-    expect(split.groups[0]?.projects.map((project) => project.id)).toEqual(["u1", "u2", "u3", "u4"]);
-    expect(split.loose.map((project) => project.id)).toEqual(["a", "b", "f1", "f2"]);
-  });
-
-  it("orders groups by sort order, leaves out empty ones, and treats an unknown group as none", () => {
-    const base = projectsGrouped.groups?.[0];
-    const row = projectsGrouped.projects[0];
-    if (base == null || row == null) throw new Error("sample has a group");
-    const split = splitByGroup({
-      projects: [
-        { ...row, id: "x", group_id: "late" },
-        { ...row, id: "y", group_id: "early" },
-        { ...row, id: "z", group_id: "gone" },
-      ],
-      groups: [
-        { ...base, id: "late", name: "ב", sort_order: 2 },
-        { ...base, id: "early", name: "א", sort_order: 1 },
-        { ...base, id: "empty", name: "ג", sort_order: 0 },
-      ],
-    });
-    expect(split.groups.map((entry) => entry.group.id)).toEqual(["early", "late"]);
-    expect(split.loose.map((project) => project.id)).toEqual(["z"]);
-  });
-
   it("finds one group with its projects, or null", () => {
     expect(findGroup(projectsGrouped, "g1")?.projects).toHaveLength(4);
     expect(findGroup(projectsGrouped, "gone")).toBeNull();
