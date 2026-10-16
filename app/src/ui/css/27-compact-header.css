@@ -119,6 +119,14 @@
   justify-self: end;
 }
 
+/* FLOW-363 (3c): the panel under the bar holds the organize chips. It is a row with the same gutter. */
+.ui-compact-panel {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-side);
+  overflow-x: auto;
+}
+
 /* The bar's height feeds the offsets under it: 44px on a list page, 56px on a detail page. */
 html[data-compact-bar] {
   --compact-bar-h: var(--touch-min);
@@ -129,6 +137,10 @@ html[data-compact-bar] {
 
 html[data-compact-bar="detail"] {
   --compact-bar-h: var(--compact-bar-detail);
+}
+
+html[data-compact-bar="panel"] {
+  --compact-bar-h: calc(var(--touch-min) + var(--size-chip) + 2 * var(--space-2));
 }
 
 /* With month heads pinned under the bar, both are reserved (11-month-lists.css). */

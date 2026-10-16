@@ -103,7 +103,7 @@ test.describe("on a touch screen (FLOW-325 §10)", () => {
 
   /** A touch swipe across a part's row, from 30% in; a positive distance moves the finger right. */
   async function swipePart(page: Page, name: string, distance: number, dy = 0) {
-    const box = await page.locator(".ui-sremove").filter({ hasText: name }).boundingBox();
+    const box = await page.locator(".ui-swipe-row").filter({ hasText: name }).boundingBox();
     if (!box) throw new Error(`no part ${name}`);
     const x = box.x + box.width * 0.3;
     const y = box.y + 24;

@@ -12,7 +12,7 @@ import { SectionHead } from "./layout";
 import { List } from "./list-row";
 import type { ScreenPhase } from "./screen-phase";
 import { RecurringSkeleton } from "./screen-skeletons";
-import { SwipeRemove } from "./swipe-remove";
+import { SwipeRow } from "./swipe-row";
 import { TextLink } from "./text-link";
 import "./css/39-missing-bills.css";
 
@@ -86,7 +86,7 @@ function HideableRow({ name, to, onHide, editing, slot, peek, children }: { name
     );
   }
   return (
-    <SwipeRemove label="סגירה" onRemove={onHide} peek={peek}>
+    <SwipeRow label="סגירה" onRemove={onHide} peek={peek}>
       <div className="ui-recurring-row">
         {children}
         {editing ? (
@@ -95,7 +95,7 @@ function HideableRow({ name, to, onHide, editing, slot, peek, children }: { name
           </TextLink>
         ) : null}
       </div>
-    </SwipeRemove>
+    </SwipeRow>
   );
 }
 

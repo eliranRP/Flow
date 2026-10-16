@@ -5,12 +5,12 @@ import { cx } from "./cx";
 const SLACK = 2;
 
 /**
- * A row of chips that scrolls sideways (FLOW-347). When more chips wait past the inline end, the
+ * The organize row: a row of chips that scrolls sideways (FLOW-347). When more chips wait past the inline end, the
  * row's end fades, so a cut chip reads as "there is more" instead of a sliver. Once the row is
  * scrolled, its start fades too, so the first chips read as off screen (FLOW-351). RTL scrollLeft
  * runs negative, so both distances use its magnitude.
  */
-export function ChipScroller({
+export function OrganizeChips({
   label,
   className,
   scrollerRef,
@@ -59,7 +59,7 @@ export function ChipScroller({
 
   return (
     <div
-      className={cx("ui-chip-scroller", className)}
+      className={cx("ui-organize-chips", className)}
       role="group"
       aria-label={label}
       data-more={more}

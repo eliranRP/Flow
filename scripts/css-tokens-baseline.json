@@ -9,9 +9,6 @@
     "spacing": 1,
     "font-weight": 2
   },
-  "app/src/ui/css/03-controls.css": {
-    "font-weight": 1
-  },
   "app/src/ui/css/04-banners-lists.css": {
     "radius": 1,
     "spacing": 2,
@@ -36,7 +33,6 @@
   },
   "app/src/ui/css/10-settings-onboarding.css": {
     "spacing": 3,
-    "color": 1,
     "font-size": 1,
     "duration": 2
   },
@@ -70,14 +66,14 @@
   "app/src/ui/css/30-prompt-card.css": {
     "font-weight": 1
   },
-  "app/src/ui/css/31-chip-scroller.css": {
+  "app/src/ui/css/31-organize-chips.css": {
     "color": 5
   },
   "app/src/ui/css/33-loan-split-editor.css": {
     "radius": 1,
     "spacing": 1
   },
-  "app/src/ui/css/34-swipe-remove.css": {
+  "app/src/ui/css/34-swipe-row.css": {
     "duration": 1
   },
   "app/src/ui/css/35-team.css": {

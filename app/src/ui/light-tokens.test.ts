@@ -102,6 +102,7 @@ describe("light values from the Design guide's Light theme table", () => {
 
   it("keeps the shadow at rgba(40,20,90,.12) in light", () => {
     expect(light.get("--shadow-pill")).toBe("0 6px 18px rgba(40, 20, 90, 0.12)");
+    expect(light.get("--shadow-toast")).toBe("0 8px 24px rgba(40, 20, 90, 0.12)");
   });
 
   it("keeps the band colour the same in both themes", () => {
@@ -154,5 +155,6 @@ describe("dark values are unchanged by FLOW-372", () => {
   it("the pill shadow keeps its dark value, in both dark blocks", () => {
     expect(darkMedia.get("--shadow-pill")).toBe("0 6px 18px rgba(0, 0, 0, 0.4)");
     expect(dark.get("--shadow-pill")).toBe("0 6px 18px rgba(0, 0, 0, 0.4)");
+    expect(dark.get("--shadow-toast")).toBe("0 8px 24px rgba(0, 0, 0, 0.4)");
   });
 });

@@ -184,6 +184,27 @@ describe("ScreenHeader", () => {
       expect(document.documentElement).not.toHaveAttribute("data-compact-bar");
     });
 
+    it("puts the mark after the below row when a panel rides under the bar", () => {
+      observe();
+      const { container } = render(
+        <MemoryRouter initialEntries={["/review", "/review/filed"]} initialIndex={1}>
+          <Routes>
+            <Route path="/review" element={<p>הרשימה</p>} />
+            <Route
+              path="/review/filed"
+              element={<ScreenHeader title="יצא" backTo="/review" below={<span>תקופה</span>} panel={<span>לפי תאריך</span>} />}
+            />
+          </Routes>
+        </MemoryRouter>,
+      );
+      const below = container.querySelector(".ui-page-below");
+      expect(below?.nextElementSibling).toHaveClass("ui-compact-mark");
+      expect(container.querySelector(".ui-page > .ui-compact-mark")).not.toBeNull();
+      scrolled(true);
+      expect(document.documentElement).toHaveAttribute("data-compact-bar", "panel");
+      expect(container.querySelector(".ui-compact-bar")).toHaveTextContent("לפי תאריך");
+    });
+
     it("has no compact bar on a tab root, an inline header, or a screen with its own leading control", () => {
       observe();
       const { container } = render(

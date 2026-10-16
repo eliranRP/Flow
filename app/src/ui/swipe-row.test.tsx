@@ -1,16 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SwipeRemove, swipeRemoves } from "./swipe-remove";
+import { SwipeRow, swipeRemoves } from "./swipe-row";
 
 function frame(): HTMLElement {
-  const node = document.querySelector<HTMLElement>(".ui-sremove");
+  const node = document.querySelector<HTMLElement>(".ui-swipe-row");
   if (!node) throw new Error("no swipe frame");
   node.getBoundingClientRect = () => ({ width: 300, height: 80, top: 100, left: 37, right: 337, bottom: 180, x: 37, y: 100, toJSON: () => ({}) });
   return node;
 }
 
 function row(): HTMLElement {
-  const node = document.querySelector<HTMLElement>(".ui-sremove-row");
+  const node = document.querySelector<HTMLElement>(".ui-swipe-row-body");
   if (!node) throw new Error("no swipe row");
   return node;
 }
@@ -49,10 +49,10 @@ afterEach(() => {
 
 function Part({ onRemove, onPick = () => undefined, disabled = false }: { onRemove: () => void; onPick?: () => void; disabled?: boolean }) {
   return (
-    <SwipeRemove onRemove={onRemove} disabled={disabled}>
+    <SwipeRow onRemove={onRemove} disabled={disabled}>
       <button type="button" onClick={onPick}>חומרים</button>
       <input aria-label="אחוז" />
-    </SwipeRemove>
+    </SwipeRow>
   );
 }
 
@@ -66,7 +66,7 @@ describe("swipeRemoves (FLOW-325 §10)", () => {
   });
 });
 
-describe("SwipeRemove", () => {
+describe("SwipeRow", () => {
   it("removes the row after it slides out toward the start side", () => {
     setReducedMotion(false);
     vi.useFakeTimers();
@@ -75,7 +75,7 @@ describe("SwipeRemove", () => {
     swipe(frame(), { x: 100, y: 130 }, { x: 260, y: 134 });
     expect(row().style.transform).toBe("translateX(300px)");
     expect(onRemove).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(240);
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
 
@@ -171,7 +171,7 @@ describe("SwipeRemove", () => {
     const { rerender } = render(<Part onRemove={onRemove} />);
     swipe(frame(), { x: 100, y: 130 }, { x: 260, y: 134 });
     rerender(<Part onRemove={onRemove} disabled />);
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(240);
     expect(onRemove).not.toHaveBeenCalled();
     expect(row().style.transform).toBe("");
   });
@@ -179,5 +179,64 @@ describe("SwipeRemove", () => {
   it("keeps the delete mark out of the accessibility tree", () => {
     render(<Part onRemove={vi.fn()} />);
     expect(screen.getByText("הסרה").closest("[aria-hidden='true']")).not.toBeNull();
+  });
+});
+
+function RevealPart({ onAct, onPick = () => undefined }: { onAct: () => void; onPick?: () => void }) {
+  return (
+    <SwipeRow onRemove={vi.fn()} reveal={{ label: "התעלמות מההתראה", onAct }}>
+      <button type="button" onClick={onPick}>חומרים</button>
+    </SwipeRow>
+  );
+}
+
+describe("SwipeRow with reveal (FLOW-363 3c)", () => {
+  it("opens over its action past 30px, and the action runs and closes it", () => {
+    setReducedMotion(false);
+    vi.useFakeTimers();
+    const onAct = vi.fn();
+    render(<RevealPart onAct={onAct} />);
+    swipe(frame(), { x: 100, y: 130 }, { x: 150, y: 131 });
+    expect(frame()).toHaveAttribute("data-open");
+    expect(row().style.transform).toBe("");
+    const action = screen.getByRole("button", { name: "התעלמות מההתראה" });
+    expect(action).toHaveAttribute("tabindex", "0");
+    vi.advanceTimersByTime(1000);
+    fireEvent.click(action);
+    expect(onAct).toHaveBeenCalledTimes(1);
+    expect(frame()).not.toHaveAttribute("data-open");
+  });
+
+  it("stays shut on a short move, and never removes the row", () => {
+    setReducedMotion(false);
+    const onRemove = vi.fn();
+    render(<SwipeRow onRemove={onRemove} reveal={{ label: "התעלמות מההתראה", onAct: vi.fn() }}><span>שורה</span></SwipeRow>);
+    swipe(frame(), { x: 100, y: 130 }, { x: 120, y: 131 });
+    expect(frame()).not.toHaveAttribute("data-open");
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+
+  it("closes on a tap on the row, without reaching what it holds", () => {
+    setReducedMotion(false);
+    vi.useFakeTimers();
+    const onPick = vi.fn();
+    render(<RevealPart onAct={vi.fn()} onPick={onPick} />);
+    swipe(frame(), { x: 100, y: 130 }, { x: 150, y: 131 });
+    vi.advanceTimersByTime(1000);
+    fireEvent.click(screen.getByRole("button", { name: "חומרים" }));
+    expect(frame()).not.toHaveAttribute("data-open");
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("closes on a move back past 30px", () => {
+    setReducedMotion(false);
+    vi.useFakeTimers();
+    render(<RevealPart onAct={vi.fn()} />);
+    swipe(frame(), { x: 100, y: 130 }, { x: 150, y: 131 });
+    expect(frame()).toHaveAttribute("data-open");
+    vi.advanceTimersByTime(1000);
+    swipe(frame(), { x: 150, y: 130 }, { x: 110, y: 131 });
+    expect(frame()).not.toHaveAttribute("data-open");
+    expect(screen.getByRole("button", { name: "התעלמות מההתראה" })).toHaveAttribute("tabindex", "-1");
   });
 });

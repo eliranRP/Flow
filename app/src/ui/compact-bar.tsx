@@ -19,19 +19,25 @@ export type CompactBarProps = {
   shown: boolean;
   /** At the end of the bar. */
   actions?: ReactNode;
+  /** A row under the bar that stays with it, e.g. the organize chips (FLOW-363 3c). */
+  panel?: ReactNode;
 };
+
+/** A bar with a panel reports "panel": it is taller than a list or detail bar. */
+type Reported = CompactBarSize | "panel";
 
 /**
  * Bars showing, by size. The html element reports the bar it has under it: the page's sticky month
  * heads and scroll padding use the height of the bar (27-compact-header.css).
  */
-const showing: Record<CompactBarSize, number> = { list: 0, detail: 0 };
+const showing: Record<Reported, number> = { list: 0, detail: 0, panel: 0 };
 
-function reportShowing(size: CompactBarSize, delta: number): void {
+function reportShowing(size: Reported, delta: number): void {
   showing[size] = Math.max(0, showing[size] + delta);
   const root = document.documentElement;
-  const total = showing.list + showing.detail;
+  const total = showing.list + showing.detail + showing.panel;
   if (total === 0) root.removeAttribute("data-compact-bar");
+  else if (showing.panel > 0) root.setAttribute("data-compact-bar", "panel");
   else root.setAttribute("data-compact-bar", showing.detail > 0 ? "detail" : "list");
 }
 
@@ -40,7 +46,8 @@ function reportShowing(size: CompactBarSize, delta: number): void {
  * centred in one line, an optional figure after it, actions at the end. It stays mounted once a
  * page can show it, so the slide out has something to run on; `shown` drives the classes.
  */
-export function CompactBar({ title, figure, label, backTo, size = "list", shown, actions }: CompactBarProps) {
+export function CompactBar({ title, figure, label, backTo, size = "list", shown, actions, panel }: CompactBarProps) {
+  const reported: Reported = panel != null ? "panel" : size;
   const goBack = useGoBack();
   const landsOnLabel = useBackLandsOn(backTo ?? "/");
   // `gone` is true once a hidden bar's slide out has ended (or it never showed): visibility hidden.
@@ -53,11 +60,11 @@ export function CompactBar({ title, figure, label, backTo, size = "list", shown,
 
   useEffect(() => {
     if (!shown) return;
-    reportShowing(size, 1);
+    reportShowing(reported, 1);
     return () => {
-      reportShowing(size, -1);
+      reportShowing(reported, -1);
     };
-  }, [shown, size]);
+  }, [shown, reported]);
 
   // The slide out ends the hiding: the bar is visibility hidden from then on. A native listener, the
   // way the sheet listens for its own slide (sheet.tsx).
@@ -116,6 +123,7 @@ export function CompactBar({ title, figure, label, backTo, size = "list", shown,
         </span>
         {actions != null ? <div className="ui-compact-actions">{actions}</div> : null}
       </div>
+      {panel != null ? <div className="ui-compact-panel">{panel}</div> : null}
     </div>
   );
 }
