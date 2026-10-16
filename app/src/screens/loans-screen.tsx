@@ -8,7 +8,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { useBlockedPreview } from "./screen-shared";
-import { LoanSettingsSection, type LoanRowsSample } from "./loan-setup";
+import { LoanSettingsSection } from "./loan-setup";
 import type { SettingsSample } from "./settings-screen";
 
 /** FLOW-501. Invented loans for `?preview=1`. */
