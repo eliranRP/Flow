@@ -12,6 +12,10 @@
   width: 100%;
   overflow: hidden;
   border-radius: var(--radius-chip);
+}
+
+/* The track shows only when a total is given, so a bar with no total draws no grey behind its parts. */
+.ui-parts-bar[data-track="true"] {
   background: var(--color-line);
 }
 
@@ -97,7 +101,7 @@
 .ui-parts-dot {
   width: var(--dot);
   height: var(--dot);
-  border-radius: 50%;
+  border-radius: var(--radius-chip);
   flex: none;
   background: var(--color-accent);
 }

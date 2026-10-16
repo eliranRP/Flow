@@ -39,7 +39,7 @@ export function PartsBar({ parts, total, height = 6, gap = 0, radius = "pill", l
   const rest = whole - sum;
   return (
     <div className="ui-parts">
-      <div className="ui-parts-bar" role="img" aria-label={label} data-height={height} data-gap={gap} data-radius={radius}>
+      <div className="ui-parts-bar" role="img" aria-label={label} data-height={height} data-gap={gap} data-radius={radius} data-track={total !== undefined ? "true" : undefined}>
         {shown.map((part) => (
           <span
             key={part.key}
