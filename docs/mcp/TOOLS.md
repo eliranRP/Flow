@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -307,6 +307,28 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 ```json
 { "idempotency_key": "undo-30", "kind": "review", "id": "11111111-1111-4000-8000-000000000010" }
 ```
+
+## Lines from the add sheet · FLOW-369
+
+### create_manual_entry
+
+```json
+{ "idempotency_key": "cash-1", "direction": "expense", "amount_minor": 35000, "doc_date": "2026-10-11", "payee": "Ajax Hardware", "project_id": "<project id>", "category_id": "<category id>", "method": "cash" }
+```
+
+A cash or cheque line with no bank document (owner or editor). `direction` is `income` or `expense`. `amount_minor` is whole minor units of the company currency, above zero (an expense is stored negative). `payee` (2 to 120 characters, no hidden character) is who the money went to or came from; it is the line's description. `category_id` is required and must be of the same direction. `project_id` is optional: `null` files the line as overhead (the sheet's בלי פרויקט). `method` is `cash` or `cheque`; a `cheque` needs `cheque_number` (1 to 20 letters, digits or hyphens), which is kept with the line. A cash line sends no number (`null`). Another company's project or category is `refused` with `project not found` or `category not found`. Output `data`: `{ "id", "direction", "amount_minor", "doc_date", "undo_kind": "manual_entry" }`. The line is a manual line (`source` manual).
+
+Undo `kind: "manual_entry"` takes the line id and deletes the line while it still has the project, category, amount and date the write gave it; a moved or changed line is `conflict`, and a line another row still refers to (a split or a loan) is `conflict` too. A second undo is `not_found`.
+
+### attach_document
+
+```json
+{ "idempotency_key": "doc-1", "transaction_id": "<line id>", "document": { "name": "receipt.pdf", "mime": "application/pdf", "bytes": 20480, "sha256": "<64 hex characters>" } }
+```
+
+Attaches one document to a line that exists, bank lines included. No line is made, so the count of lines does not change. `document.mime` is `image/jpeg`, `image/png`, `image/webp`, `image/heic` or `application/pdf`; `bytes` is 1 to 26214400; `sha256` is 64 hex characters (stored in lower case). The file is not stored and not read (receipt reading waits for FLOW-306): only this metadata is kept, in the line's `attachments`. The same `sha256` twice is `refused` with `document already attached`; more than 10 documents on a line is `too many documents`; a line of another company is `refused` with `transaction not found`. Output `data`: `{ "id", "documents", "undo_kind": "document_attach" }`, `documents` being the count on the line.
+
+Undo `kind: "document_attach"` takes the line id and puts the document list back, while the list is still the one the write made; otherwise `conflict`.
 
 ## Writes · cycle 4
 
@@ -1010,4 +1032,4 @@ The owner only; the member loses access at once. Output `data`: `{ "user_id", "p
 
 ## Not in tools/list
 
-`collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
+`collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, and `create_company`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.

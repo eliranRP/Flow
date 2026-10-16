@@ -45,6 +45,8 @@ export const READ_TOOL_NAMES = [
 export const SYNC_STATUS_TOOL = "get_sync_status";
 
 export const WRITE_TOOL_NAMES = [
+  "create_manual_entry",
+  "attach_document",
   "assign_expense",
   "assign_expense_split",
   "assign_expenses",
@@ -136,6 +138,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
+  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]),
+  attach_document: new Set(["idempotency_key", "transaction_id", "document"]),
   create_project: new Set(["idempotency_key", "name", "status", "type", "budget_minor"]),
   update_project: new Set(["idempotency_key", "id", "name", "type", "budget_minor", "status"]),
   delete_project: new Set(["idempotency_key", "id"]),
@@ -276,7 +280,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "manual_entry", "document_attach"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -494,6 +498,32 @@ const projectType = z.string().trim().max(40).transform(plainSpaces)
   .refine((type) => !HIDDEN_CHARS.test(type), { message: HIDDEN_NAME });
 // A budget is whole minor units of the company currency; null clears it (update only).
 const projectBudget = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+// FLOW-369. A cash or cheque line from the add sheet: the payee is the description, the method
+// and a cheque number are kept with it. The database checks the rest (project, category, amount).
+export const createManualEntrySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  direction: z.enum(["income", "expense"]),
+  amount_minor: z.number().int().min(1).max(999999999999),
+  doc_date: z.string().refine((v) => isCalendarDate(v)),
+  payee: visibleName(2, 120),
+  project_id: UUID_TEXT.nullable().optional(),
+  category_id: UUID_TEXT,
+  method: z.enum(["cash", "cheque"]),
+  cheque_number: z.string().trim().regex(/^[0-9A-Za-z-]{1,20}$/).nullable().optional(),
+}).strict().superRefine((body, ctx) => {
+  if (body.method === "cheque" && body.cheque_number == null) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cheque_number"] });
+});
+// FLOW-369. One document on an existing line: its metadata (no file is stored yet, FLOW-306).
+export const attachDocumentSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  document: z.object({
+    name: visibleName(1, 200),
+    mime: z.enum(["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"]),
+    bytes: z.number().int().min(1).max(26214400),
+    sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).transform((hash) => hash.toLowerCase()),
+  }).strict(),
+}).strict();
 export const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: visibleName(2, 120),
