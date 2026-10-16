@@ -65,6 +65,15 @@
   padding-bottom: var(--band-pad-bottom);
 }
 
+/* FLOW-364: a past month's band is the darker one, and the colour eases between the two. */
+.ui-band {
+  transition: background-color var(--motion-bar) var(--ease-standard);
+}
+
+.ui-band-past {
+  background: var(--color-band-past);
+}
+
 .ui-band-row {
   display: flex;
   align-items: center;
@@ -311,4 +320,41 @@ html[data-kb="open"] .ui-sheet-body {
      little height left above the keyboard. */
   max-height: none;
   padding-block-end: var(--space-3);
+}
+
+/* Mockup a-3: the company's name on Home's band, a 16px ▼ after it, a 44px hit area. */
+.ui-band-company {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: var(--touch-min);
+  margin-inline-start: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-on-band);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-band-company:active {
+  background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
+}
+
+.ui-band-company-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  font-size: var(--type-sheet-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-sheet-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-band-company > svg {
+  flex: none;
+  stroke-width: 2.5;
 }
