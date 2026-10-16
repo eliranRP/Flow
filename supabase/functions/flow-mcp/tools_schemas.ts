@@ -126,7 +126,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_recurring_this_month: new Set(),
   list_unpaid: new Set(),
   list_team: new Set(),
-  get_cash_months: new Set(["months", "year"]),
+  get_cash_months: new Set(["months", "year", "to_day"]),
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
