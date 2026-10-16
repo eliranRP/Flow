@@ -198,6 +198,8 @@
   --grab-radius: 3px;
   --row-pad: 14px;
   --stroke-strong: 1.5px;
+  --stroke-hairline: 1px;
+  --loan-legend-pitch: 30px;
   --note-icon-nudge: 2px;
   --note-body-gap: 2px;
   --signin-brand-pad: 5.5rem;

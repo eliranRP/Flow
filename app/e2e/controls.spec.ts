@@ -381,40 +381,19 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page).toHaveURL(/\/review\?preview=1$/);
 });
 
-test("unpaid opens an invoice, marks it paid from its sheet, keeps it listed, and clears the mark", async ({ page }) => {
-  await page.goto("/e2e/unpaid?preview=1");
-  await page.getByRole("button", { name: "חזרה" }).click();
-  await expect(page).toHaveURL(/\/\?preview=1$/);
-  // FLOW-357: one invoice shows its amount on its row only, so the head is the title alone.
-  await page.goto("/e2e/unpaid?preview=1");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveCount(0);
-  // Two invoices, one already marked: the total counts the open one.
-  await page.goto("/e2e/unpaid?preview=1&marked=1");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
-  // FLOW-335: the total sits on the start (right) side, lined up with the title, not on the end side.
-  const totalBox = await page.locator(".ui-unpaid-totals bdi").first().boundingBox();
-  const titleBox = await page.getByRole("heading", { name: "חשבוניות פתוחות" }).boundingBox();
-  expect(Math.abs((totalBox?.x ?? 0) + (totalBox?.width ?? 0) - ((titleBox?.x ?? 0) + (titleBox?.width ?? 0)))).toBeLessThan(4);
-  // FLOW-357: rows carry no button of their own; a tap opens the invoice's sheet.
-  await expect(page.getByRole("button", { name: "סימון כשולם" })).toHaveCount(0);
-  await page.getByRole("button", { name: /^לקוח לדוגמה/ }).click();
-  const sheet = page.getByRole("dialog", { name: "לקוח לדוגמה" });
-  await sheet.getByRole("button", { name: "סימון כשולם" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await toast(page, "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT.");
-  await expect(page.getByRole("button", { name: /^לקוח לדוגמה/ })).toContainText("סומן כשולם · ממתין לסנכרון");
-  // FLOW-335: a marked row brings the SUMIT sync onto the page.
-  await expect(page.getByRole("button", { name: /רענון מ־SUMIT/ })).toBeVisible();
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪0");
-  // The toast's ביטול clears the mark again.
+test("open invoices: the list adds up, a row marks paid, and ביטול clears the mark", async ({ page }) => {
+  await page.goto("/e2e/invoices");
+  // FLOW-367: the fixture's open total, and the one invoice over 30 days.
+  await expect(page.locator(".ui-inv-total")).toContainText("21,300");
+  await expect(page.locator(".ui-inv-overdue")).toContainText("12,500");
+  const larkspur = page.getByRole("link", { name: /^Larkspur HOA/ }).locator("xpath=ancestor::li");
+  await larkspur.getByRole("button", { name: "סימון כשולם" }).click();
+  await toast(page, "סומן כשולם");
+  await expect(larkspur).toContainText("סומן כשולם · ממתין לסנכרון");
+  await expect(page.locator(".ui-inv-total")).toContainText("15,700");
   await page.locator(".ui-toast").getByRole("button", { name: "ביטול" }).click();
   await toast(page, "הסימון בוטל.");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
-  // A marked invoice's sheet offers ביטול הסימון.
-  await page.getByRole("button", { name: /^לקוח שני לדוגמה/ }).click();
-  await page.getByRole("dialog", { name: "לקוח שני לדוגמה" }).getByRole("button", { name: "ביטול הסימון" }).click();
-  await toast(page, "הסימון בוטל.");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪1,700");
+  await expect(page.locator(".ui-inv-total")).toContainText("21,300");
 });
 
 test("a project's by-month list opens a month, and Back steps back one screen at a time", async ({ page }) => {
@@ -427,7 +406,7 @@ test("a project's by-month list opens a month, and Back steps back one screen at
   await page.goto("/e2e/project-months?preview=1");
   await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();
   await page.getByRole("link", { name: /^ספטמבר, הפסד/ }).click();
-  await expect(page).toHaveURL(/\/projects\/p1\/profit\?preview=1&period=month&at=2026-09$/);
+  await expect(page).toHaveURL(/\/projects\/p1\/profit\/2026-09\?preview=1&period=month&at=2026-09$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/project-months\?preview=1$/);
 });

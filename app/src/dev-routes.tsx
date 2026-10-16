@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { invoicesSample, invoicesSummary } from "./dev/invoices-sample";
 import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
@@ -39,13 +40,18 @@ import {
   SettingsScreen,
   SplitScreen,
   TransactionScreen,
+  InvoiceScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { ProjectProfitScreen } from "./screens/project-profit-screen";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { LoanSummaryCard } from "./screens/loan-summary-card";
+import { LOAN_SUMMARY_SAMPLE } from "./dev/loan-summary-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devReviewItems = [
@@ -474,35 +480,18 @@ export function DevCategories() {
   );
 }
 
-/** `?marked=1` adds a row already marked paid, waiting for the sync (review-cycle fixture, FLOW-335). */
-export function DevUnpaid() {
+/**
+ * FLOW-367 proof route: the list with the board's fixture (`?state=done` has no invoice), or one
+ * invoice's page with `?invoice=<id>`. Stories and proofs use the same fixture.
+ */
+export function DevInvoices() {
   const [params] = useSearchParams();
-  const marked = params.get("marked") === "1";
-  // FLOW-335: `?doc=1` gives the first row SUMIT's document link (an invented path).
-  const doc = params.get("doc") === "1" ? { document_url: "https://pay.sumit.co.il/example/doc-1" } : {};
-  return (
-    <UnpaidScreen
-      sample={[{
-        id: "u1",
-        description: "חשבונית פתוחה",
-        doc_date: "2026-09-01",
-        customer_name: "לקוח לדוגמה",
-        project_name: "שיפוץ הרצל 12",
-        open_gross_agorot: 50_000n,
-        open_net_agorot: 40_000n,
-        ...doc,
-      }, ...(marked ? [{
-        id: "u2",
-        description: "חשבונית שסומנה",
-        doc_date: "2026-08-20",
-        customer_name: "לקוח שני לדוגמה",
-        project_name: null,
-        open_gross_agorot: 120_000n,
-        open_net_agorot: 100_000n,
-        marked_paid_at: "2026-10-06T09:00:00Z",
-      }] : [])]}
-    />
-  );
+  const state = params.get("state");
+  const invoice = params.get("invoice");
+  const rows = useMemo(() => invoicesSample(state), [state]);
+  const summary = useMemo(() => invoicesSummary(), []);
+  if (invoice != null) return <InvoiceScreen sample={rows} summary={summary} invoiceId={invoice} />;
+  return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
 /** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
@@ -626,6 +615,12 @@ export function DevProjectDetail() {
       categoryTo="/e2e/project-category"
     />
   );
+}
+
+/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+export function DevProjectProfit() {
+  const [params] = useSearchParams();
+  return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;
 }
 
 /** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
@@ -757,5 +752,14 @@ export function DevTransaction() {
       sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
       sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
     />
+  );
+}
+
+/** FLOW-139. The loans list's summary card alone, for the board proof. */
+export function DevLoanSummary() {
+  return (
+    <div className="ui-page-pad">
+      <LoanSummaryCard summary={LOAN_SUMMARY_SAMPLE} currency="USD" />
+    </div>
   );
 }
