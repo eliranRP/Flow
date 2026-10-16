@@ -523,8 +523,9 @@ describe("Jev review one tap", () => {
     renderQueue([row]);
     expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: קטגוריה שמורה" })).toBeInTheDocument();
-    // The grey hint reads הצעה on any suggestion; Jev's fill is named in the row's label (aria) only.
-    expect(screen.getAllByText("הצעה")).toHaveLength(1);
+    // Jev's fill shows the הצעת Jev pill; the stored category carries no hint.
+    expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
+    expect(screen.queryByText("הצעה")).toBeNull();
   });
 
   it("keeps הצעה on a stored suggestion Jev did not answer", async () => {
