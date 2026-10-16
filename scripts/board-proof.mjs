@@ -163,6 +163,18 @@ async function proofInBrowser(input) {
   const appCanvas = draw(app);
   const boardData = boardCanvas.getContext("2d").getImageData(0, 0, w, h).data;
   const appData = appCanvas.getContext("2d").getImageData(0, 0, w, h).data;
+  const rawMismatch = mismatch(boardData, appData, input.tolerance);
+  // The text-masked number: the same text boxes painted over both images, so only layout counts.
+  for (const canvasInMask of [boardCanvas, appCanvas]) {
+    const ctx = canvasInMask.getContext("2d");
+    ctx.fillStyle = "#000";
+    for (const rect of input.textRects) ctx.fillRect(rect.x * input.scale, rect.y * input.scale, rect.w * input.scale, rect.h * input.scale);
+  }
+  const maskedMismatch = mismatch(
+    boardCanvas.getContext("2d").getImageData(0, 0, w, h).data,
+    appCanvas.getContext("2d").getImageData(0, 0, w, h).data,
+    input.tolerance,
+  );
   const diffData = new Uint8ClampedArray(boardData.length);
   for (let index = 0; index < boardData.length; index += 4) {
     const differs =
@@ -184,7 +196,26 @@ async function proofInBrowser(input) {
   ctx.drawImage(boardCanvas, 0, 0);
   ctx.drawImage(appCanvas, w + gap, 0);
   ctx.drawImage(diffCanvas, (w + gap) * 2, 0);
-  return { png: out.toDataURL("image/png"), mismatch: mismatch(boardData, appData, input.tolerance) };
+  return { png: out.toDataURL("image/png"), mismatch: rawMismatch, masked: maskedMismatch, masks: input.textRects.length };
+}
+
+/**
+ * The boxes of every text node on the app page, in CSS px, each padded by 2px. Runs in the page.
+ * @returns {Array<{ x: number, y: number, w: number, h: number }>}
+ */
+function collectTextRects() {
+  const rects = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node != null; node = walker.nextNode()) {
+    if (node.textContent == null || node.textContent.trim() === "") continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const box of range.getClientRects()) {
+      if (box.width < 1 || box.height < 1) continue;
+      rects.push({ x: box.left - 2, y: box.top - 2, w: box.width + 4, h: box.height + 4 });
+    }
+  }
+  return rects;
 }
 
 /** Takes the proofs for the planned shots and writes the PNGs and the summary. */
@@ -208,6 +239,7 @@ async function main(argv) {
       });
       const page = await context.newPage();
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
+      const textRects = await page.evaluate(collectTextRects);
       const appPng = await page.screenshot({ fullPage: false });
       await context.close();
       const boardUrl = `data:image/png;base64,${readFileSync(shot.board).toString("base64")}`;
@@ -220,11 +252,13 @@ async function main(argv) {
         height: PROOF_HEIGHT * PROOF_DPR,
         tolerance: CHANNEL_TOLERANCE,
         mismatchSource: mismatchPercent.toString(),
+        textRects,
+        scale: PROOF_DPR,
       });
       await proofPage.close();
       writeFileSync(shot.file, Buffer.from(result.png.split(",")[1], "base64"));
-      summary[shot.frame] = { ...summary[shot.frame], [shot.theme]: result.mismatch };
-      console.log(`${shot.frame} ${shot.theme}: ${result.mismatch}% mismatch`);
+      summary[shot.frame] = { ...summary[shot.frame], [shot.theme]: result.mismatch, [`${shot.theme}Masked`]: result.masked, [`${shot.theme}Masks`]: result.masks };
+      console.log(`${shot.frame} ${shot.theme}: ${result.mismatch}% mismatch, ${result.masked}% text-masked (${result.masks} boxes)`);
     }
   } finally {
     await browser.close();
