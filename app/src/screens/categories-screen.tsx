@@ -321,6 +321,22 @@ export function CategoriesScreen({
         />
       </div>
       )}
+      {/* FLOW-513: the board puts the new-category link above the card, the hidden toggle below it. */}
+      <div className="ui-cat-foot">
+        {holdWrites ? null : (
+        <TextLink
+          chevron={false}
+          wrap
+          buttonRef={createOpener}
+          icon={<PlusIcon size={16} stroke={2.2} />}
+          onClick={() => {
+            setCreateOpen(true);
+          }}
+        >
+          {parent == null ? "קטגוריה חדשה" : "הוספת תת־קטגוריה"}
+        </TextLink>
+        )}
+      </div>
       {shown.length === 0 && hiddenRows.length === 0 && parent == null ? (
         <EmptyState icon={<TagIcon />} title="אין עדיין קטגוריות" body="קטגוריות נוצרות מהמסמכים של SUMIT או כשמוסיפים אחת" />
       ) : shown.length > 0 ? (
@@ -341,19 +357,6 @@ export function CategoriesScreen({
       </List>
       ) : null}
       <div className="ui-cat-foot">
-        {holdWrites ? null : (
-        <TextLink
-          chevron={false}
-          wrap
-          buttonRef={createOpener}
-          icon={<PlusIcon size={16} stroke={2.2} />}
-          onClick={() => {
-            setCreateOpen(true);
-          }}
-        >
-          {parent == null ? "קטגוריה חדשה" : "הוספת תת־קטגוריה"}
-        </TextLink>
-        )}
         {hiddenRows.length > 0 ? (
           <TextLink
             tone="quiet"
