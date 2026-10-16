@@ -61,7 +61,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
       busy={saving != null}
       onRequestClose={requestSheetClose}
     >
-      <div role="radiogroup" aria-label={copy.title}>
+      <div role="radiogroup" aria-label={copy.title} className="ui-choice-sheet">
         {copy.choices.map((choice) => (
           <RadioRow
             key={choice.value}

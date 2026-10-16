@@ -41,13 +41,13 @@ export function formatDisplay(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-/** Day and month. A date outside the current year keeps the year. */
+/** Day and month. A date outside the current year keeps the year, as two digits (11/12/25). */
 export function formatDayMonth(iso: string, now = new Date()): string {
   const year = iso.slice(0, 4);
   const month = iso.slice(5, 7);
   const day = iso.slice(8, 10);
   if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month) || !/^\d{2}$/.test(day)) return iso;
-  if (year !== israelToday(now).slice(0, 4)) return `${day}/${month}/${year}`;
+  if (year !== israelToday(now).slice(0, 4)) return `${day}/${month}/${year.slice(2)}`;
   return `${day}/${month}`;
 }
 

@@ -100,7 +100,11 @@ const taps: Tap[] = [
     rpc: "set_invoice_paid",
     path: "/unpaid",
     arrange: async (page) => {
-      await page.getByRole("button", { name: new RegExp(escapeRe(unpaidName)) }).first().tap();
+      // FLOW-367: a row is a link to its invoice page, and the mark sits there, once.
+      await page.getByRole("link", { name: new RegExp(escapeRe(unpaidName)) }).first().tap();
+      await expect(page).toHaveURL(/\/unpaid\/[^/?]+/);
+      // The list leaves the page as the invoice route paints; until it does, every row has its own mark button.
+      await expect(page.getByRole("list", { name: "חשבוניות פתוחות" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: LABELS.markPaid, exact: true })).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {
@@ -115,6 +119,8 @@ const taps: Tap[] = [
     rpc: "set_transaction_cash",
     path: `/transactions/${TXN_ID}`,
     arrange: async (page) => {
+      // FLOW-366: the switch sits in the "נספר ב" sheet, so open the row first.
+      await page.getByRole("button", { name: /^נספר ב/ }).tap();
       await expect(cashSwitch(page)).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {

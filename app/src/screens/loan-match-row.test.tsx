@@ -488,7 +488,7 @@ describe("the transaction card with a matched payment", () => {
     expect(screen.queryByRole("button", { name: /^קטגוריה/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^הלוואה,? ?שיוך להלוואה/ })).not.toBeInTheDocument();
     // The split by category stays off while the line is matched (decision 0136).
-    expect(await screen.findByRole("button", { name: "פיצול לפי קטגוריות" })).toHaveAttribute("aria-disabled", "true");
+    expect(await screen.findByRole("button", { name: /^פיצול/ })).toBeDisabled();
     fireEvent.click(row);
     expect(await screen.findByRole("dialog", { name: "משכנתא לדוגמה" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();

@@ -65,7 +65,7 @@ describe("missing bills", () => {
     expect(missingBillPlace({})).toBeNull();
     // No last bill: the day alone; a last bill in another year carries its year.
     expect(usualDayText(4, null, now)).toBe("כל חודש ב־4");
-    expect(usualDayText(4, "2025-12-04", now)).toBe("כל חודש ב־4 · אחרון 04/12/2025");
+    expect(usualDayText(4, "2025-12-04", now)).toBe("כל חודש ב־4 · אחרון 04/12/25");
   });
 
   it("words a payment off its usual amount for Home from the server's percent (FLOW-415)", () => {
