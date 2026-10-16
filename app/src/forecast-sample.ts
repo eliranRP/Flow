@@ -290,3 +290,51 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
     data: { month: "2026-10", build, overrides },
   };
 }
+
+/**
+ * FLOW-141: the dev fixture that matches the board frame (MonthForecast): an invented USD company
+ * with the same parties, invoices and count of small charges. Its amounts are the board's, except
+ * the six small charges, which total less than the board's (each one is under the 100 units rule).
+ */
+export function monthForecastBoardSample(): MonthForecastSampleShape {
+  const today = "2026-10-16";
+  const small = [
+    ["Streaming", 9100],
+    ["Cloud storage", 8900],
+    ["Phone line", 9000],
+    ["Domain", 8700],
+    ["Password manager", 9200],
+    ["Accounting app", 9100],
+  ] as const;
+  const expected = {
+    today,
+    project_id: null,
+    months: [{ month: "2026-10", open: true, by_currency: [{ currency: "USD", income_minor: 0, expense_minor: 0 }] }],
+    recurring: [
+      ...small.map(([name, minor], index) => ({
+        direction: "expense" as const,
+        party_id: `small-${String(index + 1)}`,
+        name,
+        currency: "USD",
+        typical_amount_minor: -minor,
+        typical_day: 5,
+        months_seen: 6,
+        seen_this_month: false,
+      })),
+      { direction: "income" as const, party_id: "maple", name: "Maple Ave, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false },
+    ],
+  };
+  const unpaid = [
+    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-09-22", project_name: null, customer_name: "Henderson", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
+    { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Ridgeview HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
+    { id: "bill-118", description: "Bill RD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Rivera Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
+    { id: "bill-hd", description: "Monthly bill", doc_date: "2026-09-25", project_name: null, customer_name: "Home Depot Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
+  ];
+  const build = buildMonthForecast({
+    base: "USD",
+    expected: expectedMonthsSchema.parse(expected),
+    unpaid: unpaidRowSchema.array().parse(unpaid),
+    overrides: [],
+  });
+  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides: [] } };
+}

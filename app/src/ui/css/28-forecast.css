@@ -38,7 +38,7 @@
    line under it are the same figure Home shows. */
 .ui-forecast-screen {
   position: relative;
-  padding: 0 var(--space-side) var(--space-section);
+  padding: 0 var(--space-side) calc(var(--tabbar-height) + var(--space-section));
   color: var(--color-text);
 }
 
@@ -289,8 +289,7 @@
   font-size: var(--type-meta-size);
 }
 
-.ui-forecast-error,
-.ui-forecast-loading {
+.ui-forecast-error {
   margin: var(--space-4) 0 0;
 }
 

@@ -32,7 +32,11 @@ export const MovedItem: Story = { name: "Forecast · moved to next month, reset 
 /** The change sheet on the largest income row. Its save and the moved state are the screen's. */
 function ChangeSheet({ kind }: { kind: ForecastSampleKind }) {
   const item = monthForecastSample(kind).data.build.income[0] ?? null;
-  return <ForecastItemSheet item={item} today="2026-10-16" onOpenChange={() => undefined} onSave={() => undefined} />;
+  return (
+    <StoryRoute entry="/forecast">
+      <ForecastItemSheet item={item} today="2026-10-16" onOpenChange={() => undefined} onSave={() => undefined} />
+    </StoryRoute>
+  );
 }
 
 export const ChangeItem: Story = { name: "Forecast · change an item", args: { kind: "positive" }, render: (args) => <ChangeSheet kind={args.kind} /> };

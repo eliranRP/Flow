@@ -47,7 +47,7 @@ import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
 import { ForecastScreen } from "./screens/forecast-screen";
-import { monthForecastSample } from "./forecast-sample";
+import { monthForecastBoardSample, monthForecastSample } from "./forecast-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devReviewItems = [
@@ -511,6 +511,8 @@ export function DevUnpaid() {
 /** FLOW-141: the forecast on invented fixture data; `?kind=positive|negative|moved` picks the state. */
 export function DevForecast() {
   const [params] = useSearchParams();
+  // `board` is the USD company that matches the MonthForecast board frame.
+  if (params.get("kind") === "board") return <ForecastScreen sample={monthForecastBoardSample()} />;
   const kind = (["positive", "negative", "moved"] as const).find((k) => k === params.get("kind")) ?? "positive";
   return <ForecastScreen sample={monthForecastSample(kind)} />;
 }

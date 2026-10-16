@@ -61,7 +61,7 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
 
   return (
     <div className="ui-forecast-form">
-      <p className="ui-forecast-form-usual t-hint">{`הרגיל: ${formatAmountText(usual, "ILS")}`}</p>
+      <p className="ui-forecast-form-usual t-hint">{`הרגיל: ${formatAmountText(usual, item.currency)}`}</p>
       <label className="ui-forecast-field">
         <span className="ui-forecast-field-label">סכום צפוי</span>
         <input

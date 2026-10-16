@@ -109,7 +109,8 @@ export function buildMonthForecast(input: {
     if (currency !== input.base || usual === 0n) continue;
     raw.push({
       key: `invoice:${row.id}`,
-      direction: "income",
+      // A customer invoice is income; a supplier invoice is expense (older payloads: income).
+      direction: row.direction ?? "income",
       kind: "invoice",
       name: row.customer_name != null && row.customer_name !== "" ? row.customer_name : row.description,
       currency,

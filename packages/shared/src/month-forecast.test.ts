@@ -76,4 +76,14 @@ describe("buildMonthForecast", () => {
     expect(build.items).toHaveLength(0);
     expect(forecastTotal(0n, build)).toBe(0n);
   });
+
+  it("counts a supplier invoice as expense and a customer invoice as income", () => {
+    const supplier: UnpaidRow = { id: "bill-1", description: "Bill 1", doc_date: "2026-10-04", project_name: null, customer_name: "Supplier B", open_gross_agorot: -420000n, open_net_agorot: -420000n, currency: "ILS", direction: "expense" };
+    const customer = unpaid.find((row) => row.id === "inv-1");
+    if (customer == null) throw new Error("fixture");
+    const build = buildMonthForecast({ base: "ILS", expected: { ...expected, recurring: [] }, unpaid: [customer, supplier], overrides: [] });
+    expect(build.income.map((item) => item.key)).toEqual(["invoice:inv-1"]);
+    expect(build.expense.map((item) => item.key)).toEqual(["invoice:bill-1"]);
+    expect(build.expenseTotal).toBe(420000n);
+  });
 });

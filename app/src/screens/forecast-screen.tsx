@@ -13,22 +13,25 @@ import { ForecastItemSheet } from "./forecast-sheet";
 import { monthName } from "./home-parts";
 import { cx } from "../ui/cx";
 
-/** A story's data: the builder's output and the cash net today, both in ILS minor units. */
-export type ForecastSample = { data: MonthForecast; net: bigint; today: string };
+/**
+ * A story's data: the builder's output and the cash net today, both in the base's minor units.
+ * `base` is the currency the builder counted (ILS for the app; a sample may use another).
+ */
+export type ForecastSample = { data: MonthForecast; net: bigint; today: string; base?: string };
 
 /** The page scrolls past this many pixels: the compact bar slides down (FLOW-141). */
 const COMPACT_AFTER = 150;
 /** The moved row folds away this long before its write, then the list is refreshed. */
 const FOLD_MS = 280;
 
-function signed(minor: bigint, sign: "+" | "−" | ""): string {
-  const text = formatAmountText(minor < 0n ? -minor : minor, "ILS");
+function signed(minor: bigint, sign: "+" | "−" | "", currency: string): string {
+  const text = formatAmountText(minor < 0n ? -minor : minor, currency);
   return `${sign}${text}`;
 }
 
 /** The big number: the sign is U+2212 when it is negative, as Home's line writes it. */
-export function forecastBigText(minor: bigint): string {
-  return minor < 0n ? signed(minor, "−") : formatAmountText(minor, "ILS");
+export function forecastBigText(minor: bigint, currency = "ILS"): string {
+  return minor < 0n ? signed(minor, "−", currency) : formatAmountText(minor, currency);
 }
 
 function itemWhen(item: ForecastItem): string {
@@ -43,7 +46,7 @@ function itemWhat(item: ForecastItem): string {
 
 function ForecastRowButton({ item, onOpen, leaving }: { item: ForecastItem; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
   const name = item.name === "" ? "ללא שם" : item.name;
-  const amount = item.direction === "income" ? signed(item.minor, "+") : signed(item.minor, "−");
+  const amount = item.direction === "income" ? signed(item.minor, "+", item.currency) : signed(item.minor, "−", item.currency);
   return (
     <li className={cx("ui-forecast-li", leaving && "ui-forecast-leaving")}>
       <button type="button" className="ui-forecast-row" onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
@@ -101,7 +104,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
   const [compact, setCompact] = useState(false);
 
   const data = sample?.data ?? query.data ?? null;
-  const base = "ILS";
+  const base = sample?.base ?? "ILS";
   const currentRow = cash.data?.months.find((row) => cashMonthKey(row.month) === month);
   const net = sample?.net ?? cashRows(currentRow, base).find((row) => row.currency === base)?.net_minor ?? 0n;
   const build: ForecastBuild | null = data?.build ?? null;
@@ -154,7 +157,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
     <div className="ui-forecast-screen">
       <div className={cx("ui-forecast-compact", compact && "ui-forecast-compact-on")} aria-hidden={!compact}>
         <span>בית</span>
-        <span className="ui-forecast-compact-figure">{`צפי · ${forecastBigText(total)}`}</span>
+        <span className="ui-forecast-compact-figure">{`צפי · ${forecastBigText(total, base)}`}</span>
       </div>
       <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
       {data == null && live && query.isError ? (
@@ -167,11 +170,11 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
       ) : null}
       {build == null ? null : (
         <>
-          <p className={cx("ui-forecast-big", total < 0n && "ui-forecast-big-neg")} aria-label="הצפי לסוף החודש">{forecastBigText(total)}</p>
+          <p className={cx("ui-forecast-big", total < 0n && "ui-forecast-big-neg")} aria-label="הצפי לסוף החודש">{forecastBigText(total, base)}</p>
           <p className="ui-forecast-today">{`היום ${formatAmountText(net < 0n ? -net : net, base)}`}</p>
           <ForecastSection
             title="צפוי להיכנס"
-            total={signed(build.incomeTotal, "+")}
+            total={signed(build.incomeTotal, "+", base)}
             items={income}
             onOpen={setOpen}
             leavingKey={leavingKey}
@@ -179,7 +182,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
           <section className="ui-forecast-section">
             <h2 className="ui-forecast-section-head">
               <span>צפוי לצאת</span>
-              <span className="ui-forecast-section-total ui-forecast-total-out">{signed(build.expenseTotal, "−")}</span>
+              <span className="ui-forecast-section-total ui-forecast-total-out">{signed(build.expenseTotal, "−", base)}</span>
             </h2>
             <ul className="ui-forecast-list">
               {expense.map((item) => (
@@ -193,7 +196,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
                       <span className="ui-forecast-name">חיובים קבועים קטנים</span>
                       <span className="ui-forecast-meta">{build.small.length === 1 ? "חיוב אחד" : `${String(build.small.length)} חיובים`}</span>
                     </span>
-                    <span className="ui-forecast-amount ui-forecast-out">{signed(smallTotal, "−")}</span>
+                    <span className="ui-forecast-amount ui-forecast-out">{signed(smallTotal, "−", base)}</span>
                   </button>
                   {smallOpen ? (
                     <ul className="ui-forecast-small-list">
