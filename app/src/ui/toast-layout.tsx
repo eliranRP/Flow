@@ -179,14 +179,15 @@ export function clearToastPad(sheet: Element | null = document.querySelector("[d
 }
 
 /**
- * How far the controls have been pushed down. The live padding wins, because a
- * transition can still be showing the old pad after the variable was cleared.
- * The declared variable is the fallback when the stylesheet has not applied.
+ * How far the controls have been pushed down. The surface carries only the toast
+ * pad (the panel's top is in 08, FLOW-363 3b), so its computed top is the pad.
+ * The live padding wins, because a transition can still be showing the old pad
+ * after the variable was cleared. The declared variable is the fallback when the
+ * stylesheet has not applied.
  */
 export function shiftPad(surface: HTMLElement): number {
   const declared = Number.parseFloat(surface.style.getPropertyValue("--toast-pad")) || 0;
-  const computedTop = Number.parseFloat(getComputedStyle(surface).paddingTop) || 0;
-  const live = Math.max(0, computedTop - cssPx("--space-2"));
+  const live = Math.max(0, Number.parseFloat(getComputedStyle(surface).paddingTop) || 0);
   return live > 0.5 ? live : Math.max(live, declared);
 }
 
