@@ -191,3 +191,24 @@ export function sampleCashUsdToDay(): CashToDay {
   // The board: money in up, money out down (the same-day compare for the change pills).
   return [{ currency: "USD", in_minor: 1_824_000n, out_minor: 6_350_000n }];
 }
+
+/**
+ * FLOW-364 (board, FlowPicker): the usd-loss year in dollars, January to the current month. The
+ * cells show each month's net: losses in coral with a minus, the rest plain. Invented figures.
+ */
+export function sampleCashUsdYear(now = new Date()): NonNullable<CashMonths> {
+  const year = israelToday(now).slice(0, 4);
+  const current = israelToday(now).slice(0, 7);
+  const nets = [842_000n, -315_000n, 1_278_000n, 409_000n, -2_160_000n, 931_000n, 299_600n, 11_458_200n, -17_732_000n, -1_720_000n];
+  return {
+    basis: "paid",
+    base_currency: "USD",
+    months: nets.map((net, index) => {
+      const key = `${year}-${String(index + 1).padStart(2, "0")}`;
+      const base = 2_000_000n;
+      const inMinor = net >= 0n ? base + net : base;
+      const outMinor = net >= 0n ? base : base - net;
+      return { month: `${key}-01`, by_currency: [usdRow(inMinor, outMinor, net)] };
+    }).filter((row) => row.month.slice(0, 7) <= current),
+  };
+}

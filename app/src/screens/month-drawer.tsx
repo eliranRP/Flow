@@ -1,4 +1,4 @@
-import { formatAmountText, type CashMonth } from "@flow/shared";
+import { formatAmountText, type CashMonth, type CashMonths } from "@flow/shared";
 import { useState, type RefObject } from "react";
 import { cashHistoryPath, cashRows } from "../cash";
 import { canStepYear, drawerCells, type DrawerCell } from "../home-month";
@@ -25,6 +25,7 @@ export function MonthDrawer({
   onPick,
   returnFocusRef,
   initialYear,
+  yearMonths,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,11 +39,13 @@ export function MonthDrawer({
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** The year to open on (defaults to the selected month's). */
   initialYear?: number;
+  /** Stories and the dev route pass the year's months; the live drawer reads them. */
+  yearMonths?: NonNullable<CashMonths>;
 }) {
   const [year, setYear] = useState(initialYear ?? Number(selectedKey.slice(0, 4)));
-  const months = useCashYearMonthsQuery(year, open);
+  const months = useCashYearMonthsQuery(year, open && yearMonths == null);
   const today = israelToday();
-  const netByMonth = netsOf(months.data?.months ?? [], base);
+  const netByMonth = netsOf((yearMonths ?? months.data)?.months ?? [], base);
   const cells = drawerCells(year, netByMonth, firstKey, today, selectedKey);
   const canEarlier = canStepYear(year, -1, firstKey, today);
   const canLater = canStepYear(year, 1, firstKey, today);

@@ -305,6 +305,7 @@ export function CashHome({
   forecast = null,
   onStepMonth,
   initialDrawerOpen = false,
+  drawerYearMonths,
 }: {
   data: NonNullable<CashMonths>;
   /** The month shown (YYYY-MM). */
@@ -331,6 +332,8 @@ export function CashHome({
   onStepMonth: (key: string) => void;
   /** Stories open the drawer at once. */
   initialDrawerOpen?: boolean;
+  /** Dev route: the drawer's year, in place of the live query. */
+  drawerYearMonths?: NonNullable<CashMonths>;
 }) {
   const isPast = monthKey < currentKey;
   const base = data.base_currency;
@@ -440,6 +443,7 @@ export function CashHome({
         firstKey={firstKey}
         base={base}
         search={search}
+        yearMonths={drawerYearMonths}
         onPick={(key) => {
           pendingMonth.current = key;
           setDrawer(false);

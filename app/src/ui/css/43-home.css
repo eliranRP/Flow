@@ -159,7 +159,7 @@
   inline-size: var(--touch-min);
   block-size: var(--touch-min);
   border-radius: 50%;
-  background: var(--color-raised);
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
   color: var(--color-text);
 }
 
@@ -252,6 +252,11 @@
   padding-bottom: var(--space-1);
 }
 
+/* FLOW-364 (board): the zero figure on the empty band is a dim lavender, not white. */
+.ui-band-body-empty .ui-hero-figure {
+  opacity: 0.6;
+}
+
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
 .ui-band-month-static {
   margin: 0;
@@ -295,7 +300,7 @@
 .ui-home-empty-title {
   margin: 0;
   font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
+  font-weight: var(--type-heading-weight);
   text-align: start;
 }
 

@@ -22,7 +22,7 @@ import { useToast } from "./ui/toast";
 import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashUsdYear, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -323,6 +323,8 @@ export function DevCash() {
   const past = params.get("month") === "past";
   const data = usdLoss ? sampleCashUsdLoss(past) : sampleCashMonths();
   const currentKey = cashMonthKey(data.months[0]?.month ?? "");
+  // The board's drawer lists the year from January; the usd-loss year carries those months.
+  const yearMonths = usdLoss ? sampleCashUsdYear() : undefined;
   // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
   const monthKey = past ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
   return (
@@ -330,7 +332,7 @@ export function DevCash() {
       data={data}
       monthKey={monthKey}
       currentKey={currentKey}
-      firstKey={cashMonthKey(data.months.at(-1)?.month ?? currentKey)}
+      firstKey={cashMonthKey(yearMonths?.months[0]?.month ?? data.months.at(-1)?.month ?? currentKey)}
       previewing={false}
       search="?preview=1"
       attention={params.get("box") === "none" ? [] : attentionRows({
@@ -350,6 +352,7 @@ export function DevCash() {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}
       initialDrawerOpen={params.get("drawer") === "1"}
+      drawerYearMonths={yearMonths}
     />
   );
 }
