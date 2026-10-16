@@ -1,6 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { Fragment, useId, type ReactNode } from "react";
 import { splitCents } from "./amount";
+import { GroupHead } from "./group-head";
 import { List } from "./list-row";
 import { groupByDay, groupByMonth, type MonthAmount, type MonthGroup, type MonthTotal } from "./month-groups";
 
@@ -178,7 +179,11 @@ function MonthSection<T>({
   const shown = group.totals.filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n);
   return (
     <div className="ui-month" role={head ? "group" : undefined} aria-labelledby={head ? id : undefined}>
-      {head ? (
+      {head && count != null && showTotals && !net ? (
+        <GroupHead id={id} title={group.title} count={count}>
+          {shown.map((total) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={false} />)}
+        </GroupHead>
+      ) : head ? (
         <div className={count == null ? "ui-month-head" : "ui-month-head ui-group-head"}>
           <h2 className={count == null ? "ui-month-title t-heading" : "ui-month-title ui-group-title t-heading"} id={id}>{group.title}</h2>
           {showTotals && net && shown.length > 0 ? <MonthNet totals={shown} /> : null}
