@@ -1,61 +1,49 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "../ui/button";
-import { SetupCard } from "./card";
+import { OnboardingFrame } from "./shell";
+import { SKIP_SHEET_CONFIRM, SKIP_ALL, SETUP_TOTAL } from "./copy";
 import "./setup.css";
-import { SetupStep } from "./shell";
-import { SumitFailureNote } from "./steps";
 
-describe("setup step chrome", () => {
-  it("has no skip and no counter on step 0", () => {
+describe("onboarding frame (FLOW-514 §1)", () => {
+  it("shows the counter, the seven segments and skip-all on a counted step", () => {
     render(
-      <SetupStep step={0} title="פרטי העסק" line="השם שיופיע בבית." primary={<Button type="button">המשך</Button>} />,
+      <OnboardingFrame step={2} title="חיבור הבנק והספרים" onBack={() => undefined} onSkipAll={() => undefined} primary={<Button type="button">המשך</Button>} />,
     );
-    expect(screen.getByRole("heading", { name: "פרטי העסק" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "דלג" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("meter")).not.toBeInTheDocument();
+    const meter = screen.getByRole("meter", { name: "התקדמות ההגדרה" });
+    expect(meter).toHaveAttribute("aria-valuenow", "2");
+    expect(meter).toHaveAttribute("aria-valuemax", String(SETUP_TOTAL));
+    expect(screen.getByText(/מתוך/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חיבור הבנק והספרים" })).toBeInTheDocument();
+    expect(screen.getByText(SKIP_ALL)).toBeInTheDocument();
   });
 
-  it("counts step 2 out of 5 and skips without saving", () => {
-    const skip = vi.fn();
+  it("keeps the back slot on step 1 without a control", () => {
+    render(<OnboardingFrame step={1} title="העסק" onSkipAll={() => undefined} primary={<Button type="button">המשך</Button>} />);
+    expect(screen.queryByRole("button", { name: "הקודם" })).not.toBeInTheDocument();
+  });
+
+  it("opens the skip sheet from skip-all and runs the confirm", async () => {
+    const skipAll = vi.fn(() => Promise.resolve());
+    render(<OnboardingFrame step={4} title="הלוואות" onSkipAll={skipAll} primary={<Button type="button">המשך</Button>} />);
+    fireEvent.click(screen.getByText(SKIP_ALL));
+    fireEvent.click(await screen.findByRole("button", { name: SKIP_SHEET_CONFIRM }));
+    expect(skipAll).toHaveBeenCalledOnce();
+  });
+
+  it("gives a full screen (welcome) no counter, and passes the skip opener to a secondary function", () => {
+    const onSkipAll = vi.fn();
     render(
-      <SetupStep
-        step={2}
-        title="תיוג חכם"
-        line="Flow יציע פרויקט וקטגוריה לכל תנועה."
-        demo="jev"
-        onBack={() => undefined}
-        onSkip={skip}
-        primary={<Button type="button">המשך</Button>}
+      <OnboardingFrame
+        step="welcome"
+        title="ברוכים הבאים ל־Flow"
+        onSkipAll={onSkipAll}
+        primary={<Button type="button">בואו נתחיל</Button>}
+        secondary={(open) => <button type="button" onClick={open}>דילוג, אגדיר אחר כך</button>}
       />,
     );
-    expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuenow", "2");
-    expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuemax", "5");
-    expect(screen.getByText(/מתוך/)).toBeInTheDocument();
-    expect(document.querySelector("[data-demo-slot]")).toBeInTheDocument();
-    const meter = document.querySelector(".ui-setup-meter .ui-bar");
-    const setup = document.querySelector(".ui-setup");
-    expect(meter).not.toBeNull();
-    expect(setup).not.toBeNull();
-    if (meter) expect(getComputedStyle(meter).height).toBe("var(--bar-thin)");
-    if (setup) expect(getComputedStyle(setup).paddingBlockStart).toBe("var(--safe-top)");
-    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
-    expect(skip).toHaveBeenCalledOnce();
-  });
-
-  it("lists only the open rows and shows the SUMIT failure note", () => {
-    render(
-      <MemoryRouter>
-        <SetupCard done={3} steps={[2, 5]} onDismiss={() => undefined} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("link", { name: "תיוג חכם" })).toHaveAttribute("href", "/setup/2?from=card");
-    expect(screen.getByRole("link", { name: "התקנה" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "חיבור ספרים ובנק" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "מתקדם · עוזר AI" })).toHaveAttribute("href", "/settings/connections?sheet=assistant");
-    expect(screen.getByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
-    render(<SumitFailureNote />);
-    expect(screen.getByText("SUMIT עוד לא מחובר.")).toBeInTheDocument();
+    expect(screen.queryByRole("meter")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "דילוג, אגדיר אחר כך" }));
+    expect(screen.getByRole("button", { name: SKIP_SHEET_CONFIRM })).toBeInTheDocument();
   });
 });

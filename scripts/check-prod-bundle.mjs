@@ -49,24 +49,18 @@ const modulePatterns = [
   /[/\\]assistant-sample\./,
 ];
 
-/** The setup stage, its player, and the player's pointer ship. A fixture file named demo* stays blocked. */
-function isSetupProductModule(id) {
-  return /[/\\]setup[/\\]demo-slot\.tsx$/.test(id) || /[/\\]ui[/\\]demo-(player|pointer)\.tsx$/.test(id);
-}
-
 /** @param {string} id */
 function isBlockedModule(id) {
-  if (isSetupProductModule(id)) return false;
   return modulePatterns.some((pattern) => pattern.test(id));
 }
 
 /**
- * The setup sample card and the setup drawings use the example tag.
+ * The setup sample card uses the example tag.
  * A story, a reviewer screen, or a fixture in the same graph still fails.
  * @param {string[]} modules
  */
 function setupExampleCopyShips(modules) {
-  const ships = modules.some((id) => /[/\\]setup[/\\]sample-review\.tsx$/.test(id) || /[/\\]ui[/\\]setup-demos\.tsx$/.test(id));
+  const ships = modules.some((id) => /[/\\]setup[/\\]sample-review\.tsx$/.test(id));
   if (!ships) return false;
   return !modules.some((id) => isBlockedModule(id));
 }

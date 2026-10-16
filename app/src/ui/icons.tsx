@@ -372,26 +372,6 @@ export function DownloadIcon(props: IconProps) {
   );
 }
 
-export function ShareIcon(props: IconProps) {
-  return (
-    <Svg size={22} stroke={1.8} {...props}>
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-      <polyline points="16 6 12 2 8 6" />
-      <line x1="12" y1="2" x2="12" y2="15" />
-    </Svg>
-  );
-}
-
-export function SquarePlusIcon(props: IconProps) {
-  return (
-    <Svg size={22} stroke={1.8} {...props}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </Svg>
-  );
-}
-
 export function TrashIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>
@@ -550,6 +530,25 @@ export function MailIcon(props: IconProps) {
     <Svg size={20} stroke={1.9} {...props}>
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </Svg>
+  );
+}
+
+/** FLOW-514: the movie's pause control (two bars). */
+export function PauseIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <line x1="9" y1="6" x2="9" y2="18" />
+      <line x1="15" y1="6" x2="15" y2="18" />
+    </Svg>
+  );
+}
+
+/** FLOW-514: the movie's play control. */
+export function PlayIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polygon points="8 5 19 12 8 19 8 5" />
     </Svg>
   );
 }

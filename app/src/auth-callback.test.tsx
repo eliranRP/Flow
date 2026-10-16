@@ -104,7 +104,7 @@ describe("auth callback return (FLOW-308)", () => {
     mock.companyId = null;
     window.sessionStorage.setItem("flow.sign-in-return", "/review");
     renderAt("/auth/callback");
-    await landsOn("/setup/0");
+    await landsOn("/setup/welcome");
   });
 
   it("keeps the return on a session error and a get_home error", async () => {

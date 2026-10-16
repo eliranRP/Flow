@@ -101,6 +101,8 @@ export function proofPlan(frames, only, boards, out) {
   const plan = [];
   for (const frame of picked) {
     for (const theme of THEME_NAMES) {
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
+      if (!existsSync(path.join(boards, boardFileName(frame, theme)))) continue;
       plan.push({
         frame,
         theme,
@@ -110,6 +112,8 @@ export function proofPlan(frames, only, boards, out) {
       });
     }
   }
+  // A wrong --boards folder must fail loudly, not write an empty summary.
+  if (plan.length === 0) throw new Error(`no board PNG for ${picked.join(", ") || "any frame"} in ${boards}`);
   return plan;
 }
 
