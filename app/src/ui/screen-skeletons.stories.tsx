@@ -11,7 +11,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** FLOW-371: month lines loading (board linesLoading). Wired into the month-lines screens in cash-screens.tsx. */
+/** FLOW-371: month lines loading (board linesLoading). Wired into the month-lines screen in cash-lines-screen.tsx. */
 export const MonthLines: Story = { render: () => <LinesSkeleton />, tags: ["clip-no-text"] };
 
 /** FLOW-371: Projects loading (board projectsLoading). Wired into the Projects screen. */

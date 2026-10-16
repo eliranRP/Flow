@@ -28,6 +28,7 @@ export const screenLoaders = {
   categories: () => import("./screens/categories-screen"),
   breakdown: () => import("./screens/breakdown"),
   cash: () => import("./screens/cash-screens"),
+  cashLines: () => import("./screens/cash-lines-screen"),
   cashHistory: () => import("./screens/cash-history"),
   profitMonths: () => import("./screens/profit-months"),
   search: () => import("./screens/search"),
