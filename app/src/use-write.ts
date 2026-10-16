@@ -70,7 +70,7 @@ export function useWrite<T = void>(options: {
   /** An error that needs no toast, because the screen already shows the state. */
   silent?: (error: Error) => boolean;
   /** Where this write's toasts sit. לאישור keeps them above its action bar (decision 0137). */
-  place?: "page" | "tab" | "bar";
+  place?: "page" | "bar";
   /** The queries the write changes and each one's value after it. The tap shows it at once; a failure restores it. */
   optimistic?: (payload: T) => Array<{ key: QueryKey; update: (old: unknown) => unknown }>;
 }) {

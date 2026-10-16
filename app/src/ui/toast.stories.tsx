@@ -7,6 +7,7 @@ import { SegmentedControl } from "./segmented-control";
 import { Sheet } from "./sheet";
 import { TabBar } from "./tab-bar";
 import { TextField } from "./text-field";
+import { forceReducedMotion } from "./reduced-motion";
 import { placeToast, Toast } from "./toast";
 import "./toast.stories.css";
 
@@ -18,8 +19,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Under the title, clear of the actions. The host ignores taps; the toast does not. */
-function BelowHeader(props: { children: string; action: string; tone?: "ok" | "bad" | "info" }) {
+/** Above the tab bar, clear of the actions (decision 0182). The host ignores taps; the toast does not. */
+function AboveFloor(props: { children: string; action: string; tone?: "ok" | "bad" | "info" }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = host.current;
@@ -49,19 +50,26 @@ function BelowHeader(props: { children: string; action: string; tone?: "ok" | "b
 
 export const Undo: Story = {
   args: { children: "הפריט אושר", action: "ביטול" },
-  render: () => <BelowHeader action="ביטול">הפריט אושר</BelowHeader>,
+  render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
+};
+
+/** The toast takes no motion: it shows at once, and clears at once (decision 0182, §2.1). */
+export const ReducedMotion: Story = {
+  args: { children: "הפריט אושר", action: "ביטול" },
+  decorators: [forceReducedMotion],
+  render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
 };
 export const ErrorRetry: Story = {
   args: { children: "לא נשמר – אין חיבור", action: "ניסיון חוזר", tone: "bad" },
   render: () => (
-    <BelowHeader action="ניסיון חוזר" tone="bad">
+    <AboveFloor action="ניסיון חוזר" tone="bad">
       לא נשמר – אין חיבור
-    </BelowHeader>
+    </AboveFloor>
   ),
 };
 export const Skip: Story = {
   args: { children: "דילגנו על הפריט" },
-  render: () => <BelowHeader action="">דילגנו על הפריט</BelowHeader>,
+  render: () => <AboveFloor action="">דילגנו על הפריט</AboveFloor>,
 };
 
 function PlacedToast({ children }: { children: string }) {
@@ -104,8 +112,8 @@ function ShortSheetToast() {
   );
 }
 
-/** A form directly under the header. The toast stays off the segmented controls. */
-function FormUnderHeader() {
+/** A form under the header. The toast sits above the floor, off the segmented controls. */
+function FormToastStory() {
   return (
     <>
       <header className="ui-page">
@@ -134,10 +142,10 @@ export const ShortSheet: Story = {
   render: () => <ShortSheetToast />,
 };
 
-export const FormUnderHeaderToast: Story = {
+export const FormToast: Story = {
   args: { children: "במצב תצוגה זה לא נשמר." },
   parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <FormUnderHeader />,
+  render: () => <FormToastStory />,
 };
 
 /** Decision 0137: on לאישור the toast sits just above the pinned bar, never over it. */

@@ -25,8 +25,8 @@ test("a skip toast stays clear of the actions and leaves on its own", async ({ p
 
   await change.click();
   await expect(page.getByText("השינוי נפתח")).toBeVisible();
-  // The undo toast lives 5s from when it is placed, and placing waits for the sheet to settle,
-  // so a slow runner needs more than 5s here (main's CI failed at exactly 5s).
+  // The undo toast lives 3s from when it is placed, and placing waits for the sheet to settle,
+  // so a slow runner needs more than 3s here.
   await expect(toast).toHaveCount(0, { timeout: 12_000 });
 });
 
@@ -53,9 +53,12 @@ type SettledToast = {
   toastBottom: number;
   sheetTop: number;
   closeTop: number;
+  floorTop: number;
 };
 
 const GAP = 8;
+/** A confirmation sits --space-4 above the floor (decision 0182). */
+const FLOOR_GAP = 16;
 
 async function setSafe(page: Page, safe: number): Promise<void> {
   await page.evaluate((inset) => {
@@ -82,6 +85,11 @@ async function armSampler(page: Page, safe: number, ms: number): Promise<void> {
       const toastNode = document.querySelector(".ui-toast");
       let top: number | null = null;
       let bottom: number | null = null;
+      // The toast rises and sinks by a transform (decision 0182): sample where it rests.
+      const lift = (node: HTMLElement) => {
+        const transform = getComputedStyle(node).transform;
+        return transform && transform !== "none" ? new DOMMatrixReadOnly(transform).m42 : 0;
+      };
       let opacity = 0;
       let covers = false;
       let gapOk = true;
@@ -100,8 +108,9 @@ async function armSampler(page: Page, safe: number, ms: number): Promise<void> {
         const toastStyle = getComputedStyle(toastNode);
         opacity = Number.parseFloat(toastStyle.opacity) || 0;
         const toastRect = toastNode.getBoundingClientRect();
-        top = toastRect.top;
-        bottom = toastRect.bottom;
+        const ty = lift(toastNode);
+        top = toastRect.top - ty;
+        bottom = toastRect.bottom - ty;
         const visible = opacity > 0.02;
         if (visible) {
           if (top < inset + space - 1) gapOk = false;
@@ -157,12 +166,22 @@ async function readSettled(page: Page): Promise<SettledToast> {
     }
     const toastRect = toast.getBoundingClientRect();
     const closeRect = close.getBoundingClientRect();
+    // The floor: a pinned bar, else the tab bar, else the screen bottom (decision 0182).
+    const pinned = [...document.querySelectorAll("[data-toast-floor]")]
+      .map((node) => node.getBoundingClientRect())
+      .filter((rect) => rect.height > 0)
+      .map((rect) => rect.top);
+    const tabBar = document.querySelector(".ui-tabbar")?.getBoundingClientRect();
+    const floorTop = pinned.length > 0
+      ? Math.min(...pinned)
+      : tabBar && tabBar.height > 0 ? tabBar.top : window.innerHeight;
     return {
       pad: Number.parseFloat(getComputedStyle(surface).paddingTop) || 0,
       toastTop: toastRect.top,
       toastBottom: toastRect.bottom,
       sheetTop: sheet.getBoundingClientRect().top,
       closeTop: closeRect.top,
+      floorTop,
     };
   });
 }
@@ -179,20 +198,22 @@ function assertVisiblePosition(samples: ToastFrame[]): void {
 }
 
 /**
- * FLOW-309 (the ramp check dropped in 263b1d25): after a pad move the toast fades in over
- * `--motion-fade`; with no pad move it appears at its settled position in one frame (0075).
- * No real flow pads the sheet today; "a pad move ramps the fade" forces one with a test-only safe area.
+ * Decision 0182: every toast fades in over `--motion-fade` and rises 12px, so the ramp is always
+ * visible in the samples, whether or not the sheet pads (0075 point 7 is about where it settles).
  */
 function assertFade(samples: ToastFrame[]): void {
-  const start = samples[0]?.pad ?? 0;
-  const moved = samples.some((sample) => Math.abs(sample.pad - start) > 1);
   const partial = samples.filter((sample) => sample.opacity > 0.05 && sample.opacity < 0.95);
-  if (moved) expect(partial.length).toBeGreaterThan(0);
-  else expect(partial).toHaveLength(0);
+  expect(partial.length).toBeGreaterThan(0);
 }
 
 function assertAboveSheet(settled: SettledToast): void {
   expect(Math.abs(settled.toastBottom - (settled.sheetTop - GAP))).toBeLessThanOrEqual(1);
+  expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
+}
+
+/** A confirmation sits --space-4 above the floor, and the sheet takes no pad for it (decision 0182). */
+function assertAboveFloor(settled: SettledToast): void {
+  expect(Math.abs(settled.toastBottom + FLOOR_GAP - settled.floorTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
 }
 
@@ -265,7 +286,7 @@ for (const viewport of viewports) {
       }
     });
 
-    test(`tall to short keeps the confirmation under the header at ${label}`, async ({ page }) => {
+    test(`tall to short keeps the confirmation above the floor at ${label}`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/reviewer/save?item=q-bolts");
       await openCategory(page, safe);
@@ -278,17 +299,8 @@ for (const viewport of viewports) {
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
       assertFade(samples);
-      const underHeader = await page.evaluate((inset) => {
-        const header = document.querySelector("header.ui-page, header.ui-band");
-        const space = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-4")) || 16;
-        if (header instanceof HTMLElement && header.getBoundingClientRect().height > 0) {
-          const gap = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 8;
-          return header.getBoundingClientRect().bottom + gap;
-        }
-        return inset + space;
-      }, safe);
-      expect(Math.abs(settled.toastTop - underHeader)).toBeLessThanOrEqual(1);
-      expect(settled.toastBottom + GAP).toBeLessThanOrEqual(settled.closeTop + 1);
+      // A confirmation (not a failure), so it sits above the floor and the sheet takes no pad.
+      assertAboveFloor(settled);
       expect(settled.sheetTop).toBeGreaterThan(200);
     });
   }

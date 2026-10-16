@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { HintParts } from "./hint-parts";
 import { InfoIcon } from "./icons";
-import { clearToastPad, cssPx, OK_MS, pinSheetScroll, placeToast, sheetContentKey, sheetSurface, shiftPad, SWIPE_PX, toastAnchor, type ToastInput, toastMs } from "./toast-layout";
+import { clearToastPad, OK_MS, pinSheetScroll, placeToast, sheetContentKey, sheetSurface, shiftPad, SWIPE_PX, toastAnchor, type ToastInput, toastMs } from "./toast-layout";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
-export { safeTopPx, toastMinBlock, toastAnchor, toastFloor, clearToastPad, placeToast } from "./toast-layout";
+export { safeTopPx, toastAnchor, toastFloor, clearToastPad, placeToast } from "./toast-layout";
 
 type ToastItem = ToastInput & { id: number };
 
@@ -16,41 +16,81 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+/** A CSS time token in ms. It reads empty in jsdom and is 0 under reduced motion, so the toast clears at once. */
+function cssMs(name: string): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) return 0;
+  return raw.endsWith("ms") ? value : value * 1000;
+}
+
 export function useToast(): ToastContextValue {
   const value = useContext(ToastContext);
   if (!value) throw new Error("ToastProvider is missing");
   return value;
 }
 
-/** One toast under the page header. A new show replaces it. The host does not catch taps. */
+/** One toast above the floor (decision 0182). A new show replaces it. The host does not catch taps. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);
-  const [phase, setPhase] = useState<"off" | "measure" | "pad" | "fade" | "in">("off");
+  const [phase, setPhase] = useState<"off" | "measure" | "pad" | "fade" | "in" | "out">("off");
   const host = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
+  const outTimer = useRef<number | null>(null);
   const remaining = useRef(OK_MS);
   const started = useRef(0);
   const acting = useRef(false);
   const toastRef = useRef<ToastItem | null>(null);
   toastRef.current = toast;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   const clearTimer = () => {
     if (timer.current != null) window.clearTimeout(timer.current);
     timer.current = null;
   };
 
+  const clearOutTimer = () => {
+    if (outTimer.current != null) window.clearTimeout(outTimer.current);
+    outTimer.current = null;
+  };
+
+  const clearToast = useCallback(() => {
+    outTimer.current = null;
+    setToast(null);
+    setPhase("off");
+  }, []);
+
+  /** The one way out: a timer, a tap, a swipe or an action. Phase "out" plays the sink, then the toast clears. A zero token clears at once. */
+  const leave = useCallback(() => {
+    if (phaseRef.current === "out") return;
+    if (timer.current != null) window.clearTimeout(timer.current);
+    timer.current = null;
+    clearOutTimer();
+    if (toastRef.current == null) {
+      clearToast();
+      return;
+    }
+    phaseRef.current = "out";
+    setPhase("out");
+    const ms = cssMs("--motion-toast-out");
+    if (ms <= 0) {
+      clearToast();
+      return;
+    }
+    outTimer.current = window.setTimeout(clearToast, ms);
+  }, [clearToast]);
+
   const arm = useCallback((ms: number) => {
     clearTimer();
     started.current = Date.now();
     remaining.current = ms;
     timer.current = window.setTimeout(() => {
-      setToast(null);
+      leave();
     }, ms);
-  }, []);
+  }, [leave]);
 
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
   /** A toast that is already on screen is placed in this frame. A new one waits until the sheet shape stops changing, so it is never shown at a position it will leave. */
   const revealNow = useRef(false);
 
@@ -59,14 +99,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       acting.current = false;
       seq.current += 1;
       clearTimer();
-      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "tab" && input.place !== "bar";
+      clearOutTimer();
+      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "bar";
       const next = confirmation ? { ...input, place: "page" as const } : input;
       remaining.current = toastMs(next);
       const current = phaseRef.current;
       revealNow.current = current === "pad" || current === "fade" || current === "in";
       if (!revealNow.current) setPhase("measure");
       if (host.current) {
-        if (next.place === "page" || next.place === "tab" || next.place === "bar") host.current.dataset.place = next.place;
+        if (next.place === "page" || next.place === "bar") host.current.dataset.place = next.place;
         else delete host.current.dataset.place;
       }
       const id = seq.current;
@@ -79,18 +120,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const dismiss = useCallback((id?: number) => {
     if (id != null && toastRef.current?.id !== id) return;
     acting.current = false;
-    clearTimer();
-    setPhase("off");
-    setToast(null);
-  }, []);
+    leave();
+  }, [leave]);
 
   function runAction() {
     if (!toast?.onAction || acting.current) return;
     acting.current = true;
     const action = toast.onAction;
-    clearTimer();
-    setPhase("off");
-    setToast(null);
+    leave();
     action();
   }
 
@@ -140,7 +177,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
     padToken.current += 1;
     const layer = node;
-    if (toast.place === "page" || toast.place === "tab" || toast.place === "bar") layer.dataset.place = toast.place;
+    if (toast.place === "page" || toast.place === "bar") layer.dataset.place = toast.place;
     else delete layer.dataset.place;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let generation = 0;
@@ -154,6 +191,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     let onViewport: (() => void) | null = null;
     let settling = false;
     let settleFrame = 0;
+    // A replacement on screen is shown in place, with no second fade.
+    let instant = false;
 
     function snap() {
       const sheet = toastAnchor(layer).sheet;
@@ -243,52 +282,42 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       release();
     }
 
-    function finishPad(gen: number) {
-      if (gen !== generation || !waiting) return;
+    /** The toast fades and rises in (200ms, m-toast-fade); it is shown once that ends. */
+    function fade(gen: number) {
+      if (gen !== generation) return;
       waiting = false;
       window.clearTimeout(fallback);
       removeEnd?.();
       removeEnd = null;
       setPhase("fade");
       release();
+      if (reduce) {
+        showNow(gen);
+        return;
+      }
       const toastEl = layer.querySelector(".ui-toast");
       const onFade = (event: Event) => {
         if (gen !== generation) return;
-        if (!(event instanceof TransitionEvent) || event.propertyName !== "opacity") return;
+        if (!("animationName" in event) || event.animationName !== "m-toast-fade") return;
         if (event.target !== toastEl) return;
-        toastEl?.removeEventListener("transitionend", onFade);
+        toastEl?.removeEventListener("animationend", onFade);
         showNow(gen);
       };
-      requestAnimationFrame(() => {
-        if (gen !== generation) return;
-        toastEl?.addEventListener("transitionend", onFade);
-      });
+      toastEl?.addEventListener("animationend", onFade);
       fallback = window.setTimeout(() => {
-        toastEl?.removeEventListener("transitionend", onFade);
+        toastEl?.removeEventListener("animationend", onFade);
         showNow(gen);
-      }, 220);
+      }, 260);
+    }
+
+    function finishPad(gen: number) {
+      if (gen !== generation || !waiting) return;
+      if (instant) showNow(gen);
+      else fade(gen);
     }
 
     function openDrawer(): Element | null {
       return document.querySelector("[data-vaul-drawer][data-state='open']");
-    }
-
-    /** A confirmation stays under the header. It stays hidden while the sheet's controls still cross that slot. */
-    function toastBlockedByDrawer(): boolean {
-      if (layer.dataset.place !== "page") return false;
-      const toast = layer.querySelector(".ui-toast");
-      const sheet = openDrawer();
-      if (!(toast instanceof HTMLElement) || !(sheet instanceof Element)) return false;
-      const toastRect = toast.getBoundingClientRect();
-      if (toastRect.height === 0) return false;
-      const gap = cssPx("--space-2");
-      for (const control of sheet.querySelectorAll("button, a[href], input, textarea, select")) {
-        if (!(control instanceof HTMLElement)) continue;
-        const rect = control.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) continue;
-        if (rect.top < toastRect.bottom + gap - 1 && rect.bottom > toastRect.top) return true;
-      }
-      return false;
     }
 
     function sheetShape(): string {
@@ -331,7 +360,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         }, 220);
         return;
       }
-      showNow(gen);
+      if (instant) showNow(gen);
+      else fade(gen);
     }
 
     function begin() {
@@ -347,26 +377,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       // With no sheet, there is no shape change to wait for. A new toast over a
       // sheet waits until the shape is the same across three frames, so a pick
       // that returns to the summary does not flash the tall position.
-      if (revealNow.current || !(openDrawer() instanceof Element)) {
+      // A confirmation sits above the floor, which a sheet does not move, so it is not held.
+      if (revealNow.current || layer.dataset.place === "page" || !(openDrawer() instanceof Element)) {
+        instant = revealNow.current;
         commitPlacement(gen);
-        return;
-      }
-      if (layer.dataset.place === "page") {
-        placeToast(layer);
-        const started = performance.now();
-        let clear = 0;
-        const wait = () => {
-          if (gen !== generation) return;
-          placeToast(layer);
-          if (toastBlockedByDrawer()) clear = 0;
-          else clear += 1;
-          if (clear >= 2 || performance.now() - started > 700) {
-            commitPlacement(gen);
-            return;
-          }
-          settleFrame = requestAnimationFrame(wait);
-        };
-        settleFrame = requestAnimationFrame(wait);
         return;
       }
       settling = true;
@@ -393,32 +407,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
     begin();
 
-    // A confirmation is placed while the sheet is still closing. Vaul keeps the
-    // drawer mounted, and its rect still looks open, until the animation ends.
-    // Place again when that drawer closes or leaves, so the toast stays under
-    // the header instead of the gap the sheet used to occupy.
-    let drawerWatch: MutationObserver | null = null;
-    if (layer.dataset.place === "page" && typeof MutationObserver !== "undefined") {
-      drawerWatch = new MutationObserver((records) => {
-        const drawerMoved = records.some((record) => {
-          if (record.type === "attributes" && record.attributeName === "data-state") {
-            return record.target instanceof Element && record.target.hasAttribute("data-vaul-drawer");
-          }
-          return [...record.addedNodes, ...record.removedNodes].some((node) => (
-            node instanceof Element
-            && (node.hasAttribute("data-vaul-drawer") || node.querySelector("[data-vaul-drawer]") != null)
-          ));
-        });
-        if (drawerMoved) placeToast(layer);
-      });
-      drawerWatch.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["data-state"],
-      });
-    }
-
     // A bar toast follows the bar: when the bar comes or goes (the last card skipped), place again.
     let floorWatch: MutationObserver | null = null;
     if (layer.dataset.place === "bar" && typeof MutationObserver !== "undefined") {
@@ -443,7 +431,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       removeEnd?.();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
-      drawerWatch?.disconnect();
       if (onViewport) {
         window.removeEventListener("resize", onViewport);
         window.visualViewport?.removeEventListener("resize", onViewport);

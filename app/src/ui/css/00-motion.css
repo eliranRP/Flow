@@ -127,6 +127,41 @@
   overflow: hidden;
 }
 
+/* FLOW-363 (3c), decision 0182: a toast rises 12px as it fades in (--motion-fade), and sinks as it
+   fades out (--motion-toast-out). The fade is linear; the rise and the sink ease. */
+@keyframes m-toast-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes m-toast-rise {
+  from {
+    transform: translateY(var(--rise-toast));
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes m-toast-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes m-toast-sink {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(var(--rise-toast));
+  }
+}
+
 @keyframes m-bar-grow {
   from {
     transform: scaleX(0);
