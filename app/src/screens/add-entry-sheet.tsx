@@ -107,7 +107,6 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
         projects={projects}
         categories={cats}
         draft={draft}
-        initialAdding={fill?.adding ?? null}
         onDraftChange={setDraft}
         document={document}
         match={match}

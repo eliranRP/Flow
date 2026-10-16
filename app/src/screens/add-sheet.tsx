@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { addTriggerRef } from "../add-trigger";
 import { documentProblem, type AttachedDocument, type EntryKind } from "../add-entry";
-import { SAMPLE_ENTRY_FILLS } from "../add-entry-sample";
+import { SAMPLE_ENTRY_FILLS, SAMPLE_FROM_PROJECT } from "../add-entry-sample";
 import { documentOf } from "../add-entry-doc";
 import { quickNewPath, quickNewState } from "../open-from-query";
 import { usePreviewSearch } from "../preview";
@@ -36,6 +36,9 @@ interface OpenEntry {
  */
 export function AddForm({ bank }: { bank?: AddBankState } = {}) {
   const search = usePreviewSearch();
+  const [params] = useSearchParams();
+  // FLOW-369: `?entry=project` is the preview's from-project sheet, with an invented project (add-entry-sample.ts).
+  if (params.get("entry") === "project") return <AddSheet bank={bank} fromProject={SAMPLE_FROM_PROJECT} />;
   const projectId = new URLSearchParams(search).get("project");
   // The project's name is read only when the sheet opens from one (the books query needs its provider).
   if (projectId == null) return <AddSheet bank={bank} fromProject={null} />;
