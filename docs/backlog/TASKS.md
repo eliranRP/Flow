@@ -8,25 +8,21 @@ Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI chang
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `future` (parked by the owner, in [Future features](#future-features)), `blocked`, `done`.
 
-Last full sync: 2026-10-07. Lanes table: 2026-10-10 17:45Z.
+Last full sync: 2026-10-07. Lanes table: 2026-10-16.
 
 ## Lanes now
 
-Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Only the lane manager edits it (in tasks/index-source.md, in its own commits) when a lane starts, stops, or changes what it owns; a lane's PR changes only its own task files.
+Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Only the lane manager edits it (in tasks/index-source.md, in its own commits) when a lane starts, stops, or changes what it owns; a lane's PR changes only its own task files.
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 3 | Parked (FLOW-436 done #558); takes the next server task | Server side of the next plan-first feature |
-| Dev lane 4 | FLOW-812 faster CI (#571; the lane manager times its merge, since it changes main's workflow). Done today: FLOW-214 and 215 (#570, with the FLOW-816 follow-up `CI_BENCH_MS` 98 ms and the Storybook sheet-drawer fix), 814 #545, 815 #550, 816 #552, 817 #554 | The Flow MCP agent's next request (FLOW-216), top of the queue |
-| UI lane 1 | FLOW-914, the red-main fix: the SplitPartsHint "long names, 320" story reports its date spans clipped on main 8cc332c (first full run after #561, 564, 565, 570, 562). Done today: FLOW-425 #561. Parked 17:21Z to 17:40Z, cycle 20 found nothing on Home, profit and project | Next cycle item from the design lead, or other work from the lane manager |
-| UI lane 2 | FLOW-314 follow-ups #563: the review-card swipe walk on a project's waiting list, the next page at the last row, the Home breakdown list. Done today: FLOW-424 #553 | Next cycle item on the review and transaction screens |
-| UI lane 3 | FLOW-427: cycle 20, the loan pages (schedule matches the balance, one row style, part count skips $0 parts, no lone word at 320). Done today: FLOW-426 #564, 912 #546, 910 #555 | Settings, project screens, and other areas outside the review and transaction screens |
-| Backlog bug fixes | FLOW-818: the vitest 4 bump (dependabot #566 and #567 on one branch, #569); closes the dependabot PRs at its merge | Next bug the lane manager routes |
-| Temporary lanes (owner asks, one thread each) | Cash month thread: FLOW-438 #572, the month's transactions on the project cash month page and the profit section (FLOW-437 done #562). Closed today at their merge: FLOW-422, 423, 430 (#528), 431 (#530, #551, #556), 432, 433, 434 (#536), 435, 436 (#558), 707, 908, 909, 911, 913 (#565) | Each closes at its merge |
-| UI/UX review cycle | Design lead; cycle 20 done on cd4d7a9 (#568, FLOW-427); next cycle on the next deploy; signs off UI PRs in a PR comment | Next deploy batch |
-| Production QA | Deploy and prod check after each deploy, sandbox QA company only (17:01Z deploy of cd4d7a9 verified; the 8cc332c run failed, so production stays on cd4d7a9) | Next deploy batch |
-| MCP/data agent | Real data through the MCP tools; never changes the repo; its requests go to dev lane 4 first (nothing pending at 17:21Z) | Requests go to the top of the queue |
-| Retired | Dev lane 1 (2026-10-10 08:21Z), Dev lane 2 (FLOW-406 done), UI lane 4 (2026-10-10 10:41Z, nothing ready in Search, loans, push), File split (FLOW-807 done #287) | Reopened by the lane manager when the backlog needs them |
+| Review state (lane manager) | Runs the lanes, reviews and assigns tasks; edits this table and the lane rows only. Owns no code task | Assigns the next task to each free lane |
+| UI builder lanes | FLOW-363 step 4 on #617, then FLOW-364 (Home) and FLOW-366 (month lines and transaction page) | The next redesign batch after 363 step 4 merges |
+| Dev lane | FLOW-835 and backlog sync (smoke-readonly copy, stale statuses, this table), then the PR-check e2e job for UI PRs | Assigned by the Review state lane |
+| Flow MCP agent | Data only: real bookkeeping through the MCP tools; never changes the repo. No open requests at 07:27Z | Requests go to the Review state lane |
+| Backlog report | The status page: https://claude.ai/artifact/VK2hGv7HHmVMn2h7BYKS1P | Refreshed on request |
+
+Five lanes, 2026-10-16.
 
 Merge rule since 15:22Z: right before merging, a lane looks at main's latest workflow run; if it is a full suite and deploy run still in progress, the lane holds its merge until that run completes. The lane manager still announces holds, to every lane. Since 17:35Z: only the deploy run exercises the stories and e2e; the plan-only runs between deploys do not, so a merge can turn main red up to four merges later than it lands.
 
