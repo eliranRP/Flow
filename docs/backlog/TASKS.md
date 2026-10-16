@@ -205,7 +205,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-139"></a>[FLOW-139](tasks/FLOW-139.md) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
 | <a id="flow-140"></a>[FLOW-140](tasks/FLOW-140.md) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
 | <a id="flow-141"></a>[FLOW-141](tasks/FLOW-141.md) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
-| <a id="flow-919"></a>[FLOW-919](tasks/FLOW-919.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
+| <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 
 ## MCP
 
@@ -317,6 +317,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-370"></a>[FLOW-370](tasks/FLOW-370.md) | Redesign: one split screen for projects and categories | UI (design approved) |
 | <a id="flow-916"></a>[FLOW-916](tasks/FLOW-916.md) | Lines detail: receipt thumbnail row once a receipt image path exists | UI (follow-up) |
 | <a id="flow-917"></a>[FLOW-917](tasks/FLOW-917.md) | Add (+) sheet: camera, receipt reading and the supplier suggestion | UI (design approved) |
+| <a id="flow-919"></a>[FLOW-919](tasks/FLOW-919.md) | FLOW-369 follow-up: AddProject and AddSheet proofs under 3% | UI (design approved) |
 
 ## Projects and reports
 
