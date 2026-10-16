@@ -3,6 +3,7 @@ import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
+import { forceReducedMotion } from "../ui/reduced-motion";
 
 const meta = {
   title: "Screens/Transaction board",
@@ -109,4 +110,10 @@ export const Scrolled: Story = {
     window.scrollTo(0, 400);
     await new Promise((resolve) => setTimeout(resolve, 300));
   },
+};
+
+/** The board's reduced-motion state: the same Pending frame with the motion preference set, so nothing animates in. */
+export const ReducedMotion: Story = {
+  decorators: [forceReducedMotion],
+  render: () => <BoardTransactionStory sample={boardTxn} />,
 };
