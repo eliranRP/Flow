@@ -18,7 +18,7 @@ export function SkipSheet({
 }) {
   const [busy, setBusy] = useState(false);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={SKIP_SHEET_TITLE} busy={busy}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={SKIP_SHEET_TITLE} busy={busy} closeButton={false}>
       <p className="t-label ui-skip-body">{SKIP_SHEET_BODY}</p>
       <Button
         type="button"

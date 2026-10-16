@@ -1,6 +1,5 @@
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { Chip } from "../ui/chip";
 import { REVIEW_APPROVE, REVIEW_APPROVED, REVIEW_META } from "./copy";
 
 /**
@@ -11,13 +10,13 @@ export function SampleCard({ approved, busy = false, onApprove }: { approved: bo
   return (
     <Card as="section" className={approved ? "ui-sample ui-sample-approved" : "ui-sample"} aria-label="שורת דוגמה">
       <div className="ui-sample-head">
-        <span className="ui-sample-name t-name">Northline Supply</span>
+        <span className="ui-sample-name">Northline Supply</span>
         <bdi className="ui-sample-amount ui-num" dir="ltr">−$409.01</bdi>
       </div>
       <p className="ui-sample-meta t-hint">{REVIEW_META}</p>
       <div className="ui-sample-chips">
-        <Chip kind="choice">Birch Lane</Chip>
-        <Chip kind="choice">חומרים</Chip>
+        <span className="ui-sample-chip">Birch Lane</span>
+        <span className="ui-sample-chip">חומרים</span>
       </div>
       {approved ? (
         <p className="ui-sample-done t-label" role="status">{REVIEW_APPROVED}</p>

@@ -247,6 +247,16 @@
 
 .ui-onb-done-label {
   color: var(--color-text-secondary);
+  margin-inline-end: auto;
+}
+
+.ui-onb-done .ui-onb-mark {
+  inline-size: auto;
+  block-size: auto;
+  background: transparent;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-name-weight);
 }
 
 .ui-onb-mark {
@@ -320,7 +330,8 @@
   gap: var(--space-2);
   padding: var(--space-card-inset);
   border-radius: var(--radius-card);
-  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
   text-align: start;
 }
 
@@ -333,6 +344,22 @@
 
 .ui-sample-name {
   color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-sample-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-sample-meta {
