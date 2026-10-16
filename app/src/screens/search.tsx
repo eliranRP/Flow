@@ -441,7 +441,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
       <SearchFilterSheet
         open={sheetOpen}
         onOpenChange={setSheet}
-        draft={draft}
+        edit={draft}
         onDraft={(patch) => { setDraft((current) => ({ ...current, ...patch })); }}
         projects={projects}
         count={draftCount}

@@ -38,7 +38,7 @@ export function activeFilterCount(filters: SearchFilters): number {
 export function SearchFilterSheet({
   open,
   onOpenChange,
-  draft,
+  edit,
   onDraft,
   projects,
   count,
@@ -47,7 +47,7 @@ export function SearchFilterSheet({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  draft: SearchFilters;
+  edit: SearchFilters;
   onDraft: (patch: Partial<SearchFilters>) => void;
   projects: readonly SearchSheetProject[];
   /** The live count for the draft filters; null while it loads. */
@@ -56,8 +56,8 @@ export function SearchFilterSheet({
   onApply: () => void;
 }) {
   // A finished project stays listed while it is the filter, so the chip shows what the count applies.
-  const shown = projects.filter((project) => project.status !== "finished" || project.id === draft.project);
-  const other = periodKey(draft.period) === "other";
+  const shown = projects.filter((project) => project.status !== "finished" || project.id === edit.project);
+  const other = periodKey(edit.period) === "other";
   const applyLabel = count == null ? "הצגת תנועות" : count === 1 ? "הצגת תנועה אחת" : `הצגת ${searchCountWords(count)}`;
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="סינון">
@@ -67,7 +67,7 @@ export function SearchFilterSheet({
           <SegmentedControl<TypeChoice>
             label="סוג"
             showLabel={false}
-            value={draft.direction ?? "all"}
+            value={edit.direction ?? "all"}
             options={[
               { value: "all", label: "הכל" },
               { value: "expense", label: "הוצאות" },
@@ -81,12 +81,12 @@ export function SearchFilterSheet({
           <SegmentedControl<PeriodChoiceKey>
             label="תקופה"
             showLabel={false}
-            value={periodKey(draft.period)}
+            value={periodKey(edit.period)}
             options={[
               { value: "all", label: "הכל" },
               { value: "month", label: "החודש" },
               { value: "months3", label: "3 חודשים" },
-              ...(other ? [{ value: "other" as const, label: periodPillLabel(draft.period) }] : []),
+              ...(other ? [{ value: "other" as const, label: periodPillLabel(edit.period) }] : []),
             ]}
             onChange={(value) => { if (value !== "other") onDraft({ period: periodFor(value) }); }}
           />
@@ -94,11 +94,11 @@ export function SearchFilterSheet({
         <div className="ui-search-filter-group">
           <p className="ui-search-filter-label">פרויקט</p>
           <div className="ui-search-filter-projects" role="group" aria-label="פרויקט">
-            <Chip pressed={draft.project == null} onClick={() => { onDraft({ project: null }); }}>כל הפרויקטים</Chip>
+            <Chip pressed={edit.project == null} onClick={() => { onDraft({ project: null }); }}>כל הפרויקטים</Chip>
             {shown.map((project) => (
               <Chip
                 key={project.id}
-                pressed={draft.project === project.id}
+                pressed={edit.project === project.id}
                 onClick={() => { onDraft({ project: project.id }); }}
               >
                 {project.name}
@@ -108,7 +108,7 @@ export function SearchFilterSheet({
         </div>
         <Toggle
           label="רק ממתינים לאישור"
-          checked={draft.review}
+          checked={edit.review}
           onChange={(checked) => { onDraft({ review: checked }); }}
         />
         <div className="ui-search-filter-foot">
