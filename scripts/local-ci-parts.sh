@@ -212,8 +212,13 @@ slice_ready() {
   phases="$dir/phases.txt"
   for name in static types tests; do
     (
+      # Not in an if or || list: bash ignores errexit there, even inside the subshell, so a
+      # failing step in the middle of a slice would not stop it.
       t0="$(date +%s)"
-      if ( set -euo pipefail; "slice_$name" ) >"$dir/$name.log" 2>&1; then r=pass; else r=fail; fi
+      set +e
+      ( set -euo pipefail; "slice_$name" ) >"$dir/$name.log" 2>&1
+      rc=$?
+      if (( rc == 0 )); then r=pass; else r=fail; fi
       echo "$name $r $(( $(date +%s) - t0 ))" >>"$phases"
     ) &
   done
@@ -224,10 +229,16 @@ slice_ready() {
   done
   sort -o "$phases" "$phases"
   stamp="$(git rev-parse --git-dir)/flow-ci-stamp.md"
-  node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp"
-  cat "$stamp"
-  if [[ -n "${CI_STAMP_PR:-}" ]]; then
-    gh pr comment "$CI_STAMP_PR" --body-file "$stamp"
+  # A stamp that fails to write or post is reported, but the logs of a failed slice still print and the
+  # temp directory still goes.
+  if node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp"; then
+    cat "$stamp"
+    if [[ -n "${CI_STAMP_PR:-}" ]]; then
+      gh pr comment "$CI_STAMP_PR" --body-file "$stamp" || echo "local-ci: could not post the stamp on PR $CI_STAMP_PR." >&2
+    fi
+  else
+    echo "local-ci: could not write the stamp." >&2
+    failed=1
   fi
   if grep -q ' fail ' "$phases"; then
     failed=1
