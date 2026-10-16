@@ -49,7 +49,7 @@ function ChargeRows({
               {current ? <span className="ui-charges-badge">השורה הזו</span> : null}
             </span>
             {mark == null ? null : (
-              <span className={cx("ui-charges-mark", mark.hurts ? "ui-delta-bad" : "ui-delta-good")}>
+              <span className={cx("ui-charges-mark", mark.hurts ? "ui-delta-bad" : "ui-delta-flat")}>
                 {mark.arrow} <bdi dir="ltr">{mark.percent}</bdi>
               </span>
             )}
