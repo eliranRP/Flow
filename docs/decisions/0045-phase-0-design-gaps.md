@@ -1,7 +1,8 @@
 # Phase 0 design gaps
 
 **Date:** 2026-09-28
-**Status:** Accepted
+**Status:** Superseded
+**Superseded by:** [0183](0183-tab-bar-floor-from-the-board.md), for item 6 (the tab-bar floor) only. Items 1 to 5 stay in force.
 
 ## Context
 

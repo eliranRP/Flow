@@ -9,13 +9,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Empty: Story = { args: { reviewCount: 0 } };
-export const Pending: Story = { args: { reviewCount: 7 } };
-export const LargeCount: Story = { args: { reviewCount: 100 } };
+export const Default: Story = {};
 
-/** FLOW-506: the router-free picture the setup demos draw, on לאישור. */
+/** FLOW-364: the loans tab is current on the loans page. */
+export const Loans: Story = { args: { section: "loans" } };
+
+/** FLOW-506: the router-free picture the setup demos draw, on בית. */
 export const Picture: Story = {
-  args: { reviewCount: 12 },
   parameters: { flowRouter: false },
-  render: (args) => <TabBarPicture section="review" reviewCount={args.reviewCount} />,
+  render: () => <TabBarPicture section="home" />,
 };

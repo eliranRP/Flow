@@ -21,6 +21,14 @@ export type CompactBarProps = {
   actions?: ReactNode;
   /** A row under the bar that stays with it, e.g. the organize chips (FLOW-363 3c). */
   panel?: ReactNode;
+  /** FLOW-364: Home's bar, in the colour band (or the past month's darker one). With `centre`, the bar is its own row. */
+  tone?: "band" | "band-past";
+  /** FLOW-364: Home's bar, the earlier arrow at the start. */
+  start?: ReactNode;
+  /** FLOW-364: Home's bar, the centre button (the month and its net). */
+  centre?: ReactNode;
+  /** FLOW-364: Home's bar, the later arrow at the end. */
+  end?: ReactNode;
 };
 
 /** A bar with a panel reports "panel": it is taller than a list or detail bar. */
@@ -46,7 +54,7 @@ function reportShowing(size: Reported, delta: number): void {
  * centred in one line, an optional figure after it, actions at the end. It stays mounted once a
  * page can show it, so the slide out has something to run on; `shown` drives the classes.
  */
-export function CompactBar({ title, figure, label, backTo, size = "list", shown, actions, panel }: CompactBarProps) {
+export function CompactBar({ title, figure, label, backTo, size = "list", shown, actions, panel, tone, start, centre, end }: CompactBarProps) {
   const reported: Reported = panel != null ? "panel" : size;
   const goBack = useGoBack();
   const landsOnLabel = useBackLandsOn(backTo ?? "/");
@@ -99,6 +107,23 @@ export function CompactBar({ title, figure, label, backTo, size = "list", shown,
       <IconButton label="חזרה" onClick={() => { goBack(backTo); }}>
         <BackIcon />
       </IconButton>
+    );
+  }
+  if (centre != null) {
+    // FLOW-364: Home's bar. Its arrows keep the scroll; its centre opens the month drawer.
+    return (
+      <div
+        ref={root}
+        className={`ui-compact-bar ui-compact-bar-band ui-compact-bar-${tone === "band-past" ? "band-past" : "band"} ${state}`}
+        aria-hidden={!shown}
+        inert={shown ? undefined : true}
+      >
+        <div className="ui-compact-bar-row ui-compact-bar-band-row">
+          {start}
+          {centre}
+          {end}
+        </div>
+      </div>
     );
   }
   return (

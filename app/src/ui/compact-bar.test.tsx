@@ -103,3 +103,32 @@ describe("CompactBar", () => {
     expect(container.querySelector(".ui-compact-bar")).not.toHaveAttribute("inert");
   });
 });
+
+describe("CompactBar on Home (FLOW-364)", () => {
+  it("is the colour band with its arrows and centre, in one row", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <CompactBar
+          title=""
+          shown
+          tone="band"
+          start={<button type="button">חודש קודם</button>}
+          centre={<button type="button">בחירת חודש</button>}
+          end={<button type="button">חודש הבא</button>}
+        />
+      </MemoryRouter>,
+    );
+    const root = container.querySelector(".ui-compact-bar");
+    expect(root).toHaveClass("ui-compact-bar-band", "m-bar-in");
+    expect(root?.querySelector(".ui-compact-bar-band-row")?.textContent).toBe("חודש קודםבחירת חודשחודש הבא");
+  });
+
+  it("uses the past month's colour for a past month", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <CompactBar title="" shown tone="band-past" centre={<button type="button">בחירת חודש</button>} />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector(".ui-compact-bar")).toHaveClass("ui-compact-bar-band-past");
+  });
+});

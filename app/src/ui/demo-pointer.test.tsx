@@ -146,7 +146,6 @@ describe("pointer on the storyboards", () => {
         SUMIT_DEMO_MS,
         () => {
           expect(visibleText()).toContain("מחובר");
-          expect(visibleText()).toContain("12");
         },
       ],
       [

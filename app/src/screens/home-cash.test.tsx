@@ -5,6 +5,7 @@ import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
 import { HomeScreen, ProfitScreen } from "./HomeScreen";
+import { homeMonthLabel } from "./home-parts";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -98,53 +99,68 @@ beforeEach(() => {
   rpc.calls = [];
 });
 
-describe("Home's cash (FLOW-413, frame b)", () => {
-  it("names the month on the band with its cash, then נכנס, יצא and a quiet רווח החודש", async () => {
+function bandOf(): HTMLElement {
+  const band = document.querySelector(".ui-band");
+  if (!(band instanceof HTMLElement)) throw new Error("no band");
+  return band;
+}
+
+describe("Home's cash (FLOW-364: the redesigned Home)", () => {
+  it("shows the month in the band with its net, נכנס, יצא and the split card", async () => {
     wrap();
-    const figure = await screen.findByRole("heading", { name: "₪3,200" });
-    expect(figure.closest(".ui-band")).not.toBeNull();
-    expect(screen.getByText(/^תזרים /).closest(".ui-band")).not.toBeNull();
+    await screen.findByText("תזרים · עד היום");
+    const band = bandOf();
+    expect(within(band).getByText("₪3,200")).toBeInTheDocument();
+    expect(within(band).getByText(homeMonthLabel(current))).toBeInTheDocument();
+    expect(screen.getByText("תזרים · עד היום")).toBeInTheDocument();
     expect(rpc.calls.find((c) => c.name === "cash_months")?.args).toEqual({ p_months: 4 });
-    const incoming = screen.getByRole("link", { name: /^נכנס ב/ });
+    const incoming = screen.getByRole("link", { name: /^נכנס/ });
     expect(incoming).toHaveAttribute("href", `/cash/${current}/in/ILS`);
-    expect(within(incoming).getByText("+₪18,000")).toHaveClass("ui-income");
-    expect(screen.getByRole("link", { name: /^יצא ב/ })).toHaveAttribute("href", `/cash/${current}/out/ILS`);
-    expect(screen.getByRole("link", { name: /^רווח ב/ })).toHaveClass("ui-cash-quiet");
-    // FLOW-418: the rest of the month's figure, profit leaves out, under it with what it holds.
-    const kept = screen.getByRole("link", { name: /^לא נספר ברווח ב\S+ −₪2,400 – פירוט$/ });
+    expect(screen.getByRole("link", { name: /^יצא/ })).toHaveAttribute("href", `/cash/${current}/out/ILS`);
+    // FLOW-418: the split card, the cash profit leaves out first, then the month's profit.
+    expect(screen.getByRole("heading", { name: "ממה מורכב התזרים" })).toBeInTheDocument();
+    const kept = screen.getByRole("link", { name: /^השקעה, לא נספר ברווח/ });
     expect(kept).toHaveAttribute("href", `/cash/${current}/kept/ILS`);
-    expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים")).toHaveClass("ui-flow-hint");
-    // It is not a loss, so its minus stays out of red.
-    expect(within(kept).getByText("−₪2,400")).not.toHaveClass("ui-loss");
+    expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים · 30%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^רווח החודש/ })).toBeInTheDocument();
     // No profit band, period pill or projects: those are the profit view's.
     expect(screen.queryByRole("button", { name: /בחירת תקופה/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "פרויקטים" })).not.toBeInTheDocument();
   });
 
-  it("lists the three earlier months by their net, a loss in red, each opening its page", async () => {
+  it("drops the old earlier-months list and its two links (FLOW-364)", async () => {
     wrap();
-    const loss = await screen.findByRole("link", { name: /−₪1,150/ });
-    expect(screen.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/cash/history");
-    expect(loss).toHaveAttribute("href", `/cash/${month(1)}`);
-    expect(within(loss).getByText("−₪1,150")).toHaveClass("ui-loss");
-    expect(screen.getByRole("link", { name: /^תזרים \S+ ₪2,400/ })).toHaveAttribute("href", `/cash/${month(2)}`);
-    expect(screen.getByRole("link", { name: /₪1,800/ })).toHaveAttribute("href", `/cash/${month(3)}`);
+    await screen.findByText("תזרים · עד היום");
+    expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "לכל החודשים" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "לכל הקבועים" })).not.toBeInTheDocument();
+  });
+
+  it("reads a past month in the darker band, with a way back to the current month", async () => {
+    wrap(0, `/?month=${month(1)}`);
+    await screen.findByText("תזרים · חודש סגור");
+    const back = screen.getByRole("link", { name: /^חזרה ל/ });
+    expect(back).toHaveAttribute("href", "/");
+    expect(bandOf()).toHaveClass("ui-band-past");
+    expect(within(bandOf()).getByText("−₪1,150")).toBeInTheDocument();
+    expect(screen.getByText(`שינוי מול ${homeMonthLabel(month(2)).split(" ")[0] ?? ""}, חודש מלא`)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^הוספה/ })).not.toBeInTheDocument();
   });
 
   it("keeps the attention box when something waits, and hides it when nothing does (design lead)", async () => {
     const first = wrap(7);
     expect(await screen.findByRole("link", { name: /7 פריטים ממתינים לאישור/ })).toHaveAttribute("href", "/review");
+    expect(screen.getByRole("region", { name: "דורש טיפול" })).toBeInTheDocument();
     first.unmount();
     wrap(0);
-    await screen.findByRole("heading", { name: "₪3,200" });
+    await screen.findByText("תזרים · עד היום");
     expect(screen.queryByText(/ממתינים לאישור/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "דורש טיפול" })).not.toBeInTheDocument();
   });
 
-  it("opens the profit view on the month from רווח החודש, with a way back to the cash", async () => {
+  it("opens the profit view on the month from רווח החודש", async () => {
     wrap();
-    fireEvent.click(await screen.findByRole("link", { name: /^רווח ב/ }));
-    expect(await screen.findByRole("button", { name: "חזרה לתזרים" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /^רווח החודש/ }));
     expect(await screen.findByRole("button", { name: /בחירת תקופה/ })).toBeInTheDocument();
     const profit = rpc.calls.filter((c) => c.name === "get_dashboard").at(-1);
     expect(profit?.args).toMatchObject({ p_from: `${current}-01` });

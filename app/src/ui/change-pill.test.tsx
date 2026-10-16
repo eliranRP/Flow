@@ -54,3 +54,24 @@ describe("ChangePill", () => {
     expect(pillOf(down.container)).toHaveClass("ui-delta-good");
   });
 });
+
+describe("ChangePill amount mode (FLOW-364)", () => {
+  it("shows the absolute change with an arrow, in the tone the caller decided", () => {
+    const { container } = render(
+      <ChangePill amount={{ minor: 1_234_500n, currency: "ILS" }} tone="helps" comparison="משבוע שעבר" />,
+    );
+    const pill = pillOf(container);
+    expect(pill).toHaveClass("ui-delta-good");
+    expect(pill).toHaveTextContent("▲");
+    expect(pill.querySelector("bdi")).toHaveAttribute("dir", "ltr");
+    expect(pill.querySelector("bdi")).toHaveTextContent("12,345");
+  });
+
+  it("is red when it hurts and down when the change is negative", () => {
+    const { container } = render(<ChangePill amount={{ minor: -50_000n, currency: "ILS" }} tone="hurts" comparison="מחודש שעבר" />);
+    const pill = pillOf(container);
+    expect(pill).toHaveClass("ui-delta-bad");
+    expect(pill).toHaveTextContent("▼");
+    expect(pill).not.toHaveTextContent("−");
+  });
+});

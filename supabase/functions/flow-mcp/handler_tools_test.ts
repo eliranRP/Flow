@@ -104,6 +104,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "assign_expenses",
     "set_expense_category",
     "create_project",
+    "update_project",
+    "delete_project",
     "create_category",
     "create_projects",
     "create_categories",
