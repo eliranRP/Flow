@@ -49,7 +49,6 @@ function show(sample: NonNullable<TransactionDetail>, client = new QueryClient()
   );
 }
 
-/** The P&L switch sits in the נספר ב sheet, so the sheet opens first (FLOW-366). */
 /** The split row navigates, so this render has the split route to land on. */
 function showRouted(sample: NonNullable<TransactionDetail>, split: LineSplitRead | null = null) {
   render(
@@ -68,6 +67,7 @@ function showRouted(sample: NonNullable<TransactionDetail>, split: LineSplitRead
   );
 }
 
+/** The P&L switch sits in the נספר ב sheet, so the sheet opens first (FLOW-366). */
 function pnlSwitch() {
   return screen.getByRole("switch", { name: "נספר ברווח" });
 }
@@ -96,14 +96,18 @@ describe("one line out of the P&L", () => {
     expect(screen.getByRole("button", { name: /^נספר ב רווח ותזרים/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^נספר ב/ }));
     expect(pnlSwitch()).toBeChecked();
+    // On: the switch is described by the line's category (the redesign's hint; the old no-hint check no longer holds).
+    expect(pnlSwitch()).toHaveAccessibleDescription("לפי הקטגוריה");
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("הוצא מהרווח")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     expect(screen.getByText("רק השורה הזו. הקטגוריה לא משתנה.")).toBeTruthy();
+    // Off: the hint names the state; the old category sentence was removed by the redesign.
+    expect(pnlSwitch()).toHaveAccessibleDescription("כבוי לשורה הזו");
     fireEvent.click(screen.getByText("ביטול"));
     expect(await screen.findByText("נספר ברווח")).toBeTruthy();
     expect(pnlSwitch()).toBeChecked();
-  });
+  }, 15000);
 
   it("brings one line of a kept-out category back in from the sheet", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });

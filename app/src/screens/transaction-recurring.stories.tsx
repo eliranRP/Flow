@@ -11,7 +11,7 @@ import { StoryRoute } from "../ui/story-route";
  */
 const txn: NonNullable<TransactionDetail> = {
   id: "t-rec",
-  description: "בזק",
+  description: "ספק לדוגמה",
   direction: "expense",
   doc_date: "2026-10-04",
   amount_net: -11_990n,
@@ -19,14 +19,14 @@ const txn: NonNullable<TransactionDetail> = {
   vat_amount: 0n,
   currency: "USD",
   source: "mercury",
-  supplier_name: "בזק",
+  supplier_name: "ספק לדוגמה",
   project_name: "דירת הגפן",
   category_name: "חשבונות",
 } as unknown as NonNullable<TransactionDetail>;
 
 const recurring = (over: Partial<PaymentRecurring>): PaymentRecurring => ({
   transaction_id: "t-rec",
-  party: { direction: "expense", id: "s-bezeq", name: "בזק", currency: "USD" },
+  party: { direction: "expense", id: "s-sample", name: "ספק לדוגמה", currency: "USD" },
   recurring: true,
   override: null,
   detected: true,
