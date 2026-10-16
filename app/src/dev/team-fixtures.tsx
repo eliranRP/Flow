@@ -1,5 +1,5 @@
 import type { Dashboard } from "@flow/shared";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { cashMonthKey } from "../cash";
 import { defaultPeriod } from "../period";
@@ -23,11 +23,49 @@ function SampleTeam({ options, children }: { options: SampleTeamOptions; childre
   );
 }
 
+/** Dev-only: `?email=1` types the board's example address into the open invite sheet, as a reviewer would. */
+function fillInviteEmail() {
+  const started = Date.now();
+  const timer = window.setInterval(() => {
+    const field = document.querySelector<HTMLInputElement>('[role="dialog"] input[type="email"], [role="dialog"] input');
+    if (field) {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, "partner@example.com");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      window.clearInterval(timer);
+    } else if (Date.now() - started > 4000) {
+      window.clearInterval(timer);
+    }
+  }, 100);
+}
+
+/** Dev-only: `?sheet=invite` presses the page's invite button once the list is in, so a proof captures the open sheet. */
+function OpenInviteSheet() {
+  const [params] = useSearchParams();
+  useEffect(() => {
+    if (params.get("sheet") !== "invite") return;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const button = [...document.querySelectorAll("button")].find((el) => el.textContent.includes("הזמנה לצוות"));
+      if (button) {
+        button.click();
+        window.clearInterval(timer);
+        if (params.get("email") === "1") fillInviteEmail();
+      } else if (Date.now() - started > 4000) {
+        window.clearInterval(timer);
+      }
+    }, 100);
+    return () => { window.clearInterval(timer); };
+  }, [params]);
+  return null;
+}
+
 /** `/e2e/team?team=` pending (invite-2), alone, editor, loading, error, or nothing for a-1. */
 export function DevTeam() {
   const [params] = useSearchParams();
   const state = params.get("team");
+  // FLOW-512 proof: ?proof=1 answers at once, so a board capture is not taken on the loading skeleton.
   const options: SampleTeamOptions = {
+    ...(params.get("proof") === "1" ? { delayMs: 0 } : {}),
     pendingInvite: state === "pending",
     alone: state === "alone",
     role: state === "editor" ? "editor" : "owner",
@@ -36,6 +74,7 @@ export function DevTeam() {
   };
   return (
     <SampleTeam key={state} options={options}>
+      <OpenInviteSheet />
       <TeamScreen />
     </SampleTeam>
   );

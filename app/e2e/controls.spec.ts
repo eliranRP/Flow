@@ -23,7 +23,7 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("link", { name: /מנופים לדוגמה/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t-filed\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "הוצאה" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^פרויקט / })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
@@ -373,40 +373,19 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page).toHaveURL(/\/review\?preview=1$/);
 });
 
-test("unpaid opens an invoice, marks it paid from its sheet, keeps it listed, and clears the mark", async ({ page }) => {
-  await page.goto("/e2e/unpaid?preview=1");
-  await page.getByRole("button", { name: "חזרה" }).click();
-  await expect(page).toHaveURL(/\/\?preview=1$/);
-  // FLOW-357: one invoice shows its amount on its row only, so the head is the title alone.
-  await page.goto("/e2e/unpaid?preview=1");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveCount(0);
-  // Two invoices, one already marked: the total counts the open one.
-  await page.goto("/e2e/unpaid?preview=1&marked=1");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
-  // FLOW-335: the total sits on the start (right) side, lined up with the title, not on the end side.
-  const totalBox = await page.locator(".ui-unpaid-totals bdi").first().boundingBox();
-  const titleBox = await page.getByRole("heading", { name: "חשבוניות פתוחות" }).boundingBox();
-  expect(Math.abs((totalBox?.x ?? 0) + (totalBox?.width ?? 0) - ((titleBox?.x ?? 0) + (titleBox?.width ?? 0)))).toBeLessThan(4);
-  // FLOW-357: rows carry no button of their own; a tap opens the invoice's sheet.
-  await expect(page.getByRole("button", { name: "סימון כשולם" })).toHaveCount(0);
-  await page.getByRole("button", { name: /^לקוח לדוגמה/ }).click();
-  const sheet = page.getByRole("dialog", { name: "לקוח לדוגמה" });
-  await sheet.getByRole("button", { name: "סימון כשולם" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await toast(page, "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT.");
-  await expect(page.getByRole("button", { name: /^לקוח לדוגמה/ })).toContainText("סומן כשולם · ממתין לסנכרון");
-  // FLOW-335: a marked row brings the SUMIT sync onto the page.
-  await expect(page.getByRole("button", { name: /רענון מ־SUMIT/ })).toBeVisible();
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪0");
-  // The toast's ביטול clears the mark again.
+test("open invoices: the list adds up, a row marks paid, and ביטול clears the mark", async ({ page }) => {
+  await page.goto("/e2e/invoices");
+  // FLOW-367: the fixture's open total, and the one invoice over 30 days.
+  await expect(page.locator(".ui-inv-total")).toContainText("21,300");
+  await expect(page.locator(".ui-inv-overdue")).toContainText("12,500");
+  const larkspur = page.getByRole("link", { name: /^Larkspur HOA/ }).locator("xpath=ancestor::li");
+  await larkspur.getByRole("button", { name: "סימון כשולם" }).click();
+  await toast(page, "סומן כשולם");
+  await expect(larkspur).toContainText("סומן כשולם · ממתין לסנכרון");
+  await expect(page.locator(".ui-inv-total")).toContainText("15,700");
   await page.locator(".ui-toast").getByRole("button", { name: "ביטול" }).click();
   await toast(page, "הסימון בוטל.");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪500");
-  // A marked invoice's sheet offers ביטול הסימון.
-  await page.getByRole("button", { name: /^לקוח שני לדוגמה/ }).click();
-  await page.getByRole("dialog", { name: "לקוח שני לדוגמה" }).getByRole("button", { name: "ביטול הסימון" }).click();
-  await toast(page, "הסימון בוטל.");
-  await expect(page.locator(".ui-unpaid-totals")).toHaveText("₪1,700");
+  await expect(page.locator(".ui-inv-total")).toContainText("21,300");
 });
 
 test("a project's by-month list opens a month, and Back steps back one screen at a time", async ({ page }) => {
@@ -419,7 +398,7 @@ test("a project's by-month list opens a month, and Back steps back one screen at
   await page.goto("/e2e/project-months?preview=1");
   await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();
   await page.getByRole("link", { name: /^ספטמבר, הפסד/ }).click();
-  await expect(page).toHaveURL(/\/projects\/p1\/profit\?preview=1&period=month&at=2026-09$/);
+  await expect(page).toHaveURL(/\/projects\/p1\/profit\/2026-09\?preview=1&period=month&at=2026-09$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/project-months\?preview=1$/);
 });
@@ -427,7 +406,9 @@ test("a project's by-month list opens a month, and Back steps back one screen at
 test("a transaction shows its VAT, changes, and confirms delete", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
   await expect(page.getByRole("button", { name: "חשבונית ותשלום" })).toHaveCount(0);
-  await expect(page.getByText(/^לפני מע״מ · מע״מ משוער ₪[\d,.]+ · \d{2}\/\d{2}\/\d{4}$/)).toBeVisible();
+  await expect(page.getByText(/^לפני מע״מ · מע״מ \(משוער\) ₪[\d,.]+$/)).toBeVisible();
+  // The date sits on the meta line above the VAT line (FLOW-366).
+  await expect(page.locator(".ui-txn-meta").first()).toContainText(/\d{2}\/\d{2}\/\d{4}/);
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "מחיקה" }).click();
   await expect(page.getByRole("dialog", { name: "למחוק את הרשומה?" })).toBeVisible();
@@ -442,13 +423,14 @@ test("a transaction shows its VAT, changes, and confirms delete", async ({ page 
   await toast(page, "השיוך נשמר");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /הובלה/ })).toBeVisible();
-  await page.getByRole("link", { name: "פיצול בין פרויקטים" }).click();
+  // FLOW-366: the פיצול row (its value names the split when there is one).
+  await page.getByRole("button", { name: /^פיצול/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t-manual\/split/);
 });
 
 test("the transaction change sheet opens split in place", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
-  await page.getByRole("button", { name: /פרויקט/ }).click();
+  await page.getByRole("button", { name: /^פרויקט / }).click();
   const sheet = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
@@ -459,63 +441,55 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {
-  await page.goto("/e2e/connections?preview=1");
-  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "חיבור עוזר AI" });
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole("radio", { name: "קריאה בלבד" }).click();
-  await expect(sheet.getByRole("radio", { name: "קריאה בלבד" })).toBeChecked();
-  await sheet.getByRole("button", { name: "יצירת קוד" }).click();
+test("the AI page selects a scope, and a preview does not mint", async ({ page }) => {
+  await page.goto("/e2e/connections/ai?preview=1");
+  const readOnly = page.getByRole("radio", { name: "קריאה בלבד", exact: true });
+  await readOnly.click();
+  await expect(readOnly).toBeChecked();
+  await page.getByRole("button", { name: "יצירת קוד", exact: true }).click();
   await toast(page, previewToast);
+  await expect(page.getByRole("textbox", { name: "פקודת חיבור" })).toHaveCount(0);
+
+  await page.goto("/e2e/connections/ai");
+  await page.getByRole("radio", { name: "קריאה בלבד", exact: true }).click();
+  await page.getByRole("button", { name: "יצירת קוד", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "פקודת חיבור" })).toBeVisible();
+
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/e2e/connections?preview=1&assistant=connected");
-  const assistantRow = page.getByRole("button", { name: "עוזר AI", exact: true });
-  await expect(assistantRow).toContainText("מחובר · קריאה וכתיבה");
-  await expect(page.getByText("שימוש אחרון 30/09")).toHaveCount(0);
-  await assistantRow.click();
-  await expect(page.getByText("שימוש אחרון 30/09")).toBeVisible();
-  await page.evaluate(() => {
-    document.documentElement.dataset.theme = "dark";
-  });
-  const stampLines = await page.getByText("שימוש אחרון 30/09").evaluate((node) => node.getClientRects().length);
+  await page.goto("/e2e/connections/ai?assistant=connected&preview=1");
+  await expect(page.locator(".ui-ai-status")).toContainText("מחובר");
+  await expect(page.locator(".ui-ai-status")).toContainText("קריאה וכתיבה");
+  const stamp = page.getByText("שימוש אחרון", { exact: true });
+  await expect(stamp).toBeVisible();
+  const stampLines = await stamp.evaluate((node) => node.parentElement?.getClientRects().length ?? 0);
   expect(stampLines).toBe(1);
-  await page.getByRole("dialog", { name: "עוזר AI", exact: true }).getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("button", { name: "ניתוק", exact: true }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "ניתוק" }).click();
   await expect(confirm).toBeHidden();
   await toast(page, previewToast);
-  await page.goto("/e2e/connections?preview=1&assistant=loading");
-  const loadingRow = page.locator(".ui-row", { hasText: "עוזר AI" });
-  await expect(loadingRow).toHaveAttribute("aria-busy", "true");
-  await expect(page.getByRole("button", { name: "עוזר AI", exact: true })).toHaveCount(0);
-  await expect(loadingRow).not.toContainText("מחובר");
+
+  await page.goto("/e2e/connections/ai?assistant=loading&preview=1");
+  await expect(page.getByText("מחובר", { exact: true })).toHaveCount(0);
+
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/e2e/connections?preview=1");
-  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  const narrow = page.getByRole("dialog", { name: "חיבור עוזר AI" });
-  await expect(narrow).toBeVisible();
+  await page.goto("/e2e/connections/ai?preview=1");
+  await expect(page.getByRole("radio", { name: "קריאה בלבד", exact: true })).toBeVisible();
   const clipped = await page.evaluate(() => {
     const view = document.documentElement;
     return view.scrollWidth - view.clientWidth;
   });
   expect(clipped).toBeLessThanOrEqual(1);
 });
-
 test("settings connect, refresh, categories, and the account row", async ({ page }) => {
-  await page.goto("/e2e/connections?preview=1");
-  await page.getByRole("button", { name: "SUMIT" }).click();
-  const sumitSheet = page.getByRole("dialog", { name: "חיבור SUMIT" });
-  await expect(sumitSheet).toBeVisible();
+  await page.goto("/settings/connections/sumit?preview=1");
   // Empty fields are now checked in place (FLOW-508, #185), so fill them to reach the preview toast.
-  await sumitSheet.getByLabel("מספר חברה").fill("12345");
-  await sumitSheet.getByLabel("מפתח API").fill("preview-key");
-  await page.getByRole("button", { name: "חיבור" }).click();
+  await page.getByLabel("מספר חברה").fill("123456");
+  await page.getByLabel("מפתח API").fill("preview-key");
+  await page.getByRole("button", { name: "חיבור", exact: true }).click();
   await toast(page, previewToast);
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await page.goto("/e2e/settings?preview=1");
-  await expect(page.getByText("owner@example.com")).toBeVisible();
+  await page.goto("/e2e/business?preview=1");
   await page.getByRole("button", { name: "שם העסק: בדיקה" }).click();
   const rename = page.getByRole("dialog", { name: "שם העסק" });
   await expect(rename.getByLabel("שם")).toHaveValue("בדיקה");
@@ -524,6 +498,8 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await toast(page, previewToast);
   await rename.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("button", { name: "שם העסק: בדיקה" })).toBeFocused();
+  await page.goto("/e2e/settings?preview=1");
+  await expect(page.getByText("owner@example.com")).toBeVisible();
   await expect(page.getByText("עוסק מורשה")).toHaveCount(0);
   await expect(page.getByText("Flow 0.1")).toBeVisible();
   await page.getByRole("link", { name: "קטגוריות" }).click();
@@ -535,19 +511,20 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
+  // The overhead switch is on the העסק page now, not the Settings menu.
+  await page.goto("/e2e/business?preview=1");
   const overhead = page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
+  await page.goto("/e2e/settings?preview=1");
   await expect(page.getByRole("button", { name: "התנתקות" })).toHaveCount(0);
   await page.getByRole("link", { name: "התקנה למסך הבית" }).click();
   await expect(page).toHaveURL(/\/install/);
 
-  await page.goto("/e2e/connections?preview=1&connected=1");
-  await page.getByRole("button", { name: "SUMIT" }).click();
-  const connectedSheet = page.getByRole("dialog", { name: "SUMIT", exact: true });
-  await connectedSheet.getByRole("button", { name: "רענון עכשיו" }).click();
+  await page.goto("/e2e/connections/sumit?preview=1");
+  await page.getByRole("button", { name: "רענון עכשיו" }).click();
   await toast(page, previewToast);
-  await connectedSheet.getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("button", { name: "ניתוק" }).click();
   await page.getByRole("dialog", { name: "לנתק את SUMIT?" }).getByRole("button", { name: "ניתוק" }).click();
   await toast(page, previewToast);
 
@@ -559,42 +536,26 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await expect(page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "הלוואות" }).filter({ hasNot: page.locator(".ui-tab-label") })).toHaveCount(0);
   await page.goto("/e2e/connections?preview=1&nocompany=1");
-  const sumit = page.getByRole("button", { name: "SUMIT" });
-  await expect(sumit).toBeEnabled();
-  await expect(sumit).toContainText("לא מחובר");
-  await expect(page.getByRole("button", { name: "עוזר AI", exact: true })).toBeDisabled();
+  // With no company the connection rows say so, and the helpers section (the AI row) is not shown.
+  await expect(page.getByRole("link", { name: /^SUMIT/ })).toContainText("אין עסק עדיין");
+  await expect(page.getByRole("link", { name: /^חיבור ל־AI/ })).toHaveCount(0);
   await page.goto("/e2e/settings?preview=1&nocompany=1&email=none");
   await expect(page.getByText("owner@example.com")).toHaveCount(0);
   await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/settings?preview=1&nocompany=1&email=long");
   const longEmail = "owner.with.a.very.long.mailbox.name@example.com";
-  const emailStart = await page.locator(".ui-row-title", { hasText: longEmail }).evaluate((node, email) => {
-    const text = node.querySelector("bdi")?.firstChild;
-    if (!text || text.textContent !== email) return false;
-    const box = node.getBoundingClientRect();
-    const range = document.createRange();
-    range.setStart(text, 0);
-    range.setEnd(text, 1);
-    const start = range.getBoundingClientRect();
-    range.setStart(text, email.length - 1);
-    range.setEnd(text, email.length);
-    const end = range.getBoundingClientRect();
-    const startInside = start.width > 0 && start.left >= box.left - 1 && start.right <= box.right + 1;
-    const endClipped = end.right > box.right + 1 || node.scrollWidth > node.clientWidth + 1;
-    return startInside && endClipped;
-  }, longEmail);
-  expect(emailStart).toBe(true);
+  // The address is the page subtitle now: a long one must not push the page sideways at 320.
+  await expect(page.getByText(longEmail, { exact: false })).toBeVisible();
+  const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(sideways).toBeLessThanOrEqual(1);
 
   await page.goto("/e2e/connections?preview=1&connected=auth");
-  const reconnect = page.getByRole("button", { name: "SUMIT" });
-  await expect(reconnect).toContainText("צריך לחבר מחדש");
-  await reconnect.click();
-  const authSheet = page.getByRole("dialog", { name: "SUMIT", exact: true });
-  await expect(authSheet).toBeVisible();
-  await expect(authSheet.getByText("המזהה או המפתח לא התקבלו")).toBeVisible();
-  await expect(authSheet.getByRole("button", { name: "חיבור מחדש" })).toBeVisible();
-  await expect(authSheet.getByRole("button", { name: "ניתוק" })).toBeVisible();
+  const reconnect = page.getByRole("link", { name: /^SUMIT/ });
+  await expect(reconnect).toContainText("צריך חיבור");
+  await page.goto("/e2e/connections/sumit?preview=1&state=problem");
+  await expect(page.locator(".ui-connection-problem")).toBeVisible();
+  await expect(page.getByRole("button", { name: "חיבור מחדש" })).toBeVisible();
 });
 
 test("categories filter, hide, merge, and create", async ({ page }) => {
@@ -792,9 +753,9 @@ test("split parts, units, the hold, and close", async ({ page }) => {
   await expect(page).toHaveURL(/\/transactions\//);
 });
 
-test("settings opens the Connections and Loans pages, and Back returns to the row (FLOW-501)", async ({ page }) => {
+test("settings opens the Connections page, and Back returns to the row (FLOW-501)", async ({ page }) => {
   await page.goto("/settings?preview=1");
-  const connections = page.getByRole("link", { name: "חיבורים" });
+  const connections = page.getByRole("link", { name: /^חיבורים/ });
   await expect(connections).toBeVisible();
   await connections.click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
@@ -804,15 +765,14 @@ test("settings opens the Connections and Loans pages, and Back returns to the ro
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
   await expect(connections).toBeFocused();
-  // The loans tab shares the name, so the row is the link without the tab's label (FLOW-364).
-  const loans = page.getByRole("link", { name: "הלוואות" }).filter({ hasNot: page.locator(".ui-tab-label") });
-  await loans.click();
+  // The Settings menu has no הלוואות row (FLOW-512): the loans page is the tab bar's tab.
+  await page.locator(".ui-tabbar").getByRole("link", { name: "הלוואות" }).click();
   await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
   await expect(page.getByText("משכנתא אלון")).toBeVisible();
   await page.goBack();
-  await expect(loans).toBeFocused();
+  await expect(page).toHaveURL(/\/settings\?preview=1$/);
 
   await page.goto("/settings?preview=1&sheet=sumit");
-  await expect(page).toHaveURL(/\/settings\/connections\?preview=1/);
-  await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
+  await expect(page).toHaveURL(/\/settings\/connections\/sumit\?preview=1/);
+  await expect(page.getByRole("heading", { name: "SUMIT", exact: true })).toBeVisible();
 });

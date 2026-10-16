@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
@@ -14,25 +14,26 @@ import {
   type PushSupport,
 } from "../push";
 import { List, ListRow } from "../ui/list-row";
+import { CalendarIcon, BellIcon, DocumentIcon } from "../ui/icons";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
 import { useToast } from "../ui/toast";
 import { IOS_HOME_NOTE, IosHomeNote, PUSH_BLOCKED, PUSH_FAILED } from "./review-push-prompt";
 
-const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint?: string }> = [
-  { key: "new_transaction", label: "תנועה חדשה", hint: "כשנכנסת תנועה מהבנק" },
-  { key: "evening_reminder", label: "תזכורת ערב" },
-  { key: "weekly_summary", label: "סיכום שבועי", hint: "ראשון בבוקר" },
+const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint: string; icon: ReactNode }> = [
+  { key: "new_transaction", label: "תנועה חדשה", hint: "כשנכנסת תנועה מהבנק", icon: <BellIcon size={22} /> },
+  { key: "evening_reminder", label: "תזכורת ערב", hint: "ב־20:00, אם יש מה לאשר", icon: <CalendarIcon size={22} /> },
+  { key: "weekly_summary", label: "סיכום שבועי", hint: "ראשון בבוקר", icon: <DocumentIcon size={22} /> },
 ];
 
 const UNSUPPORTED_NOTE = "הדפדפן הזה לא שולח התראות.";
 const SAVE_FAILED = "לא הצלחנו לשמור.";
 
-/** The Settings row's hint: the switches that are on, or כבוי. */
+/** The התראות row's value: how many switches are on, or כבויות when none is. */
 export function notificationsHint(prefs: NotificationPrefs): string {
-  const on = SWITCHES.filter((item) => prefs[item.key]).map((item) => item.label);
-  return on.length === 0 ? "כבוי" : on.join(" · ");
+  const on = SWITCHES.filter((item) => prefs[item.key]).length;
+  return on === 0 ? "כבויות" : `${String(on)} פעילות`;
 }
 
 /**
@@ -80,11 +81,22 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
   // On an iPhone tab, "למסך הבית" leads to the install steps instead of ending the sentence.
   const noteBody = can === "ios-home-screen" ? <IosHomeNote /> : note;
 
+  /** A saved switch says what it did, and ביטול turns it back (FLOW-512). */
+  function said(key: NotificationPrefKey, on: boolean) {
+    const label = SWITCHES.find((item) => item.key === key)?.label ?? "";
+    toast.show({
+      message: `${label} ${on ? "פועלת" : "כבויה"}`,
+      action: "ביטול",
+      onAction: () => { void change(key, !on); },
+    });
+  }
+
   async function change(key: NotificationPrefKey, on: boolean) {
     if (busy != null) return;
     if (on && can !== "ok") return;
     if (!live) {
       setLocal((current) => ({ ...current, [key]: on }));
+      said(key, on);
       return;
     }
     setBusy(key);
@@ -99,6 +111,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
       }
       const saved = await saveNotificationPrefs({ [key]: on });
       client.setQueryData(PUSH_PREFS_KEY, saved);
+      said(key, on);
     } catch {
       toast.show({ message: SAVE_FAILED, tone: "bad" });
     } finally {
@@ -110,7 +123,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
     <div>
       <ScreenHeader
         title="התראות"
-        kicker="הגדרות"
+        subtitle="מה נשלח לטלפון"
         backTo={backTo}
         below={note != null ? <p className="t-hint" id={noteId} data-push-note="">{noteBody}</p> : undefined}
       />
@@ -120,6 +133,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
             key={item.key}
             label={item.label}
             hint={item.hint}
+            icon={item.icon}
             checked={prefs[item.key]}
             busy={busy === item.key}
             // Off stays reachable on any device; on needs a browser that can subscribe. While one

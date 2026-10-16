@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { BankIcon } from "./icons";
-import { KeptOutTag } from "./line-marks";
+import { KeptOutTag, lineTagText } from "./line-marks";
 import { List, ListRow, type ListLayout } from "./list-row";
 import { largeAgorot, longHebrew, padded } from "./story-support";
 
@@ -193,6 +193,71 @@ export const InsetList: Story = {
       <ListRow layout="inset" variant="transaction" title="העברה" hint="בנק · 10/09" agorot={450_000n} sign="out" source="bank" href="/transactions/2" />
       <ListRow layout="inset" variant="transaction" title="ספק לדוגמה" hint="חומרים · 08/09" agorot={1_000_000n} sign="out" source="invoice" href="/transactions/3" />
       <ListRow layout="inset" variant="project" title="וילה לדוגמה" hint="רווחיות 27%" agorot={2_000_000n} href="/projects/1" />
+    </List>
+  ),
+};
+
+/** FLOW-366: a transaction row with the supplier's initials in place of the source icon. Invented names and figures. */
+export const TransactionInitials: Story = {
+  args: { variant: "transaction", title: "סטודיו גל", hint: "דירת הגפן · חומרים", agorot: "120000", sign: "out", source: "invoice" },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="סטודיו גל" hint="דירת הגפן · חומרים" agorot={120_000n} sign="out" source="invoice" initials="סג" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="מים ושות׳" hint="בלי פרויקט · מים" agorot={45_000n} sign="out" source="invoice" initials="מו" href="/transactions/2" />
+    </List>
+  ),
+};
+
+/** FLOW-366: the tag line for a line awaiting review. */
+export const TransactionPending: Story = {
+  args: { variant: "transaction", title: "אור חשמל", hint: "בית הים · חשמל", agorot: "86000", sign: "out", source: "invoice" },
+  render: () => (
+    <List layout="flat">
+      <ListRow
+        layout="flat"
+        variant="transaction"
+        title="אור חשמל"
+        hint="בית הים · חשמל"
+        agorot={86_000n}
+        sign="out"
+        source="invoice"
+        initials="אח"
+        tagLine={lineTagText({ pending: true, inPnl: true, reason: null })}
+        href="/transactions/3"
+      />
+    </List>
+  ),
+};
+
+/** FLOW-366: the tag line for a loan's principal, which profit leaves out, and for a line that is both pending and out of profit. */
+export const TransactionNotInProfit: Story = {
+  args: { variant: "transaction", title: "בנק לדוגמה", hint: "בית הים · תשלום הלוואה", agorot: "150000", sign: "out", source: "bank" },
+  render: () => (
+    <List layout="flat">
+      <ListRow
+        layout="flat"
+        variant="transaction"
+        title="בנק לדוגמה"
+        hint="בית הים · תשלום הלוואה"
+        agorot={90_000n}
+        sign="out"
+        source="bank"
+        initials="בל"
+        tagLine={lineTagText({ pending: false, inPnl: false, reason: "קרן הלוואה" })}
+        href="/transactions/4"
+      />
+      <ListRow
+        layout="flat"
+        variant="transaction"
+        title="מים ושות׳"
+        hint="דירת הגפן · שיפוץ"
+        agorot={300_000n}
+        sign="out"
+        source="invoice"
+        initials="מו"
+        tagLine={lineTagText({ pending: true, inPnl: false, reason: "שיפוץ" })}
+        href="/transactions/5"
+      />
     </List>
   ),
 };

@@ -17,6 +17,8 @@
   file, including light and dark, and @theme points at the aliases.
 */
 :root {
+  /* FLOW-366: the transaction page scrolls this far before its top bar takes its surface (the board). */
+  --txn-bar-scroll: 110px;
   --token-bg: var(--color-bg);
   --token-surface: var(--color-surface);
   --token-raised: var(--color-raised);
@@ -198,6 +200,8 @@
   --grab-radius: 3px;
   --row-pad: 14px;
   --stroke-strong: 1.5px;
+  --stroke-hairline: 1px;
+  --loan-legend-pitch: 30px;
   --note-icon-nudge: 2px;
   --note-body-gap: 2px;
   --signin-brand-pad: 5.5rem;

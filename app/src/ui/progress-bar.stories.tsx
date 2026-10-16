@@ -9,7 +9,7 @@ const meta = {
   decorators: [padded],
   args: { variant: "bar", value: 42, max: 100, label: "התקדמות" },
   argTypes: {
-    variant: { control: "select", options: ["bar", "thin"] },
+    variant: { control: "select", options: ["bar", "thin", "steps"] },
     value: { control: "number" },
     max: { control: "number" },
   },
@@ -43,4 +43,9 @@ export const Job: StoryObj<JobArgs> = {
       onLeave={() => undefined}
     />
   ),
+};
+
+/** FLOW-514: the setup's seven segments, on the third step. */
+export const Steps: Story = {
+  args: { variant: "steps", count: 7, current: 3, label: "התקדמות ההגדרה" },
 };

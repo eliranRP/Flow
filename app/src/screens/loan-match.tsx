@@ -10,9 +10,7 @@ import { TextLink } from "../ui/text-link";
 import { Button } from "../ui/button";
 import { currencyWord } from "../ui/investment-card";
 import { sheetStack, useSheetHistory } from "../ui/back";
-import { getSupabase } from "../lib/supabase";
-import { assertNoError, useWrite } from "../use-write";
-import { readLoanBalances, readProjectNames } from "./loan-reads";
+import { useWrite } from "../use-write";
 import { useHoldWrites } from "../use-is-viewer";
 import { quickNewPath } from "../open-from-query";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
@@ -480,36 +478,6 @@ export function loanMatchHint(offered: ReadonlyArray<{ name: string; currency: s
   if (loans.length === 0) return loanEmptyLine(offered, lineCurrency);
   return `${String(loans.length)} הלוואות`;
 }
-
-export function useLoanBalances(companyId: string | null) {
-  return useQuery({
-    queryKey: ["loans", companyId],
-    enabled: companyId != null,
-    retry: false,
-    queryFn: async (): Promise<LoanBalanceRow[]> => {
-      const supabase = getSupabase();
-      if (!supabase || companyId == null) return [];
-      const loans = await supabase.from("loans").select("id, name, currency, project_id, principal_minor").eq("company_id", companyId);
-      assertNoError(loans);
-      const byLoan = await readLoanBalances(supabase, companyId);
-      const projectNames = await readProjectNames(supabase, loans.data ?? []);
-      return (loans.data ?? []).map((loan) => {
-        const balance = byLoan.get(loan.id);
-        return {
-          id: loan.id,
-          name: loan.name,
-          currency: balance?.currency ?? loan.currency,
-          // No balance row yet (a loan saved after the view was read): nothing is paid, so the principal is left.
-          balanceMinor: BigInt(balance?.balance_minor ?? loan.principal_minor),
-          flaggedParts: balance?.flagged_parts ?? 0,
-          projectId: loan.project_id,
-          projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),
-        };
-      });
-    },
-  });
-}
-
 
 /** What one tap writes for this loan on this line (loan-match-offer.ts). */
 function offerFor(loaded: LoadedMatch, loan: LoanChoice, transactionId: string, docDate: string): LoanOffer {

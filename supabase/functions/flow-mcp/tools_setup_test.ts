@@ -658,6 +658,53 @@ Deno.test("set_invoice_paid validates input, refuses read tokens and passes the 
   if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "invoice not found");
 });
 
+Deno.test("link_invoice_payment and dismiss_invoice_match forward their input, undo takes kinds invoice_link and invoice_dismiss", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN } } }));
+  const link = await callTool("link_invoice_payment", { idempotency_key: "l-1", invoice_id: TXN, transaction_id: INCOME_TXN }, ["write"], rpc);
+  assertEquals(link.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_link_invoice_payment",
+    body: { p_idempotency_key: "l-1", p_invoice_id: TXN, p_transaction_id: INCOME_TXN },
+  });
+  const dismiss = await callTool("dismiss_invoice_match", { idempotency_key: "d-1", invoice_id: TXN, transaction_id: INCOME_TXN }, ["write"], rpc);
+  assertEquals(dismiss.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_dismiss_invoice_match",
+    body: { p_idempotency_key: "d-1", p_invoice_id: TXN, p_transaction_id: INCOME_TXN },
+  });
+  const undoLink = await callTool("undo", { idempotency_key: "u-3", kind: "invoice_link", id: TXN }, ["write"], rpc);
+  assertEquals(undoLink.isError, false);
+  assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-3", p_kind: "invoice_link", p_id: TXN } });
+  const undoDismiss = await callTool("undo", { idempotency_key: "u-4", kind: "invoice_dismiss", id: TXN }, ["write"], rpc);
+  assertEquals(undoDismiss.isError, false);
+  assertEquals(calls[3], { name: "mcp_undo", body: { p_idempotency_key: "u-4", p_kind: "invoice_dismiss", p_id: TXN } });
+});
+
+Deno.test("link_invoice_payment and dismiss_invoice_match validate input, refuse read tokens and pass the refusals", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message: "payment not matched" } } }));
+  for (const tool of ["link_invoice_payment", "dismiss_invoice_match"]) {
+    const denied = await callTool(tool, { idempotency_key: "k", invoice_id: TXN, transaction_id: INCOME_TXN }, ["read"], rpc);
+    assertEquals(denied.isError, true);
+    if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+    const bad: unknown[] = [
+      { idempotency_key: "k", invoice_id: TXN },
+      { idempotency_key: "k", invoice_id: "not-a-uuid", transaction_id: INCOME_TXN },
+      { idempotency_key: "", invoice_id: TXN, transaction_id: INCOME_TXN },
+      { idempotency_key: "k", invoice_id: TXN, transaction_id: INCOME_TXN, amount_minor: 100 },
+      { idempotency_key: "k", transaction_id: INCOME_TXN, paid: true },
+    ];
+    for (const input of bad) {
+      const result = await callTool(tool, input, ["write"], rpc);
+      assertEquals(result.isError, true);
+      if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    }
+    const refused = await callTool(tool, { idempotency_key: "k", invoice_id: TXN, transaction_id: INCOME_TXN }, ["write"], rpc);
+    assertEquals(refused.isError, true);
+    if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "payment not matched");
+  }
+  assertEquals(calls.length, 2);
+});
+
 Deno.test("set_project_investment and set_category_rehab forward their input, undo takes both kinds (FLOW-404)", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_investment", id: TXN } } }));
   const set = await callTool("set_project_investment", {
@@ -841,4 +888,22 @@ Deno.test("set_company_currency forwards the code, undo takes company_currency (
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, before);
+});
+
+// FLOW-514: the setup's suggestions pass the SQL object through, take no arguments, and refuse a write token.
+Deno.test("get_setup_suggestions takes no arguments and passes the SQL object through", async () => {
+  const calls: Array<[string, unknown]> = [];
+  const data = { projects: [], lenders: [{ name: "Lantern Home Loans", monthly_agorot: 524000, since: "2026-04-07" }] };
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    return Promise.resolve({ status: 200, json: data });
+  };
+  const result = await callTool("get_setup_suggestions", {}, ["read"], rpc);
+  assertEquals(result.structuredContent, { ok: true, data });
+  assertEquals(calls, [["get_setup_suggestions", {}]]);
+  assertEquals((await callTool("get_setup_suggestions", { today: "2026-01-01" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_setup_suggestions", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
+  assertEquals((await callTool("get_setup_suggestions", {}, ["read"], () => Promise.resolve({ status: 200, json: [] }))).isError, true);
+  assertEquals((await callTool("get_setup_suggestions", {}, ["write"], rpc)).isError, true);
+  assertEquals(calls.length, 1);
 });

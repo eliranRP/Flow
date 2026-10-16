@@ -16,20 +16,26 @@ import { COMPANY_NAME_MAX, companyNameError } from "./rename-company";
  */
 export function useCompanyForm({
   initialName = "",
+  namePlaceholder,
   checked = false,
   reserveMessage = false,
   blocked,
+  hideVat = false,
   onCreated,
 }: {
   initialName?: string;
+  /** FLOW-514: the setup's placeholder, an invented name (never a board sample). */
+  namePlaceholder?: string;
   /** A story opens on a typed name, checked as if the field had been left. */
   checked?: boolean;
   /** Keep the error line's space, so an inline button below does not move. */
   reserveMessage?: boolean;
   /** Preview mode: true when the write must not run. */
   blocked?: () => boolean;
+  /** FLOW-514: the setup's step 1 leaves the VAT question out; it creates the company as registered (today's default). */
+  hideVat?: boolean;
   onCreated: (companyId: string) => void;
-}): { submit: (event: SubmitEvent<HTMLFormElement>) => void; busy: boolean; holdWrites: boolean; fields: ReactElement } {
+}): { submit: (event: SubmitEvent<HTMLFormElement>) => void; busy: boolean; holdWrites: boolean; name: string; fields: ReactElement } {
   const client = useQueryClient();
   const holdWrites = useHoldWrites();
   const [name, setName] = useState(initialName);
@@ -75,6 +81,7 @@ export function useCompanyForm({
       <TextField
         ref={fieldRef}
         label="שם העסק"
+        placeholder={namePlaceholder}
         value={name}
         maxLength={COMPANY_NAME_MAX * 2 + 20}
         aria-required="true"
@@ -88,19 +95,23 @@ export function useCompanyForm({
           setError(companyNameError(name));
         }}
       />
-      <SegmentedControl
-        label="סוג העסק"
-        describedBy={hintId}
-        value={vat}
-        onChange={setVat}
-        options={[
-          { value: "registered", label: "עוסק מורשה" },
-          { value: "exempt", label: "עוסק פטור" },
-        ]}
-      />
-      <p id={hintId} className="t-hint">{vat === "registered" ? VAT_HINT.registered : VAT_HINT.exempt}</p>
+      {hideVat ? null : (
+        <>
+          <SegmentedControl
+            label="סוג העסק"
+            describedBy={hintId}
+            value={vat}
+            onChange={setVat}
+            options={[
+              { value: "registered", label: "עוסק מורשה" },
+              { value: "exempt", label: "עוסק פטור" },
+            ]}
+          />
+          <p id={hintId} className="t-hint">{vat === "registered" ? VAT_HINT.registered : VAT_HINT.exempt}</p>
+        </>
+      )}
     </>
   );
 
-  return { submit, busy: save.isPending, holdWrites, fields };
+  return { submit, busy: save.isPending, holdWrites, name, fields };
 }

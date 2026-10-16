@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { invoicesSample, invoicesSummary } from "./dev/invoices-sample";
 import { type Dashboard, type ProjectsCashMonth, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
@@ -11,6 +12,7 @@ import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
+import { DevTransactionBoard } from "./dev/transaction-board";
 import { BackButton, useGoBack } from "./ui/back";
 import { BandCompany } from "./ui/top-band";
 import { Button } from "./ui/button";
@@ -24,7 +26,19 @@ import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/Hom
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashUsdYear, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import {
+  sampleBoardCashLines,
+  sampleBoardCashMonths,
+  sampleCashLines,
+  sampleCashLinesFlagged,
+  sampleCashMonths,
+  sampleCashToDay,
+  sampleCashUsdLoss,
+  sampleCashUsdToDay,
+  sampleCashUsdYear,
+  sampleCashYearMonths,
+  sampleCashYears,
+} from "./dev/cash-sample";
 import { cash as devCash, investment as devInvestment, project as devProject } from "./dev/project-cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
@@ -40,13 +54,21 @@ import {
   SettingsScreen,
   SplitScreen,
   TransactionScreen,
+  InvoiceScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
+import { AiConnectionPage } from "./screens/assistant-settings";
+import { BusinessScreen } from "./screens/business-screen";
+import { SumitConnectionRoute } from "./screens/connection-pages";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { ProjectProfitScreen } from "./screens/project-profit-screen";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { LoanSummaryCard } from "./screens/loan-summary-card";
+import { LOAN_SUMMARY_SAMPLE } from "./dev/loan-summary-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devReviewItems = [
@@ -341,15 +363,31 @@ export function DevCashMonth() {
   return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
 }
 
-/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). */
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). FLOW-366: `?order=` and `?pending=1`. */
 export function DevCashLines() {
   const [params] = useSearchParams();
   const asked = params.get("side");
   const side = asked === "in" || asked === "kept" ? asked : "out";
+  // FLOW-366: ?pending=1 flags the first line for review and the second as out of profit.
+  const flagged = params.get("pending") === "1";
+  if (params.get("board") === "1") {
+    // The board frame: an invented USD company with the board's amounts and pending rows, dated as the board
+    // draws them (today is 11/10 there), so the day titles and the rows' dates match the frame.
+    const boardToday = new Date(2026, 9, 11, 12);
+    const board = sampleBoardCashMonths(boardToday);
+    // The board draws only the יצא and נכנס rows, so a לא נספר request shows the יצא rows.
+    const boardSide = side === "in" ? "in" : "out";
+    return (
+      <CashLinesScreen
+        sample={{ months: board, lines: sampleBoardCashLines(boardSide, boardToday), today: "2026-10-11" }}
+        at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side: boardSide, currency: "USD" }}
+      />
+    );
+  }
   const data = sampleCashMonths();
   return (
     <CashLinesScreen
-      sample={{ months: data, lines: sampleCashLines(side) }}
+      sample={{ months: data, lines: flagged ? sampleCashLinesFlagged(side) : sampleCashLines(side) }}
       at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
@@ -414,6 +452,23 @@ export function DevConnections() {
   return <ConnectionsScreen sample={useDevSettingsSample()} sampleSecret={devAssistantSecret} />;
 }
 
+/** The SUMIT page on the dev fixture: connected, or `?state=problem` for a key that stopped working. */
+export function DevSumitConnection() {
+  const [params] = useSearchParams();
+  const problem = params.get("state") === "problem";
+  return <SumitConnectionRoute sample={problem ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
+}
+
+/** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
+export function DevBusiness() {
+  return <BusinessScreen sample={useDevSettingsSample()} />;
+}
+
+/** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. */
+export function DevAiConnection() {
+  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} />;
+}
+
 /** FLOW-106 B: the list reads the dev loan store, so a status change or a delete on a loan's page shows here. `?loans=none` is empty. */
 export function DevLoans() {
   const [params] = useSearchParams();
@@ -456,14 +511,21 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
     : emailParam === "long"
       ? "owner.with.a.very.long.mailbox.name@example.com"
       : "owner@example.com";
+  // FLOW-512 proof: ?board=1 gives the Settings board's own numbers (an invented business name).
+  const board = params.get("board") === "1" && !noCompany;
   return {
-        name: noCompany ? null : "בדיקה",
+        name: noCompany ? null : board ? "Cedar Lane Homes" : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
-        lastError: mode === "auth" ? "sumit_auth" : null,
+        lastError: board ? "sumit_auth" : mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
-        teamCount: teamParam == null || noCompany ? undefined : Number(teamParam),
+        teamCount: board ? 2 : teamParam == null || noCompany ? undefined : Number(teamParam),
+        companyCount: board ? 2 : undefined,
+        categoryCount: board ? 12 : undefined,
+        notifications: board
+          ? { new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }
+          : undefined,
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"
@@ -507,35 +569,18 @@ export function DevCategories() {
   );
 }
 
-/** `?marked=1` adds a row already marked paid, waiting for the sync (review-cycle fixture, FLOW-335). */
-export function DevUnpaid() {
+/**
+ * FLOW-367 proof route: the list with the board's fixture (`?state=done` has no invoice), or one
+ * invoice's page with `?invoice=<id>`. Stories and proofs use the same fixture.
+ */
+export function DevInvoices() {
   const [params] = useSearchParams();
-  const marked = params.get("marked") === "1";
-  // FLOW-335: `?doc=1` gives the first row SUMIT's document link (an invented path).
-  const doc = params.get("doc") === "1" ? { document_url: "https://pay.sumit.co.il/example/doc-1" } : {};
-  return (
-    <UnpaidScreen
-      sample={[{
-        id: "u1",
-        description: "חשבונית פתוחה",
-        doc_date: "2026-09-01",
-        customer_name: "לקוח לדוגמה",
-        project_name: "שיפוץ הרצל 12",
-        open_gross_agorot: 50_000n,
-        open_net_agorot: 40_000n,
-        ...doc,
-      }, ...(marked ? [{
-        id: "u2",
-        description: "חשבונית שסומנה",
-        doc_date: "2026-08-20",
-        customer_name: "לקוח שני לדוגמה",
-        project_name: null,
-        open_gross_agorot: 120_000n,
-        open_net_agorot: 100_000n,
-        marked_paid_at: "2026-10-06T09:00:00Z",
-      }] : [])]}
-    />
-  );
+  const state = params.get("state");
+  const invoice = params.get("invoice");
+  const rows = useMemo(() => invoicesSample(state), [state]);
+  const summary = useMemo(() => invoicesSummary(), []);
+  if (invoice != null) return <InvoiceScreen sample={rows} summary={summary} invoiceId={invoice} />;
+  return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
 /** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
@@ -652,6 +697,12 @@ export function DevProjectDetail() {
   );
 }
 
+/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+export function DevProjectProfit() {
+  const [params] = useSearchParams();
+  return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;
+}
+
 /** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
 /** `?empty=1` is a project with no month yet (review-cycle fixture, FLOW-335). */
 export function DevProjectMonths() {
@@ -756,30 +807,14 @@ export function DevInstall({ mode }: { mode: InstallMode }) {
 }
 
 export function DevTransaction() {
+  return <DevTransactionBoard />;
+}
+
+/** FLOW-139. The loans list's summary card alone, for the board proof. */
+export function DevLoanSummary() {
   return (
-    <TransactionScreen
-      sample={{
-        id: "t-manual",
-        description: "רשומה ידנית",
-        direction: "expense",
-        doc_date: "2026-09-12",
-        amount_gross: -118n,
-        amount_net: -100n,
-        vat_amount: -18n,
-        vat_status: "assumed",
-        source: "manual",
-        project_id: "p1",
-        project_name: "שיפוץ הרצל 12",
-        category_id: "c1",
-        category_name: "חומרים",
-        supplier_name: "ספק",
-        customer_name: null,
-        paid: true,
-        open_gross_agorot: null,
-        allocations: [],
-      }}
-      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
-      sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
-    />
+    <div className="ui-page-pad">
+      <LoanSummaryCard summary={LOAN_SUMMARY_SAMPLE} currency="USD" />
+    </div>
   );
 }
