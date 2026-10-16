@@ -16,7 +16,7 @@
  * Render method: see the board renders note in team memory (redesign-approval-proofs). The app shot is
  * taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -100,6 +100,8 @@ export function proofPlan(frames, only, boards, out) {
   const plan = [];
   for (const frame of picked) {
     for (const theme of THEME_NAMES) {
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
+      if (!existsSync(path.join(boards, boardFileName(frame, theme)))) continue;
       plan.push({
         frame,
         theme,
