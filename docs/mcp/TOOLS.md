@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `link_invoice_payment`, `dismiss_invoice_match`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -49,6 +49,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "recurring_match"` | `id` | the `match_party_id` `answer_recurring_match` used |
 | `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
+| `link_invoice_payment` | `invoice_id`, `transaction_id` | `list_unpaid` `invoices[].id`, `invoices[].match.transaction_id` |
+| `undo` `kind: "invoice_link"` | `id` | the invoice id `link_invoice_payment` used |
+| `dismiss_invoice_match` | `invoice_id`, `transaction_id` | `list_unpaid` `invoices[].id`, a deposit of the company |
+| `undo` `kind: "invoice_dismiss"` | `id` | the invoice id `dismiss_invoice_match` used |
 | `detach_loan_payment` | `transaction_id` | `get_loan_schedule` payments, `get_expense.id` of a line with `loan_split` |
 | `undo` `kind: "loan_detach"` | `id` | the transaction id `detach_loan_payment` used |
 | `delete_loan` | `loan_id` | `list_loans` `loans[].id` |
@@ -925,7 +929,13 @@ SUMIT invoices still open, and a mark the owner sets when one was paid before SU
 
 Read. No arguments. The open documents the Unpaid screen shows: SUMIT invoices with an amount still open after their linked receipts and credit notes, oldest first. Customer invoices have `direction` `income` and a positive amount; supplier invoices have `direction` `expense` and a negative one.
 
-Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at", "document_url" }`; `id` is the transaction id, `marked_paid_at` is when the document was marked paid (`null` when not), and `document_url` is the SUMIT document link on `https://pay.sumit.co.il/` (`null` until a sync reads it). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
+Output `data`: `{ "invoices", "totals", "overview" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at", "document_url", "days_open", "match" }`; `days_open` is the days since `doc_date`; `id` is the transaction id, `marked_paid_at` is when the document was marked paid (`null` when not), and `document_url` is the SUMIT document link on `https://pay.sumit.co.il/` (`null` until a sync reads it). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
+
+`match` is the Mercury deposit that paid the invoice, or `null`: a deposit of the same gross amount and the same customer, dated on or after the invoice, not linked to another invoice and not dismissed for this one. It is `null` for a supplier invoice and for a marked one. It is `{ "transaction_id", "date", "account_name", "raw_description", "amount_minor" }`; `account_name` is the bank account's name (`null` when none). The earliest matching deposit is offered.
+
+A linked invoice (`link_invoice_payment`) leaves the list. `overview` is the bar's totals for the company: `{ "issued_since", "billed_minor", "open_minor", "paid_minor", "last_sync_at" }`. `issued_since` is the 1st of last month; `billed_minor` is the income invoices issued since then, `open_minor` their open amount (not marked), `paid_minor` the rest of `billed_minor`. `last_sync_at` is the SUMIT connection's last sync (`null` when none). Amounts are in minor units of the company's currency.
+
+Not returned yet: a due date (the SUMIT sync reads none) and the SUMIT document number (the sync stores only the document link). Both stay out until the sync reads them.
 
 ### set_invoice_paid
 
@@ -940,6 +950,32 @@ Marks one open document paid while SUMIT has no receipt for it yet, or clears th
 - Refused: `invoice not found` (not a document `list_unpaid` lists, already closed, or another company's).
 
 Output `data`: `{ "transaction_id", "marked_paid", "marked_paid_at", "undo_kind": "invoice_paid", "id" }`. Undo `kind: "invoice_paid"` with the transaction id puts the mark back as it was before this write (with its first time and author) or takes it away. If the mark changed since (cleared, or cleared and set again, for example in the app), undo is `conflict`; a document removed since is `not_found`.
+
+### link_invoice_payment
+
+Links one open customer invoice to the Mercury deposit that paid it. The invoice leaves `list_unpaid`; the deposit pays that invoice only.
+
+```json
+{ "idempotency_key": "link-1", "invoice_id": "22222222-2222-4000-8000-000000000031", "transaction_id": "22222222-2222-4000-8000-000000000032" }
+```
+
+- The deposit needs the same gross amount as the invoice's open amount, the same customer, and a date on or after the invoice. It must be a Mercury income line of this company.
+- Refused: `invoice not found` (not a document `list_unpaid` lists, linked already, or another company's), `payment not matched` (the deposit does not match), `payment already linked` (the deposit pays another invoice).
+- A viewer cannot link (`forbidden`); the write needs the write scope and the rate limit.
+
+Output `data`: `{ "transaction_id", "bank_transaction_id", "linked": true, "linked_at", "undo_kind": "invoice_link", "id" }`. Undo `kind: "invoice_link"` with the invoice id takes the link away; if the link changed since, undo is `conflict`.
+
+### dismiss_invoice_match
+
+Says that a deposit is not the payment of one open invoice ("לא זה"). `list_unpaid` stops offering that deposit as that invoice's `match`; the invoice stays open.
+
+```json
+{ "idempotency_key": "dismiss-1", "invoice_id": "22222222-2222-4000-8000-000000000031", "transaction_id": "22222222-2222-4000-8000-000000000033" }
+```
+
+- Dismissing again keeps the first time. The deposit must be a deposit of this company (`payment not matched` otherwise); the invoice must be listed (`invoice not found`).
+
+Output `data`: `{ "transaction_id", "bank_transaction_id", "dismissed": true, "dismissed_at", "undo_kind": "invoice_dismiss", "id" }`. Undo `kind: "invoice_dismiss"` with the invoice id takes the dismissal away when this write added it; a dismissal that was there before stays. If it changed since, undo is `conflict`.
 
 ## Batch · cycle 6
 

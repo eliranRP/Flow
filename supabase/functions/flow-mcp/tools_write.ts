@@ -47,6 +47,7 @@ import {
   setCategoryRehabSchema,
   setCompanyCurrencySchema,
   setInvoicePaidSchema,
+  invoiceBankWriteSchema,
   setMemberRoleSchema,
   setJevModeSchema,
   setLineCashSchema,
@@ -384,6 +385,15 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_paid: parsed.data.paid,
+    };
+  } else if (name === "link_invoice_payment" || name === "dismiss_invoice_match") {
+    const parsed = invoiceBankWriteSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = name === "link_invoice_payment" ? "mcp_link_invoice_payment" : "mcp_dismiss_invoice_match";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_invoice_id: parsed.data.invoice_id,
+      p_transaction_id: parsed.data.transaction_id,
     };
   } else if (name === "set_jev_mode") {
     const parsed = setJevModeSchema.safeParse(args);

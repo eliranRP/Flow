@@ -7,7 +7,7 @@ import { fail, READ_REFUSED, type ToolResult, type ToolRpc } from "./tools_args.
  * FLOW-330. list_unpaid rows in minor units, with open and marked totals per currency and
  * direction: customer invoices (income) and supplier invoices (expense, negative) never mix.
  */
-export function unpaidReport(rows: unknown[]) {
+export function unpaidReport(rows: unknown[], overview: Record<string, unknown> = {}) {
   const totals = new Map<string, { currency: string; direction: string; open_gross_minor: bigint; marked_gross_minor: bigint }>();
   const invoices = rows.map((raw) => {
     const row = (raw ?? {}) as Record<string, unknown>;
@@ -32,9 +32,18 @@ export function unpaidReport(rows: unknown[]) {
       open_net_minor: Number(BigInt(String(row.open_net_agorot ?? 0))),
       marked_paid_at: markedAt,
       document_url: typeof row.document_url === "string" ? row.document_url : null,
+      days_open: typeof row.days_open === "number" ? row.days_open : null,
+      match: unpaidMatch(row.match),
     };
   });
   return {
+    overview: {
+      issued_since: typeof overview.issued_since === "string" ? overview.issued_since : null,
+      billed_minor: minorOf(overview.billed_minor),
+      open_minor: minorOf(overview.open_minor),
+      paid_minor: minorOf(overview.paid_minor),
+      last_sync_at: typeof overview.last_sync_at === "string" ? overview.last_sync_at : null,
+    },
     invoices,
     totals: [...totals.values()]
       .sort((x, y) => x.currency.localeCompare(y.currency) || x.direction.localeCompare(y.direction))
@@ -45,6 +54,24 @@ export function unpaidReport(rows: unknown[]) {
         marked_gross_minor: Number(t.marked_gross_minor),
       })),
   };
+}
+
+// FLOW-367. The Mercury deposit that matches an open invoice, or null.
+function unpaidMatch(raw: unknown) {
+  if (raw == null || typeof raw !== "object") return null;
+  const match = raw as Record<string, unknown>;
+  return {
+    transaction_id: match.transaction_id ?? null,
+    date: match.date ?? null,
+    account_name: typeof match.account_name === "string" ? match.account_name : null,
+    raw_description: match.raw_description ?? null,
+    amount_minor: Number(match.amount_minor ?? 0),
+  };
+}
+
+// Minor units as a number; null when the server sent none.
+function minorOf(raw: unknown): number | null {
+  return raw == null ? null : Number(raw);
 }
 
 export type Review = Record<string, unknown>;
