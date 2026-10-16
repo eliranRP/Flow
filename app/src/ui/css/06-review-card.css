@@ -710,7 +710,7 @@
   align-items: center;
   gap: var(--space-3);
   min-block-size: var(--touch-min);
-  padding: var(--space-4) var(--space-side);
+  padding: var(--space-3) var(--space-side);
   color: var(--color-text);
   text-decoration: none;
 }
@@ -725,6 +725,7 @@
 }
 
 .ui-review-all-title {
+  align-self: stretch;
   max-inline-size: 100%;
   overflow: hidden;
   font-size: var(--type-body-size);
