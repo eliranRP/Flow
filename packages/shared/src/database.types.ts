@@ -1062,6 +1062,11 @@ isOneToOne: false
 "cash_month_lines":
 { Args: { "p_currency"?: string,"p_limit"?: number,"p_month": string,"p_offset"?: number,"p_side": string }; Returns: Json
                            },
+"cash_month_to_day":
+{ Args: { "p_day": number,"p_month": string }; Returns: {
+              "currency": string,"in_minor": number,"out_minor": number
+            }[]
+                           },
 "cash_months":
 { Args: { "p_months"?: number,"p_today"?: string }; Returns: Json
                            },
