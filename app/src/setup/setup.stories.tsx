@@ -1,9 +1,12 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Meta, StoryObj } from "@storybook/react";
 import { StoryRoute } from "../ui/story-route";
 import { SetupDone } from "./done";
 import { SetupWelcome } from "./welcome";
 import { SkipSheet } from "./skip-sheet";
 import { SampleCard } from "./sample-card";
+import { NO_SUGGESTIONS } from "./suggestions";
 import { StepBusiness, StepConnect, StepInstall, StepJev, StepLoans, StepProjects, StepReview, type StepProps } from "./steps";
 
 /** Invented names only (Birch Lane, Northline Supply, Lantern Home Loans). Never a board sample. */
@@ -57,11 +60,22 @@ export const Step3Projects: Story = {
   ),
 };
 
+/** Puts the suggestions in the story's cache, so the step does not read the Supabase RPC (the story network guard aborts it). */
+function SeedSuggestions() {
+  const client = useQueryClient();
+  useState(() => {
+    client.setQueryData(["setup-suggestions", "company-story"], NO_SUGGESTIONS);
+    return true;
+  });
+  return null;
+}
+
 export const Step4Loans: Story = {
   name: "Step 4 · loans",
   parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/4">
+      <SeedSuggestions />
       <StepLoans {...noop} companyId="company-story" currency="ILS" bankConnected loanCount={0} picks={[]} onPick={() => undefined} />
     </StoryRoute>
   ),
