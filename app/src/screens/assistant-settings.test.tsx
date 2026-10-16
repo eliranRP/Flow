@@ -43,7 +43,7 @@ describe("AI connection page", () => {
       />,
     );
     expect(screen.getByRole("textbox", { name: "כתובת שרת MCP" })).toBeInTheDocument();
-    expect((screen.getByRole("textbox", { name: "כותרת" }) as HTMLInputElement).value).toBe(`Authorization: Bearer ${SAMPLE_ASSISTANT_SECRET}`);
+    expect(screen.getByRole("textbox", { name: "כותרת" })).toHaveValue(`Authorization: Bearer ${SAMPLE_ASSISTANT_SECRET}`);
     expect(screen.queryByRole("textbox", { name: "פקודת חיבור" })).not.toBeInTheDocument();
     vi.unstubAllEnvs();
   });

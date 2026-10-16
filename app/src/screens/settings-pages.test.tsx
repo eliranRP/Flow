@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -43,7 +43,7 @@ function renderAt(ui: ReactNode, path = "/settings") {
 
 /** The row's visible value (its hint), read from the link's text after its title. */
 function valueOf(link: HTMLElement): string {
-  return link.textContent ?? "";
+  return link.textContent;
 }
 
 describe("connectionsHint", () => {

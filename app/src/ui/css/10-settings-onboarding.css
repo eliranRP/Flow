@@ -399,7 +399,7 @@
   padding-inline: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
-  line-height: 1.5;
+  line-height: var(--type-line2-line);
 }
 
 /* A card of blocks (the inner pages). The menu and the business page use the page side (20). */
@@ -455,7 +455,7 @@
 .ui-step-text {
   min-inline-size: 0;
   font-size: var(--type-line2-size);
-  line-height: 1.5;
+  line-height: var(--type-line2-line);
 }
 
 /* The reconnect box: a tint, 14 in, 14 radius, 15/1.5. */
@@ -465,7 +465,7 @@
   background: var(--color-tint);
   color: var(--color-text);
   font-size: var(--type-line2-size);
-  line-height: 1.5;
+  line-height: var(--type-line2-line);
 }
 
 /* The facts card: a row per fact, a line between rows, the label secondary and the value text. */

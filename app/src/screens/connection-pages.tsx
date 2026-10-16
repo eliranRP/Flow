@@ -267,7 +267,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
           )}
         </>
       ) : null}
-      {showForm && !loading && !viewerOnly ? (
+      {showForm ? (
         <>
           <ConnectionHead>{copy.stepsHead}</ConnectionHead>
           <div className="ui-settings-card ui-connection-steps">
@@ -362,7 +362,7 @@ function liveView(
   if (data == null) return { state: "loading" };
   const authError = provider === "sumit" ? data.last_error === "sumit_auth" : data.last_error === "auth";
   if (authError) return { state: "problem", companyId: data.sumit_company_id != null ? String(data.sumit_company_id) : undefined };
-  if (data.connected === true) {
+  if (data.connected) {
     return {
       state: "connected",
       companyId: data.sumit_company_id != null ? String(data.sumit_company_id) : undefined,

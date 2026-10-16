@@ -39,6 +39,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const toast = useToast();
   const holdWrites = useHoldWrites();
   const holdOwner = useHoldOwnerSettings();
+  const viewerNoteId = useViewerNoteId() ?? undefined;
   const dashboard = useDashboardQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
   const live = sample == null && preview === "off";
@@ -211,7 +212,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
           icon={<SplitIcon />}
           checked={overheadOn}
           locked={overheadLocked}
-          disabledNoteId={useViewerNoteId() ?? undefined}
+          disabledNoteId={viewerNoteId}
           onChange={(checked) => {
             if (overheadLocked) return;
             setOverhead(checked, overheadOn);

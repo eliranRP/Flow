@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { useCompanyRole, useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { MY_COMPANIES_KEY, useMyCompaniesQuery, useTeamQuery } from "../team-queries";
 import { ROLE_LABEL } from "../team-api";
 import type { BasisChoice } from "../ui/company-choices";
@@ -11,7 +11,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { isStandalone } from "../ui/install-prompt";
 import { useCategoriesQuery, useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
-import { assertNoError, useWrite } from "../use-write";
+import { useWrite } from "../use-write";
 import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
 import { CompanySheet } from "./company-switcher";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
@@ -158,11 +158,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const navigate = useNavigate();
   const navigationType = useNavigationType();
   const { session } = useAuth();
-  const holdWrites = useHoldWrites();
   const role = useCompanyRole();
   // FLOW-601: the business name, its currency, connectors, setup and the team are the owner's.
   const holdOwner = useHoldOwnerSettings();
-  const blocked = useBlockedPreview();
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
@@ -323,7 +321,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
             title="חיבורים"
             icon={<PlugIcon />}
             value={connectionsValue}
-            skeleton={!noCompany && hint.kind === "loading"}
+            skeleton={hint.kind === "loading"}
           />
           {teamCount !== undefined ? (
             <SettingsPageRow

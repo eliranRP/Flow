@@ -13,7 +13,6 @@ import { CodeField, type CopyTarget } from "../ui/code-field";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
 import { FormError } from "../ui/layout";
-import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";

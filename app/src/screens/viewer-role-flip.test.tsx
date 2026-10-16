@@ -155,7 +155,6 @@ describe("inner write gates after the role changes", () => {
     });
   });
   describe("SUMIT status page (FLOW-512)", () => {
-    const connected: SettingsSample = { ...disconnected, connected: true, companyId: 1234 };
 
     function openStatus() {
       invoke.mockResolvedValue({ data: { ok: true }, error: null });

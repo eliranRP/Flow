@@ -1,9 +1,9 @@
 import { type Session } from "@supabase/supabase-js";
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
-import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "./flow-screens";
+import { CategoriesScreen, SettingsScreen } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
 
 /** FLOW-512: the menu. The account email is no longer a Settings row; the business page holds the name. */

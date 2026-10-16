@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { screenPhase } from "../query-phase";
-import { ROLE_LABEL, memberName, type Team, type TeamInvite, type TeamMember } from "../team-api";
+import { ROLE_LABEL, memberName, type Team, type TeamMember } from "../team-api";
 import { useMyCompaniesQuery, useTeamQuery } from "../team-queries";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
@@ -52,7 +52,7 @@ export function TeamScreen() {
       />
     );
   }
-  const active = companies.data?.companies.find((company) => company.id === companies.data?.active_id);
+  const active = companies.data?.companies.find((company) => company.id === companies.data.active_id);
   return <TeamList team={team.data} business={active?.name} />;
 }
 

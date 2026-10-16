@@ -139,13 +139,11 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
             blocked={blocked}
             readOnly={holdWrites}
             sample={
-              noCompany
-                ? undefined
-                : sample
-                  ? (sample.jev ?? JEV_DEFAULT)
-                  : preview !== "off"
-                    ? JEV_DEFAULT
-                    : undefined
+              sample
+                ? (sample.jev ?? JEV_DEFAULT)
+                : preview !== "off"
+                  ? JEV_DEFAULT
+                  : undefined
             }
           />
           <List>
