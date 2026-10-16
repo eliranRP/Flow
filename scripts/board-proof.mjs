@@ -164,17 +164,16 @@ async function proofInBrowser(input) {
   const boardData = boardCanvas.getContext("2d").getImageData(0, 0, w, h).data;
   const appData = appCanvas.getContext("2d").getImageData(0, 0, w, h).data;
   const rawMismatch = mismatch(boardData, appData, input.tolerance);
-  // The text-masked number: the same text boxes painted over both images, so only layout counts.
-  for (const canvasInMask of [boardCanvas, appCanvas]) {
-    const ctx = canvasInMask.getContext("2d");
+  // The text-masked number: the same text boxes painted over copies of both images, so only layout counts
+  // and the panels drawn below keep the real text.
+  const masked = (img) => {
+    const c = draw(img);
+    const ctx = c.getContext("2d");
     ctx.fillStyle = "#000";
     for (const rect of input.textRects) ctx.fillRect(rect.x * input.scale, rect.y * input.scale, rect.w * input.scale, rect.h * input.scale);
-  }
-  const maskedMismatch = mismatch(
-    boardCanvas.getContext("2d").getImageData(0, 0, w, h).data,
-    appCanvas.getContext("2d").getImageData(0, 0, w, h).data,
-    input.tolerance,
-  );
+    return c.getContext("2d").getImageData(0, 0, w, h).data;
+  };
+  const maskedMismatch = mismatch(masked(board), masked(app), input.tolerance);
   const diffData = new Uint8ClampedArray(boardData.length);
   for (let index = 0; index < boardData.length; index += 4) {
     const differs =

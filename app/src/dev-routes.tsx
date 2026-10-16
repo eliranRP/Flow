@@ -365,10 +365,12 @@ export function DevCashLines() {
     // draws them (today is 11/10 there), so the day titles and the rows' dates match the frame.
     const boardToday = new Date(2026, 9, 11, 12);
     const board = sampleBoardCashMonths(boardToday);
+    // The board draws only the יצא and נכנס rows, so a לא נספר request shows the יצא rows.
+    const boardSide = side === "in" ? "in" : "out";
     return (
       <CashLinesScreen
-        sample={{ months: board, lines: sampleBoardCashLines(side === "in" ? "in" : "out", boardToday), today: "2026-10-11" }}
-        at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side, currency: "USD" }}
+        sample={{ months: board, lines: sampleBoardCashLines(boardSide, boardToday), today: "2026-10-11" }}
+        at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side: boardSide, currency: "USD" }}
       />
     );
   }
