@@ -46,6 +46,8 @@ import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { RecurringScreen } from "./screens/recurring-screen";
+import { RECURRING_FIXTURE } from "./recurring-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devReviewItems = [
@@ -506,6 +508,11 @@ export function DevUnpaid() {
 }
 
 /** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
+/** FLOW-447: the list on the rule-25 fixture, for the e2e run. */
+export function DevRecurring() {
+  return <RecurringScreen sample={RECURRING_FIXTURE} />;
+}
+
 export function DevMissingBills() {
   const [params] = useSearchParams();
   if (params.get("empty") === "1") return <MissingBillsScreen sample={{ late: [] }} />;

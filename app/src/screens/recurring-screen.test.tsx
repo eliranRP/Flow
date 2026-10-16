@@ -1,39 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ScheduleRow } from "../recurring-schedule";
+import { RECURRING_FIXTURE as FIXTURE } from "../recurring-sample";
 import { recurringView } from "./recurring-screen";
-
-/** The brief's rule-25 fixture as the server returns it (invented names, USD, today 2026-10-11). */
-const row = (over: Partial<ScheduleRow> & Pick<ScheduleRow, "party_id" | "party_name" | "state" | "typical_amount_minor" | "typical_day">): ScheduleRow => ({
-  direction: "expense",
-  currency: "USD",
-  amount_minor: null,
-  pace: "month",
-  next_due_month: "2026-10",
-  expected_by: "2026-10-31",
-  project_id: null,
-  project_name: null,
-  category_id: null,
-  category_name: null,
-  ...over,
-});
-
-const FIXTURE: ScheduleRow[] = [
-  row({ party_id: "power", party_name: "Brightline Power", state: "late", typical_amount_minor: 18600, typical_day: 3, project_name: "Birch Lane", category_name: "חשמל ומים" }),
-  row({ party_id: "rent-elm", party_name: "Elm Row unit 2", direction: "income", state: "late", typical_amount_minor: 165000, typical_day: 1, project_name: "Elm Row", category_name: "שכירות" }),
-  row({ party_id: "hoa", party_name: "Juniper Pointe HOA", state: "soon", typical_amount_minor: 31000, typical_day: 15, project_name: "Juniper Ct", category_name: "אחזקה" }),
-  row({ party_id: "internet", party_name: "Harborlink Internet", state: "soon", typical_amount_minor: 13000, typical_day: 18, category_name: "משרד" }),
-  row({ party_id: "insurance", party_name: "Keystone Mutual", state: "soon", typical_amount_minor: 21200, typical_day: 20, project_name: "Juniper Ct", category_name: "ביטוח ומסים" }),
-  row({ party_id: "waste", party_name: "Clearway Waste", state: "soon", typical_amount_minor: 8800, typical_day: 25, project_name: "Sable Ct", category_name: "אחזקה" }),
-  row({ party_id: "software", party_name: "Docsuite", state: "soon", typical_amount_minor: 3600, typical_day: 28, category_name: "משרד" }),
-  row({ party_id: "water", party_name: "Bayside Water Utility", state: "arrived", typical_amount_minor: 10300, amount_minor: 14200, typical_day: 5, project_name: "Elm Row", category_name: "חשמל ומים" }),
-  row({ party_id: "phone", party_name: "Signalpoint Mobile", state: "arrived", typical_amount_minor: 8400, amount_minor: 8400, typical_day: 6, category_name: "משרד" }),
-  row({ party_id: "pest", party_name: "Brightside Pest", state: "arrived", typical_amount_minor: 6500, amount_minor: 6500, typical_day: 2, project_name: "Birch Lane", category_name: "אחזקה" }),
-  row({ party_id: "rent-birch", party_name: "Birch Lane rent", direction: "income", state: "arrived", typical_amount_minor: 210000, amount_minor: 210000, typical_day: 1, project_name: "Birch Lane", category_name: "שכירות" }),
-  row({ party_id: "rent-juniper", party_name: "Juniper Ct rent", direction: "income", state: "arrived", typical_amount_minor: 185000, amount_minor: 185000, typical_day: 1, project_name: "Juniper Ct", category_name: "שכירות" }),
-  row({ party_id: "lawn", party_name: "Fernway Lawn", state: "later", typical_amount_minor: 12000, typical_day: 12, pace: "2months", next_due_month: "2026-12", project_name: "Juniper Ct", category_name: "אחזקה" }),
-  row({ party_id: "pinecrest", party_name: "Pinecrest Insurance", state: "later", typical_amount_minor: 54000, typical_day: 10, pace: "quarter", next_due_month: "2027-01", project_name: "Sable Ct", category_name: "ביטוח ומסים" }),
-  row({ party_id: "tax", party_name: "Bay County Tax", state: "later", typical_amount_minor: 342000, typical_day: 30, pace: "year", next_due_month: "2026-11", project_name: "Birch Lane", category_name: "ביטוח ומסים" }),
-];
 
 describe("recurringView (rule-25 fixture)", () => {
   const view = recurringView(FIXTURE, "2026-10-11");

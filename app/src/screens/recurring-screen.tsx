@@ -19,9 +19,9 @@ function monthTitle(today: string): string {
 }
 
 /** FLOW-447: the קבועים list. Late bills lead; the rest group by category, in the server's order. */
-export function RecurringScreen({ now = new Date() }: { now?: Date } = {}) {
-  const query = useRecurringScheduleQuery();
-  const rows = query.data;
+export function RecurringScreen({ now = new Date(), sample }: { now?: Date; sample?: readonly ScheduleRow[] } = {}) {
+  const query = useRecurringScheduleQuery(sample == null);
+  const rows = sample ?? query.data;
   const view = useMemo(() => (rows == null ? null : recurringView(rows, israelToday(now))), [rows, now]);
   if (view == null) return null;
   return <RecurringList {...view} />;
