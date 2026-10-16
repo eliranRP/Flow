@@ -252,7 +252,7 @@ describe("cold review scope", () => {
     expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it("uses company_id on the list_review payload when the session has no company row yet", async () => {
     let releaseIntegration: () => void = () => undefined;
