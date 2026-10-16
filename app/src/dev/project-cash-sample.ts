@@ -41,6 +41,9 @@ export const cash = months([
   [cashRow(115_000n, 0n, 115_000n)],
   [cashRow(98_000n, 0n, 98_000n)],
 ]);
+// This month's net less its profit (לא נספר ברווח, FLOW-418): the owner's money put into the project.
+const currentRow = cash.months[0]?.by_currency[0];
+if (currentRow) currentRow.not_in_profit_categories = [{ name: "השקעת בעלים", amount_minor: 107_000n }];
 
 export const project: NonNullable<ProjectDetail> = {
   id: "p-c",
