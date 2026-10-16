@@ -1,11 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { cashMonthKey } from "../cash";
-import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
-import { exampleOnBand } from "../ui/screen-stories-support";
+import { sampleCashMonths } from "../dev/cash-sample";
 import { StoryRoute } from "../ui/story-route";
 import { CashMonthScreen } from "./cash-screens";
-import { attentionRows, CashHome } from "./HomeScreen";
 
 /** FLOW-413 (frame b): Home's cash, an earlier month's page, and a month's lines. Invented figures. */
 
