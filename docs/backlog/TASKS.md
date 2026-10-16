@@ -205,6 +205,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-139"></a>[FLOW-139](tasks/FLOW-139.md) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
 | <a id="flow-140"></a>[FLOW-140](tasks/FLOW-140.md) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
 | <a id="flow-141"></a>[FLOW-141](tasks/FLOW-141.md) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
+| <a id="flow-918"></a>[FLOW-918](tasks/FLOW-918.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 
 ## MCP
 
