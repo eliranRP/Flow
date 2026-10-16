@@ -190,8 +190,8 @@ describe("split by category editor (FLOW-325)", () => {
     // Two sheets close one after the other (each waits out --motion-sheet-out); under a loaded
     // full run that took longer than waitFor's 1s default (FLOW-363 2b gate), so allow 3s.
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
-    const field = screen.getByLabelText("אחוז, ביטוח");
-    await waitFor(() => { expect(field).toHaveFocus(); });
+    // Asked again on each try: the sheet's re-render can swap the field's element after it is found.
+    await waitFor(() => { expect(screen.getByLabelText("אחוז, ביטוח")).toHaveFocus(); }, { timeout: 3000 });
   });
 
   it("maps a server refusal to a banner and keeps the screen open", async () => {
