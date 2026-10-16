@@ -259,6 +259,14 @@ async function main(argv) {
   const summary = /** @type {Record<string, Record<string, number>>} */ ({});
   try {
     for (const shot of plan) {
+      // A frame drawn in one theme only (no board PNG for this theme, but one for the other) gets one
+      // shot, not a crash. A frame with no board in any theme is a wrong --boards folder or a typo.
+      if (!existsSync(shot.board)) {
+        const drawnElsewhere = plan.some((other) => other.frame === shot.frame && existsSync(other.board));
+        if (!drawnElsewhere) throw new Error(`no board PNG for ${shot.frame} in any theme: ${shot.board}`);
+        console.warn(`skipped ${shot.frame} ${shot.theme}: drawn in one theme only`);
+        continue;
+      }
       const context = await browser.newContext({
         viewport: { width: PROOF_WIDTH, height: PROOF_HEIGHT },
         deviceScaleFactor: PROOF_DPR,
@@ -299,6 +307,8 @@ async function main(argv) {
   } finally {
     await browser.close();
   }
+  // An empty run is a failed run: nothing was compared, so there is no number to gate on.
+  if (Object.keys(summary).length === 0) throw new Error("no frame was compared; check the map and the --boards folder");
   writeFileSync(path.join(options.out, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
 }
 

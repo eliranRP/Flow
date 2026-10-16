@@ -103,6 +103,8 @@ const taps: Tap[] = [
       // FLOW-367: a row is a link to its invoice page, and the mark sits there, once.
       await page.getByRole("link", { name: new RegExp(escapeRe(unpaidName)) }).first().tap();
       await expect(page).toHaveURL(/\/unpaid\/[^/?]+/);
+      // The list leaves the page as the invoice route paints; until it does, every row has its own mark button.
+      await expect(page.getByRole("list", { name: "חשבוניות פתוחות" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: LABELS.markPaid, exact: true })).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {
@@ -117,6 +119,8 @@ const taps: Tap[] = [
     rpc: "set_transaction_cash",
     path: `/transactions/${TXN_ID}`,
     arrange: async (page) => {
+      // FLOW-366: the switch sits in the "נספר ב" sheet, so open the row first.
+      await page.getByRole("button", { name: /^נספר ב/ }).tap();
       await expect(cashSwitch(page)).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {
@@ -216,13 +220,16 @@ test("tap-response: a failed write rolls back within 2 s and toasts ניסיון
   await slowWrite(page, "set_transaction_cash", held);
   await page.goto(`/transactions/${TXN_ID}`);
   await page.waitForLoadState("networkidle");
+  // FLOW-366: the switch sits in the "נספר ב" sheet, so open the row first, as the flip test does.
+  await page.getByRole("button", { name: /^נספר ב/ }).tap();
   const switchBox = cashSwitch(page);
   await expect(switchBox).toBeVisible({ timeout: 30_000 });
   const before = await switchBox.isChecked();
   held.failing = true;
   await switchBox.tap();
   // The 500 comes back after the hold; the switch is back to the server's state and a toast offers a retry.
-  const retry = page.getByRole("button", { name: LABELS.retry, exact: true });
+  // The toast renders under the open sheet, so the sheet marks it hidden from roles; its text is still on screen.
+  const retry = page.getByText(LABELS.retry, { exact: true });
   await expect(retry).toBeVisible({ timeout: WRITE_MS + 3_000 });
   const failedAt = held.failedAt ?? Date.now();
   const toastMs = Date.now() - failedAt;

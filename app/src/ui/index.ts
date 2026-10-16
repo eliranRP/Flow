@@ -78,5 +78,6 @@ export { TxnStepRow } from "./txn-step-row";
 export type { TxnStepRowProps } from "./txn-step-row";
 export { ReviewCount, reviewCountDigits } from "./review-count";
 export { ShareAmount } from "./share-amount";
-export { ChargeMonthBars, PartyChargesBody, PartyChargesSection, PartyChargesSheet } from "./related-charges";
+export { CountedInRow, CountedInSheet } from "./counted-in";
+export { PACE_LABEL, paceSheetCopy, paceToast } from "./pace";
 export { PartsBar, type BarPart, type PartTone } from "./parts-bar";

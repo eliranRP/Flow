@@ -43,3 +43,88 @@
 .ui-profit-rows {
   margin-block-start: var(--space-4);
 }
+
+/* FLOW-366: the month lines page. The count line sits under the total, in muted text. */
+.ui-lines-count {
+  margin: 0;
+  color: var(--color-text-muted);
+  /* One line at 390px: the board's count is the caption size. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+/* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's
+   below slot is a row for the breakdown's single control, so the lines page wraps its own. */
+.ui-lines-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ui-lines-head .ui-seg {
+  inline-size: 100%;
+}
+
+/* FLOW-366: the side switch sits above the title, full width, as the board draws it. */
+.ui-lines-switch {
+  inline-size: 100%;
+  /* The board: the track sits lower under the back link, and the title sits well under the track. */
+  margin-block: var(--space-2) var(--space-3);
+}
+
+.ui-lines-switch .ui-seg {
+  inline-size: 100%;
+  /* The board sets יצא on the left half of the segment, on a surface-coloured track. */
+  direction: ltr;
+  background: var(--color-surface);
+}
+
+/* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text.
+   The organize row's component is gone (FLOW-368), so the row is plain flex here. */
+.ui-lines-chips {
+  display: flex;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-block: var(--space-3) var(--space-2);
+  margin-inline: calc(var(--space-4) * -1);
+  padding-inline: var(--space-side);
+}
+
+/* A chip keeps its words: the row scrolls sideways instead of shortening them. */
+.ui-lines-chips > * {
+  flex: none;
+  max-width: none;
+}
+
+/* A group: its head sticks under the top of the screen, or under the compact bar when it shows
+   (--month-sticky-top, set on html by 27-compact-header.css). */
+.ui-lines-group {
+  padding: 0 var(--space-side) var(--space-2);
+}
+
+.ui-lines-group-head {
+  position: sticky;
+  inset-block-start: var(--month-sticky-top, 0);
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) 0 var(--space-2);
+  background: var(--color-bg);
+}
+
+.ui-lines-group-title {
+  margin: 0;
+}
+
+.ui-lines-group-sum {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

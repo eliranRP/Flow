@@ -23,7 +23,7 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("link", { name: /מנופים לדוגמה/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t-filed\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "הוצאה" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^פרויקט / })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
@@ -414,7 +414,9 @@ test("a project's by-month list opens a month, and Back steps back one screen at
 test("a transaction shows its VAT, changes, and confirms delete", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
   await expect(page.getByRole("button", { name: "חשבונית ותשלום" })).toHaveCount(0);
-  await expect(page.getByText(/^לפני מע״מ · מע״מ משוער ₪[\d,.]+ · \d{2}\/\d{2}\/\d{4}$/)).toBeVisible();
+  await expect(page.getByText(/^לפני מע״מ · מע״מ \(משוער\) ₪[\d,.]+$/)).toBeVisible();
+  // The date sits on the meta line above the VAT line (FLOW-366).
+  await expect(page.locator(".ui-txn-meta").first()).toContainText(/\d{2}\/\d{2}\/\d{4}/);
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "מחיקה" }).click();
   await expect(page.getByRole("dialog", { name: "למחוק את הרשומה?" })).toBeVisible();
@@ -429,13 +431,14 @@ test("a transaction shows its VAT, changes, and confirms delete", async ({ page 
   await toast(page, "השיוך נשמר");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /הובלה/ })).toBeVisible();
-  await page.getByRole("link", { name: "פיצול בין פרויקטים" }).click();
+  // FLOW-366: the פיצול row (its value names the split when there is one).
+  await page.getByRole("button", { name: /^פיצול/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t-manual\/split/);
 });
 
 test("the transaction change sheet opens split in place", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
-  await page.getByRole("button", { name: /פרויקט/ }).click();
+  await page.getByRole("button", { name: /^פרויקט / }).click();
   const sheet = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
