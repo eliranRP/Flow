@@ -13,12 +13,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// The sum as a month total draws it: a line of one currency, its income in the rows' figure markup.
+// The sum as a month total line draws it: its income after the count, with the agorot raised.
 const SUM = (
   <span className="ui-month-line">
     <span>
-      <span className="sr-only">הכנסות </span>
-      <bdi dir="ltr" className="ui-num ui-income">+₪1,250.00</bdi>
+      <span className="sr-only">, הכנסות </span>
+      <bdi dir="ltr" className="ui-num ui-income">+₪1,250<span className="ui-num-cents">.00</span></bdi>
     </span>
   </span>
 );
