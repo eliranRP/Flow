@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { ROLE_LABEL, memberName, type Team, type TeamMember } from "../team-api";
 import { useMyCompaniesQuery, useTeamQuery } from "../team-queries";
@@ -29,9 +30,25 @@ export const PENDING_WORD = "הוזמן · ממתין";
  * the name, then the pending invites. The owner opens a member's or an invite's sheet and invites
  * from the bar; anyone else who reaches the page reads the list.
  */
+/** The `?preview=1` sample: an owner, an editor, a viewer, and one pending invite. Names are invented. */
+const PREVIEW_BUSINESS = "Maple Street Builds";
+const PREVIEW_TEAM: Team = {
+  company_id: "preview",
+  role: "owner",
+  can_manage: true,
+  members: [
+    { user_id: "u-owner", name: "Noa L.", email: "owner@example.com", role: "owner", you: true },
+    { user_id: "u-editor", name: "Eli M.", email: "eli@example.com", role: "editor", you: false },
+    { user_id: "u-viewer", name: "Ari K.", email: "ari@example.com", role: "viewer", you: false },
+  ],
+  invites: [{ id: "inv-1", email: "partner@example.com", role: "viewer", created_at: "2026-10-14T09:00:00.000Z" }],
+};
+
 export function TeamScreen() {
+  const preview = useHomePreview();
   const companies = useMyCompaniesQuery();
   const team = useTeamQuery();
+  if (preview === "empty") return <TeamList team={PREVIEW_TEAM} business={PREVIEW_BUSINESS} />;
   if (companies.data != null && companies.data.active_id == null) return <Navigate to={BACK} replace />;
   const phase = screenPhase("off", team);
   if (phase.kind === "loading" || phase.kind === "error" || team.data == null) {
