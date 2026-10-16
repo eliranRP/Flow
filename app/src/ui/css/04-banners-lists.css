@@ -336,6 +336,12 @@
   background: var(--color-band-pill);
 }
 
+/* FLOW-364 (board): on the band the change pill is white, its text the helps grey or the hurts red. */
+.ui-band .ui-change-amount {
+  padding-inline: 10px;
+  background: var(--color-on-band);
+}
+
 .ui-change-amount.ui-delta-good {
   color: var(--color-pill-helps);
 }

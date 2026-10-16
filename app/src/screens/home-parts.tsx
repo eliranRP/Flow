@@ -186,6 +186,9 @@ export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; m
       <span className="ui-home-forecast-value">
         <Amount agorot={minor} currency={currency} size="list" />
       </span>
+      <span className="ui-home-forecast-chevron" aria-hidden="true">
+        <OutwardChevron side="end" />
+      </span>
     </div>
   );
 }

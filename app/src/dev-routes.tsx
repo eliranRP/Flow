@@ -11,6 +11,7 @@ import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sa
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
 import { BackButton, useGoBack } from "./ui/back";
+import { BandCompany } from "./ui/top-band";
 import { Button } from "./ui/button";
 import { ActionBar, ActionBarRow } from "./ui/action-bar";
 import { CheckIcon } from "./ui/icons";
@@ -327,7 +328,7 @@ export function DevCash() {
       monthKey={monthKey}
       currentKey={currentKey}
       firstKey={cashMonthKey(data.months.at(-1)?.month ?? currentKey)}
-      previewing={params.get("preview") != null}
+      previewing={false}
       search="?preview=1"
       attention={params.get("box") === "none" ? [] : attentionRows({
         pending: 7,
@@ -341,6 +342,7 @@ export function DevCash() {
       })}
       sameDay={sampleCashToDay()}
       forecast={-6_810_000n}
+      company={<BandCompany name="Acme Test Co" onOpen={() => undefined} />}
       onStepMonth={(key) => {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}

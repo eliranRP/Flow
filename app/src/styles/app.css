@@ -189,6 +189,7 @@
 :root {
   --band-pad-bottom: var(--radius-band);
   --band-label-gap: 2px;
+  --tabbar-min-inset: 32px;
   --empty-icon: 64px;
   --empty-line: 300px;
   --label-gap: 6px;

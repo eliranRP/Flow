@@ -64,7 +64,7 @@
   flex: none;
   inline-size: 12px;
   block-size: 12px;
-  border-radius: var(--radius-block);
+  border-radius: 3px;
   background: var(--color-accent);
 }
 
@@ -106,15 +106,33 @@
   line-height: var(--type-meta-line);
 }
 
+/* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
 .ui-home-attention {
   margin: var(--space-3) var(--space-4) var(--space-4);
-  padding: var(--space-3) 0 var(--space-1);
+  padding: var(--space-5) 0 0;
   border-radius: var(--radius-card);
   background: var(--color-tint);
 }
 
+.ui-home-attention .ui-banner-rows {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.ui-home-attention .ui-banner-rows > li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-home-attention .ui-banner-row {
+  min-height: 70px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: 0;
+}
+
 .ui-home-attention-title {
-  margin: 0 var(--space-5) var(--space-1);
+  margin: 0 var(--space-5) var(--space-3);
   font-size: var(--type-section-size);
   line-height: var(--type-section-line);
   font-weight: var(--type-section-weight);
@@ -160,14 +178,16 @@
   gap: var(--space-2);
 }
 
+/* FLOW-364 (board): the cell's name and amount sit at the start edge, 12px in, 60px high. */
 .ui-month-cell {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: var(--space-1);
+  gap: var(--band-label-gap);
   min-block-size: var(--month-cell-min);
-  padding: var(--space-2) var(--pill-pad-inline);
+  padding: var(--space-1) var(--space-3);
+  text-align: start;
   border: 2px solid transparent;
   border-radius: var(--radius-month-cell);
   background: var(--color-raised);

@@ -338,9 +338,11 @@ export function CashHome({
           leading={company}
           trailing={<HomeBandActions isPast={isPast} currentName={monthName(currentKey)} search={search} />}
         >
-          <HomeMonthPill monthKey={monthKey} nav={nav} />
-          <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
-          {isPast || forecast == null ? null : <ForecastRow monthKey={monthKey} minor={forecast} currency={base} />}
+          <div className="ui-band-body">
+            <HomeMonthPill monthKey={monthKey} nav={nav} />
+            <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
+            {isPast || forecast == null ? null : <ForecastRow monthKey={monthKey} minor={forecast} currency={base} />}
+          </div>
         </TopBand>
       </div>
 
@@ -362,7 +364,7 @@ export function CashHome({
       ) : null}
       {/* Design lead: Home shows money that needs a hand whatever its main figure; an empty box hides. */}
       <div className="m-page-enter" style={pageEnterStyle(2)}>
-        <AttentionBox rows={attention} />
+        {isPast ? null : <AttentionBox rows={attention} />}
         {checklist}
       </div>
 
