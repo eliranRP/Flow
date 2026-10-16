@@ -11,7 +11,7 @@ import {
   roundedHeroProfit,
 } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useHeldOrder } from "../list-hold";
 import { useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
@@ -96,7 +96,7 @@ function NoBooksYet({ previewing, example, search, companyName, view }: { previe
         example={example}
         wordmark={false}
         leading={previewing ? undefined : <CompanySwitcher fallbackName={companyName} />}
-        trailing={view === "cash" && !previewing ? <HomeBandActions isPast={false} currentName="" search={search} /> : undefined}
+        trailing={view === "cash" ? <HomeBandActions isPast={false} currentName="" search={search} /> : undefined}
       >
         <Hero label={view === "cash" ? emptyHomeLabel : emptyProfitLabel} />
       </TopBand>
@@ -301,6 +301,15 @@ export function CashHome({
   const laterKey = isPast ? shiftMonthKey(monthKey, 1) : null;
   const [drawerOpen, setDrawerOpen] = useState(initialDrawerOpen);
   const setDrawer = useSheetHistory("month", drawerOpen, setDrawerOpen);
+  // A pick closes the drawer by its history pop. The month moves after that pop: a navigation sent
+  // before it would be undone by the pop (FLOW-364).
+  const pendingMonth = useRef<string | null>(null);
+  useEffect(() => {
+    if (drawerOpen || pendingMonth.current == null) return;
+    const key = pendingMonth.current;
+    pendingMonth.current = null;
+    onStepMonth(key);
+  }, [drawerOpen, onStepMonth]);
   const nav: HomeMonthNav = {
     earlierKey,
     laterKey,
@@ -366,8 +375,8 @@ export function CashHome({
         base={base}
         search={search}
         onPick={(key) => {
+          pendingMonth.current = key;
           setDrawer(false);
-          onStepMonth(key);
           window.scrollTo({ top: 0 });
         }}
       />

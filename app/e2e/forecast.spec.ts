@@ -43,13 +43,14 @@ test("קבועים: a late row closes for this user with סגירה under ערי
   await expect(page).toHaveURL(/\/transactions\/t-power-oct\?preview=1$/);
 });
 
-test("Home: with no alert in the box, לכל הקבועים still opens קבועים (FLOW-423)", async ({ page }) => {
+test("Home: the קבועים tab opens קבועים, and the box has no link to it (FLOW-364)", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1&box=none");
-  const link = page.getByRole("link", { name: "לכל הקבועים" });
-  await link.scrollIntoViewIfNeeded();
-  expect((await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-  await link.click();
-  await expect(page).toHaveURL(/\/e2e\/missing-bills\?preview=1$/);
+  await expect(page.getByRole("link", { name: "לכל הקבועים" })).toHaveCount(0);
+  const tab = page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: "קבועים" });
+  await expect(tab).toBeVisible();
+  expect((await tab.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await tab.click();
+  await expect(page).toHaveURL(/\/missing-bills\?preview=1$/);
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
 });
 

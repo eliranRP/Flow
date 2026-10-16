@@ -26,7 +26,8 @@ test("preview error and loading states are reachable", async ({ page }) => {
   await expect(page.getByText("לא הצלחנו לטעון.")).toBeVisible();
   await page.goto("/?preview=loading");
   await expect(page.locator("[aria-busy=true]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "חודשים קודמים" })).toBeVisible();
+  // The loading band stands in for Home's band (FLOW-364).
+  await expect(page.locator("[aria-busy=true] .ui-band")).toBeVisible();
 });
 
 test("add is a sheet over Home and transaction detail has no tab bar", async ({ page }) => {
@@ -69,14 +70,10 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
   await expect(page.getByRole("link", { name: "הוספה" })).toBeFocused();
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
+  // /projects has no + (FLOW-364): the add is Home's band button only.
   await page.goto("/projects?preview=1");
-  await page.getByRole("link", { name: "הוספה" }).click();
-  await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  await expect(page.locator("h1", { hasText: "פרויקטים" })).toHaveCount(1);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
-  await expect(page).toHaveURL(/\/projects\?preview=1/);
   await page.goto("/transactions/1?preview=1");
   await expect(page.getByRole("heading", { name: "פרטי תנועה" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(0);

@@ -1,6 +1,7 @@
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
-import { useEffect, useState, type Ref } from "react";
+import { useEffect, useState } from "react";
+import { addTriggerRef } from "../add-trigger";
 import { Link } from "react-router-dom";
 import { cashLinesPath, notInProfitHint } from "../cash";
 import { changeTone, splitParts } from "../home-month";
@@ -43,7 +44,7 @@ export type HomeMonthNav = {
 };
 
 /** Row 1 of the band: + , search and the avatar on the current month; "חזרה ל…" on a past one. */
-export function HomeBandActions({ isPast, currentName, search, addRef }: { isPast: boolean; currentName: string; search: string; addRef?: Ref<HTMLButtonElement | HTMLAnchorElement> }) {
+export function HomeBandActions({ isPast, currentName, search }: { isPast: boolean; currentName: string; search: string }) {
   const allowAdd = useAllowAdd();
   if (isPast) {
     return (
@@ -56,7 +57,16 @@ export function HomeBandActions({ isPast, currentName, search, addRef }: { isPas
   return (
     <div className="ui-band-actions">
       {allowAdd ? (
-        <IconButton label="הוספה" onBand to={`/add${search}`} ref={addRef} className="ui-band-action">
+        <IconButton
+          label="הוספה"
+          onBand
+          to={`/add${search}`}
+          ref={(node) => {
+            // The sheet returns focus here when it closes (FLOW-364).
+            addTriggerRef.current = node;
+          }}
+          className="ui-band-action"
+        >
           <PlusIcon size={22} />
         </IconButton>
       ) : null}
