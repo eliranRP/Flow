@@ -68,7 +68,7 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
           className="ui-forecast-input"
           inputMode="decimal"
           value={amount}
-          onChange={(event) => setAmount(event.target.value)}
+          onChange={(event) => { setAmount(event.target.value); }}
           aria-label={`סכום צפוי של ${name}`}
           disabled={when === "moved"}
         />
@@ -83,14 +83,14 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
               role="radio"
               aria-checked={when === choice.value}
               className={cx("ui-forecast-choice", when === choice.value && "ui-forecast-choice-on")}
-              onClick={() => setWhen(choice.value)}
+              onClick={() => { setWhen(choice.value); }}
             >
               {choice.label}
             </button>
           ))}
         </div>
         {when === "until" ? (
-          <input type="date" className="ui-forecast-input" value={day} onChange={(event) => setDay(event.target.value)} aria-label="עד תאריך" />
+          <input type="date" className="ui-forecast-input" value={day} onChange={(event) => { setDay(event.target.value); }} aria-label="עד תאריך" />
         ) : null}
       </fieldset>
       <p className="ui-forecast-source">
@@ -114,7 +114,7 @@ export function ForecastItemSheet({ item, today, onOpenChange, onSave }: {
   return (
     <Sheet open={item != null} onOpenChange={onOpenChange} title={item?.name ?? ""}>
       {item == null ? null : (
-        <ForecastItemForm key={item.key} item={item} today={today} onSave={onSave} onDone={() => onOpenChange(false)} />
+        <ForecastItemForm key={item.key} item={item} today={today} onSave={onSave} onDone={() => { onOpenChange(false); }} />
       )}
     </Sheet>
   );

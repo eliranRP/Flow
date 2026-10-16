@@ -30,9 +30,9 @@ export function forecastBigText(minor: bigint): string {
 }
 
 function itemWhen(item: ForecastItem): string {
-  if (item.due_on != null) return `עד ${Number(item.due_on.slice(8, 10))}.${Number(item.due_on.slice(5, 7))}`;
+  if (item.due_on != null) return `עד ${String(Number(item.due_on.slice(8, 10)))}.${String(Number(item.due_on.slice(5, 7)))}`;
   if (item.kind === "invoice") return "לגבייה";
-  return item.day != null ? `ב־${item.day}` : "השבוע";
+  return item.day != null ? `ב־${String(item.day)}` : "השבוע";
 }
 
 function itemWhat(item: ForecastItem): string {
@@ -44,7 +44,7 @@ function ForecastRowButton({ item, onOpen, leaving }: { item: ForecastItem; onOp
   const amount = item.direction === "income" ? signed(item.minor, "+") : signed(item.minor, "−");
   return (
     <li className={cx("ui-forecast-li", leaving && "ui-forecast-leaving")}>
-      <button type="button" className="ui-forecast-row" onClick={() => onOpen(item)} aria-label={`${name}, ${amount}`}>
+      <button type="button" className="ui-forecast-row" onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
         <span className="ui-forecast-initial" aria-hidden="true">{name.slice(0, 1)}</span>
         <span className="ui-forecast-text">
           <span className="ui-forecast-name">{name}</span>
@@ -107,9 +107,9 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
   const days = daysLeftInMonth(today, month);
 
   useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > COMPACT_AFTER);
+    const onScroll = () => { setCompact(window.scrollY > COMPACT_AFTER); };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll); };
   }, []);
 
   const smallTotal = build == null ? 0n : build.small.reduce((sum, item) => sum + item.minor, 0n);
@@ -126,7 +126,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
       toast.show({
         message: `${item.name} הועבר לחודש הבא`,
         action: "ביטול",
-        onAction: () => write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }),
+        onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
       });
       return;
     }
@@ -134,7 +134,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
     toast.show({
       message: "הצפי עודכן",
       action: "ביטול",
-      onAction: () => write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }),
+      onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
     });
   }
 
@@ -154,7 +154,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
         <span>בית</span>
         <span className="ui-forecast-compact-figure">{`צפי · ${forecastBigText(total)}`}</span>
       </div>
-      <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${days} ימים`} />
+      <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
       {data == null && live && query.isError ? (
         <p className="ui-forecast-error t-hint" role="alert">לא הצלחנו לטעון את הצפי.</p>
       ) : null}
@@ -183,9 +183,9 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
               ))}
               {build.small.length > 0 ? (
                 <li className="ui-forecast-li">
-                  <button type="button" className="ui-forecast-row ui-forecast-small" aria-expanded={smallOpen} onClick={() => setSmallOpen((value) => !value)}>
+                  <button type="button" className="ui-forecast-row ui-forecast-small" aria-expanded={smallOpen} onClick={() => { setSmallOpen((value) => !value); }}>
                     <span className="ui-forecast-text">
-                      <span className="ui-forecast-name">{`+${build.small.length} · חיובים קבועים קטנים`}</span>
+                      <span className="ui-forecast-name">{`+${String(build.small.length)} · חיובים קבועים קטנים`}</span>
                     </span>
                     <span className="ui-forecast-amount ui-forecast-out">{signed(smallTotal, "−")}</span>
                   </button>
@@ -213,7 +213,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
             </section>
           ) : null}
           <div className={cx("ui-forecast-changed", changed > 0 && "ui-forecast-changed-on")} aria-hidden={changed === 0}>
-            <span>{`שינית ${changed} ${changed === 1 ? "פריט" : "פריטים"} בצפי`}</span>
+            <span>{`שינית ${String(changed)} ${changed === 1 ? "פריט" : "פריטים"} בצפי`}</span>
             <button type="button" className="ui-forecast-reset" onClick={resetAll} disabled={changed === 0}>איפוס</button>
           </div>
           <p className="ui-forecast-foot t-hint">

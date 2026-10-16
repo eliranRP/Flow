@@ -18,7 +18,7 @@ const expected: ExpectedMonths = {
 const unpaid: UnpaidRow[] = [
   { id: "inv-1", description: "Invoice 1", doc_date: "2026-10-02", project_name: null, customer_name: "Client A", open_gross_agorot: 250000n, open_net_agorot: 250000n, currency: "ILS" },
   { id: "inv-2", description: "Invoice 2", doc_date: "2026-10-03", project_name: null, customer_name: null, open_gross_agorot: 0n, open_net_agorot: 0n, currency: "ILS" },
-] as unknown as UnpaidRow[];
+];
 
 describe("buildMonthForecast", () => {
   it("lists the parties not yet seen and the open invoices, with the totals", () => {

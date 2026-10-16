@@ -95,7 +95,7 @@ export function priorPatch(prior: ForecastOverrideRow | null): ForecastPatch {
 }
 
 export function useResetForecastMonth(month: string) {
-  return useWrite<void>({
+  return useWrite({
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
