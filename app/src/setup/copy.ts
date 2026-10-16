@@ -127,8 +127,6 @@ export const SETUP_ERROR_RETRY = "לא הצלחנו לשמור. נסו שוב.";
 
 /** Still used by the Home card and the old review path until FLOW-365/FLOW-514 step C. */
 export const COMPLETED_TOAST = "ההגדרה הושלמה.";
-export const DISMISS_LABEL = "סגירת ההגדרה";
-export const DISMISS_TOAST = "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות.";
 export const SAMPLE_TOAST = "אישור ראשון. אפשר להמשיך בהגדרה.";
 
 export function setupHost(): string {

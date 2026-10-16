@@ -167,34 +167,8 @@ export function approveSample(store: SetupStore, at: string): SetupStore {
   return { ...store, sample_review_at: store.sample_review_at ?? at, skipped };
 }
 
-/* -- Legacy: the Home card (setup/home.tsx, setup/card.tsx) and its old counts. -------------------
- * HomeScreen.tsx still mounts the card, and #622 owns that file. Step C removes these with the card.
- * The card is hidden (cardVisible is false), so these only keep it compiling until then. */
-
-/** The old five-step numbering the card's rows use. */
-export type CountedStep = 1 | 2 | 3 | 4 | 5;
-
-export function cardVisible(_store: SetupStore, _facts: SetupFacts, _viewer: boolean): boolean {
-  // FLOW-514: the seven-step flow replaces the Home card. Removed with the card in step C (after #622).
-  return false;
-}
+/* -- Legacy: the completed toast stays gated off until #622 removes the Home slot. */
 
 export function shouldShowCompletedToast(_store: SetupStore, _facts: SetupFacts): boolean {
   return false;
-}
-
-export function remainingLegacy(store: SetupStore, facts: SetupFacts): CountedStep[] {
-  const rows: CountedStep[] = [];
-  if (!(facts.sumitConnected || facts.mercuryConnected)) rows.push(1);
-  if (!facts.jevSaved) rows.push(2);
-  if (store.confirmed_lists_at == null) rows.push(3);
-  if (!(facts.hasResolvedReview || store.sample_review_at != null)) rows.push(4);
-  if (!(store.installed_at != null || store.ios_steps_seen_at != null || facts.standalone)) rows.push(5);
-  return rows;
-}
-
-export function cardRows(store: SetupStore, facts: SetupFacts, emptyHome: boolean): CountedStep[] {
-  const rows = remainingLegacy(store, facts);
-  if (emptyHome) return rows.filter((step) => step !== 1);
-  return rows;
 }

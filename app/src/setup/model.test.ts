@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   allDone,
-  cardVisible,
   decideEntry,
   doneCount,
   emptyFacts,
@@ -130,9 +129,5 @@ describe("setup step model (FLOW-514)", () => {
     const base = skipPatch(emptySetupStore(), 1, at);
     expect(withPatch(base, { finished_at: at }).skipped["1"]).toBe(at);
     expect(withPatch(base, null)).toBe(base);
-  });
-
-  it("keeps the Home card hidden (FLOW-514 replaces it)", () => {
-    expect(cardVisible(started(), facts(), false)).toBe(false);
   });
 });
