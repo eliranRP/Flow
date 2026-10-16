@@ -488,7 +488,7 @@ export function ReviewQueue({
           {listPlace == null && !holdWrites ? <ReviewSegments index={index} total={total} /> : null}
           <div className="ui-review-counts">
             {holdWrites ? (
-              <span className="t-hint">
+              <span className="t-hint ui-review-counter">
                 <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
                 {total === 1 ? " ממתינה" : " ממתינות"}
               </span>
