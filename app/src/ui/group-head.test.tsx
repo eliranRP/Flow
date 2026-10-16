@@ -15,6 +15,7 @@ describe("GroupHead", () => {
     expect(heading.id).toBe("head-1");
     const totals = container.querySelector(".ui-month-totals");
     expect(totals?.textContent).toBe("3 תנועות₪1,250.00");
+    expect(totals?.querySelector("span.ui-group-count")?.textContent).toBe("3 תנועות");
     expect(container.querySelector(".ui-group-head")).not.toBeNull();
   });
 });
