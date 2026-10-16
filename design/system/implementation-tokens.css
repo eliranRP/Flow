@@ -126,6 +126,7 @@
   --avatar: 36px;
   --bar-thin: 6px;
   --bar-job: 8px;
+  --bar-sync: 3px;               /* background sync strip line (FLOW-371) */
   --dot: 6px;
   --cents-raise: 5px;            /* list amount: agorot raised above the baseline (Design guide, FLOW-363) */
   --status-gap: 6px;
@@ -143,6 +144,7 @@
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
+  --radius-block: 6px;           /* skeleton blocks, States board (FLOW-371) */
 
   /* ---- layout (guide-defined, from design-system.md) ---- */
   --touch-min: 44px;
@@ -178,6 +180,7 @@
   --motion-stagger: 40ms;
   --motion-bar-grow: 480ms;
   --motion-pulse: 1.2s;
+  --motion-indet: 1.4s;          /* sync strip line, States board (FLOW-371) */
   --motion-spin: 800ms;
   --rise-page: 8px;
   --rise-push: 24px;
@@ -191,6 +194,8 @@
   --surface-hover: rgba(20, 16, 32, 0.06);
   --color-raised: #FFFFFF;
   --color-tint: #F3ECFE;
+  --color-track: #F3ECFE;        /* job bar track; dark on the board is #2E2740 (FLOW-371). Light is FLOW-372's. */
+  --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4); /* sync pill, States board (FLOW-371) */
   --color-tint-strong: #E7DAFD;
   --color-line: #EEE8FA;
   --color-control-off: #8F86A3;
@@ -221,9 +226,7 @@
   --color-disabled-text: #8F889C;
   --color-error: #C3302B;
   --color-skeleton: #F3ECFE;
-  --color-skeleton-shine: #FAF6FF;
-  --color-skeleton-band: #9565E9;
-  --color-skeleton-band-shine: #A57CED;
+  --color-skeleton-band: rgba(255, 255, 255, 0.16);
   --color-knob: #FFFFFF;
   --color-knob-on: #FFFFFF;
   --color-bad-tint: #FCEDEC;
@@ -279,10 +282,9 @@
     --color-disabled-bg: #2A2438;
     --color-disabled-text: #7A7290;
     --color-error: #FF8A80;
-    --color-skeleton: #2A2045;
-    --color-skeleton-shine: #33285A;
-    --color-skeleton-band: #9565E9;
-    --color-skeleton-band-shine: #A57CED;
+    --color-skeleton: #251F33;
+    --color-track: #2E2740;
+    --color-skeleton-band: rgba(255, 255, 255, 0.16);
     --color-knob: #FFFFFF;
     --color-knob-on: #1E0B45;
     --color-bad-tint: #3A1E24;
@@ -338,10 +340,9 @@
   --color-disabled-bg: #2A2438;
   --color-disabled-text: #7A7290;
   --color-error: #FF8A80;
-  --color-skeleton: #2A2045;
-  --color-skeleton-shine: #33285A;
-  --color-skeleton-band: #9565E9;
-  --color-skeleton-band-shine: #A57CED;
+  --color-skeleton: #251F33;
+  --color-track: #2E2740;
+  --color-skeleton-band: rgba(255, 255, 255, 0.16);
   --color-knob: #FFFFFF;
   --color-knob-on: #1E0B45;
   --color-bad-tint: #3A1E24;
@@ -378,6 +379,7 @@
     --motion-stagger: 0ms;
     --motion-bar-grow: 0ms;
     --motion-pulse: 0ms;
+    --motion-indet: 0ms;
     --motion-spin: 0ms;
     --rise-page: 0px;
     --rise-push: 0px;

@@ -80,7 +80,7 @@ describe("invites list after sign-in (FLOW-601, mockup invite-3)", () => {
   it("shows a failed read with a retry, and still lets them go on", async () => {
     refuse("my_invites", "Failed to fetch");
     renderTeam(<InvitesScreen />, "/invites");
-    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    const retry = await screen.findByRole("button", { name: "נסו שוב" });
     expect(screen.getByRole("link", { name: "אחר כך" })).toBeInTheDocument();
     answer("my_invites", { data: [first] });
     fireEvent.click(retry);

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ProgressBar } from "./progress-bar";
+import { ProgressBar, type JobStep } from "./progress-bar";
 import { largeAgorot, longHebrew, padded } from "./story-support";
 
 const meta = {
@@ -33,4 +33,24 @@ export const Split: StoryObj<SplitArgs> = {
 export const SplitOver: StoryObj<SplitArgs> = {
   args: { variant: "split", label: longHebrew },
   render: (args) => <ProgressBar {...args} spentAgorot={largeAgorot} budgetAgorot={largeAgorot - 1_000_000n} />,
+};
+/** FLOW-371: a long known job, with its count, its steps and the way to leave. Invented data. */
+type JobArgs = { variant: "job"; label: string };
+const steps: JobStep[] = [
+  { label: "משיכת תנועות", state: "done" },
+  { label: "התאמה לפרויקטים", state: "doing" },
+  { label: "בדיקת כפילויות", state: "todo" },
+];
+export const Job: StoryObj<JobArgs> = {
+  args: { variant: "job", label: "התקדמות הסנכרון הראשון" },
+  render: (args) => (
+    <ProgressBar
+      {...args}
+      value={120}
+      max={340}
+      count="120 מתוך כ־340 תנועות"
+      steps={steps}
+      onLeave={() => undefined}
+    />
+  ),
 };

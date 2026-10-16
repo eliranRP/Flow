@@ -110,20 +110,6 @@ export function ChartIcon(props: IconProps) {
   );
 }
 
-export function OfflineIcon(props: IconProps) {
-  return (
-    <Svg size={36} stroke={1.6} {...props}>
-      <line x1="2" y1="2" x2="22" y2="22" />
-      <path d="M16.7 11.1A11 11 0 0 1 19 12.6" />
-      <path d="M5 12.6a11 11 0 0 1 5.2-2.4" />
-      <path d="M10.7 5.1A16 16 0 0 1 22.6 9" />
-      <path d="M1.4 9a16 16 0 0 1 4.7-2.9" />
-      <path d="M8.5 16.1a6 6 0 0 1 7 0" />
-      <circle cx="12" cy="20" r=".6" fill="currentColor" stroke="none" />
-    </Svg>
-  );
-}
-
 export function RefreshIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>

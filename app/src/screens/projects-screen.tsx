@@ -18,12 +18,12 @@ import { PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
+import { ProjectsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
-import { ListSkeleton } from "../ui/skeleton";
 import { useBlockedPreview } from "./screen-shared";
 
 /** `initialQuery` lets a story open on a search without moving focus off the title. */
@@ -74,14 +74,7 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
         // FLOW-356: a tab root, so the 34px title the other tabs and its own empty state use, not `stacked`.
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
-        loading={
-          <>
-            <div className="ui-page-pad ui-stack">
-              <SearchField label="חיפוש פרויקט" value="" onChange={() => undefined} placeholder="חיפוש לפי שם או סטטוס" disabled />
-            </div>
-            <ListSkeleton />
-          </>
-        }
+        loading={<ProjectsSkeleton />}
       >
         <ProjectsBody
           projects={data?.projects ?? []}

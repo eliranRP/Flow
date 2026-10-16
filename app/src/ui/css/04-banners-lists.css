@@ -157,7 +157,7 @@
   border: 2px solid currentColor;
   border-inline-end-color: transparent;
   border-radius: var(--radius-chip);
-  animation: ui-spin var(--dur-shimmer) linear infinite;
+  animation: ui-spin var(--motion-spin) linear infinite;
 }
 
 @keyframes ui-spin {

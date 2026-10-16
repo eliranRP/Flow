@@ -1,14 +1,27 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomeSkeleton } from "./home-skeleton";
+import { SKELETON_DELAY_MS } from "../ui/skeleton";
 import { defaultPeriod, windowLabel } from "../period";
 import { expectRtl } from "../ui/test-support";
 
 describe("HomeSkeleton", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("matches the home loading chrome and hides the preview label", () => {
     expectRtl();
     render(<MemoryRouter><HomeSkeleton /></MemoryRouter>);
+    // Nothing in the skeleton shows before the 300ms delay (FLOW-371).
+    expect(screen.queryByRole("status")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(SKELETON_DELAY_MS);
+    });
     expect(screen.getByRole("status")).toHaveTextContent("טוען…");
     expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
     expect(screen.queryByText("מצב תצוגה")).not.toBeInTheDocument();

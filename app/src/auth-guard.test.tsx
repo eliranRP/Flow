@@ -138,7 +138,8 @@ afterEach(() => {
 describe("auth guard when Supabase is configured", () => {
   it("shows a skeleton and does not redirect while the session is pending", async () => {
     await renderAt("/");
-    expect(screen.getByText("טוען…")).toBeInTheDocument();
+    // The loading line waits out the 300ms delay (FLOW-371).
+    expect(await screen.findByText("טוען…", undefined, { timeout: 1000 })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "כניסה או הרשמה" })).not.toBeInTheDocument();
   });
 
@@ -176,7 +177,7 @@ describe("auth guard when Supabase is configured", () => {
     });
     await settle();
     await waitFor(() => {
-      expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+      expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
     });
     expect(screen.queryByText("עוד אין נתונים")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "העלאת דוח בנק" })).not.toBeInTheDocument();

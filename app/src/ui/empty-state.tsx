@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
 type EmptyStateProps = {
-  icon: ReactNode;
+  /** The tint circle with an outline icon. The board's empty states mostly have none (FLOW-371). */
+  icon?: ReactNode;
   title: string;
   body: string;
   action?: ReactNode;
@@ -13,8 +14,8 @@ type EmptyStateProps = {
 export function EmptyState({ icon, title, body, action, aside }: EmptyStateProps) {
   return (
     <div className="ui-empty-state">
-      <div className="ui-empty-icon">{icon}</div>
-      <p className="ui-empty-title t-title-3" dir="rtl">{title}</p>
+      {icon ? <div className="ui-empty-icon">{icon}</div> : null}
+      <p className="ui-empty-title t-name" dir="rtl">{title}</p>
       <p className="ui-empty-line" dir="rtl">{body}</p>
       {action ? <div className="ui-empty-action">{action}</div> : null}
       {aside}

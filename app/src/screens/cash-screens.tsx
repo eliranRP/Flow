@@ -28,6 +28,7 @@ import { SplitPartsHint } from "../ui/split-parts-hint";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
+import { LinesSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, CashLinesMore, cashLinesFigures } from "./cash-lines-parts";
 
@@ -78,7 +79,7 @@ function CashMonthBody({ monthKey, search, sample }: { monthKey: string; search:
     />
   );
   if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} kicker="תזרים" phase={phase} onRetry={() => { void query.refetch(); }} loading={<LinesSkeleton />} />;
   }
   const data = sample ?? query.data ?? null;
   const month = monthOf(data ?? undefined, monthKey);
@@ -158,7 +159,7 @@ function CashLinesBody({
   const back = isCurrent ? `/${search}` : cashMonthPath(monthKey, search);
 
   if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void lines.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void lines.refetch(); }} loading={<LinesSkeleton />} />;
   }
 
   const month = data == null ? undefined : monthOf(data, monthKey);

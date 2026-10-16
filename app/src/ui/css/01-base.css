@@ -218,7 +218,8 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
 
 .ui-btn-secondary[aria-busy="true"],
 .ui-btn-pill[aria-busy="true"] {
-  background: var(--color-tint-pressed);
+  /* FLOW-371: busy keeps the look and the spinner replaces the tint fill. */
+  background: transparent;
   color: var(--color-accent-text);
 }
 

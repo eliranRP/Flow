@@ -104,45 +104,34 @@
 .ui-skeleton-bar-band {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-chip);
+  border-radius: var(--radius-block);
   background: var(--color-skeleton);
+  /* The board's block pulse (States): the blocks breathe together, opacity 1 to .55 over 1.2s. */
+  animation: ui-skel-pulse var(--motion-pulse) ease-in-out infinite;
 }
 
 .ui-skeleton-bar-band {
   background: var(--color-skeleton-band);
 }
 
-.ui-skeleton-bar::after,
-.ui-skeleton-bar-band::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, var(--color-skeleton-shine), transparent);
-  animation: flow-shimmer var(--dur-shimmer) linear infinite;
-}
-
-.ui-skeleton-bar-band::after {
-  background: linear-gradient(90deg, transparent, var(--color-skeleton-band-shine), transparent);
-}
-
 /* A still bar (FLOW-506): the setup demos draw a skeleton frame, not a load. */
-.ui-skeleton-bar-still::after {
+.ui-skeleton-bar-still {
   animation: none;
-  opacity: 0;
 }
 
-@keyframes flow-shimmer {
-  from {
-    transform: translateX(100%);
+@keyframes ui-skel-pulse {
+  0%,
+  100% {
+    opacity: 1;
   }
-  to {
-    transform: translateX(-100%);
+  50% {
+    opacity: 0.55;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ui-skeleton-bar::after,
-  .ui-skeleton-bar-band::after {
+  .ui-skeleton-bar,
+  .ui-skeleton-bar-band {
     animation: none;
   }
 }
@@ -152,6 +141,11 @@
   display: block;
   flex: none;
   max-inline-size: 100%;
+}
+
+/* The 6px track of a progress block (board projectsLoading, profitLoading): a pill, not a block. */
+.ui-skel-track {
+  border-radius: var(--radius-chip);
 }
 
 .ui-skel-copy {
