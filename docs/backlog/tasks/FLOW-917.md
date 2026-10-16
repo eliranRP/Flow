@@ -1,0 +1,11 @@
+<a id="flow-917"></a>
+# FLOW-917 · Add (+) sheet: camera, receipt reading and the supplier suggestion
+- **Type:** UI (design approved) · **Status:** ready · **Depends on:** [FLOW-369](FLOW-369.md) (the add sheet and form, PR #640), [FLOW-306](FLOW-306.md) (photo capture and receipt reading; parked by the owner) · **Source:** the Add board frames AddCamera, AddReading and AddReceipt, and the "Spec · ADD (+)" note on the design canvas (CAMERA and FORM sections).
+- **Files:** `app/src/screens/add-sheet.tsx`, `app/src/screens/add-entry-sheet.tsx`, `app/src/screens/add-entry-view.tsx`, a new `app/src/screens/add-receipt-camera.tsx` (+ test), a new reader module (the seam below), `app/src/ui/css/44-add-entry.css`, stories and tests for the above; `docs/changelog.d/`, `docs/design/log/`.
+- [ ] Camera: the camera tile opens a full-screen camera (fade 200ms): ביטול · "צילום קבלה" in the top bar, a frame with the hint "מכניסים את כל הקבלה למסגרת", the round shutter. The shutter opens the phone's camera (`capture="environment"`). The file tile keeps its picker.
+- [ ] Reading step: after the shot or a file pick, an accent scan line moves over the receipt with "קורא את הקבלה…" for about one second (reduced motion: no motion), then the form slides up filled.
+- [ ] Reader seam: one function that reads a file into { payee, amount, date, suggested project }. Until the reader exists (FLOW-306) it returns nothing and the form opens empty with the file attached, which is what FLOW-369 ships. The reader is the only part that needs a backend.
+- [ ] Filled form: the tinted box "Flow קרא את הקבלה · בדקו את מה שסומנו ושמרו" and a thumbnail when a reading filled the form.
+- [ ] Supplier suggestion: the project label reads "לפי הקבלות הקודמות מ־<supplier>" when the reading suggested the project. It needs the supplier history read (the same seam).
+- [ ] Matched receipt box: "נמצאה תנועה בבנק" is already in FLOW-369; this task checks it with a real reading (payee, amount, date within three days).
+- **Acceptance:** stories of the camera and the reading step at 320 and 393 with invented suppliers and round amounts; a test that the camera shutter opens the picker and ביטול leaves; a test that a reading fills the form and shows the box; board proofs (AddCamera, AddReading, AddReceipt) in /mnt/project-files/proofs/flow-917/ with mismatch figures.

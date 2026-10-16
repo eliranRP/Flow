@@ -142,6 +142,7 @@
   --radius-input: 12px;
   --radius-button: 9999px;
   --radius-card: 20px;
+  --radius-card-tight: 16px;     /* connection and AI pages (implementation-guide §7.14, FLOW-512) */
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
@@ -206,15 +207,17 @@
   --color-raised: #F1EEF6;       /* inner box and input (board: "Inner box, input"; DESIGN-RULES 2.2) */
   --color-tint: #EEE6FD;
   --color-track: #E7E2F0;        /* job bar track, States board (light line); dark is #2E2740 */
+  --color-avatar: #F3F0F8;       /* FLOW-366: a row's initials circle (board; dark is #2A2540) */
   --shadow-pill: 0 6px 18px rgba(40, 20, 90, 0.12); /* sync pill, States board (FLOW-371) */
   --shadow-toast: 0 8px 24px rgba(40, 20, 90, 0.12); /* toast, LinesLight and StatesLight board (FLOW-363 3c) */
   --color-tint-strong: #D9CBF6;  /* selected outline and selected row fill (board) */
   --color-line: #E7E2F0;
   --color-line-soft: #F0EDF5;    /* row hairlines inside search results and filter sheets (FLOW-368); dark is #231E30 */
-  --color-accent-dim: #9C7BE0;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
+  --color-accent-dim: #7E66B8;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
+  --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
   --color-text-muted: #746C88;
@@ -232,6 +235,9 @@
   --color-bad: #D23B2F;
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
+  --color-movie-from: #E9DDFF;
+  --movie-finger-fill: rgba(255,255,255,.28);
+  --movie-finger-ring: rgba(255,255,255,.7);
   --sheet-scrim: rgba(29,23,40,.38);
   --sheet-grab: #A69EB8;
   --color-toast-bg: #1D1728;
@@ -274,8 +280,10 @@
     --color-line: #2E2740;
     --color-line-soft: #231E30;
     --color-accent-dim: #7E66B8;
+    --color-avatar: #2A2540;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
+    --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
     --color-text-muted: #978EAB;
@@ -293,6 +301,9 @@
     --color-bad: #FF8A80;
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
+    --color-movie-from: #2A1A55;
+    --movie-finger-fill: rgba(255,255,255,.28);
+    --movie-finger-ring: rgba(255,255,255,.7);
     --sheet-scrim: rgba(8,6,12,.6);
     --sheet-grab: #564E66;
     --color-toast-bg: #F1EDF8;
@@ -339,8 +350,10 @@
   --color-line: #2E2740;
   --color-line-soft: #231E30;
   --color-accent-dim: #7E66B8;
+  --color-avatar: #2A2540;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
+  --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
   --color-text-muted: #978EAB;

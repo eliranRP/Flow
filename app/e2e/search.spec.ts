@@ -11,7 +11,10 @@ test("search opens from Home, finds a line, opens it, and Back keeps the search"
   const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
   // The icon opened the screen, so the field takes focus.
   await expect(field).toBeFocused();
-  await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toBeVisible();
+  // The start shows the last searches and the three checks, not the lines (FLOW-368).
+  await expect(page.getByRole("heading", { name: "שווה לבדוק" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /ממתינים לאישור/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toHaveCount(0);
 
   await field.fill("ספק 3");
   const row = page.getByRole("link", { name: /^ספק 3(?!\d)/ });
@@ -33,7 +36,8 @@ test("search opens from Home, finds a line, opens it, and Back keeps the search"
 
   await page.getByRole("button", { name: "ניקוי", exact: true }).click();
   await expect(field).toHaveValue("");
-  await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "שווה לבדוק" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toHaveCount(0);
 });
 
 test("a project-name miss on Projects opens search with the text", async ({ page }) => {
@@ -51,7 +55,12 @@ test("a project's כל התנועות opens search with the project chip set", a
   await page.goto("/e2e/project-detail?preview=1&section=transactions");
   await page.getByRole("link", { name: "כל התנועות" }).click();
   await expect(page).toHaveURL(/\/search\?preview=1&project=p1$/);
-  await expect(page.getByRole("button", { name: "שיפוץ הרצל 12" })).toHaveAttribute("aria-pressed", "true");
+  // The project shows as a removable chip under the field (FLOW-368).
+  await expect(page.getByRole("button", { name: "הסרת שיפוץ הרצל 12" })).toBeVisible();
+  // The sheet's project chip is a toggle and is pressed.
+  await page.getByRole("button", { name: /^סינון/ }).click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "שיפוץ הרצל 12", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
   // Only the project's lines; the other project's line is gone.
   await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^ספק 2(?!\d)/ })).toHaveCount(0);

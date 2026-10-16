@@ -26,7 +26,7 @@ describe("mobile UI consistency pass (FLOW-328)", () => {
     expect(declared(".ui-split-amount", "text-align")).not.toBe("center");
     expect(declared(".ui-split-question", "padding-inline")).toBe("var(--space-side)");
     expect(declared(".ui-split-card", "margin")).toContain("var(--space-side)");
-    for (const row of [".ui-split-card .ui-radio-row", ".ui-split-card .ui-check-row", ".ui-split-card .ui-split-manual"]) {
+    for (const row of [".ui-split-card .ui-radio-row", ".ui-split-card .ui-split-manual"]) {
       expect(declared(row, "border-bottom")).toMatch(/^(0|0px|none)/);
       // The card's surface shows in dark, so the choices keep their inset from its edge.
       expect(declared(row, "padding-inline")).toBe("var(--space-4)");

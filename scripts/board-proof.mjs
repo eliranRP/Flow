@@ -3,7 +3,8 @@
  * Step 0b of the redesign sprint: a proof of each board frame against the running app. For each frame in
  * the frame map, it writes one PNG per theme: the board frame, the app screen and a diff, side by side at
  * 390x844 and dpr 2, with a mismatch percentage for the frame. The builder and the reviewer see where the
- * app differs and by how much.
+ * app differs and by how much. A second, text-masked percentage paints every app text box (padded 2px) over
+ * both images first, so only layout, colour and spacing count: that number is the redesign gate (under 3%).
  *
  * Usage: node scripts/board-proof.mjs --base http://localhost:4173 --map <map.json> --out <dir> [--boards <dir>] [frame...]
  *
@@ -11,12 +12,12 @@
  * suffix (Flow, FlowPicker, ...) and <route> is the app path the frame is drawn from (for example "/?preview=1").
  * The light theme's board is "<frame>Light.png", the dark theme's is "<frame>.png", both in --boards
  * (default /mnt/project-files/design/board-png).
- * Output: <out>/<frame>--<theme>.png, and <out>/summary.json with each frame's mismatch percentage.
+ * Output: <out>/<frame>--<theme>.png, and <out>/summary.json with each frame's raw and text-masked mismatch.
  *
  * Render method: see the board renders note in team memory (redesign-approval-proofs). The app shot is
  * taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -100,6 +101,8 @@ export function proofPlan(frames, only, boards, out) {
   const plan = [];
   for (const frame of picked) {
     for (const theme of THEME_NAMES) {
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
+      if (!existsSync(path.join(boards, boardFileName(frame, theme)))) continue;
       plan.push({
         frame,
         theme,
@@ -109,6 +112,8 @@ export function proofPlan(frames, only, boards, out) {
       });
     }
   }
+  // A wrong --boards folder must fail loudly, not write an empty summary.
+  if (plan.length === 0) throw new Error(`no board PNG for ${picked.join(", ") || "any frame"} in ${boards}`);
   return plan;
 }
 
@@ -139,7 +144,7 @@ export function mismatchPercent(a, b, tolerance) {
 /**
  * Runs in the page: draws the board and the app shot to canvases of the same size, makes the diff,
  * and returns the three panels side by side as a PNG data URL with the mismatch.
- * @param {{ boardUrl: string, appUrl: string, width: number, height: number, tolerance: number, mismatchSource: string }} input
+ * @param {{ boardUrl: string, appUrl: string, width: number, height: number, tolerance: number, mismatchSource: string, textRects: Array<{ x: number, y: number, w: number, h: number }>, scale: number }} input
  */
 async function proofInBrowser(input) {
   const mismatch = new Function(`return (${input.mismatchSource});`)();
@@ -163,6 +168,23 @@ async function proofInBrowser(input) {
   const appCanvas = draw(app);
   const boardData = boardCanvas.getContext("2d").getImageData(0, 0, w, h).data;
   const appData = appCanvas.getContext("2d").getImageData(0, 0, w, h).data;
+  // How much of the frame the text boxes hide, so a low masked number can be read against what was compared.
+  const maskCoverage = () => {
+    const c = canvas(w, h);
+    const ctx = c.getContext("2d");
+    for (const rect of input.textRects) ctx.fillRect(rect.x * input.scale, rect.y * input.scale, rect.w * input.scale, rect.h * input.scale);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    let covered = 0;
+    for (let index = 3; index < data.length; index += 4) if (data[index] > 0) covered += 1;
+    return Math.round((covered / (w * h)) * 1000) / 10;
+  };
+  const masked = (img) => {
+    const c = draw(img);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#000";
+    for (const rect of input.textRects) ctx.fillRect(rect.x * input.scale, rect.y * input.scale, rect.w * input.scale, rect.h * input.scale);
+    return ctx.getImageData(0, 0, w, h).data;
+  };
   const diffData = new Uint8ClampedArray(boardData.length);
   for (let index = 0; index < boardData.length; index += 4) {
     const differs =
@@ -184,7 +206,45 @@ async function proofInBrowser(input) {
   ctx.drawImage(boardCanvas, 0, 0);
   ctx.drawImage(appCanvas, w + gap, 0);
   ctx.drawImage(diffCanvas, (w + gap) * 2, 0);
-  return { png: out.toDataURL("image/png"), mismatch: mismatch(boardData, appData, input.tolerance) };
+  return {
+    png: out.toDataURL("image/png"),
+    mismatch: mismatch(boardData, appData, input.tolerance),
+    masked: mismatch(masked(board), masked(app), input.tolerance),
+    masks: input.textRects.length,
+    coverage: maskCoverage(),
+  };
+}
+
+/**
+ * Runs in the page: waits for every finite animation and transition (a sheet's scrim fade, say) to finish,
+ * so the shot shows the settled screen. Endless ones (spinners) are skipped. Gives up after 3 s.
+ */
+function settleAnimations() {
+  const finite = document
+    .getAnimations()
+    .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+    .map((animation) => animation.finished.catch(() => undefined));
+  return Promise.race([Promise.all(finite), new Promise((resolve) => setTimeout(resolve, 3000))]).then(() => undefined);
+}
+
+/**
+ * Runs in the page: the box of every text node on the app screen, in CSS px, each padded by 2px.
+ * @returns {Array<{ x: number, y: number, w: number, h: number }>}
+ */
+function collectTextRects() {
+  const rects = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node != null; node = walker.nextNode()) {
+    if (node.textContent == null || node.textContent.trim() === "") continue;
+    if (node.parentElement != null && getComputedStyle(node.parentElement).visibility !== "visible") continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const box of range.getClientRects()) {
+      if (box.width < 1 || box.height < 1) continue;
+      rects.push({ x: box.left - 2, y: box.top - 2, w: box.width + 4, h: box.height + 4 });
+    }
+  }
+  return rects;
 }
 
 /** Takes the proofs for the planned shots and writes the PNGs and the summary. */
@@ -199,6 +259,14 @@ async function main(argv) {
   const summary = /** @type {Record<string, Record<string, number>>} */ ({});
   try {
     for (const shot of plan) {
+      // A frame drawn in one theme only (no board PNG for this theme, but one for the other) gets one
+      // shot, not a crash. A frame with no board in any theme is a wrong --boards folder or a typo.
+      if (!existsSync(shot.board)) {
+        const drawnElsewhere = plan.some((other) => other.frame === shot.frame && existsSync(other.board));
+        if (!drawnElsewhere) throw new Error(`no board PNG for ${shot.frame} in any theme: ${shot.board}`);
+        console.warn(`skipped ${shot.frame} ${shot.theme}: drawn in one theme only`);
+        continue;
+      }
       const context = await browser.newContext({
         viewport: { width: PROOF_WIDTH, height: PROOF_HEIGHT },
         deviceScaleFactor: PROOF_DPR,
@@ -206,7 +274,9 @@ async function main(argv) {
       });
       const page = await context.newPage();
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
+      await page.evaluate(settleAnimations);
       const appPng = await page.screenshot({ fullPage: false });
+      const textRects = await page.evaluate(collectTextRects);
       await context.close();
       const boardUrl = `data:image/png;base64,${readFileSync(shot.board).toString("base64")}`;
       const appUrl = `data:image/png;base64,${appPng.toString("base64")}`;
@@ -218,15 +288,27 @@ async function main(argv) {
         height: PROOF_HEIGHT * PROOF_DPR,
         tolerance: CHANNEL_TOLERANCE,
         mismatchSource: mismatchPercent.toString(),
+        textRects,
+        scale: PROOF_DPR,
       });
       await proofPage.close();
       writeFileSync(shot.file, Buffer.from(result.png.split(",")[1], "base64"));
-      summary[shot.frame] = { ...summary[shot.frame], [shot.theme]: result.mismatch };
-      console.log(`${shot.frame} ${shot.theme}: ${result.mismatch}% mismatch`);
+      summary[shot.frame] = {
+        ...summary[shot.frame],
+        [shot.theme]: result.mismatch,
+        [`${shot.theme}Masked`]: result.masked,
+        [`${shot.theme}Masks`]: result.masks,
+        [`${shot.theme}MaskCoverage`]: result.coverage,
+      };
+      console.log(
+        `${shot.frame} ${shot.theme}: ${result.mismatch}% mismatch, ${result.masked}% text-masked (${result.masks} boxes covering ${result.coverage}% of the frame)`,
+      );
     }
   } finally {
     await browser.close();
   }
+  // An empty run is a failed run: nothing was compared, so there is no number to gate on.
+  if (Object.keys(summary).length === 0) throw new Error("no frame was compared; check the map and the --boards folder");
   writeFileSync(path.join(options.out, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
 }
 

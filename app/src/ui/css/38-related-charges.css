@@ -1,44 +1,61 @@
-/* FLOW-431 (the owner's layout A): "חיובים קודמים" under the transaction's switches, and the sheet with all of them. */
+/* FLOW-431 and FLOW-366: the party's history under the recurring row, and the sheet with all of it. */
 
-.ui-charge-pct {
-  white-space: nowrap;
-  font-weight: 600;
+.ui-charges-history {
+  padding: var(--space-3) var(--space-side) var(--space-2);
+  border-top: 1px solid var(--color-line);
 }
 
+.ui-charges-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-charges-line {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-charges-usual,
 .ui-charges-change {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-3);
+  white-space: nowrap;
 }
 
-/* Six bars, at most 48px tall, the line's month in its tone and the rest muted. */
+/* The signal colour only when the change hurts (decision 0181). */
+.ui-charges-change-bad {
+  color: var(--color-bad);
+}
+
+/* Six months, 6 columns, 76px high, the bars bottom-aligned. The oldest month sits on the right. */
 .ui-charge-bars {
-  display: flex;
-  direction: ltr;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
+  block-size: 76px;
+  margin-block-end: var(--space-3);
 }
 
 .ui-charge-bar-col {
   display: flex;
-  flex: 1 1 0;
-  min-width: 0;
+  min-inline-size: 0;
   flex-direction: column;
-  align-items: stretch;
+  justify-content: flex-end;
   gap: var(--space-1);
 }
 
 .ui-charge-bar-track {
   display: flex;
-  block-size: 48px;
+  flex: 1;
   align-items: flex-end;
 }
 
 .ui-charge-bar {
   inline-size: 100%;
-  border-radius: 4px 4px 2px 2px;
+  border-radius: 6px;
   background: var(--color-tint-strong);
 }
 
@@ -46,26 +63,28 @@
   background: var(--color-accent);
 }
 
-.ui-charge-bar-bad {
-  background: var(--color-bad);
-}
-
 .ui-charge-bar-label {
   overflow: hidden;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
+  font-size: var(--type-cents-size);
+  line-height: var(--type-cents-line);
   text-align: center;
   white-space: nowrap;
 }
 
-.ui-charges-head {
-  margin: 0 0 var(--space-1);
-  font-weight: 500;
+.ui-charge-bar-label-now {
+  color: var(--color-text);
 }
 
+/* The three earlier rows: 8px padding, a hairline above each, 14px type, the date then the amount. */
 .ui-charges-list {
-  margin: 0 calc(-1 * var(--space-4));
+  margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.ui-charges-list li {
+  border-top: 1px solid var(--color-line);
 }
 
 .ui-charges-row {
@@ -74,17 +93,33 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-inline: var(--space-4);
+  padding-block: var(--space-2);
   color: var(--color-text);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
   text-decoration: none;
 }
 
 .ui-charges-row-now {
-  background: var(--color-tint);
+  color: var(--color-text-secondary);
 }
 
 .ui-charges-date {
   color: var(--color-text-secondary);
+}
+
+.ui-charges-badge {
+  margin-inline-start: var(--space-2);
+  color: var(--color-accent-text);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-charges-pending {
+  color: var(--color-warning);
+}
+
+.ui-charges-mark {
+  white-space: nowrap;
 }
 
 .ui-charges-end {
@@ -93,40 +128,113 @@
   gap: var(--space-2);
 }
 
-.ui-charges-chevron {
-  display: inline-flex;
-  flex: none;
-  inline-size: 20px;
-  justify-content: center;
-}
-
-/* On the screen: the line, bars and rows sit on the page gutter; the rows run edge to edge. */
-.ui-charges-section .ui-charges-line,
-.ui-charges-section .ui-charge-bars,
-.ui-charges-all {
-  margin-inline: var(--space-side);
-}
-
-.ui-charges-line {
-  margin-block: var(--space-1) var(--space-3);
-}
-
-.ui-charges-section .ui-charges-list {
-  margin: 0;
-}
-
-.ui-charges-section .ui-charges-row {
-  padding-inline: var(--space-side);
+.ui-charges-income {
+  color: var(--color-income);
 }
 
 .ui-charges-all {
   display: inline-flex;
   min-height: var(--touch-min);
   align-items: center;
+  gap: var(--space-1);
   padding: 0;
   border: 0;
   background: none;
   color: var(--color-accent-text);
   font: inherit;
-  font-weight: 500;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+}
+
+/* The all-charges sheet: a context line, the summary box, the rows with their marks. */
+.ui-charges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-charges-context {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ui-charges-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-seg-btn);
+  background: var(--color-raised);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+}
+
+/* Recurring row card: a surface card, the history under a hairline. */
+.ui-recurring-card {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* The board's recurring row has no small label: the value is the title, and the accessible name keeps the label. */
+.ui-recurring-card .ui-icon-row-label {
+  display: none;
+}
+
+.ui-recurring-card .ui-icon-row-value {
+  font-weight: var(--type-name-weight);
+}
+
+.ui-recurring-tag {
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-name-weight);
+  white-space: nowrap;
+}
+
+.ui-recurring-tag-off {
+  color: var(--color-text-secondary);
+}
+
+.ui-recurring-history {
+  margin: 0;
+}
+
+/* The board's recurring row is two lines: the value is the title, and under it the tag sits at the
+   end while the hint wraps beside it. The value line opens up so its tag and the hint share a row. */
+.ui-recurring-card .ui-icon-row-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+}
+
+.ui-recurring-card .ui-icon-row-value-line {
+  display: contents;
+}
+
+.ui-recurring-card .ui-icon-row-value {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.ui-recurring-card .ui-recurring-tag {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+}
+
+.ui-recurring-card .ui-icon-row-hint {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* The board's earlier-charge rows have no chevron: the row is the link, and its label names it. */
+.ui-charges-history .ui-charges-end > svg {
+  display: none;
+}
+
+/* The all-charges sheet starts 76px from the top, where the board draws it (the default gap is 56px). */
+.ui-charges-sheet {
+  --sheet-gap: 76px;
 }

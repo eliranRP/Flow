@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 import {
   boardFileName,
@@ -40,21 +43,32 @@ test("reads a frame map and refuses a route that is not a path", () => {
 
 test("plans both themes for each frame, in name order, and keeps only the frames asked for", () => {
   const frames = { Lines: "/cash/2026-06/in/ILS", Flow: "/" };
-  const plan = proofPlan(frames, [], "boards", "out");
+  const boards = mkdtempSync(path.join(tmpdir(), "board-proof-"));
+  for (const name of ["Flow.png", "FlowLight.png", "Lines.png", "LinesLight.png"]) writeFileSync(path.join(boards, name), "");
+  const plan = proofPlan(frames, [], boards, "out");
   assert.deepEqual(
     plan.map((shot) => [shot.frame, shot.theme, shot.board, shot.file]),
     [
-      ["Flow", "dark", "boards/Flow.png", "out/Flow--dark.png"],
-      ["Flow", "light", "boards/FlowLight.png", "out/Flow--light.png"],
-      ["Lines", "dark", "boards/Lines.png", "out/Lines--dark.png"],
-      ["Lines", "light", "boards/LinesLight.png", "out/Lines--light.png"],
+      ["Flow", "dark", path.join(boards, "Flow.png"), "out/Flow--dark.png"],
+      ["Flow", "light", path.join(boards, "FlowLight.png"), "out/Flow--light.png"],
+      ["Lines", "dark", path.join(boards, "Lines.png"), "out/Lines--dark.png"],
+      ["Lines", "light", path.join(boards, "LinesLight.png"), "out/Lines--light.png"],
     ],
   );
   assert.deepEqual(
-    proofPlan(frames, ["Flow"], "boards", "out").map((shot) => shot.frame),
+    proofPlan(frames, ["Flow"], boards, "out").map((shot) => shot.frame),
     ["Flow", "Flow"],
   );
-  assert.throws(() => proofPlan(frames, ["Nope"], "boards", "out"), /not in the frame map: Nope/);
+  assert.throws(() => proofPlan(frames, ["Nope"], boards, "out"), /not in the frame map: Nope/);
+  // A --boards folder with no board PNG for any requested frame fails, not an empty plan.
+  assert.throws(() => proofPlan(frames, [], path.join(boards, "missing"), "out"), /no board PNG for/);
+});
+
+test("a theme with no board PNG gets no shot", () => {
+  const boards = mkdtempSync(path.join(tmpdir(), "board-proof-"));
+  writeFileSync(path.join(boards, "Lines.png"), "");
+  const plan = proofPlan({ Lines: "/cash" }, [], boards, "out");
+  assert.deepEqual(plan.map((shot) => shot.theme), ["dark"]);
 });
 
 test("counts a pixel as different when a channel is more than the tolerance apart", () => {

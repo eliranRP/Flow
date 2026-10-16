@@ -220,6 +220,16 @@ export async function callTool(
     return ok({ missing: data });
   }
 
+  // FLOW-514: the first-time setup's suggestions (projects, lenders). Read only.
+  if (name === "get_setup_suggestions") {
+    const result = await rpc("get_setup_suggestions", {});
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(data);
+  }
+
   if (name === "list_team") {
     const result = await rpc("list_team", {});
     const team = result.json;
@@ -233,7 +243,12 @@ export async function callTool(
     const result = await rpc("list_unpaid", {});
     const rows = result.json;
     if (result.status >= 400 || !Array.isArray(rows)) return fail("refused", READ_REFUSED);
-    return ok(unpaidReport(rows));
+    // FLOW-367: the bar's totals and the sync time, one read beside the rows.
+    const overview = await rpc("unpaid_overview", {});
+    if (overview.status >= 400 || overview.json == null || typeof overview.json !== "object") {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(unpaidReport(rows, overview.json as Record<string, unknown>));
   }
 
   if (name === "get_expected_months") {
@@ -263,6 +278,14 @@ export async function callTool(
     const data = result.json;
     if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
     return ok(changes ? { changes: data } : { arrived: data });
+  }
+
+  // FLOW-447: the קבועים list, every recurring party with its state this month.
+  if (name === "get_recurring_schedule") {
+    const result = await rpc("recurring_schedule", {});
+    const data = result.json;
+    if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
+    return ok({ schedule: data });
   }
 
   if (name === "get_line_recurring") {

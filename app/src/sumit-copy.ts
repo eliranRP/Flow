@@ -95,23 +95,3 @@ export function israelClock(iso: string | null | undefined): string | null {
   }).format(new Date(at));
 }
 
-/** Israel clock for a future retry. A past or empty time stays silent. The next Israel date says מחר. */
-export function retryClockParts(
-  iso: string | null | undefined,
-  now = Date.now(),
-): { clock: string; tomorrow: boolean } | null {
-  if (!iso) return null;
-  const at = Date.parse(iso);
-  if (!Number.isFinite(at) || at <= now) return null;
-  const zone = "Asia/Jerusalem";
-  const clock = israelClock(iso);
-  if (clock == null) return null;
-  const day = new Intl.DateTimeFormat("en-CA", {
-    timeZone: zone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return { clock, tomorrow: day.format(new Date(at)) !== day.format(new Date(now)) };
-}
-

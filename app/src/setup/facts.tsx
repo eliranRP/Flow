@@ -26,6 +26,14 @@ async function resolvedReviewExists(): Promise<boolean> {
   return Array.isArray(data) && data.length > 0;
 }
 
+async function loanCount(companyId: string): Promise<number> {
+  const supabase = getSupabase();
+  if (!supabase || typeof supabase.from !== "function") return 0;
+  const { data, error } = await supabase.from("loans").select("id").eq("company_id", companyId).limit(50);
+  if (error) throw new Error(error.message);
+  return Array.isArray(data) ? data.length : 0;
+}
+
 /** Derived done-state. A failed read is not done. A disabled query does not block the runner. */
 export function useSetupFacts(active = true): SetupFacts {
   const preview = usePreviewMode();
@@ -46,10 +54,15 @@ export function useSetupFacts(active = true): SetupFacts {
     enabled: live && hasCompany,
     queryFn: resolvedReviewExists,
   });
+  const loans = useQuery({
+    queryKey: ["setup-loans", companyId],
+    enabled: live && hasCompany,
+    queryFn: () => loanCount(companyId as string),
+  });
   const standalone = isStandalone();
   if (!live || !dashboard.data) return { ...emptyFacts(!live), standalone };
   if (!hasCompany) return { ...emptyFacts(true), companyId: null, standalone };
-  const waiting = sumit.isLoading || mercury.isLoading || jev.isLoading || review.isLoading;
+  const waiting = sumit.isLoading || mercury.isLoading || jev.isLoading || review.isLoading || loans.isLoading;
   return {
     ready: !waiting,
     companyId,
@@ -58,5 +71,7 @@ export function useSetupFacts(active = true): SetupFacts {
     jevSaved: jev.data === true,
     hasResolvedReview: review.data === true,
     standalone,
+    projectCount: dashboard.data.projects.length,
+    loanCount: loans.data ?? 0,
   };
 }

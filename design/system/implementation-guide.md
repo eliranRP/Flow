@@ -461,8 +461,10 @@ Don't:
 - **ScreenHeader** (`screen-header.tsx`): with Back, with actions, or scrolled. Back is labelled with the kicker when there is one (`label` in `accent-text`, cut at about 16 characters) and there is no kicker line ([0156](../../docs/decisions/0156-labelled-back-and-compact-bar.md)). When Back goes to a page other than the kicker's, `backText` labels Back with that page and the kicker stays as a `hint` line above the title (FLOW-444).
 - **CompactBar** (`compact-bar.tsx`, extends the 0156 bar and is never a second bar): once the large title scrolls off, it pins to the top, 44px on a list page and 56px on a detail page, over a `line` hairline. It shows Back, "title · figure" and the actions. It slides in 240ms ease-enter and out 240ms ease-exit, and at once under reduced motion. A compact title (the transaction) gets no compact bar.
 - Don't add a kicker or an inline layout to a new screen. The options are kept only until their last screen moves.
+- The month lines page (נכנס / יצא) stacks its head in one column (`.ui-lines-head`): the side switch spans the 20px gutters, then the total, the count line, the currency switch and the order chips. The chips keep their words and scroll sideways. The shared `.ui-page-below` row is for a single control, so a page with several blocks wraps them.
 
 ### 7.7 OrganizeChips
+- No screen builds this component now: FLOW-368 removed `organize-chips.tsx` when the search row, its only user, moved to the removable filter chips. The look below still holds for choice chips.
 - Chips group a screen's views or filters. One chip is always selected: the chips are not filters you can clear.
 - Look: suggested (`tint` fill, ✦ in `accent-text`, optional hint), outlined choice (`surface`, 1px `control-border`), selected (`tint-strong` fill with an `accent` border, no ✓), disabled (`disabled-text`).
 - Chips are 36px drawn, 14px inline padding, a full radius, a 44px hit area, and they wrap. Show at most about 4 chips, then "עוד…".
@@ -487,6 +489,7 @@ Don't:
 - An icon row (`icon-row.tsx`): a 24px outline icon in `text-secondary`, a label 13 in `text-muted`, the value 16/500 in `text`, 12px block and 14px inline padding, 12px gap, at least 44px high. The accessible name is "label value" (or `name`).
 - The end is a chevron (default; `onClick` opens a sheet) or a text link action (`action`, "שינוי"). A switch row has no chevron. A busy row shows a spinner in the chevron slot. A static row (a read-only fact) has no end.
 - An accent value marks an empty prompt.
+- The transaction page's rows (project, category, recurring, counted-in, split) are IconRows inside an inset list. The split row is disabled while a loan split is open.
 - States: default, pressed (opacity .72, 120ms), focus, busy, disabled, static, value changed (the undo toast, 7.12).
 
 **Counted-in row and sheet** (spec, built in FLOW-366 for the line and FLOW-513 for the category; FLOW-363 (4) wrote it down):
@@ -596,7 +599,7 @@ Parts that are not in the inventory keep these rules until their screens move. A
 - The title is the vendor or payer (`body`). The hint below shows category and date ("חומרים · 22/09").
 - The **amount** is on the end side in `amount` (17, weight 400), **with cents** drawn small and raised, ".00" included (`₪150,000.00`); this replaces §11.3's whole units for transaction rows only. An expense is `text` **with its minus** (`−₪12,000.00`). Money in is `income` green **with a `+`** (decision 0181), preceded by a visually hidden "הכנסה ", so direction is never colour alone. A figure with a minus is never green. [0120](../../docs/decisions/0120-income-green-type-scale.md)
 - Rows have **no hairline** (any list, decision 0120), and month groups are 32px apart. The title is 17/400. The month head is `heading` with no rule; its income total is `income` green with a `+`.
-- Tapping a row opens **10 Transaction detail**.
+- Tapping a row opens the transaction page (the board's Transaction detail frames; the screen has no PNG of its own).
 
 ### 7.24 Empty state
 See §8.2.
@@ -1028,7 +1031,7 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 | `08-upload-results-*` | Bank report uploaded: results summary | A (✕ close) |
 | `09a…09e-onboarding-*` | Onboarding: Google sign-in, company details, bank report, projects, install and notifications | C |
 | `09-onboarding-*` | Strip showing all onboarding steps (overview only) | none |
-| `10-transaction-detail-*` | Expense detail with source, links and actions | C |
+| `10-transaction-detail` | Expense detail (HTML source for the confirm sheet's underlay; no PNG is rendered) | C |
 | `11-split-*` | Split between projects | C (✕ close) |
 | `12-unpaid-*` | Unpaid invoices | A |
 | `13-notifications-*` | Push notification content on the lock screen (reference, not an app screen) | none |

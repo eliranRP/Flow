@@ -1,6 +1,6 @@
 import type { ProfitMonths, ProjectDetail, UnpaidRow } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { allTime, type PeriodChoice } from "../period";
@@ -144,24 +144,17 @@ const unpaid: UnpaidRow[] = [
 ];
 
 describe("FLOW-335 Unpaid", () => {
-  it("offers the SUMIT sync only once a row is marked", async () => {
+  it("offers the SUMIT refresh on the list, and it reports the sync", () => {
     render(wrap(<UnpaidScreen sample={unpaid} />));
-    expect(screen.queryByRole("button", { name: /רענון מ־SUMIT/ })).not.toBeInTheDocument();
-    // FLOW-357: the mark is in the invoice's sheet.
-    fireEvent.click(screen.getByRole("button", { name: /לקוח לדוגמה/ }));
-    fireEvent.click(within(await screen.findByRole("dialog", { name: "לקוח לדוגמה" })).getByRole("button", { name: "סימון כשולם" }));
-    const sync = screen.getByRole("button", { name: /רענון מ־SUMIT/ });
-    fireEvent.click(sync);
+    const refresh = screen.getByRole("button", { name: /רענון מ־SUMIT/ });
+    fireEvent.click(refresh);
     expect(screen.getByText("הרענון הסתיים.")).toBeInTheDocument();
   });
 
-  it("lays the total out as a column on the start side", () => {
-    // Two invoices: with one, the head is the title alone (FLOW-357).
+  it("shows the open total as money in, with its plus, above the list", () => {
     render(wrap(<UnpaidScreen sample={[...unpaid, { ...(unpaid[0] as UnpaidRow), id: "u2", customer_name: "לקוח נוסף" }]} />));
-    const totals = document.querySelector(".ui-unpaid-totals");
-    expect(totals).not.toBeNull();
-    const style = getComputedStyle(totals as Element);
-    expect(style.display).toBe("flex");
-    expect(style.alignItems).toBe("flex-start");
+    const total = document.querySelector(".ui-inv-total");
+    expect(total).not.toBeNull();
+    expect(total?.textContent).toContain("+");
   });
 });

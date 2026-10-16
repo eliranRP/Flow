@@ -6,8 +6,10 @@ import { describe, expect, it } from "vitest";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { RolePreview } from "../use-is-viewer";
+import { VIEWER_NOTE } from "../company-role-cache";
 import { AddForm } from "./add-sheet";
-import { EDITOR_CONNECTIONS_NOTE } from "./connections-screen";
+import { BusinessScreen } from "./business-screen";
+import { ConnectionDetailPage } from "./connection-pages";
 import { ConnectionsScreen, SettingsScreen } from "./flow-screens";
 import type { SettingsSample } from "./settings-screen";
 
@@ -45,48 +47,64 @@ function renderAs(role: "owner" | "editor" | "viewer", ui: ReactNode, path: stri
   );
 }
 
-describe("Settings by role (FLOW-601)", () => {
-  it("gives the owner the צוות row with the count, after the Google row", async () => {
+describe("Settings by role (FLOW-601, FLOW-512)", () => {
+  it("gives the owner the צוות row with the count, after the business row", async () => {
     renderAs("owner", <SettingsScreen sample={business} />, "/settings");
-    const row = await screen.findByRole("link", { name: "צוות: 3" });
+    const row = await screen.findByRole("link", { name: /^צוות/ });
     expect(row).toHaveAttribute("href", "/settings/team");
-    const google = screen.getByText("dana@example.com");
-    expect(google.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole("button", { name: "שם העסק: חברה לדוגמה" })).toBeInTheDocument();
-    // FLOW-103: the owner changes the company's date; payment date is the default.
-    expect(screen.getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" })).toBeInTheDocument();
+    const business_ = screen.getByRole("link", { name: /^העסק/ });
+    expect(business_).toHaveAttribute("href", "/settings/business");
+    expect(business_.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The company's name, currency and date live on the business page, not in the menu.
+    expect(screen.queryByRole("button", { name: /שם העסק/ })).toBeNull();
   });
 
-  it.each(["editor", "viewer"] as const)("keeps the team, the name and the currency from a %s", async (role) => {
+  it.each(["editor", "viewer"] as const)("keeps the team out of the menu for a %s, and the business page open", async (role) => {
     renderAs(role, <SettingsScreen sample={business} />, "/settings");
     expect(await screen.findByText("חברה לדוגמה")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /צוות/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /שם העסק/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /מטבע העסק/ })).toBeNull();
-    // FLOW-103: they see the company's date without a way to change it.
-    expect(screen.queryByRole("button", { name: /רווח ותזרים לפי/ })).toBeNull();
-    expect(screen.getByText("רווח ותזרים לפי")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^צוות/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /^העסק/ })).toHaveAttribute("href", "/settings/business");
     expect(screen.queryByRole("link", { name: /הגדרה ראשונה/ })).toBeNull();
-  });
-
-  it("lets an editor change the view switch", async () => {
-    renderAs("editor", <SettingsScreen sample={business} />, "/settings");
-    expect(await screen.findByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).toBeEnabled();
   });
 });
 
-describe("Connections by role (FLOW-601)", () => {
-  it("shows an editor the connectors read-only, and says why", async () => {
+describe("Business page by role (FLOW-601, FLOW-512)", () => {
+  it("keeps the overhead switch to the owner: an editor sees it locked", async () => {
+    renderAs("editor", <BusinessScreen sample={business} />, "/settings/business");
+    expect(await screen.findByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("lets the owner change the overhead switch", async () => {
+    renderAs("owner", <BusinessScreen sample={business} />, "/settings/business");
+    expect(await screen.findByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("keeps the name, the currency and the date as rows without a way to change them for a viewer", async () => {
+    renderAs("viewer", <BusinessScreen sample={business} />, "/settings/business");
+    expect(await screen.findByText("רווח ותזרים לפי")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /שם העסק/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /מטבע העסק/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /רווח ותזרים לפי/ })).toBeNull();
+    expect(screen.getByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).toHaveAttribute("aria-disabled", "true");
+  });
+});
+
+describe("Connections by role (FLOW-601, FLOW-512)", () => {
+  it("shows an editor the connectors, and the SUMIT page says only the owner connects", async () => {
     renderAs("editor", <ConnectionsScreen sample={{ ...business, connected: false, mercuryConnected: false }} />, "/settings/connections");
-    expect(await screen.findByText(EDITOR_CONNECTIONS_NOTE)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /SUMIT/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Mercury/ })).toBeNull();
+    expect(await screen.findByRole("link", { name: /SUMIT/ })).toBeInTheDocument();
+  });
+
+  it("gives an editor no connect form on the SUMIT page, and says why", async () => {
+    renderAs("editor", <ConnectionDetailPage provider="sumit" sample={{ state: "new" }} />, "/settings/connections/sumit");
+    expect(await screen.findByText("רק הבעלים יכולים לחבר.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "חיבור" })).toBeNull();
   });
 
   it("keeps the connectors open for the owner, with no note", async () => {
     renderAs("owner", <ConnectionsScreen sample={{ ...business, connected: false, mercuryConnected: false }} />, "/settings/connections");
-    expect(await screen.findByRole("button", { name: /SUMIT/ })).toBeInTheDocument();
-    expect(screen.queryByText(EDITOR_CONNECTIONS_NOTE)).toBeNull();
+    expect(await screen.findByRole("link", { name: /SUMIT/ })).toBeInTheDocument();
+    expect(screen.queryByText(VIEWER_NOTE)).toBeNull();
   });
 });
 
