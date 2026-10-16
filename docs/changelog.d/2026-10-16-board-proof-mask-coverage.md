@@ -1,0 +1,1 @@
+board-proof also reports how much of each frame the text mask covers (`darkMaskCoverage` and `lightMaskCoverage` in summary.json, and in the log line), and it no longer masks text whose parent is hidden.
