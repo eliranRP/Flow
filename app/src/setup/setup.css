@@ -237,6 +237,11 @@
   text-align: start;
 }
 
+/* The board sets connect row titles at body weight, not the name weight. */
+.ui-onb-conn .t-name {
+  font-weight: var(--type-body-weight);
+}
+
 /* The board's connect pills are solid accent with on-accent text, not the tint pill. */
 .ui-onb-conn .ui-btn-pill {
   background: var(--color-accent);
