@@ -59,7 +59,8 @@ export function SetupMovie({
 }) {
   const reduced = forceReducedMotion ?? prefersReducedMotion();
   // Dev proofs freeze the movie on its last scene (?movie=last), the frame the board's movie-fixed PNGs show.
-  const frozen = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("movie") === "last";
+  const devMovie = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("movie") : null;
+  const frozen = devMovie === "last";
   const [index, setIndex] = useState(reduced || frozen ? 2 : 0);
   const [paused, setPaused] = useState(startPaused || frozen);
   const [offScreen, setOffScreen] = useState(false);
@@ -91,6 +92,8 @@ export function SetupMovie({
     return () => { window.clearInterval(id); };
   }, [running]);
 
+  // Dev proofs of a frame the board draws without the movie (?movie=off), such as the Skip sheet.
+  if (devMovie === "off") return null;
   const current = scenes[index] ?? scenes[0];
   const tapY = current.tapY;
   return (
