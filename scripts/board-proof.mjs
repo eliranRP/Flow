@@ -17,7 +17,7 @@
  * Render method: see the board renders note in team memory (redesign-approval-proofs). The app shot is
  * taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -231,6 +231,8 @@ async function main(argv) {
   const summary = /** @type {Record<string, Record<string, number>>} */ ({});
   try {
     for (const shot of plan) {
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
+      if (!existsSync(shot.board)) continue;
       const context = await browser.newContext({
         viewport: { width: PROOF_WIDTH, height: PROOF_HEIGHT },
         deviceScaleFactor: PROOF_DPR,
