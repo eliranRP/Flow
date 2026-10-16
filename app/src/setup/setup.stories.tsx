@@ -29,6 +29,7 @@ export const Welcome: Story = {
 
 export const Step1Business: Story = {
   name: "Step 1 · business",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/1">
       <StepBusiness {...noop} companyId={null} initial={null} />
@@ -38,6 +39,7 @@ export const Step1Business: Story = {
 
 export const Step2Connect: Story = {
   name: "Step 2 · connect",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/2">
       <StepConnect {...noop} mercuryConnected={false} sumitConnected={false} />
@@ -47,6 +49,7 @@ export const Step2Connect: Story = {
 
 export const Step3Projects: Story = {
   name: "Step 3 · projects",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/3">
       <StepProjects {...noop} companyId="company-story" bankConnected={false} existingNames={["Birch Lane"]} />
@@ -56,6 +59,7 @@ export const Step3Projects: Story = {
 
 export const Step4Loans: Story = {
   name: "Step 4 · loans",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/4">
       <StepLoans {...noop} companyId="company-story" currency="ILS" bankConnected loanCount={0} picks={[]} onPick={() => undefined} />
@@ -65,6 +69,7 @@ export const Step4Loans: Story = {
 
 export const Step5Jev: Story = {
   name: "Step 5 · smart tagging",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/5">
       <StepJev {...noop} />
@@ -74,6 +79,7 @@ export const Step5Jev: Story = {
 
 export const Step6Review: Story = {
   name: "Step 6 · first approval",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/6">
       <StepReview {...noop} approved={false} />
@@ -83,6 +89,7 @@ export const Step6Review: Story = {
 
 export const Step7Install: Story = {
   name: "Step 7 · Home screen",
+  parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/7">
       <StepInstall {...noop} initialMode="iphone" />
