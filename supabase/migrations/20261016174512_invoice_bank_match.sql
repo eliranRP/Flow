@@ -307,7 +307,16 @@ as $$
     select (date_trunc('month', current_date) - interval '1 month')::date as issued_since
   ),
   issued as (
+    -- Net of the credit notes that SUMIT links to the invoice (they are stored negative).
     select inv.amount_gross
+      + coalesce((
+        select sum(cred.amount_gross)::bigint
+        from public.transactions cred
+        where cred.company_id = inv.company_id
+          and cred.removed_at is null
+          and cred.doc_kind = 'credit'
+          and cred.linked_external_id = inv.external_id
+      ), 0) as amount_gross
     from public.transactions inv, since s
     where inv.company_id = (select id from cid)
       and inv.removed_at is null
@@ -390,6 +399,11 @@ begin
   open_amount := private.open_invoice_gross(cid, p_invoice);
   if open_amount is null or open_amount = 0 then
     raise exception 'invoice not found';
+  end if;
+  if exists (
+    select 1 from public.invoice_paid_marks m where m.transaction_id = p_invoice and m.company_id = cid
+  ) then
+    raise exception 'invoice already marked paid';
   end if;
 
   -- The deposit row is the lock, so two links of one deposit queue.
@@ -694,7 +708,7 @@ begin
   execute 'alter table private.mcp_writes drop constraint mcp_writes_target';
   execute 'alter table private.mcp_writes add constraint mcp_writes_target '
     || left(def, length(def) - 2)
-    || $n$ OR ((kind = 'invoice_link'::text) AND (transaction_id IS NOT NULL) AND (prior ? 'before'::text) AND (prior ? 'written'::text) AND (prior ? 'written_at'::text)) OR ((kind = 'invoice_dismiss'::text) AND (transaction_id IS NOT NULL) AND (prior ? 'before'::text) AND (prior ? 'written'::text) AND (prior ? 'written_at'::text)))$n$;
+    || $n$ OR ((kind = 'invoice_link'::text) AND (transaction_id IS NOT NULL) AND (prior ? 'before'::text) AND (prior ? 'written'::text) AND (prior ? 'written_at'::text)) OR ((kind = 'invoice_dismiss'::text) AND (transaction_id IS NOT NULL) AND (prior ? 'before'::text) AND (prior ? 'written'::text) AND (prior ? 'written_at'::text))))$n$;
 
   -- private.mcp_refused: the two refusals.
   def := pg_get_functiondef('private.mcp_refused(text)'::regprocedure);
@@ -704,7 +718,7 @@ begin
   end if;
   execute replace(def, anchor, anchor || $n$,
         -- FLOW-367.
-        'payment not matched', 'payment already linked'$n$);
+        'payment not matched', 'payment already linked', 'invoice already marked paid'$n$);
 
   -- public.mcp_undo: kinds, lookup, declarations and the two branches.
   def := pg_get_functiondef('public.mcp_undo(text,text,uuid)'::regprocedure);

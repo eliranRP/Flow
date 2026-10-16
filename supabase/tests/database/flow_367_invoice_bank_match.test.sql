@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(56);
+select plan(50);
 
 do $users$
 begin
@@ -65,6 +65,27 @@ from (values
   ('co',       'expense', 'invoice', -5000, 'ibm:bill',  'ext-s', null, '2026-06-06', 'sumit',   'Supplier bill'),
   ('other_co', 'income',  'invoice', 40000, 'ibm:foreign', 'ext-f', null, '2026-06-01', 'sumit', 'Foreign invoice')
 ) as v(co, direction, doc_kind, amount, ikey, ext, cust, doc_date, source, descr);
+
+-- Other company, issued last month (inside unpaid_overview's window): G 10000 with a credit note
+-- of 3000, H 5000 paid by a receipt. billed nets the credit, paid is the receipt.
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, external_id, linked_external_id, description
+)
+select
+  (select id from ibm where label = 'other_co'),
+  v.direction::public.txn_direction, v.doc_kind::public.doc_kind, null,
+  'posted', 'ILS', v.amount, v.amount, abs(v.amount), 0, 'source',
+  (date_trunc('month', current_date) - interval '1 month')::date + 1,
+  (date_trunc('month', current_date) - interval '1 month')::date + 1,
+  'sumit', v.ikey, v.ext, v.linked, v.descr
+from (values
+  ('income', 'invoice', 10000, 'ibm:inv_g',  'ext-g', null,    'Invoice G'),
+  ('income', 'credit',  -3000, 'ibm:cred_g', null,    'ext-g', 'Credit on G'),
+  ('income', 'invoice',  5000, 'ibm:inv_h',  'ext-h', null,    'Invoice H'),
+  ('income', 'receipt',  5000, 'ibm:rec_h',  null,    'ext-h', 'Receipt on H')
+) as v(direction, doc_kind, amount, ikey, ext, linked, descr);
 
 insert into ibm (label, id) select replace(idempotency_key, 'ibm:', 't_'), id
 from public.transactions where idempotency_key like 'ibm:%';
@@ -175,6 +196,13 @@ select is(
   'dismissing again keeps the first time'
 );
 
+select public.set_invoice_paid(pg_temp.txn('t_inv_c'), true);
+select throws_ok(
+  format('select public.link_invoice_payment(%L::uuid, %L::uuid)', pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_4')),
+  'P0001', 'invoice already marked paid', 'a marked invoice cannot be linked to a deposit'
+);
+select public.set_invoice_paid(pg_temp.txn('t_inv_c'), false);
+
 -- 3. Viewers and other companies are refused, with a positive control.
 select tests.clear_authentication();
 reset role;
@@ -195,7 +223,7 @@ select throws_ok(
   format('select public.link_invoice_payment(%L::uuid, %L::uuid)', pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_4')),
   'P0001', 'invoice not found', 'another company cannot link an invoice of this one'
 );
-select is(jsonb_array_length(public.list_unpaid()), 1, 'another company lists only its own invoice');
+select is(jsonb_array_length(public.list_unpaid()), 2, 'another company lists only its own open invoices');
 select tests.clear_authentication();
 reset role;
 select tests.authenticate_as('ibm_owner');
@@ -265,6 +293,12 @@ select ok(
   (public.unpaid_overview()->>'paid_minor')::bigint = (public.unpaid_overview()->>'billed_minor')::bigint - (public.unpaid_overview()->>'open_minor')::bigint,
   'paid is billed less open'
 );
+select tests.clear_authentication();
+reset role;
+select tests.authenticate_as('ibm_other');
+select is((public.unpaid_overview()->>'billed_minor')::bigint, 12000::bigint, 'billed nets the credit note and counts the paid invoice');
+select is((public.unpaid_overview()->>'open_minor')::bigint, 7000::bigint, 'open is the invoice less its credit note');
+select is((public.unpaid_overview()->>'paid_minor')::bigint, 5000::bigint, 'paid is the receipt, not the credit note');
 
 select * from finish();
 rollback;

@@ -960,7 +960,7 @@ Links one open customer invoice to the Mercury deposit that paid it. The invoice
 ```
 
 - The deposit needs the same gross amount as the invoice's open amount, the same customer, and a date on or after the invoice. It must be a Mercury income line of this company.
-- Refused: `invoice not found` (not a document `list_unpaid` lists, linked already, or another company's), `payment not matched` (the deposit does not match), `payment already linked` (the deposit pays another invoice).
+- Refused: `invoice not found` (not a document `list_unpaid` lists, linked already, or another company's), `payment not matched` (the deposit does not match), `payment already linked` (the deposit pays another invoice), `invoice already marked paid` (the owner marked it paid in cash, so no deposit can pay it).
 - A viewer cannot link (`forbidden`); the write needs the write scope and the rate limit.
 
 Output `data`: `{ "transaction_id", "bank_transaction_id", "linked": true, "linked_at", "undo_kind": "invoice_link", "id" }`. Undo `kind: "invoice_link"` with the invoice id takes the link away; if the link changed since, undo is `conflict`.

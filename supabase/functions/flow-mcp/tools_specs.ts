@@ -457,7 +457,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       paid: { type: "boolean" },
     }, true),
-    toolSpec("link_invoice_payment", "Link one open customer invoice from list_unpaid (invoice_id) to the Mercury deposit that paid it (transaction_id, a deposit of the same gross amount and customer, dated on or after the invoice). The invoice leaves list_unpaid; the deposit is linked to it and cannot pay another. A deposit that does not match is refused (payment not matched), a deposit already linked to an invoice is refused (payment already linked), and an invoice list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_link with the invoice id: it takes the link away, and is a conflict when the link changed since.", {
+    toolSpec("link_invoice_payment", "Link one open customer invoice from list_unpaid (invoice_id) to the Mercury deposit that paid it (transaction_id, a deposit of the same gross amount and customer, dated on or after the invoice). The invoice leaves list_unpaid; the deposit is linked to it and cannot pay another. A deposit that does not match is refused (payment not matched), a deposit already linked to an invoice is refused (payment already linked), an invoice marked paid is refused (invoice already marked paid), and an invoice list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_link with the invoice id: it takes the link away, and is a conflict when the link changed since.", {
       idempotency_key: { type: "string" },
       invoice_id: { type: "string" },
       transaction_id: { type: "string" },
