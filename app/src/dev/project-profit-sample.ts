@@ -8,7 +8,7 @@ import type { ProjectProfitSample } from "../screens/project-profit-screen";
  * newest rows are the board's, the other fourteen split the rest.
  */
 const OPEN_AND_RECENT: [string, number, number][] = [
-  ["2026-10", 630_200, 250_600],
+  ["2026-10", 630_200, 250_640],
   ["2026-09", 415_000, 174_000],
   ["2026-08", 415_000, 176_000],
   ["2026-07", 415_000, 170_000],
@@ -44,14 +44,21 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
     base_currency: "USD",
     budget_agorot: null,
     income_agorot: 7_605_000n,
-    direct_agorot: 5_457_000n,
+    direct_agorot: 5_457_040n,
     shared_agorot: 0n,
-    profit_agorot: 2_148_000n,
-    by_currency: [{ currency: "USD", income_minor: 7_605_000n, direct_minor: 5_457_000n, shared_minor: 0n, profit_minor: 2_148_000n }],
+    profit_agorot: 2_147_960n,
+    by_currency: [{ currency: "USD", income_minor: 7_605_000n, direct_minor: 5_457_040n, shared_minor: 0n, profit_minor: 2_147_960n }],
     overhead_weighted: true,
     overhead_share_minor: 304_000n,
     after_overhead: true,
-    categories: [],
+    // The brief's Juniper Ct categories (44 / 23 / 20 / 11 / 2 %), summing to the counted expenses of $54,570.
+    categories: [
+      { id: "loan-interest", name: "ריבית הלוואות", amount_agorot: 2_374_000n },
+      { id: "repairs", name: "תיקונים ותחזוקה", amount_agorot: 1_260_000n },
+      { id: "taxes", name: "מסים וביטוח", amount_agorot: 1_098_000n },
+      { id: "property-mgmt", name: "ניהול נכס", amount_agorot: 609_000n },
+      { id: "other", name: "אחר", amount_agorot: 116_040n },
+    ],
     pending_count: 0,
     pending_agorot: 0n,
     transactions: [],
@@ -64,7 +71,7 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
     after_overhead: true,
     base_currency: "USD",
     months: MONTHS,
-    by_currency: [{ currency: "USD", income_minor: 7_605_000n, expense_minor: 5_457_000n, profit_minor: 2_148_000n }],
+    by_currency: [{ currency: "USD", income_minor: 7_605_000n, expense_minor: 5_457_040n, profit_minor: 2_147_960n }],
   } satisfies NonNullable<ProfitMonths>,
 };
 

@@ -92,6 +92,7 @@ const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
 const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
 const DevProjectProfit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectProfit })));
+const DevProjectMonthProfit = /* @__PURE__ */ lazy(() => import("./dev-routes-profit").then((m) => ({ default: m.DevProjectMonthProfit })));
 const DevProjectMonths = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectMonths })));
 const DevProjects = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjects })));
 const DevReview = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevReview })));
@@ -235,6 +236,7 @@ function AppRoutes() {
                   <Route path="/e2e/project-category" element={<DevProjectCategory />} />
                   <Route path="/e2e/project-months" element={<DevProjectMonths />} />
                   <Route path="/e2e/project-profit" element={<DevProjectProfit />} />
+                  <Route path="/e2e/project-month-profit" element={<DevProjectMonthProfit />} />
                 </Route>
                 {/* Settings has no tab (FLOW-364); the loans pages open the loans tab. */}
                 <Route element={<DevShell section="loans" />}>
