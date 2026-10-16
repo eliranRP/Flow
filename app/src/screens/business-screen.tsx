@@ -5,7 +5,7 @@ import { useCompanyCurrencyQuery } from "../company-currency";
 import { useDashboardQuery } from "../use-books";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
-import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { useHoldOwnerSettings, useHoldWrites, useViewerNoteId, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { basisChoiceLabel, BASIS_TITLE, currencyChoiceLabel, type BasisChoice } from "../ui/company-choices";
 import { CalendarIcon, CoinIcon, BuildingIcon, SplitIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
@@ -211,6 +211,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
           icon={<SplitIcon />}
           checked={overheadOn}
           locked={overheadLocked}
+          disabledNoteId={useViewerNoteId() ?? undefined}
           onChange={(checked) => {
             if (overheadLocked) return;
             setOverhead(checked, overheadOn);

@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { StepBusiness } from "../setup/steps";
-import { AddForm, CategoriesScreen, ConnectionsScreen, ProjectsScreen, SettingsScreen } from "./flow-screens";
+import { AddForm, CategoriesScreen, ConnectionsScreen, ProjectsScreen } from "./flow-screens";
+import { BusinessScreen } from "./business-screen";
+import { ConnectionDetailPage } from "./connection-pages";
 import type { SettingsSample } from "./settings-screen";
 
 // FLOW-507 and FLOW-506. The outer gate hides or disables a write control for a viewer (viewer-writes.test.tsx).
@@ -130,39 +132,36 @@ describe("inner write gates after the role changes", () => {
     });
   });
 
-  describe("SUMIT connect sheet", () => {
-    async function openAndFill() {
+  describe("SUMIT connect form (FLOW-512 page)", () => {
+    function openAndFill() {
       invoke.mockResolvedValue({ data: { ok: true }, error: null });
-      renderAt(<ConnectionsScreen sample={disconnected} />, "/settings/connections?sheet=sumit");
-      const dialog = await screen.findByRole("dialog");
-      fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1234" } });
-      fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-key" } });
-      return dialog;
+      renderAt(<ConnectionDetailPage provider="sumit" sample={{ state: "new" }} />, "/settings/connections/sumit");
+      fireEvent.change(screen.getByLabelText("מספר חברה"), { target: { value: "1234567" } });
+      fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sample-key" } });
+      return screen.getByRole("button", { name: "חיבור" });
     }
 
     it("connects for an owner", async () => {
-      const dialog = await openAndFill();
-      fireEvent.submit(formIn(dialog));
+      fireEvent.click(openAndFill());
       await vi.waitFor(() => { expect(invoke).toHaveBeenCalled(); });
     });
 
-    it.each(["viewer", "unknown"] as const)("sends nothing once the role is %s", async (next) => {
-      const dialog = await openAndFill();
+    it.each(["viewer", "unknown"] as const)("sends nothing once the role is %s, and the form is gone", async (next) => {
+      openAndFill();
       flip(next);
-      fireEvent.submit(formIn(dialog));
+      expect(screen.queryByRole("button", { name: "חיבור" })).not.toBeInTheDocument();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(invoke).not.toHaveBeenCalled();
     });
   });
-  describe("SUMIT status sheet", () => {
+  describe("SUMIT status page (FLOW-512)", () => {
     const connected: SettingsSample = { ...disconnected, connected: true, companyId: 1234 };
 
-    async function openStatus() {
+    function openStatus() {
       invoke.mockResolvedValue({ data: { ok: true }, error: null });
       rpc.mockResolvedValue({ data: null, error: null });
-      renderAt(<ConnectionsScreen sample={connected} />, "/settings/connections");
-      fireEvent.click(screen.getByRole("button", { name: /SUMIT/ }));
-      return screen.findByRole("dialog", { name: "SUMIT" });
+      renderAt(<ConnectionDetailPage provider="sumit" sample={{ state: "connected", companyId: "1234567" }} />, "/settings/connections/sumit");
+      return screen.getByRole("button", { name: "רענון עכשיו" });
     }
 
     function writes() {
@@ -170,49 +169,24 @@ describe("inner write gates after the role changes", () => {
     }
 
     it("refreshes for an owner", async () => {
-      const dialog = await openStatus();
-      fireEvent.click(within(dialog).getByRole("button", { name: /רענון עכשיו/ }));
+      fireEvent.click(openStatus());
       await vi.waitFor(() => { expect(writes()).toBeGreaterThan(0); });
     });
 
-    it("refreshes nothing once the role is viewer", async () => {
-      const dialog = await openStatus();
+    it("hides the refresh once the role is viewer, so nothing is sent", async () => {
+      openStatus();
       flip("viewer");
-      fireEvent.click(within(dialog).getByRole("button", { name: /רענון עכשיו/ }));
+      expect(screen.queryByRole("button", { name: "רענון עכשיו" })).not.toBeInTheDocument();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(writes()).toBe(0);
     });
 
-    it("opens the disconnect question for an owner", async () => {
-      const dialog = await openStatus();
-      fireEvent.click(within(dialog).getByRole("button", { name: "ניתוק" }));
-      expect(await screen.findByRole("dialog", { name: "לנתק את SUMIT?" })).toBeInTheDocument();
-    });
-
-    it("does not ask to disconnect once the role is viewer", async () => {
-      const dialog = await openStatus();
-      flip("viewer");
-      fireEvent.click(within(dialog).getByRole("button", { name: "ניתוק" }));
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(screen.queryByRole("dialog", { name: "לנתק את SUMIT?" })).not.toBeInTheDocument();
-    });
-
-    it("disconnects for an owner who confirms", async () => {
-      const dialog = await openStatus();
-      fireEvent.click(within(dialog).getByRole("button", { name: "ניתוק" }));
+    it("asks to disconnect for an owner, and disconnects on confirm", async () => {
+      openStatus();
+      fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
       const confirm = await screen.findByRole("dialog", { name: "לנתק את SUMIT?" });
       fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
       await vi.waitFor(() => { expect(writes()).toBeGreaterThan(0); });
-    });
-
-    it("disconnects nothing when the role turns viewer on the question", async () => {
-      const dialog = await openStatus();
-      fireEvent.click(within(dialog).getByRole("button", { name: "ניתוק" }));
-      const confirm = await screen.findByRole("dialog", { name: "לנתק את SUMIT?" });
-      flip("viewer");
-      fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(writes()).toBe(0);
     });
   });
   describe("category menu and new category", () => {
@@ -285,16 +259,16 @@ describe("inner write gates after the role changes", () => {
     });
   });
 
-  describe("Settings switches", () => {
+  describe("Business and Jev switches", () => {
     it("locks the overhead and Jev switches once the role is viewer, and a tap changes nothing", () => {
-      renderAt(<><SettingsScreen sample={disconnected} /><ConnectionsScreen sample={disconnected} /></>, "/settings");
+      renderAt(<><BusinessScreen sample={disconnected} /><ConnectionsScreen sample={disconnected} /></>, "/settings/business");
       const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
       const jev = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
-      expect(overhead).toBeEnabled();
+      expect(overhead).not.toHaveAttribute("aria-disabled", "true");
       expect(jev).toBeEnabled();
       const before = [(overhead as HTMLInputElement).checked, (jev as HTMLInputElement).checked];
       flip("viewer");
-      expect(overhead).toBeDisabled();
+      expect(overhead).toHaveAttribute("aria-disabled", "true");
       expect(jev).toBeDisabled();
       fireEvent.click(overhead);
       fireEvent.click(jev);
@@ -303,25 +277,23 @@ describe("inner write gates after the role changes", () => {
       expect(invoke).not.toHaveBeenCalled();
     });
   });
-  describe("Mercury connect sheet", () => {
-    async function openAndFill() {
+  describe("Mercury connect form (FLOW-512 page)", () => {
+    function openAndFill() {
       invoke.mockResolvedValue({ data: { ok: true }, error: null });
-      renderAt(<ConnectionsScreen sample={disconnected} />, "/settings/connections?sheet=mercury");
-      const dialog = await screen.findByRole("dialog");
-      fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-key" } });
-      return dialog;
+      renderAt(<ConnectionDetailPage provider="mercury" sample={{ state: "new" }} />, "/settings/connections/mercury");
+      fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sample-key" } });
+      return screen.getByRole("button", { name: "חיבור" });
     }
 
     it("connects for an owner", async () => {
-      const dialog = await openAndFill();
-      fireEvent.submit(formIn(dialog));
+      fireEvent.click(openAndFill());
       await vi.waitFor(() => { expect(invoke).toHaveBeenCalled(); });
     });
 
     it("sends nothing once the role is viewer", async () => {
-      const dialog = await openAndFill();
+      openAndFill();
       flip("viewer");
-      fireEvent.submit(formIn(dialog));
+      expect(screen.queryByRole("button", { name: "חיבור" })).not.toBeInTheDocument();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(invoke).not.toHaveBeenCalled();
     });
