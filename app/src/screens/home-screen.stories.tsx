@@ -5,7 +5,6 @@ import { expect, fireEvent, within } from "@storybook/test";
 import { HomeBooks, HomeScreen } from "./HomeScreen";
 import { presetPeriod } from "../period";
 import { Banner } from "../ui/banner";
-import { OfflineIcon } from "../ui/icons";
 import { TextLink } from "../ui/text-link";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, exampleOnBand, sampleDashboard } from "../ui/screen-stories-support";
@@ -153,7 +152,6 @@ export const OfflineCached: Story = {
       <SampleHome
         notice={
           <Banner
-            icon={<OfflineIcon />}
             title={<>אין חיבור · נתונים מ-<bdi dir="ltr">09:12</bdi></>}
             action={<TextLink onClick={() => undefined}>ניסיון חוזר</TextLink>}
           />

@@ -156,7 +156,7 @@ test("the category page shows the materials line, and can be empty", async ({ pa
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/category");
   await expect(page.getByRole("heading", { name: "מלט" })).toBeVisible();
-  await expect(page.getByText("בית הספר אלון")).toBeVisible();
+  await expect(page.getByRole("button", { name: "חזרה לבית הספר אלון" })).toBeVisible();
   await expect(page.getByText("₪140")).toBeVisible();
   await expect(page.getByText("₪80")).toBeVisible();
   await expectNoOverflow(page);

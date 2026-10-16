@@ -112,6 +112,18 @@ describe("Button", () => {
     expect(screen.getByText("שומר…")).toBeInTheDocument();
   });
 
+  it("busy: keeps its label and puts the spinner inside the same button (FLOW-371)", () => {
+    const { container } = render(
+      <Button variant="primary" busy>
+        שומר…
+      </Button>,
+    );
+    const button = screen.getByRole("button", { name: "שומר…" });
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button.querySelector(".ui-spinner")).not.toBeNull();
+    expect(container.querySelectorAll(".ui-spinner")).toHaveLength(1);
+  });
+
   it("variant link with `to` renders a router anchor", () => {
     render(
       <MemoryRouter>

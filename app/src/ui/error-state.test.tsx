@@ -4,14 +4,14 @@ import { ErrorState } from "./error-state";
 import { expectRtl, expectTarget } from "./test-support";
 
 describe("ErrorState", () => {
-  it("uses the tint retry for offline and server failures (DESIGN-RULES §2.8)", () => {
+  it("is one line with the retry (FLOW-371)", () => {
     expectRtl();
     const { rerender } = render(<ErrorState offline onRetry={() => undefined} />);
-    expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
-    expectTarget(screen.getByRole("button", { name: "ניסיון חוזר" }));
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill");
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).not.toHaveClass("ui-btn-retry");
+    expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
+    expectTarget(screen.getByRole("button", { name: "נסו שוב" }));
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
     rerender(<ErrorState offline={false} onRetry={() => undefined} />);
-    expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
+    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
   });
 });

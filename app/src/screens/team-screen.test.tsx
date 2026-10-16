@@ -63,7 +63,7 @@ describe("team page (FLOW-601, mockup a-1)", () => {
   it("shows a failed read with a retry that reads again", async () => {
     refuse("list_team", "Failed to fetch");
     renderTeam(<TeamScreen />, "/settings/team");
-    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    const retry = await screen.findByRole("button", { name: "נסו שוב" });
     answer("list_team", { data: sampleTeam });
     fireEvent.click(retry);
     expect(await screen.findByText("דנה לוי")).toBeInTheDocument();

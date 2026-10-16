@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Skeleton } from "./skeleton";
+import { ListSkeleton, Skeleton } from "./skeleton";
 import { padded } from "./story-support";
 
 const meta = {
@@ -19,5 +19,12 @@ export const Bar: Story = {
 /** No shine, for a storyboard frame such as the setup demos (FLOW-506). */
 export const Still: Story = {
   args: { width: "md", still: true },
+  tags: ["clip-no-text"],
+};
+
+/** FLOW-371: a list loading. In the app the rows wait 300ms before they show; the story draws them at once. */
+export const ListLoading: Story = {
+  args: { width: "md" },
+  render: () => <ListSkeleton />,
   tags: ["clip-no-text"],
 };

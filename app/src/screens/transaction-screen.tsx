@@ -25,6 +25,7 @@ import { Toggle } from "../ui/toggle";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
 import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
+import { DetailSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
 import { useToast } from "../ui/toast";
@@ -395,7 +396,7 @@ export function TransactionScreen({
   );
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
     return frame(
-      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />,
+      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} loading={<DetailSkeleton />} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />,
     );
   }
   if (!txn) {

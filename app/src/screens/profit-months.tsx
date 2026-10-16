@@ -12,6 +12,7 @@ import { HEBREW_MONTHS } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { ChartIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
+import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 
 type MonthCurrency = ProfitMonth["by_currency"][number];
@@ -114,6 +115,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
       backTo={`${projectPath}${withPeriodSearch(search, period)}`}
       phase={phase.kind === "ready" && data == null ? { kind: "empty" } : phase}
       onRetry={() => { void months.refetch(); }}
+      loading={<ProfitSkeleton />}
       empty={<EmptyState icon={<ChartIcon />} title={EMPTY_TITLE} body={EMPTY_BODY} />}
     >
       {/* The page is already the whole project, so an empty one has no wider period to offer. */}
