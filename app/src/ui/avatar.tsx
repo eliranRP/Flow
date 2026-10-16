@@ -3,8 +3,8 @@ import { BankIcon, DocumentIcon, MailIcon, PeopleIcon } from "./icons";
 
 /**
  * A 36px initials circle in the neutral avatar fill, letters in secondary text (FLOW-305, FLOW-445).
- * Every row uses the same colour. A name with no letter shows the source icon in the same circle. Decorative: the row's
- * accessible name already carries the counterparty.
+ * Every row uses the same colour. A name with no letter shows the source icon in the same circle.
+ * Decorative: the row's accessible name already carries the counterparty.
  */
 export function Avatar({ name, fallback }: { name: string; fallback: "bank" | "invoice" | "person" }) {
   const initials = initialsOf(name);
