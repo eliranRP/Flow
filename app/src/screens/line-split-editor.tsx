@@ -42,7 +42,7 @@ import { AlertIcon, CloseIcon, PlusIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ReversalTag } from "../ui/suggest-tag";
-import { SwipeRemove } from "../ui/swipe-remove";
+import { SwipeRow } from "../ui/swipe-row";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import {
@@ -428,7 +428,7 @@ export function LineSplitEditor({
                 : over ? lineSplitCopy("parts exceed the line", { currency, overMinor: check.overMinor })
                   : undefined;
               return (
-                <SwipeRemove key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
+                <SwipeRow key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
                   <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
                     <div className="ui-lsplit-text">
                       <button
@@ -507,7 +507,7 @@ export function LineSplitEditor({
                     </div>
                     {message ? <p id={messageId} className="ui-lsplit-msg" role="status">{message}</p> : null}
                   </div>
-                </SwipeRemove>
+                </SwipeRow>
               );
             })}
             <button
