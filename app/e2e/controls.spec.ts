@@ -310,14 +310,14 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await expect(page).toHaveURL(/\/projects/);
   await page.goto("/e2e/project-detail?preview=1");
   await page.getByRole("button", { name: "עוד" }).click();
-  await page.getByRole("button", { name: "סיום הפרויקט" }).click();
+  await page.getByRole("button", { name: /^סיום הפרויקט/ }).click();
   // FLOW-334: either way can be undone, so the confirm repeats the action and is not red.
-  const finish = page.getByRole("dialog", { name: "לסיים את הפרויקט?" });
+  const finish = page.getByRole("dialog", { name: /^לסיים את/ });
   await expect(finish).toBeVisible();
   await finish.getByRole("button", { name: "סיום הפרויקט" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
-  await expect(page.getByRole("dialog", { name: "לסיים את הפרויקט?" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: /^לסיים את/ })).toHaveCount(0);
   // FLOW-340 C: the overhead switch lives in the ⋯ menu.
   await page.getByRole("button", { name: "עוד" }).click();
   const overhead = page.getByRole("dialog", { name: "עוד" }).getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
@@ -333,7 +333,7 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   // FLOW-331: + → פרויקט חדש opens the project sheet on Projects; Back does not reopen +.
   await page.goto("/add?preview=1");
   await page.getByRole("button", { name: /פרויקט חדש/ }).click();
-  await expect(page.getByRole("dialog", { name: "פרויקט" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "פרויקט חדש" })).toBeVisible();
   await expect(page).toHaveURL(/\/projects\?preview=1$/);
 });
 

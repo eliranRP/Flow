@@ -484,7 +484,7 @@ describe("FLOW-119 loan project", () => {
     fillSavable();
     const field = screen.getByRole("button", { name: "פרויקט ללא פרויקט" });
     fireEvent.click(field);
-    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקט חדש" })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "פרויקט ישן" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
@@ -504,7 +504,7 @@ describe("FLOW-119 loan project", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
     openLoan();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
-    const group = await screen.findByRole("radiogroup", { name: "פרויקט" });
+    const group = await screen.findByRole("radiogroup", { name: "פרויקט חדש" });
     expect(group.closest<HTMLElement>("[style]")?.style.minHeight).toBe("480px");
   });
 
@@ -548,7 +548,7 @@ describe("FLOW-119 loan project", () => {
     const field = screen.getByRole("button", { name: "פרויקט ללא פרויקט" });
     field.focus();
     fireEvent.click(field);
-    await waitFor(() => { expect(screen.getByRole("heading", { name: "פרויקט" })).toHaveFocus(); });
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "פרויקט חדש" })).toHaveFocus(); });
     expect(field).not.toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     await waitFor(() => { expect(screen.getByRole("button", { name: "פרויקט ללא פרויקט" })).toHaveFocus(); });
@@ -573,7 +573,7 @@ describe("FLOW-119 loan project", () => {
     });
     fillSavable();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
-    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקט חדש" })).toBeInTheDocument();
     await act(async () => {
       await router.navigate(-1);
       window.dispatchEvent(new PopStateEvent("popstate"));
@@ -646,7 +646,7 @@ describe("FLOW-119 loan project", () => {
     fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
     fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
     fireEvent.click(screen.getByRole("button", { name: "פרויקט פרויקט א" }));
-    fireEvent.click(within(screen.getByRole("dialog", { name: "פרויקט" })).getByRole("button", { name: "סגירה" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "פרויקט חדש" })).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
     openLoan();
     expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();

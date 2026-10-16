@@ -6,7 +6,7 @@ import { renderWithProviders } from "../test-render";
 
 const project: NonNullable<ProjectDetail> = {
   id: "a",
-  name: "פרויקט",
+  name: "פרויקט חדש",
   status: "active",
   state_label: null,
   budget_agorot: null,

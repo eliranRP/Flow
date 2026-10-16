@@ -2,7 +2,7 @@ import { formatAmountText, type CashMonths, type ExpectedMonths, type ProjectCat
 import { useCompanyCurrency } from "../company-currency";
 import { profitSign, projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
@@ -16,7 +16,7 @@ import { PeriodSwipe } from "../ui/period-swipe";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
-import { useProjectCashMonthsQuery } from "../project-cash";
+import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -592,20 +592,32 @@ function ProjectMenu({
   investmentTo?: string;
 }) {
   const blocked = useBlockedPreview();
+  const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
+  const [removing, setRemoving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  // FLOW-445: the month's row for this project: the pending lines (the finish warning) and whether it can be deleted.
+  const cash = useProjectsCashMonth(undefined, projectId);
+  const row = cash.data?.projects.find((project) => project.id === projectId);
+  const pending = row?.pending_count ?? 0;
+  const deletable = row?.deletable === true;
   const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
   const save = useWrite({
     failure: "לא הצלחנו לעדכן את הפרויקט.",
-    success: finished ? "הפרויקט חזר לפעיל" : "הפרויקט סומן כהסתיים",
-    keys: ["dashboard", "project"],
-    onSuccess: () => { setConfirm(false); },
+    success: finished ? "הפרויקט חזר לפעיל" : `${name} סומן כהסתיים`,
+    keys: ["dashboard", "project", "projects-cash"],
+    onSuccess: () => {
+      setConfirm(false);
+      // A finish lands on the list with הסתיימו open (FLOW-445).
+      if (!finished) void navigate("/projects", { state: { finishedOpen: true } });
+    },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      // No p_type: upsert_project keeps the stored type when none is sent.
       assertNoError(await supabase.rpc("upsert_project", {
         p_id: projectId,
         p_name: name,
@@ -614,6 +626,23 @@ function ProjectMenu({
       }));
     },
   });
+  const remove = useWrite({
+    failure: (error) => (error.message.includes("in use") ? "יש בפרויקט תנועות, אז אי אפשר למחוק אותו." : "לא הצלחנו למחוק את הפרויקט."),
+    success: `${name} נמחק`,
+    keys: ["dashboard", "project", "projects-cash"],
+    onSuccess: () => {
+      setRemoving(false);
+      void navigate("/projects");
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("delete_project", { p_id: projectId }));
+    },
+  });
+  const pendingWarning = pending === 1
+    ? "יש בו פריט אחד ממתין לאישור. כדאי לאשר אותו לפני הסיום."
+    : `יש בו ${String(pending)} פריטים ממתינים לאישור. כדאי לאשר אותם לפני הסיום.`;
   return (
     <>
       <IconButton
@@ -640,6 +669,9 @@ function ProjectMenu({
               setEditing(true);
             }}
           />
+          {finished ? null : (
+            <ListRow variant="item" title="הוספה לפרויקט" meta="תנועה ידנית לפרויקט הזה" href={`/add?project=${projectId}`} chevron />
+          )}
           {investmentTo == null ? null : (
             <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
           )}
@@ -658,11 +690,24 @@ function ProjectMenu({
           <ListRow
             variant="button"
             title={action}
+            meta={finished ? "יחזור לרשימת הפעילים" : "יעבור ל״הסתיימו״. שום דבר לא נמחק"}
             onClick={() => {
               setMenu(false);
               setConfirm(true);
             }}
           />
+          {deletable ? (
+            <ListRow
+              variant="button"
+              title="מחיקת הפרויקט"
+              meta="אין בו תנועות, אז אפשר למחוק אותו"
+              className="ui-project-menu-delete"
+              onClick={() => {
+                setMenu(false);
+                setRemoving(true);
+              }}
+            />
+          ) : null}
         </List>
       </Sheet>
       <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type, budget }} />
@@ -686,15 +731,33 @@ function ProjectMenu({
       <ConfirmSheet
         open={confirm}
         onOpenChange={setConfirm}
-        title={finished ? "להחזיר את הפרויקט לפעיל?" : "לסיים את הפרויקט?"}
-        item={name}
-        consequence="פרויקט לא נמחק. אפשר להחזיר אותו אחר כך."
+        title={finished ? "להחזיר את הפרויקט לפעיל?" : `לסיים את ${name}?`}
+        consequenceSize="body"
+        consequence={finished
+          ? "הפרויקט יחזור לרשימת הפעילים, ואפשר לסיים אותו שוב בכל רגע."
+          : "הפרויקט יעבור ל״הסתיימו״ ויצא מבחירת הפרויקטים בשיוך. התנועות, הרווח והמסמכים נשמרים, ואפשר להחזיר אותו לפעיל בכל רגע."}
+        warning={!finished && pending > 0 ? pendingWarning : undefined}
         confirmLabel={action}
         returnFocusRef={opener}
         busy={save.isPending}
         onConfirm={() => {
           if (blocked()) return;
           save.mutate();
+        }}
+      />
+      <ConfirmSheet
+        open={removing}
+        onOpenChange={setRemoving}
+        title={`למחוק את ${name}?`}
+        consequenceSize="body"
+        consequence="אין בפרויקט תנועות, חשבוניות או מסמכים, אז שום מספר לא משתנה. אי אפשר לשחזר אחרי המחיקה."
+        confirmLabel="מחיקה"
+        destructive="outline"
+        returnFocusRef={opener}
+        busy={remove.isPending}
+        onConfirm={() => {
+          if (blocked()) return;
+          remove.mutate();
         }}
       />
     </>

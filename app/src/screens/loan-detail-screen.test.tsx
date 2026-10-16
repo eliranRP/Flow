@@ -38,7 +38,7 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     expect(screen.getByRole("radio", { name: /^שיפוץ דוגמה 12/ })).toHaveAttribute("aria-checked", "true");
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(toast("ההלוואה שויכה לפרויקט")).toBeDefined(); });
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).not.toBeInTheDocument(); });
     expect(screen.getByRole("button", { name: /^פרויקט בית דוגמה 9/ })).toBeInTheDocument();
     const undo = within(toast("ההלוואה שויכה לפרויקט") as HTMLElement).getByRole("button", { name: "ביטול", hidden: true });
     fireEvent.click(undo);
@@ -60,7 +60,7 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     renderLoan(store, "loan-mortgage");
     fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^שיפוץ דוגמה 12/ }));
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).not.toBeInTheDocument(); });
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -70,7 +70,7 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(toast("אין הרשאה לעדכן הלוואה.")).toBeDefined(); });
-    expect(screen.getByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /^שיפוץ דוגמה 12/ })).toHaveAttribute("aria-checked", "true");
   });
 
@@ -81,7 +81,7 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^פרויקט שיפוץ דוגמה 12/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^בית דוגמה 9/ }));
     await waitFor(() => { expect(toast("הפרויקט לא נמצא.")).toBeDefined(); });
-    expect(screen.getByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
   });
 
   it("waits for the save: other rows are disabled and Escape does not close", async () => {
@@ -96,9 +96,9 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
     await waitFor(() => { expect(screen.getByRole("radio", { name: "ללא פרויקט" })).toHaveAttribute("aria-disabled", "true"); });
     fireEvent.keyDown(document, { key: "Escape" });
     await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 50); }); });
-    expect(screen.getByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
     await act(async () => { release(); await Promise.resolve(); });
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).not.toBeInTheDocument(); });
   });
 });
 
