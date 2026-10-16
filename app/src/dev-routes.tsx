@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { type Dashboard, type TransactionDetail } from "@flow/shared";
+import { type CashCurrencyRow, type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
@@ -21,6 +21,7 @@ import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
 import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/HomeScreen";
+import { SplitCard } from "./screens/home-parts";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
@@ -271,6 +272,33 @@ export function DevHome() {
       period={period}
       onPeriod={setPeriod}
     />
+  );
+}
+
+/**
+ * The split card alone (Home's "ממה מורכב" bar and its two rows), with invented figures. `?net=` and
+ * `?profit=` are the month's net and profit in agorot (ILS); the defaults are a negative month. The
+ * shared PartsBar proof reads this route, and the Home fix pass can use it too.
+ */
+export function DevHomeSplit() {
+  const [params] = useSearchParams();
+  const net = BigInt(params.get("net") ?? "-94600");
+  const profit = BigInt(params.get("profit") ?? "12000");
+  const row: CashCurrencyRow = {
+    currency: "ILS",
+    in_minor: 1_000_000n,
+    out_minor: 1_000_000n - net,
+    net_minor: net,
+    profit_minor: profit,
+    excluded_count: 0,
+    excluded_in_minor: 0n,
+    excluded_out_minor: 0n,
+    not_in_profit_categories: [{ name: "שיפוץ והשבחה", amount_minor: net - profit }],
+  };
+  return (
+    <div className="ui-page-pad">
+      <SplitCard monthKey="2026-10" row={row} search="?preview=1" onOpenProfit={() => undefined} />
+    </div>
   );
 }
 
