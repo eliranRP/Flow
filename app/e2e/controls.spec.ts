@@ -224,18 +224,11 @@ async function focusAt(page: Page, shell: Locator, input: Locator, xRatio: numbe
 
 test("amount and text fields focus on either edge and do not clip", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/e2e/projects?preview=1");
-  const search = page.getByRole("searchbox", { name: "חיפוש פרויקט" });
-  const searchBox = page.locator(".ui-search");
-  await focusAt(page, searchBox, search, 0.02);
-  await focusAt(page, searchBox, search, 0.5);
-  await focusAt(page, searchBox, search, 0.98);
-
   // FLOW-331: פרויקט חדש lives on +, which lands here with ?new=project.
   await page.goto("/e2e/projects?preview=1&new=project");
-  const dialog = page.getByRole("dialog", { name: "פרויקט" });
+  const dialog = page.getByRole("dialog", { name: "פרויקט חדש" });
   await expect(dialog).toBeVisible();
-  const name = dialog.getByRole("textbox", { name: "שם" });
+  const name = dialog.getByRole("textbox", { name: "שם הפרויקט" });
   await expect(name).toBeInViewport();
   await focusAt(page, name, name, 0.02);
   await focusAt(page, name, name, 0.5);
@@ -243,7 +236,7 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   await expect(name).toHaveAttribute("autocomplete", "off");
   expect(await name.getAttribute("name")).toMatch(/^flow-text-/);
 
-  const amount = dialog.getByRole("textbox", { name: "תקציב בשקלים, או ריק" });
+  const amount = dialog.getByRole("textbox", { name: "תקציב (אופציונלי)" });
   const amountBox = dialog.locator(".ui-money-field");
   await focusAt(page, amountBox, amount, 0.02);
   await focusAt(page, amountBox, amount, 0.5);
@@ -283,28 +276,27 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   expect(shareFit).toBe(true);
 });
 
-test("projects search, expand, open, and the new-project sheet", async ({ page }) => {
+test("projects list, finished projects, and the new-project sheet", async ({ page }) => {
   await page.goto("/e2e/projects?preview=1");
-  await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("אין כזה");
-  // FLOW-342: a miss offers the transaction search; the field's ✕ clears it.
-  await expect(page.getByRole("link", { name: /^חיפוש בתנועות: אין כזה/ })).toBeVisible();
-  await page.getByRole("button", { name: "ניקוי", exact: true }).click();
-  await expect(page.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveValue("");
+  // FLOW-445: the list has no search field; its top row links to search.
+  await expect(page.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^שיפוץ הרצל 12/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toHaveCount(0);
-  await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("ישן");
+  await page.getByRole("button", { name: /הסתיימו/ }).click();
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toContainText("הסתיים");
-  await page.getByRole("searchbox", { name: "חיפוש פרויקט" }).fill("");
-  await page.getByRole("button", { name: /שהסתיים/ }).click();
-  await expect(page.getByRole("link", { name: "פרויקט ישן" })).toBeVisible();
-  await page.getByRole("link", { name: "וילה רעננה" }).click();
+  await page.getByRole("link", { name: /^וילה רעננה/ }).click();
   await expect(page).toHaveURL(/\/projects\/p2/);
   await page.goto("/e2e/projects?preview=1&new=project");
-  await expect(page.getByRole("dialog", { name: "פרויקט" })).toBeVisible();
-  await page.getByRole("textbox", { name: "שם" }).fill("גג חדש");
-  await page.getByRole("button", { name: "שמירה" }).click();
+  const dialog = page.getByRole("dialog", { name: "פרויקט חדש" });
+  await expect(dialog).toBeVisible();
+  const create = dialog.getByRole("button", { name: "יצירת פרויקט" });
+  await expect(create).toBeDisabled();
+  await dialog.getByRole("textbox", { name: "שם הפרויקט" }).fill("גג חדש");
+  await expect(create).toBeEnabled();
+  await create.click();
   await toast(page, previewToast);
-  await page.getByRole("button", { name: "ביטול" }).click();
-  await expect(page.getByRole("dialog", { name: "פרויקט" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "פרויקט חדש" })).toHaveCount(0);
 });
 
 test("a project opens its menu, categories, and a transaction", async ({ page }) => {

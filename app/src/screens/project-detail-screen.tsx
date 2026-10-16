@@ -44,6 +44,7 @@ import { ProjectExpectedMonths } from "./project-expected-months";
 import { investmentFigure, openLoans, PROJECT_RECENT_CAP, ProjectProfitRows } from "./project-overview";
 import { ProjectTransactions } from "./project-transactions";
 import { ProjectCashOverview } from "./project-cash-screens";
+import { ProjectFormSheet } from "./project-form-sheet";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment } from "./project-investment-data";
 
@@ -369,6 +370,7 @@ export function ProjectDetailScreen({
       projectId={project.id}
       name={project.name}
       budget={project.budget_agorot ?? null}
+      type={project.state_label ?? null}
       finished={project.status === "finished"}
       groups={groups}
       sample={sample != null}
@@ -568,6 +570,7 @@ function LegacyEmptyProject() {
 function ProjectMenu({
   projectId,
   name,
+  type,
   budget,
   finished,
   groups,
@@ -577,6 +580,7 @@ function ProjectMenu({
 }: {
   projectId: string;
   name: string;
+  type: string | null;
   budget: bigint | null;
   finished: boolean;
   /** FLOW-360 A: the קבוצה row shows once the groups are read. */
@@ -591,6 +595,7 @@ function ProjectMenu({
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
+  const [editing, setEditing] = useState(false);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
   const save = useWrite({
@@ -625,6 +630,16 @@ function ProjectMenu({
         {overhead}
         {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
         <List className="ui-project-menu-list">
+          <ListRow
+            variant="button"
+            title="עריכת פרטים"
+            meta="שם, סוג ותקציב"
+            chevron
+            onClick={() => {
+              setMenu(false);
+              setEditing(true);
+            }}
+          />
           {investmentTo == null ? null : (
             <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
           )}
@@ -650,6 +665,7 @@ function ProjectMenu({
           />
         </List>
       </Sheet>
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type, budget }} />
       {groups == null ? null : (
         <ProjectGroupSheets
           projectId={projectId}

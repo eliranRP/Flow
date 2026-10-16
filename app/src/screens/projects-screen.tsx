@@ -1,10 +1,9 @@
-import { shekelsToAgorot, type Dashboard, type ProjectRow, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
+import { type Dashboard, type ProjectRow, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
 import { projectAmountFigures } from "../by-currency";
-import { useRef, useState, type SubmitEvent } from "react";
+import { useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
-import { getSupabase } from "../lib/supabase";
 import { groupHref, projectCountLabel } from "../project-groups";
 import { cashMonthName } from "../cash";
 import { useProjectsCashMonth } from "../project-cash";
@@ -12,7 +11,6 @@ import { netIn, orderActiveProjects, overheadRow, isOverBudget, projectInitials,
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
-import { assertNoError, useWrite } from "../use-write";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
@@ -20,14 +18,11 @@ import { IconButton } from "../ui/icon-button";
 import { formatAmount } from "../ui/amount";
 import { PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
-import { MoneyField } from "../ui/money-field";
 import { ScreenHeader } from "../ui/screen-header";
 import { ProjectsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
-import { Sheet } from "../ui/sheet";
-import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
-import { useBlockedPreview } from "./screen-shared";
+import { ProjectFormSheet } from "./project-form-sheet";
 
 /** FLOW-445: the Projects tab. Rows are this month's cash per project, the overhead row last. */
 export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cashSample?: ProjectsCashMonth } = {}) {
@@ -52,9 +47,7 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
   const loadingCash = sample == null && cashSample == null && cash.isPending && preview === "off";
   const phase: ScreenPhase = sample ? { kind: "ready" } : loadingCash ? { kind: "loading" } : screenPhase(preview, dashboard);
   const sheet = (
-    <Sheet open={open} onOpenChange={setOpen} title="פרויקט">
-      <ProjectForm onClose={() => { setOpen(false); }} />
-    </Sheet>
+    <ProjectFormSheet open={open} onOpenChange={setOpen} />
   );
   const empty = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -228,44 +221,5 @@ export function ProjectRowItem({ project, search, alignWithChevron = false }: { 
       // Beside a group row's chevron, the amounts keep one column (FLOW-408).
       chevronSpace={alignWithChevron}
     />
-  );
-}
-
-function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: string }) {
-  const blocked = useBlockedPreview();
-  const holdWrites = useHoldWrites();
-  const [name, setName] = useState("");
-  const [budget, setBudget] = useState("");
-  const save = useWrite({
-    failure: "לא הצלחנו לשמור את הפרויקט.",
-    success: "הפרויקט נשמר",
-    keys: ["dashboard", "project"],
-    onSuccess: onClose,
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      const agorot = budget.trim() === "" ? null : Number(shekelsToAgorot(budget));
-      assertNoError(await supabase.rpc("upsert_project", {
-        p_name: name,
-        p_status: "active",
-        ...(projectId ? { p_id: projectId } : {}),
-        ...(agorot == null ? {} : { p_budget_agorot: agorot }),
-      }));
-    },
-  });
-
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    if (holdWrites || blocked()) return;
-    save.mutate();
-  }
-
-  return (
-    <form className="ui-stack" onSubmit={submit}>
-      <TextField label="שם" value={name} onChange={(event) => { setName(event.target.value); }} required />
-      <MoneyField label="תקציב בשקלים, או ריק" value={budget} onValueChange={setBudget} />
-      <Button type="submit" busy={save.isPending} disabled={holdWrites}>שמירה</Button>
-      <Button variant="secondary" onClick={onClose}>ביטול</Button>
-    </form>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { type Dashboard, type TransactionDetail } from "@flow/shared";
+import { type Dashboard, type ProjectsCashMonth, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
@@ -370,8 +370,21 @@ export function DevCashYear() {
   return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;
 }
 
+/** FLOW-445: the list's month cash for the same three projects, and one line with no project. */
+const devProjectsCash: NonNullable<ProjectsCashMonth> = {
+  month: "2026-09-01",
+  base_currency: "ILS",
+  basis: "paid",
+  projects: [
+    { id: "p1", name: "שיפוץ הרצל 12", type: "flip", status: "active", is_overhead: false, group_id: null, created_at: "2026-08-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "ILS", in_minor: 100_000, out_minor: 40_000, net_minor: 60_000 }], profit_month_minor: 60_000, profit_all_minor: 60_000, first_month: "2026-09-01", pending_count: 0, deletable: false },
+    { id: "p2", name: "וילה רעננה", type: "השכרה", status: "active", is_overhead: false, group_id: null, created_at: "2026-09-20T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_month_minor: 0, profit_all_minor: 0, first_month: null, pending_count: 0, deletable: true },
+    { id: "p3", name: "פרויקט ישן", type: null, status: "finished", is_overhead: false, group_id: null, created_at: "2026-06-01T08:00:00Z", finished_on: "2026-08-30", budget_minor: null, spent_minor: 0, cash: [], profit_month_minor: 0, profit_all_minor: 0, first_month: "2026-06-01", pending_count: 0, deletable: false },
+  ],
+  unassigned: { count: 1, cash: [{ currency: "ILS", in_minor: 0, out_minor: 2_500, net_minor: -2_500 }] },
+};
+
 export function DevProjects() {
-  return <ProjectsScreen sample={devDashboard} />;
+  return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
 }
 
 /** Dev-only. A production build drops the sample secret with this flag. */

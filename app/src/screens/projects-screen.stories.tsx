@@ -1,45 +1,73 @@
-import type { Dashboard } from "@flow/shared";
+import type { ProjectCashRow, ProjectsCashMonth } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
-import { projectsGroupDone, projectsGrouped } from "./project-groups-sample";
+import { projectsGrouped } from "./project-groups-sample";
 
-function listedProject(id: string, name: string, status: "active" | "finished" = "active"): Dashboard["projects"][number] {
+/** FLOW-445: one project's row in the month's cash (the list reads projects_cash_month). Invented names only. */
+function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; group?: string | null; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
+  const net = input.net ?? 0;
   return {
-    id,
-    name,
-    status,
-    income_agorot: 10_000_000n,
-    direct_agorot: 8_000_000n,
-    shared_agorot: 0n,
-    profit_before_shared_agorot: 2_000_000n,
-    profit_agorot: 2_000_000n,
-    by_currency: [],
+    id: input.id,
+    name: input.name,
+    type: input.type ?? null,
+    status: input.status ?? "active",
+    is_overhead: input.overhead ?? false,
+    group_id: input.group ?? null,
+    created_at: input.fresh ? "2026-10-15T08:00:00Z" : "2026-08-01T08:00:00Z",
+    finished_on: input.status === "finished" ? "2026-09-30" : null,
+    budget_minor: input.budget ?? null,
+    spent_minor: input.spent ?? 0,
+    cash: net === 0 ? [] : [{ currency: "ILS", in_minor: Math.max(net, 0), out_minor: Math.max(-net, 0), net_minor: net }],
+    profit_month_minor: net,
+    profit_all_minor: input.profitAll ?? net,
+    first_month: input.fresh ? null : "2026-08-01",
+    pending_count: 0,
+    deletable: false,
   };
 }
 
-const projectsList: Dashboard = {
-  ...sampleDashboard,
-  projects: [
-    listedProject("a", "בניין מגורים חולון"),
-    listedProject("b", "וילה רעננה"),
-    listedProject("c", "מגדל משרדים פ״ת"),
-    ...Array.from({ length: 14 }, (_, index) => listedProject(`p${String(index)}`, `פרויקט ${String(index + 4)}`)),
-    ...Array.from({ length: 21 }, (_, index) => listedProject(`f${String(index)}`, `הסתיים ${String(index + 1)}`, "finished")),
-  ],
-};
+function cashMonth(projects: ProjectCashRow[], unassigned = { count: 0, net: 0 }): NonNullable<ProjectsCashMonth> {
+  return {
+    month: "2026-10-01",
+    base_currency: "ILS",
+    basis: "paid",
+    projects,
+    unassigned: {
+      count: unassigned.count,
+      cash: unassigned.net === 0 ? [] : [{ currency: "ILS", in_minor: 0, out_minor: Math.abs(unassigned.net), net_minor: unassigned.net }],
+    },
+  };
+}
 
-/** FLOW-410: more active projects than one screen, and a finished one that shares a name with an active one. */
-const projectsSearch: Dashboard = {
-  ...sampleDashboard,
-  projects: [
-    ...["בית ארז", "בית אלון", "בית ברוש", "בית דקל", "בית הדס", "בית ורד", "בית תמר", "בית חצב", "בית כלנית"].map((name, index) => listedProject(`s${String(index)}`, name)),
-    listedProject("sf1", "מחסן תמר", "finished"),
-    listedProject("sf2", "חנות רימון", "finished"),
+const activeMonth = cashMonth(
+  [
+    cashRow({ id: "lark", name: "Lark Hill", type: "flip", net: -12_000_00, spent: 9_000_00, budget: 10_000_00 }),
+    cashRow({ id: "okafor", name: "Okafor", type: "לקוח", net: 45_000_00 }),
+    cashRow({ id: "juniper", name: "Juniper Ct", type: "flip", net: -8_000_00, spent: 12_000_00, budget: 10_000_00 }),
+    cashRow({ id: "tidewater", name: "Tidewater", type: "השכרה", net: 3_000_00 }),
+    cashRow({ id: "quarry", name: "Quarry Rd", type: "השכרה", net: 0 }),
+    cashRow({ id: "office", name: "הוצאות כלליות", overhead: true, net: -5_000_00 }),
   ],
-};
+  { count: 2, net: -1_500_00 },
+);
+
+const withFinished = cashMonth([
+  ...activeMonth.projects,
+  cashRow({ id: "wren", name: "Wren St", type: "flip", status: "finished", profitAll: 80_000_00 }),
+  cashRow({ id: "ashby", name: "Ashby Rd", type: "השכרה", status: "finished", profitAll: -4_000_00 }),
+], { count: 2, net: -1_500_00 });
+
+const withNew = cashMonth([
+  ...activeMonth.projects,
+  cashRow({ id: "harrow", name: "Harrow Ln", type: "flip", fresh: true }),
+]);
+
+const withGroup = cashMonth(
+  projectsGrouped.projects.map((project) => cashRow({ id: project.id, name: project.name, group: project.group_id ?? null, net: 1_000_00 })),
+);
 
 const meta = {
   title: "Screens/Routes",
@@ -59,45 +87,68 @@ export const ProjectsEmpty: Story = {
 };
 
 export const ProjectsList: Story = {
+  name: "Projects, the list with cash per project",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsList} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
     </StoryRoute>
   ),
 };
 
-/** FLOW-410: a query searches every project; the finished match reads הסתיים. */
-export const ProjectsSearch: Story = {
-  name: "Projects, search finds a finished project",
+/** FLOW-445: the finished projects stay closed until הצג opens them. */
+export const ProjectsFinished: Story = {
+  name: "Projects, finished shown",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsSearch} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /הסתיימו/u }));
+    await expect(await canvas.findByText("Wren St")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-445: a project with no line yet reads חדש and sorts first. */
+export const ProjectsNew: Story = {
+  name: "Projects, a new project first",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withNew} />
     </StoryRoute>
   ),
 };
 
-/** FLOW-410: with no query every active project shows, past the first six. */
-/** FLOW-342 (A): a name that is no project offers the transaction search, one row. */
-export const ProjectsMiss: Story = {
-  name: "Projects, no project matches",
+/** FLOW-445: a group is one row among the active rows; its members' month net is its amount. */
+export const ProjectsGrouped: Story = {
+  name: "Projects, grouped",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsSearch} />
+      <ProjectsScreen sample={projectsGrouped} cashSample={withGroup} />
     </StoryRoute>
   ),
 };
 
-export const ProjectsManyActive: Story = {
-  name: "Projects, every active project",
+/** FLOW-445: the new-project sheet; its save stays disabled until a name is typed. */
+export const ProjectsNewSheet: Story = {
+  name: "Projects, new project sheet",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={projectsSearch} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ פרויקט חדש" }));
+    const dialog = await within(document.body).findByRole("dialog");
+    await expect(within(dialog).getByRole("button", { name: "יצירת פרויקט" })).toBeDisabled();
+  },
 };
 
 export const ProjectsLoading: Story = {
@@ -116,43 +167,4 @@ export const ProjectsError: Story = {
       <ProjectsScreen />
     </StoryRoute>
   ),
-};
-
-/** FLOW-406 (proj-b): a group is one row with its project count and summed profit; it opens the group. */
-export const ProjectsGrouped: Story = {
-  name: "Projects, grouped",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={projectsGrouped} />
-    </StoryRoute>
-  ),
-};
-
-/** A query finds a project inside a group, and the group by its own name. */
-export const ProjectsGroupedSearch: Story = {
-  name: "Projects, grouped, search",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={projectsGrouped} />
-    </StoryRoute>
-  ),
-};
-
-/** A group whose projects have all finished folds under עוד N שהסתיימו, and comes back when opened. */
-export const ProjectsGroupDone: Story = {
-  name: "Projects, a finished group folds",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={projectsGroupDone} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByText("מרכז מסחרי לדוגמה")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: /עוד 3 שהסתיימו/ }));
-    await expect(canvas.getByText("מרכז מסחרי לדוגמה")).toBeInTheDocument();
-  },
 };
