@@ -373,7 +373,7 @@ grant execute on function public.mcp_reset_forecast(text, text) to authenticated
 
 -- private.mcp_writes: the two kinds, with the fields their undo reads (anchors checked: each
 -- must occur once in the live definition, as in 20261014184227_projects_tab.sql).
-create function pg_temp.anchor_count(p_def text, p_anchor text)
+create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer
 language sql
 immutable
