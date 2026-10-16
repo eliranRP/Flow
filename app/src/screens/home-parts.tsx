@@ -17,6 +17,7 @@ import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
+import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { bandFade } from "../ui/top-band";
 
@@ -204,10 +205,16 @@ export function SplitCard({ monthKey, row, search, onOpenProfit }: { monthKey: s
   return (
     <section className="ui-home-split" aria-label="ממה מורכב">
       <h2 className="ui-home-split-title">{row.net_minor < 0n ? "ממה מורכב המינוס" : "ממה מורכב התזרים"}</h2>
-      <div className="ui-home-split-bar" aria-hidden="true">
-        <span className="ui-home-split-kept" style={{ flexGrow: Number(absKept) }} />
-        <span className={cx("ui-home-split-profit", parts.profit < 0n && "ui-home-split-loss")} style={{ flexGrow: Number(absProfit) }} />
-      </div>
+      <PartsBar
+        label={row.net_minor < 0n ? "ממה מורכב המינוס" : "ממה מורכב התזרים"}
+        height={8}
+        gap={2}
+        radius="block"
+        parts={[
+          { key: "kept", value: absKept, tone: "accent" },
+          { key: "profit", value: absProfit, tone: parts.profit < 0n ? "bad" : "muted" },
+        ]}
+      />
       <Link to={cashLinesPath(monthKey, "kept", row.currency, search)} className="ui-home-split-row m-press">
         <span className="ui-home-split-swatch" aria-hidden="true" />
         <span className="ui-home-split-text">
