@@ -107,6 +107,16 @@
   flex: none;
 }
 
+/* FLOW-364: on the band, the pager's track is the band's translucent white and its chevrons are white. */
+.ui-month-step-band {
+  justify-content: space-between;
+  inline-size: 100%;
+  block-size: 48px;
+  border-radius: 24px;
+  background: var(--band-track);
+  color: var(--color-on-band);
+}
+
 /* No month that way: the chevron stays, dimmed, and does not respond (2026-10-10). */
 .ui-month-step-arrow[aria-disabled="true"],
 .ui-month-step-arrow[aria-disabled="true"]:active {

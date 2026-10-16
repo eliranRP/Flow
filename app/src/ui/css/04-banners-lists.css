@@ -79,25 +79,6 @@
   display: grid;
 }
 
-.ui-count-badge {
-  position: absolute;
-  z-index: 1;
-  inset-block-start: calc(var(--badge-lift) * -1);
-  inset-inline-end: auto;
-  inset-inline-start: calc(100% - var(--badge-size) + var(--badge-nudge));
-  display: inline-grid;
-  min-inline-size: var(--badge-size);
-  block-size: var(--badge-size);
-  place-items: center;
-  padding-inline: var(--space-1);
-  border-radius: var(--radius-chip);
-  background: var(--color-badge-bg);
-  color: var(--color-badge-text);
-  font-size: var(--type-micro-size);
-  line-height: var(--badge-size);
-  box-shadow: 0 0 0 var(--badge-ring) var(--color-surface);
-}
-
 /* FLOW-363 (2b): off the band a change is coloured text; the one signal colour marks a fall in value. */
 .ui-delta-good,
 .ui-delta-flat {
@@ -347,6 +328,31 @@
 
 .ui-change-band.ui-delta-flat {
   color: var(--color-on-band);
+}
+
+/* FLOW-364: the change as an amount on the band. A grey (helps) or red (hurts) figure on the band's pill. */
+.ui-change-amount {
+  padding: var(--pill-pad-block) var(--pill-pad-inline);
+  background: var(--color-band-pill);
+}
+
+/* FLOW-364 (board): on the band the change pill is white, its text the helps grey or the hurts red. */
+.ui-band .ui-change-amount {
+  padding-inline: 10px;
+  background: var(--color-on-band);
+}
+
+.ui-change-amount.ui-delta-good {
+  color: var(--color-pill-helps);
+}
+
+.ui-change-amount.ui-delta-bad {
+  color: var(--color-pill-hurts);
+}
+
+/* FLOW-364 (board): on the band both change pills are white with the helps text; the arrow gives the direction. */
+.ui-band .ui-change-amount.ui-delta-bad {
+  color: var(--color-pill-helps);
 }
 
 .ui-radio-row {

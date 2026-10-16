@@ -1,3 +1,4 @@
+import type { ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import {
   hasExpectedHistory,
   lateCounts,
   missingBillsTitle,
+  openMonthDue,
 } from "./forecast";
 import { arrivedViews, missingBillHref, missingBillPlace, missingBillViews, usualDayText } from "./recurring";
 import {
@@ -23,6 +25,7 @@ import {
 } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
 import { ApproxAmount } from "./ui/approx-amount";
+import { forecastMinor } from "./home-month";
 import { ExpectedMonths } from "./ui/expected-months";
 import { MissingBillList } from "./ui/missing-bill-list";
 
@@ -304,5 +307,33 @@ describe("ApproxAmount", () => {
   it("paints income green", () => {
     const { container } = render(<ApproxAmount minor={1_200_000n} income />);
     expect(container.querySelector(".ui-approx-income")).not.toBeNull();
+  });
+});
+
+describe("openMonthDue (FLOW-364)", () => {
+  it("reads the open month's recurring money still due in one currency, or 0", () => {
+    const data = {
+      today: "2026-10-11",
+      project_id: null,
+      months: [
+        { month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 12_000n, expense_minor: 31_500n }] },
+        { month: "2026-11", open: false, by_currency: [{ currency: "ILS", income_minor: 1n, expense_minor: 2n }] },
+      ],
+      recurring: [],
+    } as unknown as ExpectedMonthsData;
+    expect(openMonthDue(data, "ILS")).toEqual({ income: 12_000n, expense: 31_500n });
+    expect(openMonthDue(data, "USD")).toEqual({ income: 0n, expense: 0n });
+    expect(openMonthDue(null, "ILS")).toEqual({ income: 0n, expense: 0n });
+  });
+
+  it("takes the server's negative expense as a positive amount, so the forecast subtracts it once", () => {
+    const data = {
+      today: "2026-10-11",
+      project_id: null,
+      months: [{ month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: -283_000n }] }],
+      recurring: [],
+    } as unknown as ExpectedMonthsData;
+    expect(openMonthDue(data, "ILS")).toEqual({ income: 0n, expense: 283_000n });
+    expect(forecastMinor(-100_000n, 0n, openMonthDue(data, "ILS").expense, 0n).minor).toBe(-383_000n);
   });
 });

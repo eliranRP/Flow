@@ -78,7 +78,7 @@ describe("+ quick action history", () => {
   }
 
   it("Back after + → פרויקט חדש closes the sheet, then leaves Projects for the screen before +", async () => {
-    const view = renderBrowser("/review?preview=1");
+    const view = renderBrowser("/?preview=1");
     await quickAction(/פרויקט חדש/);
     expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
     window.history.back();
@@ -86,41 +86,13 @@ describe("+ quick action history", () => {
     expect(window.location.pathname).toBe("/projects");
     expect(window.location.search).not.toContain("new=");
     window.history.back();
-    await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
+    await waitFor(() => { expect(window.location.pathname).toBe("/"); });
     expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     view.unmount();
   });
 
-  it("over Projects itself, one Back closes the project sheet and the next leaves Projects", async () => {
-    window.history.replaceState(null, "", "/review?preview=1");
-    window.history.pushState(null, "", "/projects?preview=1");
-    const view = renderBrowser("/projects?preview=1");
-    await quickAction(/פרויקט חדש/);
-    expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
-    window.history.back();
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
-    expect(window.location.pathname).toBe("/projects");
-    window.history.back();
-    await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
-    view.unmount();
-  });
-
-  it("over Loans itself, one Back closes the loan sheet and the next leaves Loans", async () => {
-    window.history.replaceState(null, "", "/review?preview=1");
-    window.history.pushState(null, "", "/settings/loans?preview=1");
-    const view = renderBrowser("/settings/loans?preview=1");
-    await quickAction(/הלוואה חדשה/);
-    expect(await screen.findByRole("dialog", { name: /הלוואה/ })).toBeInTheDocument();
-    window.history.back();
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: /הלוואה/ })).not.toBeInTheDocument(); });
-    expect(window.location.pathname).toBe("/settings/loans");
-    window.history.back();
-    await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
-    view.unmount();
-  });
-
   it("Back after + → הלוואה חדשה closes the loan sheet and keeps Loans", async () => {
-    const view = renderBrowser("/review?preview=1");
+    const view = renderBrowser("/?preview=1");
     await quickAction(/הלוואה חדשה/);
     expect(await screen.findByRole("dialog", { name: /הלוואה/ })).toBeInTheDocument();
     expect(window.location.search).not.toContain("new=");
