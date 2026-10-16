@@ -58,8 +58,10 @@ export function SetupMovie({
   startPaused?: boolean;
 }) {
   const reduced = forceReducedMotion ?? prefersReducedMotion();
-  const [index, setIndex] = useState(reduced ? 2 : 0);
-  const [paused, setPaused] = useState(startPaused);
+  // Dev proofs freeze the movie on its last scene (?movie=last), the frame the board's movie-fixed PNGs show.
+  const frozen = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("movie") === "last";
+  const [index, setIndex] = useState(reduced || frozen ? 2 : 0);
+  const [paused, setPaused] = useState(startPaused || frozen);
   const [offScreen, setOffScreen] = useState(false);
   const [tabHidden, setTabHidden] = useState(() => typeof document !== "undefined" && document.hidden);
   const ref = useRef<HTMLElement>(null);
