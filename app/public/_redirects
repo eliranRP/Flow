@@ -113,5 +113,9 @@
 /transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200
 /transactions/:transactionId/ /transactions/:transactionId 301
+/setup/welcome /app-shell 200
+/setup/welcome/ /setup/welcome 301
+/setup/done /app-shell 200
+/setup/done/ /setup/done 301
 /setup/:step /app-shell 200
 /setup/:step/ /setup/:step 301
