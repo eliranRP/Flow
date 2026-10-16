@@ -212,7 +212,11 @@
     "txn-swipe.spec.ts": [
       "ui/card-swipe.tsx",
       "txn-nav.tsx",
-      "screens/transaction-screen.tsx"
+      "screens/transaction-screen.tsx",
+      "ui/counted-in.tsx",
+      "screens/transaction-recurring.tsx",
+      "screens/transaction-head.tsx",
+      "screens/transaction-top-bar.tsx"
     ],
     "home-redesign.spec.ts": [
       "screens/HomeScreen.tsx",
@@ -222,6 +226,12 @@
       "ui/top-band.tsx",
       "dev-routes.tsx",
       "dev/cash-sample.ts"
+    ],
+    "cash-lines.spec.ts": [
+      "screens/cash-lines-screen.tsx",
+      "screens/cash-screens.tsx",
+      "dev-routes.tsx",
+      "cash.ts"
     ]
   },
   "sweeps": {
@@ -428,7 +438,6 @@
       "screens/review-screen.tsx",
       "screens/unpaid-screen.tsx",
       "screens/transaction-screen.tsx",
-      "screens/transaction-charge-switches.tsx",
       "screens/categories-screen.tsx",
       "ui/change-sheet.tsx"
     ]

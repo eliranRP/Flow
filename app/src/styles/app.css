@@ -17,6 +17,8 @@
   file, including light and dark, and @theme points at the aliases.
 */
 :root {
+  /* FLOW-366: the transaction page scrolls this far before its top bar takes its surface (the board). */
+  --txn-bar-scroll: 110px;
   --token-bg: var(--color-bg);
   --token-surface: var(--color-surface);
   --token-raised: var(--color-raised);

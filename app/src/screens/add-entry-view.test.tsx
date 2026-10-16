@@ -14,7 +14,7 @@ function setup(overrides: Partial<AddEntryViewProps> = {}, draft: Partial<EntryD
     kind: "cash",
     projects,
     categories,
-    draft: { ...emptyDraft(null, TODAY), ...draft },
+    edit: { ...emptyDraft(null, TODAY), ...draft },
     onDraftChange: vi.fn(),
     formatMoney: (minor) => (minor / 100).toFixed(2),
     onClose: vi.fn(),

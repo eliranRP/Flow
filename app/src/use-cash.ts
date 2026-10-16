@@ -85,7 +85,8 @@ export function useCashMonthData(monthKey: string, active = true) {
   return { query: older ? year : recent, recent: !older };
 }
 
-const CASH_LINES_PAGE = 40;
+/** The server's cap per call (FLOW-366: the lines page loads every page). */
+const CASH_LINES_PAGE = 200;
 
 /** One month's נכנס, יצא or לא נספר ברווח lines in one currency, newest first. */
 export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true) {

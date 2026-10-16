@@ -31,7 +31,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   // The preview route has no books: it shows the invented USD company (add-entry-sample.ts).
   const sample = preview !== "off";
   const currency = sample ? SAMPLE_CURRENCY : companyCurrency;
-  const [draft, setDraft] = useState<EntryDraft>(() => ({ ...emptyDraft(fromProjectId, todayDisplayDate()), ...fill?.draft }));
+  const [draft, setDraft] = useState<EntryDraft>(() => ({ ...emptyDraft(fromProjectId, todayDisplayDate()), ...fill?.values }));
   const [document, setDocument] = useState<AttachedDocument | null>(initialDocument);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
         fromProject={fromProjectName}
         projects={projects}
         categories={cats}
-        draft={draft}
+        edit={draft}
         onDraftChange={setDraft}
         document={document}
         match={match}
