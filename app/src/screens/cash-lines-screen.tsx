@@ -32,7 +32,6 @@ import { Chip } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { lineTagText, rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
-import { OrganizeChips } from "../ui/organize-chips";
 import { ScreenHeader } from "../ui/screen-header";
 import { LinesSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
@@ -155,7 +154,7 @@ function CashLinesBody({
     />
   );
   const chips = (
-    <OrganizeChips className="ui-lines-chips" label="סדר">
+    <div className="ui-lines-chips" role="group" aria-label="סדר">
       {LINES_ORDERS.map((value) => (
         <Chip
           key={value}
@@ -167,7 +166,7 @@ function CashLinesBody({
           {LINES_ORDER_LABEL[value]}
         </Chip>
       ))}
-    </OrganizeChips>
+    </div>
   );
   const currencies = (
     <CashCurrencySwitch
