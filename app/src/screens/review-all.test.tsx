@@ -330,7 +330,7 @@ describe("review queue list", () => {
       p_remember: true,
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
   });
