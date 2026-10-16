@@ -371,8 +371,8 @@ test("the primary action stays above the tab bar on a crowded review card", asyn
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto("/iframe.html?id=screens-routes--review-missing-project&viewMode=story", { waitUntil: "domcontentloaded" });
-    // With no project the primary action reads בחירת פרויקט (decision 0091).
-    const approve = page.getByRole("button", { name: "בחירת פרויקט", exact: true });
+    // FLOW-365: אישור always reads אישור; with no project it is disabled, and its line says why.
+    const approve = page.getByRole("button", { name: "אישור", exact: true });
     await expect(approve).toBeVisible();
     const approveBox = await approve.boundingBox();
     const tabBox = await page.locator(".ui-tabbar").boundingBox();
@@ -391,8 +391,8 @@ test("the primary action stays above the tab bar on a list card with a long supp
   await expect(page.getByText("14 מתוך 15")).toBeVisible();
   await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
   await expect(page.getByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" })).toBeVisible();
-  // With no category the primary action reads בחירת קטגוריה (decision 0091).
-  const approve = page.getByRole("button", { name: "בחירת קטגוריה", exact: true });
+  // FLOW-365: אישור always reads אישור; with no category it is disabled, and its line says why.
+  const approve = page.getByRole("button", { name: "אישור", exact: true });
   await expect(approve).toBeVisible();
   const approveBox = await approve.boundingBox();
   const tabBox = await page.locator(".ui-tabbar").boundingBox();
