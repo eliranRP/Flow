@@ -388,7 +388,7 @@ export function DevConnections() {
 export function DevSumitConnection() {
   const [params] = useSearchParams();
   const problem = params.get("state") === "problem";
-  return <SumitConnectionRoute sample={problem ? { state: "problem", companyId: "1001" } : { state: "connected", companyId: "1001", lastSync: "היום, 06:05" }} />;
+  return <SumitConnectionRoute sample={problem ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
 }
 
 /** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
