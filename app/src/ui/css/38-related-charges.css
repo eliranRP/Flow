@@ -233,3 +233,8 @@
 .ui-charges-history .ui-charges-end > svg {
   display: none;
 }
+
+/* The all-charges sheet starts 76px from the top, where the board draws it (the default gap is 56px). */
+.ui-charges-sheet {
+  --sheet-gap: 76px;
+}

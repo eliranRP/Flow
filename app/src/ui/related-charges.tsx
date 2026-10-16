@@ -177,7 +177,7 @@ export function PartyChargesSheet({
 }) {
   const title = `${data.party?.name ?? ""} · ${data.party?.direction === "income" ? "כל התקבולים" : "כל החיובים"}`;
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} panelClassName="ui-sheet-tall">
+    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} panelClassName="ui-sheet-tall ui-charges-sheet">
       <PartyChargesBody data={data} search={search} context={context} />
     </Sheet>
   );
