@@ -32,6 +32,8 @@ export type ForecastItem = {
   minor: bigint;
   /** The usual day of the month (1–31), or null. */
   day: number | null;
+  /** An invoice's own description (its number, for example "Invoice #1043"), or null for a recurring charge. */
+  description: string | null;
   /** The day the owner set (yyyy-mm-dd), or null. */
   due_on: string | null;
   moved_out: boolean;
@@ -100,6 +102,7 @@ export function buildMonthForecast(input: {
       currency: party.currency,
       usual: abs(party.typical_amount_minor),
       day: party.typical_day > 0 ? party.typical_day : null,
+      description: null,
     });
   }
 
@@ -116,6 +119,7 @@ export function buildMonthForecast(input: {
       currency,
       usual,
       day: null,
+      description: row.description,
     });
   }
 

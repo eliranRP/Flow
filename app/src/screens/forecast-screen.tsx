@@ -42,7 +42,8 @@ function itemWhen(item: ForecastItem): string {
 }
 
 function itemWhat(item: ForecastItem): string {
-  return item.kind === "invoice" ? "חשבונית" : "קבוע";
+  if (item.kind !== "invoice") return "קבוע";
+  return item.description != null && item.description !== "" ? `חשבונית ${item.description.replace(/^Invoice\s*/i, "")}` : "חשבונית";
 }
 
 function ForecastRowButton({ item, onOpen, leaving }: { item: ForecastItem; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
