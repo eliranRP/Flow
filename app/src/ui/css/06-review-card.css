@@ -356,9 +356,14 @@
   color: var(--color-text-secondary);
 }
 
+/* FLOW-352 1: a value wraps to two lines, then ends in an ellipsis. */
 .ui-review-field-value {
+  display: -webkit-box;
   min-inline-size: 0;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
   line-height: var(--type-body-line);
@@ -696,8 +701,8 @@
   min-inline-size: 0;
 }
 
-/* FLOW-704: a pending row holds the title line a settled row's text has, so the waiting card keeps its height. */
-.ui-review-skel-title {
+/* FLOW-704: a pending line holds the value line a settled line's text has, so the waiting card keeps its height. */
+.ui-review-skel-value {
   display: block;
   min-block-size: calc(var(--type-body-size) * var(--type-body-line));
 }

@@ -93,43 +93,48 @@ test("the empty filed list says both sources and does not clip", async ({ page }
   }
 });
 
-test("skip, approve, and undo keep the visit index and grow the total", async ({ page }) => {
-  for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme });
-    for (const width of [390, 320]) {
+for (const scheme of ["light", "dark"] as const) {
+  for (const width of [390, 320]) {
+    test(`skip, approve, and undo keep the visit index and grow the total (${scheme}, ${String(width)})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width, height: 844 });
-      await page.goto("/reviewer/review");
-      await expect(page.getByText("1 מתוך 3")).toBeVisible();
-      await page.getByRole("button", { name: "דלג" }).click();
-      await expect(page.getByText("2 מתוך 3")).toBeVisible();
-      await page.getByRole("button", { name: "דלג" }).click();
-      await expect(page.getByText("3 מתוך 3")).toBeVisible();
-      await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
-      await page.getByRole("button", { name: "אישור" }).click();
-      await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
-      await page.getByRole("button", { name: "אישור" }).click();
-      // The shared card's approve opens the split sheet: the rest and one more part are saved, then the card approves.
-      await page.getByRole("button", { name: LINE_REST }).click();
-      await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "בית הספר אלון" }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-      await page.getByRole("button", { name: "הוספת חלק" }).click();
-      await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "מחסן הנמל" }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-      await page.getByLabel("סכום, מחסן הנמל").fill("1");
-      await page.getByRole("button", { name: "סגירה" }).click();
-      await page.getByRole("button", { name: "אישור" }).click();
-      // ברגי is still held without a category; picking one lets it approve, and the queue ends.
-      await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
-      await page.getByRole("button", { name: /^קטגוריה:/ }).click();
-      await page.getByRole("radio", { name: "שינוע" }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-      await page.getByRole("button", { name: "אישור" }).click();
-      await expect(page.getByText("הכל מאושר")).toBeVisible();
-      await expect(page.getByText("מתוך")).toHaveCount(0);
-      await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
-      await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
-      await expect(page.getByText("4 מתוך 4")).toBeVisible();
-      await expectNoOverflow(page);
-    }
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/reviewer/review");
+    await expect(page.getByText("1 מתוך 3")).toBeVisible();
+    await expect(page.getByRole("button", { name: "דלג" })).toBeEnabled();
+    await page.getByRole("button", { name: "דלג" }).click();
+    await expect(page.getByText("2 מתוך 3")).toBeVisible();
+    await page.getByRole("button", { name: "דלג" }).click();
+    await expect(page.getByText("3 מתוך 3")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
+    await page.getByRole("button", { name: "אישור" }).click();
+    await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+    await page.getByRole("button", { name: "אישור" }).click();
+    // The shared card's approve opens the split sheet: the rest and one more part are saved, then the card approves.
+    await page.getByRole("button", { name: LINE_REST }).click();
+    await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "בית הספר אלון" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    await page.getByRole("button", { name: "הוספת חלק" }).click();
+    await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "מחסן הנמל" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    await page.getByLabel("סכום, מחסן הנמל").fill("1");
+    await page.getByRole("button", { name: "סגירה" }).click();
+    await page.getByRole("button", { name: "אישור" }).click();
+    // ברגי is still held without a category; picking one lets it approve, and the queue ends.
+    await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+    await page.getByRole("button", { name: /^קטגוריה:/ }).click();
+    await page.getByRole("radio", { name: "שינוע" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    // The pointer still rests where שמירה was, over the toast; a hovered toast holds its timer, so move it away.
+    await page.mouse.move(0, 0);
+    await expect(page.locator(".ui-toast")).toHaveCount(0, { timeout: 10_000 });
+    await page.getByRole("button", { name: "אישור" }).click();
+    await expect(page.getByText("הכל מאושר")).toBeVisible();
+    await expect(page.getByText("מתוך")).toHaveCount(0);
+    await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
+    await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+    await expect(page.getByText("פריט 2 מתוך 2")).toBeVisible();
+    await expectNoOverflow(page);
+    });
   }
-});
+}

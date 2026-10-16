@@ -296,12 +296,11 @@ export function ReviewCard({
           <div className="ui-review-panel">
             {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
               <div className="ui-review-field" aria-hidden="true" key={line.key}>
-                <span className="ui-row-main">
-                  <span className="ui-row-text">
-                    <span className="ui-row-hint">{line.label}</span>
-                    <span className="ui-row-title ui-review-skel-title"><Skeleton width="md" still={still} /></span>
-                  </span>
+                <span className="ui-review-field-main">
+                  <span className="ui-review-field-label">{line.label}</span>
+                  <span className="ui-review-field-value ui-review-skel-value"><Skeleton width="md" still={still} /></span>
                 </span>
+                {line.suggested ? <span className="ui-review-field-hint">הצעה</span> : null}
               </div>
             ) : (
               <ReviewPanelLine

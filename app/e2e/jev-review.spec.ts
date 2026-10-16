@@ -60,9 +60,9 @@ test("a long suggestion keeps הצעת Jev and the chevron inside the row at 320
   for (const tag of await tags.all()) {
     inside(await tag.boundingBox(), "הצעת Jev");
     const row = tag.locator("xpath=ancestor::button[1]");
-    inside(await row.locator(".ui-row-chevron").boundingBox(), "the chevron");
+    inside(await row.locator("svg:has(polyline)").last().boundingBox(), "the chevron");
     // FLOW-352 1: the value wraps to two lines at 320, then ends in an ellipsis.
-    const title = row.locator(".ui-row-title-text");
+    const title = row.locator(".ui-review-field-value").first();
     const { cut, lines } = await title.evaluate((node) => {
       const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
       return { cut: node.scrollHeight > node.clientHeight, lines: Math.round(node.clientHeight / lineHeight) };
