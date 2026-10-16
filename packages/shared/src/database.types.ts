@@ -1258,6 +1258,9 @@ isOneToOne: false
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
+"mark_invite_seen":
+{ Args: { "p_invite_id": string }; Returns: Json
+                           },
 "match_lines":
 { Args: { "p_currency"?: string,"p_direction"?: string,"p_rows": Json,"p_window_days"?: number }; Returns: Json
                            },
@@ -1451,9 +1454,6 @@ isOneToOne: false
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
-                           },
-"mark_invite_seen":
-{ Args: { "p_invite_id": string }; Returns: Json
                            },
 "missing_bills":
 { Args: { "p_today"?: string }; Returns: Json
