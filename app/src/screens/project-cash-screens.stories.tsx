@@ -117,7 +117,7 @@ export const ProjectInvestmentLoans: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getAllByText("$213,600").length).toBe(2);
+    await expect(canvas.getAllByText("$210,000").length).toBe(2);
   },
 };
 

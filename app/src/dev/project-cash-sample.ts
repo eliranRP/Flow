@@ -63,21 +63,21 @@ export const project: NonNullable<ProjectDetail> = {
   pending_agorot: 0n,
   // FLOW-438: the profit page lists these under its figures; they add up to them.
   transactions: sampleProfitLines(thisMonth),
-  loans: [{ id: "l1", name: "הלוואת DSCR לדוגמה", currency: "USD", balance_minor: 21_360_000n, status: "open" }],
+  loans: [{ id: "l1", name: "הלוואת DSCR לדוגמה", currency: "USD", balance_minor: 21_000_000n, status: "open" }],
 };
 
 /** A dollar project's investment, so the row's figure is in the project's currency. */
 export const usdFigures: InvestmentFigures = {
   currency: "USD",
-  purchaseMinor: 28_500_000n,
-  arvMinor: 41_000_000n,
-  valueMinor: 37_000_000n,
+  purchaseMinor: 18_500_000n,
+  arvMinor: 31_000_000n,
+  valueMinor: 31_000_000n,
   valueDate: "2026-10-01",
-  rehabMinor: 6_200_000n,
+  rehabMinor: 6_130_000n,
   rehabOther: [],
-  loanMinor: 21_360_000n,
+  loanMinor: 21_000_000n,
   loanOther: [],
-  forcedEquityMinor: 6_300_000n,
-  currentEquityMinor: 15_640_000n,
+  forcedEquityMinor: 6_370_000n,
+  currentEquityMinor: 10_000_000n,
 };
 export const investment = { isOverhead: false, figures: usdFigures, categories: [], loans: [] };
