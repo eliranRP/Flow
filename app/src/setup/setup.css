@@ -237,6 +237,12 @@
   text-align: start;
 }
 
+/* The board's connect pills are solid accent with on-accent text, not the tint pill. */
+.ui-onb-conn .ui-btn-pill {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
 .ui-onb-conn-done {
   color: var(--color-good);
 }
