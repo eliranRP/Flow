@@ -37,3 +37,55 @@
 .ui-project-menu-list.ui-project-list {
   padding-inline: 0;
 }
+
+/* FLOW-445: the budget card (budget-card.tsx). */
+.ui-budget-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.ui-budget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ui-budget-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.ui-budget-spent {
+  margin: 0;
+  font-size: 17px;
+}
+
+.ui-budget-bar {
+  block-size: 8px;
+  border-radius: 4px;
+  background: var(--color-track-strong);
+  overflow: hidden;
+}
+
+.ui-budget-fill {
+  display: block;
+  block-size: 100%;
+  border-radius: 4px;
+  background: var(--color-accent);
+}
+
+.ui-budget-fill-over {
+  background: var(--color-signal-soft);
+}
+
+.ui-budget-note {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+.ui-budget-note-over {
+  color: var(--color-signal-soft);
+}

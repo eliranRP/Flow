@@ -20,6 +20,7 @@ import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
 import { ConfirmSheet } from "../ui/confirm-sheet";
+import { BudgetCard } from "../ui/budget-card";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton, useBackTarget } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
@@ -28,7 +29,6 @@ import { BandHero, SectionHead } from "../ui/layout";
 import { TextLink } from "../ui/text-link";
 import { List, ListRow } from "../ui/list-row";
 import { FocusTitle } from "../ui/focus-title";
-import { ProgressBar } from "../ui/progress-bar";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
@@ -258,7 +258,7 @@ export function ProjectDetailScreen({
         <ScreenHeader title="הוצאות" kicker={project.name} subtitle={periodWords} backTo={sectionHref("overview")} />
         {project.budget_agorot != null && period.kind === "all" ? (
           <div className="ui-page-pad ui-project-budget">
-            <ProgressBar variant="split" label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
+            <ProjectBudget project={project} spentAgorot={expenses} />
           </div>
         ) : null}
         <ProjectCategories
@@ -760,6 +760,17 @@ function ProjectMenu({
           remove.mutate();
         }}
       />
+    </>
+  );
+}
+
+/** FLOW-445: the budget card with its edit sheet, on the expenses section. */
+function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <>
+      <BudgetCard spentMinor={spentAgorot} budgetMinor={project.budget_agorot ?? 0n} onEdit={() => { setEditing(true); }} />
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type: project.state_label ?? null, budget: project.budget_agorot ?? null }} />
     </>
   );
 }

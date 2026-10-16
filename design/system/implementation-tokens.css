@@ -255,6 +255,8 @@
   --color-gsi-text: #1F1F1F;
   --color-signal: #D23B2F;
   --color-signal-soft: #B9503F;
+  --color-track-strong: #DAD3E6;   /* FLOW-445: budget track, loan part of the equity bar */
+  --color-avatar: #F3F0F8;   /* FLOW-366/445: initials and menu icon circles */
   --color-band-past: #5A2DB0;
   --color-pill-helps: #4A4458;
   --color-pill-hurts: #C3302B;
@@ -315,6 +317,8 @@
     --color-gsi-text: #1F1F1F;
     --color-signal: #FF8A80;
     --color-signal-soft: #E8A598;
+    --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
+    --color-avatar: #2A2540;   /* FLOW-366/445: initials and menu icon circles */
     --color-band-past: #5A2DB0;
     --color-pill-helps: #4A4458;
     --color-pill-hurts: #C3302B;
@@ -378,6 +382,8 @@
   --color-gsi-text: #1F1F1F;
   --color-signal: #FF8A80;
   --color-signal-soft: #E8A598;
+  --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
+  --color-avatar: #2A2540;   /* FLOW-366/445: initials and menu icon circles */
   --color-band-past: #5A2DB0;
   --color-pill-helps: #4A4458;
   --color-pill-hurts: #C3302B;
