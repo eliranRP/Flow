@@ -316,8 +316,8 @@ describe("review queue list", () => {
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "פרויקט: אין הצעה · הקישו לבחירה" }, { timeout: 2500 }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    // FLOW-365: a pick saves that one field and returns to the card; there is no שמירה.
+    fireEvent.click(await screen.findByRole("radio", { name: "הרצל" }, { timeout: 2500 }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -326,6 +326,7 @@ describe("review queue list", () => {
       p_action: "changed",
       p_resolve: false,
       p_project_id: "p1",
+      p_remember: true,
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();

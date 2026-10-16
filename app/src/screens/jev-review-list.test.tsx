@@ -72,7 +72,7 @@ const ruled: ReviewRow = {
 };
 
 function renderList(rows: ReviewRow[]) {
-  return renderWithProviders(<ReviewAllList rows={rows} search="" backTo="/review" skipped={false} />);
+  return renderWithProviders(<ReviewAllList rows={rows} search="" backTo="/review" />);
 }
 
 describe("Review list rows on a Jev fill (FLOW-704)", () => {

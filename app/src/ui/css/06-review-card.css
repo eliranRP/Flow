@@ -556,3 +556,47 @@
   margin: 0;
   text-align: center;
 }
+
+/* FLOW-365: a saved split on the card, in place of the two rows (the board's card after the split). */
+.ui-review-split-sum {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.ui-review-split-head,
+.ui-review-split-part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.ui-review-split-head {
+  background: var(--color-tint);
+  color: var(--color-text-secondary);
+}
+
+.ui-review-split-title {
+  font-weight: 600;
+}
+
+.ui-review-split-edit {
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: 15px;
+}
+
+.ui-review-split-part {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-review-split-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-inline-size: 0;
+}

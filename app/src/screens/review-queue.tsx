@@ -4,7 +4,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
-import { useCategoriesQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
+import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
+import { projectChoices } from "../project-groups";
+import { Picker } from "../ui/change-picker";
+import type { ChangeChoice } from "../ui/change-sheet-copy";
+import { Sheet } from "../ui/sheet";
+import { Toggle } from "../ui/toggle";
 import { approveFailure, approveShown } from "../approve-review";
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { useHeldOrder } from "../list-hold";
@@ -87,7 +92,11 @@ export function ReviewQueue({
   const held = useHeldOrder(incoming, (item) => item.id);
   // The card on screen stays the head until it is handled, so a refetch that reorders the
   // queue can't swap another line under אישור. A card opened from the list keeps its focus.
-  const rows = fromList ? held : pinReviewHead(held, reviewPin());
+  // FLOW-365: דלג sends a card to the end of this queue. The order lives on this device only.
+  const [deferred, setDeferred] = useState<string[]>([]);
+  const skippedNow = useRef(false);
+  const ordered = useMemo(() => deferOrder(held, deferred), [held, deferred]);
+  const rows = fromList ? ordered : pinReviewHead(ordered, reviewPin());
   const { shown, motion } = useReviewSwap(rows[0] ?? null);
   useEffect(() => {
     // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
@@ -145,8 +154,6 @@ export function ReviewQueue({
   const visit = useRef(emptyVisit());
   /** The card whose אישור is in flight. Only a second tap on that same card waits for it (decision 0180). */
   const approving = useRef<string | null>(null);
-  const skippedId = useRef<string | null>(null);
-  const skippedLine = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
   const queueRoot = useRef<HTMLDivElement>(null);
   /** Focus was last in the action bar (a keyboard, or a tap that focuses on Android). */
@@ -264,51 +271,40 @@ export function ReviewQueue({
       });
     },
   });
-  const skip = useWrite({
-    failure: previewWrite ? changeSaveFailure : "לא הצלחנו לדלג.",
-    keys: ["review", "review-skipped", "project", "project-category", "project-waiting"],
-    place: "bar",
-    run: async () => {
-      // The card on screen, like אישור; rows[0] can differ while the queue reorders.
-      const target = shown;
-      skippedId.current = target?.id ?? null;
-      skippedLine.current = target?.transaction_id ?? null;
-      if (previewWrite) {
-        await previewWrite.run();
-        if (target) markHandled(target.id);
-        return;
-      }
-      if (!target) throw new Error("missing");
+  /** FLOW-365: דלג sends the card on screen to the end of the queue. Nothing is written. */
+  function skipCard() {
+    const target = shown;
+    if (target == null || leaving) return;
+    // The pin keeps the card on screen at the head; once it is sent away, the pin moves on.
+    pinReviewLine(null);
+    // Focus was on this card's דלג; the next card's אישור takes it (FLOW-327 r2).
+    skippedNow.current = true;
+    setDeferred((list) => [...list.filter((id) => id !== target.id), target.id]);
+  }
+  // FLOW-365: the project picker (a sheet over the card) saves that one field and returns to the card.
+  const [pickProject, setPickProject] = useState(false);
+  const [pickQuery, setPickQuery] = useState("");
+  const [rememberPick, setRememberPick] = useState(true);
+  async function savePickedProject(choice: ChangeChoice) {
+    setPickProject(false);
+    setPickQuery("");
+    const target = shown;
+    if (target == null || previewWrite != null) return;
+    try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: target.id,
-        p_action: "skipped",
+        p_action: "changed",
+        p_resolve: false,
+        p_project_id: choice.id,
+        p_remember: rememberPick,
       }));
-      markHandled(target.id);
-    },
-    onSuccess: () => {
-      const id = skippedId.current;
-      if (!id) return;
-      if (previewWrite) previewWrite.onDone(id);
-      // ביטול puts the skipped card back at the front (Eliran 2026-10-08: list + undo).
-      const line = skippedLine.current;
-      toast.show({
-        message: "דילגנו על הפריט",
-        action: "ביטול",
-        place: "bar",
-        onAction: () => {
-          keepToastFocus();
-          pinReviewLine(line, { hold: true });
-          if (previewWrite) {
-            previewWrite.onUndo(id);
-            return;
-          }
-          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.", { line, failed: undoFailed, settled: undoSettled });
-        },
-      });
-    },
-  });
+      await invalidate(["review", "dashboard", "project", "project-waiting", "txn"]);
+    } catch {
+      toast.show({ message: "לא הצלחנו לשמור.", tone: "bad", place: "bar" });
+    }
+  }
   // FLOW-333 C8: the part count, read for a split_mismatch card only.
   const mismatchLine = shown?.reason === "split_mismatch" ? shown.transaction_id : "";
   // Focus that was in the bar must not fall to the page: the buttons go disabled while a card
@@ -323,7 +319,7 @@ export function ReviewQueue({
     const root = queueRoot.current;
     if (!barFocus.current || root == null) return;
     const active = document.activeElement;
-    const lost = active == null || active === document.body || isQueueTitle(active, root);
+    const lost = active == null || active === document.body || isQueueTitle(active, root) || skippedNow.current;
     if (!lost) {
       if (!root.contains(active)) barFocus.current = false;
       return;
@@ -331,6 +327,8 @@ export function ReviewQueue({
     const target = root.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]");
     if (target == null) return;
     target.focus({ preventScroll: true });
+    // A disabled אישور takes no focus yet: the flag waits for the card that can take it.
+    if (document.activeElement === target) skippedNow.current = false;
     takeReviewFocus();
   }, [barKind, shown?.id, leaving, jevLoading]);
   // FLOW-309: the last card left with focus in the bar, and this queue shows the empty state itself
@@ -341,11 +339,23 @@ export function ReviewQueue({
     if (emptied && barFocus.current) focusReviewEmptyAction();
   }, [emptied]);
   const splitRead = useLineSplitQuery(mismatchLine, mismatchLine !== "" && !sample && previewWrite == null);
+  // FLOW-365: a saved split shows its parts on the card. Read only for a card that is a split.
+  const splitShown = shown != null && (shown.share_count ?? 0) > 1 && shown.reason !== "unallocated_shared";
+  const summaryRead = useLineSplitQuery(splitShown ? shown.transaction_id : "", splitShown && !sample && previewWrite == null);
+  const splitSummary = summaryRead.data != null && summaryRead.data.parts.length > 0 ? {
+    total: formatMoney(summaryRead.data.lineMinor, summaryRead.data.currency),
+    parts: summaryRead.data.parts.map((part, index) => ({
+      key: String(index),
+      amount: formatMoney(part.amount_minor, summaryRead.data?.currency ?? "ILS"),
+      project: part.project_name ?? "ללא פרויקט",
+      category: part.rest ? `${part.category_name ?? ""} · השאר` : (part.category_name ?? ""),
+    })),
+  } : null;
   const splitParts: number | "loading" | undefined = splitRead.data != null
     ? splitRead.data.parts.length
     : splitRead.isPending && splitRead.fetchStatus === "fetching" ? "loading" : undefined;
   const card = shown;
-  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} skippedLink={homeTo == null && !sample && previewWrite == null} />;
+  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
   const current = card;
   const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
   function openProject() {
@@ -356,6 +366,10 @@ export function ReviewQueue({
         return;
       }
       void navigate(`/transactions/${current.transaction_id}/split${search}`);
+      return;
+    }
+    if (changeTo == null && !sample && previewWrite == null) {
+      setPickProject(true);
       return;
     }
     void navigate(assignmentPath(changeTo, search, current.id, "project", fromList, true));
@@ -444,12 +458,11 @@ export function ReviewQueue({
   const skipButton = (
     <Button
       variant="ghost"
-      busy={skip.isPending}
       disabled={leaving}
       onClick={() => {
         if (leaving) return;
         if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
-        skip.mutate();
+        skipCard();
       }}
     >
       דלג
@@ -522,6 +535,8 @@ export function ReviewQueue({
           sourcePill={card.source === "mercury" ? "שורת בנק" : "חשבונית מצולמת"}
           sourceLine={`${invoiceDate(card.doc_date)} • ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
           onSplit={holdWrites || leaving ? undefined : openSplit}
+          splitSummary={splitSummary}
+          transfer={(card as ReviewRow & { transfer?: boolean }).transfer === true}
           pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
@@ -537,6 +552,26 @@ export function ReviewQueue({
           jevFilled={jevFilled}
         />
       </div>
+      {pickProject ? (
+        <ProjectPickSheet
+          query={pickQuery}
+          onQuery={setPickQuery}
+          selectedId={current.project_id ?? ""}
+          suggestionId={current.project_suggested === true ? (current.project_id ?? "") : ""}
+          supplier={current.supplier_name ?? current.description}
+          remember={rememberPick}
+          onRemember={setRememberPick}
+          onClose={() => {
+            setPickProject(false);
+            setPickQuery("");
+          }}
+          onPick={(choice) => { void savePickedProject(choice); }}
+          onCreate={() => {
+            setPickProject(false);
+            void navigate(assignmentPath(changeTo, search, current.id, "project", fromList, true));
+          }}
+        />
+      ) : null}
       {/* FLOW-365: the card after this one, dashed, so the owner sees what comes next. */}
       {!holdWrites && rows[1] != null ? (
         <div className="ui-review-next t-hint">
@@ -599,6 +634,17 @@ export function ReviewQueue({
   );
 }
 
+/** FLOW-365: the cards דלג sent to the end, in the order they were sent. The rest keep the queue's order. */
+export function deferOrder<T extends { id: string }>(rows: readonly T[], deferred: readonly string[]): T[] {
+  if (deferred.length === 0) return [...rows];
+  const late = new Map(deferred.map((id, index) => [id, index] as const));
+  const head = rows.filter((row) => !late.has(row.id));
+  const tail = rows
+    .filter((row) => late.has(row.id))
+    .sort((a, b) => (late.get(a.id) ?? 0) - (late.get(b.id) ?? 0));
+  return [...head, ...tail];
+}
+
 /** The queue's own header title (it focuses itself on mount), not a sheet's title. */
 function isQueueTitle(node: EventTarget | null, root: HTMLElement | null): boolean {
   return node instanceof Element && root != null && root.contains(node) && node.matches(".ui-focus-title")
@@ -630,7 +676,7 @@ async function reopenReview(
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
-    await invalidate(["review", "review-skipped", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
+    await invalidate(["review", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
     undo?.settled?.(undo.line);
     toast.show({ message: done, place: "bar" });
   } catch {
@@ -646,4 +692,57 @@ async function reopenReview(
       },
     });
   }
+}
+
+/**
+ * FLOW-365: the project picker sheet over the card. It reads the books only while it is open. A pick
+ * saves that one field (the caller) and the sheet closes; "לזכור לספק" is on by default.
+ */
+function ProjectPickSheet({
+  query,
+  onQuery,
+  selectedId,
+  suggestionId,
+  supplier,
+  remember,
+  onRemember,
+  onClose,
+  onPick,
+  onCreate,
+}: {
+  query: string;
+  onQuery: (value: string) => void;
+  selectedId: string;
+  suggestionId: string;
+  supplier: string;
+  remember: boolean;
+  onRemember: (value: boolean) => void;
+  onClose: () => void;
+  onPick: (choice: ChangeChoice) => void;
+  onCreate: () => void;
+}) {
+  const dashboard = useDashboardQuery(true);
+  const projectOptions = useMemo(() => projectChoices(dashboard.data), [dashboard.data]);
+  return (
+    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }} title="בחירת פרויקט">
+      <Picker
+        kind="project"
+        searchable
+        query={query}
+        onQuery={onQuery}
+        loading={dashboard.isPending}
+        listed={projectOptions}
+        selectedId={selectedId}
+        suggestionId={suggestionId}
+        savingId={null}
+        onSelect={(id) => {
+          const choice = projectOptions.find((option) => option.id === id);
+          if (choice) onPick(choice);
+        }}
+        onCreate={onCreate}
+        splitLink={false}
+      />
+      <Toggle label={`לזכור לספק ${supplier}`} checked={remember} onChange={onRemember} />
+    </Sheet>
+  );
 }

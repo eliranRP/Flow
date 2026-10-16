@@ -1,14 +1,13 @@
 import type { ReviewRow } from "@flow/shared";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { type SkippedReviewRow } from "./review-skipped";
 import { reviewFlagsQueryKey, type JevQueueData, type ReviewFlagsData } from "./jev-review";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
-import { ReviewAllList, ReviewEmpty as ReviewEmptyState, ReviewQueue } from "./flow-screens";
+import { ReviewQueue } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { pinReviewLine } from "../review-pin";
-import { bareReview, sampleReview, SeedSkipped } from "../ui/screen-stories-support";
+import { bareReview, sampleReview } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -209,38 +208,4 @@ const unpin: NonNullable<Story["loaders"]> = [() => {
 }];
 export const ReviewCounter10At: Story = { loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
-/** FLOW-309: the skipped cards at the end of הצגת הכול. Invented data. */
-const skippedSample: SkippedReviewRow[] = [
-  {
-    id: "k1", transaction_id: "tk1", description: "ברזל ומתכת לדוגמה", doc_date: "2026-09-28", doc_kind: "invoice",
-    amount_net: -250_000n, currency: "ILS", direction: "expense", line_status: "posted", source: "sumit",
-    project_name: "וילה רעננה", category_name: "חומרים", supplier_name: "ברזל ומתכת לדוגמה בע״מ", skipped_at: "2026-09-30T08:00:00Z",
-  },
-  {
-    id: "k2", transaction_id: "tk2", description: "Northwind Traders", doc_date: "2026-09-26", doc_kind: null,
-    amount_net: -4_299n, currency: "USD", direction: "expense", line_status: "pending", source: "mercury",
-    project_name: null, category_name: null, supplier_name: null, skipped_at: "2026-09-29T08:00:00Z",
-  },
-];
-function ReviewAllSkippedStory({ rows, skipped }: { rows: ReviewRow[]; skipped: SkippedReviewRow[] }) {
-  return (
-    <StoryRoute entry="/review/all" tabs reviewCount={rows.length}>
-      <SeedSkipped rows={skipped} />
-      <ReviewAllList backTo="/review" search="" rows={rows} />
-    </StoryRoute>
-  );
-}
-const pendingRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
-export const ReviewAllSkipped: Story = { render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
-export const ReviewAllSkippedOnly: Story = { render: () => <ReviewAllSkippedStory rows={[]} skipped={skippedSample} /> };
 
-/** Owner pick 2026-10-08: הכל מאושר with a link to the skipped cards. */
-function ReviewEmptySkippedStory() {
-  return (
-    <StoryRoute entry="/review" tabs>
-      <SeedSkipped rows={skippedSample} />
-      <ReviewEmptyState search="" skippedLink />
-    </StoryRoute>
-  );
-}
-export const ReviewEmptySkippedLink: Story = { render: () => <ReviewEmptySkippedStory /> };

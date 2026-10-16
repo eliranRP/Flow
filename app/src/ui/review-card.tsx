@@ -56,10 +56,18 @@ export type ReviewSuggestion = {
 
 /** FLOW-703: Jev's "no project / overhead" answer on the project row. תקורה first: at 320 the row cuts the end. */
 export const JEV_NO_PROJECT = "תקורה · ללא פרויקט";
+/** FLOW-365: a saved split's parts, amounts and names already formatted by the caller. */
+export type ReviewSplitSummary = {
+  total: string;
+  parts: Array<{ key: string; amount: string; project: string; category: string }>;
+};
+
 /** FLOW-365: the project row when nothing suggests one. It reads in the accent and asks for a tap. */
 export const REVIEW_NO_SUGGESTION = "אין הצעה · הקישו לבחירה";
 /** FLOW-365: the split link under the rows. */
 export const REVIEW_SPLIT_LINK = "פיצול לכמה פרויקטים או קטגוריות";
+/** FLOW-365: the project row of a transfer. It does not apply to a transfer. */
+export const REVIEW_TRANSFER = "לא רלוונטי · העברה";
 
 type ReviewCardProps = {
   supplier: string;
@@ -77,6 +85,10 @@ type ReviewCardProps = {
   sourcePill?: string;
   /** FLOW-365: opens the split screen for this line. Left out for a transfer or a viewer. */
   onSplit?: () => void;
+  /** FLOW-365: a split already saved. The card shows its parts in place of the two rows. */
+  splitSummary?: ReviewSplitSummary | null;
+  /** FLOW-365: a transfer between the owner's accounts. The project row says it does not apply. */
+  transfer?: boolean;
   /** Opens the category picker. A line pick saves that field and does not resolve. */
   onCategory?: () => void;
   projectButtonRef?: Ref<HTMLButtonElement>;
@@ -126,6 +138,8 @@ export function ReviewCard({
   onCategory,
   sourcePill,
   onSplit,
+  splitSummary,
+  transfer = false,
   projectButtonRef,
   categoryButtonRef,
   pending = false,
@@ -162,7 +176,9 @@ export function ReviewCard({
     onOpen?: () => void;
   }> = [];
   const projectNone = projectValue == null && suggestion?.projectNoneJev === true;
-  if (projectValue || onProject || projectNone) {
+  if (transfer) {
+    lines.push({ key: "project", label: "פרויקט", value: REVIEW_TRANSFER, suggested: false, jev: false, onOpen: undefined });
+  } else if (projectValue || onProject || projectNone) {
     lines.push({
       key: "project",
       label: "פרויקט",
@@ -252,6 +268,27 @@ export function ReviewCard({
             className="ui-review-split-row"
             title={splitParts === "loading" ? <Skeleton width="sm" /> : splitParts == null ? "מפוצל" : <SplitPartsTitle count={splitParts} />}
           />
+        ) : splitSummary ? (
+          <div className="ui-review-split-sum">
+            <div className="ui-review-split-head">
+              <span className="ui-review-split-title">
+                {`פיצול · ${String(splitSummary.parts.length)} חלקים · `}
+                <bdi className="ui-num" dir="ltr">{splitSummary.total}</bdi>
+              </span>
+              {onSplit ? (
+                <button type="button" className="ui-review-split-edit ui-hit" onClick={onSplit}>עריכה</button>
+              ) : null}
+            </div>
+            {splitSummary.parts.map((part) => (
+              <div className="ui-review-split-part" key={part.key}>
+                <bdi className="ui-num ui-review-split-amount" dir="ltr">{part.amount}</bdi>
+                <span className="ui-review-split-name">
+                  <span>{part.project}</span>
+                  <span className="t-hint">{part.category}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         ) : lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
           <div className="ui-row ui-hit" aria-hidden="true" key={line.key}>
             <span className="ui-row-main">
@@ -283,7 +320,7 @@ export function ReviewCard({
             tag={lineTag(line)}
           />
         ))}
-        {onSplit && !mismatch ? (
+        {onSplit && !mismatch && !transfer && splitSummary == null ? (
           <button type="button" className="ui-review-split-link ui-hit" onClick={onSplit}>
             <SplitIcon size={18} />
             {REVIEW_SPLIT_LINK}

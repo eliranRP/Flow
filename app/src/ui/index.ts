@@ -50,8 +50,6 @@ export { Toast, ToastProvider, useToast } from "./toast";
 export { TopBand } from "./top-band";
 export { Wordmark } from "./wordmark";
 export { ActionBar, ActionBarRow } from "./action-bar";
-export { ReviewSkippedLink, ReviewSkippedList, skippedCountText } from "./review-skipped-list";
-export type { SkippedRowView } from "./review-skipped-list";
 export { CopyLine, JEV_NO_PROJECT, REVIEW_MISSING_BOTH, SPLIT_MISMATCH_KEEP } from "./review-card";
 export { toastFloor } from "./toast";
 export { OutwardChevron } from "./icons";

@@ -1,5 +1,5 @@
 import { type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useFlowSearch, useHomePreview } from "../preview";
@@ -14,11 +14,10 @@ import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { statementMethodOf } from "../ui/statement";
-import { ReviewSkippedSection, useSkippedReviewQuery } from "./review-skipped";
 import { ScreenHeader } from "../ui/screen-header";
 import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
-import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, REVIEW_NONE_WAITING, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, reviewSuggestion, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
+import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, reviewSuggestion, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 import { useJevQueue } from "./jev-review-card";
 import { jevShown, withJev } from "./jev-review";
@@ -105,7 +104,7 @@ export function ReviewScreen() {
       const ids = new Set(held.map((row) => row.review_id));
       const rows = source.filter((row) => ids.has(row.id));
       if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
-      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} skipped={false} />;
+      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
       const fromList = listFocusId(params) != null;
       const ordered = rowsForFocus(rows);
       return (
@@ -134,9 +133,8 @@ export function ReviewScreen() {
     );
   }
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    // FLOW-309: הצגת הכול still lists the skipped cards when nothing waits.
     if (listing) return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} />;
-    return <ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} skippedLink pushPrompt />;
+    return <ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} pushPrompt />;
   }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
@@ -162,13 +160,10 @@ export function ReviewAllList({
   rows,
   search,
   backTo,
-  skipped = true,
 }: {
   rows: ReviewRow[];
   search: string;
   backTo: string;
-  /** FLOW-309: the דולגו section at the end. A project's list leaves it out. */
-  skipped?: boolean;
 }) {
   useEffect(() => {
     const id = reviewReturnId;
@@ -189,24 +184,7 @@ export function ReviewAllList({
   // FLOW-305: one bank-details read for the bank lines on this page. A failed read keeps "בנק".
   const bankIds = useMemo(() => rows.filter((row) => row.source === "mercury").map((row) => row.transaction_id), [rows]);
   const lineMeta = useLineMetaPageQuery(bankIds);
-  const skippedRead = useSkippedReviewQuery(skipped && rows.length === 0);
-  const cardPath = useCallback((id: string) => reviewFocusPath(search, id), [search]);
-  if (rows.length === 0) {
-    const someSkipped = skipped && (skippedRead.isError || (skippedRead.data?.length ?? 0) > 0);
-    // FLOW-327 r1: while the skipped read loads, only the header shows, so הכל מאושר never flashes
-    // before the skipped rows land.
-    if (skipped && skippedRead.isLoading) {
-      return <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />;
-    }
-    if (!someSkipped) return <ReviewEmpty search={search} backTo={backTo} />;
-    return (
-      <div>
-        <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
-        <p className="t-hint ui-page-pad ui-review-none-waiting">{REVIEW_NONE_WAITING}</p>
-        <ReviewSkippedSection search={search} cardPath={cardPath} />
-      </div>
-    );
-  }
+  if (rows.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
   return (
     <div>
       {/* FLOW-365: the flat list's title and its count line. */}
@@ -247,7 +225,6 @@ export function ReviewAllList({
           );
         }}
       />
-      {skipped ? <ReviewSkippedSection search={search} cardPath={cardPath} /> : null}
     </div>
   );
 }

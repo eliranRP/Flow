@@ -91,7 +91,7 @@ function renderWithLine(path: string, options?: { viewer?: boolean }) {
 }
 
 describe("the pinned review bar (FLOW-327)", () => {
-  it("puts אישור, שינוי and דלג in one bar above the tab bar, and the skip toast above it", async () => {
+  it("puts אישור, שינוי and דלג in one bar above the tab bar, and דלג sends the card to the end", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
       return Promise.resolve({ data: null, error: null });
@@ -106,12 +106,9 @@ describe("the pinned review bar (FLOW-327)", () => {
     expect(document.querySelector(".ui-review-queue")).toHaveAttribute("data-bar");
     expect(screen.getByText("פריט")).toHaveClass("sr-only");
     fireEvent.click(skip);
-    await waitFor(() => {
-      expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
-    });
-    const toast = await screen.findByText("דילגנו על הפריט");
-    expect(toast.closest(".ui-toast-host")).toHaveAttribute("data-place", "bar");
-    expect(within(toast.closest(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    // FLOW-365: דלג moves the card to the end of the queue on this device; nothing is written.
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
   });
 
   it("keeps focus on the bar's first button when the next card is a split_mismatch (FLOW-327 r1)", async () => {
