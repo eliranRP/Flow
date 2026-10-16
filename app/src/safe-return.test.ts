@@ -77,7 +77,7 @@ describe("safeSignInReturn", () => {
       "/",
       "/install",
       "/onboarding",
-      "/setup/0",
+      "/setup/welcome",
       "/transactions/abc",
       "/review/",
       "/review?x=1",
@@ -118,7 +118,7 @@ describe("sign-in return across the redirect", () => {
   });
 
   it("sends a new account to setup and a returning one to the stored screen or Home", () => {
-    expect(afterSignInPath(false, "/review")).toBe("/setup/0");
+    expect(afterSignInPath(false, "/review")).toBe("/setup/welcome");
     expect(afterSignInPath(true, "/review")).toBe("/review");
     expect(afterSignInPath(true, "/install")).toBe("/");
     expect(afterSignInPath(true, null)).toBe("/");

@@ -45,24 +45,6 @@ const tabs: { section: TabSection; label: string; path: string; icon: ReactNode 
   { section: "recurring", label: "קבועים", path: "/missing-bills", icon: <RepeatIcon size={24} stroke={2} /> },
 ];
 
-/**
- * The tab bar as a picture (FLOW-506): the same slots and icons, with no links, no router.
- * It sits in the flow, not fixed, and is hidden from assistive tech.
- */
-export function TabBarPicture({ section = null }: { section?: TabSection | null }) {
-  return (
-    <div className="ui-tabbar-picture" aria-hidden="true">
-      <div className="ui-tabbar-slots">
-        {tabs.map((tab) => (
-          <span key={tab.section} className={slot} aria-current={section === tab.section ? "page" : undefined}>
-            <TabFace icon={tab.icon} label={tab.label} />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();

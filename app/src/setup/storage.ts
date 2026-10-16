@@ -1,42 +1,61 @@
-import { STARTER_SETS, type StarterSetKey } from "@flow/shared";
 import { loadSetupState, uploadSetupState, type LocalSetupCopy } from "./server-store";
 
 /**
  * Per user and company. localStorage is the copy the screens read synchronously; with a company,
  * setup_states on the server keeps the same object across devices (FLOW-506, server-store.ts).
+ *
+ * FLOW-514: the seven-step flow reads `skipped` keys "1"-"7" and the stamps below. The jsonb row needs
+ * no migration. The legacy stamps (confirmed_lists_at, ios_steps_seen_at, card_dismissed_at,
+ * completed_toast_at) stay only because the Home card (setup/home.tsx) still reads them until #622.
  */
 
+/** A lender the bank lines suggested and the owner picked in step 4. Setup state only (no loan row). */
+export type SetupLender = { name: string; monthly_agorot: number; since: string };
+
 export type SetupStore = {
+  /** Set when the company is created in step 1 (or skip-all). A run that has it has started. */
   run_started_at: string | null;
+  /** Set on the one automatic resume of this page load's first launch. */
   run_resumed_at: string | null;
-  skipped: Partial<Record<"1" | "2" | "3" | "4" | "5", string>>;
-  confirmed_lists_at: string | null;
+  /** FLOW-514: set when this run began in the seven-step flow. An older run has none: it gets the Settings entry only. */
+  flow_at: string | null;
+  skipped: Partial<Record<"1" | "2" | "3" | "4" | "5" | "6" | "7", string>>;
+  projects_at: string | null;
+  loans_at: string | null;
+  lenders: SetupLender[];
+  /** Step 5: the switch as saved. Null until step 5 is saved. */
+  jev_on: boolean | null;
   sample_review_at: string | null;
   installed_at: string | null;
+  skipped_all_at: string | null;
+  finished_at: string | null;
+  /** Legacy: read by the Home card (setup/home.tsx) until #622 merges. */
+  confirmed_lists_at: string | null;
   ios_steps_seen_at: string | null;
   card_dismissed_at: string | null;
-  /** Not in the design jsonb. Keeps "ההגדרה הושלמה." to one show. */
   completed_toast_at: string | null;
-  /** FLOW-406: the starter set picked after the company step, and when (decision 0164). */
-  starter_set: StarterSetKey | null;
-  starter_at: string | null;
 };
 
-const SKIP_KEYS = ["1", "2", "3", "4", "5"] as const;
+const SKIP_KEYS = ["1", "2", "3", "4", "5", "6", "7"] as const;
 
 export function emptySetupStore(): SetupStore {
   return {
     run_started_at: null,
     run_resumed_at: null,
+    flow_at: null,
     skipped: {},
-    confirmed_lists_at: null,
+    projects_at: null,
+    loans_at: null,
+    lenders: [],
+    jev_on: null,
     sample_review_at: null,
     installed_at: null,
+    skipped_all_at: null,
+    finished_at: null,
+    confirmed_lists_at: null,
     ios_steps_seen_at: null,
     card_dismissed_at: null,
     completed_toast_at: null,
-    starter_set: null,
-    starter_at: null,
   };
 }
 
@@ -48,11 +67,14 @@ function stamp(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
 }
 
-/** A pick needs both a known set and its stamp. */
-function starterPick(set: unknown, at: unknown): Pick<SetupStore, "starter_set" | "starter_at"> {
-  const when = stamp(at);
-  const known = STARTER_SETS.find((row) => row.key === set)?.key ?? null;
-  return known != null && when != null ? { starter_set: known, starter_at: when } : { starter_set: null, starter_at: null };
+function lenderRow(value: unknown): SetupLender | null {
+  if (value == null || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const name = typeof row.name === "string" ? row.name.trim() : "";
+  const monthly = typeof row.monthly_agorot === "number" && Number.isInteger(row.monthly_agorot) && row.monthly_agorot >= 0 ? row.monthly_agorot : null;
+  const since = stamp(row.since);
+  if (name === "" || monthly == null || since == null) return null;
+  return { name: name.slice(0, 80), monthly_agorot: monthly, since };
 }
 
 export function parseSetupStore(raw: string | null): SetupStore {
@@ -73,17 +95,24 @@ export function parseSetupStore(raw: string | null): SetupStore {
       if (at) skipped[key] = at;
     }
   }
+  const lenders = Array.isArray(row.lenders) ? row.lenders.map(lenderRow).filter((lender): lender is SetupLender => lender != null) : [];
   return {
     run_started_at: stamp(row.run_started_at),
     run_resumed_at: stamp(row.run_resumed_at),
+    flow_at: stamp(row.flow_at),
     skipped,
-    confirmed_lists_at: stamp(row.confirmed_lists_at),
+    projects_at: stamp(row.projects_at),
+    loans_at: stamp(row.loans_at),
+    lenders,
+    jev_on: typeof row.jev_on === "boolean" ? row.jev_on : null,
     sample_review_at: stamp(row.sample_review_at),
     installed_at: stamp(row.installed_at),
+    skipped_all_at: stamp(row.skipped_all_at),
+    finished_at: stamp(row.finished_at),
+    confirmed_lists_at: stamp(row.confirmed_lists_at),
     ios_steps_seen_at: stamp(row.ios_steps_seen_at),
     card_dismissed_at: stamp(row.card_dismissed_at),
     completed_toast_at: stamp(row.completed_toast_at),
-    ...starterPick(row.starter_set, row.starter_at),
   };
 }
 
@@ -131,20 +160,25 @@ export function mergeSetupStores(server: SetupStore, local: SetupStore): SetupSt
   for (const [step, at] of Object.entries(local.skipped) as [keyof SetupStore["skipped"], string][]) {
     skipped[step] = later(skipped[step], at) ?? at;
   }
-  const starter = local.starter_at != null && later(server.starter_at, local.starter_at) === local.starter_at ? local : server;
+  // The picked lenders are one list: a local pick (made before the row arrived) wins whole.
+  const lenders = local.lenders.length > 0 ? local.lenders : server.lenders;
   return {
     run_started_at: later(server.run_started_at, local.run_started_at),
     run_resumed_at: later(server.run_resumed_at, local.run_resumed_at),
+    flow_at: later(server.flow_at, local.flow_at),
     skipped,
-    confirmed_lists_at: later(server.confirmed_lists_at, local.confirmed_lists_at),
+    projects_at: later(server.projects_at, local.projects_at),
+    loans_at: later(server.loans_at, local.loans_at),
+    lenders,
+    jev_on: local.jev_on ?? server.jev_on,
     sample_review_at: later(server.sample_review_at, local.sample_review_at),
     installed_at: later(server.installed_at, local.installed_at),
+    skipped_all_at: later(server.skipped_all_at, local.skipped_all_at),
+    finished_at: later(server.finished_at, local.finished_at),
+    confirmed_lists_at: later(server.confirmed_lists_at, local.confirmed_lists_at),
     ios_steps_seen_at: later(server.ios_steps_seen_at, local.ios_steps_seen_at),
     card_dismissed_at: later(server.card_dismissed_at, local.card_dismissed_at),
     completed_toast_at: later(server.completed_toast_at, local.completed_toast_at),
-    // The later pick wins with its own set.
-    starter_set: starter.starter_set,
-    starter_at: starter.starter_at,
   };
 }
 
@@ -164,7 +198,6 @@ export function loadSetupStore(userId: string, companyId: string): Promise<true>
 }
 
 const sessionEnteredKey = (userId: string) => `flow.setup.session-entered.${userId}`;
-const companyCreatedKey = (userId: string) => `flow.setup.company-created.${userId}`;
 
 function sessionGet(key: string): boolean {
   try {
@@ -190,14 +223,4 @@ export function sessionEntered(userId: string | null): boolean {
 export function markSessionEntered(userId: string | null): void {
   if (!userId) return;
   sessionSet(sessionEnteredKey(userId));
-}
-
-export function companyCreatedThisRun(userId: string | null): boolean {
-  if (!userId) return false;
-  return sessionGet(companyCreatedKey(userId));
-}
-
-export function markCompanyCreated(userId: string | null): void {
-  if (!userId) return;
-  sessionSet(companyCreatedKey(userId));
 }
