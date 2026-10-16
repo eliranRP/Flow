@@ -557,6 +557,10 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 
 `recurring_this_month`, no arguments ([0175](../decisions/0175-recurring-pace-dismissals.md)). Read tool. Output `data.arrived[]`: every recurring supplier and customer seen this month (the app's הגיעו החודש), with the fields of `get_recurring_changes`; `changed` is true at 20% or more either way. Nothing is left out for dismissals. Expenses first, then by name.
 
+### get_recurring_schedule
+
+`recurring_schedule`, no arguments (FLOW-447, [0175](../decisions/0175-recurring-pace-dismissals.md)). Read tool. Output `data.schedule[]`: every recurring supplier and customer of the company with its `state` this month: `arrived` (seen), `late` (past its expected day, as `get_missing_bills`), `soon` (due this month) or `later` (its next month is after this one). Each row has `direction`, `party_id`, `state`, `party_name`, `currency`, `typical_amount_minor` (expenses negative), `amount_minor` (only when arrived), `typical_day`, `pace`, `next_due_month` (YYYY-MM), `expected_by`, `project_id`/`project_name` and `category_id`/`category_name`. Read only; nothing is left out for dismissals.
+
 ### get_line_recurring
 
 `payment_recurring`, `transaction_id` required ([0172](../decisions/0172-recurring-charges.md)). Read tool. Output `data`: `{ "transaction_id", "party", "recurring", "override", "detected", "typical_day", "typical_amount_minor" }`. `party` is the line's supplier (expense) or customer (income) with `direction`, `id`, `name`, `currency`, or `null` when it has neither. `recurring` is what counts: `override` (the owner's switch, `null` when the rule decides) and otherwise `detected` (the rule alone). `typical_day` and `typical_amount_minor` are `null` when not recurring. `pace` is what counts, `pace_override` the owner's (`set_line_pace`), `detected_pace` the rule's, and `next_due_month` (YYYY-MM) when the next bill is due. Another company's line is `refused`.
@@ -982,7 +986,7 @@ A company has an owner and members, each an editor or a viewer ([0167](../decisi
 
 ### get_setup_suggestions
 
-`get_setup_suggestions`, no arguments ([FLOW-514](../backlog/TASKS.md#flow-514), migration `20261016155441_setup_suggestions.sql`). Read tool. The first-time setup's two suggestions, from the company's bank lines. Output `data`: `projects` (project names found in the lines; `[]` until a bank source is chosen) and `lenders[]`: recurring suppliers the company pays in its own currency in at least three months, with no loan of the same name yet. Each has `name`, `monthly_agorot` (positive minor units of the company's currency, the usual amount) and `since` (the date of its first line). Suggestions only: ask the owner before creating a loan or a project from one. A failed read returns `refused`, as the other reads do; a user with no company gets no data.
+`get_setup_suggestions`, no arguments ([FLOW-514](../backlog/TASKS.md#flow-514), migration `20261016170502_setup_suggestions.sql`). Read tool. The first-time setup's two suggestions, from the company's bank lines. Output `data`: `projects` (project names found in the lines; `[]` until a bank source is chosen) and `lenders[]`: recurring suppliers the company pays in its own currency in at least three months, with no loan of the same name yet. Each has `name`, `monthly_agorot` (positive minor units of the company's currency, the usual amount) and `since` (the date of its first line). Suggestions only: ask the owner before creating a loan or a project from one. A failed read returns `refused`, as the other reads do; a user with no company gets no data.
 
 ### list_team
 

@@ -1,0 +1,1 @@
+FLOW-447: the קבועים list has one read. `recurring_schedule()` gives every recurring party its state this month (arrived, late, soon or later), and the flow-mcp tool `get_recurring_schedule` returns it. It is read only and company scoped.
