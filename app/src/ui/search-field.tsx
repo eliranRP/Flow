@@ -13,6 +13,8 @@ type SearchFieldProps = {
   /** The transaction search moves focus here itself, after the title took it (FLOW-323). */
   inputRef?: Ref<HTMLInputElement>;
   maxLength?: number;
+  /** Results are loading: a spinner sits at the end, the clear button hides, and the box is aria-busy. */
+  busy?: boolean;
 };
 
 export function SearchField({
@@ -24,14 +26,15 @@ export function SearchField({
   disabled = false,
   inputRef,
   maxLength,
+  busy = false,
 }: SearchFieldProps) {
   const generated = useId();
   const id = flowControlName("flow-search", generated);
   return (
-    <div className="ui-search">
+    <div className="ui-search" aria-busy={busy || undefined}>
       <label className="ui-search-field" htmlFor={id} onPointerDown={holdFieldPointer}>
         <span className="ui-search-icon" aria-hidden="true">
-          <SearchIcon />
+          <SearchIcon size={18} stroke={1.8} />
         </span>
         <span className="sr-only">{label}</span>
         <input
@@ -54,8 +57,9 @@ export function SearchField({
             onChange(event.target.value);
           }}
         />
+        {busy ? <span className="ui-spinner ui-search-spinner" aria-hidden="true" /> : null}
       </label>
-      {value !== "" && !disabled ? (
+      {value !== "" && !disabled && !busy ? (
         <button
           type="button"
           className="ui-search-clear"
