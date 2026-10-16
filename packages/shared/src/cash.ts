@@ -113,6 +113,10 @@ export const cashLinesSchema = z
         parts: z.array(z.object({ name: z.string().nullable(), amount_minor: minorSchema })).nullable().optional().catch(undefined),
         /** FLOW-432: on a line split by category, the whole line's amount (positive). */
         line_minor: minorSchema.nullable().optional().catch(undefined),
+        /** FLOW-366: the row's transaction has an open review. */
+        pending: z.boolean().optional().catch(undefined),
+        /** FLOW-366: the row's part counts in profit (false on a line left out of the P&L). */
+        in_pnl: z.boolean().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

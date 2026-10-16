@@ -136,7 +136,7 @@ function readTools() {
       to_day: { type: "integer", minimum: 1, maximum: 31 },
     }),
     toolSpec("get_cash_years", "The cash view's whole history (FLOW-417): money in and out since the company's first cash month and per calendar year, on the company's cash basis (as get_cash_months), through the end of this month. Returns basis, base_currency, this_month and first_month (YYYY-MM-DD, the first day; first_month is null when no line counts in cash yet), by_currency[] (the total since first_month: currency, in_minor, out_minor, net_minor; the base currency first and always present) and years[] newest first, from first_month's year to this one, empty years included: year and by_currency[] in the same shape. A year's months (get_cash_months with year) add up to its row.", {}),
-    toolSpec("get_cash_lines", "The lines behind a get_cash_months figure, newest first. month (required) is YYYY-MM (or a date in it), side (required, one per call) is in, out, excluded (left out of the view) or not_in_profit (in the view but left out of the P&L, as get_cash_months not_in_profit_categories counts them), currency defaults to the company's base currency. At most 100 rows a call: limit 1 to 100 (default 40) and offset page through rows[]; while has_more is true, call again with offset + limit. Each row: transaction_id, part (a loan payment has a row per part: principal, interest, escrow or fees; a line split's parts on one side are one row), description, supplier_name, project_name, category_name, doc_date, cash_month_date, currency, amount_minor (gross, positive), side, source, kept_out, line_minor (the whole bank line, gross and positive, on a loan part's row and on a split line's row; else null) and parts (on a split line's row, the parts it counts: name and amount_minor, signed like the row; else null). On not_in_profit a loan payment's principal row is that part alone, out of line_minor.", {
+    toolSpec("get_cash_lines", "The lines behind a get_cash_months figure, newest first. month (required) is YYYY-MM (or a date in it), side (required, one per call) is in, out, excluded (left out of the view) or not_in_profit (in the view but left out of the P&L, as get_cash_months not_in_profit_categories counts them), currency defaults to the company's base currency. At most 100 rows a call: limit 1 to 100 (default 40) and offset page through rows[]; while has_more is true, call again with offset + limit. Each row: transaction_id, part (a loan payment has a row per part: principal, interest, escrow or fees; a line split's parts on one side are one row), description, supplier_name, project_name, category_name, doc_date, cash_month_date, currency, amount_minor (gross, positive), side, source, kept_out, line_minor (the whole bank line, gross and positive, on a loan part's row and on a split line's row; else null) and parts (on a split line's row, the parts it counts: name and amount_minor, signed like the row; else null), pending (true while the row's transaction has an open review) and in_pnl (false when the row is left out of the P&L, as on not_in_profit, and for a category kept out of profit). On not_in_profit a loan payment's principal row is that part alone, out of line_minor.", {
       month: { type: "string" },
       side: { type: "string", enum: ["in", "out", "excluded", "not_in_profit"] },
       currency: { type: "string" },
@@ -263,10 +263,24 @@ function writeTools() {
       transaction_id: { type: "string" },
       category_id: { type: "string" },
     }, true),
-    toolSpec("create_project", "Create a project in the owner's company.", {
+    toolSpec("create_project", "Create a project in the owner's company (FLOW-445). type (optional, up to 40 characters, free text, e.g. flip or rental) and budget_minor (optional, whole minor units of the company currency, or null for no budget; the project's budget, over which its page warns) are set when given. Returns id and undo_kind (project: undo deletes it while it is empty).", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       status: { type: "string", enum: ["active", "finished"] },
+      type: { type: "string" },
+      budget_minor: { type: ["integer", "null"], minimum: 0 },
+    }, true),
+    toolSpec("update_project", "Change a project's name, type, budget or status (FLOW-445; owner or editor). id is the project id; send only the fields to change: name (2 to 120 characters), type (up to 40 characters; null clears it), budget_minor (whole minor units; null clears the budget), status (active or finished; finished sets its finish day, active clears it). At least one field. Returns id, name, type, budget_minor, status and undo_kind (project_update: undo puts the before values back while the project still holds this write's values, else conflict). A project of another company is not_found.", {
+      idempotency_key: { type: "string" },
+      id: { type: "string" },
+      name: { type: "string" },
+      type: { type: ["string", "null"] },
+      budget_minor: { type: ["integer", "null"], minimum: 0 },
+      status: { type: "string", enum: ["active", "finished"] },
+    }, true),
+    toolSpec("delete_project", "Delete a project that nothing refers to (FLOW-445; owner or editor): no line, split, allocation, loan or supplier default. A project in use is refused (in use). Returns id, name and undo_kind (project_delete: undo puts the project back with the same id).", {
+      idempotency_key: { type: "string" },
+      id: { type: "string" },
     }, true),
     toolSpec("create_category", "Create a category in the owner's company. parent_id (optional) puts it under a parent category of the same kind, as a sub-category (one level; not a loan category).", {
       idempotency_key: { type: "string" },
@@ -563,7 +577,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects or create_categories batch.", {
