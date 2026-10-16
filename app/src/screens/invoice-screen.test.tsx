@@ -6,6 +6,7 @@ import { InvoiceScreen } from "./invoice-screen";
 import { UnpaidScreen } from "./unpaid-screen";
 import { invoicesSample, invoicesSummary } from "../dev/invoices-sample";
 import { unpaidOpenRows, unpaidTotals } from "../unpaid";
+import { israelToday, shiftDays } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 
 // FLOW-367: the fixture's list adds up to the open total, the bank match is on the page, and the
@@ -22,7 +23,7 @@ describe("Open invoices (FLOW-367)", () => {
     const first = render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><ToastProvider><UnpaidScreen sample={invoicesSample()} summary={invoicesSummary()} /></ToastProvider></MemoryRouter></QueryClientProvider>);
     expect(first.container.querySelector(".ui-inv-overdue")?.textContent).toContain("פתוחים יותר מ־30 ימים");
     first.unmount();
-    renderList(invoicesSample().map((row) => ({ ...row, doc_date: "2026-10-01" })));
+    renderList(invoicesSample().map((row) => ({ ...row, doc_date: shiftDays(israelToday(), -2) })));
     expect(document.querySelectorAll(".ui-inv-overdue")).toHaveLength(0);
   });
 
