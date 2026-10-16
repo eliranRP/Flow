@@ -534,6 +534,15 @@ export function MailIcon(props: IconProps) {
   );
 }
 
+export function ClockIcon(props: IconProps) {
+  return (
+    <Svg stroke={1.8} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 14" />
+    </Svg>
+  );
+}
+
 /** FLOW-514: the movie's pause control (two bars). */
 export function PauseIcon(props: IconProps) {
   return (

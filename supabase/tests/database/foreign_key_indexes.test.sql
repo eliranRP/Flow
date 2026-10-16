@@ -1,3 +1,4 @@
+-- pgtap: catalog-wide
 -- FLOW-811: every foreign key in public and private has an index that leads with its columns,
 -- as the database advisor's unindexed_foreign_keys check asks. A new foreign key needs one too.
 
