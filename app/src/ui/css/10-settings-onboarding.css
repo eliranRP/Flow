@@ -403,6 +403,14 @@
 }
 
 /* A card of blocks (the inner pages). The menu and the business page use the page side (20). */
+/* A connection page (SUMIT, Mercury, the AI page): the 16 side gutter and the 14 block gap of guide §7.14. */
+.ui-connection-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 16px 28px;
+}
+
 .ui-settings-card {
   overflow: hidden;
   border-radius: var(--radius-card);

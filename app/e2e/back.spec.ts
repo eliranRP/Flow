@@ -84,34 +84,32 @@ test("the period sheet closes on browser back and on its own close", async ({ pa
   await expect(page).toHaveURL(/\/e2e\/project$/);
 });
 
-test("the connect sheet closes on browser back and on its own close", async ({ page }) => {
+test("the SUMIT page returns to Connections on browser back and on its Back link", async ({ page }) => {
   await page.goto("/settings/connections?preview=1");
-  await page.getByRole("button", { name: "SUMIT" }).click();
-  await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
+  await page.getByRole("link", { name: /^SUMIT/ }).click();
+  await expect(page).toHaveURL(/\/settings\/connections\/sumit\?preview=1$/);
   await page.goBack();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await page.goto("/e2e/project");
   await page.goto("/settings/connections?preview=1");
-  await page.getByRole("button", { name: "SUMIT" }).click();
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("link", { name: /^SUMIT/ }).click();
+  await page.getByRole("button", { name: "חזרה לחיבורים" }).click();
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/project$/);
 });
 
-test("the assistant sheet closes on browser back and on its own close", async ({ page }) => {
+test("the AI page returns to Connections on browser back and on its Back link", async ({ page }) => {
   await page.goto("/settings/connections?preview=1");
-  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "חיבור עוזר AI" })).toBeVisible();
+  await page.getByRole("link", { name: /^חיבור ל־AI/ }).click();
+  await expect(page).toHaveURL(/\/settings\/connections\/ai\?preview=1$/);
   await page.goBack();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await page.goto("/e2e/project");
   await page.goto("/settings/connections?preview=1");
-  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("link", { name: /^חיבור ל־AI/ }).click();
+  await page.getByRole("button", { name: "חזרה לחיבורים" }).click();
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/project$/);
 });

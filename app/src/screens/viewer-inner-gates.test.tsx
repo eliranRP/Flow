@@ -48,11 +48,6 @@ afterEach(() => {
 });
 
 describe("viewer inner write gates", () => {
-  it.each(["sumit", "mercury"])("a ?sheet=%s deep link opens the connect sheet for an owner", async (sheet) => {
-    renderAt(<ConnectionsScreen sample={disconnected} />, `/settings/connections?sheet=${sheet}`, false);
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-  });
-
   it.each(["sumit", "mercury"])("a ?sheet=%s deep link opens nothing for a viewer", async (sheet) => {
     renderAt(<ConnectionsScreen sample={disconnected} />, `/settings/connections?sheet=${sheet}`, true);
     await expect(waitFor(() => { expect(screen.getByRole("dialog")).toBeInTheDocument(); }, { timeout: 300 })).rejects.toThrow();
