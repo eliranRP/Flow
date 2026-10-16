@@ -108,6 +108,7 @@ function CategoryLine({
         icon={<TagIcon />}
         chevron
         hint={hint}
+        layout="inset"
       />
     );
   }
@@ -121,6 +122,7 @@ function CategoryLine({
       icon={<TagIcon />}
       chevron
       hint={hint}
+      layout="inset"
     />
   );
 }
@@ -322,7 +324,7 @@ export function CategoriesScreen({
       {shown.length === 0 && hiddenRows.length === 0 && parent == null ? (
         <EmptyState icon={<TagIcon />} title="אין עדיין קטגוריות" body="קטגוריות נוצרות מהמסמכים של SUMIT או כשמוסיפים אחת" />
       ) : shown.length > 0 ? (
-      <List className="ui-cat-list">
+      <List className="ui-cat-list" layout="inset">
         {shown.map((category) => (
           <CategoryLine
             key={category.id}
@@ -372,7 +374,7 @@ export function CategoriesScreen({
       {hiddenRows.length > 0 ? (
         <div id="categories-hidden" hidden={!hiddenExpanded}>
           {hiddenExpanded ? (
-            <List className="ui-cat-list ui-cat-hidden">
+            <List className="ui-cat-list ui-cat-hidden" layout="inset">
               {hiddenRows.map((category) => (
                 <CategoryLine
                   key={category.id}
@@ -392,6 +394,7 @@ export function CategoriesScreen({
       ) : null}
       <CategoryMenuSheet
         category={menuRow}
+        linesHref={menuRow == null ? undefined : linesHref(menuRow)}
         rows={rows}
         loanLine={menuLoanLine}
         pnlBusy={pnl.isPending}

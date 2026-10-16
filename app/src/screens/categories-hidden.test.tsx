@@ -68,6 +68,8 @@ describe("categories hidden footer", () => {
     renderScreen(<CategoriesScreen sample={sample} />);
     fireEvent.click(screen.getByRole("button", { name: /^חומרים/ }));
     expect(await screen.findByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
+    // FLOW-322: the sheet's show-lines row opens the category's lines in search (FLOW-513).
+    expect(screen.getByRole("link", { name: "הצג תנועות" })).toHaveAttribute("href", "/search?dir=expense&category=c1");
   });
 
   it("saves unhide through set_category_hidden", async () => {

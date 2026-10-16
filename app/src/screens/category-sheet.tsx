@@ -49,6 +49,7 @@ function lineCount(lines: number | undefined): string | undefined {
 export function CategoryMenuSheet({
   category,
   rows,
+  linesHref,
   loanLine,
   pnlBusy,
   onClose,
@@ -61,6 +62,8 @@ export function CategoryMenuSheet({
   category: ManagedCategory | null;
   /** Every category, for the move picker. */
   rows: ManagedCategory[];
+  /** FLOW-322: the category's lines in search, one tap from the sheet (FLOW-513: the row has no link any more). */
+  linesHref?: string;
   /** The fixed line a built-in loan category shows instead of the P&L, rehab, move and delete rows. */
   loanLine: LoanLine | null;
   pnlBusy: boolean;
@@ -130,6 +133,7 @@ export function CategoryMenuSheet({
               />
             ) : null}
             <List>
+              {linesHref == null ? null : <ListRow variant="item" title="הצג תנועות" href={linesHref} chevron />}
               {loanLine == null ? (
                 <ListRow
                   variant="button"
