@@ -108,6 +108,15 @@ export const dashboardSchema = z.object({
   base_currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
 });
 
+/** FLOW-367. The bank deposit the server offers for an open invoice: the same amount and customer, not linked or dismissed. */
+const unpaidMatchSchema = z.object({
+  transaction_id: z.string(),
+  date: z.string(),
+  account_name: z.string(),
+  raw_description: z.string(),
+  amount_agorot: agorotSchema,
+});
+
 export const unpaidRowSchema = z.object({
   id: z.string(),
   description: z.string(),
@@ -124,6 +133,10 @@ export const unpaidRowSchema = z.object({
   marked_paid_at: z.string().nullable().optional(),
   /** FLOW-335. The SUMIT document link (pay.sumit.co.il), null until a sync reads it. */
   document_url: z.string().nullable().optional(),
+  /** FLOW-367. Whole days since the document's date. */
+  days_open: z.number().int().nonnegative().optional(),
+  /** FLOW-367. The deposit to offer, null when none (and when the invoice is marked). */
+  match: unpaidMatchSchema.nullable().optional(),
 });
 
 /**
