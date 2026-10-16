@@ -31,7 +31,7 @@ export const PENDING_WORD = "הוזמן · ממתין";
  * from the bar; anyone else who reaches the page reads the list.
  */
 /** The `?preview=1` sample: an owner, an editor, a viewer, and one pending invite. Names are invented. */
-const PREVIEW_BUSINESS = "Maple Street Builds";
+const PREVIEW_BUSINESS = "Cedar Lane Homes";
 const PREVIEW_TEAM: Team = {
   company_id: "preview",
   role: "owner",
@@ -48,7 +48,7 @@ export function TeamScreen() {
   const preview = useHomePreview();
   const companies = useMyCompaniesQuery();
   const team = useTeamQuery();
-  if (preview === "empty") return <TeamList team={PREVIEW_TEAM} business={PREVIEW_BUSINESS} />;
+  if (import.meta.env.DEV && preview === "empty") return <TeamList team={PREVIEW_TEAM} business={PREVIEW_BUSINESS} />;
   if (companies.data != null && companies.data.active_id == null) return <Navigate to={BACK} replace />;
   const phase = screenPhase("off", team);
   if (phase.kind === "loading" || phase.kind === "error" || team.data == null) {

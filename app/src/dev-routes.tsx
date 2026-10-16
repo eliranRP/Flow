@@ -446,7 +446,7 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
   // FLOW-512 proof: ?board=1 gives the Settings board's own numbers (an invented business name).
   const board = params.get("board") === "1" && !noCompany;
   return {
-        name: noCompany ? null : board ? "Maple Street Builds" : "בדיקה",
+        name: noCompany ? null : board ? "Cedar Lane Homes" : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
         lastError: board ? "sumit_auth" : mode === "auth" ? "sumit_auth" : null,
