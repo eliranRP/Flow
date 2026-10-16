@@ -46,6 +46,7 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { useProjectQuery } from "../use-books";
 import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, CashLinesMore, cashLinesFigures } from "./cash-lines-parts";
+import { monthOf } from "./cash-lines-screen";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
 
@@ -158,10 +159,6 @@ export function ProjectCashOverview({
       ) : null}
     </div>
   );
-}
-
-function monthOf(data: CashMonths | undefined, key: string) {
-  return data?.months.find((month) => cashMonthKey(month.month) === key);
 }
 
 /** An earlier month of the project: its figure, נכנס, יצא and רווח החודש. */

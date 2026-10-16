@@ -6,7 +6,7 @@ import { StoryRoute } from "../ui/story-route";
 import { CashLinesScreen } from "./cash-lines-screen";
 
 const meta = {
-  title: "Screens/Cash",
+  title: "Screens/Cash lines",
   parameters: { flowRouter: false },
 } satisfies Meta;
 
