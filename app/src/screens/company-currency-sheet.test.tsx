@@ -74,7 +74,7 @@ describe("CompanyCurrencySheet (FLOW-504)", () => {
     release();
     await screen.findByText(CURRENCY_SAVED);
     expect(calls).toEqual([{ name: "set_company_currency", args: { p_currency: "USD" } }]);
-    expect(screen.getByText("closed")).toBeInTheDocument();
+    expect(await screen.findByText("closed")).toBeInTheDocument();
     expect(sheetStack(router.state.location.state)).toEqual([]);
     const keys = invalidate.mock.calls.map(([filters]) => filters?.queryKey?.[0]);
     expect(keys).toEqual(expect.arrayContaining(["company-currency", "loan-currency", "dashboard", "project", "profit-months"]));
