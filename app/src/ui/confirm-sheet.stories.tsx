@@ -78,6 +78,20 @@ export const Merge: Story = {
     onConfirm: () => undefined,
   },
 };
+/** The save is in flight: no ✕, ביטול is off, and the confirm spins. */
+export const Busy: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    title: "למחוק את ההוצאה?",
+    item: "טק-ליין",
+    consequence: "הפרויקט ייעלם מהרשימה. התנועות נשארות.",
+    confirmLabel: "מחיקה",
+    destructive: true,
+    busy: true,
+    onConfirm: () => undefined,
+  },
+};
 export const LongHebrew: Story = {
   args: {
     open: true,

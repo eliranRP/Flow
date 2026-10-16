@@ -185,7 +185,7 @@ button.ui-tab-slot {
   inset: 0;
   z-index: 30;
   border: 0;
-  background: var(--color-scrim);
+  background: var(--sheet-scrim);
   /* Duration is set without a property, which would otherwise animate z-index. */
   transition-property: opacity;
 }
@@ -206,7 +206,7 @@ button.ui-tab-slot {
   /* The body scrolls, never the panel: clip stops a click's scroll-into-view or scroll anchoring
      from scrolling the panel mid tall-to-short change, which hid the header's padding. */
   overflow: clip;
-  padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+  padding: var(--sheet-pad-top) 0 calc(var(--sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
   outline: none;
@@ -233,10 +233,14 @@ button.ui-tab-slot {
   animation-timing-function: var(--ease-linear);
 }
 
-[data-vaul-drawer][data-state="closed"],
-[data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
+[data-vaul-drawer][data-state="closed"] {
   animation-duration: var(--motion-sheet-out);
   animation-timing-function: var(--ease-exit);
+}
+
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
+  animation-duration: var(--motion-sheet-out);
+  animation-timing-function: var(--ease-linear);
 }
 
 [data-vaul-drawer][data-state="open"]:not(.vaul-dragging) {
@@ -244,10 +248,14 @@ button.ui-tab-slot {
   transition-timing-function: var(--ease-enter) !important;
 }
 
-[data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
-body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
+[data-vaul-drawer][data-state="closed"]:not(.vaul-dragging) {
   transition-duration: var(--motion-sheet-out) !important;
   transition-timing-function: var(--ease-exit) !important;
+}
+
+body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
+  transition-duration: var(--motion-sheet-out) !important;
+  transition-timing-function: var(--ease-linear) !important;
 }
 
 body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
@@ -260,7 +268,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   height: var(--grab-height);
   margin: 0 auto var(--space-3);
   border-radius: var(--grab-radius);
-  background: var(--color-control-off);
+  background: var(--sheet-grab);
 }
 
 /* The ✕ is a 44px target; centring it on the one-line title puts its glyph on the title's line (FLOW-339). */
@@ -296,18 +304,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: -webkit-box;
   min-width: 0;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-/* FLOW-310 clip review: a sheet title is often a name (a category, a project). It wraps to a
-   second line before it ends in an ellipsis. */
-.ui-sheet-head .t-title-2 {
-  display: -webkit-box;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }

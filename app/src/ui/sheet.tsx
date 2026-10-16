@@ -51,6 +51,7 @@ export function SheetSurface({
   closeRef,
   titleRef,
   footClassName,
+  busy = false,
 }: {
   title: string;
   children?: ReactNode;
@@ -64,14 +65,16 @@ export function SheetSurface({
   closeRef?: RefObject<HTMLButtonElement | null>;
   titleRef?: RefObject<HTMLHeadingElement | null>;
   footClassName?: string;
+  /** A save is in flight: no ✕ (the board's saving frame). */
+  busy?: boolean;
 }) {
   const Title = drawer ? sheetDrawer?.Drawer.Title : undefined;
   const heading = Title ? (
-    <Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2" data-clip-ok="">
+    <Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-sheet ui-sheet-title" data-clip-ok="">
       {title}
     </Title>
   ) : (
-    <h2 className="t-title-2" data-clip-ok="">
+    <h2 className="t-sheet ui-sheet-title" data-clip-ok="">
       {title}
     </h2>
   );
@@ -81,9 +84,9 @@ export function SheetSurface({
       <div className="ui-sheet-head">
         {leading}
         {heading}
-        {onClose ? (
+        {onClose && !busy ? (
           <IconButton ref={closeRef} label="סגירה" onClick={onClose}>
-            <CloseIcon />
+            <CloseIcon size={22} />
           </IconButton>
         ) : null}
       </div>
@@ -140,6 +143,7 @@ export function Sheet({
   returnFocusRef,
   onCloseKind,
   closeOnBackdrop = true,
+  busy = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -170,6 +174,8 @@ export function Sheet({
   onCloseKind?: (byKey: boolean) => void;
   /** A backdrop tap closes the sheet. Step 2 of the one-time code turns this off. */
   closeOnBackdrop?: boolean;
+  /** A save is in flight: the sheet stays open and closes once it settles. */
+  busy?: boolean;
 }) {
   const vaul = useSheetDrawer();
   // Until vaul arrives the sheet counts as closed, so its open runs in full once it can draw.
@@ -181,6 +187,8 @@ export function Sheet({
   const titleRef = titleRefProp ?? localTitle;
   const closing = useRef(false);
   const deciding = useRef(false);
+  /** A dismiss came in while a save was in flight; the sheet closes once it settles (0075). */
+  const closeAfterBusy = useRef<{ byKey: boolean } | null>(null);
   const wasOpen = useRef(false);
   /** The sheet closed from the keyboard (Escape), so the returned focus shows its ring. */
   const keyClose = useRef(false);
@@ -306,6 +314,11 @@ export function Sheet({
     };
   }, [open, returnFocusRef]);
   async function requestClose(byKey = false) {
+    if (busy) {
+      // A repeat dismiss keeps the key flag: Escape anywhere in the wait means a key close.
+      closeAfterBusy.current = { byKey: byKey || closeAfterBusy.current?.byKey === true };
+      return;
+    }
     if (closing.current || deciding.current) return;
     deciding.current = true;
     try {
@@ -328,6 +341,17 @@ export function Sheet({
   const requestCloseRef = useRef(requestClose);
   requestCloseRef.current = requestClose;
   useEffect(() => {
+    // The pending close dies with the sheet: a sheet that closed by another route must not close again.
+    if (!open) {
+      closeAfterBusy.current = null;
+      return;
+    }
+    const pending = closeAfterBusy.current;
+    if (busy || pending == null) return;
+    closeAfterBusy.current = null;
+    void requestCloseRef.current(pending.byKey);
+  }, [busy, open]);
+  useEffect(() => {
     if (!onRequestClose) return;
     onRequestClose.current = () => {
       void requestCloseRef.current();
@@ -336,20 +360,22 @@ export function Sheet({
       onRequestClose.current = null;
     };
   });
-  function keepOpenForToast(event: { preventDefault: () => void; target: EventTarget | null; detail?: { originalEvent?: { target: EventTarget | null } } }) {
+  /** A tap on a toast keeps the sheet open. Returns true when it did. */
+  function keepOpenForToast(event: { preventDefault: () => void; target: EventTarget | null; detail?: { originalEvent?: { target: EventTarget | null } } }): boolean {
     const nodes = [event.target, event.detail?.originalEvent?.target];
     const onToast = nodes.some((node) => {
       const element = node instanceof Element ? node : node instanceof Text ? node.parentElement : null;
       return element?.closest(".ui-toast, .ui-toast-host") != null;
     });
     if (onToast) event.preventDefault();
+    return onToast;
   }
   if (!vaul) return null;
   const { Drawer } = vaul;
   return (
     <Drawer.Root
       open={open}
-      dismissible={closeOnBackdrop}
+      dismissible={closeOnBackdrop && !busy}
       modal={modal}
       onOpenChange={(next) => {
         if (!next) void requestClose(escapeNow.current);
@@ -371,23 +397,36 @@ export function Sheet({
           ref={panelRef}
           style={depth > 0 ? { zIndex: 31 + (depth - 1) * 2 } : undefined}
           className={cx("ui-sheet-panel", panelClassName)}
+          aria-busy={busy || undefined}
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             titleRef.current?.focus({ preventScroll: true });
           }}
           onPointerDownOutside={(event) => {
-            keepOpenForToast(event);
+            if (keepOpenForToast(event)) return;
+            // A scrim tap during a save waits for the save, like Escape does.
+            if (busy) {
+              event.preventDefault();
+              void requestClose();
+              return;
+            }
             if (!closeOnBackdrop) event.preventDefault();
           }}
           onInteractOutside={(event) => {
             keepOpenForToast(event);
-            if (!closeOnBackdrop) event.preventDefault();
+            if (busy || !closeOnBackdrop) event.preventDefault();
           }}
           onFocusOutside={(event) => {
             keepOpenForToast(event);
           }}
           onEscapeKeyDown={(event) => {
+            // A save in flight keeps the sheet open; Escape closes it once the save settles.
+            if (busy) {
+              event.preventDefault();
+              void requestClose(true);
+              return;
+            }
             if (onEscape) {
               event.preventDefault();
               onEscape();
@@ -415,6 +454,7 @@ export function Sheet({
             closeRef={closeRef}
             titleRef={titleRef}
             footClassName={footClassName}
+            busy={busy}
             onClose={() => {
               void requestClose();
             }}

@@ -39,7 +39,7 @@ export function ConfirmSheet({
   alternative,
 }: ConfirmSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy}>
       {item ? <p className="t-label text-text-secondary">{item}</p> : null}
       <p className="t-hint text-text-secondary">{consequence}</p>
       {detail ? <p className="t-hint text-text-secondary">{detail}</p> : null}
@@ -58,6 +58,7 @@ export function ConfirmSheet({
         variant="ghost"
         quiet
         full
+        disabled={busy}
         onClick={() => {
           onOpenChange(false);
         }}

@@ -19,11 +19,11 @@ test("preview error and loading states are reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=error");
   await expect(page.getByText("אין חיבור לאינטרנט")).toBeVisible();
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "נסו שוב" })).toBeVisible();
   await expect(page.locator("header.band")).toHaveCount(0);
   await expect(page.getByText("מצב תצוגה")).toHaveCount(0);
   await page.goto("/?preview=error-server");
-  await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toBeVisible();
+  await expect(page.getByText("לא הצלחנו לטעון.")).toBeVisible();
   await page.goto("/?preview=loading");
   await expect(page.locator("[aria-busy=true]")).toBeVisible();
   await expect(page.getByRole("heading", { name: "חודשים קודמים" })).toBeVisible();

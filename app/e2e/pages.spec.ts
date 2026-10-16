@@ -41,13 +41,13 @@ test("add sheet offers the quick actions that work today (FLOW-331)", async ({ p
 test("a failed load is not an empty or missing record", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/unpaid?preview=error");
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "נסו שוב" })).toBeVisible();
   await expect(page.getByText("הכל שולם")).toHaveCount(0);
   await page.goto("/projects/missing?preview=error");
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "נסו שוב" })).toBeVisible();
   await expect(page.getByText("הפרויקט לא נמצא.")).toHaveCount(0);
   await page.goto("/review?preview=error");
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "נסו שוב" })).toBeVisible();
   await expect(page.getByText("הכל מאושר")).toHaveCount(0);
 });
 
