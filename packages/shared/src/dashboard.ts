@@ -434,6 +434,18 @@ export const projectDetailSchema = z
       balance_minor: agorotSchema,
       /** FLOW-132. Omitted on older payloads. */
       status: z.string().optional(),
+      /** FLOW-446. The loan's terms, so the client works out its next payment (loan-schedule.ts). Omitted on older payloads. */
+      principal_minor: z.number().optional(),
+      annual_rate_ppm: z.number().optional(),
+      term_months: z.number().nullable().optional(),
+      start_date: z.string().optional(),
+      payment_minor: z.number().nullable().optional(),
+      escrow_minor: z.number().optional(),
+      kind: z.string().optional(),
+      interest_only_months: z.number().nullable().optional(),
+      amortization_months: z.number().nullable().optional(),
+      closed_on: z.string().nullable().optional(),
+      rates: z.array(z.object({ effective_date: z.string(), annual_rate_ppm: z.number() })).optional(),
     })).optional(),
     /** The company's overhead project (0021). Omitted on older payloads. */
     is_overhead: z.boolean().optional(),
@@ -586,6 +598,8 @@ export const breakdownSchema = z
         key: z.string(),
         name: z.string().nullable(),
         shared: z.boolean(),
+        /** FLOW-140. Projects with a counted line in the group. Omitted on older payloads. */
+        projects: z.number().int().nonnegative().optional(),
       }),
     ),
     excluded: z.array(breakdownSumSchema),

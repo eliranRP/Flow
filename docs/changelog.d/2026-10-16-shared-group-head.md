@@ -1,0 +1,1 @@
+Backlog: shared components for the redesign, step S7. A new `GroupHead` in the shared UI: a sticky group head with the group's name, then its line count and sums in muted meta. The transaction lists' group heads (FLOW-334) now draw through it. The look is unchanged; its stories and tests are in the shared UI.

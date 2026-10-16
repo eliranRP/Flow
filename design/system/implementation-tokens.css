@@ -211,6 +211,8 @@
   --shadow-toast: 0 8px 24px rgba(40, 20, 90, 0.12); /* toast, LinesLight and StatesLight board (FLOW-363 3c) */
   --color-tint-strong: #D9CBF6;  /* selected outline and selected row fill (board) */
   --color-line: #E7E2F0;
+  --color-line-soft: #F0EDF5;    /* row hairlines inside search results and filter sheets (FLOW-368); dark is #231E30 */
+  --color-accent-dim: #9C7BE0;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
@@ -272,6 +274,8 @@
     --color-tint: #2A2045;
     --color-tint-strong: #382A5E;
     --color-line: #2E2740;
+    --color-line-soft: #231E30;
+    --color-accent-dim: #7E66B8;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
     --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
@@ -336,6 +340,8 @@
   --color-tint: #2A2045;
   --color-tint-strong: #382A5E;
   --color-line: #2E2740;
+  --color-line-soft: #231E30;
+  --color-accent-dim: #7E66B8;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
   --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */

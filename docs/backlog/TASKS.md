@@ -40,6 +40,8 @@ Take tasks in this order. The fast-cycle and cleanup rows (F1 to F3, owner 2026-
 | R3 | [FLOW-372](#flow-372) | Redesign: light theme and the מראה setting | UI (design approved) |
 | R4a | [FLOW-364](#flow-364) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
 | R4b | [FLOW-366](#flow-366) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
+| R4c | [FLOW-374](#flow-374) | Home's compact bar clips the month figure and leaves an empty purple band | BUG (high priority) |
+| R4d | [FLOW-375](#flow-375) | Home's loading skeleton looks squeezed | BUG (high priority) |
 | R5a | [FLOW-365](#flow-365) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | R5b | [FLOW-367](#flow-367) | Redesign: open invoices, with a bank match and mark as paid | UI (design approved) |
 | R6a | [FLOW-445](#flow-445) | Redesign: the Projects tab, the project page, new project, ⋯ menu, finish and delete | UI (design approved) |
@@ -303,6 +305,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-371"></a>[FLOW-371](tasks/FLOW-371.md) | Redesign: skeletons, empty states and loaders | UI (design approved) |
 | <a id="flow-372"></a>[FLOW-372](tasks/FLOW-372.md) | Redesign: light theme and the מראה setting | UI (design approved) |
 | <a id="flow-373"></a>[FLOW-373](tasks/FLOW-373.md) | Expected (כ־) income figures get the "+" | BACKLOG NIT |
+| <a id="flow-374"></a>[FLOW-374](tasks/FLOW-374.md) | Home's compact bar clips the month figure and leaves an empty purple band | BUG (high priority) |
+| <a id="flow-375"></a>[FLOW-375](tasks/FLOW-375.md) | Home's loading skeleton looks squeezed | BUG (high priority) |
 | <a id="flow-364"></a>[FLOW-364](tasks/FLOW-364.md) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
