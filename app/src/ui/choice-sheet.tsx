@@ -7,6 +7,8 @@ import { Sheet } from "./sheet";
 export type ChoiceSheetCopy<T extends string> = {
   historyKey: string;
   title: string;
+  /** Under the title, in its column (the board's "רק בטלפון הזה"). */
+  subtitle?: string;
   note?: string;
   choices: ReadonlyArray<{ value: T; label: string; description?: string }>;
 };
@@ -54,6 +56,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
       open={open}
       onOpenChange={setOpen}
       title={copy.title}
+      subtitle={copy.subtitle}
       returnFocusRef={returnFocusRef}
       busy={saving != null}
       onRequestClose={requestSheetClose}

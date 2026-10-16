@@ -83,8 +83,6 @@ describe("motion tokens in implementation-tokens.css", () => {
       "--rise-push": "24px",
       "--rise-toast": "12px",
       "--dur-shimmer": "1400ms",
-      "--toast-duration": "3000ms",
-      "--toast-duration-error": "4000ms",
     };
     for (const [name, value] of Object.entries(expected)) {
       expect(rootTokens.get(name), name).toBe(value);

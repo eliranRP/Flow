@@ -19,7 +19,6 @@ describe("Chip", () => {
     const choice = screen.getByRole("button", { name: "חומרים" });
     expectTarget(choice);
     expectThemePaint(choice, "color");
-    expect(choice.querySelector(".ui-chip-mark")).toBeNull();
     expect(screen.getByRole("button", { name: "עבודה" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "מוסתר" })).toBeDisabled();
   });

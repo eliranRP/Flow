@@ -3,6 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual" />
+    <script>
+      // FLOW-372: the saved light or dark choice, before first paint. theme-store.ts reads the same key.
+      (function () {
+        try {
+          const theme = localStorage.getItem("flow.theme");
+          if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+        } catch {}
+      })();
+    </script>
     <meta name="theme-color" content="#7B3FE4" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
