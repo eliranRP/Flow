@@ -17,7 +17,7 @@
 
 .ui-recurring-bar {
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-chip);
   background: var(--color-track-strong);
   overflow: hidden;
 }
