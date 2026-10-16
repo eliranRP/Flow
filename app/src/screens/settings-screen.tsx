@@ -305,7 +305,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
       <ScreenHeader title="הגדרות" backTo="/" backText="בית" subtitle={subtitle} />
       <ViewerNote />
       {noCompany ? null : (
-        <List>
+        <List layout="inset">
           {namedBusiness !== "" ? (
             <SettingsPageRow
               page="business"
@@ -359,7 +359,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         onLeave={() => { setCompanyOpen(false); }}
         returnFocusRef={companyRowRef}
       />
-      <List>
+      <List layout="inset">
         <ListRow
           variant="button"
           title={THEME_TITLE}
