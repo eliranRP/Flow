@@ -370,7 +370,6 @@ export function ProjectDetailScreen({
       projectId={project.id}
       name={project.name}
       budget={project.budget_agorot ?? null}
-      type={project.state_label ?? null}
       finished={project.status === "finished"}
       groups={groups}
       sample={sample != null}
@@ -390,7 +389,7 @@ export function ProjectDetailScreen({
         investmentHref={sectionHref("investment")}
         stateLine={stateLine}
         menu={menu}
-        budget={project.budget_agorot == null ? undefined : (
+        budget={(
           <ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
         )}
         attention={projectAttentionRows({
@@ -573,7 +572,6 @@ function LegacyEmptyProject() {
 function ProjectMenu({
   projectId,
   name,
-  type,
   budget,
   finished,
   groups,
@@ -583,7 +581,6 @@ function ProjectMenu({
 }: {
   projectId: string;
   name: string;
-  type: string | null;
   budget: bigint | null;
   finished: boolean;
   /** FLOW-360 A: the קבוצה row shows once the groups are read. */
@@ -713,7 +710,7 @@ function ProjectMenu({
           ) : null}
         </List>
       </Sheet>
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type, budget }} />
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type: row?.type ?? null, budget }} />
       {groups == null ? null : (
         <ProjectGroupSheets
           projectId={projectId}
@@ -768,12 +765,20 @@ function ProjectMenu({
 }
 
 /** FLOW-445: the budget card with its edit sheet, on the expenses section. */
+/** FLOW-445: the budget card when a budget is set; with none, a quiet "+ הוספת תקציב" at the end of the page. */
 function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
   const [editing, setEditing] = useState(false);
+  // The owner's type text is on the month's row (the same cached read the menu uses).
+  const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
+  const budget = project.budget_agorot ?? null;
   return (
     <>
-      <BudgetCard spentMinor={spentAgorot} budgetMinor={project.budget_agorot ?? 0n} onEdit={() => { setEditing(true); }} />
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type: project.state_label ?? null, budget: project.budget_agorot ?? null }} />
+      {budget == null ? (
+        <TextLink tone="quiet" chevron={false} onClick={() => { setEditing(true); }}>+ הוספת תקציב</TextLink>
+      ) : (
+        <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} onEdit={() => { setEditing(true); }} />
+      )}
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type, budget }} />
     </>
   );
 }

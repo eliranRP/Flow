@@ -9,6 +9,8 @@ export type CompactBarProps = {
   title: string;
   /** After the title, " · " and the figure (an Amount at list size). Its own LTR run. */
   figure?: ReactNode;
+  /** FLOW-445: the figure before the title, "−$X • name" (the project page's bar). */
+  figureFirst?: boolean;
   /** Back's label, the parent's name (decision 0156). Without one, Back is the icon. */
   label?: string;
   /** Where Back goes. Without it the bar has no Back. */
@@ -54,7 +56,7 @@ function reportShowing(size: Reported, delta: number): void {
  * centred in one line, an optional figure after it, actions at the end. It stays mounted once a
  * page can show it, so the slide out has something to run on; `shown` drives the classes.
  */
-export function CompactBar({ title, figure, label, backTo, size = "list", shown, actions, panel, tone, start, centre, end }: CompactBarProps) {
+export function CompactBar({ title, figure, figureFirst = false, label, backTo, size = "list", shown, actions, panel, tone, start, centre, end }: CompactBarProps) {
   const reported: Reported = panel != null ? "panel" : size;
   const goBack = useGoBack();
   const landsOnLabel = useBackLandsOn(backTo ?? "/");
@@ -138,8 +140,14 @@ export function CompactBar({ title, figure, label, backTo, size = "list", shown,
         {/* The page's h1 is still there; this is its echo. */}
         {/* A long title is cut with an ellipsis; the figure after it always shows whole. */}
         <span className="ui-compact-title t-btn" aria-hidden="true">
+          {figureFirst && figure != null ? (
+            <span className="ui-compact-figure">
+              <bdi dir="ltr">{figure}</bdi>
+              {"\u00a0•\u00a0"}
+            </span>
+          ) : null}
           <span className="ui-compact-title-text" data-clip-ok="">{title}</span>
-          {figure != null ? (
+          {!figureFirst && figure != null ? (
             <span className="ui-compact-figure">
               {"\u00a0·\u00a0"}
               <bdi dir="ltr">{figure}</bdi>

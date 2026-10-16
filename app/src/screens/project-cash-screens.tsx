@@ -1,5 +1,5 @@
 import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } from "@flow/shared";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   cashMonthKey,
@@ -40,7 +40,8 @@ import { List, ListRow } from "../ui/list-row";
 import { InvestmentSummary } from "../ui/investment-card";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
-import { ScreenHeader } from "../ui/screen-header";
+import { ScreenHeader, useScrolledPast } from "../ui/screen-header";
+import { CompactBar } from "../ui/compact-bar";
 import { ScreenState } from "../ui/screen-state";
 import { TextLink } from "../ui/text-link";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
@@ -115,6 +116,10 @@ export function ProjectCashOverview({
     ? figures
     : null;
   const summary = summaryFigures != null;
+  // FLOW-445: once the figure scrolls under the band, the compact bar slides down: Back, "−$X • name", ⋯.
+  const titleEnd = useRef<HTMLSpanElement>(null);
+  const past = useScrolledPast(titleEnd, true);
+  const first = rows[0];
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -138,8 +143,18 @@ export function ProjectCashOverview({
               ))}
             </div>
           )}
+          <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
         </BandHero>
       </TopBand>
+      <CompactBar
+        title={project.name}
+        figureFirst
+        figure={first == null ? undefined : <Amount agorot={first.net_minor} currency={first.currency} loss={first.net_minor < 0n} />}
+        backTo={`/projects${search}`}
+        size="detail"
+        shown={past}
+        actions={menu}
+      />
       {data == null ? <ListSkeleton /> : null}
       {key == null ? null : <CashRows rows={projectCashSummaryRows(project.id, key, rows, search, now)} />}
       {budget ? <div className="ui-page-pad">{budget}</div> : null}

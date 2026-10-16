@@ -615,7 +615,8 @@ export function DevProjectDetail() {
         name: "שיפוץ הרצל 12",
         status: "active",
         state_label: "פעיל",
-        budget_agorot: null,
+        // `?budget=1` draws the flip with a budget (the board's Oak Ridge frame, with invented figures).
+        budget_agorot: params.get("budget") === "1" ? 7_500_000n : null,
         income_agorot: 1_000n,
         direct_agorot: 400n,
         shared_agorot: 0n,

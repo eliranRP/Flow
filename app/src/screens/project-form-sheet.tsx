@@ -61,8 +61,8 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
       const result = await supabase.rpc("upsert_project", {
         ...(project ? { p_id: project.id } : {}),
         p_name: trimmed,
-        // An empty type clears it on an edit; a null type on a finish or rename keeps the stored one.
-        p_type: type.trim(),
+        // An empty type clears it on an edit. When the stored type is not known (none, or not read yet), an empty field sends nothing, so it keeps the stored one.
+        ...(project != null && project.type == null && type.trim() === "" ? {} : { p_type: type.trim() }),
         p_status: "active",
         ...(agorot == null ? {} : { p_budget_agorot: agorot }),
       });
