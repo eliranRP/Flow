@@ -128,6 +128,8 @@ for (const scheme of ["light", "dark"] as const) {
     // The pointer still rests where שמירה was, over the toast; a hovered toast holds its timer, so move it away.
     await page.mouse.move(0, 0);
     await expect(page.locator(".ui-toast")).toHaveCount(0, { timeout: 10_000 });
+    // One card left, so the total is 1; the approve empties the queue, and undo grows the total to 2.
+    await expect(page.getByText("פריט 1 מתוך 1")).toBeVisible();
     await page.getByRole("button", { name: "אישור" }).click();
     await expect(page.getByText("הכל מאושר")).toBeVisible();
     await expect(page.getByText("מתוך")).toHaveCount(0);
