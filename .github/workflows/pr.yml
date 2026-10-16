@@ -28,6 +28,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       db: ${{ steps.paths.outputs.db }}
+      ui: ${{ steps.paths.outputs.ui }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +43,13 @@ jobs:
             echo "db=true" >> "$GITHUB_OUTPUT"
           else
             echo "db=false" >> "$GITHUB_OUTPUT"
+          fi
+          # FLOW-836: the app's source, its e2e specs, and the build, test and package config that the
+          # dev server and Playwright read. Script-only and doc-only changes skip the e2e job.
+          if grep -Eq '^(app/(src|e2e)/|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$)' <<<"$files"; then
+            echo "ui=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ui=false" >> "$GITHUB_OUTPUT"
           fi
 
   static:
@@ -141,6 +149,88 @@ jobs:
       - name: Related app unit and Storybook tests (shard ${{ matrix.shard }}/6)
         run: bash scripts/local-ci.sh --part tests --shard ${{ matrix.shard }}/6
 
+  # FLOW-836: main's Playwright suite on the PR, only for a UI change (see changes). Six shards, the same
+  # split and spec set as main's e2e-shard job: four shards of the main suite and two sweeps. Each shard
+  # starts its own local Supabase and its own dev server; the database part, pgTAP and the deploy checks stay
+  # on main. The runner jobs restore Playwright's browsers and apt packages from main's caches and never save.
+  e2e:
+    name: pr (e2e ${{ matrix.part }})
+    needs: [changes]
+    if: needs.changes.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { part: 1/4, shard: 1/4, filter: --grep-invert }
+          - { part: 2/4, shard: 2/4, filter: --grep-invert }
+          - { part: 3/4, shard: 3/4, filter: --grep-invert }
+          - { part: 4/4, shard: 4/4, filter: --grep-invert }
+          - { part: sweeps 1/2, shard: 1/2, filter: --grep }
+          - { part: sweeps 2/2, shard: 2/2, filter: --grep }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.118.0
+      # Supabase pulls and starts its containers while node, pnpm, and Playwright install.
+      - name: Start local Supabase in the background
+        run: |
+          (supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
+      - run: pnpm install --frozen-lockfile
+      - name: Restore Playwright browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-1.63.0
+      - name: Restore Playwright system packages
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flow-apt
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+      - name: Restore apt packages from the cache
+        run: bash scripts/ci-apt-cache.sh restore
+      - name: Install Playwright system dependencies
+        timeout-minutes: 8
+        run: bash scripts/ci-apt-cache.sh install
+      - name: Install Playwright browsers
+        timeout-minutes: 5
+        run: pnpm --filter @flow/app exec playwright install chromium
+      - name: Wait for local Supabase
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          while [ ! -f "$RUNNER_TEMP/supabase-start.exit" ]; do sleep 2; done
+          cat "$RUNNER_TEMP/supabase-start.log"
+          test "$(cat "$RUNNER_TEMP/supabase-start.exit")" = 0
+      - name: flow-mcp answers on the local API
+        run: bash scripts/mcp-function-smoke.sh
+      - name: Main Playwright suite against local Supabase (${{ matrix.part }})
+        run: |
+          set -euo pipefail
+          eval "$(bash scripts/ci-local-supabase-env.sh)"
+          pnpm test:e2e --shard=${{ matrix.shard }} ${{ matrix.filter }} "no enabled control is a no-op"
+
   # Local Supabase with every service but the database, the REST API, auth and the edge runtime.
   db:
     name: pr (db)
@@ -184,7 +274,7 @@ jobs:
   # The check a merge waits for. Every job it needs must have passed, or been skipped on purpose (db when
   # the diff does not touch supabase/). always(), not !cancelled(): a skipped job must not hide a failed one.
   pr:
-    needs: [changes, static, types, tests, db]
+    needs: [changes, static, types, tests, e2e, db]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -195,6 +285,8 @@ jobs:
           STATIC: ${{ needs.static.result }}
           TYPES: ${{ needs.types.result }}
           TESTS: ${{ needs.tests.result }}
+          E2E: ${{ needs.e2e.result }}
+          UI_CHANGED: ${{ needs.changes.outputs.ui }}
           DB: ${{ needs.db.result }}
           DB_CHANGED: ${{ needs.changes.outputs.db }}
         run: |
@@ -202,11 +294,17 @@ jobs:
           echo "static: $STATIC"
           echo "types: $TYPES"
           echo "tests: $TESTS"
+          echo "e2e: $E2E (the diff touches the app: $UI_CHANGED)"
           echo "db: $DB (the diff touches supabase/: $DB_CHANGED)"
           test "$CHANGES" = success
           test "$STATIC" = success
           test "$TYPES" = success
           test "$TESTS" = success
+          if [ "$UI_CHANGED" = true ]; then
+            test "$E2E" = success
+          else
+            test "$E2E" = skipped
+          fi
           if [ "$DB_CHANGED" = true ]; then
             test "$DB" = success
           else
