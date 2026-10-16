@@ -21,24 +21,6 @@ export const UNPAID_DISMISSED = "נסמן ידנית, או נחכה לתשלום
 
 type LocalState = { marked: string | null; gone: boolean; match: boolean };
 
-type RpcResult = { error: { message: string; code?: string } | null };
-
-/**
- * link_invoice_payment and dismiss_invoice_match come with 367-server, so the generated types do not
- * have them yet. No row carries a match until that server part ships, so no tap reaches these calls.
- */
-function untypedRpc(name: "link_invoice_payment" | "dismiss_invoice_match", args: Record<string, string>): Promise<RpcResult> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  const client = supabase as unknown as { rpc: (fn: string, params: Record<string, string>) => Promise<RpcResult> };
-  return client.rpc(name, args);
-}
-
-/**
- * The open invoices and every write on them: a mark (cash, cheque), the link to a bank deposit, and
- * "לא זה". A sample (Storybook, dev routes) keeps its state here; a live row takes its change in the
- * query cache at once and the server's answer replaces it on the refresh (decision 0180).
- */
 export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSummary) {
   const preview = useHomePreview();
   const unpaid = useUnpaidQuery(sample == null);
@@ -72,34 +54,6 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("set_invoice_paid", { p_id: id, p_paid: paid }));
-    },
-  });
-
-  const link = useWrite<{ id: string; transaction: string }>({
-    keys: ["unpaid"],
-    failure: "לא הצלחנו לחבר את התשלום.",
-    optimistic: ({ id }) => [{
-      key: ["unpaid", preview],
-      update: (old: unknown) => (Array.isArray(old) ? (old as UnpaidInvoice[]).filter((row) => row.id !== id) : old),
-    }],
-    onSuccess: () => { toast.show({ message: UNPAID_LINKED }); },
-    run: async ({ id, transaction }) => {
-      assertNoError(await untypedRpc("link_invoice_payment", { p_invoice: id, p_transaction: transaction }));
-    },
-  });
-
-  const dismiss = useWrite<{ id: string; transaction: string }>({
-    keys: ["unpaid"],
-    failure: "לא הצלחנו לשמור את התשובה.",
-    optimistic: ({ id }) => [{
-      key: ["unpaid", preview],
-      update: (old: unknown) => (Array.isArray(old)
-        ? (old as UnpaidInvoice[]).map((row) => (row.id === id ? { ...row, match: null } : row))
-        : old),
-    }],
-    onSuccess: () => { toast.show({ message: UNPAID_DISMISSED }); },
-    run: async ({ id, transaction }) => {
-      assertNoError(await untypedRpc("dismiss_invoice_match", { p_invoice: id, p_transaction: transaction }));
     },
   });
 
@@ -137,26 +91,18 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
   const setPaidRef = useRef(setPaid);
   setPaidRef.current = setPaid;
 
-  function linkMatch(id: string, transaction: string) {
-    if (holdWrites) return;
-    if (sample) {
-      setLocal((current) => ({ ...current, [id]: { marked: null, gone: true, match: false } }));
-      toast.show({ message: UNPAID_LINKED });
-      return;
-    }
-    if (blocked()) return;
-    link.mutate({ id, transaction });
+  // The bank match and its writes (link_invoice_payment, dismiss_invoice_match) come with 367-server.
+  // Until then no live row carries a match, so only the sample reaches these.
+  function linkMatch(id: string) {
+    if (holdWrites || sample == null) return;
+    setLocal((current) => ({ ...current, [id]: { marked: null, gone: true, match: false } }));
+    toast.show({ message: UNPAID_LINKED });
   }
 
-  function dismissMatch(id: string, transaction: string) {
-    if (holdWrites) return;
-    if (sample) {
-      setLocal((current) => ({ ...current, [id]: { marked: current[id]?.marked ?? null, gone: false, match: true } }));
-      toast.show({ message: UNPAID_DISMISSED });
-      return;
-    }
-    if (blocked()) return;
-    dismiss.mutate({ id, transaction });
+  function dismissMatch(id: string) {
+    if (holdWrites || sample == null) return;
+    setLocal((current) => ({ ...current, [id]: { marked: current[id]?.marked ?? null, gone: false, match: true } }));
+    toast.show({ message: UNPAID_DISMISSED });
   }
 
   function startSync() {

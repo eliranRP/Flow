@@ -83,13 +83,13 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
                   className="ui-inv-match-yes"
                   disabled={holdWrites}
                   onClick={() => {
-                    actions.linkMatch(row.id, match.transaction_id);
+                    actions.linkMatch(row.id);
                     void navigate(`/unpaid${search}`);
                   }}
                 >
                   זה התשלום
                 </Button>
-                <Button variant="secondary" className="ui-inv-match-no" disabled={holdWrites} onClick={() => { actions.dismissMatch(row.id, match.transaction_id); }}>
+                <Button variant="secondary" className="ui-inv-match-no" disabled={holdWrites} onClick={() => { actions.dismissMatch(row.id); }}>
                   לא זה
                 </Button>
               </div>
