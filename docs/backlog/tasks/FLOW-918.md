@@ -1,5 +1,5 @@
 <a id="flow-915"></a>
-# FLOW-915 · Port the deleted SUMIT and Mercury row suites onto the connection pages
+# FLOW-918 · Port the deleted SUMIT and Mercury row suites onto the connection pages
 - **Type:** Test · **Status:** ready · **Depends on:** [FLOW-512](FLOW-512.md) · **Source:** Haiku review of PR #650 (round 1), finding 3: four suites were removed with the old row components and not replaced.
 - **Files:** `app/src/screens/connection-page.test.tsx`, `app/src/ui/connector-row.test.tsx`, `app/src/setup/sumit-step.test.tsx` (the FLOW-505 setup cases stay here), new tests next to the connection pages.
 - [ ] Port the focus cases from the old SUMIT row suite onto the connection pages: focus returns to the row after ניתוק from either sheet, a successful retry keeps focus on the row, and a retry that fails again keeps focus on ניסיון חוזר.
