@@ -4,12 +4,13 @@ import type { EntryDraft } from "./add-entry";
 
 export const SAMPLE_CURRENCY = "USD";
 
+// The chips wrap as the board's do: the selected (cash, cheque) project is the first, and the names are about the board's length.
 export const SAMPLE_PROJECTS = [
-  { id: "sp-1", name: "Lakeview Duplex" },
-  { id: "sp-2", name: "Harbor Point" },
-  { id: "sp-3", name: "Willow Creek" },
-  { id: "sp-4", name: "Summit Row" },
-  { id: "sp-5", name: "Birch Lane" },
+  { id: "sp-3", name: "Elm Yard" },
+  { id: "sp-1", name: "Fern Rd" },
+  { id: "sp-5", name: "Larch Ave" },
+  { id: "sp-2", name: "Quill Ct" },
+  { id: "sp-4", name: "Ashgrove" },
 ];
 
 export const SAMPLE_CATEGORIES = [
@@ -34,4 +35,4 @@ export const SAMPLE_ENTRY_FILLS: Record<string, SampleEntryFill> = {
 };
 
 /** FLOW-369: `?entry=project` opens the + sheet from this invented project (the board's from-project frame). */
-export const SAMPLE_FROM_PROJECT = { id: "sp-5", name: "Birch Lane" };
+export const SAMPLE_FROM_PROJECT = { id: "sp-5", name: "Larch Ave" };
