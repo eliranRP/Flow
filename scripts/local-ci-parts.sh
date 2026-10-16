@@ -69,7 +69,10 @@ static_part() {
 typecheck_part() {
   local info dir script
   info="$(cd "$cache" && pwd)/tsbuildinfo"
-  node scripts/check-unused-app-code.mjs && node scripts/check-unused-css.mjs && node scripts/check-css-tokens.mjs # FLOW-819, 822, 363: no dead code, CSS or raw CSS values.
+  # FLOW-819, 822, 363: no dead code, CSS or raw CSS values. Separate statements, not an and-list: errexit does not stop an and-list early.
+  node scripts/check-unused-app-code.mjs
+  node scripts/check-unused-css.mjs
+  node scripts/check-css-tokens.mjs
   if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
     != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
     pnpm typecheck
@@ -203,6 +206,57 @@ slice_db() {
   bash scripts/check-db-types.sh
 }
 
+# CI v2: the PR's local check, run in the background after a push. It runs the static, types and tests slices
+# at the same time, then writes the stamp for this exact commit to .git/flow-ci-stamp.md. CI_STAMP_PR=<number>
+# also posts the stamp as a comment on that PR. The e2e, clip-check and board-proof slices join it later.
+slice_ready() {
+  local dir name phases stamp failed=0
+  dir="$(mktemp -d)"
+  phases="$dir/phases.txt"
+  for name in static types tests; do
+    (
+      # Not in an if or || list: bash ignores errexit there, even inside the subshell, so a
+      # failing step in the middle of a slice would not stop it.
+      t0="$(date +%s)"
+      set +e
+      ( set -euo pipefail; "slice_$name" ) >"$dir/$name.log" 2>&1
+      rc=$?
+      if (( rc == 0 )); then r=pass; else r=fail; fi
+      echo "$name $r $(( $(date +%s) - t0 ))" >>"$phases"
+    ) &
+  done
+  wait
+  # A slice whose subshell died before its line was written is a failure, never a missing row.
+  for name in static types tests; do
+    grep -q "^$name " "$phases" || echo "$name fail 0" >>"$phases"
+  done
+  sort -o "$phases" "$phases"
+  stamp="$(git rev-parse --git-dir)/flow-ci-stamp.md"
+  # A stamp that fails to write or post is reported, but the logs of a failed slice still print and the
+  # temp directory still goes.
+  # Written beside the stamp and moved into place only on success, so a failed write keeps the last stamp.
+  if node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp.tmp" && mv "$stamp.tmp" "$stamp"; then
+    cat "$stamp"
+    if [[ -n "${CI_STAMP_PR:-}" ]]; then
+      gh pr comment "$CI_STAMP_PR" --body-file "$stamp" || echo "local-ci: could not post the stamp on PR $CI_STAMP_PR." >&2
+    fi
+  else
+    echo "local-ci: could not write the stamp." >&2
+    failed=1
+  fi
+  if grep -q ' fail ' "$phases"; then
+    failed=1
+    for name in static types tests; do
+      if grep -q "^$name fail " "$phases"; then
+        echo "---- local-ci: $name failed ----"
+        cat "$dir/$name.log" 2>/dev/null || true
+      fi
+    done
+  fi
+  rm -rf "$dir"
+  return "$failed"
+}
+
 # Runs the slice named by $slice, then exits from the caller. A failing check fails the run (set -e).
 run_part() {
   mode="part $slice"
@@ -225,6 +279,11 @@ run_part() {
       phase "tests: the app unit and Storybook tests this change reaches${shard:+, shard $shard}"
       slice_tests
       echo "local-ci: tests passed${shard:+ for shard $shard}."
+      ;;
+    ready)
+      phase "ready: static, types and tests at the same time, then the stamp"
+      slice_ready
+      echo "local-ci: ready passed; the stamp for $head is in .git/flow-ci-stamp.md."
       ;;
     db)
       phase "db: local Supabase, a fresh database, the flow-mcp smoke, pgTAP and the db types"
