@@ -32,7 +32,7 @@ export interface SampleEntryFill {
 
 export const SAMPLE_ENTRY_FILLS: Record<string, SampleEntryFill> = {
   cash: { values: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cash", projectId: "sp-3", categoryId: "sc-2" } },
-  cheque: { values: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cheque", projectId: "sp-3", categoryId: "sc-2" } },
+  cheque: { values: { amount: "2400.00", payee: "Rivera Drywall", date: "11/10/2026", method: "cheque", cheque: "1048", projectId: "sp-3", categoryId: "sc-2" } },
 };
 
 /** FLOW-369: `?entry=project` opens the + sheet from this invented project (the board's from-project frame). */
