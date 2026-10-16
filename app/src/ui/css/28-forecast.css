@@ -66,7 +66,7 @@
 .ui-forecast-big {
   margin: var(--space-4) 0 0;
   font-size: var(--type-hero-size);
-  font-weight: var(--type-hero-weight);
+  font-weight: var(--type-amount-weight);
   line-height: var(--type-hero-line);
   font-variant-numeric: tabular-nums lining-nums;
 }
@@ -95,6 +95,10 @@
 
 .ui-forecast-section-total {
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-forecast-total-out {
+  color: var(--color-text-muted);
 }
 
 .ui-forecast-list {
@@ -151,8 +155,8 @@
 }
 
 .ui-forecast-name {
-  font-size: var(--type-name-size);
-  font-weight: var(--type-name-weight);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-forecast-meta {

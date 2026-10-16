@@ -6,6 +6,8 @@ import { daysLeftInMonth, type ForecastPatch, type MonthForecast, priorPatch, us
 import { useCashMonthsQuery } from "../use-cash";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
+import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
+import { EmptyState } from "../ui/empty-state";
 import { useToast } from "../ui/toast";
 import { ForecastItemSheet } from "./forecast-sheet";
 import { monthName } from "./home-parts";
@@ -159,7 +161,9 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
         <p className="ui-forecast-error t-hint" role="alert">לא הצלחנו לטעון את הצפי.</p>
       ) : null}
       {data == null && !query.isError ? (
-        <p className="ui-forecast-loading t-hint" aria-busy="true">טוען את הצפי…</p>
+        <DelayedSkeleton>
+          <ListSkeleton />
+        </DelayedSkeleton>
       ) : null}
       {build == null ? null : (
         <>
@@ -175,7 +179,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
           <section className="ui-forecast-section">
             <h2 className="ui-forecast-section-head">
               <span>צפוי לצאת</span>
-              <span className="ui-forecast-section-total">{signed(build.expenseTotal, "−")}</span>
+              <span className="ui-forecast-section-total ui-forecast-total-out">{signed(build.expenseTotal, "−")}</span>
             </h2>
             <ul className="ui-forecast-list">
               {expense.map((item) => (
@@ -184,8 +188,10 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
               {build.small.length > 0 ? (
                 <li className="ui-forecast-li">
                   <button type="button" className="ui-forecast-row ui-forecast-small" aria-expanded={smallOpen} onClick={() => { setSmallOpen((value) => !value); }}>
+                    <span className="ui-forecast-initial" aria-hidden="true">{`+${String(build.small.length)}`}</span>
                     <span className="ui-forecast-text">
-                      <span className="ui-forecast-name">{`+${String(build.small.length)} · חיובים קבועים קטנים`}</span>
+                      <span className="ui-forecast-name">חיובים קבועים קטנים</span>
+                      <span className="ui-forecast-meta">{build.small.length === 1 ? "חיוב אחד" : `${String(build.small.length)} חיובים`}</span>
                     </span>
                     <span className="ui-forecast-amount ui-forecast-out">{signed(smallTotal, "−")}</span>
                   </button>
@@ -200,6 +206,9 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
               ) : null}
             </ul>
           </section>
+          {income.length + expense.length + build.small.length === 0 && moved.length === 0 ? (
+            <EmptyState title="הכל הגיע החודש" body="כל החיובים וההכנסות הצפויים לחודש נכנסו לחשבון." />
+          ) : null}
           {moved.length > 0 ? (
             <section className="ui-forecast-section ui-forecast-moved">
               <h2 className="ui-forecast-section-head">

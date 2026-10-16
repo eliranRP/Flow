@@ -3,6 +3,7 @@ import { monthForecastSample, type ForecastSampleKind } from "../forecast-sample
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { ForecastScreen } from "./forecast-screen";
+import { ForecastItemSheet } from "./forecast-sheet";
 
 const meta: Meta<{ kind: ForecastSampleKind }> = {
   title: "Screens/Routes",
@@ -25,4 +26,13 @@ function Forecast({ kind }: { kind: ForecastSampleKind }) {
 
 export const Positive: Story = { name: "Forecast · positive", args: { kind: "positive" }, render: (args) => <Forecast kind={args.kind} /> };
 export const Negative: Story = { name: "Forecast · negative", args: { kind: "negative" }, render: (args) => <Forecast kind={args.kind} /> };
-export const MovedItem: Story = { name: "Forecast · moved to next month", args: { kind: "moved" }, render: (args) => <Forecast kind={args.kind} /> };
+/** After a change: the moved row sits in לא החודש and the reset line counts it (FLOW-141). */
+export const MovedItem: Story = { name: "Forecast · moved to next month, reset line", args: { kind: "moved" }, render: (args) => <Forecast kind={args.kind} /> };
+
+/** The change sheet on the largest income row. Its save and the moved state are the screen's. */
+function ChangeSheet({ kind }: { kind: ForecastSampleKind }) {
+  const item = monthForecastSample(kind).data.build.income[0] ?? null;
+  return <ForecastItemSheet item={item} today="2026-10-16" onOpenChange={() => undefined} onSave={() => undefined} />;
+}
+
+export const ChangeItem: Story = { name: "Forecast · change an item", args: { kind: "positive" }, render: (args) => <ChangeSheet kind={args.kind} /> };
