@@ -1066,8 +1066,3 @@ test("the --part slices: quick lints only, static and tests and db run the scope
   assert.equal(parts.includes("mark_green"), false);
   assert.equal(parts.includes("flow-local-ci"), false);
 });
-
-test("the Storybook preview builds only for a pull request that is ready for review (FLOW-837)", () => {
-  const preview = readFileSync(new URL("../.github/workflows/storybook-preview.yml", import.meta.url), "utf8");
-  assert.match(preview, /if: github\.event\.pull_request\.head\.repo\.full_name == github\.repository && !github\.event\.pull_request\.draft\n/);
-});

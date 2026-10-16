@@ -207,7 +207,7 @@ slice_db() {
 # at the same time, then writes the stamp for this exact commit to .git/flow-ci-stamp.md. CI_STAMP_PR=<number>
 # also posts the stamp as a comment on that PR. The e2e, clip-check and board-proof slices join it later.
 slice_ready() {
-  local dir name phases stamp
+  local dir name phases stamp failed=0
   dir="$(mktemp -d)"
   phases="$dir/phases.txt"
   for name in static types tests; do
@@ -218,6 +218,10 @@ slice_ready() {
     ) &
   done
   wait
+  # A slice whose subshell died before its line was written is a failure, never a missing row.
+  for name in static types tests; do
+    grep -q "^$name " "$phases" || echo "$name fail 0" >>"$phases"
+  done
   sort -o "$phases" "$phases"
   stamp="$(git rev-parse --git-dir)/flow-ci-stamp.md"
   node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp"
@@ -226,14 +230,16 @@ slice_ready() {
     gh pr comment "$CI_STAMP_PR" --body-file "$stamp"
   fi
   if grep -q ' fail ' "$phases"; then
+    failed=1
     for name in static types tests; do
       if grep -q "^$name fail " "$phases"; then
         echo "---- local-ci: $name failed ----"
-        cat "$dir/$name.log"
+        cat "$dir/$name.log" 2>/dev/null || true
       fi
     done
-    exit 1
   fi
+  rm -rf "$dir"
+  return "$failed"
 }
 
 # Runs the slice named by $slice, then exits from the caller. A failing check fails the run (set -e).
