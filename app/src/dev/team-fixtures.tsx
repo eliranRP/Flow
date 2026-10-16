@@ -23,6 +23,21 @@ function SampleTeam({ options, children }: { options: SampleTeamOptions; childre
   );
 }
 
+/** Dev-only: `?email=1` types the board's example address into the open invite sheet, as a reviewer would. */
+function fillInviteEmail() {
+  const started = Date.now();
+  const timer = window.setInterval(() => {
+    const field = document.querySelector<HTMLInputElement>('[role="dialog"] input[type="email"], [role="dialog"] input');
+    if (field) {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, "partner@example.com");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      window.clearInterval(timer);
+    } else if (Date.now() - started > 4000) {
+      window.clearInterval(timer);
+    }
+  }, 100);
+}
+
 /** Dev-only: `?sheet=invite` presses the page's invite button once the list is in, so a proof captures the open sheet. */
 function OpenInviteSheet() {
   const [params] = useSearchParams();
@@ -34,6 +49,7 @@ function OpenInviteSheet() {
       if (button) {
         button.click();
         window.clearInterval(timer);
+        if (params.get("email") === "1") fillInviteEmail();
       } else if (Date.now() - started > 4000) {
         window.clearInterval(timer);
       }
