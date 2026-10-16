@@ -431,20 +431,31 @@ export function LineSplitEditor({
                 <SwipeRow key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
                   <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
                     <div className="ui-lsplit-text">
-                      <button
-                        type="button"
-                        className="ui-lsplit-pick ui-hit"
-                        aria-label={`${name}${reversal ? ", החזר" : ""}, ${project}, שינוי`}
-                        aria-describedby={message ? messageId : undefined}
-                        onClick={(event) => { openPicker({ kind: "part", key: part.key }, needsProject ? "project" : "category", event.currentTarget); }}
-                      >
-                        <span className="ui-lsplit-title">
-                          {/* The full name is in the button's label. */}
-                          <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
-                          {reversal ? <ReversalTag /> : null}
-                        </span>
-                        <span className={needsProject ? "ui-lsplit-project ui-lsplit-project-error" : "ui-lsplit-project"}>{project}</span>
-                      </button>
+                      {/* FLOW-370: two pickers side by side, as on the board: category, then project. */}
+                      <div className="ui-lsplit-pickers">
+                        <button
+                          type="button"
+                          className="ui-lsplit-pick ui-lsplit-pick-project ui-hit"
+                          aria-label={`${project}, פרויקט, שינוי`}
+                          aria-describedby={message ? messageId : undefined}
+                          onClick={(event) => { openPicker({ kind: "part", key: part.key }, "project", event.currentTarget); }}
+                        >
+                          <span className={needsProject ? "ui-lsplit-project ui-lsplit-project-error" : "ui-lsplit-project"}>{project}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="ui-lsplit-pick ui-hit"
+                          aria-label={`${name}${reversal ? ", החזר" : ""}, קטגוריה, שינוי`}
+                          aria-describedby={message ? messageId : undefined}
+                          onClick={(event) => { openPicker({ kind: "part", key: part.key }, "category", event.currentTarget); }}
+                        >
+                          <span className="ui-lsplit-title">
+                            {/* The full name is in the button's label. */}
+                            <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
+                            {reversal ? <ReversalTag /> : null}
+                          </span>
+                        </button>
+                      </div>
                       <SplitRemoveButton name={name} onRemove={() => { removePart(part.key); }} />
                     </div>
                     <div className="ui-lsplit-end ui-lsplit-end-entry">

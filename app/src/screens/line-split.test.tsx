@@ -106,7 +106,7 @@ describe("split by category editor (FLOW-325)", () => {
       api,
       parts: [{ key: "a", categoryId: "c-build", projectId: null, unit: "percent", value: "40" }],
     });
-    const pick = screen.getByRole("button", { name: /^חומרי בניין, החזר, פרויקט · חובה בהחזר/ });
+    const pick = screen.getByRole("button", { name: /^פרויקט · חובה בהחזר, פרויקט, שינוי/ });
     expect(pick).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     // FLOW-343: said once, on the part's red line. The hold line keeps it for screen readers only.
@@ -139,8 +139,8 @@ describe("split by category editor (FLOW-325)", () => {
       categories: [...SAMPLE_SPLIT_CATEGORIES, { id: "c-owner", name: "משיכות בעלים", kind: "expense", hidden: false, excluded_from_pnl: true }],
       parts: [{ key: "a", categoryId: "c-owner", projectId: null, unit: "percent", value: "40" }],
     });
-    expect(screen.getByRole("button", { name: /^משיכות בעלים, החזר, משרד · פרויקט השורה/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^משיכות בעלים, החזר/ }));
+    expect(screen.getByRole("button", { name: /^משרד · פרויקט השורה, פרויקט, שינוי/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^משיכות בעלים, החזר, קטגוריה, שינוי/ }));
     // The part's own kept-out category is the only kept-out reversal listed (0138), and it is the saved value.
     // Keeping the line's project without a project pick is covered by the reversalNeedsProject tests in src/line-split.test.ts.
     const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
@@ -307,7 +307,7 @@ describe("split by category editor (FLOW-325)", () => {
     const field = screen.getAllByLabelText("סכום, חשמל")[0];
     const id = field?.getAttribute("aria-describedby") ?? "";
     expect(document.getElementById(id)).toHaveTextContent("הקטגוריה והפרויקט האלה כבר בחלק אחר.");
-    expect(screen.getAllByRole("button", { name: /^חשמל, פרויקט הרצליה, שינוי/ })[0]).toHaveAttribute("aria-describedby", id);
+    expect(screen.getAllByRole("button", { name: /^חשמל, קטגוריה, שינוי/ })[0]).toHaveAttribute("aria-describedby", id);
   });
 
   it("the rest row's message sits outside its button and describes it", () => {
@@ -322,7 +322,7 @@ describe("split by category editor (FLOW-325)", () => {
 
   it("the picker gives focus back to the part that opened it", async () => {
     showEditor({ parts: expenseParts });
-    const pick = screen.getByRole("button", { name: /^ביטוח, פרויקט רעננה, שינוי/ });
+    const pick = screen.getByRole("button", { name: /^ביטוח, קטגוריה, שינוי/ });
     pick.focus();
     fireEvent.click(pick);
     const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
