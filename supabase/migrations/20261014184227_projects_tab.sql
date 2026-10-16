@@ -54,7 +54,8 @@ $$;
 revoke all on function private.project_is_empty(uuid, uuid) from public, anon, authenticated;
 
 -- upsert_project with the type. The old four-argument version goes; the five-argument one
--- keeps every four-argument call working (p_type defaults to null).
+-- keeps every four-argument call working (p_type defaults to null: an update keeps the stored
+-- type, so a finish or a rename does not clear it).
 drop function public.upsert_project(uuid, text, bigint, text);
 
 create function public.upsert_project(
@@ -108,7 +109,8 @@ begin
   set name = clean,
       budget_agorot = p_budget_agorot,
       status = next_status,
-      state_label = clean_type,
+      -- A null p_type keeps the stored type (finish and rename callers do not send one); '' clears it.
+      state_label = case when p_type is null then p.state_label else clean_type end,
       finished_on = case when next_status = 'finished' then coalesce(p.finished_on, today) end
   where p.id = p_id and p.company_id = cid
   returning p.id into rid;
@@ -543,7 +545,8 @@ begin
       response := private.mcp_error('not_found', 'not found');
     else
       new_name := case when p_patch ? 'name' then p_patch->>'name' else cur.name end;
-      new_type := case when p_patch ? 'type' then p_patch->>'type' else cur.state_label end;
+      -- An empty type clears it (a null type in the patch means no type, which upsert_project reads as keep).
+      new_type := case when p_patch ? 'type' then coalesce(p_patch->>'type', '') else cur.state_label end;
       new_budget := case when p_patch ? 'budget_minor' then (p_patch->>'budget_minor')::bigint else cur.budget_agorot end;
       new_status := case when p_patch ? 'status' then p_patch->>'status' else cur.status::text end;
       before_state := jsonb_build_object(

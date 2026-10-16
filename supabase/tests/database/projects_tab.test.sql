@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(42);
+select plan(43);
 
 do $users$
 begin
@@ -122,6 +122,13 @@ select is(
   null::date,
   'reactivating a project clears finished_on'
 );
+select public.upsert_project(pg_temp.id('lark'), 'Lark Hill', 500000, 'finished');
+select is(
+  (select state_label from public.projects where id = pg_temp.id('lark')),
+  'flip',
+  'an update without a type keeps the stored type'
+);
+select public.upsert_project(pg_temp.id('lark'), 'Lark Hill', 500000, 'active', 'flip');
 
 -- The list's figures: one month, per project, overhead and unassigned.
 insert into pt_out (label, body)
