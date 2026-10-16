@@ -57,10 +57,10 @@ type SettledToast = {
 };
 
 const GAP = 8;
+/** FLOW-363 (3b): the panel holds the space above the handle, so a sheet the toast fits above keeps a 0px surface pad. */
+const BASE_PAD = 0;
 /** A confirmation sits --space-4 above the floor (decision 0182). */
 const FLOOR_GAP = 16;
-/** The surface's resting pad: the panel's top is in 08 (FLOW-363 3b), so the surface adds none. */
-const REST_PAD = 0;
 
 async function setSafe(page: Page, safe: number): Promise<void> {
   await page.evaluate((inset) => {
@@ -210,13 +210,13 @@ function assertFade(samples: ToastFrame[]): void {
 
 function assertAboveSheet(settled: SettledToast): void {
   expect(Math.abs(settled.toastBottom - (settled.sheetTop - GAP))).toBeLessThanOrEqual(1);
-  expect(Math.abs(settled.pad - REST_PAD)).toBeLessThanOrEqual(1);
+  expect(Math.abs(settled.pad - BASE_PAD)).toBeLessThanOrEqual(1);
 }
 
 /** A confirmation sits --space-4 above the floor, and the sheet takes no pad for it (decision 0182). */
 function assertAboveFloor(settled: SettledToast): void {
   expect(Math.abs(settled.toastBottom + FLOOR_GAP - settled.floorTop)).toBeLessThanOrEqual(1);
-  expect(Math.abs(settled.pad - REST_PAD)).toBeLessThanOrEqual(1);
+  expect(Math.abs(settled.pad - BASE_PAD)).toBeLessThanOrEqual(1);
 }
 
 async function openCategory(page: Page, safe: number): Promise<void> {
@@ -247,7 +247,7 @@ for (const viewport of viewports) {
       assertFade(samples);
       // The category picker is a fit sheet (change-sheet.tsx), so the toast sits above it with no pad.
       assertAboveSheet(settled);
-      expect(samples.every((sample) => Math.abs(sample.pad - REST_PAD) <= 1)).toBe(true);
+      expect(samples.every((sample) => Math.abs(sample.pad - BASE_PAD) <= 1)).toBe(true);
     });
 
     test(`first show after the sheet settles at ${label}`, async ({ page }) => {
@@ -327,7 +327,7 @@ for (const viewport of viewports) {
       assertAboveSheet(settled);
       const partial = first.filter((sample) => sample.opacity > 0.02 && sample.opacity < 0.9);
       expect(partial).toHaveLength(0);
-      expect(first.every((sample) => Math.abs(sample.pad - REST_PAD) <= 1)).toBe(true);
+      expect(first.every((sample) => Math.abs(sample.pad - BASE_PAD) <= 1)).toBe(true);
       await armSampler(page, safe, 600);
       await page.getByRole("button", { name: "חזרה" }).click();
       await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
@@ -337,7 +337,7 @@ for (const viewport of viewports) {
       expect(short.length).toBeGreaterThan(0);
       assertVisiblePosition(short);
       assertAboveSheet(above);
-      expect(short.every((sample) => sample.pad <= Math.max(above.pad, REST_PAD) + 1)).toBe(true);
+      expect(short.every((sample) => sample.pad <= Math.max(above.pad, BASE_PAD) + 1)).toBe(true);
     });
   }
 }
@@ -363,7 +363,7 @@ for (const viewport of viewports) {
     await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
     const samples = await readFrames(page);
     const settled = await readSettled(page);
-    expect(settled.pad).toBeGreaterThan(REST_PAD + 1);
+    expect(settled.pad).toBeGreaterThan(BASE_PAD + 1);
     assertFade(samples);
     const shown = samples.findIndex((sample) => sample.opacity > 0.02);
     expect(shown).toBeGreaterThan(0);
