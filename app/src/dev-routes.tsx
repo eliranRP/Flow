@@ -674,7 +674,6 @@ export function DevProjectDetail() {
 }
 
 /** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
-/** FLOW-140 slice 2: the project month page on the Juniper Ct October fixture (the ProfitMonth frame). */
 export function DevProjectProfit() {
   const [params] = useSearchParams();
   return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;

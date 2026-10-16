@@ -8,7 +8,7 @@ import type { ProjectProfitSample } from "../screens/project-profit-screen";
  * newest rows are the board's, the other fourteen split the rest.
  */
 const OPEN_AND_RECENT: [string, number, number][] = [
-  ["2026-10", 630_200, 250_600],
+  ["2026-10", 630_200, 250_640],
   ["2026-09", 415_000, 174_000],
   ["2026-08", 415_000, 176_000],
   ["2026-07", 415_000, 170_000],

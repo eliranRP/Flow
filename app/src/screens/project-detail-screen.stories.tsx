@@ -223,7 +223,6 @@ const periodProject: NonNullable<ProjectDetailData> = {
   ],
 };
 
-/** A month from the "לפי חודש" list. The row still shows: the page lists the whole project (FLOW-337). */
 /** FLOW-404. The השקעה card under the categories, with invented figures. */
 export const ProjectInvestment: Story = {
   name: "Project with investment card",
