@@ -80,3 +80,4 @@ export type { TxnStepRowProps } from "./txn-step-row";
 export { ReviewCount, reviewCountDigits } from "./review-count";
 export { ShareAmount } from "./share-amount";
 export { ChargeMonthBars, PartyChargesBody, PartyChargesSection, PartyChargesSheet } from "./related-charges";
+export { PartsBar, type BarPart, type PartTone } from "./parts-bar";
