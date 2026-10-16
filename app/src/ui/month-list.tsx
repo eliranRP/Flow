@@ -181,7 +181,7 @@ function MonthSection<T>({
     <div className="ui-month" role={head ? "group" : undefined} aria-labelledby={head ? id : undefined}>
       {head && count != null ? (
         <GroupHead id={id} title={group.title} count={count}>
-          {showTotals && !net ? shown.map((total) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={false} />) : null}
+          {shown.map((total) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={false} />)}
         </GroupHead>
       ) : head ? (
         <div className="ui-month-head">
