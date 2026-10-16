@@ -619,6 +619,28 @@ Screens: `09a-onboarding` (sign-in), `er-03-google-cancelled`, `er-04-google-fai
 - **After sign-in:** a new account goes to 09b (company details). A returning account goes straight to Home. Use the Google name only as a greeting ("בוקר טוב, אלירן").
 - **Errors:** see §7.20 (`er-03`, `er-04`).
 
+
+### 7.25 Counted-in row and sheet (spec; built in FLOW-366 and FLOW-513)
+FLOW-363 (4) wrote this down. The code waits for its first callers, the transaction page (FLOW-366, the line) and the category sheet (FLOW-513), so no `counted-in` module exists yet.
+- **Row (line):** an IconRow (`ui/icon-row.tsx`) with `ChartIcon`, label "נספר ב" and a chevron. It opens the sheet. Value copy: "רווח ותזרים" (both on), "תזרים בלבד · <reason>", "רווח בלבד · לא בתזרים", or "לא נספר". The value is `--color-text` when both are on, otherwise `--color-accent-text`. [0170](../../docs/decisions/0170-pnl-follows-company-basis.md).
+- **Row (category):** label "נספרת ב", on `--color-raised`, radius 16, min-height 60, padding 12 14, value 17/400. Copy: "רווח ותזרים", "תזרים בלבד · הוצאה מהרווח", "תזרים · שיפוץ, לא ברווח החודשי", or "לא נספרת".
+- **Line sheet:** surface, padding 10 16 28, gap 10. Title "איפה השורה נספרת" (sheet title role, 20/600). ✕ is a 44px target with a 22px glyph in text-secondary. Two switch rows, each on `--color-raised`, radius 14, min-height 64, padding 10 14, gap 12: "נספר ברווח" (sub: the P&L reason) and "נספר בתזרים" (sub "כסף שזז בבנק. כבוי רק להעברות בין החשבונות שלך"). Title 16/400 (no role; body 17 or btn-2 16/500 are the nearest), sub 12 (caption 13 is the nearest). Toggle 46×28 track, 22px white knob, on `--color-accent`, off the app's switch-off token, knob 150ms. Footer 13 in `--color-text-muted`: "רק השורה הזו. הקטגוריה לא משתנה."
+- **Line toasts:** "הוצא מהרווח", "נספר ברווח", "הוצא מהתזרים", "נספר בתזרים".
+- **Category sheet:** title "איפה הקטגוריה נספרת", sub "חל על כל N התנועות של <name>". Three switches, "נספרת ברווח", "נספרת בתזרים" and "נספרת בשיפוץ" (expense only). Off track `#3A3350` (no token). The knob side is opposite to the line sheet's (open question 12 in FLOW-363).
+- **Decided:** switches, not three choices, because the board frames in use draw switches (0170). The row's copy and the toasts come from the board's Lines and Settings frames.
+
+### 7.26 Connection page (spec; built in FLOW-512)
+FLOW-363 (4) wrote this down. The page is `connection-page.tsx`, built in FLOW-512 for SUMIT, Mercury and MCP. It composes the page header, StepList (`ui-install-num`), the problem box, a TextField with show and hide, a CodeField, the primary and secondary Button, and facts rows.
+- **Page and header:** padding 12 16 28 (the app's side is 20). Back is 16/500 in `--color-accent-text` with a 44px target and a 20px chevron. The title is 32/600 with line-height 1.2. The subtitle is 15 in `--color-text-muted`. Content gap 14.
+- **Steps:** the section head is 15/500 in `--color-text-secondary`. The card is surface, radius 16 (the app's card radius is 20), padding 16, gap 10. A step is 15 with line-height 1.5. The number circle is 22, radius 11, tint background, accent text, 12/500 (the board draws 24 and 13/500).
+- **Problem box:** padding 14, radius 14, tint background, 15 with line-height 1.5. The copy comes from the connection's broken text, as `connect-sheet.tsx`'s authReconnect lead did.
+- **Show and hide:** "הצגה" and "הסתרה", 36px high, padding-inline 10, radius 10, tint, accent text, 14/500 (`--type-chip`; the board's 13/500 has no role).
+- **Copy:** `CodeField` with a "העתקה" pill (§7.11). The pill is 36 high in a 44px hit area.
+- **Connect button:** the primary Button, 52px pill. Disabled uses `--color-disabled-bg` and `--color-disabled-text` (the board's #6A627A has no token). Label "מתחבר…" while busy, otherwise "חיבור מחדש" or "חיבור".
+- **Connected:** facts rows min-height 44, 15 text, label in text-secondary, line divider, card padding 6 16. A secondary Button, 52px, outline `--color-outline-secondary`. "החלפת מפתח API" is 15/400 in accent text. "ניתוק" is 15/400 in `--color-signal-soft`.
+- **Motion:** push 280 in and 220 out (the plan wins over the board's 300 and 260). Page enter is 280 with an 8px rise and a 40ms stagger. Press is opacity .72 and scale .985. Reduced motion turns everything off.
+- **Values with no token or role (open question 10 in FLOW-363):** #3A3350 (secondary border and category switch off), #6A627A (disabled text), the section head 15/500, the step number 12/500, the side padding 16, and the card radius 16. They are recorded in the design log, not in tokens.
+
 ---
 
 ## 8. States every screen must handle
