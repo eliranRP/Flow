@@ -34,6 +34,7 @@ import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { wantsSearchFocus } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
+import { TabBar } from "../ui/tab-bar";
 import { ListSkeleton } from "../ui/skeleton";
 import type { StatementDetail } from "../ui/statement";
 import { SearchFilterSheet, activeFilterCount, type SearchSheetProject } from "./search-filter-sheet";
@@ -111,7 +112,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   });
   const [filters, setFilters] = useState<SearchFilters>(initial.filters);
   const [text, setText] = useState(initial.text);
-  const [recent, setRecent] = useState<string[]>(() => readRecentSearches());
+  const [recent, setRecent] = useState<string[]>(() => (boardSample && searchE2e ? [...searchE2e.boardRecents] : readRecentSearches()));
   // `?sheet=filters` opens the sheet on arrival: a dev-only query the board proofs use.
   const [sheetOpen, setSheetOpen] = useState(() => import.meta.env.DEV && new URLSearchParams(location.search).get("sheet") === "filters");
   const [draft, setDraft] = useState<SearchFilters>(filters);
@@ -275,7 +276,12 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 
   let body;
   if (!filtered) {
-    body = <SearchStart recent={recent} checks={checks} onRecent={search} />;
+    body = (
+      <>
+        <SearchStart recent={recent} checks={checks} onRecent={search} />
+        <TabBar section="home" />
+      </>
+    );
   } else if (phase.kind === "loading") {
     body = <ListSkeleton />;
   } else if (phase.kind === "error") {

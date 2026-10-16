@@ -143,3 +143,6 @@ export function searchBoardFixture(): { projects: Array<(typeof boardProjects)[n
     rows,
   };
 }
+
+/** The board's last three searches (invented, same length), shown on the proof start only. */
+export const boardRecents = ["lumber yard", "Brightline", "ביטוח"] as const;

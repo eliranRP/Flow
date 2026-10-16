@@ -149,7 +149,7 @@
 .ui-search-heading {
   margin: 0;
   padding-block: var(--space-5) var(--space-2);
-  font-size: var(--type-title-2-size);
+  font-size: var(--type-heading-size);
   font-weight: var(--type-title-3-weight);
   color: var(--color-text);
 }
@@ -181,6 +181,11 @@
 }
 
 .ui-search-recent-icon,
+.ui-search-check-chevron svg,
+.ui-search-project-chevron svg {
+  transform: scaleX(-1);
+}
+
 .ui-search-check-chevron {
   display: inline-flex;
   flex: none;

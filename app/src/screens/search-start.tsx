@@ -1,4 +1,4 @@
-import { BackIcon, SearchIcon } from "../ui/icons";
+import { BackIcon, ClockIcon } from "../ui/icons";
 
 export type QuickCheck = {
   key: string;
@@ -32,7 +32,7 @@ export function SearchStart({
               <li key={text}>
                 <button type="button" className="ui-search-recent-row" onClick={() => { onRecent(text); }}>
                   <span className="ui-search-recent-icon" aria-hidden="true">
-                    <SearchIcon size={20} stroke={1.6} />
+                    <ClockIcon size={20} />
                   </span>
                   <span className="ui-search-recent-text">{text}</span>
                 </button>
