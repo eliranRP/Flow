@@ -16,7 +16,8 @@ type Story = StoryObj<typeof meta>;
 // One story per board preset in States (FLOW-371), with its copy. The plan keeps the 64px tint circle
 // with its icon (REDESIGN-PLAN §2.2), so each story has one. Each has at most one action: a
 // 52px primary pill when it is the next step, a 44px outline pill when it only helps, and none when
-// the user just waits. Invented data: "Maple Ave" and "Elm St" are sample project names.
+// the user just waits. Home's second choice is a 44px text link under the action, not a button.
+// Invented data: "Maple Ave" and "Elm St" are sample project names.
 
 /** homeEmpty: Home without a bank. The next step is to connect one. */
 export const HomeNoBank: Story = {
@@ -30,7 +31,7 @@ export const HomeNoBank: Story = {
       </Button>
     ),
     aside: (
-      <Button variant="secondary" to="/settings">
+      <Button variant="link" to="/settings">
         בינתיים, הוספה ידנית
       </Button>
     ),
