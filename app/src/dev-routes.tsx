@@ -525,7 +525,6 @@ export function DevInvoices() {
   return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
-/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
 /** FLOW-141: the forecast on invented fixture data; `?kind=positive|negative|moved` picks the state. */
 export function DevForecast() {
   const [params] = useSearchParams();
@@ -535,6 +534,7 @@ export function DevForecast() {
   return <ForecastScreen sample={monthForecastSample(kind)} />;
 }
 
+/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
 export function DevMissingBills() {
   const [params] = useSearchParams();
   if (params.get("empty") === "1") return <MissingBillsScreen sample={{ late: [] }} />;
