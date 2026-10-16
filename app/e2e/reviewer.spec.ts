@@ -367,7 +367,8 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByText("ליסינג הדרך בע״מ", { exact: true })).toBeVisible();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await expect(page.getByText("01/07/2026")).toBeVisible();
-  await expect(page.getByText("₪3,200")).toBeVisible();
+  // The exact amount: the compact top bar also carries "ליסינג הדרך בע״מ · ₪3,200", which a substring matches.
+  await expect(page.getByText("−₪3,200", { exact: true })).toBeVisible();
   // FLOW-320: the category row opens the category picker, and the pick closes it.
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
