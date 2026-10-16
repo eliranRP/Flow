@@ -73,6 +73,7 @@ import {
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
+import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
 
 export async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],
@@ -119,6 +120,32 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "create_manual_entry") {
+    // FLOW-369: the cash or cheque line. The database refuses another company's project or category.
+    const parsed = createManualEntrySchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_create_manual_entry";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_direction: parsed.data.direction,
+      p_amount_minor: parsed.data.amount_minor,
+      p_doc_date: parsed.data.doc_date,
+      p_payee: parsed.data.payee,
+      p_project_id: parsed.data.project_id ?? null,
+      p_category_id: parsed.data.category_id,
+      p_method: parsed.data.method,
+      p_cheque_number: parsed.data.method === "cheque" ? parsed.data.cheque_number ?? null : null,
+    };
+  } else if (name === "attach_document") {
+    // FLOW-369: one document on a line that exists. No line is made.
+    const parsed = attachDocumentSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_attach_document";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_document: parsed.data.document,
     };
   } else if (name === "create_project") {
     const parsed = createProjectSchema.safeParse(args);

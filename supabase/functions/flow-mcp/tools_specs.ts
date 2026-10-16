@@ -267,6 +267,32 @@ function writeTools() {
       transaction_id: { type: "string" },
       category_id: { type: "string" },
     }, true),
+    toolSpec("create_manual_entry", "Add a cash or cheque line with no bank document (FLOW-369; owner or editor). direction is income or expense; amount_minor is whole minor units above zero; doc_date is YYYY-MM-DD; payee (2 to 120 characters) is who the money went to or came from; category_id is required, of the same direction; project_id is optional (null files the line as overhead); method is cash or cheque, and a cheque needs cheque_number (1 to 20 letters, digits or hyphens). Returns id, direction, amount_minor, doc_date and undo_kind (manual_entry: undo deletes the line while it still has this project, category, amount and date).", {
+      idempotency_key: { type: "string" },
+      direction: { type: "string", enum: ["income", "expense"] },
+      amount_minor: { type: "integer", minimum: 1 },
+      doc_date: { type: "string" },
+      payee: { type: "string" },
+      project_id: { type: ["string", "null"] },
+      category_id: { type: "string" },
+      method: { type: "string", enum: ["cash", "cheque"] },
+      cheque_number: { type: ["string", "null"] },
+    }, true),
+    toolSpec("attach_document", "Attach a document to an existing line without making a line (FLOW-369; owner or editor). document is { name (up to 200 characters), mime (image/jpeg, image/png, image/webp, image/heic or application/pdf), bytes (1 to 26214400), sha256 (64 hex characters) }. The file is not stored and not read: this keeps its metadata. The same sha256 twice is refused (document already attached); at most 10 documents a line. Returns id, documents (the count on the line) and undo_kind (document_attach: undo puts the list back while it is the one this write made).", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      document: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          mime: { type: "string", enum: ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"] },
+          bytes: { type: "integer", minimum: 1, maximum: 26214400 },
+          sha256: { type: "string" },
+        },
+        required: ["name", "mime", "bytes", "sha256"],
+        additionalProperties: false,
+      },
+    }, true),
     toolSpec("create_project", "Create a project in the owner's company (FLOW-445). type (optional, up to 40 characters, free text, e.g. flip or rental) and budget_minor (optional, whole minor units of the company currency, or null for no budget; the project's budget, over which its page warns) are set when given. Returns id and undo_kind (project: undo deletes it while it is empty).", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
@@ -594,7 +620,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "manual_entry", "document_attach"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects or create_categories batch.", {

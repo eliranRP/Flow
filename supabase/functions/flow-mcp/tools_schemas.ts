@@ -47,6 +47,8 @@ export const READ_TOOL_NAMES = [
 export const SYNC_STATUS_TOOL = "get_sync_status";
 
 export const WRITE_TOOL_NAMES = [
+  "create_manual_entry",
+  "attach_document",
   "assign_expense",
   "assign_expense_split",
   "assign_expenses",
@@ -144,6 +146,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
+  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]),
+  attach_document: new Set(["idempotency_key", "transaction_id", "document"]),
   create_project: new Set(["idempotency_key", "name", "status", "type", "budget_minor"]),
   update_project: new Set(["idempotency_key", "id", "name", "type", "budget_minor", "status"]),
   delete_project: new Set(["idempotency_key", "id"]),
@@ -198,8 +202,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
 // Any case is accepted; the database compares ids in lower case (FLOW-205).
-const UUID_TEXT = z.string().regex(UUID).transform((id) => id.toLowerCase());
-const IDEMPOTENCY_KEY = z.string().min(1).max(128);
+export const UUID_TEXT = z.string().regex(UUID).transform((id) => id.toLowerCase());
+export const IDEMPOTENCY_KEY = z.string().min(1).max(128);
 // A batch key leaves room for ":" and a three-digit ordinal on each row key.
 const BATCH_KEY = z.string().min(1).max(124);
 export const assignSchema = z.object({
@@ -284,7 +288,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "manual_entry", "document_attach"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -327,7 +331,7 @@ export const renameCompanySchema = z.object({
     .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME })
     .refine(companyNameIsValid),
 }).strict();
-function visibleName(min: number, max: number) {
+export function visibleName(min: number, max: number) {
   return z.string().trim().min(min).max(max).transform(plainSpaces)
     .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME });
 }

@@ -79,11 +79,7 @@
   "app/src/ui/css/35-team.css": {
     "font-weight": 1
   },
-  "app/src/ui/css/37-charge-switches.css": {
-    "spacing": 1
-  },
   "app/src/ui/css/38-related-charges.css": {
-    "font-weight": 3,
     "radius": 1
   },
   "app/src/ui/css/43-home.css": {
