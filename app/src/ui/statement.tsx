@@ -1,7 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import type { ReactNode } from "react";
 import { methodLabel, type TxnMeta } from "../txn-meta";
-import { BankIcon, CameraIcon, CardIcon, DocumentIcon, TransferIcon } from "./icons";
+import { BankIcon, CardIcon, DocumentIcon, TransferIcon } from "./icons";
 
 /**
  * The method slot under a statement row's amount (FLOW-305): a 16px icon and a short label,
@@ -13,34 +13,6 @@ export type StatementMethod = { icon: ReactNode; text: string; spoken?: string; 
 /** One muted fact on a statement row's second line. Accent marks a state to act on ("ממתינה לאישור"). */
 /** `keep`: a state to act on that never drops off line 2; it shortens instead. `accent` also keeps it. */
 export type StatementDetail = { text: string; tone?: "accent"; keep?: boolean };
-
-export type StatementSource = "sumit" | "mercury" | "manual" | "photo";
-
-/**
- * FLOW-304's short method label as a statement method. Null for no meta or `other`, so the
- * caller keeps "בנק". Only the last 4 card digits ever reach the label (`methodLabel`).
- */
-export function statementMethodFromMeta(meta: Pick<TxnMeta, "method" | "card_last4"> | null | undefined): StatementMethod | null {
-  const label = methodLabel(meta);
-  if (label == null) return null;
-  const icon =
-    label.icon === "card" ? <CardIcon size={16} /> : label.icon === "transfer" ? <TransferIcon size={16} /> : <DocumentIcon size={16} stroke={1.9} />;
-  const ltr = !/[\u0590-\u05FF]/u.test(label.short);
-  return {
-    icon,
-    text: label.short,
-    ...(label.spoken !== label.short ? { spoken: label.spoken } : {}),
-    ...(ltr ? { ltr: true } : {}),
-  };
-}
-
-/** Short document kind for the method slot (≤ 70px at 15px). */
-export function docKindShort(kind: string | undefined): string {
-  if (kind === "invoice" || kind === "invoice_receipt") return "חשבונית";
-  if (kind === "receipt") return "קבלה";
-  if (kind === "credit") return "זיכוי";
-  return "מסמך";
-}
 
 /**
  * The statement row's link name, in reading order: counterparty, method in words, the suggestion,
