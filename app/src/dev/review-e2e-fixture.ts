@@ -31,12 +31,12 @@ type SeedSpec = {
 };
 const SEED: readonly SeedSpec[] = [
   { supplier: "Harbor Hardware", date: "2026-10-08", minor: 120_000n, source: "photo" },
-  { supplier: "Bayview Plumbing LLC", date: "2026-10-09", minor: 240_000n, source: "mercury" },
+  { supplier: "Lark Plumbing Co", date: "2026-10-09", minor: 240_000n, source: "mercury" },
   { supplier: "J. Ortega • שכר דירה", date: "2026-10-09", minor: 185_000n, source: "mercury", direction: "income" },
   { supplier: "Maple Lumber", date: "2026-10-10", minor: 45_000n, source: "photo", project: false },
   { supplier: "Coastal Water Co.", date: "2026-10-10", minor: 9_000n, source: "mercury" },
   { supplier: "העברה לחיסכון לדוגמה", date: "2026-10-10", minor: 500_000n, source: "mercury" },
-  { supplier: "Summit Insurance", date: "2026-10-11", minor: 125_000n, source: "mercury" },
+  { supplier: "Quill Insurance Co", date: "2026-10-11", minor: 125_000n, source: "mercury" },
 ];
 
 function seed(): ReviewRow[] {

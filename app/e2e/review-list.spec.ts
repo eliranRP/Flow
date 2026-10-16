@@ -9,12 +9,12 @@ test("the list opens a card and Back returns to that row", async ({ page }) => {
   await page.goto(queue);
   await page.getByRole("link", { name: "הצגת הכול" }).click();
   await expect(page).toHaveURL(/\/review\/all\?/);
-  await page.getByRole("link", { name: /Bayview Plumbing LLC/ }).click();
-  await expect(page.getByRole("heading", { name: "Bayview Plumbing LLC" })).toBeVisible();
+  await page.getByRole("link", { name: /Lark Plumbing Co/ }).click();
+  await expect(page.getByRole("heading", { name: "Lark Plumbing Co" })).toBeVisible();
   await expect(page.getByText("2 מתוך 7")).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/review\/all\?/);
-  const opened = page.getByRole("link", { name: /Bayview Plumbing LLC/ });
+  const opened = page.getByRole("link", { name: /Lark Plumbing Co/ });
   await expect(opened).toBeVisible();
   await expect(opened).toBeFocused();
 });
@@ -63,7 +63,7 @@ test("three approvals from a list card stay in list order", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "העברה לחיסכון לדוגמה" })).toBeVisible();
   await expect(page).toHaveURL(/item=r6/);
   await page.getByRole("button", { name: "אישור" }).click();
-  await expect(page.getByRole("heading", { name: "Summit Insurance" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quill Insurance Co" })).toBeVisible();
   await expect(page).toHaveURL(/item=r7/);
   await page.getByRole("button", { name: "אישור" }).click();
   await expect(page.getByRole("heading", { name: "Harbor Hardware" })).toBeVisible();

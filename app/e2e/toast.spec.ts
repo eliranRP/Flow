@@ -11,7 +11,7 @@ test("an approve toast stays clear of the actions and leaves on its own", async 
   const toast = page.locator(".ui-toast");
   await expect(toast).toHaveAttribute("role", "status");
   await expect(toast).toHaveText(/הפריט אושר/);
-  await expect(page.getByRole("heading", { name: "Bayview Plumbing LLC" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lark Plumbing Co" })).toBeVisible();
   await expect(page.getByText("2 מתוך 2")).toBeVisible();
 
   const toastBox = await toast.boundingBox();
