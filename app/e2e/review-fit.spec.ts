@@ -54,16 +54,16 @@ test("at 320x693 the worst-case card ends above the bar, and אישור, שינ�
 test("the counter reserves no blank digit under 10, and stays put from 9 to 10 of 12", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 693 });
   await page.goto("/review?preview=1&e2e=list");
-  await expect(page.locator(".ui-review-counter")).toContainText("1 מתוך 7");
+  await expect(page.locator(".ui-review-counter")).toHaveText("פריט 1 מתוך 7");
   await expect(page.locator(".ui-review-counter [data-reserve]")).toHaveCount(0);
   await page.goto("/review?preview=1&e2e=list&rows=12");
   const counter = page.locator(".ui-review-counter");
   const meter = page.locator(".ui-review-segments");
-  await expect(counter).toContainText("1 מתוך 12");
+  await expect(counter).toHaveText("פריט 1 מתוך 12");
   const first = { counter: await box(counter, "the counter"), meter: await box(meter, "the bar") };
   for (let step = 2; step <= 10; step += 1) {
     await page.locator(".ui-action-bar").getByRole("button", { name: "דלג" }).click();
-    await expect(counter).toContainText(`${String(step)} מתוך 12`);
+    await expect(counter).toHaveText(`פריט ${String(step)} מתוך 12`);
     const now = { counter: await box(counter, "the counter"), meter: await box(meter, "the bar") };
     expect(now.counter.x, `counter at ${String(step)}`).toBeCloseTo(first.counter.x, 0);
     expect(now.counter.width, `counter at ${String(step)}`).toBeCloseTo(first.counter.width, 0);

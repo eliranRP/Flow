@@ -539,6 +539,7 @@ export function ReviewQueue({
           paid={reviewPaidView(card)}
           suggestion={shownSuggestion}
           sourcePill={card.source === "mercury" ? "שורת בנק" : "חשבונית מצולמת"}
+          photo={card.source === "photo"}
           sourceLine={`${invoiceDate(card.doc_date)} • ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
           onSplit={holdWrites || leaving ? undefined : openSplit}
           splitSummary={splitSummary}

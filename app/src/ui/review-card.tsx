@@ -81,6 +81,8 @@ type ReviewCardProps = {
   onProject?: () => void;
   /** FLOW-365: the source pill at the top of the text column (חשבונית מצולמת, שורת בנק). */
   sourcePill?: string;
+  /** FLOW-365: a photographed document. Its card shows the receipt thumbnail at the top corner. */
+  photo?: boolean;
   /** FLOW-365: opens the split screen for this line. Left out for a viewer. */
   onSplit?: () => void;
   /** FLOW-365: a split already saved. The card shows its parts in place of the two rows. */
@@ -133,6 +135,7 @@ export function ReviewCard({
   onProject,
   onCategory,
   sourcePill,
+  photo = false,
   onSplit,
   splitSummary,
   projectButtonRef,
@@ -233,7 +236,7 @@ export function ReviewCard({
           ) : null}
         </div>
         {/* FLOW-365: a photographed document's thumbnail at the card's end-side top corner (the board's receipt). A bank line has no document. */}
-        {sourcePill === "חשבונית מצולמת" ? (
+        {photo ? (
         <span className="ui-review-tile" aria-hidden="true">
           <span className="ui-review-paper-line" data-w="long" />
           <span className="ui-review-paper-line" data-w="long" />

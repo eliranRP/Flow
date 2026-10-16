@@ -134,5 +134,5 @@ describe("review approve and undo refresh", () => {
       expect(rpc.calls.slice(reopen)).toContain("get_transaction");
     });
     expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
-  }, 15_000);
+  });
 });
